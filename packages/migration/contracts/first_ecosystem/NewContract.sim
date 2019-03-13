@@ -1,0 +1,33 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewContract {
+    data {
+        ApplicationId int
+        Value string
+        Conditions string
+        TokenEcosystem int "optional"
+    }
+
+    conditions {
+        ValidateCondition($Conditions,$ecosystem_id)
+
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
+        }
+
+        $contract_name = ContractName($Value)
+
+        if !$contract_name {
+            error "must be the name"
+        }
+
+        if !$TokenEcosystem {
+            $TokenEcosystem = 1
+        } else {
+            if !SysFuel($TokenEcosystem) {
+                warning Sprintf("Ecosystem %d is not system", $TokenEcosystem)
+            }
+        }
+    }
+
+    action {
