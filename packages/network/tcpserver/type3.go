@@ -1,0 +1,85 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package tcpserver
+
+import (
+	"errors"
+	"net"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+)
+
+var errStopCertAlreadyUsed = errors.New("Stop certificate is already used")
+
+// Type3
+func Type3(req *network.StopNetworkRequest, w net.Conn) error {
+	hash, err := processStopNetwork(req.Data)
+	if err != nil {
+		return err
+	}
+
+	res := &network.StopNetworkResponse{hash}
+	if err = res.Write(w); err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.NetworkError}).Error("sending response")
+		return err
+	}
+
+	return nil
+}
+
+func processStopNetwork(b []byte) ([]byte, error) {
+	cert, err := utils.ParseCert(b)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.ParseError}).Error("parsing cert")
+		return nil, err
+	}
+
+		log.WithFields(log.Fields{"error": err, "type": consts.InvalidObject}).Error("validating cert")
+		return nil, err
+	}
+
+	var data []byte
+	tnow := time.Now().Unix()
+	_, err = converter.BinMarshal(&data,
+		&consts.StopNetwork{
+			TxHeader: consts.TxHeader{
+				Type:  consts.TxTypeStopNetwork,
+				Time:  uint32(tnow),
+				KeyID: conf.Config.KeyID,
+			},
+			StopNetworkCert: b,
+		},
+	)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.MarshallingError}).Error("binary marshaling")
+		return nil, err
+	}
+
+	hash := crypto.DoubleHash(data)
+	tx := &model.Transaction{
+		Hash:     hash,
+		Data:     data,
+		Type:     consts.TxTypeStopNetwork,
+		KeyID:    conf.Config.KeyID,
+		HighRate: model.TransactionRateStopNetwork,
+		Time:     tnow,
+	}
+	if err = tx.Create(nil); err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("inserting tx to database")
+		return nil, err
+	}
+
+	return hash, nil
+}

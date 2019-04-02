@@ -225,10 +225,6 @@ func TestPage(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	form = url.Values{"Name": {`app` + name}, "Value": {value}, "ValidateCount": {"2"},
-		"ValidateMode": {"1"}, "ApplicationId": {`1`},
-		"Menu": {menu}, "Conditions": {`ContractConditions("MainCondition")`}}
-	err = postTx(`NewPage`, &form)
 	if err != nil {
 		t.Error(err)
 		return
@@ -573,6 +569,18 @@ func TestValidateConditions(t *testing.T) {
 		if err.Error() != expectedErr {
 			t.Errorf("contract %s expected '%s' got '%s'", contract, expectedErr, err)
 			return
+		}
+	}
+}
+
+func TestPartitialEdit(t *testing.T) {
+	assert.NoError(t, keyLogin(1))
+
+	name := randName(`part`)
+	form := url.Values{"Name": {name}, "Value": {"Span(Original text)"},
+		"Menu": {"original_menu"}, "ApplicationId": {"1"}, "Conditions": {`ContractConditions("MainCondition")`}}
+	assert.NoError(t, postTx(`NewPage`, &form))
+
 	var retList listResult
 	assert.NoError(t, sendGet(`list/pages`, nil, &retList))
 

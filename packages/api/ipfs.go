@@ -31,6 +31,12 @@ const leadingSlash = "/"
 
 var (
 	errPathPrefix = errType{"E_PathPrefix", "paths must start with a leading slash", http.StatusBadRequest}
+	errPathsEmpty = errType{"E_PathsEmpty", "paths must not be empty", http.StatusBadRequest}
+)
+
+var TempDir = "./tempdir/"
+
+type pathsForm struct {
 	Paths string `schema:"paths"`
 }
 
@@ -328,15 +334,6 @@ func filesCp(w http.ResponseWriter, r *http.Request) {
 	form := &pathsForm{}
 	client := getClient(r)
 	params := mux.Vars(r)
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-
-	s := shell.NewShell(conf.GetGFilesHost())
-
-	resp, err := s.Request("files/cp", fmt.Sprintf("/ipfs/%s", params["hash"]),
-		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Paths).
 		Send(context.Background())
 	if err != nil {
 		errorResponse(w, err)

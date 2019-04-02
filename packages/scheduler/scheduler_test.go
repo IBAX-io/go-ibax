@@ -5,6 +5,8 @@
 package scheduler
 
 import (
+	"testing"
+	"time"
 )
 
 func TestParse(t *testing.T) {
@@ -17,15 +19,6 @@ func TestParse(t *testing.T) {
 
 	for cronSpec, expectedErr := range cases {
 		_, err := Parse(cronSpec)
-		if err != nil {
-			if errStr := err.Error(); errStr != expectedErr {
-				t.Errorf("cron: %s, expected: %s, got: %s\n", cronSpec, expectedErr, errStr)
-			}
-
-			continue
-		}
-
-		if expectedErr != "" {
 			t.Errorf("cron: %s, error: %s\n", cronSpec, err)
 		}
 	}
