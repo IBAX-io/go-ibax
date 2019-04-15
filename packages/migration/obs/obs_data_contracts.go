@@ -487,23 +487,6 @@ VALUES
     }
     conditions {
         $Data = BytesToString($Data["Body"])
-        $limit = 10 // data piece size of import
-    }
-    action {
-        // init buffer_data, cleaning old buffer
-        var initJson map
-        $import_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "import", "ecosystem": $ecosystem_id}).One("id")
-        if $import_id {
-            $import_id = Int($import_id)
-            DBUpdate("@1buffer_data", $import_id, {"value": initJson})
-        } else {
-            $import_id = DBInsert("@1buffer_data", {"account": $account_id, "key": "import", "value": initJson, "ecosystem": $ecosystem_id})
-        }
-        $info_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "import_info", "ecosystem": $ecosystem_id}).One("id")
-        if $info_id {
-            $info_id = Int($info_id)
-            DBUpdate("@1buffer_data", $info_id, {"value": initJson})
-        } else {
             $info_id = DBInsert("@1buffer_data", {"account": $account_id, "key": "import_info", "value": initJson, "ecosystem": $ecosystem_id})
         }
         var input map arrData array
@@ -744,6 +727,18 @@ VALUES
 			Till       string "optional date"
 			Conditions string
 		}
+		conditions {
+			ValidateCondition($Conditions,$ecosystem_id)
+			ValidateCron($Cron)
+		}
+		action {
+			if !$Till {
+				$Till = "1970-01-01 00:00:00"
+			}
+			if !HasPrefix($Contract, "@") {
+				$Contract = "@" + Str($ecosystem_id) + $Contract
+			}
+			$result = DBInsert("cron", {owner: $key_id,cron:$Cron,contract: $Contract,
 				counter:$Limit, till: $Till,conditions: $Conditions})
 			UpdateCron($result)
 		}

@@ -51,13 +51,24 @@ func Type2(rw io.ReadWriter) error {
 		if err = rtx.Processing(tran); err != nil {
 			return err
 		}
+		rtxs = append(rtxs, rtx.SetRawTx())
+	}
+
+	err = model.SendTxBatches(rtxs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+//// Type2 serves requests from disseminator
+//func Type2(rw io.ReadWriter) (*network.DisTrResponse, error) {
+//	r := &network.DisRequest{}
 //	if err := r.Read(rw); err != nil {
 //		return nil, err
 //	}
 //
 //	binaryData := r.Data
-//	// take the transactions from usual users but not nodes.
-//	_, _, decryptedBinData, err := DecryptData(&binaryData)
 //	if err != nil {
 //		return nil, utils.ErrInfo(err)
 //	}
