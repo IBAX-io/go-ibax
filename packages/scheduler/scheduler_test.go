@@ -15,10 +15,9 @@ func TestParse(t *testing.T) {
 		"0-59 0-23 1-31 1-12 0-6": "",
 		"*/2 */2 */2 */2 */2":     "",
 		"* * * * *":               "",
-	}
+		}
 
-	for cronSpec, expectedErr := range cases {
-		_, err := Parse(cronSpec)
+		if expectedErr != "" {
 			t.Errorf("cron: %s, error: %s\n", cronSpec, err)
 		}
 	}
