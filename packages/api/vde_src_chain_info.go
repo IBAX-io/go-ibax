@@ -76,6 +76,25 @@ func VDESrcChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	m := &model.VDESrcChainInfo{}
 
+	if m, err = unmarshalColumnVDESrcChainInfo(form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
+		return
+	}
+
+	result, err := m.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
+		return
+	}
+
+	jsonResponse(w, result)
 }
 
 func VDESrcChainInfoDeleteHandlre(w http.ResponseWriter, r *http.Request) {
@@ -116,8 +135,3 @@ func VDESrcChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query chain info data by ID failed")
 		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
-}

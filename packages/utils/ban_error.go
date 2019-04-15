@@ -2,20 +2,25 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package script
+package utils
 
 import (
-	"testing"
+	"github.com/pkg/errors"
+)
 
-		{int64(1), 8}, {int(1), 8},
-		{float32(1), 4}, {float64(1), 8},
-		{"test", 4},
-		{[]byte("test"), 16},
-		{[]string{"test", "test"}, 20},
-		{map[string]string{"test": "test"}, 12},
-	}
+type BanError struct {
+	err error
+}
 
-	for _, v := range cases {
-		assert.Equal(t, v.mem, calcMem(v.v))
+func (b *BanError) Error() string {
+	return b.err.Error()
+}
+
+func WithBan(err error) error {
+	return &BanError{
+		err: err,
 	}
+		return true
+	}
+	return false
 }

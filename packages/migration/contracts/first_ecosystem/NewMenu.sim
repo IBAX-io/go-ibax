@@ -1,0 +1,14 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewMenu {
+            warning Sprintf( "Menu %s already exists", $Name)
+        }
+    }
+
+    action {
+        DBInsert("menu", {name:$Name,value: $Value, title: $Title, conditions: $Conditions})
+    }
+    func price() int {
+        return SysParamInt("menu_price")
+    }
+}
