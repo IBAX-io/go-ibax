@@ -34,6 +34,19 @@ type VDEScheTask struct {
 	TaskRunState    int64  `gorm:"not null" json:"task_run_state"`
 	TaskRunStateErr string `gorm:"not null" json:"task_run_state_err"`
 
+	TxHash     string `gorm:"not null" json:"tx_hash"`
+	ChainState int64  `gorm:"not null" json:"chain_state"`
+	BlockId    int64  `gorm:"not null" json:"block_id"`
+	ChainId    int64  `gorm:"not null" json:"chain_id"`
+	ChainErr   string `gorm:"not null" json:"chain_err"`
+
+	UpdateTime int64 `gorm:"not null" json:"update_time"`
+	CreateTime int64 `gorm:"not null" json:"create_time"`
+}
+
+func (VDEScheTask) TableName() string {
+	return "vde_sche_task"
+}
 
 func (m *VDEScheTask) Create() error {
 	return DBConn.Create(&m).Error
@@ -108,13 +121,6 @@ func (m *VDEScheTask) GetAllByContractStateSrc(ContractStateSrc int64) ([]VDESch
 }
 
 func (m *VDEScheTask) GetAllByContractStateDest(ContractStateDest int64) ([]VDEScheTask, error) {
-	result := make([]VDEScheTask, 0)
-	err := DBConn.Table("vde_sche_task").Where("contract_state_dest = ? AND contract_state_src = 1", ContractStateDest).Find(&result).Error
-	return result, err
-}
-
-type VDEScheTaskFromSrc struct {
-	ID         int64  `gorm:"primary_key; not null" json:"id"`
 	TaskUUID   string `gorm:"not null" json:"task_uuid"`
 	TaskName   string `gorm:"not null" json:"task_name"`
 	TaskSender string `gorm:"not null" json:"task_sender"`

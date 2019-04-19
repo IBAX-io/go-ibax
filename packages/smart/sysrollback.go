@@ -19,18 +19,6 @@ import (
 const (
 	SysName = `@system`
 )
-
-type SysRollData struct {
-	Type        string `json:"type,omitempty"`
-	EcosystemID int64  `json:"ecosystem,omitempty"`
-	ID          int64  `json:"id,omitempty"`
-	Data        string `json:"data,omitempty"`
-	TableName   string `json:"table,omitempty"`
-}
-
-func SysRollback(sc *SmartContract, data SysRollData) error {
-	out, err := marshalJSON(data, `marshaling sys rollback`)
-	if err != nil {
 		return err
 	}
 	rollbackSys := &model.RollbackTx{
@@ -186,6 +174,16 @@ func SysRollbackEditContract(transaction *model.DbTransaction, sysData SysRollDa
 // SysRollbackEcosystem is rolling back ecosystem
 func SysRollbackEcosystem(DbTransaction *model.DbTransaction, sysData SysRollData) error {
 	tables := make([]string, 0)
+	for table := range converter.FirstEcosystemTables {
+		tables = append(tables, table)
+		err := model.Delete(DbTransaction, `1_`+table, fmt.Sprintf(`where ecosystem='%d'`, sysData.ID))
+		if err != nil {
+			return err
+		}
+	}
+	if sysData.ID == 1 {
+		tables = append(tables, `node_ban_logs`, `bad_blocks`, `system_parameters`, `ecosystems`)
+		for _, name := range tables {
 			err := model.DropTable(DbTransaction, fmt.Sprintf("%d_%s", sysData.ID, name))
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("dropping table")
