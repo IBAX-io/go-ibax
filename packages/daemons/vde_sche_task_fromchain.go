@@ -203,31 +203,24 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 			//fmt.Println("myContractSrcGet", myContractSrcGet)
 
 			ShareTaskItem.ContractSrcGet = myContractSrcGet
-			ShareTaskItem.ContractSrcGetHash = myContractSrcGetHash
-
-			contractDestDataBase64, err := base64.StdEncoding.DecodeString(ShareTaskItem.ContractDestGet)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("base64 DecodeString err")
-				fmt.Println("base64 DecodeString err")
-				continue
-			}
-			ContractDestGetPlusHash, err := ecies.EccDeCrypto(contractDestDataBase64, nodePrivateKey)
-			if err != nil {
-				fmt.Println("Decryption error:", err)
-				log.WithFields(log.Fields{"type": consts.CryptoError}).Error("Decryption error")
-				continue
-			}
-			//fmt.Println(":", ContractDestGetPlusHash)
-			myContractDestGetHash = string(ContractDestGetPlusHash)[:64]
-			myContractDestGet = string(ContractDestGetPlusHash)[64:]
-			//fmt.Println("myContractDestGetHash:", myContractDestGetHash)
-			//fmt.Println("myContractDestGet:", myContractDestGet)
 
 			ShareTaskItem.ContractDestGet = myContractDestGet
 			ShareTaskItem.ContractDestGetHash = myContractDestGetHash
 
 		}
 
+		//
+		if ContractSrcGetHashHex, err = crypto.HashHex([]byte(ShareTaskItem.ContractSrcGet)); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
+			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
+			continue
+		}
+		if ContractSrcGetHashHex != ShareTaskItem.ContractSrcGetHash {
+			log.WithFields(log.Fields{"error": err}).Error("Contract Src Hash validity fails")
+			fmt.Println("Contract Src Hash validity fails")
+			continue
+		}
+		if ContractDestGetHashHex, err = crypto.HashHex([]byte(ShareTaskItem.ContractDestGet)); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
 			fmt.Println("ContractDestGetHashHex Raw data hash failed ")
 			continue
