@@ -409,14 +409,6 @@ func sendMultipart(ApiAddress string, gAuth string, url string, files map[string
 		req.Header.Set("Authorization", jwtPrefix+gAuth)
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -891,6 +883,23 @@ func VDEWaitTx(apiAddress string, gAuth string, hash string) (int64, error) {
 		}, &multiRet)
 		if err != nil {
 			return 0, err
+		}
+
+		ret := multiRet.Results[hash]
+
+		if len(ret.BlockID) > 0 {
+			return converter.StrToInt64(ret.BlockID), fmt.Errorf(ret.Result)
+		}
+		if ret.Message != nil {
+			errtext, err := json.Marshal(ret.Message)
+			if err != nil {
+				return 0, err
+			}
+			return 0, errors.New(string(errtext))
+		}
+		time.Sleep(time.Second)
+	}
+	//return 0, fmt.Errorf(`TxStatus timeout`)
 	return -1, fmt.Errorf(`TxStatus timeout`)
 }
 
