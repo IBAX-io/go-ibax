@@ -1,6 +1,16 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package vde_sdk
+
+import (
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/vmihailenco/msgpack/v5"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
 )
 
 // Header is contain header data
@@ -71,7 +81,3 @@ func CreateTransaction(data, hash []byte, keyID int64) error {
 	}
 	if err := tx.Create(); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating new transaction")
-		return err
-	}
-	return nil
-}*/

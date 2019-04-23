@@ -582,6 +582,15 @@ func LoadContract(transaction *model.DbTransaction, ecosystem int64) (err error)
 		return err
 	}
 	return
+}
+
+func (sc *SmartContract) getExtend() *map[string]interface{} {
+	var block, blockTime, blockKeyID, blockNodePosition int64
+	var perBlockHash string
+	if sc.BlockData != nil {
+		block = sc.BlockData.BlockID
+		blockKeyID = sc.BlockData.KeyID
+		blockTime = sc.BlockData.Time
 		blockNodePosition = sc.BlockData.NodePosition
 	}
 	if sc.PreBlockData != nil {
@@ -686,17 +695,6 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 		if !ret {
 			logger.WithFields(log.Fields{"action": action, "permissions": tablePermission[action], "type": consts.EvalError}).Error("access denied")
 			return tablePermission, errAccessDenied
-		}
-	}
-	return tablePermission, nil
-}
-
-// AccessTable checks the access right to the table
-func (sc *SmartContract) AccessTable(table, action string) error {
-	if sc.FullAccess {
-		return nil
-	}
-	_, err := sc.AccessTablePerm(table, action)
 	return err
 }
 

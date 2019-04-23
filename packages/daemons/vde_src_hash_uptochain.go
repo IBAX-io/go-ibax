@@ -12,6 +12,22 @@ import (
 	"strconv"
 	"time"
 
+	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
+
+	"path/filepath"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
+//Scheduling task data hash information up the chain
+func VDESrcHashUpToChain(ctx context.Context, d *daemon) error {
+	var (
+		blockchain_http      string
+		blockchain_ecosystem string
 		err                  error
 	)
 
@@ -148,9 +164,6 @@ func VDESrcHashUpToChainState(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
 			time.Sleep(time.Millisecond * 2)
 			continue
-		}
-		chain_apiAddress := blockchain_http
-		chain_apiEcosystemID := int64(ecosystemID)
 
 		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
 		// Login
