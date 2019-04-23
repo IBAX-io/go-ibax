@@ -19,19 +19,20 @@ import (
 const (
 	SysName = `@system`
 )
+
+type SysRollData struct {
+	Type        string `json:"type,omitempty"`
+	EcosystemID int64  `json:"ecosystem,omitempty"`
+	ID          int64  `json:"id,omitempty"`
+	Data        string `json:"data,omitempty"`
+	TableName   string `json:"table,omitempty"`
+}
+
+func SysRollback(sc *SmartContract, data SysRollData) error {
+	out, err := marshalJSON(data, `marshaling sys rollback`)
+	if err != nil {
 		return err
 	}
-	rollbackSys := &model.RollbackTx{
-		BlockID:   sc.BlockData.BlockID,
-		TxHash:    sc.TxHash,
-		NameTable: SysName,
-		TableID:   converter.Int64ToStr(sc.TxSmart.EcosystemID),
-		Data:      string(out),
-	}
-	sc.RollBackTx = append(sc.RollBackTx, rollbackSys)
-	err = rollbackSys.Create(sc.DbTransaction)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating system  rollback")
 		return err
 	}
 	return nil

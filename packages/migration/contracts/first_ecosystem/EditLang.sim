@@ -1,0 +1,16 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract EditLang {
+    data {
+        Id int
+        Trans string
+    }
+
+    conditions {
+        EvalCondition("parameters", "changing_language", "value")
+        $lang = DBFind("languages").Where({id: $Id}).Row()
+    }
+
+    action {
+        EditLanguage($Id, $lang["name"], $Trans)
+    }

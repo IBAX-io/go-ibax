@@ -1,4 +1,15 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package model
+
+import (
+	"github.com/IBAX-io/go-ibax/packages/converter"
+)
+
+// InfoBlock is model
 type InfoBlock struct {
 	Hash           []byte `gorm:"not null"`
 	EcosystemID    int64  `gorm:"not null default 0"`
@@ -47,12 +58,6 @@ func UpdRollbackHash(transaction *DbTransaction, hash []byte) error {
 }
 
 // BlockGetUnsent returns InfoBlock
-func BlockGetUnsent() (*InfoBlock, error) {
-	ib := &InfoBlock{}
-	found, err := ib.GetUnsent()
-	if !found {
-		return nil, err
-	}
 	return ib, err
 }
 

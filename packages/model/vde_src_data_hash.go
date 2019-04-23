@@ -60,3 +60,4 @@ func (m *VDESrcDataHash) GetOneByTaskUUID(TaskUUID string) (*VDESrcDataHash, err
 }
 
 func (m *VDESrcDataHash) GetAllByChainState(ChainState int64) ([]VDESrcDataHash, error) {
+	result := make([]VDESrcDataHash, 0)

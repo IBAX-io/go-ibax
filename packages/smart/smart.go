@@ -65,6 +65,18 @@ var (
 		NewBadBlockContract: true,
 	}
 )
+
+var (
+	smartVM   *script.VM
+	smartTest = make(map[string]string)
+)
+
+func testValue(name string, v ...interface{}) {
+	smartTest[name] = fmt.Sprint(v...)
+}
+
+// GetTestValue returns the test value of the specified key
+func GetTestValue(name string) string {
 	return smartTest[name]
 }
 
@@ -570,15 +582,6 @@ func LoadContract(transaction *model.DbTransaction, ecosystem int64) (err error)
 		return err
 	}
 	return
-}
-
-func (sc *SmartContract) getExtend() *map[string]interface{} {
-	var block, blockTime, blockKeyID, blockNodePosition int64
-	var perBlockHash string
-	if sc.BlockData != nil {
-		block = sc.BlockData.BlockID
-		blockKeyID = sc.BlockData.KeyID
-		blockTime = sc.BlockData.Time
 		blockNodePosition = sc.BlockData.NodePosition
 	}
 	if sc.PreBlockData != nil {

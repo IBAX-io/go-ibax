@@ -38,16 +38,16 @@ func Type201(r *network.SubNodeSrcDataAgentRequest) (*network.SubNodeSrcDataAgen
 		return nil, err
 	}
 
+	//hash, err := crypto.HashHex(r.Data)
+	hash, err := crypto.HashHex(data)
+	if err != nil {
+		log.WithError(err)
+		return nil, err
+	}
+	resp := &network.SubNodeSrcDataAgentResponse{}
 	resp.Hash = hash
 
 	//
-	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
-	if len(NodePrivateKey) < 1 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
-		err = errors.New(`empty node private key`)
-		return nil, err
-	}
-	eccData, err := ecies.EccCryptoKey(data, NodePublicKey)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
 		return nil, err
