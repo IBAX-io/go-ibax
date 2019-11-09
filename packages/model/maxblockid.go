@@ -34,6 +34,14 @@ func (b *BlockID) Unmarshal(bt []byte) error {
 	}
 	return nil
 }
+
+//Get by name
+func (b *BlockID) GetbyName(name string) (bool, error) {
+	return true, nil
+}
+
+//Get by name
+func (b *BlockID) GetRangeByName(n1, n2 string, count int64) (bool, error) {
 	var nb1, nb2 BlockID
 	rp1 := &RedisParams{
 		Key: MihPrefix + n1,
