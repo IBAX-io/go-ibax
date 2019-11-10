@@ -208,6 +208,13 @@ var (
 					val = uint32(state2int[sval[0]] << 16) // new state
 				}
 				val |= uint32(lexem[sval[1]] << 8) // lexem
+				cmds := strings.Split(sval[2], ` `)
+				var flag uint32
+				for _, icmd := range cmds {
+					flag |= flags[icmd]
+				}
+				val |= flag
+				for _, ch := range []byte(skey) {
 					var ind int
 					switch ch {
 					case 'd':
@@ -257,4 +264,3 @@ var (
 	} else {
 		fmt.Println(err.Error())
 	}
-}
