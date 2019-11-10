@@ -170,8 +170,10 @@ type TxDetailedInfo struct {
 	Params       map[string]interface{} `json:"params"`
 	KeyID        int64                  `json:"key_id"`
 	Time         int64                  `json:"time"`
+	Type         int64                  `json:"type"`
 }
 
+type BlockHeaderInfo struct {
 type BlockDetailedInfo struct {
 	Header        BlockHeaderInfo  `json:"header"`
 	Hash          []byte           `json:"hash"`

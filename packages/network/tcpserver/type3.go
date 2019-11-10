@@ -19,10 +19,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-)
-
-var errStopCertAlreadyUsed = errors.New("Stop certificate is already used")
-
 // Type3
 func Type3(req *network.StopNetworkRequest, w net.Conn) error {
 	hash, err := processStopNetwork(req.Data)
@@ -46,6 +42,18 @@ func processStopNetwork(b []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	if cert.EqualBytes(consts.UsedStopNetworkCerts...) {
+		log.WithFields(log.Fields{"error": errStopCertAlreadyUsed, "type": consts.InvalidObject}).Error("checking cert")
+		return nil, errStopCertAlreadyUsed
+	}
+
+	fbdata, err := syspar.GetFirstBlockData()
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.ConfigError}).Error("getting data of first block")
+		return nil, err
+	}
+
+	if err = cert.Validate(fbdata.StopNetworkCertBundle); err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.InvalidObject}).Error("validating cert")
 		return nil, err
 	}
