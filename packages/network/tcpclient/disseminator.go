@@ -89,6 +89,21 @@ func SendFullBlockToAll(ctx context.Context, hosts []string, block *model.InfoBl
 	req := prepareFullBlockRequest(block, txes, nodeID)
 	txDataMap := make(map[string][]byte, len(txes))
 	for _, tx := range txes {
+		txDataMap[string(tx.Hash)] = tx.Data
+	}
+
+	var errCount int32
+	increaseErrCount := func() {
+		atomic.AddInt32(&errCount, 1)
+	}
+
+	var wg sync.WaitGroup
+	for _, host := range hosts {
+		wg.Add(1)
+
+		go func(h string) {
+			defer wg.Done()
+
 			con, err := newConnection(h)
 			if err != nil {
 				increaseErrCount()
@@ -227,16 +242,6 @@ func sendDisseminatorRequest(con net.Conn, requestType network.ReqTypesFlag, pac
 	// type
 	rt := network.RequestType{
 		Type: requestType,
-	}
-	err = rt.Write(con)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing request type to host")
-		return err
-	}
-
-	// data size
-	// size := converter.DecToBin(len(packet), 4)
-	// _, err = con.Write(size)
 	// if err != nil {
 	// 	log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing data size to host")
 	// 	return err

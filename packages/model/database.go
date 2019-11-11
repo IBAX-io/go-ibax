@@ -6,6 +6,13 @@ import (
 	"fmt"
 	"gorm.io/gorm"
 )
+
+func GetNodeRows(tableName string) (int64, error) {
+	var count int64
+	err := DBConn.Table(tableName).Count(&count).Error
+	if err == gorm.ErrRecordNotFound {
+		return 0, nil
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -37,17 +44,6 @@ func GetRowsInfo(rows *sql.Rows,sqlQuest string) ([]map[string]string, error) {
 		rez := make(map[string]string)
 		for i, col := range values {
 			// Here we can check if the value is nil (NULL value)
-			if col == nil {
-				value = "NULL"
-			} else {
-				if columntypes[i].DatabaseTypeName() == "BYTEA" {
-					value = hex.EncodeToString(col)
-				} else {
-					value = string(col)
-				}
-			}
-			rez[columns[i]] = value
-		}
 		result = append(result, rez)
 
 	}

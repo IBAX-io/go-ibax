@@ -123,6 +123,10 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 					toIDBalance,
 					sum,
 					comment,
+					sc.BlockData.BlockID,
+					sc.TxHash,
+					pay.tokenEco,
+					t,
 					sc.BlockData.Time,
 				},
 				`1_history`)
@@ -239,18 +243,6 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 			newTaxes = append(newTaxes, strconv.FormatInt(eco, 10), strconv.FormatInt(id, 10))
 			taxes = append(taxes, newTaxes)
 			tax, err := json.Marshal(taxes)
-			if err != nil {
-				return err
-			}
-			sc.taxes = true
-			_, err = UpdateSysParam(sc, syspar.TaxesWallet, string(tax), "")
-			if err != nil {
-				return err
-			}
-		}
-		key := &model.Key{}
-		var found bool
-		if found, err = key.SetTablePrefix(eco).Get(sc.DbTransaction, pay.toID); err != nil || !found {
 			if err != nil {
 				return err
 			}

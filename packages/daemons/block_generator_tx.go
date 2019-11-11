@@ -1,3 +1,21 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"encoding/hex"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/utils/tx"
+
+	log "github.com/sirupsen/logrus"
+)
 
 const (
 	callDelayedContract = "CallDelayedContract"
@@ -14,22 +32,6 @@ type DelayedTx struct {
 
 // RunForDelayBlockID creates the transactions that need to be run for blockID
 func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*model.Transaction, error) {
-
-	contracts, err := model.GetAllDelayedContractsForBlockID(blockID)
-	if err != nil {
-		dtx.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting delayed contracts for block")
-		return nil, err
-	}
-	txList := make([]*model.Transaction, 0, len(contracts))
-	for _, c := range contracts {
-		params := make(map[string]interface{})
-		params["Id"] = c.ID
-		tx, err := dtx.createDelayTx(c.KeyID, c.HighRate, params)
-		if err != nil {
-			dtx.logger.WithFields(log.Fields{"error": err}).Debug("can't create transaction for delayed contract")
-			return nil, err
-		}
-		txList = append(txList, tx)
 	}
 
 	return txList, nil

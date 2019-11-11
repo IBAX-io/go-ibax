@@ -21,4 +21,3 @@ contract NewLang {
 
     action {
         CreateLanguage($Name, $Trans)
-    }

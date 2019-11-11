@@ -78,7 +78,9 @@ func TestParseRecipientNotifications(t *testing.T) {
 		if err := compareNotificationRecordResult(result, item.Want); err != nil {
 			t.Errorf("on item %d err: %v\n", i, err)
 		}
-				return fmt.Errorf("recipient %d does'nt contains %+v", wRecipient, rec)
+	}
+}
+
 			}
 		}
 	}

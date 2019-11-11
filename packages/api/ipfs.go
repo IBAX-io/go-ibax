@@ -212,18 +212,6 @@ func addDir(w http.ResponseWriter, r *http.Request) {
 	if resp.Error != nil {
 		errorResponse(w, resp.Error)
 		return
-	}
-	jsonResponse(w, &dirResult{
-		Hash: hash,
-	})
-}
-
-func cat(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	type link struct {
-		Link string
-	}
-	jsonResponse(w, link{Link: conf.GetGFilesHost() + fmt.Sprintf("/api/v0/cat?arg=/ipfs/%s", params["hash"])})
 }
 
 func filesMkdir(w http.ResponseWriter, r *http.Request) {
@@ -334,6 +322,15 @@ func filesCp(w http.ResponseWriter, r *http.Request) {
 	form := &pathsForm{}
 	client := getClient(r)
 	params := mux.Vars(r)
+	if err := parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+
+	s := shell.NewShell(conf.GetGFilesHost())
+
+	resp, err := s.Request("files/cp", fmt.Sprintf("/ipfs/%s", params["hash"]),
+		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Paths).
 		Send(context.Background())
 	if err != nil {
 		errorResponse(w, err)

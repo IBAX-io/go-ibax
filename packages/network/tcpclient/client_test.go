@@ -49,6 +49,17 @@ func BenchmarkGetBlockBodiesWithChanReadAll(t *testing.B) {
 			resp.Write(r)
 		}
 
+		ctxDone, cancel := context.WithCancel(context.Background())
+
+		t.StartTimer()
+		blocksC, errC := GetBlockBodiesChanReadAll(ctxDone, r, 100)
+		// blocksC, errC := GetBlockBodiesChan(ctxDone, r, 100)
+		go func() {
+			err := <-errC
+			if err != nil {
+				fmt.Println(err)
+			}
+		}()
 
 		for item := range blocksC {
 			item = item[:0]
@@ -154,19 +165,6 @@ func BenchmarkGetBlockBodiesWithChanReadToStruct(t *testing.B) {
 
 			// fmt.Println("lenData", len(inputs[i]))
 			resp.Write(r)
-		}
-
-		ctx := context.Background()
-
-		t.StartTimer()
-		blocksC, errC := GetBlockBodiesChan(ctx, r, 100)
-
-		go func() {
-			err := <-errC
-			if err != nil {
-				fmt.Println(err)
-			}
-		}()
 
 		for item := range blocksC {
 			item = item[:0]
