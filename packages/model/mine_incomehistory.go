@@ -1,10 +1,6 @@
 package model
 
 import (
-	"github.com/shopspring/decimal"
-	Keyid                   int64           `gorm:"not null"`
-	Mineid                  int64           `gorm:"not null"`
-	Amount                  decimal.Decimal `gorm:"not null"`
 	Type                    int64           `gorm:"not null"`
 	Capacitys               int64           `gorm:"not null" `
 	Nonce                   int64           `gorm:"not null" `

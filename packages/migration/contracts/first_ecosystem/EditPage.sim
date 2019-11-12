@@ -31,9 +31,16 @@ contract EditPage {
         if $Conditions {
             ValidateCondition($Conditions, $ecosystem_id)
         }
-        $ValidateCount = preparePageValidateCount($ValidateCount)
-    }
-
+        if $Conditions {
+            pars["conditions"] = $Conditions
+        }
+        if $ValidateCount {
+            pars["validate_count"] = $ValidateCount
+        }
+        if $ValidateMode {
+            if $ValidateMode != "1" {
+                $ValidateMode = "0"
+            }
             pars["validate_mode"] = $ValidateMode
         }
         if pars {

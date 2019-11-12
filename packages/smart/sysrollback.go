@@ -33,6 +33,17 @@ func SysRollback(sc *SmartContract, data SysRollData) error {
 	if err != nil {
 		return err
 	}
+	rollbackSys := &model.RollbackTx{
+		BlockID:   sc.BlockData.BlockID,
+		TxHash:    sc.TxHash,
+		NameTable: SysName,
+		TableID:   converter.Int64ToStr(sc.TxSmart.EcosystemID),
+		Data:      string(out),
+	}
+	sc.RollBackTx = append(sc.RollBackTx, rollbackSys)
+	err = rollbackSys.Create(sc.DbTransaction)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating system  rollback")
 		return err
 	}
 	return nil
@@ -127,12 +138,6 @@ func SysSetContractWallet(tblid, state int64, wallet int64) error {
 // SysRollbackEditContract rollbacks the contract
 func SysRollbackEditContract(transaction *model.DbTransaction, sysData SysRollData,
 	EcosystemID string) error {
-
-	fields, err := model.GetOneRowTransaction(transaction, `select * from "1_contracts" where id=?`,
-		sysData.ID).String()
-	if err != nil {
-		return err
-	}
 	if len(fields["value"]) > 0 {
 		var owner *script.OwnerInfo
 		for i, item := range smartVM.Block.Children {
