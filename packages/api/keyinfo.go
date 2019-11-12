@@ -39,6 +39,13 @@ type keyEcosystemInfo struct {
 	Notifications []notifyInfo `json:"notifications,omitempty"`
 }
 
+func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	keysList := make([]*keyEcosystemInfo, 0)
+	keyID := converter.StringToAddress(params["wallet"])
+	if keyID == 0 {
 		errorResponse(w, errInvalidWallet.Errorf(params["wallet"]))
 		return
 	}
@@ -116,14 +123,6 @@ type keyEcosystemInfo struct {
 		Account:    account,
 		Ecosystems: keysList,
 	})
-}
-
-func (m Mode) getNotifications(ecosystemID int64, key *model.Key) ([]notifyInfo, error) {
-	notif, err := model.GetNotificationsCount(ecosystemID, []string{key.AccountID})
-	if err != nil {
-		return nil, err
-	}
-
 	list := make([]notifyInfo, 0)
 	for _, n := range notif {
 		if n.RecipientID != key.ID {

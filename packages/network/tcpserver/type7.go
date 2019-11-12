@@ -55,10 +55,3 @@ func Type7(request *network.GetBodiesRequest, w net.Conn) error {
 	return nil
 }
 
-func lenOfBlockData(blocks []model.Block) int64 {
-	var length int64
-	for i := 0; i < len(blocks); i++ {
-		length += int64(len(blocks[i].Data))
-	}
-
-	return length
