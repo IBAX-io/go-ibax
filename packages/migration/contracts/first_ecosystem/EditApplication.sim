@@ -1,0 +1,10 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract EditApplication {
+    data {
+        ApplicationId int
+        Conditions string "optional"
+    }
+    func onlyConditions() bool {
+        return $Conditions && false
+}
