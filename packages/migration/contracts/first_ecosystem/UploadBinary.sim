@@ -1,0 +1,28 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract UploadBinary {
+    data {
+        ApplicationId int
+        Name string
+        Data bytes
+        DataMimeType string "optional"
+        MemberAccount string "optional"
+    }
+    conditions {
+        if Size($MemberAccount) > 0 {
+            $UserID = $MemberAccount
+        } else {
+            $UserID = $account_id
+        }
+        $Id = Int(DBFind("@1binaries").Columns("id").Where({"app_id": $ApplicationId, 
+                "account": $UserID, "name": $Name, "ecosystem": $ecosystem_id}).One("id"))
+        if $Id == 0 {
+            if $ApplicationId == 0 {
+            DBUpdate("@1binaries", $Id, {"data": $Data, "hash": hash, "mime_type": $DataMimeType})
+        } else {
+            $Id = DBInsert("@1binaries", {"app_id": $ApplicationId, "account": $UserID,
+                "name": $Name, "data": $Data, "hash": hash, "mime_type": $DataMimeType, "ecosystem": $ecosystem_id})
+        }
+        $result = $Id
+    }
+}

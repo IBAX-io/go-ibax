@@ -33,18 +33,15 @@ func unmarshalColumnVDEAgentChainInfo(form *VDEAgentChainInfoForm) (*model.VDEAg
 }
 
 func VDEAgentChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
-	)
-	logger := getLogger(r)
-	form := &VDEAgentChainInfoForm{}
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
+	//
+	if m.LogMode == 0 {
+		m.LogMode = 3 //not log
 	}
-	m := &model.VDEAgentChainInfo{}
-	if m, err = unmarshalColumnVDEAgentChainInfo(form); err != nil {
-		fmt.Println(err)
+
+	m.CreateTime = time.Now().Unix()
+
+	if err = m.Create(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
 
 	model.DBConn.Last(&m)
