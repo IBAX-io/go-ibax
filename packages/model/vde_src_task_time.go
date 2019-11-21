@@ -1,3 +1,7 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 package model
 
 type VDESrcTaskTime struct {
@@ -21,9 +25,6 @@ func (m *VDESrcTaskTime) Updates() error {
 
 func (m *VDESrcTaskTime) Delete() error {
 	return DBConn.Delete(m).Error
-}
-
-func (m *VDESrcTaskTime) Get() (*VDESrcTaskTime, error) {
 	err := DBConn.First(&m).Error
 	return m, err
 }
