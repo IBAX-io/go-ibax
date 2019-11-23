@@ -49,9 +49,9 @@ func loadContractTasks() error {
 			})
 			if err != nil {
 				return err
-func Scheduler(ctx context.Context, d *daemon) error {
-	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
-		defer atomic.StoreUint32(&d.atomic, 0)
+			}
+		}
+	}
 	} else {
 		return nil
 	}

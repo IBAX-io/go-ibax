@@ -55,9 +55,5 @@ func (m *VDESrcDataHash) GetAllByTaskUUID(TaskUUID string) ([]VDESrcDataHash, er
 }
 
 func (m *VDESrcDataHash) GetOneByTaskUUID(TaskUUID string) (*VDESrcDataHash, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
+	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
 }
-
-func (m *VDESrcDataHash) GetAllByChainState(ChainState int64) ([]VDESrcDataHash, error) {
-	result := make([]VDESrcDataHash, 0)

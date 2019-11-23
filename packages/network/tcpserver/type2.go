@@ -69,6 +69,8 @@ func Type2(rw io.ReadWriter) error {
 //	}
 //
 //	binaryData := r.Data
+//	// take the transactions from usual users but not nodes.
+//	_, _, decryptedBinData, err := DecryptData(&binaryData)
 //	if err != nil {
 //		return nil, utils.ErrInfo(err)
 //	}
@@ -126,15 +128,6 @@ func DecryptData(binaryTx *[]byte) ([]byte, []byte, []byte, error) {
 	log.WithFields(log.Fields{"encryptedKey": encryptedKey, "iv": iv}).Debug("binary tx encryptedKey and iv is")
 
 	if len(encryptedKey) == 0 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("binary tx encrypted key is empty")
-		return nil, nil, nil, utils.ErrInfo("len(encryptedKey) == 0")
-	}
-
-	if len(*binaryTx) == 0 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("binary tx is empty")
-		return nil, nil, nil, utils.ErrInfo("len(*binaryTx) == 0")
-	}
-
 	nodeKeyPrivate, _ := utils.GetNodeKeys()
 	if len(nodeKeyPrivate) == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")

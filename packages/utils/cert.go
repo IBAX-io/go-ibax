@@ -15,15 +15,6 @@ var (
 	errParseRootCert = errors.New("Failed to parse root certificate")
 )
 
-type Cert struct {
-	cert *x509.Certificate
-}
-
-func (c *Cert) Validate(pem []byte) error {
-	roots := x509.NewCertPool()
-	if ok := roots.AppendCertsFromPEM(pem); !ok {
-		return errParseRootCert
-	}
 
 	if _, err := c.cert.Verify(x509.VerifyOptions{Roots: roots}); err != nil {
 		return err
@@ -59,4 +50,13 @@ func parseCert(b []byte) (*x509.Certificate, error) {
 	}
 
 	return cert, nil
+}
+
+func ParseCert(b []byte) (c *Cert, err error) {
+	cert, err := parseCert(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Cert{cert}, nil
 }

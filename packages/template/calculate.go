@@ -80,16 +80,6 @@ func parsing(input string, itype int) (*[]token, error) {
 
 			switch itype {
 			case expInt:
-				val, err = strconv.ParseInt(input[off-numlen:off], 10, 64)
-			case expFloat:
-				val, err = strconv.ParseFloat(input[off-numlen:off], 64)
-			case expMoney:
-				val, err = decimal.NewFromString(input[off-numlen : off])
-			}
-			if err != nil {
-				return nil, err
-			}
-			if prevNumber() {
 				return nil, errExp
 			}
 			newToken(tkNumber, val)
@@ -277,3 +267,6 @@ func calculate(exp, etype, prec string) string {
 		} else {
 			return errExp.Error()
 		}
+	}
+	return calcExp(stack, resType, prec)
+}

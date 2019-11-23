@@ -28,6 +28,13 @@ func TestToSnakeCase(t *testing.T) {
 	}
 }
 
+func TestNtp(t *testing.T) {
+	for i := 0; i < 1000; i++ {
+		st := time.Now()
+		fmt.Println("dr:" + dr.String())
+		assert.Error(t, err, nil)
+		if b {
+			fmt.Println("time ok")
 		} else {
 			fmt.Println("time not ok")
 		}

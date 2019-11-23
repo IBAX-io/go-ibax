@@ -2,12 +2,17 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package contract
+
+package cmd
 
 import (
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/scheduler"
-	}
+	"time"
 
-	log.WithFields(log.Fields{"task": t.String(), "contract": ch.Contract}).Info("run contract task")
-}
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/daylight"
+
+	"github.com/spf13/cobra"
+)
+
+// startCmd is starting node
+var startCmd = &cobra.Command{
