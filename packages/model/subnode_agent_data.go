@@ -31,19 +31,23 @@ type SubNodeAgentData struct {
 }
 
 func (SubNodeAgentData) TableName() string {
+	return "subnode_agent_data"
+}
+
+func (m *SubNodeAgentData) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *SubNodeAgentData) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *SubNodeAgentData) Delete() error {
+	return DBConn.Delete(m).Error
+}
 
 func (m *SubNodeAgentData) GetAll() ([]SubNodeAgentData, error) {
 	var result []SubNodeAgentData
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *SubNodeAgentData) GetOneByID() (*SubNodeAgentData, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
-func (m *SubNodeAgentData) GetOneByDataUUID(DataUUID string) (*SubNodeAgentData, error) {
-	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
-	return m, err
 }
 func (m *SubNodeAgentData) GetOneByTaskUUID(TaskUUID string) (*SubNodeAgentData, error) {
 	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error

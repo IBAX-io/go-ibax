@@ -2,18 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-package block
-
-import (
-	"errors"
-	"fmt"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 
@@ -175,6 +163,21 @@ type ecosysLimit struct {
 	TxUsers map[int64]int // the counter of tx from one user in the ecosystem
 	Limit   int           // the value of max tx from one user in the ecosystem
 }
+
+type txUserEcosysLimit struct {
+	TxEcosys map[int64]ecosysLimit // the counter of tx from one user in ecosystems
+}
+
+func (bl *txUserEcosysLimit) init(b *Block) {
+	bl.TxEcosys = make(map[int64]ecosysLimit)
+}
+
+func (bl *txUserEcosysLimit) check(t *transaction.Transaction, mode int) error {
+	keyID := t.TxSmart.KeyID
+	ecosystemID := t.TxSmart.EcosystemID
+	if val, ok := bl.TxEcosys[ecosystemID]; ok {
+		if user, ok := val.TxUsers[keyID]; ok {
+			if user+1 > val.Limit && mode == letPreprocess {
 				return ErrLimitSkip
 			}
 			if user > val.Limit {
