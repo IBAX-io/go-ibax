@@ -1,8 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package types
 func NewFileFromMap(m map[string]interface{}) (f *Map, ok bool) {
 	var v interface{}
 	f = NewFile()

@@ -17,15 +17,16 @@ func TestAesEncryptAndDecrypt(t *testing.T) {
 	pass := []byte("This is my private data!")
 	fmt.Printf("password:%v\n", string(aeskey))
 	fmt.Printf("src data:%v\n", string(pass))
-
-	xpass, err := AesEncrypt(pass, aeskey)
+	bytesPass, err := base64.StdEncoding.DecodeString(pass64)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	pass64 := base64.StdEncoding.EncodeToString(xpass)
-	fmt.Printf("aes des:%v\n", pass64)
-
-	bytesPass, err := base64.StdEncoding.DecodeString(pass64)
+	tpass, err := AesDecrypt(bytesPass, aeskey)
 	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("aesdecrypt:%s\n", tpass)
+}

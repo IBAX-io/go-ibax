@@ -179,6 +179,7 @@ func VDESrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		//fmt.Println("Login OK!")
 
 		blockId, err := chain_api.VDEWaitTx(chain_apiAddress, gAuth_chain, string(item.TxHash))
+		if blockId > 0 {
 			item.ChainState = 1 //
 			item.ChainErr = err.Error()
 		} else {

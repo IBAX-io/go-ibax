@@ -2,4 +2,4 @@
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract RunOBS {
 	data {
-}
+		OBSName string

@@ -153,6 +153,21 @@ func concatKDF(hash hash.Hash, z, s1 []byte, kdLen int) (k []byte, err error) {
 	reps := ((kdLen + 7) * 8) / (hash.BlockSize() * 8)
 	if big.NewInt(int64(reps)).Cmp(big2To32M1) > 0 {
 		fmt.Println(big2To32M1)
+		return nil, ErrKeyDataTooLong
+	}
+
+	counter := []byte{0, 0, 0, 1}
+	k = make([]byte, 0)
+
+	for i := 0; i <= reps; i++ {
+		hash.Write(counter)
+		hash.Write(z)
+		hash.Write(s1)
+		k = append(k, hash.Sum(nil)...)
+		hash.Reset()
+		incCounter(counter)
+	}
+
 	k = k[:kdLen]
 	return
 }
@@ -329,15 +344,6 @@ func (prv *PrivateKey) Decrypt(c, s1, s2 []byte) (m []byte, err error) {
 
 	m, err = symDecrypt(params, Ke, c[mStart:mEnd])
 	return
-}
-
-//
-func ParamsFromCurve(curve elliptic.Curve) (params *ECIESParams) {
-	return paramsFromCurve[curve]
-}
-
-var paramsFromCurve = map[elliptic.Curve]*ECIESParams{
-	//ethcrypto.S256(): ECIES_AES128_SHA256,
 	elliptic.P256(): ECIES_AES128_SHA256,
 	elliptic.P384(): ECIES_AES256_SHA384,
 	elliptic.P521(): ECIES_AES256_SHA512,

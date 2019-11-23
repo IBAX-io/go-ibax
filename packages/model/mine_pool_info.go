@@ -32,6 +32,3 @@ func (m *MinePoolInfo) Get(id int64) (bool, error) {
 // GetAllMinePool is returning all pools
 func (m *MinePoolInfo) GetAllMinePoolInfos(dbt *DbTransaction) ([]MinePoolInfo, error) {
 	var pools []MinePoolInfo
-	err := GetDB(dbt).Table(m.TableName()).Find(&pools).Error
-	if err != nil {
-		return pools, err
