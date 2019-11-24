@@ -14,14 +14,18 @@ type StopDaemon struct {
 	StopTime int64 `gorm:"not null"`
 }
 
-
-// Get is retrieving model from database
-func (sd *StopDaemon) Get() (bool, error) {
-	return isFound(DBConn.First(sd))
+// TableName returns name of table
+func (sd *StopDaemon) TableName() string {
+	return "stop_daemons"
 }
 
-// SetStopNow is updating daemon stopping time to now
-func SetStopNow() error {
-	stopTime := &StopDaemon{StopTime: time.Now().Unix()}
-	return stopTime.Create()
+// Create is creating record of model
+func (sd *StopDaemon) Create() error {
+	return DBConn.Create(sd).Error
 }
+
+// Delete is deleting record
+func (sd *StopDaemon) Delete() error {
+	return DBConn.Delete(&StopDaemon{}).Error
+}
+
