@@ -1,0 +1,109 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract ImportUpload {
+    data {
+        Data file
+    }
+    conditions {
+        $Data = BytesToString($Data["Body"])
+        $limit = 10 // data piece size of import
+    }
+    action {
+        // init buffer_data, cleaning old buffer
+        var initJson map
+        $import_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "import", "ecosystem": $ecosystem_id}).One("id")
+        if $import_id {
+            $import_id = Int($import_id)
+            DBUpdate("@1buffer_data", $import_id, {"value": initJson})
+        } else {
+            $import_id = DBInsert("@1buffer_data", {"account": $account_id, "key": "import", "value": initJson, "ecosystem": $ecosystem_id})
+        }
+        $info_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "import_info", "ecosystem": $ecosystem_id}).One("id")
+        if $info_id {
+            $info_id = Int($info_id)
+            DBUpdate("@1buffer_data", $info_id, {"value": initJson})
+        } else {
+            $info_id = DBInsert("@1buffer_data", {"account": $account_id, "key": "import_info", "value": initJson, "ecosystem": $ecosystem_id})
+        }
+        var input map arrData array
+        input = JSONDecode($Data)
+        arrData = input["data"]
+        var pages_arr blocks_arr menu_arr parameters_arr languages_arr contracts_arr tables_arr array
+        // IMPORT INFO
+        var i lenArrData int item map
+        lenArrData = Len(arrData)
+        while i < lenArrData {
+            item = arrData[i]
+            if item["Type"] == "pages" {
+                pages_arr = Append(pages_arr, item["Name"])
+            } elif item["Type"] == "blocks" {
+                blocks_arr = Append(blocks_arr, item["Name"])
+            } elif item["Type"] == "menu" {
+                menu_arr = Append(menu_arr, item["Name"])
+            } elif item["Type"] == "app_params" {
+                parameters_arr = Append(parameters_arr, item["Name"])
+            } elif item["Type"] == "languages" {
+                languages_arr = Append(languages_arr, item["Name"])
+            } elif item["Type"] == "contracts" {
+                contracts_arr = Append(contracts_arr, item["Name"])
+            } elif item["Type"] == "tables" {
+                tables_arr = Append(tables_arr, item["Name"])
+            }
+            i = i + 1
+        }
+        var inf map
+        inf["app_name"] = input["name"]
+        inf["pages"] = Join(pages_arr, ", ")
+        inf["pages_count"] = Len(pages_arr)
+        inf["blocks"] = Join(blocks_arr, ", ")
+        inf["blocks_count"] = Len(blocks_arr)
+        inf["menu_count"] = Len(menu_arr)
+        inf["parameters"] = Join(parameters_arr, ", ")
+        inf["parameters_count"] = Len(parameters_arr)
+        inf["languages"] = Join(languages_arr, ", ")
+        inf["languages_count"] = Len(languages_arr)
+        inf["contracts"] = Join(contracts_arr, ", ")
+        inf["contracts_count"] = Len(contracts_arr)
+        inf["tables"] = Join(tables_arr, ", ")
+        inf["tables_count"] = Len(tables_arr)
+        if 0 == inf["pages_count"] + inf["blocks_count"] + inf["menu_count"] + inf["parameters_count"] + inf["languages_count"] + inf["contracts_count"] + inf["tables_count"] {
+            warning "Invalid or empty import file"
+        }
+        // IMPORT DATA
+        // the contracts is imported in one piece, the rest is cut under the $limit
+        var sliced contracts array
+        i = 0
+        while i < lenArrData {
+            var items array l int item map
+            while l < $limit && (i + l < lenArrData) {
+                item = arrData[i + l]
+                if item["Type"] == "contracts" {
+                    contracts = Append(contracts, item)
+                } else {
+                    items = Append(items, item)
+                }
+                l = l + 1
+            }
+            var batch map
+            batch["Data"] = JSONEncode(items)
+            sliced = Append(sliced, batch)
+            i = i + $limit
+        }
+        if Len(contracts) > 0 {
+            var batch map
+            batch["Data"] = JSONEncode(contracts)
+            sliced = Append(sliced, batch)
+        }
+        input["data"] = sliced
+        // storing
+        DBUpdate("@1buffer_data", $import_id, {"value": input})
+        DBUpdate("@1buffer_data", $info_id, {"value": inf})
+        var name string
+        name = Str(input["name"])
+        var cndns string
+        cndns = Str(input["conditions"])
+        if !DBFind("@1applications").Columns("id").Where({"name": name, "ecosystem": $ecosystem_id}).One("id") {
+            DBInsert("@1applications", {"name": name, "conditions": cndns, "ecosystem": $ecosystem_id})
+        }
+    }
+}
