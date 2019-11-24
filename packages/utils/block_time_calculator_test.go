@@ -170,6 +170,21 @@ func TestBlockTimeCalculator_ValidateBlock(t *testing.T) {
 		},
 	}
 
+	for _, c := range cases {
+		btc := NewBlockTimeCalculator(c.firstBlockTime,
+			c.blockGenTime,
+			c.blocksGap,
+			c.nodesCount,
+		)
+
+		execResult, execErr := btc.
+			setBlockCounter(c.blocksCounter).
+			ValidateBlock(c.nodePosition, c.time)
+
+		require.Equal(t, c.err, execErr)
+		assert.Equal(t, c.result, execResult)
+	}
+}
 
 func TestBlockTImeCalculator_countBlockTime(t *testing.T) {
 	cases := []struct {
@@ -364,13 +379,6 @@ func TestBlockTImeCalculator_countBlockTime(t *testing.T) {
 
 				nodePosition: 0,
 			},
-		},
-	}
-
-	for _, c := range cases {
-		btc := NewBlockTimeCalculator(c.firstBlockTime,
-			c.blockGenTime,
-			c.blocksGap,
 			c.nodesCount,
 		)
 

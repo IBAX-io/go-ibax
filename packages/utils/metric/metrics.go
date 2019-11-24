@@ -17,19 +17,6 @@ import (
 const (
 	metricEcosystemPages   = "ecosystem_pages"
 	metricEcosystemMembers = "ecosystem_members"
-	metricEcosystemTx      = "ecosystem_tx"
-)
-
-// CollectMetricDataForEcosystemTables returns metrics for some tables of ecosystems
-func CollectMetricDataForEcosystemTables(timeBlock int64) (metricValues []*Value, err error) {
-	stateIDs, _, err := model.GetAllSystemStatesIDs()
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get all system states ids")
-		return nil, err
-	}
-
-	now := time.Unix(timeBlock, 0)
-	unixDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local).Unix()
 
 	for _, stateID := range stateIDs {
 		var pagesCount, membersCount int64
@@ -41,6 +28,21 @@ func CollectMetricDataForEcosystemTables(timeBlock int64) (metricValues []*Value
 		if pagesCount, err = p.Count(); err != nil {
 			log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get count of pages")
 			return nil, err
+		}
+		metricValues = append(metricValues, &Value{
+			Time:   unixDate,
+			Metric: metricEcosystemPages,
+			Key:    tablePrefix,
+			Value:  pagesCount,
+		})
+
+		m := &model.Member{}
+		m.SetTablePrefix(tablePrefix)
+		if membersCount, err = m.Count(); err != nil {
+			log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get count of members")
+			return nil, err
+		}
+		metricValues = append(metricValues, &Value{
 			Time:   unixDate,
 			Metric: metricEcosystemMembers,
 			Key:    tablePrefix,

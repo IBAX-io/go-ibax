@@ -25,17 +25,23 @@ contract NewPage {
         return count
     }
 
+    conditions {
+        ValidateCondition($Conditions,$ecosystem_id)
+
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
+        }
+
+        if DBFind("pages").Columns("id").Where({name: $Name}).One("id") {
+            warning Sprintf( "Page %s already exists", $Name)
+        }
+
+        $ValidateCount = preparePageValidateCount($ValidateCount)
 
         if $ValidateMode {
             if $ValidateMode != "1" {
                 $ValidateMode = "0"
             }
-        }
-    }
-
-    action {
-        DBInsert("pages", {name: $Name,value: $Value, menu: $Menu,
-             validate_count:$ValidateCount,validate_mode: $ValidateMode,
              conditions: $Conditions,app_id: $ApplicationId})
     }
     func price() int {

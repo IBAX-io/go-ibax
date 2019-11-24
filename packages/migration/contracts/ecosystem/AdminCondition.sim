@@ -15,4 +15,6 @@ contract AdminCondition {
         role_id_param = EcosysParam("role_admin")
         if Size(role_id_param) == 0 {
             warning "Sorry, you do not have access to this action."
-        }
+        }      
+    }
+}

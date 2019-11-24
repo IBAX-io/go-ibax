@@ -21,8 +21,15 @@ func getHMAC(secret string, message string) ([]byte, error) {
 	switch hmacProv {
 	case _SHA256:
 		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write([]byte(message))
+		return mac.Sum(nil), nil
 	default:
 		return nil, ErrUnknownProvider
+	}
+}
+
+// GetHMACWithTimestamp allows add timestamp
+func GetHMACWithTimestamp(secret string, message string, timestamp string) ([]byte, error) {
 	}
 }
 

@@ -81,6 +81,16 @@ func TestParseRecipientNotifications(t *testing.T) {
 	}
 }
 
+func compareNotificationRecordResult(have, want map[int64]*[]notificationRecord) error {
+	for wRecipient, wRecords := range want {
+		hRecords, ok := have[wRecipient]
+		if !ok {
+			return fmt.Errorf("Have does'nt contains %d recipient", wRecipient)
+		}
+
+		for _, rec := range *wRecords {
+			if !containsNotificationRecord(*hRecords, rec) {
+				return fmt.Errorf("recipient %d does'nt contains %+v", wRecipient, rec)
 			}
 		}
 	}
@@ -202,12 +212,4 @@ func TestStatsChanged(t *testing.T) {
 
 			new:    nil,
 			result: true,
-		},
-	}
-
-	for i, record := range table {
-		if assert.Equal(t, record.result, statsChanged(record.old, record.new)) != true {
-			t.Errorf("step %d the result is not the expected", i)
-		}
-	}
 }
