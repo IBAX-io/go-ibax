@@ -47,17 +47,7 @@ func (ib *InfoBlock) Create(transaction *DbTransaction) error {
 	return GetDB(transaction).Omit("rollbacks_hash").Create(ib).Error
 }
 
-// MarkSent update model sent field
-func (ib *InfoBlock) MarkSent() error {
-	return DBConn.Model(ib).Update("sent", 1).Error
-}
-
-// UpdRollbackHash update model rollbacks_hash field
-func UpdRollbackHash(transaction *DbTransaction, hash []byte) error {
-	return GetDB(transaction).Model(&InfoBlock{}).Update("rollbacks_hash", hash).Error
-}
-
-// BlockGetUnsent returns InfoBlock
+	}
 	return ib, err
 }
 

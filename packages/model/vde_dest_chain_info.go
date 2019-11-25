@@ -11,7 +11,6 @@ type VDEDestChainInfo struct {
 	Comment             string `gorm:"not null" json:"comment"`
 
 	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
 func (m *VDEDestChainInfo) Delete() error {

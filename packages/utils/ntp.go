@@ -23,15 +23,19 @@ const (
 
 // durationSlice attaches the methods of sort.Interface to []time.Duration,
 // sorting in increasing order.
-	if drift < -driftThreshold || drift > driftThreshold {
-		return false, nil
+type durationSlice []time.Duration
+
+func (s durationSlice) Len() int           { return len(s) }
+func (s durationSlice) Less(i, j int) bool { return s[i] < s[j] }
+func (s durationSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+// checkClockDrift queries an NTP server for clock drifts and warns the user if
+// one large enough is detected.
+func CheckClockDrift() (bool, error) {
+	drift, err := sntpDrift(ntpChecks)
+	if err != nil {
+		return false, err
 	}
-
-	return true, nil
-}
-
-// sntpDrift does a naive time resolution against an NTP server and returns the
-// measured drift. This method uses the simple version of NTP. It's not precise
 // but should be fine for these purposes.
 //
 // Note, it executes two extra measurements compared to the number of requested

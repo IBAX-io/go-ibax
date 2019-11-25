@@ -28,6 +28,18 @@ func newTransaction(smartTx SmartContract, privateKey []byte, internal bool) (da
 	}
 
 	if data, err = msgpack.Marshal(smartTx); err != nil {
+		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Error("marshalling smart contract to msgpack")
+		return
+	}
+	hash = crypto.DoubleHash(data)
+	signature, err := crypto.Sign(privateKey, hash)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by node private key")
+		return
+	}
+
+	data = append(append([]byte{128}, converter.EncodeLengthPlusData(data)...), converter.EncodeLengthPlusData(signature)...)
+	return
 }
 
 func NewInternalTransaction(smartTx SmartContract, privateKey []byte) (data, hash []byte, err error) {
@@ -51,11 +63,6 @@ func CreateTransaction(data, hash []byte, keyID, tnow int64) error {
 	if err := tx.Create(nil); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating new transaction")
 		return err
-	}
-	return nil
-}
-
-// CreateDelayTransactionHighRate creates transaction
 func CreateDelayTransactionHighRate(data, hash []byte, keyID, highRate int64) *model.Transaction {
 
 	t := int8(highRate)

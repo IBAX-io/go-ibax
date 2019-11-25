@@ -80,6 +80,16 @@ func parsing(input string, itype int) (*[]token, error) {
 
 			switch itype {
 			case expInt:
+				val, err = strconv.ParseInt(input[off-numlen:off], 10, 64)
+			case expFloat:
+				val, err = strconv.ParseFloat(input[off-numlen:off], 64)
+			case expMoney:
+				val, err = decimal.NewFromString(input[off-numlen : off])
+			}
+			if err != nil {
+				return nil, err
+			}
+			if prevNumber() {
 				return nil, errExp
 			}
 			newToken(tkNumber, val)
@@ -171,19 +181,6 @@ func calcExp(tokens []token, resType int, prec string) string {
 				switch resType {
 				case expInt:
 					if stack[top].(int64) == 0 {
-						return errDiv.Error()
-					}
-				case expFloat:
-					if stack[top].(float64) == 0 {
-						return errDiv.Error()
-					}
-				case expMoney:
-					if stack[top].(decimal.Decimal).Cmp(decimal.New(0, 0)) == 0 {
-						return errDiv.Error()
-					}
-				}
-			}
-			funcs[item.Type][resType]()
 			stack = stack[:top]
 		}
 	}

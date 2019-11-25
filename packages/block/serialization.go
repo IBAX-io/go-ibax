@@ -57,12 +57,6 @@ func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockDa
 	buf.Write(converter.DecToBin(header.NodePosition, 1))
 	buf.Write(converter.EncodeLengthPlusData(prev.RollbacksHash))
 
-	// fill signature
-	buf.Write(converter.EncodeLengthPlusData(signed))
-
-	// data
-	buf.Write(blockDataTx)
-
 	return buf.Bytes(), nil
 }
 
@@ -83,6 +77,17 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 		transactionSize, err := converter.DecodeLengthBuf(blockBuffer)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("transaction size is 0")
+			return nil, fmt.Errorf("bad block format (%s)", err)
+		}
+		if blockBuffer.Len() < int(transactionSize) {
+			logger.WithFields(log.Fields{"size": blockBuffer.Len(), "match_size": int(transactionSize), "type": consts.SizeDoesNotMatch}).Error("transaction size does not matches encoded length")
+			return nil, fmt.Errorf("bad block format (transaction len is too big: %d)", transactionSize)
+		}
+
+		if transactionSize == 0 {
+			logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("transaction size is 0")
+			return nil, fmt.Errorf("transaction size is 0")
+		}
 
 		bufTransaction := bytes.NewBuffer(blockBuffer.Next(int(transactionSize)))
 		t, err := transaction.UnmarshallTransaction(bufTransaction, fillData)

@@ -123,16 +123,16 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 		Account:    account,
 		Ecosystems: keysList,
 	})
+}
+
+func (m Mode) getNotifications(ecosystemID int64, key *model.Key) ([]notifyInfo, error) {
+	notif, err := model.GetNotificationsCount(ecosystemID, []string{key.AccountID})
+	if err != nil {
+		return nil, err
+	}
+
 	list := make([]notifyInfo, 0)
 	for _, n := range notif {
 		if n.RecipientID != key.ID {
 			continue
-		}
-
-		list = append(list, notifyInfo{
-			RoleID: converter.Int64ToStr(n.RoleID),
-			Count:  n.Count,
-		})
-	}
-	return list, nil
 }
