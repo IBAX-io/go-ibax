@@ -1,0 +1,14 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract UpdateSysParam {
+     data {
+        Name string
+        Value string
+        Conditions string "optional"
+     }
+     conditions {
+         if !GetContractByName($Name){
+            warning "System parameter not found"
+         }
+     }
+     action {
