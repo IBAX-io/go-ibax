@@ -21,12 +21,6 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 	defer func() {
 		if err != nil {
 			err = MarkTransactionBad(dbTransaction, hs, err.Error())
-			if err != nil {
-				return
-			}
-		}
-	}()
-	for i := 0; i < len(qs); i++ {
 		binaryTx := qs[i].Data
 		hs = qs[i].Hash
 		tx := &Transaction{}
@@ -67,3 +61,10 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 		}
 	}
 	if len(hashes) > 0 {
+		errQTx := model.DeleteQueueTxs(dbTransaction, hashes)
+		if errQTx != nil {
+			return errQTx
+		}
+	}
+	return nil
+}

@@ -83,20 +83,6 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 				`DataUUID`:  {item.DataUUID},
 				`DataInfo`:  {item.DataInfo},
 				`Data`:      {item.Hash},
-			}
-
-			tran_mode := converter.Int64ToStr(item.TranMode)
-			chain_api.ApiPrivateFor = []string{
-				tran_mode,
-				//"1",
-				//node_pubkey,
-			}
-			node_pubkey_slice := strings.Split(item.SubNodeDestPubkey, ";")
-			chain_api.ApiPrivateFor = append(chain_api.ApiPrivateFor, node_pubkey_slice...)
-
-			ContractName := `@1SubNodeSrcHashCreate`
-			_, txHash, _, err = chain_api.VDEPostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
-			if err != nil {
 				fmt.Println("Send SubNodeSrcData to chain err: ", err)
 				log.WithFields(log.Fields{"error": err}).Error("Send SubNodeSrcData to chain!")
 				time.Sleep(time.Second * 5)
@@ -141,6 +127,18 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 					log.WithFields(log.Fields{"error": err}).Error("Send SubNodeSrcData to chain!")
 					time.Sleep(time.Second * 5)
 					continue
+				}
+				fmt.Println("Send chain Contract to run, ContractName:", ContractName)
+				item.ChainState = 1 //success
+				item.TxHash = txHash
+				item.BlockId = 0
+				item.ChainErr = ""
+			}
+		} else {
+			fmt.Println("TranMode err:", item.TranMode)
+			item.ChainState = 4 //not need uptochain
+			item.TxHash = ""
+			item.BlockId = 0
 			item.ChainErr = "TranMode err!"
 		}
 
