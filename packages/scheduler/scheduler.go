@@ -11,6 +11,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var scheduler *Scheduler
+
+func init() {
+	scheduler = NewScheduler()
+}
+
+// Scheduler represents wrapper over the cron library
+type Scheduler struct {
 	cron *cron.Cron
 }
 
@@ -32,15 +40,6 @@ func (s *Scheduler) UpdateTask(t *Task) error {
 	err := t.ParseCron()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("parse cron format")
-		return err
-	}
-
-	s.cron.Stop()
-	defer s.cron.Start()
-
-	entries := s.cron.Entries()
-	for _, entry := range entries {
-		task := entry.Schedule.(*Task)
 		if task.ID == t.ID {
 			*task = *t
 			log.WithFields(log.Fields{"task": t.String()}).Info("task updated")

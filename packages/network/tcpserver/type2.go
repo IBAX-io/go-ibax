@@ -35,22 +35,6 @@ func Type2(rw io.ReadWriter) error {
 	if err != nil {
 		return err
 	}
-	var rtxs []*model.RawTx
-	for _, tran := range txs {
-		if int64(len(tran)) > syspar.GetMaxTxSize() {
-			log.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_tx_size": syspar.GetMaxTxSize(), "current_size": len(tran)}).Error("transaction size exceeds max size")
-			return utils.ErrInfo("len(txBinData) > max_tx_size")
-		}
-
-		if tran == nil {
-			log.WithFields(log.Fields{"type": consts.ParameterExceeded, "mx_tx_size": syspar.GetMaxTxSize(), "info": "tran nil", "current_size": len(tran)}).Error("transaction size nil")
-			continue
-		}
-
-		rtx := &transaction.RawTransaction{}
-		if err = rtx.Processing(tran); err != nil {
-			return err
-		}
 		rtxs = append(rtxs, rtx.SetRawTx())
 	}
 
@@ -128,6 +112,15 @@ func DecryptData(binaryTx *[]byte) ([]byte, []byte, []byte, error) {
 	log.WithFields(log.Fields{"encryptedKey": encryptedKey, "iv": iv}).Debug("binary tx encryptedKey and iv is")
 
 	if len(encryptedKey) == 0 {
+		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("binary tx encrypted key is empty")
+		return nil, nil, nil, utils.ErrInfo("len(encryptedKey) == 0")
+	}
+
+	if len(*binaryTx) == 0 {
+		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("binary tx is empty")
+		return nil, nil, nil, utils.ErrInfo("len(*binaryTx) == 0")
+	}
+
 	nodeKeyPrivate, _ := utils.GetNodeKeys()
 	if len(nodeKeyPrivate) == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")

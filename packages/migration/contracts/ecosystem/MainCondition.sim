@@ -1,0 +1,7 @@
+// +prop AppID = '{{.AppID}}'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract MainCondition {
+	conditions {
+		}
+	}
+}

@@ -18,16 +18,6 @@ type BlockID struct {
 
 var MihPrefix = "blockid-"
 
-//marshal
-func (b *BlockID) Marshal() ([]byte, error) {
-	if res, err := msgpack.Marshal(b); err != nil {
-		return nil, err
-	} else {
-		return res, err
-	}
-}
-
-//unmarshal
 func (b *BlockID) Unmarshal(bt []byte) error {
 	if err := msgpack.Unmarshal(bt, &b); err != nil {
 		return err
@@ -37,6 +27,15 @@ func (b *BlockID) Unmarshal(bt []byte) error {
 
 //Get by name
 func (b *BlockID) GetbyName(name string) (bool, error) {
+	rp := &RedisParams{
+		Key: MihPrefix + name,
+	}
+	if err := rp.Getdb1(); err != nil {
+		return false, err
+	}
+	if err := b.Unmarshal([]byte(rp.Value)); err != nil {
+		return false, err
+	}
 	return true, nil
 }
 

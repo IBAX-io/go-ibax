@@ -12,11 +12,6 @@ contract EditPage {
     func onlyConditions() bool {
         return $Conditions && !$Value && !$Menu && !$ValidateCount 
     }
-    func preparePageValidateCount(count int) int {
-        var min, max int
-        min = Int(EcosysParam("min_page_validate_count"))
-        max = Int(EcosysParam("max_page_validate_count"))
-        if count < min {
             count = min
         } else {
             if count > max {
@@ -30,6 +25,17 @@ contract EditPage {
         RowConditions("pages", $Id, onlyConditions())
         if $Conditions {
             ValidateCondition($Conditions, $ecosystem_id)
+        }
+        $ValidateCount = preparePageValidateCount($ValidateCount)
+    }
+
+    action {
+        var pars map
+        if $Value {
+            pars["value"] = $Value
+        }
+        if $Menu {
+            pars["menu"] = $Menu
         }
         if $Conditions {
             pars["conditions"] = $Conditions
