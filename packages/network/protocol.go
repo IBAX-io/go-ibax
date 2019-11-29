@@ -313,6 +313,10 @@ func ReadSliceWithMaxSize(r io.Reader, maxSize uint64) ([]byte, error) {
 	if size > maxSize {
 		return nil, ErrMaxSize
 	}
+
+	data := make([]byte, size)
+	if _, err := io.ReadFull(r, data); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on reading block body")
 		return nil, err
 	}
 
@@ -1057,16 +1061,6 @@ func (req *SubNodeAgentDataRequest) Write(w io.Writer) error {
 
 	err = writeSlice(w, []byte(req.DataUUID))
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on sending DataUUID request")
-		return err
-	}
-
-	err = writeSlice(w, []byte(req.AgentMode))
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on sending AgentMode request")
-		return err
-	}
-
 	err = writeSlice(w, []byte(req.TranMode))
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on sending TranMode request")

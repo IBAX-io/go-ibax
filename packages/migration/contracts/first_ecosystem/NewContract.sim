@@ -19,8 +19,6 @@ contract NewContract {
 
         if !$contract_name {
             error "must be the name"
-        }
-
         if !$TokenEcosystem {
             $TokenEcosystem = 1
         } else {
@@ -31,3 +29,9 @@ contract NewContract {
     }
 
     action {
+        $result = CreateContract($contract_name, $Value, $Conditions, $TokenEcosystem, $ApplicationId)
+    }
+    func price() int {
+        return SysParamInt("contract_price")
+    }
+}

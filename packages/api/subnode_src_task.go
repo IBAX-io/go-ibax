@@ -6,6 +6,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -17,42 +18,56 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func unmarshalColumnVDESrcTaskAuth(form *VDESrcTaskAuthForm) (*model.VDESrcTaskAuth, error) {
+func unmarshalColumnSubNodeSrcTask(form *SubNodeSrcTaskForm) (*model.SubNodeSrcTask, error) {
 	var (
-		err error
+		parms          map[string]interface{}
+		task_run_parms map[string]interface{}
+		err            error
 	)
 
-	m := &model.VDESrcTaskAuth{
-		TaskUUID:             form.TaskUUID,
-		Comment:              form.Comment,
-		VDEPubKey:            form.VDEPubKey,
-		ContractRunHttp:      form.ContractRunHttp,
-		ContractRunEcosystem: form.ContractRunEcosystem,
-		ChainState:           form.ChainState,
+	err = json.Unmarshal([]byte(form.Parms), &parms)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("unmarshal Parms error")
+		return nil, err
+	}
+	err = json.Unmarshal([]byte(form.TaskRunParms), &task_run_parms)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("unmarshal TaskRunParms error")
+		return nil, err
+	}
+	//fmt.Println("TaskType,TaskState:", form.TaskType, int64(form.TaskType), form.TaskState, int64(form.TaskState))
+
+		TaskRunParms: converter.MarshalJson(task_run_parms),
+		//TaskRunState:    int64(form.TaskRunState),
+		//TaskRunStateErr: form.TaskRunStateErr,
+
+		//TxHash:     form.TxHash,
+		//ChainState: int64(form.ChainState),
+		//BlockId:    int64(form.BlockId),
+		//ChainId:    int64(form.ChainId),
+		//ChainErr:   form.ChainErr,
 	}
 
 	return m, err
 }
 
-func VDESrcTaskAuthCreateHandlre(w http.ResponseWriter, r *http.Request) {
+func SubNodeSrcTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
 	)
 	logger := getLogger(r)
-	form := &VDESrcTaskAuthForm{}
+	form := &SubNodeSrcTaskForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
-	m := &model.VDESrcTaskAuth{}
-	if m, err = unmarshalColumnVDESrcTaskAuth(form); err != nil {
+	m := &model.SubNodeSrcTask{}
+	if m, err = unmarshalColumnSubNodeSrcTask(form); err != nil {
 		fmt.Println(err)
 		errorResponse(w, err)
 		return
 	}
-
 	m.CreateTime = time.Now().Unix()
-
 	if err = m.Create(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
@@ -62,7 +77,7 @@ func VDESrcTaskAuthCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, *m)
 }
 
-func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
+func SubNodeSrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
 	)
@@ -70,19 +85,20 @@ func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
-	form := &VDESrcTaskAuthForm{}
+	form := &SubNodeSrcTaskForm{}
 
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)
 		return
 	}
 
-	m := &model.VDESrcTaskAuth{}
+	m := &model.SubNodeSrcTask{}
 
-	if m, err = unmarshalColumnVDESrcTaskAuth(form); err != nil {
+	if m, err = unmarshalColumnSubNodeSrcTask(form); err != nil {
 		errorResponse(w, err)
 		return
 	}
+	//fmt.Println("====m.TaskState,m.TaskType:", m.TaskState, m.TaskType)
 
 	m.ID = id
 	m.UpdateTime = time.Now().Unix()
@@ -100,12 +116,12 @@ func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, result)
 }
 
-func VDESrcTaskAuthDeleteHandlre(w http.ResponseWriter, r *http.Request) {
+func SubNodeSrcTaskDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 	id := converter.StrToInt64(params["id"])
 
-	m := &model.VDESrcTaskAuth{}
+	m := &model.SubNodeSrcTask{}
 	m.ID = id
 	if err := m.Delete(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
@@ -114,9 +130,9 @@ func VDESrcTaskAuthDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, "ok")
 }
 
-func VDESrcTaskAuthListHandlre(w http.ResponseWriter, r *http.Request) {
+func SubNodeSrcTaskListHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
-	srcData := model.VDESrcTaskAuth{}
+	srcData := model.SubNodeSrcTask{}
 
 	result, err := srcData.GetAll()
 	if err != nil {
@@ -127,33 +143,31 @@ func VDESrcTaskAuthListHandlre(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, result)
 }
 
-func VDESrcTaskAuthByIDHandlre(w http.ResponseWriter, r *http.Request) {
+func SubNodeSrcTaskByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
-	srcData := model.VDESrcTaskAuth{}
+	srcData := model.SubNodeSrcTask{}
 	srcData.ID = id
 	result, err := srcData.GetOneByID()
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
+		logger.WithFields(log.Fields{"error": err}).Error("The query task data by ID failed")
 		errorResponse(w, err)
 		return
 	}
 
 	jsonResponse(w, result)
-
-	jsonResponse(w, result)
 }
 
-func VDESrcTaskAuthByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
+func SubNodeSrcTaskByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
-	srcData := model.VDESrcTaskAuth{}
-	result, err := srcData.GetOneByTaskUUID(params["taskuuid"])
+	srcData := model.SubNodeSrcTask{}
+	result, err := srcData.GetAllByTaskUUID(params["taskuuid"])
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query task auth data by TaskUUID failed")
+		logger.WithFields(log.Fields{"error": err}).Error("The query task data by TaskUUID failed")
 		errorResponse(w, err)
 		return
 	}
