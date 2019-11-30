@@ -25,6 +25,13 @@ var configCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		// Error omitted because we have default flag value
 		configPath, _ := cmd.Flags().GetString("path")
+
+		err := conf.FillRuntimePaths()
+		if err != nil {
+			log.WithError(err).Fatal("Filling config")
+		}
+
+		if configPath == "" {
 			configPath = filepath.Join(conf.Config.DataDir, consts.DefaultConfigFile)
 		}
 		err = viper.Unmarshal(&conf.Config)
@@ -131,24 +138,6 @@ func init() {
 	configCmd.Flags().StringVar(&conf.Config.TokenMovement.Subject, "tmovSubj", "", "Token movement subject")
 	viper.BindPFlag("TokenMovement.Host", configCmd.Flags().Lookup("tmovHost"))
 	viper.BindPFlag("TokenMovement.Port", configCmd.Flags().Lookup("tmovPort"))
-	viper.BindPFlag("TokenMovement.Username", configCmd.Flags().Lookup("tmovUser"))
-	viper.BindPFlag("TokenMovement.Password", configCmd.Flags().Lookup("tmovPw"))
-	viper.BindPFlag("TokenMovement.To", configCmd.Flags().Lookup("tmovTo"))
-	viper.BindPFlag("TokenMovement.From", configCmd.Flags().Lookup("tmovFrom"))
-	viper.BindPFlag("TokenMovement.Subject", configCmd.Flags().Lookup("tmovSubj"))
-
-	configCmd.Flags().IntVar(&conf.Config.BanKey.BadTime, "badTime", 5, "Period for bad tx (minutes)")
-	configCmd.Flags().IntVar(&conf.Config.BanKey.BanTime, "banTime", 15, "Ban time in minutes")
-	configCmd.Flags().IntVar(&conf.Config.BanKey.BadTx, "badTx", 3, "Maximum bad tx during badTime minutes")
-	viper.BindPFlag("BanKey.BadTime", configCmd.Flags().Lookup("badTime"))
-	viper.BindPFlag("BanKey.BanTime", configCmd.Flags().Lookup("banTime"))
-	viper.BindPFlag("BanKey.BadTx", configCmd.Flags().Lookup("badTx"))
-
-	// Etc
-	configCmd.Flags().StringVar(&conf.Config.PidFilePath, "pid", "",
-		fmt.Sprintf("ibax pid file name (default dataDir/%s)", consts.DefaultPidFilename),
-	)
-	configCmd.Flags().StringVar(&conf.Config.LockFilePath, "lock", "",
 		fmt.Sprintf("ibax lock file name (default dataDir/%s)", consts.DefaultLockFilename),
 	)
 	configCmd.Flags().StringVar(&conf.Config.KeysDir, "keysDir", "", "Keys directory (default dataDir)")

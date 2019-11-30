@@ -163,18 +163,6 @@ func TestStatsChanged(t *testing.T) {
 			new: []notificationRecord{
 				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 2}, //records count changed
-				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
-			},
-			result: true,
-		},
-		// not changed
-		tsc{
-			old: []notificationRecord{
-				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
-				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
-				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
-			},
-
 			new: []notificationRecord{
 				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
@@ -212,4 +200,12 @@ func TestStatsChanged(t *testing.T) {
 
 			new:    nil,
 			result: true,
+		},
+	}
+
+	for i, record := range table {
+		if assert.Equal(t, record.result, statsChanged(record.old, record.new)) != true {
+			t.Errorf("step %d the result is not the expected", i)
+		}
+	}
 }

@@ -8,9 +8,14 @@ package api
 import (
 	stdErrors "errors"
 	"testing"
-)
+		return
+	}
 
-func TestHistory(t *testing.T) {
+	var ret historyResult
+	err := sendGet("history/pages/1", nil, &ret)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 	if len(ret.List) == 0 {
 		t.Error(stdErrors.New("History should not be empty"))

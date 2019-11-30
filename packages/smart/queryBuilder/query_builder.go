@@ -227,17 +227,6 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, e
 			initial = colname
 		} else {
 			initial = `'{}'`
-		}
-
-		expressions = append(expressions, fmt.Sprintf(`%s=%s::jsonb || '%s'::jsonb`, colname, initial, string(out)))
-	}
-
-	return strings.Join(expressions, ","), nil
-}
-
-func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, error) {
-	if err := b.Prepare(); err != nil {
-		return "", err
 	}
 
 	isID := false
@@ -413,6 +402,22 @@ func toSQLField(rawField string) string {
 func wrapString(raw, wrapper string) string {
 	return wrapper + raw + wrapper
 }
+
+func escapeSingleQuotes(val string) string {
+	return strings.Replace(val, `'`, `''`, -1)
+}
+
+// CheckNow allows check if the content contains postgres NOW()
+func CheckNow(inputs ...string) error {
+	for _, item := range inputs {
+		if checkNowRE.Match([]byte(strings.ToLower(item))) {
+			return ErrNow
+		}
+	}
+	return nil
+}
+
+func getFieldIndex(fields []string, name string) int {
 	for i, v := range fields {
 		if strings.ToLower(v) == name {
 			return i
