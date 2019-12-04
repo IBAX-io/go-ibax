@@ -1,0 +1,53 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package consts
+
+// LogEventType is storing numeric event type
+type LogEventType int
+
+// Types of log errors
+const (
+	NetworkError             = "Network"
+	JSONMarshallError        = "JSONMarshall"
+	JSONUnmarshallError      = "JSONUnmarshall"
+	CommandExecutionError    = "CommandExecution"
+	ConversionError          = "Conversion"
+	TypeError                = "Type"
+	ProtocolError            = "Protocol"
+	MarshallingError         = "Marshall"
+	UnmarshallingError       = "Unmarshall"
+	ParseError               = "Parse"
+	IOError                  = "IO"
+	CryptoError              = "Crypto"
+	ContractError            = "Contract"
+	DBError                  = "DB"
+	PanicRecoveredError      = "Panic"
+	ParameterExceeded        = "ParameterExceeded"
+	DivisionByZero           = "DivisionByZero"
+	EvalError                = "Eval"
+	JWTError                 = "JWT"
+	AccessDenied             = "AccessDenied"
+	SizeDoesNotMatch         = "SizeDoesNotMatch"
+	NoIndex                  = "NoIndex"
+	NoFunds                  = "NoFunds"
+	BlockIsFirst             = "BlockIsFirst"
+	IncorrectCallingContract = "IncorrectCallingContract"
+	WritingFile              = "WritingFile"
+	CentrifugoError          = "CentrifugoError"
+	StatsdError              = "StatsdError"
+	MigrationError           = "MigrationError"
+	AutoupdateError          = "AutoupdateError"
+	BCRelevanceError         = "BCRelevanceError"
+	BCActualizationError     = "BCActualizationError"
+	SchedulerError           = "SchedulerError"
+	SyncProcess              = "SyncProcess"
+	WrongModeError           = "WrongModeError"
+	OBSManagerError          = "OBSManagerError"
+	TCPClientError           = "TCPClientError"
+	BadTxError               = "BadTxError"
+	TimeCalcError            = "BlockTimeCounterError"
+	RegisterError            = "RegisterError"
+)

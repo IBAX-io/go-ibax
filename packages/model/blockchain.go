@@ -95,6 +95,16 @@ func (b *Block) GetReverseBlockchain(endBlockID int64, limit int) ([]Block, erro
 	var err error
 	blockchain := new([]Block)
 	err = DBConn.Model(&Block{}).Order("id DESC").Where("id <= ?", endBlockID).Limit(limit).Find(&blockchain).Error
+	return *blockchain, err
+}
+
+// GetNodeBlocksAtTime returns records of blocks for time interval and position of node
+func (b *Block) GetNodeBlocksAtTime(from, to time.Time, node int64) ([]Block, error) {
+	var err error
+	blockchain := new([]Block)
+	err = DBConn.Model(&Block{}).Where("node_position = ? AND time BETWEEN ? AND ?", node, from.Unix(), to.Unix()).Find(&blockchain).Error
+	return *blockchain, err
+}
 
 // DeleteById is deleting block by ID
 func (b *Block) DeleteById(transaction *DbTransaction, id int64) error {
@@ -105,14 +115,3 @@ func GetTxCount() (int64, error) {
 	var txCount int64
 	row := DBConn.Raw("SELECT SUM(tx) tx_count FROM block_chain").Select("tx_count").Row()
 	err := row.Scan(&txCount)
-
-	return txCount, err
-}
-
-func GetBlockCountByNode(NodePosition int64) (int64, error) {
-	var BlockCount int64
-	row := DBConn.Raw("SELECT count(*) block_count FROM block_chain where node_Position = ?", NodePosition).Select("block_count").Row()
-	err := row.Scan(&BlockCount)
-
-	return BlockCount, err
-}
