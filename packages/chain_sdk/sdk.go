@@ -259,23 +259,6 @@ func postTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPrivat
 		value := form.Get(name)
 
 		if len(value) == 0 {
-			continue
-		}
-
-		switch field.Type {
-		case "bool":
-			params[name], err = strconv.ParseBool(value)
-		case "int":
-			params[name], err = strconv.ParseInt(value, 10, 64)
-		case "float":
-			params[name], err = strconv.ParseFloat(value, 64)
-		case "string", "money":
-			params[name] = value
-		case "file", "bytes":
-			if cp, ok := form.(*contractParams); !ok {
-				err = fmt.Errorf("Form is not *contractParams type")
-			} else {
-				params[name] = cp.GetRaw(name)
 			}
 		}
 
@@ -409,6 +392,14 @@ func sendMultipart(ApiAddress string, gAuth string, url string, files map[string
 		req.Header.Set("Authorization", jwtPrefix+gAuth)
 	}
 
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}

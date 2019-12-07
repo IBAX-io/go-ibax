@@ -27,17 +27,12 @@ func PrepareWhere(where string) string {
 		if len(slice) != 4 {
 			continue
 		}
-		if i < len(whereSlice)-1 && slice[1] == whereSlice[i+1][0] {
-			colsWhere := []string{where[slice[2]:slice[3]]}
-			from := slice[0]
-			for i < len(whereSlice)-1 && slice[1] == whereSlice[i+1][0] {
-				i++
-				slice = whereSlice[i]
-				if len(slice) != 4 {
-					break
-				}
-				colsWhere = append(colsWhere, where[slice[2]:slice[3]])
-			}
+			out += fmt.Sprintf(`%s::jsonb#>>'{%s}'`, where[startWhere:from], strings.Join(colsWhere, `,`))
+			startWhere = slice[3]
+		} else {
+			out += fmt.Sprintf(`%s->>'%s'`, where[startWhere:slice[0]], where[slice[2]:slice[3]])
+			startWhere = slice[3]
+		}
 	}
 	if len(out) > 0 {
 		return out + where[startWhere:]

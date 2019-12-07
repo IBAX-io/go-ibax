@@ -2,6 +2,13 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+package consts
+
+import (
+	"reflect"
+)
+
 // BlockHeader is a structure of the block header
 type BlockHeader struct {
 	Type     byte
@@ -46,16 +53,6 @@ func init() {
 	}
 
 	for _, item := range list {
-		blockStructs[reflect.TypeOf(item).Name()] = reflect.TypeOf(item)
-	}
-}
-
-// MakeStruct is only used for FirstBlock now
-func MakeStruct(name string) interface{} {
-	v := reflect.New(blockStructs[name]) //.Elem()
-	return v.Interface()
-}
-
 // IsStruct is only used for FirstBlock now
 func IsStruct(tx int64) bool {
 	return tx == TxTypeFirstBlock || tx == TxTypeStopNetwork

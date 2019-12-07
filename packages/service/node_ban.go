@@ -6,6 +6,19 @@ package service
 
 import (
 	"bytes"
+	"sync"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/utils/tx"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+)
 
 type localBannedNode struct {
 	HonorNode      *syspar.HonorNode
@@ -165,11 +178,6 @@ func (nbs *NodesBanService) FilterHosts(hosts []string) ([]string, []string, err
 	for _, h := range hosts {
 		n, err := syspar.GetNodeByHost(h)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err, "host": h}).Error("getting node by host")
-			return nil, nil, err
-		}
-
-		if nbs.IsBanned(n) {
 			banHosts = append(banHosts, n.TCPAddress)
 		} else {
 			goodHosts = append(goodHosts, n.TCPAddress)

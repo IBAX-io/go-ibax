@@ -13,10 +13,18 @@ import (
 
 func TestAppContent(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
-		t.Error("incorrect contracts count")
+
+	var ret appContentResult
+	err := sendGet(`appcontent/1`, nil, &ret)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 
-	if len(ret.Pages) == 0 {
-		t.Error("incorrent pages count")
+	if len(ret.Blocks) == 0 {
+		t.Error("incorrect blocks count")
 	}
-}
+
+	if len(ret.Contracts) == 0 {
+		t.Error("incorrect contracts count")
+	}

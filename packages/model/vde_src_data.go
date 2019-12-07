@@ -43,6 +43,15 @@ func (m *VDESrcData) GetOneByID() (*VDESrcData, error) {
 	return m, err
 }
 
+func (m *VDESrcData) GetOneByDataUUID(DataUUID string) (*VDESrcData, error) {
+	err := DBConn.Where("data_uuid = ?", DataUUID).First(&m).Error
+	return m, err
+}
+func (m *VDESrcData) GetAllByTaskUUID(TaskUUID string) ([]VDESrcData, error) {
+	result := make([]VDESrcData, 0)
+	err := DBConn.Table("vde_src_data").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	return result, err
+}
 
 func (m *VDESrcData) GetAllByDataStatus(DataStatus int64) ([]VDESrcData, error) {
 	result := make([]VDESrcData, 0)
@@ -52,4 +61,3 @@ func (m *VDESrcData) GetAllByDataStatus(DataStatus int64) ([]VDESrcData, error) 
 
 func (m *VDESrcData) GetOneByDataStatus(DataStatus int64) (bool, error) {
 	return isFound(DBConn.Where("data_state = ?", DataStatus).First(m))
-}
