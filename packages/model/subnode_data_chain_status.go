@@ -33,14 +33,10 @@ func (SubNodeSrcDataChainStatus) TableName() string {
 	return "subnode_src_data_chain_status"
 }
 
-func (m *SubNodeSrcDataChainStatus) Create() error {
-	return DBConn.Create(&m).Error
 }
-
-func (m *SubNodeSrcDataChainStatus) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
-
+func (m *SubNodeSrcDataChainStatus) GetOneByID() (*SubNodeSrcDataChainStatus, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
 }
 
 func (m *SubNodeSrcDataChainStatus) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcDataChainStatus, error) {

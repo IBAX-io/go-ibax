@@ -3,6 +3,16 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -188,11 +198,6 @@ type VDEDestDataStatusList struct {
 //		CreateTime       int64  `json:"create_time"`
 //	} `json:"list"`
 //}
-
-func VDEDestDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err            error
-		DataStatusList VDEDestDataStatusList
 	)
 
 	logger := getLogger(r)
