@@ -1,17 +1,14 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract EditPage {
-    data {
-        Id int
-        Value string "optional"
-        Menu string "optional"
-        Conditions string "optional"
-        ValidateCount int "optional"
-        ValidateMode string "optional"
-    }
     func onlyConditions() bool {
         return $Conditions && !$Value && !$Menu && !$ValidateCount 
     }
+    func preparePageValidateCount(count int) int {
+        var min, max int
+        min = Int(EcosysParam("min_page_validate_count"))
+        max = Int(EcosysParam("max_page_validate_count"))
+        if count < min {
             count = min
         } else {
             if count > max {

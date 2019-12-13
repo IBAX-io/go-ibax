@@ -1,13 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package cmd
-
-import (
-	"encoding/hex"
-	"os"
 	"path/filepath"
 	"strconv"
 
@@ -85,3 +77,4 @@ func createKeyPair(privFilename, pubFilename string) (priv, pub []byte, err erro
 		return
 	}
 	return
+}
