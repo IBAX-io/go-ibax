@@ -1,6 +1,14 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract EditPage {
+    data {
+        Id int
+        Value string "optional"
+        Menu string "optional"
+        Conditions string "optional"
+        ValidateCount int "optional"
+        ValidateMode string "optional"
+    }
     func onlyConditions() bool {
         return $Conditions && !$Value && !$Menu && !$ValidateCount 
     }
@@ -47,7 +55,3 @@ contract EditPage {
             pars["validate_mode"] = $ValidateMode
         }
         if pars {
-            DBUpdate("pages", $Id, pars)
-        }
-    }
-}

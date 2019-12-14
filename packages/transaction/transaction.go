@@ -1,15 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package transaction
-
-import (
-	"bytes"
-	"encoding/hex"
-	"fmt"
-	"math/rand"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -450,6 +439,16 @@ func (t *Transaction) CallOBSContract() (resultContract string, flushRollback []
 // CleanCache cleans cache of transaction parsers
 func CleanCache() {
 	txCache.Clean()
+}
+
+// GetTxTypeAndUserID returns tx type, wallet and citizen id from the block data
+func GetTxTypeAndUserID(binaryBlock []byte) (txType int64, keyID int64) {
+	tmp := binaryBlock[:]
+	txType = converter.BinToDecBytesShift(&binaryBlock, 1)
+	if consts.IsStruct(txType) {
+		var txHead consts.TxHeader
+		converter.BinUnmarshal(&tmp, &txHead)
+		keyID = txHead.KeyID
 	}
 	return
 }

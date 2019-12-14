@@ -7,11 +7,17 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/smart"
-func getTestHandler(w http.ResponseWriter, r *http.Request) {
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+)
+
+func getTxRecord(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	jsonResponse(w, &getTestResult{
-		Value: smart.GetTestValue(params["name"]),
-	})
+		}
+	}
+	jsonResponse(w, &resultList)
+	return
 }

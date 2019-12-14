@@ -42,9 +42,8 @@ contract NewPage {
             if $ValidateMode != "1" {
                 $ValidateMode = "0"
             }
-             conditions: $Conditions,app_id: $ApplicationId})
+        }
     }
-    func price() int {
-        return SysParamInt("page_price")
-    }
-}
+
+    action {
+        DBInsert("pages", {name: $Name,value: $Value, menu: $Menu,
