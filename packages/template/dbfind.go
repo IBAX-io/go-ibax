@@ -156,6 +156,15 @@ main:
 				if mapMode {
 					ret.(*types.Map).Set(key, val)
 					key = ``
+				} else {
+					if len(key) > 0 {
+						ret = append(ret.([]interface{}), types.LoadMap(map[string]interface{}{key: val}))
+						key = ``
+					} else {
+						ret = append(ret.([]interface{}), val)
+					}
+				}
+			}
 			start = i + 1
 		}
 		if ch != ' ' {
@@ -186,11 +195,6 @@ main:
 		if v.Size() == 0 {
 			ret = ``
 		}
-	case map[string]interface{}:
-		if len(v) == 0 {
-			ret = ``
-		}
-	case []interface{}:
 		if len(v) == 0 {
 			ret = ``
 		}

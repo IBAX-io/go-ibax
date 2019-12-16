@@ -145,25 +145,20 @@ func txHandler(r *http.Request, txData []byte, m Mode) (string, error) {
 	if err != nil {
 		return "", err
 	}
-		logger.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_size": syspar.GetMaxTxSize(), "size": len(txData)}).Error("transaction size exceeds max size")
-		block.BadTxForBan(client.KeyID)
-		return nil, errLimitTxSize.Errorf(len(txData))
-	}
-
-	hash, err := m.ClientTxProcessor.ProcessClientTxBatches(txData, client.KeyID, logger)
-	if err != nil {
-		return nil, err
-	}
 
 	return hash, nil
 }
 
-func txSignHandler(r *http.Request, keyid int64, txData []byte, m Mode) (string, error) {
+func txHandlerBatches(r *http.Request, m Mode, mtx map[string][]byte) ([]string, error) {
+	client := getClient(r)
 	logger := getLogger(r)
-
+	var txData [][]byte
+	for _, datum := range mtx {
+		txData = append(txData, datum)
+	}
 	if int64(len(txData)) > syspar.GetMaxTxSize() {
 		logger.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_size": syspar.GetMaxTxSize(), "size": len(txData)}).Error("transaction size exceeds max size")
-		block.BadTxForBan(keyid)
+		block.BadTxForBan(client.KeyID)
 		return "", errLimitTxSize.Errorf(len(txData))
 	}
 

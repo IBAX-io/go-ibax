@@ -554,6 +554,12 @@ func fAssignVar(buf *[]*Block, state int, lexem *Lexem) error {
 	}
 	prev = append(prev, &ivar)
 	if len(prev) == 1 {
+		(*(*buf)[len(*buf)-1]).Code = append((*block).Code, &ByteCode{cmdAssignVar, lexem.Line, prev})
+	} else {
+		(*(*buf)[len(*buf)-1]).Code[len(block.Code)-1] = &ByteCode{cmdAssignVar, lexem.Line, prev}
+	}
+	return nil
+}
 
 func fAssign(buf *[]*Block, state int, lexem *Lexem) error {
 	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, &ByteCode{cmdAssign, lexem.Line, 0})
@@ -1246,17 +1252,6 @@ main:
 				if len(buffer) == 0 {
 					logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("there is not pair")
 					return fmt.Errorf(`there is not pair`)
-				}
-				prev := buffer[len(buffer)-1]
-				buffer = buffer[:len(buffer)-1]
-				if prev.Value.(uint16) == 0xff {
-					break
-				} else {
-					bytecode = append(bytecode, prev)
-				}
-			}
-			if len(buffer) > 0 {
-				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdIndex {
 					buffer = buffer[:len(buffer)-1]
 					if i < len(*lexems)-1 && (*lexems)[i+1].Type == isEq {
 						i++

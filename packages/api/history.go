@@ -33,9 +33,4 @@ func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("rollback history")
 		errorResponse(w, err)
-		return
-	}
-	rollbackList := []map[string]string{}
-	for _, tx := range *txs {
-	jsonResponse(w, &historyResult{rollbackList})
 }
