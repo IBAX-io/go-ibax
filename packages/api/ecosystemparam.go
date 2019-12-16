@@ -37,6 +37,13 @@ func (m Mode) getEcosystemParamHandler(w http.ResponseWriter, r *http.Request) {
 	if found, err := sp.Get(nil, name); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting state parameter by name")
 		errorResponse(w, err)
+		return
+	} else if !found {
+		logger.WithFields(log.Fields{"type": consts.NotFound, "key": name}).Error("state parameter not found")
+		errorResponse(w, errParamNotFound.Errorf(name))
+		return
+	}
+
 	jsonResponse(w, &paramResult{
 		ID:         converter.Int64ToStr(sp.ID),
 		Name:       sp.Name,
@@ -57,8 +64,6 @@ func getEcosystemNameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound, "ecosystem_id": ecosystemID}).Error("ecosystem by id not found")
-		errorResponse(w, errParamNotFound.Errorf("name"))
 		return
 	}
 

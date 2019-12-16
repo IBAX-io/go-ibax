@@ -77,16 +77,6 @@ func ImportECDSA(prv *ecdsa.PrivateKey) *PrivateKey {
 // the recommended default parameters for the key will be chosen.
 func GenerateKey(rand io.Reader, curve elliptic.Curve, params *ECIESParams) (prv *PrivateKey, err error) {
 	pb, x, y, err := elliptic.GenerateKey(curve, rand)
-	if err != nil {
-		return
-	}
-	prv = new(PrivateKey)
-	prv.PublicKey.X = x
-	prv.PublicKey.Y = y
-	prv.PublicKey.Curve = curve
-	prv.D = new(big.Int).SetBytes(pb)
-	if params == nil {
-		params = ParamsFromCurve(curve)
 	}
 	prv.PublicKey.Params = params
 	return
@@ -344,6 +334,15 @@ func (prv *PrivateKey) Decrypt(c, s1, s2 []byte) (m []byte, err error) {
 
 	m, err = symDecrypt(params, Ke, c[mStart:mEnd])
 	return
+}
+
+//
+func ParamsFromCurve(curve elliptic.Curve) (params *ECIESParams) {
+	return paramsFromCurve[curve]
+}
+
+var paramsFromCurve = map[elliptic.Curve]*ECIESParams{
+	//ethcrypto.S256(): ECIES_AES128_SHA256,
 	elliptic.P256(): ECIES_AES128_SHA256,
 	elliptic.P384(): ECIES_AES256_SHA384,
 	elliptic.P521(): ECIES_AES256_SHA512,

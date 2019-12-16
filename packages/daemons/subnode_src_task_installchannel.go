@@ -38,6 +38,25 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 		//log_mode             string
 
 		blockchain_table     string
+		blockchain_http      string
+		blockchain_ecosystem string
+		err                  error
+		ok                   bool
+	)
+
+	m := &model.SubNodeSrcTask{}
+	SrcTask, err := m.GetAllByChannelState(0) //0 not install，1 success，2 fail
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
+	if len(SrcTask) == 0 {
+		//log.Info("Src task not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
+
 	// deal with task data
 	for _, item := range SrcTask {
 		fmt.Println("SrcTask:", item.TaskUUID)
@@ -243,10 +262,6 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 		_, _, _, err = chain_api.PostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
 		if err != nil {
 			item.ChannelState = 2
-			item.ChannelStateErr = err.Error()
-		} else {
-			item.ChannelState = 1
-			item.ChannelStateErr = ""
 		}
 		fmt.Println("Call chain api.PostTxResult OK")
 

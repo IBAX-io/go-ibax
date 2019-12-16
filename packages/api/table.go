@@ -5,19 +5,6 @@
 
 package api
 
-import (
-	"encoding/json"
-	"net/http"
-	"strings"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
 type columnInfo struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
@@ -91,3 +78,4 @@ func getTableHandler(w http.ResponseWriter, r *http.Request) {
 		AppID:      converter.Int64ToStr(table.AppID),
 		Columns:    columns,
 	})
+}
