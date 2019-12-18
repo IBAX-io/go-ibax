@@ -133,19 +133,27 @@ func VDESrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		err                    error
 	)
 	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	id := converter.StrToInt64(params["id"])
+	form := &VDESrcTaskForm{}
+
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m := &model.VDESrcTask{}
+
+	if m, err = unmarshalColumnVDESrcTask(form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+	//fmt.Println("====m.TaskState,m.TaskType:", m.TaskState, m.TaskType)
+	//
+	if len(m.ContractSrcGetHash) == 0 {
 		if ContractSrcGetHashHex, err = crypto.HashHex([]byte(m.ContractSrcGet)); err != nil {
 			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
-			errorResponse(w, err)
-			return
-		}
-		m.ContractSrcGetHash = ContractSrcGetHashHex
-	}
-	if len(m.ContractDestGetHash) == 0 {
-		if ContractDestGetHashHex, err = crypto.HashHex([]byte(m.ContractDestGet)); err != nil {
-			fmt.Println("ContractDestGetHashHex Raw data hash failed ")
-			errorResponse(w, err)
-			return
-		}
 		m.ContractDestGetHash = ContractDestGetHashHex
 	}
 	if m.ContractMode == 0 {

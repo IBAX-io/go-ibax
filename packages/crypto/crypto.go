@@ -62,6 +62,17 @@ var (
 var (
 	cryptoProv   = _AESCBC
 	hashProv     = _SHA256
+	ellipticSize = elliptic256
+	signProv     = _ECDSA
+	checksumProv = _CRC64
+	hmacProv     = _SHA256
+)
+
+// Encrypt is encrypting
+func Encrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
+	if len(msg) == 0 {
+		return nil, ErrEncryptingEmpty
+	}
 	switch cryptoProv {
 	case _AESCBC:
 		return encryptCBC(msg, key, iv)
@@ -107,17 +118,6 @@ func encryptCBC(text, key, iv []byte) ([]byte, error) {
 		}
 	} else if len(iv) < consts.BlockSize {
 		return nil, fmt.Errorf(`wrong size of iv %d`, len(iv))
-	} else if len(iv) > consts.BlockSize {
-		iv = iv[:consts.BlockSize]
-	}
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	plaintext := _PKCS7Padding(text, consts.BlockSize)
-	mode := cipher.NewCBCEncrypter(block, iv)
-	encrypted := make([]byte, len(plaintext))
 	mode.CryptBlocks(encrypted, plaintext)
 	return append(iv, encrypted...), nil
 

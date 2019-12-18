@@ -36,6 +36,14 @@ func SendTx(rtx RawTransaction, adminWallet int64) error {
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction from transactions status")
 		return err
+	}
+	err = ts.Create()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("transaction status create")
+		return err
+	}
+
+	qtx := &QueueTx{
 		Hash:     rtx.Hash(),
 		Data:     rtx.Bytes(),
 		Expedite: rtx.Expedite(),
@@ -53,12 +61,6 @@ func SendTx(rtx RawTransaction, adminWallet int64) error {
 	return qtx.Create()
 }
 
-type RawTx struct {
-	TxType, Time int64
-	Hash         []byte
-	Data         []byte
-	Expedite     string
-	WalletID     int64
 }
 
 func (rtx *RawTx) GetExpedite() decimal.Decimal {

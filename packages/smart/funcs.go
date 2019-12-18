@@ -1212,10 +1212,6 @@ func DBUpdateExt(sc *SmartContract, tblname string, where *types.Map,
 	}
 	columns, val, err := mapToParams(values)
 	if err != nil {
-		return
-	}
-	if err = sc.AccessColumns(tblname, &columns, true); err != nil {
-		return
 	}
 	qcost, _, err = sc.updateWhere(columns, val, tblname, where)
 	return
@@ -2443,6 +2439,17 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 	}
 	if err = t.Delete(sc.DbTransaction); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting table")
+		return err
+	}
+
+	if err = model.DropTable(sc.DbTransaction, tblname); err != nil {
+		return
+	}
+	if !sc.OBS {
+		var (
+			out []byte
+		)
+		cols, err := model.GetAllColumnTypes(tblname)
 		if err != nil {
 			return err
 		}

@@ -13,14 +13,6 @@ func TestMapRefresh(t *testing.T) {
 		// run
 		for {
 			dt := time.Now().Unix()
-			gr.RefreshClaims()
-		}
-	}()
-
-	go func() {
-		// run
-		for {
-			dt := time.Now().Unix()
 			gr := GRefreshClaims{
 				Header:           "abc",
 				Refresh:          "cd",
@@ -30,6 +22,9 @@ func TestMapRefresh(t *testing.T) {
 			gr.RefreshClaims()
 		}
 	}()
-	// run
-	select {}
-}
+
+	go func() {
+		// run
+		for {
+			dt := time.Now().Unix()
+			gr := GRefreshClaims{

@@ -469,16 +469,6 @@ func LoadContracts() error {
 	for ; int64(offset) < count; offset += listCount {
 		list, err := contract.GetList(offset, listCount)
 		if err != nil {
-			return logErrorDB(err, "getting list of contracts")
-		}
-		if err = loadContractList(list); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func LoadSysFuncs(vm *script.VM, state int) error {
 	code := `func DBFind(table string).Columns(columns string).Where(where map)
 	.WhereId(id int).Order(order string).Limit(limit int).Offset(offset int).All(all bool) array {
    return DBSelect(table, columns, id, order, offset, limit, where, all)
@@ -695,6 +685,17 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 		if !ret {
 			logger.WithFields(log.Fields{"action": action, "permissions": tablePermission[action], "type": consts.EvalError}).Error("access denied")
 			return tablePermission, errAccessDenied
+		}
+	}
+	return tablePermission, nil
+}
+
+// AccessTable checks the access right to the table
+func (sc *SmartContract) AccessTable(table, action string) error {
+	if sc.FullAccess {
+		return nil
+	}
+	_, err := sc.AccessTablePerm(table, action)
 	return err
 }
 

@@ -88,17 +88,6 @@ func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, 
 func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error {
 	// for local tests
 	blockID := block.Header.BlockID
-
-	// record into the block chain
-	bl := &model.Block{}
-	err := bl.DeleteById(transaction, blockID)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
-		return err
-	}
-	rollbacksHash, err := GetRollbacksHash(transaction, blockID)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
 		return err
 	}
 
@@ -121,6 +110,7 @@ func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error 
 			return err
 		}
 
+		validBlockTime = !exists
 	}
 	if validBlockTime {
 		if err = b.Create(transaction); err != nil {

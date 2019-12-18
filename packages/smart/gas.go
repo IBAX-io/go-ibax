@@ -246,6 +246,18 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 			if err != nil {
 				return err
 			}
+			sc.taxes = true
+			_, err = UpdateSysParam(sc, syspar.TaxesWallet, string(tax), "")
+			if err != nil {
+				return err
+			}
+		}
+		key := &model.Key{}
+		var found bool
+		if found, err = key.SetTablePrefix(eco).Get(sc.DbTransaction, pay.toID); err != nil || !found {
+			if err != nil {
+				return err
+			}
 			if !found {
 				_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]interface{}{
 					"id":      pay.toID,
@@ -348,22 +360,6 @@ func (sc *SmartContract) appendTokens(nums ...int64) error {
 			continue
 		}
 		ecosystems := model.Ecosystem{}
-		_, err := ecosystems.Get(sc.DbTransaction, num)
-		if err != nil {
-			return err
-		}
-		if !ecosystems.IsOpenMultiFee() {
-			return nil
-		}
-		if len(ecosystems.TokenTitle) <= 0 {
-			return nil
-		}
-		if _, ok := sc.TxSmart.TokenEcosystems[num]; !ok {
-			sc.TxSmart.TokenEcosystems[num] = nil
-		}
-	}
-	return nil
-}
 
 func (sc *SmartContract) getTokenEcos() []int64 {
 	var ecos []int64

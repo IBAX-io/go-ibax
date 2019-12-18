@@ -21,6 +21,12 @@ var (
 	banList = make(map[int64]banKey)
 	mutex   = &sync.RWMutex{}
 )
+
+// IsBanned returns true if the key has been banned
+func IsKeyBanned(keyID int64) bool {
+	mutex.RLock()
+	if ban, ok := banList[keyID]; ok {
+		mutex.RUnlock()
 		now := time.Now()
 		if now.Before(ban.Time) {
 			return true
@@ -44,21 +50,6 @@ var (
 func BannedTill(keyID int64) string {
 	mutex.RLock()
 	defer mutex.RUnlock()
-	if ban, ok := banList[keyID]; ok {
-		return ban.Time.Format(`2006-01-02 15:04:05`)
-	}
-	return ``
-}
-
-// BadTxForBan adds info about bad tx of the key
-func BadTxForBan(keyID int64) {
-	var (
-		ban banKey
-		ok  bool
-	)
-	mutex.Lock()
-	defer mutex.Unlock()
-	now := time.Now()
 	if ban, ok = banList[keyID]; ok {
 		var bMin, count int
 		for i := 0; i < conf.Config.BanKey.BadTx; i++ {
