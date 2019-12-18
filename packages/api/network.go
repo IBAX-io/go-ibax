@@ -40,4 +40,4 @@ func GetNodesJSON() []HonorNodeJSON {
 			PublicKey:  crypto.PubToHex(node.PublicKey),
 			UnbanTime:  strconv.FormatInt(node.UnbanTime.Unix(), 10),
 		})
-	}
+}

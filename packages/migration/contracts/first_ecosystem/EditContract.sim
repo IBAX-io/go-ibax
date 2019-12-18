@@ -1,0 +1,22 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract EditContract {
+    data {
+        Id int
+        Value string "optional"
+        Conditions string "optional"
+    }
+    func onlyConditions() bool {
+        return $Conditions && !$Value
+    }
+
+    conditions {
+        RowConditions("contracts", $Id, onlyConditions())
+        if $Conditions {
+        $recipient = Int($cur["wallet_id"])
+    }
+
+    action {
+        UpdateContract($Id, $Value, $Conditions, $recipient, $cur["token_id"])
+    }
+}
