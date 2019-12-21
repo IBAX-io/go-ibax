@@ -232,18 +232,6 @@ func (mgr *OBSManager) StartOBS(name string) error {
 		err := fmt.Errorf(`OBS '%s' is not exists`, name)
 		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on find OBS process")
 		return err
-	}
-
-	state := proc.GetState()
-	if state == process.Stopped ||
-		state == process.Exited ||
-		state == process.Fatal {
-		proc.Start(true)
-		log.WithFields(log.Fields{"obs_name": name}).Info("OBS started")
-		return nil
-	}
-
-	err := fmt.Errorf("OBS '%s' is %s", name, state)
 	log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on starting OBS")
 	return err
 }
@@ -267,6 +255,16 @@ func (mgr *OBSManager) StopOBS(name string) error {
 	if state == process.Running ||
 		state == process.Starting {
 		proc.Stop(true)
+		log.WithFields(log.Fields{"obs_name": name}).Info("OBS is stoped")
+		return nil
+	}
+
+	err := fmt.Errorf("OBS '%s' is %s", name, state)
+	log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on stoping OBS")
+	return err
+}
+
+func (mgr *OBSManager) createOBSDB(obsName, login, pass string) error {
 
 	if err := model.DBConn.Exec(fmt.Sprintf(createRoleTemplate, login, pass)).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating OBS DB User")

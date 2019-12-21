@@ -1,5 +1,14 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+type VDEAgentData struct {
+	ID             int64  `gorm:"primary_key; not null" json:"id"`
+	DataUUID       string `gorm:"not null" json:"data_uuid"`
+	TaskUUID       string `gorm:"not null" json:"task_uuid"`
+	Hash           string `gorm:"not null" json:"hash"`
 	Data           []byte `gorm:"not null" json:"data"`
 	DataInfo       string `gorm:"type:jsonb" json:"data_info"`
 	VDESrcPubkey   string `gorm:"not null" json:"vde_src_pubkey"`
@@ -38,13 +47,6 @@ func (m *VDEAgentData) GetAll() ([]VDEAgentData, error) {
 func (m *VDEAgentData) GetOneByID() (*VDEAgentData, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
-}
-func (m *VDEAgentData) GetOneByDataUUID(DataUUID string) (*VDEAgentData, error) {
-	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
-	return m, err
-}
-func (m *VDEAgentData) GetOneByTaskUUID(TaskUUID string) (*VDEAgentData, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
 	return m, err
 }
 func (m *VDEAgentData) GetAllByTaskUUID(TaskUUID string) ([]VDEAgentData, error) {

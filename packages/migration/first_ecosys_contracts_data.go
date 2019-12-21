@@ -816,8 +816,21 @@ VALUES
         }
         TableConditions($Name, $Columns, $Permissions)
     }
-			error "User already exists"
-		}
+    
+    action {
+        CreateTable($Name, $Columns, $Permissions, $ApplicationId)
+    }
+    func price() int {
+        return SysParamInt("table_price")
+    }
+}
+', '1', 'ContractConditions("MainCondition")', '1', '1'),
+	(next_id('1_contracts'), 'NewUser', 'contract NewUser {
+	data {
+		NewPubkey string
+	}
+	conditions {
+		$id = PubToID($NewPubkey)
 	}
 	action {
 		$pub = HexToPub($NewPubkey)

@@ -29,14 +29,6 @@ type BanRequests struct {
 	Count          int64
 }
 
-// GetNeedToBanNodes is returns list of ban requests for each node
-func (r *BadBlocks) GetNeedToBanNodes(now time.Time, blocksPerNode int) ([]BanRequests, error) {
-	var res []BanRequests
-
-	err := DBConn.
-		Raw(
-			`SELECT
-				producer_node_id,
 				COUNT(consumer_node_id) as count
 			FROM (
 				SELECT
@@ -64,6 +56,13 @@ func (r *BadBlocks) GetNeedToBanNodes(now time.Time, blocksPerNode int) ([]BanRe
 	return res, err
 }
 
+func (r *BadBlocks) GetNodeBlocks(nodeId int64, now time.Time) ([]BadBlocks, error) {
+	var res []BadBlocks
+	err := DBConn.
+		Table(r.TableName()).
+		Model(&BadBlocks{}).
+		Where(
+			"producer_node_id = ? AND block_time > ?::date - interval '24 hours' AND deleted = ?",
 			nodeId,
 			now,
 			false,

@@ -30,6 +30,18 @@ type blockGenerationState struct {
 }
 
 var TimeError = errors.New("current time before first block")
+var DuplicateBlockError = errors.New("block with that time interval already exists in db")
+
+func NewBlockTimeCalculator(firstBlockTime time.Time, generationTime, blocksGap time.Duration, nodesCount int64) BlockTimeCalculator {
+	return BlockTimeCalculator{
+		clock:         &ClockWrapper{},
+		blocksCounter: &blocksCounter{},
+
+		firstBlockTime:      firstBlockTime,
+		blockGenerationTime: generationTime,
+		blocksGap:           blocksGap,
+		nodesCount:          nodesCount,
+	}
 }
 
 func (btc *BlockTimeCalculator) TimeToGenerate(nodePosition int64) (bool, error) {
@@ -59,15 +71,6 @@ func (btc *BlockTimeCalculator) ValidateBlock(nodePosition int64, at time.Time) 
 	blocks, err := btc.blocksCounter.count(bgs)
 	if err != nil {
 		return false, err
-	}
-
-	if blocks != 0 {
-		return false, DuplicateBlockError
-	}
-
-	return bgs.nodePosition == nodePosition, nil
-}
-
 func (btc *BlockTimeCalculator) SetClock(clock Clock) *BlockTimeCalculator {
 	btc.clock = clock
 	return btc

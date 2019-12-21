@@ -97,6 +97,22 @@ func (m *VDEDestTaskFromSrc) GetAllByTaskState(TaskState int64) ([]VDEDestTaskFr
 	err := DBConn.Table("vde_dest_task_from_src").Where("task_state = ?", TaskState).Find(&result).Error
 	return result, err
 }
+
+func (m *VDEDestTaskFromSrc) GetOneByTaskState(TaskState int64) (bool, error) {
+	return isFound(DBConn.Where("task_state = ?", TaskState).First(m))
+}
+
+func (m *VDEDestTaskFromSrc) GetOneByChainState(ChainState int64) (bool, error) {
+	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
+}
+
+func (m *VDEDestTaskFromSrc) GetAllByContractStateAndChainState(ContractStateSrc int64, ContractStateDest int64, ChainState int64) ([]VDEDestTaskFromSrc, error) {
+	result := make([]VDEDestTaskFromSrc, 0)
+	err := DBConn.Table("vde_dest_task_from_src").Where("contract_state_src = ? AND contract_state_dest = ? AND chain_state = ?", ContractStateSrc, ContractStateDest, ChainState).Find(&result).Error
+	return result, err
+}
+
+func (m *VDEDestTaskFromSrc) GetAllByContractStateSrc(ContractStateSrc int64) ([]VDEDestTaskFromSrc, error) {
 	result := make([]VDEDestTaskFromSrc, 0)
 	err := DBConn.Table("vde_dest_task_from_src").Where("contract_state_src = ?", ContractStateSrc).Find(&result).Error
 	return result, err
@@ -124,14 +140,6 @@ type VDEDestTaskFromSche struct {
 	ContractDestName    string `gorm:"not null" json:"contract_dest_name"`
 	ContractDestGet     string `gorm:"not null" json:"contract_dest_get"`
 	ContractDestGetHash string `gorm:"not null" json:"contract_dest_get_hash"`
-
-	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
-	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
-	ContractRunParms     string `gorm:"type:jsonb" json:"contract_run_parms"`
-
-	ContractMode int64 `gorm:"not null" json:"contract_mode"`
-
-	ContractStateSrc     int64  `gorm:"not null" json:"contract_state_src"`
 	ContractStateDest    int64  `gorm:"not null" json:"contract_state_dest"`
 	ContractStateSrcErr  string `gorm:"not null" json:"contract_state_src_err"`
 	ContractStateDestErr string `gorm:"not null" json:"contract_state_dest_err"`

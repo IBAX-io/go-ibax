@@ -2,6 +2,15 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+package system
+
+import (
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 
 	log "github.com/sirupsen/logrus"
@@ -35,6 +44,3 @@ func ReadPidFile() (int, error) {
 	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
 	if err != nil {
 		log.WithFields(log.Fields{"data": data, "error": err, "type": consts.ConversionError}).Error("pid file data to int")
-	}
-	return pid, err
-}

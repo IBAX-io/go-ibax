@@ -33,6 +33,11 @@ func unmarshalColumnVDEAgentChainInfo(form *VDEAgentChainInfoForm) (*model.VDEAg
 }
 
 func VDEAgentChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
+	logger := getLogger(r)
+	}
 	//
 	if m.LogMode == 0 {
 		m.LogMode = 3 //not log

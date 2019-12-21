@@ -75,12 +75,6 @@ func (m *AssignGetInfo) GetBalance(db *DbTransaction, wallet int64) (bool, decim
 
 	rules := make(map[int64]AssignRules, 10)
 	err = json.Unmarshal([]byte(sp.Value), &rules)
-	if err != nil {
-		return false, balance, total_balance, err
-	}
-
-	maxblockid := block.ID
-	for _, t := range mps {
 		am := decimal.NewFromFloat(0)
 		tm := t.BalanceAmount
 		rule, ok := rules[t.Type]
@@ -109,6 +103,13 @@ func (m *AssignGetInfo) GetBalance(db *DbTransaction, wallet int64) (bool, decim
 								am = t.Amount.Mul(decimal.NewFromFloat(float64(count)))
 							}
 
+						} else {
+							am = t.Amount.Mul(decimal.NewFromFloat(float64(count)))
+						}
+					}
+
+				} else {
+					if maxblockid > t.Latestid {
 						count := (maxblockid - t.Latestid) / iid
 						am = t.Amount.Mul(decimal.NewFromFloat(float64(count)))
 					}
