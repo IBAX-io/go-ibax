@@ -5,6 +5,16 @@
 
 package daemons
 
+import (
+	"context"
+	"sync"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var mutex = sync.Mutex{}
@@ -43,10 +53,6 @@ func CheckDB() bool {
 
 	if install.Progress == model.ProgressComplete {
 		return true
-	}
-
-	return false
-}
 
 // DBLock locks daemons
 func DBLock() {
