@@ -58,6 +58,9 @@ func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse,
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
 		return nil, err
+	}
+	encodeDataString := base64.StdEncoding.EncodeToString(eccData)
+	////
 
 	AgentMode := converter.StrToInt64(r.AgentMode)
 	TranMode := converter.StrToInt64(r.TranMode)
@@ -84,6 +87,3 @@ func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse,
 		log.WithError(err)
 		return nil, err
 	}
-
-	return resp, nil
-}

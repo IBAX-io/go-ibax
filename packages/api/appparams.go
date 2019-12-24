@@ -15,16 +15,6 @@ import (
 	"github.com/gorilla/mux"
 
 	log "github.com/sirupsen/logrus"
-)
-
-type appParamsResult struct {
-	App  string        `json:"app_id"`
-	List []paramResult `json:"list"`
-}
-
-type appParamsForm struct {
-	ecosystemForm
-	paramsForm
 }
 
 func (f *appParamsForm) Validate(r *http.Request) error {
@@ -63,6 +53,8 @@ func (m Mode) getAppParamsHandler(w http.ResponseWriter, r *http.Request) {
 	for _, item := range list {
 		if len(acceptNames) > 0 && !acceptNames[item.Name] {
 			continue
+		}
+		result.List = append(result.List, paramResult{
 			ID:         converter.Int64ToStr(item.ID),
 			Name:       item.Name,
 			Value:      item.Value,

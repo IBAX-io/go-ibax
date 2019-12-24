@@ -61,6 +61,12 @@ func SendTx(rtx RawTransaction, adminWallet int64) error {
 	return qtx.Create()
 }
 
+type RawTx struct {
+	TxType, Time int64
+	Hash         []byte
+	Data         []byte
+	Expedite     string
+	WalletID     int64
 }
 
 func (rtx *RawTx) GetExpedite() decimal.Decimal {
@@ -80,15 +86,6 @@ func SendTxBatches(rtxs []*RawTx) error {
 		}
 		rawTxs = append(rawTxs, ts)
 		qtx := &QueueTx{
-			Hash:     rtx.Hash,
-			Data:     rtx.Data,
-			Expedite: rtx.GetExpedite(),
-			Time:     rtx.Time,
-		}
-		qtxs = append(qtxs, qtx)
-	}
-	return DBConn.Clauses(clause.OnConflict{DoNothing: true}).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&rawTxs).Error; err != nil {
 			return err
 		}
 		if err := tx.Create(&qtxs).Error; err != nil {

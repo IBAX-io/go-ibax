@@ -7,6 +7,13 @@ var (
 func Put_MintCount() error {
 
 	return nil
+}
+
+	//		}
+	//		//time.Sleep(5*time.Second)
+	//		//MintCountDealCh<-dat
+	//	}
+	//
 	//}
 	return nil
 }

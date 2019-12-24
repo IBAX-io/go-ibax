@@ -1,0 +1,6 @@
+language: go
+go_import_path: github.com/IBAX/go-ibax
+
+install: true
+
+script: go build github.com/IBAX/go-ibax

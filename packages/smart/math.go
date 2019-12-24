@@ -52,22 +52,6 @@ func Log(x interface{}) (float64, error) {
 		return 0, err
 	}
 	if fx = math.Log(fx); isValidFloat(fx) {
-		return fx, nil
-	}
-	return 0, errFloatResult
-}
-
-// Log10 returns the decimal logarithm of x
-func Log10(x interface{}) (float64, error) {
-	fx, err := parseFloat(x)
-	if err != nil {
-		return 0, err
-	}
-	if fx = math.Log10(fx); isValidFloat(fx) {
-		return fx, nil
-	}
-	return 0, errFloatResult
-}
 
 // Pow returns x**y, the base-x exponential of y
 func Pow(x, y interface{}) (float64, error) {
@@ -86,6 +70,20 @@ func Pow(x, y interface{}) (float64, error) {
 }
 
 // Round returns the nearest integer, rounding half away from zero
+func Round(x interface{}) (int64, error) {
+	fx, err := parseFloat(x)
+	if err != nil {
+		return 0, err
+	}
+	if fx = math.Round(fx); isValidFloat(fx) {
+		return int64(fx), nil
+	}
+	return 0, errFloatResult
+}
+
+// Sqrt returns the square root of x
+func Sqrt(x interface{}) (float64, error) {
+	fx, err := parseFloat(x)
 	if err != nil {
 		return 0, err
 	}

@@ -15,6 +15,22 @@ import (
 
 	qb "github.com/IBAX-io/go-ibax/packages/smart/queryBuilder"
 
+	log "github.com/sirupsen/logrus"
+)
+
+func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) error {
+	rollbackTx := &model.RollbackTx{
+		BlockID:   sc.BlockData.BlockID,
+		TxHash:    sc.TxHash,
+		NameTable: table,
+		TableID:   tableID,
+		Data:      rollbackInfoStr,
+	}
+	sc.RollBackTx = append(sc.RollBackTx, rollbackTx)
+	err := rollbackTx.Create(sc.DbTransaction)
+	if err != nil {
+		return logErrorDB(err, "creating rollback tx")
+	}
 	return nil
 }
 
@@ -117,16 +133,6 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		if err != nil {
 			logger.WithFields(log.Fields{"error": err}).Error("on build insert query")
 			return 0, "", err
-		}
-
-		insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery)
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
-			return 0, "", err
-		}
-
-		cost += insertCost
-		err = model.GetDB(sc.DbTransaction).Exec(insertQuery).Error
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
 			return 0, "", err

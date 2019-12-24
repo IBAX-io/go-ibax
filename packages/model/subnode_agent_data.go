@@ -12,17 +12,6 @@ type SubNodeAgentData struct {
 	Hash     string `gorm:"not null" json:"hash"`
 	Data     []byte `gorm:"not null" json:"data"`
 	DataInfo string `gorm:"type:jsonb" json:"data_info"`
-	//SubNodeSrcPubkey     string `gorm:"not null" json:"subnode_src_pubkey"`
-	SubNodeSrcPubkey string `gorm:"column:subnode_src_pubkey;not null" json:"subnode_src_pubkey"`
-	//SubNodeDestPubkey    string `gorm:"not null" json:"subnode_dest_pubkey"`
-	SubNodeDestPubkey string `gorm:"column:subnode_dest_pubkey;not null" json:"subnode_dest_pubkey"`
-	//SubNodeDestIP        string `gorm:"not null" json:"subnode_dest_ip"`
-	SubNodeDestIP string `gorm:"column:subnode_dest_ip;not null" json:"subnode_dest_ip"`
-	//SubNodeAgentPubkey   string `gorm:"not null" json:"subnode_agent_pubkey"`
-	SubNodeAgentPubkey string `gorm:"column:subnode_agent_pubkey;not null" json:"subnode_agent_pubkey"`
-	//SubNodeAgentIP       string `gorm:"not null" json:"subnode_agent_ip"`
-	SubNodeAgentIP string `gorm:"column:subnode_agent_ip;not null" json:"subnode_agent_ip"`
-	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
 	TranMode       int64  `gorm:"not null" json:"tran_mode"`
 	DataSendState  int64  `gorm:"not null" json:"data_send_state"`
 	DataSendErr    string `gorm:"not null" json:"data_send_err"`
@@ -48,6 +37,16 @@ func (m *SubNodeAgentData) Delete() error {
 
 func (m *SubNodeAgentData) GetAll() ([]SubNodeAgentData, error) {
 	var result []SubNodeAgentData
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *SubNodeAgentData) GetOneByID() (*SubNodeAgentData, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
+}
+func (m *SubNodeAgentData) GetOneByDataUUID(DataUUID string) (*SubNodeAgentData, error) {
+	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
+	return m, err
 }
 func (m *SubNodeAgentData) GetOneByTaskUUID(TaskUUID string) (*SubNodeAgentData, error) {
 	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
