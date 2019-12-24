@@ -48,9 +48,16 @@ func TestEvalIf(t *testing.T) {
 		{"341 * 234/0", "divided by zero"},
 		{"0 == ((15+82)*2 + 5)/2 - 99", "true"},
 		{"Multi( (34+35)*2, Multi( $citizenId, 56))== 1 || Multi( (34+35)*2, Multi( $citizenId, 56))== 0", `false`},
-			if fmt.Sprint(out) != item.Output {
-				t.Error(`error of ifeval ` + item.Input + ` Output:` + fmt.Sprint(out))
-			}
-		}
+		{"2+ Multi( (34+35)*2, Multi( $citizenId, 56)) /2 == 56972", `true`},
+		{"$citizenId && 0", "false"},
+		{"0|| ($citizenId + $wallet_id == 950240)", "true"},
 	}
-}
+	vars := map[string]interface{}{
+		`citizenId`: 56789,
+		`wallet_id`: 893451,
+	}
+	vm := NewVM()
+	vm.Extend(&ExtendData{map[string]interface{}{"Multi": Multi}, nil, nil})
+	for _, item := range test {
+		out, err := vm.EvalIf(item.Input, 0, &vars)
+		if err != nil {

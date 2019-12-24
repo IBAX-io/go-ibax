@@ -117,6 +117,8 @@ func VDESrcData(ctx context.Context, d *daemon) error {
 
 		if vde_src_pubkey, ok = TaskParms["vde_src_pubkey"].(string); !ok {
 			log.WithFields(log.Fields{"error": err}).Error("src_vde_pubkey parse error")
+			item.DataState = 3 //Indicates an error in parsing task parameters
+			err = item.Updates()
 			if err != nil {
 				log.WithError(err)
 			}
@@ -233,9 +235,6 @@ func VDESrcData(ctx context.Context, d *daemon) error {
 		if len(vde_agent_pubkey_slice) != vde_dest_num {
 			log.WithFields(log.Fields{"error": err}).Error("vde_agent_pubkey parse error")
 			item.DataState = 3 //Indicates an error in parsing task parameters
-			err = item.Updates()
-			if err != nil {
-				log.WithError(err)
 			}
 			continue
 		}
