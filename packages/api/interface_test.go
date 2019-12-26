@@ -65,6 +65,12 @@ func TestNewMenuNoError(t *testing.T) {
 	err := postTx(`NewMenu`, &form)
 	assert.Equal(t, fmt.Sprintf(`{"type":"warning","error":"Menu %s already exists"}`, menuname), cutErr(err))
 }
+
+func TestEditMenuNoError(t *testing.T) {
+	require.NoError(t, keyLogin(1))
+	form := url.Values{
+		"Id": {"1"},
+		"Value": {`first
 		second
 		third
 		andmore`},
@@ -79,6 +85,3 @@ func TestAppendMenuNoError(t *testing.T) {
 		"Id":    {"3"},
 		"Value": {"appended item"},
 	}
-
-	assert.NoError(t, postTx("AppendMenu", &form))
-}

@@ -61,6 +61,17 @@ func (m *VDESrcTaskStatus) GetOneByTaskUUID(TaskUUID string) (*VDESrcTaskStatus,
 func (m *VDESrcTaskStatus) GetOneByChainState(ChainState int64) (bool, error) {
 	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
 }
+
+func (m *VDESrcTaskStatus) GetAllByChainState(ChainState int64) ([]VDESrcTaskStatus, error) {
+	result := make([]VDESrcTaskStatus, 0)
+	err := DBConn.Table("vde_src_task_status").Where("chain_state = ?", ChainState).Find(&result).Error
+	return result, err
+}
+
+type VDESrcTaskFromScheStatus struct {
+	ID                   int64  `gorm:"primary_key; not null" json:"id"`
+	TaskUUID             string `gorm:"not null" json:"task_uuid"`
+	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
 	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
 	ContractRunParms     string `gorm:"type:jsonb" json:"contract_run_parms"`
 	ContractSrcName      string `gorm:"not null" json:"contract_src_name"`
@@ -97,22 +108,6 @@ func (m *VDESrcTaskFromScheStatus) GetAll() ([]VDESrcTaskFromScheStatus, error) 
 }
 func (m *VDESrcTaskFromScheStatus) GetOneByID() (*VDESrcTaskFromScheStatus, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
-
-func (m *VDESrcTaskFromScheStatus) GetAllByTaskUUID(TaskUUID string) ([]VDESrcTaskFromScheStatus, error) {
-	result := make([]VDESrcTaskFromScheStatus, 0)
-	err := DBConn.Table("vde_src_task_from_sche_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
-}
-
-func (m *VDESrcTaskFromScheStatus) GetOneByTaskUUID(TaskUUID string) (*VDESrcTaskFromScheStatus, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
-}
-
-func (m *VDESrcTaskFromScheStatus) GetOneByChainState(ChainState int64) (bool, error) {
-	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
 }
 
 func (m *VDESrcTaskFromScheStatus) GetAllByChainState(ChainState int64) ([]VDESrcTaskFromScheStatus, error) {

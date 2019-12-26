@@ -75,19 +75,6 @@ func VDEDestDataStatusCreateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	model.DBConn.Last(&m)
 
-	jsonResponse(w, *m)
-}
-
-func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
-	)
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	id := converter.StrToInt64(params["id"])
-	form := &VDEDestDataStatusForm{}
-
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)
 		return
@@ -198,6 +185,11 @@ type VDEDestDataStatusList struct {
 //		CreateTime       int64  `json:"create_time"`
 //	} `json:"list"`
 //}
+
+func VDEDestDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err            error
+		DataStatusList VDEDestDataStatusList
 	)
 
 	logger := getLogger(r)

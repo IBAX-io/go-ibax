@@ -37,6 +37,14 @@ func (m *VDEDestDataLog) Updates() error {
 }
 
 func (m *VDEDestDataLog) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *VDEDestDataLog) GetAll() ([]VDEDestDataLog, error) {
+	var result []VDEDestDataLog
+	err := DBConn.Find(&result).Error
+	return result, err
+}
 func (m *VDEDestDataLog) GetOneByID() (*VDEDestDataLog, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
@@ -57,8 +65,3 @@ func (m *VDEDestDataLog) GetAllByChainState(ChainState int64) ([]VDEDestDataLog,
 	result := make([]VDEDestDataLog, 0)
 	err := DBConn.Table("vde_dest_data_log").Where("chain_state = ?", ChainState).Find(&result).Error
 	return result, err
-}
-
-func (m *VDEDestDataLog) GetOneByChainState(ChainState int64) (bool, error) {
-	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
-}

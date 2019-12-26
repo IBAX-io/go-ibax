@@ -84,6 +84,11 @@ VALUES
 {{- end}}
 ` + "`"))
 
+func main() {
+	for _, s := range scenarios {
+		if err := generate(s); err != nil {
+func loadSource(srcPath string) (*contract, error) {
+	file, err := os.Open(srcPath)
 	if err != nil {
 		return nil, err
 	}

@@ -1,11 +1,15 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package types
 
 import (
 	"context"
+
+	log "github.com/sirupsen/logrus"
+)
+
+// ClientTxPreprocessor procees tx from client
+type ClientTxPreprocessor interface {
 	ProcessClientTranstaction([]byte, int64, *log.Entry) (string, error)
 	ProcessClientTxBatches([][]byte, int64, *log.Entry) ([]string, error)
 }

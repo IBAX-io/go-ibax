@@ -19,14 +19,9 @@ func TestAesEncryptAndDecrypt(t *testing.T) {
 	fmt.Printf("src data:%v\n", string(pass))
 
 	xpass, err := AesEncrypt(pass, aeskey)
-		fmt.Println(err)
-		return
-	}
-
-	tpass, err := AesDecrypt(bytesPass, aeskey)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	fmt.Printf("aesdecrypt:%s\n", tpass)
-}
+
+	pass64 := base64.StdEncoding.EncodeToString(xpass)

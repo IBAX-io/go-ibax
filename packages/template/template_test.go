@@ -327,20 +327,6 @@ var forTest = tplList{
 	{`Button(My Contract,, myclass, NewEcosystem, "Name=myid,Id=i10,Value").Style( .btn {
 		border: 10px 10px;
 	})`,
-		`[{"tag":"button","attr":{"class":"myclass","contract":"NewEcosystem","params":{"Id":{"text":"i10","type":"text"},"Name":{"text":"myid","type":"text"},"Value":{"text":"Value","type":"text"}},"style":".btn {\n\t\tborder: 10px 10px;\n\t}"},"children":[{"tag":"text","text":"My Contract"}]}]`},
-	{`Div(myclass)Div().Style{
-		.class {
-			text-style: italic;
-		}
-	}
-				Div()`,
-		`[{"tag":"div","attr":{"class":"myclass"}},{"tag":"div","attr":{"style":".class {\n\t\t\ttext-style: italic;\n\t\t}"}},{"tag":"div"}]`},
-	{`Div(myclass){Div()
-		P(){
-			Div(id){
-				Label(My #text#,myl,forname)
-			}
-		}
 	}`,
 		`[{"tag":"div","attr":{"class":"myclass"},"children":[{"tag":"div"},{"tag":"p","children":[{"tag":"div","attr":{"class":"id"},"children":[{"tag":"label","attr":{"class":"myl","for":"forname"},"children":[{"tag":"text","text":"My "}]}]}]}]}]`},
 	{`SetVar(istrue, 1)If(GetVar(istrue),OK)If(GetVar(isfalse)){Skip}.Else{Span(Else OK)}`,
@@ -420,3 +406,4 @@ var forFullTest = tplList{
 	{`If(true) {OK}.Else {false} If(false, FALSE).ElseIf(1) {Else OK
 			}.Else {Fourth}If(0).Else{ALL right}.What`,
 		`[{"tag":"if","attr":{"condition":"true"},"children":[{"tag":"text","text":"OK"}],"tail":[{"tag":"else","children":[{"tag":"text","text":"false"}]}]},{"tag":"if","attr":{"condition":"false"},"children":[{"tag":"text","text":"FALSE"}],"tail":[{"tag":"elseif","attr":{"condition":"1"},"children":[{"tag":"text","text":"Else OK"}]},{"tag":"else","children":[{"tag":"text","text":"Fourth"}]}]},{"tag":"if","attr":{"condition":"0"},"tail":[{"tag":"else","children":[{"tag":"text","text":"ALL right"}]}]},{"tag":"text","text":".What"}]`},
+}
