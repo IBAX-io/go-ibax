@@ -33,6 +33,22 @@ type FirstBlockTransaction struct {
 	Data          interface{}
 }
 
+// ErrFirstBlockHostIsEmpty host for first block is not specified
+var ErrFirstBlockHostIsEmpty = errors.New("FirstBlockHost is empty")
+
+// Init first block
+func (t *FirstBlockTransaction) Init() error {
+	return nil
+}
+
+// Validate first block
+func (t *FirstBlockTransaction) Validate() error {
+	return nil
+}
+
+// Action is fires first block
+func (t *FirstBlockTransaction) Action() error {
+	logger := t.Logger
 	data := t.Data.(*consts.FirstBlock)
 	keyID := crypto.Address(data.PublicKey)
 	nodeKeyID := crypto.Address(data.NodePublicKey)
@@ -62,18 +78,6 @@ type FirstBlockTransaction struct {
 		return utils.ErrInfo(err)
 	}
 
-	if err = syspar.SysUpdate(t.DbTransaction); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
-		return utils.ErrInfo(err)
-	}
-
-	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_keys" (id,account,pub,amount) values(?,?,?,?),(?,?,?,?)`,
-		keyID, converter.AddressToString(keyID), data.PublicKey, amount, nodeKeyID, converter.AddressToString(nodeKeyID), data.NodePublicKey, 0).Error
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting key")
-		return utils.ErrInfo(err)
-	}
-	id, err := model.GetNextID(t.DbTransaction, "1_pages")
 	if err != nil {
 		return utils.ErrInfo(err)
 	}

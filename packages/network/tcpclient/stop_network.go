@@ -29,4 +29,12 @@ func SendStopNetwork(addr string, req *network.StopNetworkRequest) error {
 	}
 
 	res := &network.StopNetworkResponse{}
-}
+	if err = res.Read(conn); err != nil {
+		return err
+	}
+
+	if len(res.Hash) != consts.HashSize {
+		return network.ErrNotAccepted
+	}
+
+	return nil

@@ -72,12 +72,6 @@ func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
 
 		//
 		//fmt.Println("--ContractMode ", item.ContractMode)
-		//if srcTask.ContractMode == 2 || srcTask.ContractMode == 3 {
-		if srcTask.ContractMode == 3 || srcTask.ContractMode == 4 {
-
-			contractData, err := ecies.EccCryptoKey([]byte(ContractSrcGetPlusHash), item.VDEPubKey)
-			if err != nil {
-				fmt.Println("error", err)
 				log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
 				continue
 			}
@@ -105,6 +99,13 @@ func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
 				continue
 			}
 			//fmt.Println("--DEST  :", ContractDestGetPlusHash)
+			//fmt.Println("--DEST  :", contractData)
+			contractDataBase64 := base64.StdEncoding.EncodeToString(contractData)
+			myContractDestGet = contractDataBase64
+			//fmt.Println("--DEST  :", myContractDestGet)
+			if myContractDestGetHash, err = crypto.HashHex([]byte(myContractDestGet)); err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
+				fmt.Println("HashHex Raw data hash failed ")
 				continue
 			}
 

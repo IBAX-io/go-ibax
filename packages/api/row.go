@@ -53,19 +53,6 @@ func getRowHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-	col := `id`
-	if len(params["column"]) > 0 {
-		col = converter.Sanitize(params["column"], `-`)
-	}
-	if converter.FirstEcosystemTables[params["name"]] {
-		q = q.Table(table).Where(col+" = ? and ecosystem = ?", params["id"], client.EcosystemID)
-	} else {
-		q = q.Table(table).Where(col+" = ?", params["id"])
-	}
-
-	if len(form.Columns) > 0 {
-		q = q.Select(form.Columns)
-	}
 
 	rows, err := q.Rows()
 	if err != nil {
@@ -85,3 +72,7 @@ func getRowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	jsonResponse(w, &rowResult{
+		Value: result[0],
+	})
+}

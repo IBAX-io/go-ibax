@@ -207,13 +207,6 @@ func SubNodeSrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		}
 		chain_apiAddress := blockchain_http
 		chain_apiEcosystemID := int64(ecosystemID)
-
-		src := filepath.Join(conf.Config.KeysDir, "chain_PrivateKey")
-		// Login
-		gAuth_chain, _, _, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
-			time.Sleep(time.Millisecond * 2)
 			continue
 		}
 		//fmt.Println("Login OK!")
@@ -237,6 +230,12 @@ func SubNodeSrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		err = item.Updates()
 		if err != nil {
 			fmt.Println("Update SubNodeSrcDataChainStatus table err: ", err)
+			log.WithFields(log.Fields{"error": err}).Error("Update SubNodeSrcDataChainStatus table!")
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		fmt.Println("SubNode SrcData Run chain Contract ok, TxHash:", string(item.TxHash))
+		time.Sleep(time.Millisecond * 200)
 	} //for
 	return nil
 }

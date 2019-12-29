@@ -66,17 +66,6 @@ func blockVer(cur, prev *BlockData) (ret string) {
 		ret = fmt.Sprintf(",%x", prev.RollbacksHash)
 	}
 	return
-}
-
-func (b BlockData) ForSha(prev *BlockData, mrklRoot []byte) string {
-	return fmt.Sprintf("%d,%x,%s,%d,%d,%d,%d",
-		b.BlockID, prev.Hash, mrklRoot, b.Time, b.EcosystemID, b.KeyID, b.NodePosition) +
-		blockVer(&b, prev)
-}
-
-// ForSign from 128 bytes to 512 bytes. Signature of TYPE, BLOCK_ID, PREV_BLOCK_HASH, TIME, WALLET_ID, state_id, MRKL_ROOT
-func (b BlockData) ForSign(prev *BlockData, mrklRoot []byte) string {
-	return fmt.Sprintf("0,%v,%x,%v,%v,%v,%v,%s",
 		b.BlockID, prev.Hash, b.Time, b.EcosystemID, b.KeyID, b.NodePosition, mrklRoot) +
 		blockVer(&b, prev)
 }
@@ -199,6 +188,21 @@ func CallMethod(i interface{}, methodName string) interface{} {
 	if method.IsValid() {
 		finalMethod = method
 	}
+	// check for method on pointer
+	method = ptr.MethodByName(methodName)
+	if method.IsValid() {
+		finalMethod = method
+	}
+
+	if finalMethod.IsValid() {
+		return finalMethod.Call([]reflect.Value{})[0].Interface()
+	}
+
+	// return or panic, method not found of either type
+	log.WithFields(log.Fields{"method_name": methodName, "type": consts.NotFound}).Error("method not found")
+	return fmt.Errorf("method %s not found", methodName)
+}
+
 // Caller returns the name of the latest function
 func Caller(steps int) string {
 	name := "?"

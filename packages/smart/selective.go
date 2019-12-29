@@ -92,10 +92,6 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		}
 	}
 
-	if !sqlBuilder.Where.IsEmpty() && len(logData) > 0 {
-		var err error
-		rollbackInfoStr, err = sqlBuilder.GenerateRollBackInfoString(logData)
-		if err != nil {
 			logger.WithFields(log.Fields{"error": err}).Error("on generate rollback info string for update")
 			return 0, "", err
 		}
@@ -133,6 +129,16 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		if err != nil {
 			logger.WithFields(log.Fields{"error": err}).Error("on build insert query")
 			return 0, "", err
+		}
+
+		insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery)
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
+			return 0, "", err
+		}
+
+		cost += insertCost
+		err = model.GetDB(sc.DbTransaction).Exec(insertQuery).Error
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
 			return 0, "", err

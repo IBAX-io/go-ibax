@@ -91,17 +91,6 @@ func shareDataUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	result, err := m.GetOneByID()
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to get one-on-one hit data")
-		return
-	}
-
-	jsonResponse(w, result)
-}
-
-func shareDataDeleteHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-	id := converter.StrToInt64(params["id"])
 
 	m := &model.ShareDataStatus{}
 	m.ID = id
@@ -168,6 +157,20 @@ func shareDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"error": err}).Error("The query task data status by TaskUUID failed")
 		errorResponse(w, err)
 		return
+	}
+
+	jsonResponse(w, result)
+}
+
+func unmarshalColumnShareData(form *shareDataForm) (*model.ShareDataStatus, error) {
+	var (
+		dist map[string]interface{}
+		err  error
+	)
+
+	err = json.Unmarshal([]byte(form.Dist), &dist)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("unmarshal dist error")
 	}
 
 	m := &model.ShareDataStatus{
