@@ -47,17 +47,6 @@ func UpdBlockInfo(dbTransaction *model.DbTransaction, block *Block) error {
 			return fmt.Errorf("error insert into info_block %s", err)
 		}
 	} else {
-		ibUpdate := &model.InfoBlock{
-			Hash:         hash,
-			BlockID:      blockID,
-			Time:         block.Header.Time,
-			EcosystemID:  block.Header.EcosystemID,
-			KeyID:        block.Header.KeyID,
-			NodePosition: converter.Int64ToStr(block.Header.NodePosition),
-			Sent:         0,
-		}
-		if err := ibUpdate.Update(dbTransaction); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating info block")
 			return fmt.Errorf("error while updating info_block: %s", err)
 		}
 	}
@@ -88,6 +77,17 @@ func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, 
 func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error {
 	// for local tests
 	blockID := block.Header.BlockID
+
+	// record into the block chain
+	bl := &model.Block{}
+	err := bl.DeleteById(transaction, blockID)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
+		return err
+	}
+	rollbacksHash, err := GetRollbacksHash(transaction, blockID)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
 		return err
 	}
 

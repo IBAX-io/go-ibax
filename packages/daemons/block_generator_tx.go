@@ -66,10 +66,5 @@ func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]int
 			KeyID:       keyID,
 			NetworkID:   conf.Config.NetworkID,
 		},
-		SignedBy: smart.PubToID(dtx.publicKey),
-		Params:   params,
-	}
-
-	privateKey, err := hex.DecodeString(dtx.privateKey)
 	return tx.CreateDelayTransactionHighRate(txData, txHash, keyID, highRate), nil
 }
