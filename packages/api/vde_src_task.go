@@ -1,13 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -154,6 +146,17 @@ func VDESrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	if len(m.ContractSrcGetHash) == 0 {
 		if ContractSrcGetHashHex, err = crypto.HashHex([]byte(m.ContractSrcGet)); err != nil {
 			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
+			errorResponse(w, err)
+			return
+		}
+		m.ContractSrcGetHash = ContractSrcGetHashHex
+	}
+	if len(m.ContractDestGetHash) == 0 {
+		if ContractDestGetHashHex, err = crypto.HashHex([]byte(m.ContractDestGet)); err != nil {
+			fmt.Println("ContractDestGetHashHex Raw data hash failed ")
+			errorResponse(w, err)
+			return
+		}
 		m.ContractDestGetHash = ContractDestGetHashHex
 	}
 	if m.ContractMode == 0 {

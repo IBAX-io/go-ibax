@@ -17,12 +17,6 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
-
-func unmarshalColumnSubNodeSrcTask(form *SubNodeSrcTaskForm) (*model.SubNodeSrcTask, error) {
-	var (
-		parms          map[string]interface{}
-		task_run_parms map[string]interface{}
-		err            error
 	)
 
 	err = json.Unmarshal([]byte(form.Parms), &parms)
@@ -36,6 +30,14 @@ func unmarshalColumnSubNodeSrcTask(form *SubNodeSrcTaskForm) (*model.SubNodeSrcT
 		return nil, err
 	}
 	//fmt.Println("TaskType,TaskState:", form.TaskType, int64(form.TaskType), form.TaskState, int64(form.TaskState))
+	m := &model.SubNodeSrcTask{
+		TaskUUID:   form.TaskUUID,
+		TaskName:   form.TaskName,
+		TaskSender: form.TaskSender,
+		Comment:    form.Comment,
+		Parms:      converter.MarshalJson(parms),
+		TaskType:   int64(form.TaskType),
+		TaskState:  int64(form.TaskState),
 
 		TaskRunParms: converter.MarshalJson(task_run_parms),
 		//TaskRunState:    int64(form.TaskRunState),

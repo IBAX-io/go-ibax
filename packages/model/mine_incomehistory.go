@@ -17,16 +17,6 @@ type MineIncomehistory struct {
 	Type                    int64           `gorm:"not null"`
 	Capacitys               int64           `gorm:"not null" `
 	Nonce                   int64           `gorm:"not null" `
-	Foundation              decimal.Decimal `gorm:"not null" `
-	Mine_incomehistory_hash []byte          `gorm:"not null`
-	Block_id                int64           `gorm:"not null"`
-	Date_created            int64           `gorm:"not null default 0"`
-}
-
-//DayMineIncomehistory example
-type DayMineIncomehistory struct {
-	Amount decimal.Decimal `json:"amount"`
-	Time   int64           `json:"time"`
 }
 
 // TableName returns name of table
@@ -55,3 +45,9 @@ func (m *MineIncomehistory) GetDelay(id int64) (bool, error) {
 // Get is retrieving model from database
 func (m *MineIncomehistory) GetActiveMiner(time, devid int64) (incomes []MineIncomehistory, err error) {
 	db := GetDB(nil)
+	err = db.Table("1_mine_incomehistory").
+		Where("devid = ? and date_created >?", devid, time).
+		Order("date_created asc").
+		Scan(&incomes).Error
+	return incomes, err
+}
