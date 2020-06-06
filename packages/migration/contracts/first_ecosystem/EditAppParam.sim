@@ -9,9 +9,6 @@ contract EditAppParam {
     func onlyConditions() bool {
         return $Conditions && !$Value
     }
-
-    conditions {
-        RowConditions("app_params", $Id, onlyConditions())
         if $Conditions {
             ValidateCondition($Conditions, $ecosystem_id)
         }
@@ -20,4 +17,13 @@ contract EditAppParam {
     action {
         var pars map
         if $Value {
+            pars["value"] = $Value
+        }
+        if $Conditions {
+            pars["conditions"] = $Conditions
+        }
+        if pars {
+            DBUpdate("app_params", $Id, pars)
+        }
+    }
 }

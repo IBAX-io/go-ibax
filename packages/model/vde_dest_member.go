@@ -20,13 +20,6 @@ type VDEDestMember struct {
 
 func (VDEDestMember) TableName() string {
 	return "vde_dest_member"
-}
-
-func (m *VDEDestMember) Create() error {
-	return DBConn.Create(&m).Error
-}
-
-func (m *VDEDestMember) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
 }
 
@@ -43,6 +36,10 @@ func (m *VDEDestMember) GetOneByID() (*VDEDestMember, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
 }
+
+func (m *VDEDestMember) GetOneByPubKey(VDEPubKey string) (*VDEDestMember, error) {
+	err := DBConn.Where("vde_pub_key=?", VDEPubKey).First(&m).Error
+	return m, err
 }
 
 func (m *VDEDestMember) GetAllByType(Type int64) ([]VDEDestMember, error) {

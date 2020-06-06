@@ -62,13 +62,6 @@ func (m *VDEDestTaskFromSrc) Delete() error {
 }
 
 func (m *VDEDestTaskFromSrc) GetAll() ([]VDEDestTaskFromSrc, error) {
-	var result []VDEDestTaskFromSrc
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *VDEDestTaskFromSrc) GetOneByID() (*VDEDestTaskFromSrc, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
 }
 
 func (m *VDEDestTaskFromSrc) GetAllByTaskUUID(TaskUUID string) ([]VDEDestTaskFromSrc, error) {
@@ -140,6 +133,14 @@ type VDEDestTaskFromSche struct {
 	ContractDestName    string `gorm:"not null" json:"contract_dest_name"`
 	ContractDestGet     string `gorm:"not null" json:"contract_dest_get"`
 	ContractDestGetHash string `gorm:"not null" json:"contract_dest_get_hash"`
+
+	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
+	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
+	ContractRunParms     string `gorm:"type:jsonb" json:"contract_run_parms"`
+
+	ContractMode int64 `gorm:"not null" json:"contract_mode"`
+
+	ContractStateSrc     int64  `gorm:"not null" json:"contract_state_src"`
 	ContractStateDest    int64  `gorm:"not null" json:"contract_state_dest"`
 	ContractStateSrcErr  string `gorm:"not null" json:"contract_state_src_err"`
 	ContractStateDestErr string `gorm:"not null" json:"contract_state_dest_err"`

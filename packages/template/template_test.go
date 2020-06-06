@@ -302,14 +302,6 @@ var forTest = tplList{
 		"1",John Silver
 		2,"Mark, Smith"
 		3,"Unknown ""Person"""
-		}`,
-		`[{"tag":"data","attr":{"columns":["id","name"],"data":[["1","John Silver"],["2","Mark, Smith"],["3","Unknown \"Person\""]],"source":"mysrc","types":["text","text"]}}]`},
-	{`If(true) {OK}.Else {false} Div(){test} If(false, FALSE).ElseIf(0) { Skip }.ElseIf(1) {Else OK
-		}.Else {Fourth}If(0).Else{ALL right}`,
-		`[{"tag":"text","text":"OK"},{"tag":"div","children":[{"tag":"text","text":"test"}]},{"tag":"text","text":"Else OK"},{"tag":"text","text":"ALL right"}]`},
-	{`Button(Contract: MyContract, Body:My Contract, Class: myclass, Params:"Name=myid,Id=i10,Value")`,
-		`[{"tag":"button","attr":{"class":"myclass","contract":"MyContract","params":{"Id":{"text":"i10","type":"text"},"Name":{"text":"myid","type":"text"},"Value":{"text":"Value","type":"text"}}},"children":[{"tag":"text","text":"My Contract"}]}]`},
-	{`Simple text +=<b>bold</b>`, `[{"tag":"text","text":"Simple text +=\u003cb\u003ebold\u003c/b\u003e"}]`},
 	{`Div(myclass control, Content of the Div)`, `[{"tag":"div","attr":{"class":"myclass control"},"children":[{"tag":"text","text":"Content of the Div"}]}]`},
 	{`input Div(myclass, Content Div(mypar) the Div)`,
 		`[{"tag":"text","text":"input "},{"tag":"div","attr":{"class":"myclass"},"children":[{"tag":"text","text":"Content "},{"tag":"div","attr":{"class":"mypar"}},{"tag":"text","text":" the Div"}]}]`},
@@ -327,6 +319,20 @@ var forTest = tplList{
 	{`Button(My Contract,, myclass, NewEcosystem, "Name=myid,Id=i10,Value").Style( .btn {
 		border: 10px 10px;
 	})`,
+		`[{"tag":"button","attr":{"class":"myclass","contract":"NewEcosystem","params":{"Id":{"text":"i10","type":"text"},"Name":{"text":"myid","type":"text"},"Value":{"text":"Value","type":"text"}},"style":".btn {\n\t\tborder: 10px 10px;\n\t}"},"children":[{"tag":"text","text":"My Contract"}]}]`},
+	{`Div(myclass)Div().Style{
+		.class {
+			text-style: italic;
+		}
+	}
+				Div()`,
+		`[{"tag":"div","attr":{"class":"myclass"}},{"tag":"div","attr":{"style":".class {\n\t\t\ttext-style: italic;\n\t\t}"}},{"tag":"div"}]`},
+	{`Div(myclass){Div()
+		P(){
+			Div(id){
+				Label(My #text#,myl,forname)
+			}
+		}
 	}`,
 		`[{"tag":"div","attr":{"class":"myclass"},"children":[{"tag":"div"},{"tag":"p","children":[{"tag":"div","attr":{"class":"id"},"children":[{"tag":"label","attr":{"class":"myl","for":"forname"},"children":[{"tag":"text","text":"My "}]}]}]}]}]`},
 	{`SetVar(istrue, 1)If(GetVar(istrue),OK)If(GetVar(isfalse)){Skip}.Else{Span(Else OK)}`,

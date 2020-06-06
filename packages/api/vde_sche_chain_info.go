@@ -37,15 +37,6 @@ func VDEScheChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	)
 	logger := getLogger(r)
 	form := &VDEScheChainInfoForm{}
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-	m := &model.VDEScheChainInfo{}
-	if m, err = unmarshalColumnVDEScheChainInfo(form); err != nil {
-		fmt.Println(err)
-		errorResponse(w, err)
-		return
 	}
 
 	m.CreateTime = time.Now().Unix()
@@ -66,6 +57,24 @@ func VDEScheChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
+	id := converter.StrToInt64(params["id"])
+	form := &VDEScheChainInfoForm{}
+
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m := &model.VDEScheChainInfo{}
+
+	if m, err = unmarshalColumnVDEScheChainInfo(form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
 		return
 	}

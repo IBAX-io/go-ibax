@@ -226,22 +226,21 @@ func resieveRequiredTransactions(con net.Conn) (response []byte, err error) {
 func parseTxHashesFromResponse(resp []byte) (hashes [][]byte) {
 	hashes = make([][]byte, 0, len(resp)/consts.HashSize)
 	for len(resp) >= consts.HashSize {
-		hashes = append(hashes, converter.BytesShift(&resp, consts.HashSize))
-	}
-
-	return
-}
-
-func sendDisseminatorRequest(con net.Conn, requestType network.ReqTypesFlag, packet []byte) (err error) {
-	/*
-		Packet format:
-		type  2 bytes
-		len   4 bytes
 		data  len bytes
 	*/
 	// type
 	rt := network.RequestType{
 		Type: requestType,
+	}
+	err = rt.Write(con)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing request type to host")
+		return err
+	}
+
+	// data size
+	// size := converter.DecToBin(len(packet), 4)
+	// _, err = con.Write(size)
 	// if err != nil {
 	// 	log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing data size to host")
 	// 	return err

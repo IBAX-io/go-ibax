@@ -29,21 +29,23 @@ func GetRowsInfo(rows *sql.Rows,sqlQuest string) ([]map[string]string, error) {
 	columntypes, err1 := rows.ColumnTypes()
 	if err1 != nil {
 		return result, fmt.Errorf("getRows ColumnTypes err:%s in query %s", err1, sqlQuest)
-	}
-	values := make([][]byte /*sql.RawBytes*/, len(columns))
-	scanArgs := make([]interface{}, len(values))
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
-	for rows.Next() {
-		err = rows.Scan(scanArgs...)
-		if err != nil {
 			return result, fmt.Errorf("getRows scan err:%s in query %s", err, sqlQuest)
 		}
 		var value string
 		rez := make(map[string]string)
 		for i, col := range values {
 			// Here we can check if the value is nil (NULL value)
+			if col == nil {
+				value = "NULL"
+			} else {
+				if columntypes[i].DatabaseTypeName() == "BYTEA" {
+					value = hex.EncodeToString(col)
+				} else {
+					value = string(col)
+				}
+			}
+			rez[columns[i]] = value
+		}
 		result = append(result, rez)
 
 	}

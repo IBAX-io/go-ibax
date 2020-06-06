@@ -26,15 +26,22 @@ import (
 
 // Type2 serves requests from disseminator
 func Type2(rw io.ReadWriter) error {
-	r := &network.DisRequest{}
-	if err := r.Read(rw); err != nil {
-		return err
-	}
+	var rtxs []*model.RawTx
+	for _, tran := range txs {
+		if int64(len(tran)) > syspar.GetMaxTxSize() {
+			log.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_tx_size": syspar.GetMaxTxSize(), "current_size": len(tran)}).Error("transaction size exceeds max size")
+			return utils.ErrInfo("len(txBinData) > max_tx_size")
+		}
 
-	txs, err := UnmarshalTxPacket(r.Data)
-	if err != nil {
-		return err
-	}
+		if tran == nil {
+			log.WithFields(log.Fields{"type": consts.ParameterExceeded, "mx_tx_size": syspar.GetMaxTxSize(), "info": "tran nil", "current_size": len(tran)}).Error("transaction size nil")
+			continue
+		}
+
+		rtx := &transaction.RawTransaction{}
+		if err = rtx.Processing(tran); err != nil {
+			return err
+		}
 		rtxs = append(rtxs, rtx.SetRawTx())
 	}
 

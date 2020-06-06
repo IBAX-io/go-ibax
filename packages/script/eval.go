@@ -13,6 +13,15 @@ import (
 )
 
 type evalCode struct {
+	Source string
+	Code   *Block
+}
+
+var (
+	evals = make(map[uint64]*evalCode)
+)
+
+// CompileEval compiles conditional exppression
 func (vm *VM) CompileEval(input string, state uint32) error {
 	source := `func eval bool { return ` + input + `}`
 	block, err := vm.CompileBlock([]rune(source), &OwnerInfo{StateID: state})
@@ -38,19 +47,6 @@ func (vm *VM) EvalIf(input string, state uint32, vars *map[string]interface{}) (
 	crc, err := crypto.CalcChecksum([]byte(input))
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("calculating compile eval checksum")
-		return false, err
-	}
-	if eval, ok := evals[crc]; !ok || eval.Source != input {
-		if err := vm.CompileEval(input, state); err != nil {
-			log.WithFields(log.Fields{"type": consts.EvalError, "error": err}).Error("compiling eval")
-			return false, err
-		}
-	}
-	rt := vm.RunInit(syspar.GetMaxCost())
-	ret, err := rt.Run(evals[crc].Code.Children[0], nil, vars)
-	if err == nil {
-		if len(ret) == 0 {
-			return false, nil
 		}
 		return valueToBool(ret[0]), nil
 	}
