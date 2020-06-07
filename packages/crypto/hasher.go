@@ -50,6 +50,9 @@ func getHasher() Hasher {
 }
 
 func InitHash(s string) {
+	switch s {
+	case hSM3:
+		hal.name = hSM3
 		return
 	case hSHA256:
 		hal.name = hSHA256
@@ -85,13 +88,6 @@ func Address(pubKey []byte) int64 {
 type SM3 struct {
 	Hasher
 }
-
-type SHA256 struct {
-	Hasher
-}
-
-func (s *SM3) getHMAC(secret string, message string) ([]byte, error) {
-	mac := hmac.New(sm3.New, []byte(secret))
 	mac.Write([]byte(message))
 	return mac.Sum(nil), nil
 }

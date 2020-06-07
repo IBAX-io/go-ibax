@@ -30,16 +30,6 @@ func unmarshalColumnVDEDestMember(form *VDEDestMemberForm) (*model.VDEDestMember
 		VDEType:              int64(form.VDEType),
 		ContractRunHttp:      form.ContractRunHttp,
 		ContractRunEcosystem: form.ContractRunEcosystem,
-	}
-
-	return m, err
-}
-
-func VDEDestMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
-	)
-	logger := getLogger(r)
 	form := &VDEDestMemberForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
@@ -77,6 +67,15 @@ func VDEDestMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+
+	m := &model.VDEDestMember{}
+
+	if m, err = unmarshalColumnVDEDestMember(form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m.ID = id
 	m.UpdateTime = time.Now().Unix()
 	if err = m.Updates(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")

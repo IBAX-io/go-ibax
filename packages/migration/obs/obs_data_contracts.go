@@ -414,22 +414,6 @@ VALUES
         var editors, creators map
         editors["pages"] = "EditPage"
         editors["blocks"] = "EditBlock"
-        editors["menu"] = "EditMenu"
-        editors["app_params"] = "EditAppParam"
-        editors["languages"] = "EditLang"
-        editors["contracts"] = "EditContract"
-        editors["tables"] = "" // nothing
-        creators["pages"] = "NewPage"
-        creators["blocks"] = "NewBlock"
-        creators["menu"] = "NewMenu"
-        creators["app_params"] = "NewAppParam"
-        creators["languages"] = "NewLang"
-        creators["contracts"] = "NewContract"
-        creators["tables"] = "NewTable"
-        var dataImport array
-        dataImport = JSONDecode($Data)
-        var i int
-        while i < Len(dataImport) {
             var item cdata map type name string
             cdata = dataImport[i]
             if cdata {
@@ -487,6 +471,23 @@ VALUES
     }
     conditions {
         $Data = BytesToString($Data["Body"])
+        $limit = 10 // data piece size of import
+    }
+    action {
+        // init buffer_data, cleaning old buffer
+        var initJson map
+        $import_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "import", "ecosystem": $ecosystem_id}).One("id")
+        if $import_id {
+            $import_id = Int($import_id)
+            DBUpdate("@1buffer_data", $import_id, {"value": initJson})
+        } else {
+            $import_id = DBInsert("@1buffer_data", {"account": $account_id, "key": "import", "value": initJson, "ecosystem": $ecosystem_id})
+        }
+        $info_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "import_info", "ecosystem": $ecosystem_id}).One("id")
+        if $info_id {
+            $info_id = Int($info_id)
+            DBUpdate("@1buffer_data", $info_id, {"value": initJson})
+        } else {
             $info_id = DBInsert("@1buffer_data", {"account": $account_id, "key": "import_info", "value": initJson, "ecosystem": $ecosystem_id})
         }
         var input map arrData array

@@ -11,14 +11,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -72,6 +64,9 @@ func getBinaryHandler(w http.ResponseWriter, r *http.Request) {
 	found, err := bin.GetByID(converter.StrToInt64(params["id"]))
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Errorf("getting binary by id")
+		errorResponse(w, err)
+		return
+	}
 
 	if !found {
 		errorResponse(w, errNotFound)
