@@ -1,9 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
-	ID         int64  `gorm:"primary_key;not null"`
-	MemberName string `gorm:"not null"`
-	ImageID    *int64
 	MemberInfo string `gorm:"type:jsonb"`
 }
 
