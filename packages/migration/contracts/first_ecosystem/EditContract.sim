@@ -13,10 +13,11 @@ contract EditContract {
     conditions {
         RowConditions("contracts", $Id, onlyConditions())
         if $Conditions {
-        $recipient = Int($cur["wallet_id"])
-    }
-
-    action {
-        UpdateContract($Id, $Value, $Conditions, $recipient, $cur["token_id"])
-    }
-}
+            ValidateCondition($Conditions, $ecosystem_id)
+        }
+        $cur = DBFind("contracts").Columns("id,value,conditions,wallet_id,token_id").WhereId($Id).Row()
+        if !$cur {
+            error Sprintf("Contract %d does not exist", $Id)
+        }
+        if $Value {
+            ValidateEditContractNewValue($Value, $cur["value"])

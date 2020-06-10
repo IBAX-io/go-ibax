@@ -42,8 +42,6 @@ func VDESrcTaskFromScheStatus(ctx context.Context, d *daemon) error {
 			TaskStatus.CreateTime = time.Now().Unix()
 			err = TaskStatus.Create()
 			if err != nil {
-				fmt.Println("Create VDESrcTaskStatus table err: ", err)
-				log.WithFields(log.Fields{"error": err}).Error("Create VDESrcTaskStatus table!")
 				time.Sleep(time.Millisecond * 2)
 				continue
 			}
@@ -68,6 +66,17 @@ func VDESrcTaskFromScheStatus(ctx context.Context, d *daemon) error {
 	if len(SrcTask) > 0 {
 		log.Info("Src task  found")
 		// deal with task data
+		for _, item := range SrcTask {
+			//fmt.Println("SrcTask:", item.TaskUUID)
+			TaskStatus := &model.VDESrcTaskFromScheStatus{}
+			TaskStatus.TaskUUID = item.TaskUUID
+			TaskStatus.ContractRunHttp = item.ContractRunHttp
+			TaskStatus.ContractRunEcosystem = item.ContractRunEcosystem
+			TaskStatus.ContractRunParms = item.ContractRunParms
+			TaskStatus.ContractSrcName = item.ContractSrcName
+			TaskStatus.CreateTime = time.Now().Unix()
+			err = TaskStatus.Create()
+			if err != nil {
 				fmt.Println("Create VDESrcTaskStatus table err: ", err)
 				log.WithFields(log.Fields{"error": err}).Error("Create VDESrcTaskStatus table!")
 				time.Sleep(time.Millisecond * 2)

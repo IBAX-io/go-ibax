@@ -1,0 +1,9 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract UploadFile {
+    data {
+        ApplicationId int
+        Data file
+        Name string "optional"
+    }
+    conditions {
