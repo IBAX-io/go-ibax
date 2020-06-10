@@ -63,6 +63,11 @@ func CreateTransaction(data, hash []byte, keyID, tnow int64) error {
 	if err := tx.Create(nil); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating new transaction")
 		return err
+	}
+	return nil
+}
+
+// CreateDelayTransactionHighRate creates transaction
 func CreateDelayTransactionHighRate(data, hash []byte, keyID, highRate int64) *model.Transaction {
 
 	t := int8(highRate)
@@ -70,12 +75,6 @@ func CreateDelayTransactionHighRate(data, hash []byte, keyID, highRate int64) *m
 		Hash:     hash,
 		Data:     data[:],
 		Type:     getTxTxType(t),
-		KeyID:    keyID,
-		HighRate: model.GetTxRateByTxType(t),
-	}
-	return tx
-}
-
 func getTxTxType(rate int8) int8 {
 	ret := int8(1)
 	switch rate {

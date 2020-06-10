@@ -26,16 +26,6 @@ const (
 	cmdIndex                 // get index []
 	cmdSetIndex              // set index []
 	cmdFuncName              // set func name Func(...).Name(...)
-	cmdUnwrapArr             // unwrap array to stack
-	cmdMapInit               // map initialization
-	cmdArrayInit             // array initialization
-	cmdError                 // error command
-)
-
-// the commands for operations in expressions are listed below
-const (
-	cmdNot = iota | 0x0100
-	cmdSign
 )
 
 const (
@@ -53,3 +43,5 @@ const (
 	cmdNotGreat
 
 	cmdSys          = 0xff
+	cmdUnary uint16 = 50
+)

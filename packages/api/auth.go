@@ -110,6 +110,16 @@ func RefreshToken(header string) (*jwt.Token, error) {
 	if f {
 
 		token, err := jwt.ParseWithClaims(gr.Refresh, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+			}
+
+			return []byte(jwtSecret), nil
+		})
+		if err != nil {
+			return nil, err
+		}
+
 		if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
 			dnw := time.Now().Add(time.Second * time.Duration(jwtrefeshExpire)).Unix()
 			if dnw > claims.StandardClaims.ExpiresAt {
@@ -126,17 +136,6 @@ func RefreshToken(header string) (*jwt.Token, error) {
 					}
 
 					return []byte(jwtSecret), nil
-				})
-			}
-			return token, nil
-		}
-		gd := GRefreshClaims{
-			Header: header,
-		}
-		gd.DeleteClaims()
-		return token, err
-	}
-
 	token, err := jwt.ParseWithClaims(header, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])

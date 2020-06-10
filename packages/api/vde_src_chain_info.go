@@ -6,14 +6,6 @@
 package api
 
 import (
-	"fmt"
-	"net/http"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -135,3 +127,8 @@ func VDESrcChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query chain info data by ID failed")
 		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, result)
+}

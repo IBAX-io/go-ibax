@@ -61,9 +61,6 @@ func GetAllSystemParameters(transaction *DbTransaction) ([]SystemParameter, erro
 
 // ToMap is converting SystemParameter to map
 func (sp *SystemParameter) ToMap() map[string]string {
-	result := make(map[string]string, 0)
-	result["name"] = sp.Name
-	result["value"] = sp.Value
 	result["conditions"] = sp.Conditions
 	return result
 }
@@ -89,6 +86,22 @@ func (sp *SystemParameter) GetNumberOfHonorNodes() (int, error) {
 		return 0, err
 	}
 	if f {
+		if len(sp.Value) > 0 {
+			if err := json.Unmarshal([]byte(sp.Value), &hns); err != nil {
+				return 0, err
+			}
+		}
+	}
+
+	if len(hns) == 0 || len(hns) == 1 {
+		return 0, nil
+	}
+	return len(hns), nil
+}
+
+func (sp *SystemParameter) GetPoolBlockRate(dbt *DbTransaction) (int64, error) {
+	f, err := sp.GetTransaction(dbt, `pool_block_rate`)
+	if err != nil {
 		return 0, err
 	}
 	if f {

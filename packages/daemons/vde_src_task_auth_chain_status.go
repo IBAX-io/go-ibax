@@ -72,6 +72,12 @@ func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
 
 		//
 		//fmt.Println("--ContractMode ", item.ContractMode)
+		//if srcTask.ContractMode == 2 || srcTask.ContractMode == 3 {
+		if srcTask.ContractMode == 3 || srcTask.ContractMode == 4 {
+
+			contractData, err := ecies.EccCryptoKey([]byte(ContractSrcGetPlusHash), item.VDEPubKey)
+			if err != nil {
+				fmt.Println("error", err)
 				log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
 				continue
 			}
@@ -147,12 +153,6 @@ func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
 		if err = SrcTaskChainStatusAuth.Create(); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Insert vde_src_task_chain_status table failed")
 			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-		fmt.Println("Insert vde_src_task_chain_status table ok")
-
-		item.ChainState = 1
-		item.UpdateTime = time.Now().Unix()
 		err = item.Updates()
 		if err != nil {
 			fmt.Println("Update VDESrcTaskAuth table err: ", err)

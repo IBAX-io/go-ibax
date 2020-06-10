@@ -69,23 +69,6 @@ func VDESrcLogUpToChain(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
 			time.Sleep(time.Millisecond * 2)
 			continue
-		}
-		chain_apiAddress := blockchain_http
-		chain_apiEcosystemID := int64(ecosystemID)
-
-		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
-		// Login
-		gAuth_chain, _, gPrivate_chain, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
-			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-		//fmt.Println("Login OK!")
-
-		form := url.Values{
-			"TaskUUID":  {item.TaskUUID},
-			"DataUUID":  {item.DataUUID},
 			"Log":       {item.Log},
 			"LogType":   {converter.Int64ToStr(item.LogType)},
 			"LogSender": {item.LogSender},
@@ -100,6 +83,15 @@ func VDESrcLogUpToChain(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("Send VDESrcLog to chain!")
 			time.Sleep(time.Second * 5)
 			continue
+		}
+		//fmt.Println("Call api.VDEPostTxResult OK")
+		fmt.Println("Send chain Contract to run, ContractName:", ContractName)
+
+		item.ChainState = 1
+		item.TxHash = txHash
+		item.BlockId = 0
+		item.ChainErr = ""
+		item.UpdateTime = time.Now().Unix()
 		err = item.Updates()
 		if err != nil {
 			fmt.Println("Update VDESrcLog table err: ", err)

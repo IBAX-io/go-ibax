@@ -45,9 +45,8 @@ func (b *BlockID) GetbyName(name string) (bool, error) {
 	}
 	if err := b.Unmarshal([]byte(rp.Value)); err != nil {
 		return false, err
-	}
-	return true, nil
-}
+	rp1 := &RedisParams{
+		Key: MihPrefix + n1,
 	}
 	if err := rp1.Getdb1(); err != nil {
 		if err.Error() == "redis: nil" {

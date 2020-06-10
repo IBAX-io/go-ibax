@@ -20,21 +20,6 @@ var (
 
 	migrationInitialSchema = `
 		CREATE TABLE "system_contracts" (
-		"id" bigint NOT NULL  DEFAULT '0',
-		"value" text  NOT NULL DEFAULT '',
-		"wallet_id" bigint NOT NULL DEFAULT '0',
-		"token_id" bigint NOT NULL DEFAULT '0',
-		"active" character(1) NOT NULL DEFAULT '0',
-		"conditions" text  NOT NULL DEFAULT ''
-		);
-		ALTER TABLE ONLY "system_contracts" ADD CONSTRAINT system_contracts_pkey PRIMARY KEY (id);
-		
-		
-		CREATE TABLE "system_tables" (
-		"name" varchar(100)  NOT NULL DEFAULT '',
-		"permissions" jsonb,
-		"columns" jsonb,
-		"conditions" text  NOT NULL DEFAULT ''
 		);
 		ALTER TABLE ONLY "system_tables" ADD CONSTRAINT system_tables_pkey PRIMARY KEY (name);
 		
@@ -45,3 +30,4 @@ var (
 		DROP TABLE IF EXISTS "stop_daemons"; CREATE TABLE "stop_daemons" (
 		"stop_time" int NOT NULL DEFAULT '0'
 		);`
+)

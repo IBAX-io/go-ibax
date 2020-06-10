@@ -47,10 +47,6 @@ func GetPublicKeys(public []byte) (*ecdsa.PublicKey, error) {
 	pubkey := new(ecdsa.PublicKey)
 
 	if len(public) != consts.PubkeySizeLength {
-		return pubkey, fmt.Errorf("invalid parameters len(public) = %d", len(public))
-	}
-
-	var pubkeyCurve elliptic.Curve
 
 	return pubkey, nil
 }
