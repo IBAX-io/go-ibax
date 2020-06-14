@@ -36,15 +36,16 @@ var migrationsCLB = &migration{"0.1.8", migrationInitialTablesCLB, true}
 
 var updateMigrations = []*migration{
 	&migration{"3.1.0", updates.M310, false},
-	&migration{"3.2.0", updates.M320, false},
 }
 
-type migration struct {
-	version  string
-	data     string
-	template bool
-}
-
+func compareVer(a, b string) (int, error) {
+	var (
+		av, bv []string
+		ai, bi int
+		err    error
+	)
+	if av = strings.Split(a, `.`); len(av) != 3 {
+		return 0, fmt.Errorf(eVer, a)
 	}
 	if bv = strings.Split(b, `.`); len(bv) != 3 {
 		return 0, fmt.Errorf(eVer, b)

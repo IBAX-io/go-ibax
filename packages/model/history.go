@@ -11,6 +11,16 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+// History represent record of history table
+type History struct {
+	ecosystem        int64
+	ID               int64
+	SenderID         int64
+	RecipientID      int64
+	SenderBalance    decimal.Decimal
+	RecipientBalance decimal.Decimal
+	Amount           decimal.Decimal
+	Comment          string `json:"comment,omitempty"`
 	BlockID          int64  `json:"block_id,omitempty"`
 	TxHash           []byte `gorm:"column:txhash"`
 	CreatedAt        int64  `json:"created_at,omitempty"`
@@ -71,18 +81,6 @@ func GetExcessFromToTokenMovementPerDay(tx *DbTransaction) (excess []MoneyTransf
 		Where("to_timestamp(created_at) > NOW() - interval '24 hours' AND amount > 0").
 		Group("sender_id, recipient_id").
 		Having("SUM(amount) > ?", consts.FromToPerDayLimit).
-		Scan(&excess).Error
-
-	return excess, err
-}
-
-// GetExcessTokenMovementQtyPerBlock returns from to pairs where money transactions count greather than tokenMovementQtyPerBlockLimit per 24 hours
-func GetExcessTokenMovementQtyPerBlock(tx *DbTransaction, blockID int64) (excess []SenderTxCount, err error) {
-	db := GetDB(tx)
-	err = db.Table("1_history").
-		Select("sender_id, count(*) tx_count").
-		Where("block_id = ? AND amount > ?", blockID, 0).
-		Group("sender_id").
 		Having("count(*) > ?", consts.TokenMovementQtyPerBlockLimit).
 		Scan(&excess).Error
 

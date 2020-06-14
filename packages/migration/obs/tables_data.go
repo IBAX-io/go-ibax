@@ -113,6 +113,12 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
 		'ContractConditions("MainCondition")'),
 	('12', 'notifications',
 		'{"insert":"ContractAccess(\"notifications_Send\", \"CheckNodesBan\")",
+			"update":"ContractAccess(\"notifications_Send\", \"notifications_Close\", \"notifications_Process\")",
+			"new_column":"ContractConditions(\"MainCondition\")"}',
+		'{"date_closed":"ContractAccess(\"notifications_Close\")",
+			"sender":"false",
+			"processing_info":"ContractAccess(\"notifications_Close\",\"notifications_Process\")",
+			"date_start_processing":"ContractAccess(\"notifications_Close\",\"notifications_Process\")",
 			"notification":"false",
 			"page_name":"false",
 			"page_params":"false",
@@ -171,18 +177,5 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
 		"new_column": "ContractConditions(\"MainCondition\")"}',
 	  '{"owner": "ContractConditions(\"MainCondition\")",
 	  "cron": "ContractConditions(\"MainCondition\")",
-	  "contract": "ContractConditions(\"MainCondition\")",
-	  "counter": "ContractConditions(\"MainCondition\")",
-	  "till": "ContractConditions(\"MainCondition\")",
-		"conditions": "ContractConditions(\"MainCondition\")"
-	  }', 'ContractConditions("MainCondition")'),
-	('19', 'buffer_data',
-		'{"insert":"true","update":"ContractConditions(\"MainCondition\")",
-			"new_column":"ContractConditions(\"MainCondition\")"}',
-		'{
-			"key": "false",
-			"value": "true",
-			"account": "false"
-		}',
 		'ContractConditions("MainCondition")');
 `

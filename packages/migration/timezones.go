@@ -32,10 +32,6 @@ INSERT INTO "1_time_zones" VALUES
 (next_id('1_time_zones'), 'Africa/Ceuta', '+02:00'),
 (next_id('1_time_zones'), 'Africa/Conakry', 'UTC'),
 (next_id('1_time_zones'), 'Africa/Dakar', 'UTC'),
-(next_id('1_time_zones'), 'Africa/Dar_es_Salaam', '+03:00'),
-(next_id('1_time_zones'), 'Africa/Djibouti', '+03:00'),
-(next_id('1_time_zones'), 'Africa/Douala', '+01:00'),
-(next_id('1_time_zones'), 'Africa/El_Aaiun', '+01:00'),
 (next_id('1_time_zones'), 'Africa/Freetown', 'UTC'),
 (next_id('1_time_zones'), 'Africa/Gaborone', '+02:00'),
 (next_id('1_time_zones'), 'Africa/Harare', '+02:00'),
@@ -434,3 +430,11 @@ INSERT INTO "1_time_zones" VALUES
 (next_id('1_time_zones'), 'Pacific/Pitcairn', '-08:00'),
 (next_id('1_time_zones'), 'Pacific/Pohnpei', '+11:00'),
 (next_id('1_time_zones'), 'Pacific/Port_Moresby', '+10:00'),
+(next_id('1_time_zones'), 'Pacific/Rarotonga', '-10:00'),
+(next_id('1_time_zones'), 'Pacific/Saipan', '+10:00'),
+(next_id('1_time_zones'), 'Pacific/Tahiti', '-10:00'),
+(next_id('1_time_zones'), 'Pacific/Tarawa', '+12:00'),
+(next_id('1_time_zones'), 'Pacific/Tongatapu', '+13:00'),
+(next_id('1_time_zones'), 'Pacific/Wake', '+12:00'),
+(next_id('1_time_zones'), 'Pacific/Wallis', '+12:00');
+`

@@ -17,6 +17,12 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
+
+func unmarshalColumnSubNodeSrcTask(form *SubNodeSrcTaskForm) (*model.SubNodeSrcTask, error) {
+	var (
+		parms          map[string]interface{}
+		task_run_parms map[string]interface{}
+		err            error
 	)
 
 	err = json.Unmarshal([]byte(form.Parms), &parms)
@@ -106,20 +112,6 @@ func SubNodeSrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	m.UpdateTime = time.Now().Unix()
 	if err = m.Updates(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
-		return
-	}
-
-	result, err := m.GetOneByID()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
-		return
-	}
-
-	jsonResponse(w, result)
-}
-
-func SubNodeSrcTaskDeleteHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
 	logger := getLogger(r)
 	id := converter.StrToInt64(params["id"])
 

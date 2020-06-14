@@ -359,6 +359,17 @@ func GetFuelRate(ecosystem int64) string {
 func IsFuelRate(ecosystem int64) (string, bool) {
 	mutex.RLock()
 	defer mutex.RUnlock()
+	if ret, ok := fuels[ecosystem]; ok {
+		return ret, ok
+	}
+	return "", false
+}
+
+// GetTaxesWallet is returns taxes wallet
+func GetTaxesWallet(ecosystem int64) string {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	if ret, ok := wallets[ecosystem]; ok {
 		return ret
 	}
 	return wallets[1]
@@ -405,12 +416,6 @@ func GetMaxForsignSize() int64 {
 }
 
 // GetGapsBetweenBlocks is returns gaps between blocks
-func GetGapsBetweenBlocks() int64 {
-	return converter.StrToInt64(SysString(GapsBetweenBlocks))
-}
-
-// GetMaxTxCount is returns max tx count
-func GetMaxTxCount() int {
 	return converter.StrToInt(SysString(MaxTxCount))
 }
 

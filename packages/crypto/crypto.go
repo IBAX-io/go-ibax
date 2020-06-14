@@ -97,27 +97,23 @@ func Decrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
 // SharedEncrypt creates a shared key and encrypts text. The first 32 characters are the created public key.
 // The cipher text can be only decrypted with the original private key.
 //func SharedEncrypt(public, text []byte) ([]byte, error) {
-//	priv, pub, err := genBytesKeys()
-//	if err != nil {
-//		return nil, err
-//	}
-//	shared, err := getSharedKey(priv, public)
-//	if err != nil {
-//		return nil, err
-//	}
-//	val, err := Encrypt(shared, text, pub)
-//	return val, err
-//}
-
-// CBCEncrypt encrypts the text by using the key parameter. It uses CBC mode of AES.
-func encryptCBC(text, key, iv []byte) ([]byte, error) {
-	if iv == nil {
 		iv = make([]byte, consts.BlockSize)
 		if _, err := crand.Read(iv); err != nil {
 			return nil, err
 		}
 	} else if len(iv) < consts.BlockSize {
 		return nil, fmt.Errorf(`wrong size of iv %d`, len(iv))
+	} else if len(iv) > consts.BlockSize {
+		iv = iv[:consts.BlockSize]
+	}
+
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	plaintext := _PKCS7Padding(text, consts.BlockSize)
+	mode := cipher.NewCBCEncrypter(block, iv)
+	encrypted := make([]byte, len(plaintext))
 	mode.CryptBlocks(encrypted, plaintext)
 	return append(iv, encrypted...), nil
 

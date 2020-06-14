@@ -18,11 +18,14 @@ contract UploadBinary {
                 "account": $UserID, "name": $Name, "ecosystem": $ecosystem_id}).One("id"))
         if $Id == 0 {
             if $ApplicationId == 0 {
-            DBUpdate("@1binaries", $Id, {"data": $Data, "hash": hash, "mime_type": $DataMimeType})
-        } else {
-            $Id = DBInsert("@1binaries", {"app_id": $ApplicationId, "account": $UserID,
-                "name": $Name, "data": $Data, "hash": hash, "mime_type": $DataMimeType, "ecosystem": $ecosystem_id})
+                warning LangRes("@1aid_cannot_zero")
+            }
         }
-        $result = $Id
     }
+    action {
+        var hash string
+        hash = Hash($Data)
+        if $DataMimeType == "" {
+            $DataMimeType = "application/octet-stream"
+        }
 }

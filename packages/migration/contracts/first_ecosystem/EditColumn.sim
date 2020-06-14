@@ -1,6 +1,10 @@
 // +prop AppID = '1'
-
-    action {
-        PermColumn($TableName, $Name, $Permissions)
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract EditColumn {
+    data {
+        TableName string
+        Name string
+        Permissions string
     }
-}
+
+    conditions {

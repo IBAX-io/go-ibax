@@ -7,13 +7,19 @@ package crypto
 import "hash/crc64"
 
 type checksumProvider int
-// CalcChecksum is calculates checksum
-func CalcChecksum(input []byte) (uint64, error) {
-	switch checksumProv {
-	case _CRC64:
-		return calcCRC64(input), nil
-	default:
-		return 0, ErrUnknownProvider
+
+const (
+	_CRC64 checksumProvider = iota
+)
+
+var (
+	table64 *crc64.Table
+)
+
+func init() {
+	table64 = crc64.MakeTable(crc64.ECMA)
+}
+
 	}
 }
 

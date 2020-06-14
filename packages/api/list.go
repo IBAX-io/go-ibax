@@ -9,6 +9,18 @@ import (
 	"errors"
 	//"encoding/json"
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/smart"
+	qb "github.com/IBAX-io/go-ibax/packages/smart/queryBuilder"
+	"github.com/IBAX-io/go-ibax/packages/template"
+	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/IBAX-io/go-ibax/packages/utils/tx"
+
+	//"io/ioutil"
+	"net/http"
+
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -401,22 +413,6 @@ func getSubNodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-	q := model.SubNodeGetTableQuery(params["name"], client.EcosystemID)
-
-	if len(form.Columns) > 0 {
-		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
-	}
-
-	if len(form.InWhere) > 0 {
-		inWhere, _, err := template.ParseObject([]rune(form.InWhere))
-		switch v := inWhere.(type) {
-		case string:
-			if len(v) == 0 {
-				where = `true`
-			} else {
-				errorResponse(w, errors.New(`Where has wrong format`))
-				return
-			}
 		case map[string]interface{}:
 			where, err = qb.GetWhere(types.LoadMap(v))
 			if err != nil {

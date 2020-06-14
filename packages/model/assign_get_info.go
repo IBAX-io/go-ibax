@@ -40,18 +40,6 @@ func (m *AssignGetInfo) GetBalance(db *DbTransaction, wallet int64) (bool, decim
 	var mps []AssignGetInfo
 	var balance, total_balance decimal.Decimal
 	balance = decimal.NewFromFloat(0)
-	total_balance = decimal.NewFromFloat(0)
-	err := GetDB(db).Table(m.TableName()).
-		Where("keyid = ? and deleted =? ", wallet, 0).
-		Find(&mps).Error
-	if err != nil {
-		return false, balance, total_balance, err
-	}
-	if len(mps) == 0 {
-		return false, balance, total_balance, err
-	}
-
-	//newblockid
 	block := &Block{}
 	found, err := block.GetMaxBlock()
 	if err != nil {
@@ -75,6 +63,12 @@ func (m *AssignGetInfo) GetBalance(db *DbTransaction, wallet int64) (bool, decim
 
 	rules := make(map[int64]AssignRules, 10)
 	err = json.Unmarshal([]byte(sp.Value), &rules)
+	if err != nil {
+		return false, balance, total_balance, err
+	}
+
+	maxblockid := block.ID
+	for _, t := range mps {
 		am := decimal.NewFromFloat(0)
 		tm := t.BalanceAmount
 		rule, ok := rules[t.Type]
