@@ -12,6 +12,17 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/converter"
+
+	"path/filepath"
+
+	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
 type dest_VDEDestDataHashResult struct {
 	Count string `json:"count"`
 	List  []struct {
@@ -115,19 +126,6 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 	}
 	if len(t_struct.List) == 0 {
 		//log.Info("DEDestDataHashResult not found, sleep...")
-		//fmt.Println("DEDestDataHashResult not found, sleep...")
-		time.Sleep(time.Second * 2)
-		return nil
-	}
-
-	//utils.Print_json(t_struct)
-	for _, DataHashItem := range t_struct.List {
-		//fmt.Println("DataHashItem:", DataHashItem.ID, DataHashItem.TaskUUID)
-		m := &model.VDEDestDataHash{}
-		m.TaskUUID = DataHashItem.TaskUUID
-		m.DataUUID = DataHashItem.DataUUID
-		m.Hash = DataHashItem.Hash
-		m.BlockchainHttp = blockchain_http
 		m.BlockchainEcosystem = blockchain_ecosystem
 		m.CreateTime = converter.StrToInt64(DataHashItem.CreateTime)
 

@@ -50,6 +50,21 @@ func IsKeyBanned(keyID int64) bool {
 func BannedTill(keyID int64) string {
 	mutex.RLock()
 	defer mutex.RUnlock()
+	if ban, ok := banList[keyID]; ok {
+		return ban.Time.Format(`2006-01-02 15:04:05`)
+	}
+	return ``
+}
+
+// BadTxForBan adds info about bad tx of the key
+func BadTxForBan(keyID int64) {
+	var (
+		ban banKey
+		ok  bool
+	)
+	mutex.Lock()
+	defer mutex.Unlock()
+	now := time.Now()
 	if ban, ok = banList[keyID]; ok {
 		var bMin, count int
 		for i := 0; i < conf.Config.BanKey.BadTx; i++ {
@@ -57,16 +72,5 @@ func BannedTill(keyID int64) string {
 				count++
 			}
 			if i > bMin && ban.Bad[i].Before(ban.Bad[bMin]) {
-				bMin = i
-			}
-		}
-		ban.Bad[bMin] = now
-		if count >= conf.Config.BanKey.BadTx-1 {
-			ban.Time = now.Add(time.Duration(conf.Config.BanKey.BanTime) * time.Minute)
-		}
-	} else {
-		ban = banKey{Bad: make([]time.Time, conf.Config.BanKey.BadTx)}
-		ban.Bad[0] = time.Now()
-	}
 	banList[keyID] = ban
 }

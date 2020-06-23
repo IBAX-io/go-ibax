@@ -1,18 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"context"
-	"fmt"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
 )
 
 //Scheduling task to run
@@ -42,6 +27,8 @@ func VDESrcTaskFromScheStatus(ctx context.Context, d *daemon) error {
 			TaskStatus.CreateTime = time.Now().Unix()
 			err = TaskStatus.Create()
 			if err != nil {
+				fmt.Println("Create VDESrcTaskStatus table err: ", err)
+				log.WithFields(log.Fields{"error": err}).Error("Create VDESrcTaskStatus table!")
 				time.Sleep(time.Millisecond * 2)
 				continue
 			}

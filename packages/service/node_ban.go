@@ -169,15 +169,10 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 	if err != nil {
 		return err
 	}
+			return nil, nil, err
+		}
 
-	return tx.CreateTransaction(txData, txHash, conf.Config.KeyID, sc.Time)
-}
-
-func (nbs *NodesBanService) FilterHosts(hosts []string) ([]string, []string, error) {
-	var goodHosts, banHosts []string
-	for _, h := range hosts {
-		n, err := syspar.GetNodeByHost(h)
-		if err != nil {
+		if nbs.IsBanned(n) {
 			banHosts = append(banHosts, n.TCPAddress)
 		} else {
 			goodHosts = append(goodHosts, n.TCPAddress)

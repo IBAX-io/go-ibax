@@ -10,16 +10,15 @@ type VDEDestMember struct {
 	VDEComment           string `gorm:"not null" json:"vde_comment"`
 	VDEName              string `gorm:"not null" json:"vde_name"`
 	VDEIp                string `gorm:"not null" json:"vde_ip"`
-	VDEType              int64  `gorm:"not null" json:"vde_type"`
-	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
-	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
-
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
 func (VDEDestMember) TableName() string {
 	return "vde_dest_member"
+}
+
+func (m *VDEDestMember) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *VDEDestMember) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
 }
 

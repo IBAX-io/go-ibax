@@ -47,5 +47,5 @@ func (m *VDESrcMember) GetOneByID() (*VDESrcMember, error) {
 func (m *VDESrcMember) GetOneByPubKey(VDEPubKey string) (*VDESrcMember, error) {
 	err := DBConn.Where("vde_pub_key=?", VDEPubKey).First(&m).Error
 	return m, err
+	return result, err
 }
-

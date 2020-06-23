@@ -3,6 +3,21 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package model
+
+import (
+type RolesParticipants struct {
+	ecosystem   int64
+	Id          int64
+	Role        string `gorm:"type":jsonb`
+	Member      string `gorm:"type":jsonb`
+	Appointed   string `gorm:"type":jsonb`
+	DateCreated int64
+	DateDeleted int64
+	Deleted     bool
+}
+
+// SetTablePrefix is setting table prefix
 func (r *RolesParticipants) SetTablePrefix(prefix int64) *RolesParticipants {
 	r.ecosystem = prefix
 	return r

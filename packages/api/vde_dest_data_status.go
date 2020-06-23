@@ -1,16 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"encoding/json"
-	"fmt"
-	"net/http"
-	"time"
-
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 
@@ -74,6 +61,19 @@ func VDEDestDataStatusCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	model.DBConn.Last(&m)
+
+	jsonResponse(w, *m)
+}
+
+func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	id := converter.StrToInt64(params["id"])
+	form := &VDEDestDataStatusForm{}
 
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)

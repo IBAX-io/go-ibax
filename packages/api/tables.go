@@ -44,8 +44,16 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting records count from tables")
 		errorResponse(w, err)
 		return
+
+	list, err := model.GetResult(rows)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting names from tables")
+		errorResponse(w, err)
+		return
 	}
 
+	result := &tablesResult{
+		Count: count,
 		List:  make([]tableInfo, len(list)),
 	}
 	for i, item := range list {

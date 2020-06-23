@@ -19,9 +19,8 @@ import (
 
 func unmarshalColumnVDEAgentMember(form *VDEAgentMemberForm) (*model.VDEAgentMember, error) {
 	var (
-		err error
-	)
-
+		VDEComment:           form.VDEComment,
+		VDEName:              form.VDEName,
 		VDEIp:                form.VDEIp,
 		VDEType:              int64(form.VDEType),
 		ContractRunHttp:      form.ContractRunHttp,

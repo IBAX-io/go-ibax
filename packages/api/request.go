@@ -136,6 +136,11 @@ func (connect *Connect) SendMultipart(url string, files map[string][]byte, v int
 }
 
 func (connect *Connect) WaitTx(hash string) (int64, error) {
+	data, err := json.Marshal(&txstatusRequest{
+		Hashes: []string{hash},
+	})
+	if err != nil {
+		return 0, err
 	}
 
 	for i := 0; i < 15; i++ {
@@ -170,20 +175,6 @@ func (connect *Connect) WaitTxList(hashes []string) (map[string]WaitResult, erro
 	})
 	if err != nil {
 		return nil, err
-	}
-	var multiRet multiTxStatusResult
-	err = connect.SendPost(`txstatus`, &url.Values{
-		"data": {string(data)},
-	}, &multiRet)
-	if err != nil {
-		return nil, err
-	}
-	waitResults := map[string]WaitResult{}
-	for key, ret := range multiRet.Results {
-		if len(ret.BlockID) > 0 {
-			waitResults[key] = WaitResult{
-				BlockID: converter.StrToInt64(ret.BlockID),
-				Msg:     ret.Result,
 			}
 			continue
 		}
