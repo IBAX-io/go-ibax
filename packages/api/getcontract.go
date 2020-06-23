@@ -52,3 +52,12 @@ func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
 		TableID:  converter.Int64ToStr(info.Owner.TableID),
 		Name:     info.Name,
 		StateID:  info.Owner.StateID,
+		WalletID: converter.Int64ToStr(info.Owner.WalletID),
+		TokenID:  converter.Int64ToStr(info.Owner.TokenID),
+		Address:  converter.AddressToString(info.Owner.WalletID),
+	}
+	}
+	result.Fields = fields
+
+	jsonResponse(w, result)
+}

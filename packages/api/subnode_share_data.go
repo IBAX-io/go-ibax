@@ -91,6 +91,17 @@ func shareDataUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	result, err := m.GetOneByID()
 	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to get one-on-one hit data")
+		return
+	}
+
+	jsonResponse(w, result)
+}
+
+func shareDataDeleteHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+	id := converter.StrToInt64(params["id"])
 
 	m := &model.ShareDataStatus{}
 	m.ID = id
@@ -143,12 +154,6 @@ func shareDataByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-
-	jsonResponse(w, result)
-}
-
-func shareDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
 	logger := getLogger(r)
 
 	shareDataStatus := model.DataUpToChainStatus{}

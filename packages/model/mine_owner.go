@@ -76,6 +76,14 @@ func (m *MineOwner) GetPoolManage(keyid int64) (bool, error) {
 		var mr MinePoolApplyInfo
 		fr, erro := mr.GetPool(keyid)
 		if erro != nil {
+			return false, erro
+		}
+
+		if fr {
+			return true, nil
+		}
+
+		return fh, errors.New("MintPoolTransferHistory keyid not found")
 	}
 
 	return true, nil
@@ -98,6 +106,3 @@ func (m *MineOwner) GetAllPoolManage(dbt *DbTransaction, ts int64) (map[int64]in
 	for _, v := range mp {
 		ret[v.Devid] = v.Minerid
 	}
-
-	return ret, err
-}

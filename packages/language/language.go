@@ -103,6 +103,8 @@ func loadLang(transaction *model.DbTransaction, state int) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if _, ok := lang[state]; !ok {
+		lang[state] = &cacheLang{}
+	}
 	lang[state].res = res
 	return nil
 }
@@ -158,16 +160,6 @@ func LangText(transaction *model.DbTransaction, in string, state int, accept str
 				return val, true
 			}
 		}
-		return (*lres)[lng], true
-	}
-	return in, false
-}
-
-// LangMacro replaces all inclusions of $resname$ in the incoming text with the corresponding language resources,
-// if they exist
-func LangMacro(input string, state int, accept string) string {
-	if !strings.ContainsRune(input, '$') {
-		return input
 	}
 	syschar := '$'
 	length := utf8.RuneCountInString(input)

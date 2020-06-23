@@ -21,3 +21,6 @@ contract EditContract {
         }
         if $Value {
             ValidateEditContractNewValue($Value, $cur["value"])
+        }
+   
+        $recipient = Int($cur["wallet_id"])

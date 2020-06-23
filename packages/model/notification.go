@@ -21,10 +21,10 @@ const (
 // Notification structure
 type Notification struct {
 	ecosystem           int64
-	ID                  int64  `gorm:"primary_key;not null"`
-	Recipient           string `gorm:"type:jsonb`
-	Sender              string `gorm:"type:jsonb`
-	Notification        string `gorm:"type:jsonb`
+// SetTablePrefix set table Prefix
+func (n *Notification) SetTablePrefix(tablePrefix string) {
+	n.ecosystem = converter.StrToInt64(tablePrefix)
+}
 
 // TableName returns table name
 func (n *Notification) TableName() string {
