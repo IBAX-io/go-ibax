@@ -222,6 +222,19 @@ var obsimp = `{
     ],
     "languages": [
         {
+            "Name": "est2",
+            "Trans": "{\"en\":\"yeye\",\"te\":\"knfek\"}"
+        }
+    ],
+    "contracts": [
+        {
+            "Name": "testCont2",
+            "Value": "contract testCont2 {\n    data {\n\n    }\n\n    conditions {\n\n    }\n\n    action {\n        $result=\"privet\"\n    }\n}",
+            "Conditions": "true"
+        }
+    ],
+    "tables": [
+        {
             "Name": "tests2",
             "Columns": "[{\"name\":\"name\",\"type\":\"text\",\"conditions\":\"true\"}]",
             "Permissions": "{\"insert\":\"true\",\"update\":\"true\",\"new_column\":\"true\"}"
@@ -439,14 +452,6 @@ func TestCreateCron(t *testing.T) {
 
 	till := time.Now().Format(time.RFC3339)
 	require.NoError(t,
-		postTx("NewCron", &url.Values{
-			"Cron":       {"* * * * *"},
-			"Contract":   {"TestCron"},
-			"Conditions": {`ContractConditions("MainCondition")`},
-			"Till":       {till},
-			"obs":        {"true"},
-		}))
-}
 
 func TestCron(t *testing.T) {
 	if err := keyLogin(1); err != nil {

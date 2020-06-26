@@ -41,18 +41,6 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 		blockchain_http      string
 		blockchain_ecosystem string
 		UpdateTime           string
-		err                  error
-	)
-
-	hashtime := &model.VDEDestHashTime{}
-	DestHashTime, err := hashtime.Get()
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting DestHashTime")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-	if DestHashTime == nil {
-		//log.Info("DestHashTime not found")
 		fmt.Println("Dest DestHashTime not found")
 		time.Sleep(time.Millisecond * 2)
 		return nil
@@ -126,6 +114,19 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 	}
 	if len(t_struct.List) == 0 {
 		//log.Info("DEDestDataHashResult not found, sleep...")
+		//fmt.Println("DEDestDataHashResult not found, sleep...")
+		time.Sleep(time.Second * 2)
+		return nil
+	}
+
+	//utils.Print_json(t_struct)
+	for _, DataHashItem := range t_struct.List {
+		//fmt.Println("DataHashItem:", DataHashItem.ID, DataHashItem.TaskUUID)
+		m := &model.VDEDestDataHash{}
+		m.TaskUUID = DataHashItem.TaskUUID
+		m.DataUUID = DataHashItem.DataUUID
+		m.Hash = DataHashItem.Hash
+		m.BlockchainHttp = blockchain_http
 		m.BlockchainEcosystem = blockchain_ecosystem
 		m.CreateTime = converter.StrToInt64(DataHashItem.CreateTime)
 

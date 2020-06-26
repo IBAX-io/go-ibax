@@ -7,6 +7,11 @@
 
 package log
 
+import (
+	"github.com/sirupsen/logrus"
+)
+
+
 func (hook *SyslogHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }

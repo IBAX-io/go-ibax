@@ -26,19 +26,6 @@ type VDEAgentDataLog struct {
 
 func (VDEAgentDataLog) TableName() string {
 	return "vde_agent_data_log"
-}
-
-func (m *VDEAgentDataLog) Create() error {
-	return DBConn.Create(&m).Error
-}
-
-func (m *VDEAgentDataLog) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
-
-func (m *VDEAgentDataLog) Delete() error {
-	return DBConn.Delete(m).Error
-}
 
 func (m *VDEAgentDataLog) GetAll() ([]VDEAgentDataLog, error) {
 	var result []VDEAgentDataLog
@@ -57,3 +44,16 @@ func (m *VDEAgentDataLog) GetAllByTaskUUID(TaskUUID string) ([]VDEAgentDataLog, 
 }
 
 func (m *VDEAgentDataLog) GetOneByTaskUUID(TaskUUID string) (*VDEAgentDataLog, error) {
+	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+	return m, err
+}
+
+func (m *VDEAgentDataLog) GetAllByChainState(ChainState int64) ([]VDEAgentDataLog, error) {
+	result := make([]VDEAgentDataLog, 0)
+	err := DBConn.Table("vde_agent_data_log").Where("chain_state = ?", ChainState).Find(&result).Error
+	return result, err
+}
+
+func (m *VDEAgentDataLog) GetOneByChainState(ChainState int64) (bool, error) {
+	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
+}

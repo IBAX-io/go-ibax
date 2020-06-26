@@ -30,13 +30,7 @@ func unmarshalColumnVDEAgentChainInfo(form *VDEAgentChainInfoForm) (*model.VDEAg
 	}
 
 	return m, err
-}
-
-func VDEAgentChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
-	)
-	logger := getLogger(r)
+		return
 	}
 	//
 	if m.LogMode == 0 {

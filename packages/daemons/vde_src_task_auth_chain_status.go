@@ -65,9 +65,6 @@ func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
 		}
 		//Generate a chain request
 		ContractSrcGetPlusHash := srcTask.ContractSrcGetHash + srcTask.ContractSrcGet
-		ContractDestGetPlusHash := srcTask.ContractDestGetHash + srcTask.ContractDestGet
-
-		//fmt.Println("--ContractSrcGetPlusHash ", ContractSrcGetPlusHash)
 		//fmt.Println("--ContractDestGetPlusHash ", ContractDestGetPlusHash)
 
 		//
@@ -153,6 +150,12 @@ func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
 		if err = SrcTaskChainStatusAuth.Create(); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Insert vde_src_task_chain_status table failed")
 			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		fmt.Println("Insert vde_src_task_chain_status table ok")
+
+		item.ChainState = 1
+		item.UpdateTime = time.Now().Unix()
 		err = item.Updates()
 		if err != nil {
 			fmt.Println("Update VDESrcTaskAuth table err: ", err)
