@@ -36,14 +36,16 @@ contract NewPage {
             warning Sprintf( "Page %s already exists", $Name)
         }
 
-        $ValidateCount = preparePageValidateCount($ValidateCount)
-
-        if $ValidateMode {
-            if $ValidateMode != "1" {
-                $ValidateMode = "0"
             }
         }
     }
 
     action {
         DBInsert("pages", {name: $Name,value: $Value, menu: $Menu,
+             validate_count:$ValidateCount,validate_mode: $ValidateMode,
+             conditions: $Conditions,app_id: $ApplicationId})
+    }
+    func price() int {
+        return SysParamInt("page_price")
+    }
+}

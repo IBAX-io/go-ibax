@@ -8,6 +8,12 @@ package daemons
 import (
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/daylight/system"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -42,13 +48,3 @@ func WaitStopTime() {
 				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("gorm close")
 			}
 			err = system.RemovePidFile()
-			if err != nil {
-				log.WithFields(log.Fields{
-					"type": consts.IOError, "error": err,
-				}).Error("removing pid file")
-				panic(err)
-			}
-		}
-		time.Sleep(time.Second)
-	}
-}

@@ -414,6 +414,22 @@ VALUES
         var editors, creators map
         editors["pages"] = "EditPage"
         editors["blocks"] = "EditBlock"
+        editors["menu"] = "EditMenu"
+        editors["app_params"] = "EditAppParam"
+        editors["languages"] = "EditLang"
+        editors["contracts"] = "EditContract"
+        editors["tables"] = "" // nothing
+        creators["pages"] = "NewPage"
+        creators["blocks"] = "NewBlock"
+        creators["menu"] = "NewMenu"
+        creators["app_params"] = "NewAppParam"
+        creators["languages"] = "NewLang"
+        creators["contracts"] = "NewContract"
+        creators["tables"] = "NewTable"
+        var dataImport array
+        dataImport = JSONDecode($Data)
+        var i int
+        while i < Len(dataImport) {
             var item cdata map type name string
             cdata = dataImport[i]
             if cdata {
@@ -710,13 +726,6 @@ VALUES
                 warning Sprintf("Ecosystem %d is not system", $TokenEcosystem)
             }
         }
-    }
-
-    action {
-        $result = CreateContract($contract_name, $Value, $Conditions, $TokenEcosystem, $ApplicationId)
-    }
-    func price() int {
-        return SysParamInt("contract_price")
     }
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),

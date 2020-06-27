@@ -232,6 +232,18 @@ func (mgr *OBSManager) StartOBS(name string) error {
 		err := fmt.Errorf(`OBS '%s' is not exists`, name)
 		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on find OBS process")
 		return err
+	}
+
+	state := proc.GetState()
+	if state == process.Stopped ||
+		state == process.Exited ||
+		state == process.Fatal {
+		proc.Start(true)
+		log.WithFields(log.Fields{"obs_name": name}).Info("OBS started")
+		return nil
+	}
+
+	err := fmt.Errorf("OBS '%s' is %s", name, state)
 	log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on starting OBS")
 	return err
 }
@@ -300,16 +312,6 @@ func (mgr *OBSManager) initOBSDir(obsName string) error {
 func InitOBSManager() {
 	if !conf.Config.IsOBSMaster() {
 		return
-	}
-
-	execPath, err := os.Executable()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Fatal("on determine executable path")
-	}
-
-	childConfigsPath, err := prepareWorkDir()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Fatal("on prepare child configs folder")
 	}
 
 	Manager = &OBSManager{

@@ -1,5 +1,13 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package cmd
+
+import (
+	"encoding/hex"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -47,12 +55,6 @@ var generateKeysCmd = &cobra.Command{
 }
 
 func createFile(filename string, data []byte) error {
-	dir := filepath.Dir(filename)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.Mkdir(dir, 0775)
-		if err != nil {
-			return errors.Wrapf(err, "creating dir %s", dir)
-		}
 	}
 
 	return os.WriteFile(filename, data, fileMode)

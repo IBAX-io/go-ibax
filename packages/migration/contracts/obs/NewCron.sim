@@ -1,0 +1,16 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewCron {
+		data {
+			Cron       string
+			Contract   string
+			Limit      int "optional"
+			Till       string "optional date"
+			Conditions string
+		}
+		conditions {
+			ValidateCondition($Conditions,$ecosystem_id)
+			ValidateCron($Cron)
+		}
+		action {
+	}

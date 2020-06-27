@@ -1,19 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"context"
-	"encoding/json"
-	"strings"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-
-	log "github.com/sirupsen/logrus"
-
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -235,6 +222,9 @@ func VDESrcData(ctx context.Context, d *daemon) error {
 		if len(vde_agent_pubkey_slice) != vde_dest_num {
 			log.WithFields(log.Fields{"error": err}).Error("vde_agent_pubkey parse error")
 			item.DataState = 3 //Indicates an error in parsing task parameters
+			err = item.Updates()
+			if err != nil {
+				log.WithError(err)
 			}
 			continue
 		}
