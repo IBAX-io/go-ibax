@@ -75,9 +75,17 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 		ContractDestGetHashHex string
 	)
 
-	tasktime := &model.VDESrcTaskTime{}
-	SrcTaskTime, err := tasktime.Get()
-	if err != nil {
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
+	if SrcTaskTime == nil {
+		//log.Info("SrcTaskTime not found")
+		fmt.Println("SrcTaskTime not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
+
+	chaininfo := &model.VDESrcChainInfo{}
 	SrcChainInfo, err := chaininfo.Get()
 	if err != nil {
 		//log.WithFields(log.Fields{"error": err}).Error("VDE Src fromchain getting chain info")

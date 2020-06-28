@@ -1,5 +1,13 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -73,16 +81,6 @@ func VDESrcTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		ContractSrcGetHashHex  string
 		ContractDestGetHashHex string
 		err                    error
-	)
-	logger := getLogger(r)
-	form := &VDESrcTaskForm{}
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-	m := &model.VDESrcTask{}
-	if m, err = unmarshalColumnVDESrcTask(form); err != nil {
-		fmt.Println(err)
 		errorResponse(w, err)
 		return
 	}

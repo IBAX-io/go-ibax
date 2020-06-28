@@ -1,0 +1,15 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract EditCron {
+		data {
+			Id         int
+			Contract   string
+			Cron       string "optional"
+			Limit      int "optional"
+			Till       string "optional date"
+			Conditions string
+		}
+		conditions {
+			ConditionById("cron", true)
+			ValidateCron($Cron)
+	}

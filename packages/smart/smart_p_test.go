@@ -19,3 +19,10 @@ func TestRegexpMatch(t *testing.T) {
 		want bool
 	}{
 		// TODO: Add test cases.
+		t.Run(tt.name, func(t *testing.T) {
+			if got := RegexpMatch(tt.args.str, tt.args.reg); got != tt.want {
+				t.Errorf("RegexpMatch() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

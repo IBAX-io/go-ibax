@@ -1,3 +1,9 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package model
 
 import "github.com/IBAX-io/go-ibax/packages/converter"
 
@@ -27,4 +33,3 @@ func (m Menu) TableName() string {
 // Get is retrieving model from database
 func (m *Menu) Get(name string) (bool, error) {
 	return isFound(DBConn.Where("ecosystem=? and name = ?", m.ecosystem, name).First(m))
-}

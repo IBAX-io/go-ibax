@@ -1,5 +1,14 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+import (
+	"errors"
+	"github.com/shopspring/decimal"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"math"
 )
 
 // AppParam is model
@@ -49,19 +58,6 @@ func (sp *AppParam) GetHvlvebalance(transaction *DbTransaction, blockid int64) (
 	var halve, mine_reward AppParam
 	hf, err := isFound(GetDB(transaction).Where("ecosystem=? and app_id=? and name = ?", 1, 1, "halve_interval_blockid").First(&halve))
 	if err != nil {
-		return ret, err
-	}
-
-	md, err := isFound(GetDB(transaction).Where("ecosystem=? and app_id=? and name = ?", 1, 1, "mine_reward").First(&mine_reward))
-	if err != nil {
-		return ret, err
-	}
-
-	if !hf || !md {
-		return ret, errors.New("param mine_reward or halve_interval_blockid not found")
-	}
-
-	hal := converter.StrToInt64(halve.Value)
 	if hal > 0 {
 		he := blockid / hal
 		mdv := converter.StrToFloat64(mine_reward.Value)

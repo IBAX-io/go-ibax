@@ -26,6 +26,15 @@ import (
 
 // Type2 serves requests from disseminator
 func Type2(rw io.ReadWriter) error {
+	r := &network.DisRequest{}
+	if err := r.Read(rw); err != nil {
+		return err
+	}
+
+	txs, err := UnmarshalTxPacket(r.Data)
+	if err != nil {
+		return err
+	}
 	var rtxs []*model.RawTx
 	for _, tran := range txs {
 		if int64(len(tran)) > syspar.GetMaxTxSize() {
@@ -137,11 +146,6 @@ func DecryptData(binaryTx *[]byte) ([]byte, []byte, []byte, error) {
 	block, _ := pem.Decode([]byte(nodeKeyPrivate))
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
 		log.WithFields(log.Fields{"type": consts.CryptoError}).Error("No valid PEM data found")
-		return nil, nil, nil, utils.ErrInfo("No valid PEM data found")
-	}
-
-	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("Parse PKCS1PrivateKey")
 		return nil, nil, nil, utils.ErrInfo(err)
 	}

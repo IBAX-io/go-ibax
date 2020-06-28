@@ -20,6 +20,17 @@ type Ecosystem struct {
 	IsValued       bool
 	EmissionAmount string `gorm:"type:jsonb"`
 	TokenTitle     string
+	TokenName      string
+	TypeEmission   int64
+	TypeWithdraw   int64
+	Info           string `gorm:"type:jsonb"`
+}
+
+// TableName returns name of table
+// only first ecosystem has this entity
+func (sys *Ecosystem) TableName() string {
+	return ecosysTable
+}
 
 // GetAllSystemStatesIDs is retrieving all ecosystems ids
 func GetAllSystemStatesIDs() ([]int64, []string, error) {
@@ -55,11 +66,6 @@ func (sys *Ecosystem) Delete(transaction *DbTransaction) error {
 func (sys *Ecosystem) IsOpenMultiFee() bool {
 	if len(sys.Info) > 0 {
 		var info map[string]interface{}
-		json.Unmarshal([]byte(sys.Info), &info)
-		if v, ok := info["multi_fee"]; ok {
-			multi, _ := strconv.Atoi(fmt.Sprint(v))
-			if multi == 1 {
-				return true
 			}
 		}
 	}
