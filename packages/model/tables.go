@@ -112,6 +112,13 @@ func (t *Table) GetColumns(transaction *DbTransaction, name, jsonKey string) (ma
 }
 
 // GetPermissions returns table permissions by name
+func (t *Table) GetPermissions(transaction *DbTransaction, name, jsonKey string) (map[string]string, error) {
+	keyStr := ""
+	if jsonKey != "" {
+		keyStr = `->'` + jsonKey + `'`
+	}
+	rows, err := GetDB(transaction).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(permissions`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
+	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
@@ -145,8 +152,6 @@ func CreateTable(transaction *DbTransaction, tableName, colsSQL string) error {
 // CreateView is creating view table
 func CreateView(transaction *DbTransaction, inViewName, inTables, inWhere, inColSQL string) error {
 	inSQL := `CREATE VIEW "` + inViewName + `" AS SELECT ` + inColSQL + ` FROM ` + inTables + ` WHERE ` + inWhere + `;`
-	return GetDB(transaction).Exec(inSQL).Error
-}
 
 // DropView is drop view table
 func DropView(transaction *DbTransaction, inViewName string) error {

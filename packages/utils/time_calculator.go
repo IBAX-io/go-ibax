@@ -7,11 +7,6 @@ package utils
 import (
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-)
-
 type BlockTimeCounter struct {
 	start       time.Time
 	duration    time.Duration
@@ -56,6 +51,11 @@ func (btc *BlockTimeCounter) NextTime(t time.Time, nodePosition int) time.Time {
 
 	d := nodePosition - curNodePosition
 	if curNodePosition >= nodePosition {
+		d += btc.numberNodes
+	}
+
+	return btc.start.Add(btc.duration*time.Duration(block+d) + time.Second)
+}
 
 // RangesByTime returns start and end of interval by time
 func (btc *BlockTimeCounter) RangesByTime(t time.Time) (start, end time.Time) {

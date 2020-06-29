@@ -181,6 +181,19 @@ func calcExp(tokens []token, resType int, prec string) string {
 				switch resType {
 				case expInt:
 					if stack[top].(int64) == 0 {
+						return errDiv.Error()
+					}
+				case expFloat:
+					if stack[top].(float64) == 0 {
+						return errDiv.Error()
+					}
+				case expMoney:
+					if stack[top].(decimal.Decimal).Cmp(decimal.New(0, 0)) == 0 {
+						return errDiv.Error()
+					}
+				}
+			}
+			funcs[item.Type][resType]()
 			stack = stack[:top]
 		}
 	}
@@ -252,11 +265,6 @@ func calculate(exp, etype, prec string) string {
 					stack = append(stack, last)
 					buf[len(buf)-1] = item
 					continue
-				}
-			}
-			buf = append(buf, item)
-		}
-	}
 	for i := len(buf) - 1; i >= 0; i-- {
 		last := buf[i]
 		if last.Type >= tkAdd && last.Type <= tkDiv {

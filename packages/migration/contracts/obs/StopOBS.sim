@@ -3,3 +3,5 @@
 contract StopOBS {
 		data {
 			OBSName string
+		}
+	

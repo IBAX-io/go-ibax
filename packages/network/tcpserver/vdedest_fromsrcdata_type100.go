@@ -4,6 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 package tcpserver
 
+import (
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -47,12 +60,6 @@ func Type100(r *network.VDESrcDataRequest) (*network.VDESrcDataResponse, error) 
 		//Data:         r.Data,
 		Data:       data,
 		CreateTime: time.Now().Unix(),
-	}
-
-	err = VDEDestData.Create()
-	if err != nil {
-		log.WithError(err)
-		return nil, err
 	}
 
 	return resp, nil

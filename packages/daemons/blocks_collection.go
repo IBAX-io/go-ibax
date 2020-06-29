@@ -133,7 +133,6 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 
 		lastBlockID = bl.Header.BlockID
 		lastBlockTime = bl.Header.Time
-
 		if err = bl.Check(); err != nil {
 			var replaceCount int64 = 1
 			if err == block.ErrIncorrectRollbackHash {
@@ -311,6 +310,15 @@ func getBlocks(ctx context.Context, host string, blockID, minCount int64) ([]*bl
 	nextBlockID := blockID
 
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// load the block bodies from the host
+	blocksCh, err := tcpclient.GetBlocksBodies(ctx, host, blockID, true)
+	if err != nil {
+		return nil, utils.WithBan(errors.Wrapf(err, "Getting bodies of blocks by id %d", blockID))
+	}
+
+	for binaryBlock := range blocksCh {
 		if blockID < 2 {
 			break
 		}

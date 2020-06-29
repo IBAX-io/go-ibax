@@ -59,10 +59,9 @@ func Struct2Map(obj interface{}) map[string]interface{} {
 	for i := 0; i < t.NumField(); i++ {
 		data[t.Field(i).Name] = v.Field(i).Interface()
 	}
-	return data
-}
-func DBGetAllKey(prefix string, bvalue bool) (*[]string, error) {
-	var (
+			if strings.HasPrefix(key, prefix) {
+				if bvalue {
+					value := string(iter.Value())
 					s := fmt.Sprintf("Key[%s]=[%s]\n", key, value)
 					ret = append(ret, s)
 				} else {

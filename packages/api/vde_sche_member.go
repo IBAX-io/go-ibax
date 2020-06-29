@@ -40,6 +40,21 @@ func VDEScheMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	logger := getLogger(r)
+	form := &VDEScheMemberForm{}
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.VDEScheMember{}
+	if m, err = unmarshalColumnVDEScheMember(form); err != nil {
+		fmt.Println(err)
+		errorResponse(w, err)
+		return
+	}
+
+	m.CreateTime = time.Now().Unix()
+
+	if err = m.Create(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
 
@@ -90,15 +105,6 @@ func VDEScheMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 	id := converter.StrToInt64(params["id"])
-
-	m := &model.VDEScheMember{}
-	m.ID = id
-	if err := m.Delete(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
-	}
-
-	jsonResponse(w, "ok")
-}
 
 func VDEScheMemberListHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
