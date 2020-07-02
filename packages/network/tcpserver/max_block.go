@@ -7,14 +7,12 @@ package tcpserver
 import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network"
-	"github.com/IBAX-io/go-ibax/packages/utils"
+	}
+	if !found {
+		log.WithFields(log.Fields{"type": consts.NotFound}).Debug("Can't found info block")
+	}
 
-	log "github.com/sirupsen/logrus"
-)
-
-// Type10 sends the last block ID
-// blocksCollection daemon sends this request
+	return &network.MaxBlockResponse{
 		BlockID: infoBlock.BlockID,
 	}, nil
 }

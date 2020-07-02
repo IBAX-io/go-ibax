@@ -2,14 +2,14 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-package migration
+package utils
 
 import (
-	"fmt"
-	"os"
 	"testing"
+
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestGetEcosystemScript(t *testing.T) {
-	str := fmt.Sprintf(GetFirstEcosystemScript(), -1744264011260937456)
+func TestBanError(t *testing.T) {
+	cases := map[error]bool{

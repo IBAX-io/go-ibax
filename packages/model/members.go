@@ -1,7 +1,7 @@
 /*---------------------------------------------------------------------------------------------
-	MemberInfo string `gorm:"type:jsonb"`
-}
-
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 // SetTablePrefix is setting table prefix
 func (m *Member) SetTablePrefix(prefix string) {
 	m.ecosystem = converter.StrToInt64(prefix)

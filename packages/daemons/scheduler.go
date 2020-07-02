@@ -40,18 +40,12 @@ func loadContractTasks() error {
 		}
 
 		for _, cronTask := range tasks {
-			err = scheduler.UpdateTask(&scheduler.Task{
-				ID:       cronTask.UID(),
-				CronSpec: cronTask.Cron,
-				Handler: &contract.ContractHandler{
-					Contract: cronTask.Contract,
-				},
-			})
-			if err != nil {
-				return err
-			}
-		}
-	}
+}
+
+// Scheduler starts contracts on schedule
+func Scheduler(ctx context.Context, d *daemon) error {
+	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
+		defer atomic.StoreUint32(&d.atomic, 0)
 	} else {
 		return nil
 	}

@@ -18,17 +18,6 @@ contract Import {
         }
     }
     action {
-        var editors, creators map
-        editors["pages"] = "EditPage"
-        editors["blocks"] = "EditBlock"
-        editors["menu"] = "EditMenu"
-        editors["app_params"] = "EditAppParam"
-        editors["languages"] = "EditLang"
-        editors["contracts"] = "EditContract"
-        editors["tables"] = "" // nothing
-        creators["pages"] = "NewPage"
-        creators["blocks"] = "NewBlock"
-        creators["menu"] = "NewMenu"
         creators["app_params"] = "NewAppParam"
         creators["languages"] = "NewLang"
         creators["contracts"] = "NewContract"
@@ -75,3 +64,15 @@ contract Import {
                             cdata["Value"] = item["value"] + "\n" + cdata["Value"]
                         }
                     }
+                } else {
+                    contractName = creators[type]
+                }
+                if contractName != "" {
+                    CallContract(contractName, cdata)
+                }
+            }
+            i = i + 1
+        }
+        // Println(Sprintf("> time: %v", $time))
+    }
+}

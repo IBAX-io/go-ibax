@@ -2,6 +2,18 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+package block
+
+import (
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 
@@ -96,14 +108,6 @@ func (bl *txMaxLimit) init(b *Block) {
 }
 
 func (bl *txMaxLimit) check(t *transaction.Transaction, mode int) error {
-	bl.Count++
-	if bl.Count+1 > bl.Limit && mode == letPreprocess {
-		return ErrLimitStop
-	}
-	if bl.Count > bl.Limit {
-		return limitError(`txMaxLimit`, `Max tx in the block`)
-	}
-	return nil
 }
 
 // Checking the time of the start of generating block

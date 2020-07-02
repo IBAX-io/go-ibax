@@ -2,25 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package queryBuilder
-
-import (
-	"encoding/hex"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"regexp"
-	"strings"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/types"
-
-	log "github.com/sirupsen/logrus"
-)
-
-const (
 	prefTimestamp      = "timestamp"
 	prefTimestampSpace = "timestamp "
 )
@@ -227,6 +208,17 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, e
 			initial = colname
 		} else {
 			initial = `'{}'`
+		}
+
+		expressions = append(expressions, fmt.Sprintf(`%s=%s::jsonb || '%s'::jsonb`, colname, initial, string(out)))
+	}
+
+	return strings.Join(expressions, ","), nil
+}
+
+func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, error) {
+	if err := b.Prepare(); err != nil {
+		return "", err
 	}
 
 	isID := false

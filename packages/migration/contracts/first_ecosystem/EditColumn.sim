@@ -8,3 +8,8 @@ contract EditColumn {
     }
 
     conditions {
+        ColumnCondition($TableName, $Name, "", $Permissions)
+    }
+
+    action {
+        PermColumn($TableName, $Name, $Permissions)

@@ -5,6 +5,19 @@
 
 package api
 
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
 type columnInfo struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
@@ -18,15 +31,6 @@ type tableResult struct {
 	Update     string       `json:"update"`
 	Read       string       `json:"read,omitempty"`
 	Filter     string       `json:"filter,omitempty"`
-	Conditions string       `json:"conditions"`
-	AppID      string       `json:"app_id"`
-	Columns    []columnInfo `json:"columns"`
-}
-
-func getTableHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-	client := getClient(r)
 	prefix := client.Prefix()
 
 	table := &model.Table{}

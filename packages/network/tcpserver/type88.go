@@ -27,12 +27,23 @@ func Type88(r *network.PrivateDateRequest) (*network.PrivateDateResponse, error)
 		log.WithError(err)
 		return nil, err
 	}
+	//hash, err := crypto.HashHex(r.Data)
+	hash, err := crypto.HashHex(data)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
+		log.WithError(err)
 		return nil, err
 	}
-	encodeDataString := base64.StdEncoding.EncodeToString(eccData)
-	////
+	resp := &network.PrivateDateResponse{}
+	resp.Hash = hash
+
+	//
+	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
+	if len(NodePrivateKey) < 1 {
+		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
+		err = errors.New(`empty node private key`)
+		return nil, err
+	}
+	eccData, err := ecies.EccCryptoKey(data, NodePublicKey)
 
 	privatePackets := model.PrivatePackets{
 		Hash: hash,
