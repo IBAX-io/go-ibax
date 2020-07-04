@@ -20,6 +20,13 @@ var (
 	errEcosystem         = errType{"E_ECOSYSTEM", "Ecosystem %d doesn't exist", defaultStatus}
 	errEmptyPublic       = errType{"E_EMPTYPUBLIC", "Public key is undefined", http.StatusBadRequest}
 	errKeyNotFound       = errType{"E_KEYNOTFOUND", "Key has not been found", http.StatusNotFound}
+	errEmptySign         = errType{"E_EMPTYSIGN", "Signature is undefined", defaultStatus}
+	errHashWrong         = errType{"E_HASHWRONG", "Hash is incorrect", http.StatusBadRequest}
+	errHashNotFound      = errType{"E_HASHNOTFOUND", "Hash has not been found", defaultStatus}
+	errHeavyPage         = errType{"E_HEAVYPAGE", "This page is heavy", defaultStatus}
+	errInstalled         = errType{"E_INSTALLED", "Chain is already installed", defaultStatus}
+	errInvalidWallet     = errType{"E_INVALIDWALLET", "Wallet %s is not valid", http.StatusBadRequest}
+	errLimitForsign      = errType{"E_LIMITFORSIGN", "Length of forsign is too big (%d)", defaultStatus}
 	errLimitTxSize       = errType{"E_LIMITTXSIZE", "The size of tx is too big (%d)", defaultStatus}
 	errNotFound          = errType{"E_NOTFOUND", "Page not found", http.StatusNotFound}
 	errNotFoundRecord    = errType{"E_NOTFOUND", "Record not found", http.StatusNotFound}
@@ -59,9 +66,3 @@ type errType struct {
 
 func (et errType) Error() string {
 	return et.Err
-}
-
-func (et errType) Errorf(v ...interface{}) errType {
-	et.Message = fmt.Sprintf(et.Message, v...)
-	return et
-}

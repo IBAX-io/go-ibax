@@ -12,4 +12,12 @@ contract EditCron {
 		conditions {
 			ConditionById("cron", true)
 			ValidateCron($Cron)
+		}
+		action {
+			if !$Till {
+			}
+			DBUpdate("cron", $Id, {"cron": $Cron,"contract": $Contract,
+			    "counter":$Limit, "till": $Till, "conditions":$Conditions})
+			UpdateCron($Id)
+		}
 	}

@@ -14,19 +14,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
 )
-
-func InitialLoad(logger *log.Entry) error {
-
-	// check for initial load
-	toLoad, err := needLoad(logger)
-	if err != nil {
-		return err
-	}
-
-	if toLoad {
-		logger.Debug("start first block loading")
-
-		if err := firstLoad(logger); err != nil {
 			logger.WithFields(log.Fields{"error": err}).Error("cant load first block form file or host")
 			return err
 		}
@@ -53,6 +40,13 @@ func loadFirstBlock(logger *log.Entry) error {
 		host, _, err := getHostWithMaxID(ctxDone, logger)
 		if err != nil {
 			return errors.Wrap(err, "reading host")
+		}
+		rawBlocksChan, err := tcpclient.GetBlocksBodies(ctxDone, host, 1, true)
+		if err != nil {
+			return err
+		}
+		for rawBlock := range rawBlocksChan {
+			newBlock = rawBlock
 		}
 	}
 	if err = block.InsertBlockWOForks(newBlock, false, true); err != nil {
