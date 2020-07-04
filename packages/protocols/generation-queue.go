@@ -37,6 +37,14 @@ func (btc *BlockTimeCounter) queue(t time.Time) (int, error) {
 	ut := t.Unix()
 	t = time.Unix(ut, 0)
 	if t.Before(btc.start) {
+		return -1, TimeError
+	}
+
+	return int((t.Sub(btc.start) - 1) / btc.duration), nil
+}
+
+// NodePosition returns generating node position for time
+func (btc *BlockTimeCounter) nodePosition(t time.Time) (int, error) {
 	queue, err := btc.queue(t)
 	if err != nil {
 		return -1, err
@@ -123,15 +131,4 @@ func (btc *BlockTimeCounter) TimeToGenerate(at time.Time, nodePosition int) (boo
 }
 
 // NewBlockTimeCounter return initialized BlockTimeCounter
-func NewBlockTimeCounter() *BlockTimeCounter {
-	firstBlock, _ := syspar.GetFirstBlockData()
-	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
-	blocksGapDuration := time.Second * time.Duration(syspar.GetGapsBetweenBlocks())
-	btc := BlockTimeCounter{
-		start:       time.Unix(int64(firstBlock.Time), 0),
-		duration:    blockGenerationDuration + blocksGapDuration,
-		numberNodes: int(syspar.GetCountOfActiveNodes()),
-	}
-
-	return &btc
 }

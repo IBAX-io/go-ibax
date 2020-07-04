@@ -452,6 +452,14 @@ func TestCreateCron(t *testing.T) {
 
 	till := time.Now().Format(time.RFC3339)
 	require.NoError(t,
+		postTx("NewCron", &url.Values{
+			"Cron":       {"* * * * *"},
+			"Contract":   {"TestCron"},
+			"Conditions": {`ContractConditions("MainCondition")`},
+			"Till":       {till},
+			"obs":        {"true"},
+		}))
+}
 
 func TestCron(t *testing.T) {
 	if err := keyLogin(1); err != nil {
@@ -469,15 +477,6 @@ func TestCron(t *testing.T) {
 			}
 		`},
 		"Conditions": {`ContractConditions("MainCondition")`},
-		"obs":        {"true"},
-	})
-
-	till := time.Now().Format(time.RFC3339)
-	err := postTx("NewCron", &url.Values{
-		"Cron":       {"* * * * *"},
-		"Contract":   {"TestCron"},
-		"Conditions": {`ContractConditions("MainCondition")`},
-		"Till":       {till},
 		"obs":        {"true"},
 	})
 	if err != nil {

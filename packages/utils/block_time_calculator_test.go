@@ -216,9 +216,6 @@ func TestBlockTImeCalculator_countBlockTime(t *testing.T) {
 			result: blockGenerationState{
 				start:    time.Unix(0, 0),
 				duration: time.Second * 0,
-
-				nodePosition: 0,
-			},
 		},
 
 		// Duration testing case
@@ -379,6 +376,13 @@ func TestBlockTImeCalculator_countBlockTime(t *testing.T) {
 
 				nodePosition: 0,
 			},
+		},
+	}
+
+	for _, c := range cases {
+		btc := NewBlockTimeCalculator(c.firstBlockTime,
+			c.blockGenTime,
+			c.blocksGap,
 			c.nodesCount,
 		)
 

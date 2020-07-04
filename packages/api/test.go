@@ -5,10 +5,13 @@
 
 package api
 
-import (
-	"net/http"
+	"github.com/gorilla/mux"
+)
 
-	"github.com/IBAX-io/go-ibax/packages/smart"
+type getTestResult struct {
+	Value string `json:"value"`
+}
+
 func getTestHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	jsonResponse(w, &getTestResult{

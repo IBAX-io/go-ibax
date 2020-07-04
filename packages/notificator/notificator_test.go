@@ -36,21 +36,6 @@ func TestParseRecipientNotifications(t *testing.T) {
 					"role_id":      "3",
 					"cnt":          "4",
 				},
-				map[string]string{
-					"recipient_id": "2",
-					"role_id":      "4",
-					"cnt":          "3",
-				},
-			},
-			Want: map[int64]*[]notificationRecord{
-				1: &[]notificationRecord{
-					notificationRecord{
-						EcosystemID:  1,
-						RoleID:       1,
-						RecordsCount: 2,
-					},
-					notificationRecord{
-						EcosystemID:  1,
 						RoleID:       2,
 						RecordsCount: 1,
 					},
@@ -163,6 +148,18 @@ func TestStatsChanged(t *testing.T) {
 			new: []notificationRecord{
 				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 2}, //records count changed
+				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
+			},
+			result: true,
+		},
+		// not changed
+		tsc{
+			old: []notificationRecord{
+				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
+				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
+				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
+			},
+
 			new: []notificationRecord{
 				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
