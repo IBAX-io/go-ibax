@@ -40,26 +40,30 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 		TaskUUID:            form.TaskUUID,
 		TaskName:            form.TaskName,
 		TaskSender:          form.TaskSender,
+		Comment:             form.Comment,
+		Parms:               converter.MarshalJson(parms),
+		TaskType:            int64(form.TaskType),
+		TaskState:           int64(form.TaskState),
+		ContractSrcName:     form.ContractSrcName,
+		ContractSrcGet:      form.ContractSrcGet,
+		ContractSrcGetHash:  form.ContractSrcGetHash,
+		ContractDestName:    form.ContractDestName,
+		ContractDestGet:     form.ContractDestGet,
+		ContractDestGetHash: form.ContractDestGetHash,
+
+		ContractRunHttp:      form.ContractRunHttp,
+		ContractRunEcosystem: form.ContractRunEcosystem,
+		ContractRunParms:     converter.MarshalJson(contract_run_parms),
+
+		ContractMode: int64(form.ContractMode),
+
+		ContractStateSrc:     int64(form.ContractStateSrc),
 		ContractStateDest:    int64(form.ContractStateDest),
 		ContractStateSrcErr:  form.ContractStateSrcErr,
 		ContractStateDestErr: form.ContractStateDestErr,
 
 		TaskRunState:    int64(form.TaskRunState),
 		TaskRunStateErr: form.TaskRunStateErr,
-
-		//TxHash:     form.TxHash,
-		//ChainState: int64(form.ChainState),
-		//BlockId:    int64(form.BlockId),
-		//ChainId:    int64(form.ChainId),
-		//ChainErr:   form.ChainErr,
-	}
-
-	return m, err
-}
-
-func VDESrcTaskFromScheCreateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
 	)
 	logger := getLogger(r)
 	form := &VDESrcTaskFromScheForm{}

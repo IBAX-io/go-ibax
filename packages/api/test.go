@@ -5,16 +5,6 @@
 
 package api
 
-	"github.com/gorilla/mux"
-)
+import (
+	"net/http"
 
-type getTestResult struct {
-	Value string `json:"value"`
-}
-
-func getTestHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	jsonResponse(w, &getTestResult{
-		Value: smart.GetTestValue(params["name"]),
-	})
-}

@@ -2,12 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"fmt"
-	"net/url"
 	"testing"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto"
@@ -77,6 +71,13 @@ func TestEditEcosystem(t *testing.T) {
 		"Conditions": {`ContractConditions("MainCondition")`}}
 	_, id, err := postTxResult(`@1NewContract`, &form)
 	if err != nil {
+		t.Error(err)
+		return
+	}
+	form = url.Values{"Id": {id}, "Value": {`contract ` + nameCont + ` {
+		action { Test("empty3",  "empty value")}}`},
+		"Conditions": {`ContractConditions("MainCondition")`}}
+	if err := postTx(`@1EditContract`, &form); err != nil {
 		t.Error(err)
 		return
 	}
