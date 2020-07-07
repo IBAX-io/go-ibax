@@ -11,11 +11,6 @@ import (
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-
-	log "github.com/sirupsen/logrus"
-)
-
 // CreatePidFile creats pid file
 func CreatePidFile() error {
 	pid := os.Getpid()
@@ -44,3 +39,6 @@ func ReadPidFile() (int, error) {
 	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
 	if err != nil {
 		log.WithFields(log.Fields{"data": data, "error": err, "type": consts.ConversionError}).Error("pid file data to int")
+	}
+	return pid, err
+}

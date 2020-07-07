@@ -16,3 +16,9 @@ import (
 
 // startCmd is starting node
 var startCmd = &cobra.Command{
+	Use:    "start",
+	Short:  "Starting node",
+	PreRun: loadConfigWKey,
+	Run: func(cmd *cobra.Command, args []string) {
+	startCmd.Flags().BoolVar(&conf.Config.FuncBench, "funcBench", false, "Disable access checking in some built-in functions for benchmarks")
+}
