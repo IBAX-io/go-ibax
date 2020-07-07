@@ -46,6 +46,17 @@ func (t *StopNetworkTransaction) validate() error {
 	cert, err := utils.ParseCert(data.StopNetworkCert)
 	if err != nil {
 		return err
+	}
+
+	fbdata, err := syspar.GetFirstBlockData()
+	if err != nil {
+		return err
+	}
+
+	if err = cert.Validate(fbdata.StopNetworkCertBundle); err != nil {
+		return err
+	}
+
 	t.Cert = cert
 	return nil
 }
@@ -58,15 +69,6 @@ func (t *StopNetworkTransaction) Action() error {
 
 	// Set the node in a pause state
 	service.PauseNodeActivity(service.PauseTypeStopingNetwork)
-
-	t.Logger.Warn(messageNetworkStopping)
-	return ErrNetworkStopping
-}
-
-func (t *StopNetworkTransaction) Rollback() error {
-	return nil
-}
-
 func (t StopNetworkTransaction) Header() *tx.Header {
 	return nil
 }

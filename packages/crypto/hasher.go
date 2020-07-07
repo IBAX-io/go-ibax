@@ -86,11 +86,6 @@ func Address(pubKey []byte) int64 {
 }
 
 type SM3 struct {
-	Hasher
-}
-	mac.Write([]byte(message))
-	return mac.Sum(nil), nil
-}
 
 func (s *SM3) hash(msg []byte) []byte {
 	return sm3.Sm3Sum(msg)
