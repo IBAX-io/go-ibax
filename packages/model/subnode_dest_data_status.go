@@ -37,6 +37,16 @@ func (SubNodeDestDataStatus) TableName() string {
 	return "subnode_dest_data_status"
 }
 
+func (m *SubNodeDestDataStatus) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *SubNodeDestDataStatus) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *SubNodeDestDataStatus) Delete() error {
+	return DBConn.Delete(m).Error
 }
 
 func (m *SubNodeDestDataStatus) GetAll() ([]SubNodeDestDataStatus, error) {
@@ -53,22 +63,6 @@ func (m *SubNodeDestDataStatus) GetOneByDataUUID(DataUUID string) (*SubNodeDestD
 	return m, err
 }
 func (m *SubNodeDestDataStatus) GetOneByTaskUUID(TaskUUID string) (*SubNodeDestDataStatus, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
-}
-func (m *SubNodeDestDataStatus) GetAllByTaskUUID(TaskUUID string) ([]SubNodeDestDataStatus, error) {
-	result := make([]SubNodeDestDataStatus, 0)
-	err := DBConn.Table("subnode_dest_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
-}
-
-func (m *SubNodeDestDataStatus) GetAllByDataStatus(AuthState int64, SignState int64, HashState int64) ([]SubNodeDestDataStatus, error) {
-	result := make([]SubNodeDestDataStatus, 0)
-	err := DBConn.Table("subnode_dest_data_status").Where("auth_state = ? AND sign_state = ? AND hash_state = ?", AuthState, SignState, HashState).Find(&result).Error
-	return result, err
-}
-
-func (m *SubNodeDestDataStatus) GetAllByHashState(HashState int64) ([]SubNodeDestDataStatus, error) {
 	result := make([]SubNodeDestDataStatus, 0)
 	err := DBConn.Table("subnode_dest_data_status").Where("hash_state = ?", HashState).Find(&result).Error
 	return result, err

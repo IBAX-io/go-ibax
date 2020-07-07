@@ -45,15 +45,6 @@ func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse,
 		return nil, err
 	}
 	resp := &network.SubNodeSrcDataResponse{}
-	resp.Hash = hash
-
-	//
-	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
-	if len(NodePrivateKey) < 1 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
-		err = errors.New(`empty node private key`)
-		return nil, err
-	}
 	eccData, err := ecies.EccCryptoKey(data, NodePublicKey)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
@@ -87,3 +78,6 @@ func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse,
 		log.WithError(err)
 		return nil, err
 	}
+
+	return resp, nil
+}

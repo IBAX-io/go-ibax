@@ -79,6 +79,11 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	//}
 
 	//var cf model.Confirmation
+	//cfg, err := cf.CheckAllowGenBlock()
+	//if err != nil {
+	//	d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Debug("confirmation block not allow")
+	//	return err
+	//}
 	//
 	//if !cfg {
 	//	d.logger.WithFields(log.Fields{"type": consts.JustWaiting}).Debug("not my confirmation time")
@@ -182,10 +187,6 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 		return nil, err
 	}
 
-	limits := block.NewLimits(nil)
-
-	type badTxStruct struct {
-		hash  []byte
 		msg   string
 		keyID int64
 	}

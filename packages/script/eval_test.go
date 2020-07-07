@@ -61,3 +61,7 @@ func TestEvalIf(t *testing.T) {
 	for _, item := range test {
 		out, err := vm.EvalIf(item.Input, 0, &vars)
 		if err != nil {
+			if err.Error() != item.Output {
+				t.Error(`error of ifeval ` + item.Input + ` ` + err.Error())
+			}
+		} else {

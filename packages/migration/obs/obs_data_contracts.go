@@ -228,17 +228,6 @@ VALUES
 			}
 			if !HasPrefix($Contract, "@") {
 				$Contract = "@" + Str($ecosystem_id) + $Contract
-			}
-			DBUpdate("cron", $Id, {"cron": $Cron,"contract": $Contract,
-			    "counter":$Limit, "till": $Till, "conditions":$Conditions})
-			UpdateCron($Id)
-		}
-	}
-', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
-	(next_id('1_contracts'), 'EditLang', 'contract EditLang {
-    data {
-        Id int
-        Trans string
     }
 
     conditions {
@@ -726,6 +715,13 @@ VALUES
                 warning Sprintf("Ecosystem %d is not system", $TokenEcosystem)
             }
         }
+    }
+
+    action {
+        $result = CreateContract($contract_name, $Value, $Conditions, $TokenEcosystem, $ApplicationId)
+    }
+    func price() int {
+        return SysParamInt("contract_price")
     }
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),

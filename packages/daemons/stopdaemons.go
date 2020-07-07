@@ -36,15 +36,17 @@ func WaitStopTime() {
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting stop_time from StopDaemons")
 		}
-		if dExists > 0 {
-			utils.CancelFunc()
-			for i := 0; i < utils.DaemonsCount; i++ {
-				name := <-utils.ReturnCh
-				log.WithFields(log.Fields{"daemon_name": name}).Debug("daemon stopped")
-			}
-
-			err := model.GormClose()
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("gorm close")
 			}
 			err = system.RemovePidFile()
+			if err != nil {
+				log.WithFields(log.Fields{
+					"type": consts.IOError, "error": err,
+				}).Error("removing pid file")
+				panic(err)
+			}
+		}
+		time.Sleep(time.Second)
+	}
+}

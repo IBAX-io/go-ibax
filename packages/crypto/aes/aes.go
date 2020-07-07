@@ -5,6 +5,15 @@
 
 package aes
 
+import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+)
+}
+
+func PKCS5UnPadding(origData []byte) []byte {
+	length := len(origData)
 	unpadding := int(origData[length-1])
 	return origData[:(length - unpadding)]
 }
