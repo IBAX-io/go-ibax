@@ -1252,6 +1252,17 @@ main:
 				if len(buffer) == 0 {
 					logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("there is not pair")
 					return fmt.Errorf(`there is not pair`)
+				}
+				prev := buffer[len(buffer)-1]
+				buffer = buffer[:len(buffer)-1]
+				if prev.Value.(uint16) == 0xff {
+					break
+				} else {
+					bytecode = append(bytecode, prev)
+				}
+			}
+			if len(buffer) > 0 {
+				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdIndex {
 					buffer = buffer[:len(buffer)-1]
 					if i < len(*lexems)-1 && (*lexems)[i+1].Type == isEq {
 						i++
@@ -1318,19 +1329,6 @@ main:
 					count := 0
 					if (*lexems)[i+2].Type != isRPar {
 						count++
-					}
-					parcount = append(parcount, count)
-					buffer = append(buffer, &ByteCode{cmdCallExtend, lexem.Line, lexem.Value.(string)})
-					call = true
-				}
-			}
-			if !call {
-				cmd = &ByteCode{cmdExtend, lexem.Line, lexem.Value.(string)}
-				if i < len(*lexems)-1 && (*lexems)[i+1].Type == isLBrack {
-					buffer = append(buffer, &ByteCode{cmdIndex, lexem.Line,
-						&IndexInfo{Extend: lexem.Value.(string)}})
-				}
-			}
 		case lexIdent:
 			noMap = true
 			objInfo, tobj := vm.findObj(lexem.Value.(string), block)

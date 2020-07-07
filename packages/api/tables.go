@@ -44,6 +44,14 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting records count from tables")
 		errorResponse(w, err)
 		return
+	}
+
+	rows, err := model.GetDB(nil).Table(table.TableName()).Where("ecosystem = ?", client.EcosystemID).Offset(form.Offset).Limit(form.Limit).Rows()
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
+		errorResponse(w, err)
+		return
+	}
 
 	list, err := model.GetResult(rows)
 	if err != nil {
@@ -61,12 +69,3 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting count from table")
 			errorResponse(w, err)
-			return
-		}
-
-		result.List[i].Name = item["name"]
-		result.List[i].Count = converter.Int64ToStr(count)
-	}
-
-	jsonResponse(w, result)
-}

@@ -11,10 +11,6 @@ import (
 )
 
 var (
-	errParseCert     = errors.New("Failed to parse certificate")
-	errParseRootCert = errors.New("Failed to parse root certificate")
-)
-
 type Cert struct {
 	cert *x509.Certificate
 }
@@ -67,3 +63,5 @@ func ParseCert(b []byte) (c *Cert, err error) {
 		return nil, err
 	}
 
+	return &Cert{cert}, nil
+}

@@ -59,18 +59,6 @@ func killOld() {
 
 		KillPid(pidMap["pid"])
 		if fmt.Sprintf("%s", err) != "null" {
-			// give 15 sec to end the previous process
-			for i := 0; i < 10; i++ {
-				if _, err := os.Stat(conf.Config.GetPidPath()); err == nil {
-					time.Sleep(time.Second)
-				} else {
-					break
-				}
-			}
-		}
-	}
-}
-
 func initLogs() error {
 	switch conf.Config.Log.LogFormat {
 	case "json":
@@ -133,6 +121,8 @@ func savePid() error {
 	}
 
 	return os.WriteFile(conf.Config.GetPidPath(), PidAndVer, 0644)
+}
+
 func delPidFile() {
 	os.Remove(conf.Config.GetPidPath())
 }

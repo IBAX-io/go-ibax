@@ -13,6 +13,21 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/smart"
+
+	"github.com/IBAX-io/go-ibax/packages/block"
+	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/rollback"
+	"github.com/IBAX-io/go-ibax/packages/service"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/pkg/errors"
@@ -152,19 +167,6 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 
 	d.logger.WithFields(log.Fields{"min_block": curBlock.BlockID, "max_block": maxBlockID, "count": maxBlockID - curBlock.BlockID}).Info("starting downloading blocks")
 	for blockID := curBlock.BlockID + 1; blockID <= maxBlockID; blockID += int64(network.BlocksPerRequest) {
-
-		if loopErr := func() error {
-			ctxDone, cancel := context.WithCancel(ctx)
-			defer func() {
-				cancel()
-				d.logger.WithFields(log.Fields{"count": count, "time": time.Since(st).String()}).Info("blocks downloaded")
-			}()
-
-			rawBlocksChan, err := tcpclient.GetBlocksBodies(ctxDone, host, blockID, false)
-			if err != nil {
-				d.logger.WithFields(log.Fields{"error": err, "type": consts.BlockError}).Error("getting block body")
-				return err
-			}
 
 			for rawBlock := range rawBlocksChan {
 

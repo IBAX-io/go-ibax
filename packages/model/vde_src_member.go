@@ -35,17 +35,5 @@ func (m *VDESrcMember) Delete() error {
 }
 
 func (m *VDESrcMember) GetAll() ([]VDESrcMember, error) {
-	var result []VDESrcMember
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *VDESrcMember) GetOneByID() (*VDESrcMember, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
-
-func (m *VDESrcMember) GetOneByPubKey(VDEPubKey string) (*VDESrcMember, error) {
-	err := DBConn.Where("vde_pub_key=?", VDEPubKey).First(&m).Error
-	return m, err
 	return result, err
 }

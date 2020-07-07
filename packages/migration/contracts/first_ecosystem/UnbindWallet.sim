@@ -8,5 +8,8 @@ contract UnbindWallet {
 		$cur = DBRow("contracts").Columns("id,conditions,wallet_id").WhereId($Id)
 		if !$cur {
 			error Sprintf("Contract %d does not exist", $Id)
-	}
-}
+		}
+		
+		Eval($cur["conditions"])
+		if $key_id != Int($cur["wallet_id"]) {
+			error Sprintf("Wallet %d cannot deactivate the contract", $key_id)

@@ -30,8 +30,6 @@ var firstEcosystemPagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, 
             Div(list-group-item){
                 Div(row){
                     Div(col-md-10 mc-sm text-left){
-                        Span(Class: text-bold, Body: "#DataName#")
-                    }
                     Div(col-md-2 mc-sm text-right){
                         If(#DataCount# > 0){
                             Span(Class: text-bold, Body: "(#DataCount#)")
@@ -66,3 +64,11 @@ var firstEcosystemPagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, 
         }
         Form(panel panel-primary){
             Div(list-group-item){
+                Input(Name: Data, Type: file)
+            }
+            Div(list-group-item text-right){
+                Button(Body: "Load", Class: btn btn-primary, Contract: @1ImportUpload, Page: @1import_app)
+            }
+        }
+    }', 'developer_menu', 'ContractConditions("@1DeveloperCondition")', '1', '1');
+`
