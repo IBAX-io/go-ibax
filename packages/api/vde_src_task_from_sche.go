@@ -64,8 +64,8 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 
 		TaskRunState:    int64(form.TaskRunState),
 		TaskRunStateErr: form.TaskRunStateErr,
-	)
-	logger := getLogger(r)
+
+		//TxHash:     form.TxHash,
 	form := &VDESrcTaskFromScheForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)

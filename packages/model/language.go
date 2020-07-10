@@ -28,8 +28,6 @@ func (l *Language) TableName() string {
 	if l.ecosystem == 0 {
 		l.ecosystem = 1
 	}
-	return `1_languages`
-}
 
 // ToMap is converting model to map
 func (l *Language) ToMap() map[string]string {
