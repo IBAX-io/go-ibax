@@ -55,13 +55,9 @@ func (m *VDEDestTaskFromSrc) Create() error {
 
 func (m *VDEDestTaskFromSrc) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
-}
-
-func (m *VDEDestTaskFromSrc) Delete() error {
-	return DBConn.Delete(m).Error
-}
-
-func (m *VDEDestTaskFromSrc) GetAll() ([]VDEDestTaskFromSrc, error) {
+func (m *VDEDestTaskFromSrc) GetOneByID() (*VDEDestTaskFromSrc, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
 }
 
 func (m *VDEDestTaskFromSrc) GetAllByTaskUUID(TaskUUID string) ([]VDEDestTaskFromSrc, error) {
