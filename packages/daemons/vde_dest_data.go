@@ -449,14 +449,6 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 		//fmt.Println("TaskParms:",TaskParms)
 		// fmt.Println("TaskParms:")
 		//fmt.Println("vde_src_pubkey:", vde_src_pubkey)
-		//fmt.Println("vde_dest_pubkey:", vde_dest_pubkey)
-		//fmt.Println("vde_dest_ip:", vde_dest_ip)
-		//fmt.Println("vde_agent_pubkey:", vde_agent_pubkey)
-		//fmt.Println("vde_agent_ip:", vde_agent_ip)
-		//fmt.Println("agent_mode,hash_mode,log_mode:", agent_mode, hash_mode, log_mode)
-		//fmt.Println("blockchain_http,blockchain_ecosystem:", blockchain_http, blockchain_ecosystem)
-
-		//Hash validity
 
 		if hash_mode == "1" { //1HASH，2HASHnot
 			myHashState = 0 //
@@ -469,6 +461,19 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 				chain_state = 5
 			} else {
 				chain_state = 0
+			}
+			DataSendLog := "TaskUUID:" + item.TaskUUID + " DataUUID:" + item.DataUUID
+			LogType := int64(2) //
+			DestDataLog := model.VDEDestDataLog{
+				DataUUID:            item.DataUUID,
+				TaskUUID:            item.TaskUUID,
+				Log:                 DataSendLog,
+				LogType:             LogType,
+				LogSender:           vde_dest_pubkey,
+				BlockchainHttp:      blockchain_http,
+				BlockchainEcosystem: blockchain_ecosystem,
+				ChainState:          chain_state,
+				CreateTime:          time.Now().Unix()}
 
 			if err = DestDataLog.Create(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Insert vde_dest_data_log table failed")

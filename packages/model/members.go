@@ -2,11 +2,8 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-// SetTablePrefix is setting table prefix
-func (m *Member) SetTablePrefix(prefix string) {
-	m.ecosystem = converter.StrToInt64(prefix)
-}
 
+package model
 // TableName returns name of table
 func (m *Member) TableName() string {
 	if m.ecosystem == 0 {

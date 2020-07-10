@@ -61,10 +61,14 @@ func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]int
 	smartTx := tx.SmartContract{
 		Header: tx.Header{
 			ID:          int(info.ID),
-
-	txData, txHash, err := tx.NewInternalTransaction(smartTx, privateKey)
-	if err != nil {
-		return nil, err
+			Time:        dtx.time,
+			EcosystemID: firstEcosystemID,
+			KeyID:       keyID,
+			NetworkID:   conf.Config.NetworkID,
+		},
+		SignedBy: smart.PubToID(dtx.publicKey),
+		Params:   params,
 	}
-	return tx.CreateDelayTransactionHighRate(txData, txHash, keyID, highRate), nil
-}
+
+	privateKey, err := hex.DecodeString(dtx.privateKey)
+	if err != nil {

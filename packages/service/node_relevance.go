@@ -106,23 +106,16 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 
 	_, maxBlockID, err := tcpclient.HostWithMaxBlock(ctx, remoteHosts)
 	if err != nil {
-		if err == tcpclient.ErrNodesUnavailable {
-			return false, nil
-		}
-		return false, errors.Wrapf(err, "choosing best host")
-	}
-
-	// Node can't connect to others
-	if maxBlockID == -1 {
-		log.WithFields(log.Fields{"hosts": remoteHosts}).Info("can't connect to others, stopping node relevance")
-		return false, nil
-	}
-
-	// Node blockchain is stale
-	if curBlock.BlockID+n.availableBlockchainGap < maxBlockID {
 		log.WithFields(log.Fields{"maxBlockID": maxBlockID, "curBlockID": curBlock.BlockID, "Gap": n.availableBlockchainGap}).Info("blockchain is stale, stopping node relevance")
 		return false, nil
 	}
+
+	return true, nil
+}
+
+func (n *NodeRelevanceService) pauseNodeActivity() {
+	np.Set(PauseTypeUpdatingBlockchain)
+}
 
 func (n *NodeRelevanceService) resumeNodeActivity() {
 	np.Unset()

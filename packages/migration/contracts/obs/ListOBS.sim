@@ -1,0 +1,4 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract ListOBS {
+		data {}

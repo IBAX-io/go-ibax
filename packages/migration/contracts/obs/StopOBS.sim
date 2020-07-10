@@ -5,3 +5,10 @@ contract StopOBS {
 			OBSName string
 		}
 	
+		conditions {
+		}
+	
+		action {
+			$OBSName = ToLower($OBSName)
+		}
+}

@@ -106,6 +106,20 @@ func newSource(par parFunc) {
 		return
 	}
 	par.Workspace.SetSource(par.Node.Attr[`source`].(string), &Source{
+		Columns: par.Node.Attr[`columns`].(*[]string),
+		Data:    par.Node.Attr[`data`].(*[][]string),
+	})
+}
+
+func setAttr(par parFunc, name string) {
+	if len((*par.Pars)[name]) > 0 {
+		par.Node.Attr[strings.ToLower(name)] = (*par.Pars)[name]
+	}
+}
+
+func setAllAttr(par parFunc) {
+	for key, v := range *par.Pars {
+		if key == `Params` || key == `PageParams` {
 			imap := make(map[string]interface{})
 			re := regexp.MustCompile(`(?is)(.*)\((.*)\)`)
 			parList := make([]string, 0, 10)
@@ -258,15 +272,6 @@ func replace(input string, level *[]string, vars *map[string]Var) string {
 	for _, r := range input {
 		if r != syschar {
 			if isName {
-				name = append(name, r)
-				if len(name) > 64 || r <= ' ' {
-					clearname()
-				}
-			} else {
-				result = append(result, r)
-			}
-			continue
-		}
 		if isName {
 			if varValue, ok := (*vars)[string(name)]; ok {
 				value := varValue.Value

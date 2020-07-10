@@ -11,6 +11,19 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/script"
 )
+
+type TestSmart struct {
+	Input  string
+	Output string
+}
+
+func TestNewContract(t *testing.T) {
+	test := []TestSmart{
+		{`contract NewCitizen {
+			data {
+				Public bytes
+				MyVal  string
+			}
 			func conditions {
 				Println( "Front", Random(10, 5000))
 				//$tmp = "Test string"
@@ -64,7 +77,3 @@ func TestCheckAppend(t *testing.T) {
 
 	cnt := GetContract("AppendTest", 1)
 	cfunc := cnt.GetFunc("action")
-
-	_, err := Run(cfunc, nil, &map[string]interface{}{})
-	require.NoError(t, err)
-}

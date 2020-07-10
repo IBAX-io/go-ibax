@@ -36,14 +36,24 @@ func (MineStake) TableName() string {
 	return `1_mine_stake`
 }
 
+// Get is retrieving model from database
+func (m *MineStake) GetActiveMiner(time, availableStatus int64) (mp []MineStake, err error) {
+	err = DBConn.Table(m.TableName()).
+		Where("stime <= ? and etime >=? and status = ?", time, time, availableStatus).
+		Order("devid asc").
+		Scan(&mp).Error
+	return mp, err
+}
+
+// Get is retrieving model from database
+func (m *MineStake) GetExpiredMiner(time int64) (mp []MineStake, err error) {
+	err = DBConn.Table(m.TableName()).
 		Where("etime <=? and expired = 0", time).
 		Order("etime asc").
 		Limit(10).
 		Scan(&mp).Error
 	return mp, err
 }
-
-// Get is retrieving model from database
 func (m *MineStake) UpdateExpired(t int64) error {
 	m.Expired = 1
 	m.DateUpdated = t
