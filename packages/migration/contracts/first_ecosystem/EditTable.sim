@@ -4,16 +4,6 @@ contract EditTable {
     data {
         Name string
         InsertPerm string
-        UpdatePerm string
-        NewColumnPerm string
-        ReadPerm string "optional"
-    }
-
-    conditions {
-        if !$InsertPerm {
-            info("Insert condition is empty")
-        }
-        if !$UpdatePerm {
             info("Update condition is empty")
         }
         if !$NewColumnPerm {
@@ -30,3 +20,8 @@ contract EditTable {
         $Permissions = permissions
         TableConditions($Name, "", JSONEncode($Permissions))
     }
+
+    action {
+        PermTable($Name, JSONEncode($Permissions))
+    }
+}
