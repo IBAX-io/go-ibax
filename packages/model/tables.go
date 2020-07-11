@@ -152,6 +152,8 @@ func CreateTable(transaction *DbTransaction, tableName, colsSQL string) error {
 // CreateView is creating view table
 func CreateView(transaction *DbTransaction, inViewName, inTables, inWhere, inColSQL string) error {
 	inSQL := `CREATE VIEW "` + inViewName + `" AS SELECT ` + inColSQL + ` FROM ` + inTables + ` WHERE ` + inWhere + `;`
+	return GetDB(transaction).Exec(inSQL).Error
+}
 
 // DropView is drop view table
 func DropView(transaction *DbTransaction, inViewName string) error {
@@ -195,13 +197,6 @@ func GetTableListQuery(table string, ecosystemID int64) *gorm.DB {
 
 //
 func SubNodeGetTableQuery(table string, ecosystemID int64) *gorm.DB {
-	//if converter.FirstEcosystemTables[table] {
-	//	return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)
-	//}
-	return DBConn.Table(converter.SubNodeParseTable(table, ecosystemID))
-}
-
-//
 func VDEGetTableQuery(table string, ecosystemID int64) *gorm.DB {
 	//if converter.FirstEcosystemTables[table] {
 	//	return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)

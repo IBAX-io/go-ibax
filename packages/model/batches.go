@@ -29,16 +29,6 @@ type AfterTxs struct {
 	Rts         []*RollbackTx
 	Lts         []*LogTransaction
 	UpdTxStatus []*updateBlockMsg
-}
-
-func AfterPlayTxs(dbTx *DbTransaction, blockID int64, playTx AfterTxs, logger *log.Entry) error {
-	return GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
-		if err := DeleteTransactions(tx, playTx.UsedTx); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("batches delete used transactions")
-			return err
-		}
-		if err := CreateLogTransactionBatches(tx, playTx.Lts); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("batches insert log_transactions")
 			return err
 		}
 		if err := CreateBatchesRollbackTx(tx, playTx.Rts); err != nil {
@@ -79,6 +69,22 @@ func (l txser) BatchFindByHash(tr *DbTransaction, hs ArrHashes) error {
 		if tx.RowsAffected > 0 {
 			return errors.New("duplicated transaction at transactions")
 		}
+		return nil
+	}); result.Error != nil {
+		return result.Error
+	}
+	return nil
+}
+
+func (l queueser) BatchFindByHash(tr *DbTransaction, hs ArrHashes) error {
+	if result := GetDB(tr).Model(&QueueTx{}).Select("hash").Where("hash IN ?", hs).FindInBatches(&l, len(hs), func(tx *gorm.DB, batch int) error {
+		if tx.RowsAffected > 0 {
+			return errors.New("duplicated transaction at queue_tx")
+		}
+		return nil
+	}); result.Error != nil {
+		return result.Error
+	}
 	return nil
 }
 

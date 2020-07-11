@@ -36,6 +36,21 @@ func TestParseRecipientNotifications(t *testing.T) {
 					"role_id":      "3",
 					"cnt":          "4",
 				},
+				map[string]string{
+					"recipient_id": "2",
+					"role_id":      "4",
+					"cnt":          "3",
+				},
+			},
+			Want: map[int64]*[]notificationRecord{
+				1: &[]notificationRecord{
+					notificationRecord{
+						EcosystemID:  1,
+						RoleID:       1,
+						RecordsCount: 2,
+					},
+					notificationRecord{
+						EcosystemID:  1,
 						RoleID:       2,
 						RecordsCount: 1,
 					},
@@ -89,10 +104,6 @@ func containsNotificationRecord(slice []notificationRecord, rec notificationReco
 			return true
 		}
 	}
-
-	return false
-}
-
 func TestOutputFormat(t *testing.T) {
 	records := []notificationRecord{
 		notificationRecord{

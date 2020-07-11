@@ -18,6 +18,21 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
+	log "github.com/sirupsen/logrus"
+)
+
+// Type2 serves requests from disseminator
+func Type2(rw io.ReadWriter) error {
+	r := &network.DisRequest{}
+	if err := r.Read(rw); err != nil {
+		return err
+	}
+
+	txs, err := UnmarshalTxPacket(r.Data)
+	if err != nil {
 		return err
 	}
 	var rtxs []*model.RawTx
@@ -47,17 +62,6 @@ import (
 }
 
 //// Type2 serves requests from disseminator
-//func Type2(rw io.ReadWriter) (*network.DisTrResponse, error) {
-//	r := &network.DisRequest{}
-//	if err := r.Read(rw); err != nil {
-//		return nil, err
-//	}
-//
-//	binaryData := r.Data
-//	// take the transactions from usual users but not nodes.
-//	_, _, decryptedBinData, err := DecryptData(&binaryData)
-//	if err != nil {
-//		return nil, utils.ErrInfo(err)
 //	}
 //
 //	if int64(len(binaryData)) > syspar.GetMaxTxSize() {
