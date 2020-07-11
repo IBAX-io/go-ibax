@@ -106,8 +106,3 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		item["title"] = language.LangMacro(item["title"], int(client.EcosystemID), form.Lang)
-		sections = append(sections, item)
-	}
-	result.List = sections
-
-	jsonResponse(w, result)

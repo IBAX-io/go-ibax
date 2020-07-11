@@ -31,6 +31,15 @@ type tableResult struct {
 	Update     string       `json:"update"`
 	Read       string       `json:"read,omitempty"`
 	Filter     string       `json:"filter,omitempty"`
+	Conditions string       `json:"conditions"`
+	AppID      string       `json:"app_id"`
+	Columns    []columnInfo `json:"columns"`
+}
+
+func getTableHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+	client := getClient(r)
 	prefix := client.Prefix()
 
 	table := &model.Table{}
@@ -79,7 +88,3 @@ type tableResult struct {
 		Read:       table.Permissions.Read,
 		Filter:     table.Permissions.Filter,
 		Conditions: table.Conditions,
-		AppID:      converter.Int64ToStr(table.AppID),
-		Columns:    columns,
-	})
-}

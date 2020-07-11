@@ -130,19 +130,20 @@ func VDEScheTaskUpToChain(ctx context.Context, d *daemon) error {
 			time.Sleep(time.Millisecond * 100)
 			continue
 		}
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-	if len(ScheTask) == 0 {
-		//log.Info("Sche task not found")
-		time.Sleep(time.Millisecond * 2)
-		return nil
-	}
-	chaininfo := &model.VDEScheChainInfo{}
-	ScheChainInfo, err := chaininfo.Get()
-	if err != nil {
+	} //for
+	time.Sleep(time.Millisecond * 100)
+	return nil
+}
+
+//Query the status of the chain on the scheduling task information
+func VDEScheTaskUpToChainState(ctx context.Context, d *daemon) error {
+	var (
+		blockchain_http      string
+		blockchain_ecosystem string
+		err                  error
+	)
+
+	m := &model.VDEScheTaskChainStatus{}
 		//log.WithFields(log.Fields{"error": err}).Error("VDE Sche uptochain getting chain info")
 		log.Info("Sche chain info not found")
 		time.Sleep(time.Millisecond * 100)

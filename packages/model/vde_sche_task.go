@@ -75,19 +75,6 @@ func (m *VDEScheTask) GetAllByTaskUUID(TaskUUID string) ([]VDEScheTask, error) {
 	err := DBConn.Table("vde_sche_task").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
 }
-
-// func (m *VDEScheTask) GetOneByTaskUUID(TaskUUID string) (*VDEScheTask, bool) {
-// 	var (
-// 		result VDEScheTask
-// 		b	bool
-// 	)
-// 	b = DBConn.Where("task_uuid = ?", TaskUUID).First(m).RecordNotFound()
-// 	return &result, b
-// }
-
-func (m *VDEScheTask) GetOneByTaskUUID(TaskUUID string, TaskState int64) (*VDEScheTask, error) {
-	err := DBConn.Where("task_uuid=? AND task_state=?", TaskUUID, TaskState).First(&m).Error
-	return m, err
 }
 
 func (m *VDEScheTask) GetAllByTaskState(TaskState int64) ([]VDEScheTask, error) {
@@ -121,6 +108,13 @@ func (m *VDEScheTask) GetAllByContractStateSrc(ContractStateSrc int64) ([]VDESch
 }
 
 func (m *VDEScheTask) GetAllByContractStateDest(ContractStateDest int64) ([]VDEScheTask, error) {
+	result := make([]VDEScheTask, 0)
+	err := DBConn.Table("vde_sche_task").Where("contract_state_dest = ? AND contract_state_src = 1", ContractStateDest).Find(&result).Error
+	return result, err
+}
+
+type VDEScheTaskFromSrc struct {
+	ID         int64  `gorm:"primary_key; not null" json:"id"`
 	TaskUUID   string `gorm:"not null" json:"task_uuid"`
 	TaskName   string `gorm:"not null" json:"task_name"`
 	TaskSender string `gorm:"not null" json:"task_sender"`

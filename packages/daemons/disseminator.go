@@ -25,13 +25,6 @@ import (
 func Disseminator(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
 		defer atomic.StoreUint32(&d.atomic, 0)
-	} else {
-		return nil
-	}
-	DBLock()
-	defer DBUnlock()
-
-	isHonorNode := true
 	myNodePosition, err := syspar.GetThisNodePosition()
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("finding node")
@@ -51,6 +44,9 @@ func Disseminator(ctx context.Context, d *daemon) error {
 
 func sendTransactions(ctx context.Context, logger *log.Entry) error {
 	// get unsent transactions
+	trs, err := model.GetAllUnsentTransactions(syspar.GetMaxTxCount())
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unsent transactions")
 		return err
 	}
 

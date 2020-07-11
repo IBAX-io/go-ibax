@@ -5,10 +5,6 @@
 
 package model
 
-type SubNodeSrcTask struct {
-	ID         int64  `gorm:"primary_key; not null" json:"id"`
-	TaskUUID   string `gorm:"not null" json:"task_uuid"`
-	TaskName   string `gorm:"not null" json:"task_name"`
 	TaskSender string `gorm:"not null" json:"task_sender"`
 	Comment    string `gorm:"not null" json:"comment"`
 	Parms      string `gorm:"type:jsonb" json:"parms"`
@@ -48,6 +44,14 @@ func (m *SubNodeSrcTask) Delete() error {
 	return DBConn.Delete(m).Error
 }
 
+func (m *SubNodeSrcTask) GetAll() ([]SubNodeSrcTask, error) {
+	var result []SubNodeSrcTask
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *SubNodeSrcTask) GetOneByID() (*SubNodeSrcTask, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
 }
 
 func (m *SubNodeSrcTask) GetAllByTaskUUIDAndTaskState(TaskUUID string, TaskState int64) ([]SubNodeSrcTask, error) {

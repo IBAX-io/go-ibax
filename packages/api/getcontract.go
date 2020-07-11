@@ -24,25 +24,6 @@ type contractField struct {
 
 type getContractResult struct {
 	ID       uint32          `json:"id"`
-	StateID  uint32          `json:"state"`
-	TableID  string          `json:"tableid"`
-	WalletID string          `json:"walletid"`
-	TokenID  string          `json:"tokenid"`
-	Address  string          `json:"address"`
-	Fields   []contractField `json:"fields"`
-	Name     string          `json:"name"`
-}
-
-func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	contract := getContract(r, params["name"])
-	if contract == nil {
-		logger.WithFields(log.Fields{"type": consts.ContractError, "contract_name": params["contract"]}).Debug("contract name")
-		errorResponse(w, errContract.Errorf(params["name"]))
-		return
-	}
 
 	var result getContractResult
 	info := getContractInfo(contract)
@@ -56,6 +37,15 @@ func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
 		TokenID:  converter.Int64ToStr(info.Owner.TokenID),
 		Address:  converter.AddressToString(info.Owner.WalletID),
 	}
+
+	if info.Tx != nil {
+		for _, fitem := range *info.Tx {
+			fields = append(fields, contractField{
+				Name:     fitem.Name,
+				Type:     script.OriginalToString(fitem.Original),
+				Optional: fitem.ContainsTag(script.TagOptional),
+			})
+		}
 	}
 	result.Fields = fields
 

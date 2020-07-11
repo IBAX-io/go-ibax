@@ -32,15 +32,6 @@ var (
 	// ErrDBConn database connection error
 	ErrDBConn = errors.New("Database connection error")
 )
-var notAutoIncrement = map[string]bool{
-	"1_keys": true,
-}
-
-// non-self-increasing costs
-const notAutoIncrementCost int64 = 1
-
-type KeyTableChecker struct{}
-
 func (ktc KeyTableChecker) IsKeyTable(tableName string) bool {
 	val, exist := converter.FirstEcosystemTables[tableName]
 	return exist && val
@@ -551,3 +542,7 @@ func GetSumColumn(table, column, where string) (result string, err error) {
 func GetSumColumnCount(table, column, where string) (result int, err error) {
 	err = DBConn.Table(table).Select("count(*)").Where(where).Row().Scan(&result)
 	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("sum column")
+	}
+	return
+}

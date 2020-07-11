@@ -83,14 +83,6 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 			Name:      names[i],
 		}
 		ra := &model.RolesParticipants{}
-		roles, err := ra.SetTablePrefix(ecosystemID).GetActiveMemberRoles(key.AccountID)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-		for _, r := range roles {
-			var role roleInfo
-			if err := json.Unmarshal([]byte(r.Role), &role); err != nil {
 				logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling role")
 				errorResponse(w, err)
 				return
@@ -135,4 +127,12 @@ func (m Mode) getNotifications(ecosystemID int64, key *model.Key) ([]notifyInfo,
 	for _, n := range notif {
 		if n.RecipientID != key.ID {
 			continue
+		}
+
+		list = append(list, notifyInfo{
+			RoleID: converter.Int64ToStr(n.RoleID),
+			Count:  n.Count,
+		})
+	}
+	return list, nil
 }
