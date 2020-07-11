@@ -101,6 +101,14 @@ func TestMoneyTransfer(t *testing.T) {
 
 	form := url.Values{`Amount`: {`53330000`}, `Recipient`: {`0005-2070-2000-0006-0200`}}
 	if err := postTx(`MoneyTransfer`, &form); err != nil {
+		t.Error(err)
+		return
+	}
+	form = url.Values{`Amount`: {`2440000`}, `Recipient`: {`1109-7770-3360-6764-7059`}, `Comment`: {`Test`}}
+	if err := postTx(`MoneyTransfer`, &form); err != nil {
+		t.Error(err)
+		return
+	}
 	form = url.Values{`Amount`: {`53330000`}, `Recipient`: {`0005207000`}}
 	if err := postTx(`MoneyTransfer`, &form); cutErr(err) != `{"type":"error","error":"Recipient 0005207000 is invalid"}` {
 		t.Error(err)
@@ -429,8 +437,6 @@ func TestUpdateSysParam(t *testing.T) {
 
 	form := url.Values{"Name": {`max_columns`}, "Value": {`49`}}
 	assert.NoError(t, postTx(`UpdateSysParam`, &form))
-
-	var sysList ecosystemParamsResult
 	assert.NoError(t, sendGet(`systemparams?names=max_columns`, nil, &sysList))
 	assert.Len(t, sysList.List, 1)
 	assert.Equal(t, "49", sysList.List[0].Value)

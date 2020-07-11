@@ -168,6 +168,19 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 	d.logger.WithFields(log.Fields{"min_block": curBlock.BlockID, "max_block": maxBlockID, "count": maxBlockID - curBlock.BlockID}).Info("starting downloading blocks")
 	for blockID := curBlock.BlockID + 1; blockID <= maxBlockID; blockID += int64(network.BlocksPerRequest) {
 
+		if loopErr := func() error {
+			ctxDone, cancel := context.WithCancel(ctx)
+			defer func() {
+				cancel()
+				d.logger.WithFields(log.Fields{"count": count, "time": time.Since(st).String()}).Info("blocks downloaded")
+			}()
+
+			rawBlocksChan, err := tcpclient.GetBlocksBodies(ctxDone, host, blockID, false)
+			if err != nil {
+				d.logger.WithFields(log.Fields{"error": err, "type": consts.BlockError}).Error("getting block body")
+				return err
+			}
+
 			for rawBlock := range rawBlocksChan {
 
 				//if conf.Config.PoolPub.Enable {
@@ -400,14 +413,6 @@ func processBlocks(blocks []*block.Block) error {
 				return utils.ErrInfo(err)
 			}
 		}
-	}
-
-	// If all right we can delete old blockchain and write new
-	for i := len(blocks) - 1; i >= 0; i-- {
-		b := blocks[i]
-		// insert new blocks into blockchain
-		if err := block.InsertIntoBlockchain(dbTransaction, b); err != nil {
-			dbTransaction.Rollback()
 			return err
 		}
 	}

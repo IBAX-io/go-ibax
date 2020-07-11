@@ -46,6 +46,22 @@ func ExecSchemaEcosystem(db *DbTransaction, id int, wallet int64, name string, f
 		}
 		q, err = migration.GetFirstTableScript(id)
 		if err != nil {
+			return err
+		}
+		if err := GetDB(db).Exec(q).Error; err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing first tables schema")
+		}
+	}
+	return nil
+}
+
+func ExecSubSchema() error {
+	if conf.Config.IsSubNode() {
+		if err := migration.InitMigrate(&MigrationHistory{}); err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on executing obs script")
+			return err
+		}
+	}
 	return nil
 }
 
@@ -85,7 +101,6 @@ func ExecOBSSchema(id int, wallet int64) error {
 				return nil, err
 			}
 			return pubKey, nil
-		}
 
 		nodePubKey, err := pubfunc(consts.NodePrivateKeyFilename)
 		PubKey, err := pubfunc(consts.PrivateKeyFilename)

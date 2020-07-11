@@ -2,12 +2,10 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package utils
-
-import (
-	"fmt"
-	"testing"
-	"time"
+		arg, expected string
+	}{
+		{"Contains", "contains"},
+		{"AddressToId", "address_to_id"},
 		{"HMac", "h_mac"},
 		{"JSONEncode", "json_encode"},
 		{"Hash", "hash"},

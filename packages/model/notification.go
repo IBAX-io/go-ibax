@@ -21,16 +21,15 @@ const (
 // Notification structure
 type Notification struct {
 	ecosystem           int64
-// SetTablePrefix set table Prefix
-func (n *Notification) SetTablePrefix(tablePrefix string) {
-	n.ecosystem = converter.StrToInt64(tablePrefix)
-}
-
-// TableName returns table name
-func (n *Notification) TableName() string {
-	if n.ecosystem == 0 {
-		n.ecosystem = 1
-	}
+	ID                  int64  `gorm:"primary_key;not null"`
+	Recipient           string `gorm:"type:jsonb`
+	Sender              string `gorm:"type:jsonb`
+	Notification        string `gorm:"type:jsonb`
+	PageParams          string `gorm:"type:jsonb`
+	ProcessingInfo      string `gorm:"type:jsonb`
+	PageName            string `gorm:"size:255"`
+	DateCreated         int64
+	DateStartProcessing int64
 	return `1_notifications`
 }
 

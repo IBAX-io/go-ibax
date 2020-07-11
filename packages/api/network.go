@@ -4,11 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package api
-
-import (
-	"net/http"
-	"strconv"
-
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -40,4 +35,16 @@ func GetNodesJSON() []HonorNodeJSON {
 			PublicKey:  crypto.PubToHex(node.PublicKey),
 			UnbanTime:  strconv.FormatInt(node.UnbanTime.Unix(), 10),
 		})
+	}
+	return nodes
+}
+
+func getNetworkHandler(w http.ResponseWriter, r *http.Request) {
+	jsonResponse(w, &NetworkResult{
+		NetworkID:     converter.Int64ToStr(conf.Config.NetworkID),
+		CentrifugoURL: conf.Config.Centrifugo.URL,
+		Test:          syspar.IsTestMode(),
+		Private:       syspar.IsPrivateBlockchain(),
+		HonorNodes:    GetNodesJSON(),
+	})
 }

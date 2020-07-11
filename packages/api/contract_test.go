@@ -692,11 +692,6 @@ var contracts = []smartContract{
 					list array
 				}
 				action {
-					Test("multiform",  $list[0]+$list[1])
-				}
-			}`,
-		[]smartParams{
-			{map[string]string{`list[]`: `2`, `list[0]`: `start`, `list[1]`: `finish`}, map[string]string{`multiform`: `startfinish`}},
 		}},
 	{`errTestMessage`, `contract errTestMessage {
 			conditions {
@@ -1431,6 +1426,18 @@ func TestLoopCond(t *testing.T) {
 	err = sendGet(`contract/`+rnd+`1`, nil, &ret)
 	if err != nil {
 		t.Error(err)
+		return
+	}
+	sid := ret.TableID
+	form = url.Values{`Value`: {`contract ` + rnd + `1 {
+				conditions {
+					ContractConditions("` + rnd + `2")
+				}
+			}`}, `Id`: {sid}, `Conditions`: {`true`}, `ApplicationId`: {`1`}}
+	err = postTx(`EditContract`, &form)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 	assert.EqualError(t, postTx(rnd+`2`, &url.Values{}), `{"type":"panic","error":"There is loop in `+rnd+`1 contract"}`)
 

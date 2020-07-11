@@ -191,22 +191,6 @@ func updateNodes() (err error) {
 		}
 	}
 	nodes = make(map[string]*HonorNode)
-	nodesByPosition = []*HonorNode{}
-	for i := 0; i < len(items); i++ {
-		nodes[hex.EncodeToString(items[i].PublicKey)] = items[i]
-
-		if !items[i].Stopped {
-			nodesByPosition = append(nodesByPosition, items[i])
-		}
-	}
-
-	return nil
-}
-
-// addHonorNodeKeys adds node by keys to list of nodes
-func addHonorNodeKeys(publicKey []byte) {
-	nodesByPosition = append(nodesByPosition, &HonorNode{
-		PublicKey: publicKey,
 	})
 }
 
@@ -416,6 +400,12 @@ func GetMaxForsignSize() int64 {
 }
 
 // GetGapsBetweenBlocks is returns gaps between blocks
+func GetGapsBetweenBlocks() int64 {
+	return converter.StrToInt64(SysString(GapsBetweenBlocks))
+}
+
+// GetMaxTxCount is returns max tx count
+func GetMaxTxCount() int {
 	return converter.StrToInt(SysString(MaxTxCount))
 }
 

@@ -23,11 +23,16 @@ func (l *Language) SetTablePrefix(prefix string) {
 	l.ecosystem = converter.StrToInt64(prefix)
 }
 
-// TableName returns name of table
-func (l *Language) TableName() string {
-	if l.ecosystem == 0 {
-		l.ecosystem = 1
 	}
+	return `1_languages`
+}
+
+// GetAll is retrieving all records from database
+func (l *Language) GetAll(transaction *DbTransaction, prefix string) ([]Language, error) {
+	result := new([]Language)
+	err := GetDB(transaction).Table("1_languages").Where("ecosystem = ?", prefix).Order("name asc").Find(&result).Error
+	return *result, err
+}
 
 // ToMap is converting model to map
 func (l *Language) ToMap() map[string]string {
