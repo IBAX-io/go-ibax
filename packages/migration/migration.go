@@ -36,6 +36,18 @@ var migrationsCLB = &migration{"0.1.8", migrationInitialTablesCLB, true}
 
 var updateMigrations = []*migration{
 	&migration{"3.1.0", updates.M310, false},
+	&migration{"3.2.0", updates.M320, false},
+}
+
+type migration struct {
+	version  string
+	data     string
+	template bool
+}
+
+type database interface {
+	CurrentVersion() (string, error)
+	ApplyMigration(string, string) error
 }
 
 func compareVer(a, b string) (int, error) {
@@ -83,15 +95,6 @@ func migrate(db database, appVer string, migrations []*migration) error {
 
 	for _, m := range migrations {
 		if cmp, err := compareVer(dbVerString, m.version); err != nil {
-			log.WithFields(log.Fields{"type": consts.MigrationError, "err": err}).Errorf("parse version")
-			return err
-		} else if cmp >= 0 {
-			continue
-		}
-		if m.template {
-			m.data, err = sqlConvert([]string{m.data})
-			if err != nil {
-				return err
 			}
 		}
 		err = db.ApplyMigration(m.version, m.data)

@@ -14,6 +14,15 @@ const obsMaster RunMode = "OBSMaster"
 const obs RunMode = "OBS"
 
 // OBS const label for running mode
+const node RunMode = "NONE"
+
+//
+//Add sub node processing
+const subNode RunMode = "SubNode"
+
+// IsOBSMaster returns true if mode equal obsMaster
+func (rm RunMode) IsNode() bool {
+	return rm == node
 }
 
 // IsSupportingOBS returns true if mode support obs

@@ -1033,10 +1033,6 @@ main:
 		case isRBrack:
 			break main
 		}
-		switch state {
-		case mustComma:
-			if lexem.Type != isComma {
-				return nil, errUnexpComma
 			}
 			state = mustValue
 		case mustValue:
@@ -1329,6 +1325,19 @@ main:
 					count := 0
 					if (*lexems)[i+2].Type != isRPar {
 						count++
+					}
+					parcount = append(parcount, count)
+					buffer = append(buffer, &ByteCode{cmdCallExtend, lexem.Line, lexem.Value.(string)})
+					call = true
+				}
+			}
+			if !call {
+				cmd = &ByteCode{cmdExtend, lexem.Line, lexem.Value.(string)}
+				if i < len(*lexems)-1 && (*lexems)[i+1].Type == isLBrack {
+					buffer = append(buffer, &ByteCode{cmdIndex, lexem.Line,
+						&IndexInfo{Extend: lexem.Value.(string)}})
+				}
+			}
 		case lexIdent:
 			noMap = true
 			objInfo, tobj := vm.findObj(lexem.Value.(string), block)

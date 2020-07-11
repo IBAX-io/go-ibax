@@ -104,6 +104,10 @@ func containsNotificationRecord(slice []notificationRecord, rec notificationReco
 			return true
 		}
 	}
+
+	return false
+}
+
 func TestOutputFormat(t *testing.T) {
 	records := []notificationRecord{
 		notificationRecord{
@@ -169,19 +173,6 @@ func TestStatsChanged(t *testing.T) {
 				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
-			},
-
-			new: []notificationRecord{
-				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
-				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
-				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
-			},
-			result: false,
-		},
-		// no old records add new record
-		tsc{
-			old: []notificationRecord{},
-			new: []notificationRecord{
 				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},

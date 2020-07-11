@@ -44,6 +44,12 @@ func Type88(r *network.PrivateDateRequest) (*network.PrivateDateResponse, error)
 		return nil, err
 	}
 	eccData, err := ecies.EccCryptoKey(data, NodePublicKey)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
+		return nil, err
+	}
+	encodeDataString := base64.StdEncoding.EncodeToString(eccData)
+	////
 
 	privatePackets := model.PrivatePackets{
 		Hash: hash,
@@ -52,13 +58,5 @@ func Type88(r *network.PrivateDateRequest) (*network.PrivateDateResponse, error)
 		//Data: data,
 		Data: []byte(encodeDataString),
 		Time: time.Now().Unix(),
-	}
-
-	err = privatePackets.Create()
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Create PrivatePackets table record error")
-		return nil, err
-	}
-
 	return resp, nil
 }

@@ -57,3 +57,4 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 	if result.Token, err = generateJWTToken(claims); err != nil {
 		logger := getLogger(r)
 		logger.WithFields(log.Fields{"type": consts.JWTError, "error": err}).Error("generating jwt token")
+		errorResponse(w, err)

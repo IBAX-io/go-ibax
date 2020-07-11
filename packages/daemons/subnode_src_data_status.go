@@ -42,6 +42,20 @@ func SubNodeSrcDataStatus(ctx context.Context, d *daemon) error {
 		}
 		//fmt.Println("item.AgentMode:", converter.Int64ToStr(item.AgentMode))
 		//hash := tcpclient.SendVDESrcData(item.VDEDestIP,item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), item.DataInfo, ItemDataBytes)
+		hash := tcpclient.SendSubNodeSrcData(item.SubNodeDestIP, item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), converter.Int64ToStr(item.TranMode), item.DataInfo, item.SubNodeSrcPubkey, item.SubNodeAgentPubkey, item.SubNodeAgentIP, item.SubNodeDestPubkey, item.SubNodeDestIP, ItemDataBytes)
+		if string(hash) == "0" {
+			//item.DataSendState = 3 //
+			item.DataSendState = 0 //
+			item.DataSendErr = "Network error"
+		} else if string(hash) == string(item.Hash) {
+			item.DataSendState = 1 //
+		} else {
+			item.DataSendState = 2 //
+			item.DataSendErr = "Hash mismatch"
+		}
+		err = item.Updates()
+		if err != nil {
+			log.WithError(err)
 		}
 		//time.Sleep(time.Millisecond * 2)
 	} //for
@@ -77,14 +91,6 @@ func SubNodeSrcDataStatusAgent(ctx context.Context, d *daemon) error {
 		if string(hash) == "0" {
 			//item.DataSendState = 3 //
 			item.DataSendState = 0 //
-			item.DataSendErr = "Network error"
-		} else if string(hash) == string(item.Hash) {
-			item.DataSendState = 1 //
-		} else {
-			item.DataSendState = 2 //
-			item.DataSendErr = "Hash mismatch"
-		}
-		err = item.Updates()
 		if err != nil {
 			log.WithError(err)
 		}
