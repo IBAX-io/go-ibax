@@ -81,6 +81,19 @@ func VDEScheChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
+		return
+	}
+
+	result, err := m.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
+		return
+	}
+
 	jsonResponse(w, result)
 }
 
@@ -115,15 +128,3 @@ func VDEScheChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
-	id := converter.StrToInt64(params["id"])
-	srcData := model.VDEScheChainInfo{}
-	srcData.ID = id
-	result, err := srcData.GetOneByID()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query chain info data by ID failed")
-		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
-}

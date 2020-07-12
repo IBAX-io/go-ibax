@@ -16,5 +16,4 @@ contract NewAppParam {
         }
 
         if DBFind("app_params").Columns("id").Where({"name":$Name}).One("id") {
-            warning Sprintf( "Application parameter %s already exists", $Name)
-        }
+}

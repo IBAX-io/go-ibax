@@ -16,8 +16,12 @@ import (
 
 func getTxRecord(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-		}
+	hashes := params["hashes"]
+
+	var (
+		hashList   []string
+		resultList []interface{}
+	)
+	if len(hashes) > 0 {
+		hashList = strings.Split(hashes, ",")
 	}
-	jsonResponse(w, &resultList)
-	return
-}

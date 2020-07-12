@@ -295,17 +295,6 @@ func TestPage(t *testing.T) {
 
 	form = url.Values{"Name": {name}, "Value": {value}, "ApplicationId": {`1`},
 		"Conditions": {`ContractConditions("MainCondition")`}}
-	assert.NoError(t, postTx(`NewBlock`, &form))
-
-	err = postTx(`NewBlock`, &form)
-	assert.EqualError(t, err, fmt.Sprintf(`{"type":"warning","error":"Block %s already exists"}`, name))
-
-	form = url.Values{"Id": {`1`}, "Name": {name}, "Value": {value},
-		"Conditions": {`ContractConditions("MainCondition")`}}
-	assert.NoError(t, postTx(`EditBlock`, &form))
-
-	form = url.Values{"Id": {`1`}, "Value": {value + `Span(Test)`},
-		"Menu": {menu}, "Conditions": {`ContractConditions("MainCondition")`}}
 	assert.NoError(t, postTx(`EditPage`, &form))
 
 	form = url.Values{"Id": {`1112`}, "Value": {value + `Span(Test)`},
@@ -437,6 +426,8 @@ func TestUpdateSysParam(t *testing.T) {
 
 	form := url.Values{"Name": {`max_columns`}, "Value": {`49`}}
 	assert.NoError(t, postTx(`UpdateSysParam`, &form))
+
+	var sysList ecosystemParamsResult
 	assert.NoError(t, sendGet(`systemparams?names=max_columns`, nil, &sysList))
 	assert.Len(t, sysList.List, 1)
 	assert.Equal(t, "49", sysList.List[0].Value)

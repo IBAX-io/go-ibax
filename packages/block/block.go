@@ -45,21 +45,6 @@ type Block struct {
 	PrevRollbacksHash []byte
 	MrklRoot          []byte
 	BinData           []byte
-	Transactions      []*transaction.Transaction
-	SysUpdate         bool
-	GenBlock          bool // it equals true when we are generating a new block
-	Notifications     []types.Notifications
-}
-
-func (b Block) String() string {
-	return fmt.Sprintf("header: %s, prevHeader: %s", b.Header, b.PrevHeader)
-}
-
-// GetLogger is returns logger
-func (b Block) GetLogger() *log.Entry {
-	return log.WithFields(log.Fields{"block_id": b.Header.BlockID, "block_time": b.Header.Time, "block_wallet_id": b.Header.KeyID,
-		"block_state_id": b.Header.EcosystemID, "block_hash": b.Header.Hash, "block_version": b.Header.Version})
-}
 func (b *Block) IsGenesis() bool {
 	return b.Header.BlockID == 1
 }
@@ -228,6 +213,20 @@ func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
 					if finfo.Prev == nil {
 						if finfo.ID != uint32(len(smart.GetVM().Children)-1) {
 							logger.WithFields(log.Fields{"type": consts.ContractError, "value": finfo.ID,
+								"len": len(smart.GetVM().Children) - 1}).Error("flush rollback")
+						} else {
+							smart.GetVM().Children = smart.GetVM().Children[:len(smart.GetVM().Children)-1]
+							delete(smart.GetVM().Objects, finfo.Name)
+						}
+					} else {
+						smart.GetVM().Children[finfo.ID] = finfo.Prev
+						smart.GetVM().Objects[finfo.Name] = finfo.Info
+					}
+				}
+			}
+			if err == custom.ErrNetworkStopping {
+				return err
+			}
 
 			errRoll := dbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(curTx))
 			if errRoll != nil {

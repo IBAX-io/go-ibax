@@ -69,18 +69,6 @@ func prepareWorkDir() (string, error) {
 // CreateOBS creates one instance of OBS
 func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) error {
 	if err := checkOBSName(name); err != nil {
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on check OBS name")
-		return errIncorrectOBSName
-	}
-
-	var err error
-	var cancelChain []func()
-
-	defer func() {
-		if err == nil {
-			return
-		}
-
 		for _, cancelFunc := range cancelChain {
 			cancelFunc()
 		}
@@ -312,6 +300,16 @@ func (mgr *OBSManager) initOBSDir(obsName string) error {
 func InitOBSManager() {
 	if !conf.Config.IsOBSMaster() {
 		return
+	}
+
+	execPath, err := os.Executable()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Fatal("on determine executable path")
+	}
+
+	childConfigsPath, err := prepareWorkDir()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Fatal("on prepare child configs folder")
 	}
 
 	Manager = &OBSManager{

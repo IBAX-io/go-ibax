@@ -75,6 +75,9 @@ func (m *VDEDestDataStatus) GetAllByHashState(HashState int64) ([]VDEDestDataSta
 	result := make([]VDEDestDataStatus, 0)
 	err := DBConn.Table("vde_dest_data_status").Where("hash_state = ?", HashState).Find(&result).Error
 	return result, err
+}
+
+func (m *VDEDestDataStatus) GetAllBySignState(SignState int64) ([]VDEDestDataStatus, error) {
 	result := make([]VDEDestDataStatus, 0)
 	err := DBConn.Table("vde_dest_data_status").Where("task_uuid = ? AND auth_state = ? AND sign_state = ? AND hash_state = ?", TaskUUID, AuthState, SignState, HashState).Find(&result).Error
 	return result, err

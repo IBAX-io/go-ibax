@@ -38,11 +38,6 @@ func loadContractTasks() error {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get all cron tasks")
 			return err
 		}
-
-		for _, cronTask := range tasks {
-}
-
-// Scheduler starts contracts on schedule
 func Scheduler(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
 		defer atomic.StoreUint32(&d.atomic, 0)

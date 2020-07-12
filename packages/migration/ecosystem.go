@@ -1,3 +1,11 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package migration
+
+import (
 	"bytes"
 	"fmt"
 	"io"
@@ -30,11 +38,6 @@ const (
 	sqlSeq     = "seq"
 )
 
-func sqlHeadSequence(name string) string {
-	ret := fmt.Sprintf(`sql("DROP SEQUENCE IF EXISTS %[1]s_id_seq CASCADE;")
-sql("CREATE SEQUENCE %[1]s_id_seq START WITH 1;")`, name)
-
-	return ret + "\r\n" + sqlHead(name)
 }
 
 func sqlHead(name string) string {
