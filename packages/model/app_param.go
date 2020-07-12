@@ -44,20 +44,21 @@ func (sp *AppParam) Get(transaction *DbTransaction, app int64, name string) (boo
 func (sp *AppParam) GetAllAppParameters(app int64) ([]AppParam, error) {
 	parameters := make([]AppParam, 0)
 	err := DBConn.Table(sp.TableName()).Where(`ecosystem = ?`, sp.ecosystem).Where(`app_id = ?`, app).Find(&parameters).Error
-	if err != nil {
-		return nil, err
-	}
-	return parameters, nil
-}
-
-// Get is retrieving model from database
-func (sp *AppParam) GetHvlvebalance(transaction *DbTransaction, blockid int64) (decimal.Decimal, error) {
-
-	//var halve,balance string
-	ret := decimal.NewFromFloat(0)
-	var halve, mine_reward AppParam
 	hf, err := isFound(GetDB(transaction).Where("ecosystem=? and app_id=? and name = ?", 1, 1, "halve_interval_blockid").First(&halve))
 	if err != nil {
+		return ret, err
+	}
+
+	md, err := isFound(GetDB(transaction).Where("ecosystem=? and app_id=? and name = ?", 1, 1, "mine_reward").First(&mine_reward))
+	if err != nil {
+		return ret, err
+	}
+
+	if !hf || !md {
+		return ret, errors.New("param mine_reward or halve_interval_blockid not found")
+	}
+
+	hal := converter.StrToInt64(halve.Value)
 	if hal > 0 {
 		he := blockid / hal
 		mdv := converter.StrToFloat64(mine_reward.Value)

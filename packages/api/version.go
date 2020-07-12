@@ -10,3 +10,6 @@ import (
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+)
+
+func getVersionHandler(w http.ResponseWriter, r *http.Request) {

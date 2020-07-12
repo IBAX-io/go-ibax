@@ -24,15 +24,6 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 		contract_run_parms map[string]interface{}
 		err                error
 	)
-
-	err = json.Unmarshal([]byte(form.Parms), &parms)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("unmarshal Parms error")
-		return nil, err
-	}
-	err = json.Unmarshal([]byte(form.ContractRunParms), &contract_run_parms)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("unmarshal ContractRunParms error")
 		return nil, err
 	}
 	//fmt.Println("TaskType,TaskState:", form.TaskType, int64(form.TaskType), form.TaskState, int64(form.TaskState))
@@ -66,6 +57,20 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 		TaskRunStateErr: form.TaskRunStateErr,
 
 		//TxHash:     form.TxHash,
+		//ChainState: int64(form.ChainState),
+		//BlockId:    int64(form.BlockId),
+		//ChainId:    int64(form.ChainId),
+		//ChainErr:   form.ChainErr,
+	}
+
+	return m, err
+}
+
+func VDESrcTaskFromScheCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
+	logger := getLogger(r)
 	form := &VDESrcTaskFromScheForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
