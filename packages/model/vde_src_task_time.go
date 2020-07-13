@@ -5,8 +5,6 @@
 package model
 
 type VDESrcTaskTime struct {
-	ID             int64 `gorm:"primary_key; not null" json:"id"`
-}
 
 func (VDESrcTaskTime) TableName() string {
 	return "vde_src_task_time"

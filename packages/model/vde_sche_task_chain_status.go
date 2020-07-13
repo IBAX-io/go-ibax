@@ -35,9 +35,11 @@ type VDEScheTaskChainStatus struct {
 	TaskRunState    int64  `gorm:"not null" json:"task_run_state"`
 	TaskRunStateErr string `gorm:"not null" json:"task_run_state_err"`
 
-	TxHash     string `gorm:"not null" json:"tx_hash"`
-	ChainState int64  `gorm:"not null" json:"chain_state"`
-	BlockId    int64  `gorm:"not null" json:"block_id"`
+func (VDEScheTaskChainStatus) TableName() string {
+	return "vde_sche_task_chain_status"
+}
+
+func (m *VDEScheTaskChainStatus) Create() error {
 	return DBConn.Create(&m).Error
 }
 

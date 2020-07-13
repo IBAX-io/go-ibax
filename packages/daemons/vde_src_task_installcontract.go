@@ -9,13 +9,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strconv"
-	"time"
-
-	vde_api "github.com/IBAX-io/go-ibax/packages/vde_sdk"
-
-	"path/filepath"
-
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/model"
 
@@ -71,6 +64,11 @@ func VDESrcTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 		}
 		//fmt.Println("Login OK!")
 
+		ContractSrc := item.ContractSrcGet
+
+		form := url.Values{
+			`Value`:         {ContractSrc},
+			"ApplicationId": {"1"},
 			`Conditions`:    {`true`}}
 
 		ContractName := `@1NewContract`

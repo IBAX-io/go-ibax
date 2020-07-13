@@ -6,13 +6,6 @@ package aes
 
 import (
 	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
-)
-
-func PKCS5Padding(ciphertext []byte, blockSize int) []byte {
-	padding := blockSize - len(ciphertext)%blockSize
-	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(ciphertext, padtext...)
 }
 
@@ -36,3 +29,15 @@ func AesEncrypt(origData, key []byte) ([]byte, error) {
 }
 
 func AesDecrypt(crypted, key []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	blockSize := block.BlockSize()
+	blockMode := cipher.NewCBCDecrypter(block, key[:blockSize])
+	origData := make([]byte, len(crypted))
+	blockMode.CryptBlocks(origData, crypted)
+	origData = PKCS5UnPadding(origData)
+	return origData, nil
+}
