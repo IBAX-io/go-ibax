@@ -39,16 +39,6 @@ func TestNewContract(t *testing.T) {
 	owner := script.OwnerInfo{
 		StateID:  1,
 		Active:   false,
-		TableID:  1,
-		WalletID: 0,
-		TokenID:  0,
-	}
-	for _, item := range test {
-		if err := Compile(item.Input, &owner); err != nil {
-			t.Error(err)
-		}
-	}
-	cnt := GetContract(`NewCitizen`, 1)
 	cfunc := cnt.GetFunc(`conditions`)
 	_, err := Run(cfunc, nil, &map[string]interface{}{})
 	if err != nil {
@@ -77,3 +67,7 @@ func TestCheckAppend(t *testing.T) {
 
 	cnt := GetContract("AppendTest", 1)
 	cfunc := cnt.GetFunc("action")
+
+	_, err := Run(cfunc, nil, &map[string]interface{}{})
+	require.NoError(t, err)
+}

@@ -103,16 +103,6 @@ func TestTableName(t *testing.T) {
 		t.Errorf(`wrong table columns or app_id`)
 		return
 	}
-	var retList listResult
-	err = sendGet(`list/tbl-`+name, nil, &retList)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if retList.Count != 1 {
-		t.Errorf(`wrong table count`)
-		return
-	}
 	forTest := tplList{
 		{`DBFind(tbl-` + name + `,my).Columns("id,myname").WhereId(1)`,
 			`[{"tag":"dbfind","attr":{"columns":["id","myname"],"data":[["1","New test"]],"name":"tbl-` + name + `","source":"my","types":["text","text"],"whereid":"1"}}]`},
@@ -157,6 +147,8 @@ func TestJSONTable(t *testing.T) {
 			mydoc["doc"] = "Some text."
 			ret2 = DBInsert("` + name + `", {MyName: "test2",Doc: mydoc})
 			DBInsert("` + name + `", {MyName: "test3",Doc: "{\"title\": {\"name\":\"Test att\",\"text\":\"low\"}}"})
+			DBInsert("` + name + `", {MyName: "test4",doc: "{\"languages\": {\"arr_id\":{\"1\":\"0\",\"2\":\"0\",\"3\":\"0\"}}}"})
+			DBInsert("` + name + `", {MyName: "test5",Doc: "{\"app_id\": \"33\"}"})
 		}}`}, "ApplicationId": {`1`},
 		"Conditions": {`ContractConditions("MainCondition")`}}
 	assert.NoError(t, postTx("NewContract", &form))

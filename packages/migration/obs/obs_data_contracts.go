@@ -228,6 +228,17 @@ VALUES
 			}
 			if !HasPrefix($Contract, "@") {
 				$Contract = "@" + Str($ecosystem_id) + $Contract
+			}
+			DBUpdate("cron", $Id, {"cron": $Cron,"contract": $Contract,
+			    "counter":$Limit, "till": $Till, "conditions":$Conditions})
+			UpdateCron($Id)
+		}
+	}
+', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
+	(next_id('1_contracts'), 'EditLang', 'contract EditLang {
+    data {
+        Id int
+        Trans string
     }
 
     conditions {
@@ -670,15 +681,6 @@ VALUES
     }
 
     conditions {
-        ValidateCondition($Conditions, $ecosystem_id)
-
-        if $ApplicationId == 0 {
-            warning "Application id cannot equal 0"
-        }
-
-        if DBFind("blocks").Columns("id").Where({name:$Name}).One("id") {
-            warning Sprintf( "Block %s already exists", $Name)
-        }
     }
 
     action {

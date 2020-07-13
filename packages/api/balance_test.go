@@ -36,15 +36,6 @@ func TestBalance(t *testing.T) {
 	if len(ret.Amount) > 0 {
 		t.Error(fmt.Errorf(`wrong balance %s`, ret.Amount))
 		return
-	}
-}
-
-func TestAssignBalance(t *testing.T) {
-	if err := keyLogin(1); err != nil {
-		t.Error(err)
-		return
-	}
-	var ret model.Response
 	err := sendGet(`assignbalance/`+gAddress, nil, &ret)
 	if err != nil {
 		t.Error(err)
@@ -87,3 +78,9 @@ func TestMoneyMoreSend(t *testing.T) {
 	//}
 
 	form := url.Values{`Amount`: {`-1`}, `Account`: {`0323-3625-0280-2110-5478`}, `Type`: {`1`}}
+	if err := postTx(`AddAssignMember`, &form); err != nil {
+		t.Error(err)
+		return
+	}
+
+}

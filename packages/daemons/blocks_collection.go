@@ -157,15 +157,6 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 	//	f, err := bi.GetRangeByName(consts.MintMax, consts.ChainMax, 2000)
 	//	fmt.Println(f, err)
 	//	if err != nil {
-	//		return err
-	//	}
-	//	if f {
-	//		time.Sleep(4 * time.Second)
-	//		return errors.New("deal mint blockid please wait")
-	//	}
-	//}
-
-	d.logger.WithFields(log.Fields{"min_block": curBlock.BlockID, "max_block": maxBlockID, "count": maxBlockID - curBlock.BlockID}).Info("starting downloading blocks")
 	for blockID := curBlock.BlockID + 1; blockID <= maxBlockID; blockID += int64(network.BlocksPerRequest) {
 
 		if loopErr := func() error {
@@ -413,6 +404,14 @@ func processBlocks(blocks []*block.Block) error {
 				return utils.ErrInfo(err)
 			}
 		}
+	}
+
+	// If all right we can delete old blockchain and write new
+	for i := len(blocks) - 1; i >= 0; i-- {
+		b := blocks[i]
+		// insert new blocks into blockchain
+		if err := block.InsertIntoBlockchain(dbTransaction, b); err != nil {
+			dbTransaction.Rollback()
 			return err
 		}
 	}

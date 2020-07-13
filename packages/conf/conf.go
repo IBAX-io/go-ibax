@@ -249,6 +249,23 @@ func FillRuntimePaths() error {
 		//	return errors.Wrapf(err, "getting current wd")
 		//}
 
+		//Config.DataDir = filepath.Join(cwd, consts.DefaultWorkdirName)
+		Config.DataDir = filepath.Join(consts.DefaultWorkdirName)
+	}
+
+	if Config.KeysDir == "" {
+		Config.KeysDir = Config.DataDir
+	}
+
+	if Config.TempDir == "" {
+		Config.TempDir = filepath.Join(os.TempDir(), consts.DefaultTempDirName)
+	}
+
+	if Config.FirstBlockPath == "" {
+		Config.FirstBlockPath = filepath.Join(Config.DataDir, consts.FirstBlockFilename)
+	}
+
+	if Config.PidFilePath == "" {
 		Config.PidFilePath = filepath.Join(Config.DataDir, consts.DefaultPidFilename)
 	}
 
@@ -315,9 +332,6 @@ func (c GlobalConfig) IsNode() bool {
 //
 //Add sub node processing
 // IsSubNode check running mode
-func (c GlobalConfig) IsSubNode() bool {
-	return RunMode(c.OBSMode).IsSubNode()
-}
 
 func registerCrypto(c CryptoSettings) {
 	crypto.InitCurve(c.Cryptoer)

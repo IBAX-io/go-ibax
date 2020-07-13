@@ -302,6 +302,14 @@ var forTest = tplList{
 		"1",John Silver
 		2,"Mark, Smith"
 		3,"Unknown ""Person"""
+		}`,
+		`[{"tag":"data","attr":{"columns":["id","name"],"data":[["1","John Silver"],["2","Mark, Smith"],["3","Unknown \"Person\""]],"source":"mysrc","types":["text","text"]}}]`},
+	{`If(true) {OK}.Else {false} Div(){test} If(false, FALSE).ElseIf(0) { Skip }.ElseIf(1) {Else OK
+		}.Else {Fourth}If(0).Else{ALL right}`,
+		`[{"tag":"text","text":"OK"},{"tag":"div","children":[{"tag":"text","text":"test"}]},{"tag":"text","text":"Else OK"},{"tag":"text","text":"ALL right"}]`},
+	{`Button(Contract: MyContract, Body:My Contract, Class: myclass, Params:"Name=myid,Id=i10,Value")`,
+		`[{"tag":"button","attr":{"class":"myclass","contract":"MyContract","params":{"Id":{"text":"i10","type":"text"},"Name":{"text":"myid","type":"text"},"Value":{"text":"Value","type":"text"}}},"children":[{"tag":"text","text":"My Contract"}]}]`},
+	{`Simple text +=<b>bold</b>`, `[{"tag":"text","text":"Simple text +=\u003cb\u003ebold\u003c/b\u003e"}]`},
 	{`Div(myclass control, Content of the Div)`, `[{"tag":"div","attr":{"class":"myclass control"},"children":[{"tag":"text","text":"Content of the Div"}]}]`},
 	{`input Div(myclass, Content Div(mypar) the Div)`,
 		`[{"tag":"text","text":"input "},{"tag":"div","attr":{"class":"myclass"},"children":[{"tag":"text","text":"Content "},{"tag":"div","attr":{"class":"mypar"}},{"tag":"text","text":" the Div"}]}]`},
@@ -393,23 +401,4 @@ func TestFullJSON(t *testing.T) {
 var forFullTest = tplList{
 	{`Div(){Span(begin "You've" end<hr>)}`, `[{"tag":"div","children":[{"tag":"span","children":[{"tag":"text","text":"begin \"You've\" end\u003chr\u003e"}]}]}]`},
 	{`DBFind(parameters, mysrc).Columns("name,amount").Limit(10)Table(mysrc,"Name=name,Amount=amount").Style(.tbl {boder: 0px;})`,
-		`[{"tag":"dbfind","attr":{"name":"parameters","source":"mysrc"},"tail":[{"tag":"columns","attr":{"columns":"name,amount"}},{"tag":"limit","attr":{"limit":"10"}}]},{"tag":"table","attr":{"columns":"Name=name,Amount=amount","source":"mysrc"},"tail":[{"tag":"style","attr":{"style":".tbl {boder: 0px;}"}}]}]`},
-	{`Simple text +=<b>bold</b>`, `[{"tag":"text","text":"Simple text +=\u003cb\u003ebold\u003c/b\u003e"}]`},
-	{`Div(myclass control, Content of the Div)`, `[{"tag":"div","attr":{"class":"myclass control"},"children":[{"tag":"text","text":"Content of the Div"}]}]`},
-	{`If(true,OK)If(false){Skip}.Else{Span(Else OK)}`,
-		`[{"tag":"if","attr":{"condition":"true"},"children":[{"tag":"text","text":"OK"}]},{"tag":"if","attr":{"condition":"false"},"children":[{"tag":"text","text":"Skip"}],"tail":[{"tag":"else","children":[{"tag":"span","children":[{"tag":"text","text":"Else OK"}]}]}]}]`},
-	{`If(false,First).ElseIf(GetVar(my)){Skip}.ElseIf(1){
-		Second
-	}.ElseIf(true){Third}.Else{Fourth}`,
-		`[{"tag":"if","attr":{"condition":"false"},"children":[{"tag":"text","text":"First"}],"tail":[{"tag":"elseif","attr":{"condition":"GetVar(my)"},"children":[{"tag":"text","text":"Skip"}]},{"tag":"elseif","attr":{"condition":"1"},"children":[{"tag":"text","text":"Second"}]},{"tag":"elseif","attr":{"condition":"true"},"children":[{"tag":"text","text":"Third"}]},{"tag":"else","children":[{"tag":"text","text":"Fourth"}]}]}]`},
-	{`Button(Page: link){My Button}.Alert(ConfirmButton: ConfBtn, CancelButton: CancelBtn, 
-			Text: Alert text, Icon:myicon)`,
-		`[{"tag":"button","attr":{"page":"link"},"children":[{"tag":"text","text":"My Button"}],"tail":[{"tag":"alert","attr":{"cancelbutton":"CancelBtn","confirmbutton":"ConfBtn","icon":"myicon","text":"Alert text"}}]}]`},
-	{`SetVar(testvalue, The new value).(n, param).Span(#testvalue#)`,
-		`[{"tag":"setvar","attr":{"name":"testvalue","value":"The new value"}},{"tag":"setvar","attr":{"name":"n","value":"param"}},{"tag":"text","text":"."},{"tag":"span","children":[{"tag":"text","text":"#testvalue#"}]}]`},
-	{`Include(myblock)`,
-		`[{"tag":"include","attr":{"name":"myblock"}}]`},
-	{`If(true) {OK}.Else {false} If(false, FALSE).ElseIf(1) {Else OK
-			}.Else {Fourth}If(0).Else{ALL right}.What`,
-		`[{"tag":"if","attr":{"condition":"true"},"children":[{"tag":"text","text":"OK"}],"tail":[{"tag":"else","children":[{"tag":"text","text":"false"}]}]},{"tag":"if","attr":{"condition":"false"},"children":[{"tag":"text","text":"FALSE"}],"tail":[{"tag":"elseif","attr":{"condition":"1"},"children":[{"tag":"text","text":"Else OK"}]},{"tag":"else","children":[{"tag":"text","text":"Fourth"}]}]},{"tag":"if","attr":{"condition":"0"},"tail":[{"tag":"else","children":[{"tag":"text","text":"ALL right"}]}]},{"tag":"text","text":".What"}]`},
 }

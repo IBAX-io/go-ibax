@@ -53,6 +53,11 @@ func InitCentrifugo(cfg conf.CentrifugoConfig) {
 	config = cfg
 	publisher = gocent.New(gocent.Config{
 		Addr: cfg.URL,
+		Key:  cfg.Key,
+	})
+}
+
+func GetJWTCent(userID, expire int64) (string, string, error) {
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 
 	centJWT := CentJWT{
@@ -84,6 +89,3 @@ func GetStats() (gocent.InfoResult, error) {
 		return gocent.InfoResult{}, fmt.Errorf("publisher not initialized")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), centrifugoTimeout)
-	defer cancel()
-	return publisher.Info(ctx)
-}
