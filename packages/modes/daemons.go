@@ -1,3 +1,9 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package modes
+
 type BlockchainDaemonsListsFactory struct{}
 
 func (f BlockchainDaemonsListsFactory) GetDaemonsList() []string {
@@ -36,19 +42,6 @@ func (f OBSDaemonsListFactory) GetDaemonsList() []string {
 		"VDEDestData",
 		"VDEDestDataStatus",
 		"VDESrcHashUpToChain",
-		"VDESrcHashUpToChainState",
-		"VDESrcLogUpToChain",
-		"VDESrcLogUpToChainState",
-		"VDEDestLogUpToChain",
-		"VDEDestLogUpToChainState",
-		"VDEDestDataHashGetFromChain",
-		"VDESrcTaskStatus",
-		"VDESrcTaskStatusRun",
-		"VDESrcTaskStatusRunState",
-		"VDESrcTaskFromScheStatus",
-		"VDESrcTaskFromScheStatusRun",
-		"VDESrcTaskFromScheStatusRunState",
-		"VDEAgentLogUpToChain",
 		"VDEScheTaskChainStatus",
 		"VDEScheTaskChainStatusState",
 		"VDESrcTaskChainStatus",

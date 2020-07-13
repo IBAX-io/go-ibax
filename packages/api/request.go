@@ -98,6 +98,22 @@ func (connect *Connect) SendMultipart(url string, files map[string][]byte, v int
 		}
 		if _, err := part.Write(data); err != nil {
 			return err
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", connect.Root+url, body)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	if len(connect.Auth) > 0 {
+		req.Header.Set("Authorization", jwtPrefix+connect.Auth)
 	}
 
 	client := &http.Client{}
@@ -257,20 +273,6 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 
 	ret := &sendTxResult{}
 	err = connect.SendMultipart("sendTx", map[string][]byte{
-		fmt.Sprintf("%x", txhash): data,
-	}, &ret)
-	if err != nil {
-		return
-	}
-	if len(form.Get("nowait")) > 0 {
-		msg = ret.Hashes["data"]
-		return
-	}
-	id, err = connect.WaitTx(ret.Hashes[fmt.Sprintf("%x", txhash)])
-	if id != 0 && err != nil {
-		msg = err.Error()
-		err = nil
-	}
 
 	return
 }

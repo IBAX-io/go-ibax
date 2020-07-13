@@ -112,6 +112,19 @@ const (
 	DtAddress
 	DtArray
 	DtMap
+	DtMoney
+	DtFloat
+	DtString
+	DtFile
+)
+
+type typeInfo struct {
+	Original uint32
+	Type     reflect.Type
+}
+
+var (
+	// The list of key words
 	keywords = map[string]uint32{`contract`: keyContract, `func`: keyFunc, `return`: keyReturn,
 		`if`: keyIf, `elif`: keyElif, `else`: keyElse, msgError: keyError, msgWarning: keyWarning,
 		msgInfo: keyInfo, `while`: keyWhile, `data`: keyTX, `settings`: keySettings, `nil`: keyNil,
@@ -304,15 +317,6 @@ func lexParser(input []rune) (Lexems, error) {
 								&Lexem{lexSys | ('{' << 8), 0, uint32('{'), uint16(line), lexOff - offline + 1})
 							lexID = lexKeyword | (keyIf << 8)
 							value = uint32(keyIf)
-							ifbuf[len(ifbuf)-1].count++
-						}
-					case keyAction, keyCond:
-						if len(lexems) > 0 {
-							lexf := *lexems[len(lexems)-1]
-							if lexf.Type&0xff != lexKeyword || lexf.Value.(uint32) != keyFunc {
-								lexems = append(lexems, &Lexem{lexKeyword | (keyFunc << 8), 0,
-									keyFunc, uint16(line), lexOff - offline + 1})
-							}
 						}
 						value = name
 					case keyTrue:

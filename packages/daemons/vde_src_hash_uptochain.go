@@ -164,12 +164,6 @@ func VDESrcHashUpToChainState(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
 			time.Sleep(time.Millisecond * 2)
 			continue
-		}
-		chain_apiAddress := blockchain_http
-		chain_apiEcosystemID := int64(ecosystemID)
-
-		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
-		// Login
 		gAuth_chain, _, _, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
@@ -180,6 +174,13 @@ func VDESrcHashUpToChainState(ctx context.Context, d *daemon) error {
 
 		blockId, err := chain_api.VDEWaitTx(chain_apiAddress, gAuth_chain, string(item.TxHash))
 		if blockId > 0 {
+			item.BlockId = blockId
+			item.ChainId = converter.StrToInt64(err.Error())
+			item.ChainState = 2
+			item.ChainErr = ""
+
+		} else if blockId == 0 {
+			//item.ChainState = 3
 			item.ChainState = 1 //
 			item.ChainErr = err.Error()
 		} else {

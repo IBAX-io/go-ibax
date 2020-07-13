@@ -639,9 +639,6 @@ func PostTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPrivat
 
 		switch field.Type {
 		case "bool":
-			params[name], err = strconv.ParseBool(value)
-		case "int":
-			params[name], err = strconv.ParseInt(value, 10, 64)
 		case "float":
 			params[name], err = strconv.ParseFloat(value, 64)
 			//
@@ -773,6 +770,20 @@ func VDEPostTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPri
 		}
 
 		if err != nil {
+			err = fmt.Errorf("Parse param '%s': %s", name, err)
+			return
+		}
+	}
+
+	var privateKey, publicKey []byte
+	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
+		return
+	}
+	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+		return
+	}
+
+	/*data, _, err := tx.NewTransaction(tx.SmartContract{
 		Header: tx.Header{
 			ID:          int(contract.ID),
 			Time:        time.Now().Unix(),

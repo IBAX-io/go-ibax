@@ -7,17 +7,6 @@ package model
 import (
 	"github.com/shopspring/decimal"
 )
-
-type MineStake struct {
-	ID           int64           `gorm:"primary_key not null"`
-	Number       int64           `gorm:"null" `      //number
-	Devid        int64           `gorm:";not null" ` //devid
-	Keyid        int64           `gorm:"not null" `  //keyid
-	Poolid       int64           `gorm:"not null" `  //
-	MineType     int64           `gorm:"not null"`
-	MineNumber   string          `gorm:"not null"`
-	MineCapacity int64           `gorm:"not null"`
-	Cycle        int64           `gorm:"not null" `           //
 	Amount       decimal.Decimal `gorm:"not null default 0" ` //
 	Expired      int64           `gorm:"null" `
 	Status       int64           `gorm:"null"`            //
@@ -54,6 +43,8 @@ func (m *MineStake) GetExpiredMiner(time int64) (mp []MineStake, err error) {
 		Scan(&mp).Error
 	return mp, err
 }
+
+// Get is retrieving model from database
 func (m *MineStake) UpdateExpired(t int64) error {
 	m.Expired = 1
 	m.DateUpdated = t

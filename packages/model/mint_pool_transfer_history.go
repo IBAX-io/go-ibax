@@ -11,10 +11,9 @@ type MintPoolTransferHistory struct {
 	DateCreated              int64  `gorm:"not null"`
 }
 
-// TableName returns name of table
-func (m MintPoolTransferHistory) TableName() string {
-	return `1_mint_pool_transfer_history`
 }
+
+// Get is retrieving model from database
 func (m *MintPoolTransferHistory) GetPool(keyid int64) (bool, error) {
 	return isFound(DBConn.Where("keyid = ? and  status = ?", keyid, 1).Last(m))
 }

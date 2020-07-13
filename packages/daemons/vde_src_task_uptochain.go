@@ -97,6 +97,24 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 
 			"ContractSrcName":     {item.ContractSrcName},
 			"ContractSrcGet":      {item.ContractSrcGet},
+			"ContractSrcGetHash":  {item.ContractSrcGetHash},
+			"ContractDestName":    {item.ContractDestName},
+			"ContractDestGet":     {item.ContractDestGet},
+			"ContractDestGetHash": {item.ContractDestGetHash},
+
+			"ContractRunHttp":      {item.ContractRunHttp},
+			"ContractRunEcosystem": {item.ContractRunEcosystem},
+			"ContractRunParms":     {item.ContractRunParms},
+
+			"ContractMode": {converter.Int64ToStr(item.ContractMode)},
+			`CreateTime`:   {converter.Int64ToStr(time.Now().Unix())},
+		}
+
+		ContractName := `@1VDEShareTaskCreate`
+		_, txHash, _, err := chain_api.VDEPostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
+		if err != nil {
+			fmt.Println("Send VDESrcTask to chain err: ", err)
+			log.WithFields(log.Fields{"error": err}).Error("Send VDESrcTask to chain!")
 			time.Sleep(time.Second * 5)
 			continue
 		}
@@ -127,15 +145,6 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 		blockchain_ecosystem string
 
 		//ok        bool
-		err error
-	)
-
-	m := &model.VDESrcTaskChainStatus{}
-	SrcTask, err := m.GetAllByContractStateAndChainState(1, 0, 1) //
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
-		time.Sleep(time.Millisecond * 2)
-		return err
 	}
 	if len(SrcTask) == 0 {
 		//log.Info("Src task not found")

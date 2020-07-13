@@ -30,14 +30,6 @@ func (t *TestTableRowCounter) RowCount(tx *model.DbTransaction, tableName string
 type QueryCostByFormulaTestSuite struct {
 	suite.Suite
 	queryCoster QueryCoster
-}
-
-func (s *QueryCostByFormulaTestSuite) SetupTest() {
-	s.queryCoster = &FormulaQueryCoster{&TestTableRowCounter{}}
-}
-
-func (s *QueryCostByFormulaTestSuite) TestQueryCostUnknownQueryType() {
-	_, err := s.queryCoster.QueryCost(nil, "UNSELECT * FROM name")
 	assert.Error(s.T(), err)
 	assert.Equal(s.T(), err, UnknownQueryTypeError)
 }
@@ -76,6 +68,12 @@ func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromUpdateNoSet() {
 	_, err := UpdateQueryType(`update keys a = b where id = 1`).GetTableName()
 	assert.Error(s.T(), err)
 	assert.Equal(s.T(), err, SetStatementMissingError)
+}
+
+func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromUpdate() {
+	tableName, err := UpdateQueryType("update keys set a = 1 where id = 2").GetTableName()
+	assert.Nil(s.T(), err)
+	assert.Equal(s.T(), tableName, "keys")
 	tableName, err = UpdateQueryType(`update "1_keys" set a = 1`).GetTableName()
 	assert.Nil(s.T(), err)
 	assert.Equal(s.T(), tableName, "1_keys")
