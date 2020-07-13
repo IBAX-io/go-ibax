@@ -177,5 +177,15 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
 		"new_column": "ContractConditions(\"MainCondition\")"}',
 	  '{"owner": "ContractConditions(\"MainCondition\")",
 	  "cron": "ContractConditions(\"MainCondition\")",
-		'ContractConditions("MainCondition")');
-`
+	  "contract": "ContractConditions(\"MainCondition\")",
+	  "counter": "ContractConditions(\"MainCondition\")",
+	  "till": "ContractConditions(\"MainCondition\")",
+		"conditions": "ContractConditions(\"MainCondition\")"
+	  }', 'ContractConditions("MainCondition")'),
+	('19', 'buffer_data',
+		'{"insert":"true","update":"ContractConditions(\"MainCondition\")",
+			"new_column":"ContractConditions(\"MainCondition\")"}',
+		'{
+			"key": "false",
+			"value": "true",
+			"account": "false"

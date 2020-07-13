@@ -28,9 +28,15 @@ func (hook ContextHook) Levels() []logrus.Level {
 func (hook ContextHook) Fire(entry *logrus.Entry) error {
 	var pc []uintptr
 	if _, skip := entry.Data["nocontext"]; skip {
-	for i := 0; i < cnt; i++ {
-		fu := runtime.FuncForPC(pc[i] - 1)
-		name := fu.Name()
+		delete(entry.Data, "nocontext")
+		return nil
+	}
+	if conf.Config.Log.LogLevel == "DEBUG" {
+		pc = make([]uintptr, 15, 15)
+	} else {
+		pc = make([]uintptr, 4, 4)
+	}
+	cnt := runtime.Callers(6, pc)
 		if !strings.Contains(name, "github.com/sirupsen/logrus") {
 			file, line := fu.FileLine(pc[i] - 1)
 			if count == 0 {

@@ -24,6 +24,15 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 		contract_run_parms map[string]interface{}
 		err                error
 	)
+
+	err = json.Unmarshal([]byte(form.Parms), &parms)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("unmarshal Parms error")
+		return nil, err
+	}
+	err = json.Unmarshal([]byte(form.ContractRunParms), &contract_run_parms)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("unmarshal ContractRunParms error")
 		return nil, err
 	}
 	//fmt.Println("TaskType,TaskState:", form.TaskType, int64(form.TaskType), form.TaskState, int64(form.TaskState))
@@ -47,9 +56,6 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 		ContractRunParms:     converter.MarshalJson(contract_run_parms),
 
 		ContractMode: int64(form.ContractMode),
-
-		ContractStateSrc:     int64(form.ContractStateSrc),
-		ContractStateDest:    int64(form.ContractStateDest),
 		ContractStateSrcErr:  form.ContractStateSrcErr,
 		ContractStateDestErr: form.ContractStateDestErr,
 

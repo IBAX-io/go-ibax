@@ -98,22 +98,6 @@ func (connect *Connect) SendMultipart(url string, files map[string][]byte, v int
 		}
 		if _, err := part.Write(data); err != nil {
 			return err
-		}
-	}
-
-	if err := writer.Close(); err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("POST", connect.Root+url, body)
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-
-	if len(connect.Auth) > 0 {
-		req.Header.Set("Authorization", jwtPrefix+connect.Auth)
 	}
 
 	client := &http.Client{}
@@ -175,6 +159,20 @@ func (connect *Connect) WaitTxList(hashes []string) (map[string]WaitResult, erro
 	})
 	if err != nil {
 		return nil, err
+	}
+	var multiRet multiTxStatusResult
+	err = connect.SendPost(`txstatus`, &url.Values{
+		"data": {string(data)},
+	}, &multiRet)
+	if err != nil {
+		return nil, err
+	}
+	waitResults := map[string]WaitResult{}
+	for key, ret := range multiRet.Results {
+		if len(ret.BlockID) > 0 {
+			waitResults[key] = WaitResult{
+				BlockID: converter.StrToInt64(ret.BlockID),
+				Msg:     ret.Result,
 			}
 			continue
 		}

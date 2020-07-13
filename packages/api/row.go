@@ -52,6 +52,8 @@ func getRowHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		errorResponse(w, err)
 		return
+	if len(form.Columns) > 0 {
+		q = q.Select(form.Columns)
 	}
 
 	rows, err := q.Rows()

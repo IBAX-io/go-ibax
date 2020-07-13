@@ -188,6 +188,24 @@ func getPage(r *http.Request) (result *contentResult, err error) {
 		defer wg.Done()
 		if conf.Config.MaxPageGenerationTime == 0 {
 			return
+		}
+		select {
+		case <-time.After(time.Duration(conf.Config.MaxPageGenerationTime) * time.Millisecond):
+			timeout = true
+		case <-success:
+		}
+	}()
+	wg.Wait()
+	close(success)
+
+	if timeout {
+		logger.WithFields(log.Fields{"type": consts.InvalidObject}).Error(page.Name + " is a heavy page")
+		return nil, errHeavyPage
+	}
+
+	return result, nil
+}
+
 func getPageHandler(w http.ResponseWriter, r *http.Request) {
 	result, err := getPage(r)
 	if err != nil {
@@ -290,19 +308,6 @@ func jsonContentHandler(w http.ResponseWriter, r *http.Request) {
 
 	ret := template.Template2JSON(form.Template, &timeout, vars)
 	jsonResponse(w, &contentResult{Tree: ret})
-}
-
-func getSourceHandler(w http.ResponseWriter, r *http.Request) {
-	page, _, err := pageValue(r)
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-	var timeout bool
-	vars := initVars(r)
-	(*vars)["_full"] = strOne
-	ret := template.Template2JSON(page.Value, &timeout, vars)
-
 	jsonResponse(w, &contentResult{Tree: ret})
 }
 
