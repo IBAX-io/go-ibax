@@ -19,12 +19,6 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "block_id": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
             "every_block": "ContractAccess(\"@1EditDelayedContract\")",
             "counter": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
-            "high_rate": "ContractAccess(\"@1EditDelayedContract\")",
-            "limit": "ContractAccess(\"@1EditDelayedContract\")",
-            "deleted": "ContractAccess(\"@1EditDelayedContract\")",
-            "conditions": "ContractAccess(\"@1EditDelayedContract\")"
-        }',
-        'ContractConditions("@1AdminCondition")'
     ),
     (next_id('1_tables'), 'ecosystems',
         '{
@@ -60,6 +54,19 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     (next_id('1_tables'), 'bad_blocks',
         '{
             "insert": "ContractAccess(\"@1NewBadBlock\")",
+            "update": "ContractAccess(\"@1NewBadBlock\", \"@1CheckNodesBan\")",
+            "new_column": "ContractConditions(\"@1AdminCondition\")"
+        }',
+        '{
+            "block_id": "ContractAccess(\"@1CheckNodesBan\")",
+            "producer_node_id": "ContractAccess(\"@1CheckNodesBan\")",
+            "consumer_node_id": "ContractAccess(\"@1CheckNodesBan\")",
+            "block_time": "ContractAccess(\"@1CheckNodesBan\")",
+            "reason": "ContractAccess(\"@1CheckNodesBan\")",
+            "deleted": "ContractAccess(\"@1CheckNodesBan\")"
+        }',
+        'ContractConditions("@1AdminCondition")'
+    ),
     (next_id('1_tables'), 'node_ban_logs',
         '{
             "insert": "ContractAccess(\"@1CheckNodesBan\")",

@@ -49,16 +49,6 @@ func RollbackBlock(data []byte) error {
 		dbTransaction.Rollback()
 		return err
 	}
-
-	if err = b.DeleteById(dbTransaction, bl.Header.BlockID); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
-		dbTransaction.Rollback()
-		return err
-	}
-
-	b = &model.Block{}
-	if _, err = b.Get(bl.Header.BlockID - 1); err != nil {
-		dbTransaction.Rollback()
 		return err
 	}
 
@@ -90,6 +80,17 @@ func rollbackBlock(dbTransaction *model.DbTransaction, block *block.Block) error
 	// rollback transactions in reverse order
 	logger := block.GetLogger()
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
+		t := block.Transactions[i]
+		t.DbTransaction = dbTransaction
+
+		_, err := model.MarkTransactionUnusedAndUnverified(dbTransaction, t.TxHash)
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting transaction")
+			return err
+		}
+		_, err = model.DeleteLogTransactionsByHash(dbTransaction, t.TxHash)
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting log transactions by hash")
 			return err
 		}
 

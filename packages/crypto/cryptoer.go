@@ -3,9 +3,11 @@ package crypto
 import (
 	"encoding/hex"
 	"fmt"
-)
+	name string
+}
 
-type Cryptoer interface {
+const (
+	cSM2   = "SM2"
 	cECDSA = "ECDSA"
 )
 

@@ -55,12 +55,6 @@ func TestTable(t *testing.T) {
 func TestTableName(t *testing.T) {
 	if err := keyLogin(1); err != nil {
 		t.Error(err)
-		return
-	}
-	form := url.Values{"Name": {`кириллица`}, "Columns": {`[{"name":"MyName","type":"varchar", "index": "0", 
-		"conditions":{"update":"true", "read":"true"}}]`}, "ApplicationId": {"1"},
-		"Permissions": {`{"insert": "true", "update" : "true", "new_column": "true"}`}}
-	assert.EqualError(t, postTx(`NewTable`, &form),
 		`{"type":"panic","error":"Name кириллица must only contain latin, digit and '_', '-' characters"}`)
 
 	form = url.Values{"Name": {`latin`}, "Columns": {`[{"name":"колонка","type":"varchar", "index": "0", 
@@ -101,6 +95,16 @@ func TestTableName(t *testing.T) {
 	}
 	if len(ret.Columns) == 0 || ret.AppID != `100` {
 		t.Errorf(`wrong table columns or app_id`)
+		return
+	}
+	var retList listResult
+	err = sendGet(`list/tbl-`+name, nil, &retList)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if retList.Count != 1 {
+		t.Errorf(`wrong table count`)
 		return
 	}
 	forTest := tplList{

@@ -1,5 +1,7 @@
-// +build linux freebsd darwin
-// +build 386 amd64
+	"github.com/IBAX-io/go-ibax/packages/converter"
+
+	log "github.com/sirupsen/logrus"
+)
 
 // KillPid is killing process by PID
 func KillPid(pid string) error {

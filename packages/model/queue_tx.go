@@ -23,16 +23,6 @@ func (qt *QueueTx) TableName() string {
 	return "queue_tx"
 }
 
-// DeleteTx is deleting tx
-func (qt *QueueTx) DeleteTx(transaction *DbTransaction) error {
-	return GetDB(transaction).Delete(qt).Error
-}
-
-// Save is saving model
-func (qt *QueueTx) Save(transaction *DbTransaction) error {
-	return GetDB(transaction).Save(qt).Error
-}
-
 // Create is creating record of model
 func (qt *QueueTx) Create() error {
 	return DBConn.Create(qt).Error
@@ -49,6 +39,12 @@ func DeleteQueueTxByHash(transaction *DbTransaction, hash []byte) (int64, error)
 	return query.RowsAffected, query.Error
 }
 
+// GetQueuedTransactionsCount counting queued transactions
+func GetQueuedTransactionsCount(hash []byte) (int64, error) {
+	var rowsCount int64
+	err := DBConn.Table("queue_tx").Where("hash = ?", hash).Count(&rowsCount).Error
+	return rowsCount, err
+}
 
 // GetAllUnverifiedAndUnusedTransactions is returns all unverified and unused transaction
 func GetAllUnverifiedAndUnusedTransactions(dbTransaction *DbTransaction, limit int) ([]*QueueTx, error) {

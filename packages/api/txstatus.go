@@ -30,20 +30,6 @@ type txstatusResult struct {
 	Penalty int64          `json:"penalty"`
 }
 
-func getTxStatus(r *http.Request, hash string) (*txstatusResult, error) {
-	logger := getLogger(r)
-
-	var status txstatusResult
-	if _, err := hex.DecodeString(hash); err != nil {
-		logger.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("decoding tx hash from hex")
-		return nil, errHashWrong
-	}
-	ts := &model.TransactionStatus{}
-	found, err := ts.Get([]byte(converter.HexToBin(hash)))
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("getting transaction status by hash")
-		return nil, err
-	}
 	if !found {
 		logger.WithFields(log.Fields{"type": consts.NotFound, "key": []byte(converter.HexToBin(hash))}).Error("getting transaction status by hash")
 		return nil, errHashNotFound
@@ -94,3 +80,10 @@ func getTxStatusHandler(w http.ResponseWriter, r *http.Request) {
 		status, err := getTxStatus(r, hash)
 		if err != nil {
 			errorResponse(w, err)
+			return
+		}
+		result.Results[hash] = status
+	}
+
+	jsonResponse(w, result)
+}
