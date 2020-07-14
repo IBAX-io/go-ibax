@@ -207,6 +207,13 @@ func SubNodeSrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		}
 		chain_apiAddress := blockchain_http
 		chain_apiEcosystemID := int64(ecosystemID)
+
+		src := filepath.Join(conf.Config.KeysDir, "chain_PrivateKey")
+		// Login
+		gAuth_chain, _, _, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
+			time.Sleep(time.Millisecond * 2)
 			continue
 		}
 		//fmt.Println("Login OK!")
@@ -214,19 +221,6 @@ func SubNodeSrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		blockId, err := chain_api.VDEWaitTx(chain_apiAddress, gAuth_chain, string(item.TxHash))
 		if blockId > 0 {
 			item.BlockId = blockId
-			item.ChainId = converter.StrToInt64(err.Error())
-			item.ChainState = 2
-			item.ChainErr = ""
-
-		} else if blockId == 0 {
-			//item.ChainState = 3
-			item.ChainState = 1 //
-			item.ChainErr = err.Error()
-		} else {
-			//fmt.Println("VDEWaitTx! err: ", err)
-			time.Sleep(2 * time.Second)
-			continue
-		}
 		err = item.Updates()
 		if err != nil {
 			fmt.Println("Update SubNodeSrcDataChainStatus table err: ", err)

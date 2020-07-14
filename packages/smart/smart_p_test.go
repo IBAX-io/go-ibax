@@ -6,6 +6,15 @@ package smart
 
 import (
 	"testing"
+)
+
+func TestRegexpMatch(t *testing.T) {
+	type args struct {
+		str string
+		reg string
+	}
+	tests := []struct {
+		name string
 		args args
 		want bool
 	}{
@@ -19,6 +28,3 @@ import (
 			if got := RegexpMatch(tt.args.str, tt.args.reg); got != tt.want {
 				t.Errorf("RegexpMatch() = %v, want %v", got, tt.want)
 			}
-		})
-	}
-}

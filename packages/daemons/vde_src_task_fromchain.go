@@ -75,6 +75,10 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 		ContractDestGetHashHex string
 	)
 
+	tasktime := &model.VDESrcTaskTime{}
+	SrcTaskTime, err := tasktime.Get()
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting SrcTaskTime")
 		time.Sleep(time.Millisecond * 2)
 		return err
 	}
@@ -126,15 +130,6 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 	}
 	//fmt.Println("Login OK!")
 
-	_, NodePublicKey, err := utils.VDEGetNodeKeys()
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("GetNodeKeys")
-		return err
-	}
-	nodePrivateKey, err := utils.GetNodePrivateKey()
-	if err != nil || len(nodePrivateKey) < 1 {
-		if err == nil {
-			log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
 		}
 		return err
 	}

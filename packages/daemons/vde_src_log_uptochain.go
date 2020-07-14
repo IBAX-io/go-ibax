@@ -69,9 +69,15 @@ func VDESrcLogUpToChain(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
 			time.Sleep(time.Millisecond * 2)
 			continue
-			"Log":       {item.Log},
-			"LogType":   {converter.Int64ToStr(item.LogType)},
-			"LogSender": {item.LogSender},
+		}
+		chain_apiAddress := blockchain_http
+		chain_apiEcosystemID := int64(ecosystemID)
+
+		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
+		// Login
+		gAuth_chain, _, gPrivate_chain, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
 
 			`CreateTime`: {converter.Int64ToStr(time.Now().Unix())},
 		}

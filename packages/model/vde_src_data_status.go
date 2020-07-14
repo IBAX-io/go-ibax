@@ -12,17 +12,6 @@ type VDESrcDataStatus struct {
 	Data           []byte `gorm:"column:data;not null" json:"data"`
 	DataInfo       string `gorm:"type:jsonb" json:"data_info"`
 	VDESrcPubkey   string `gorm:"not null" json:"vde_src_pubkey"`
-	VDEDestPubkey  string `gorm:"not null" json:"vde_dest_pubkey"`
-	VDEDestIP      string `gorm:"not null" json:"vde_dest_ip"`
-	VDEAgentPubkey string `gorm:"not null" json:"vde_agent_pubkey"`
-	VDEAgentIP     string `gorm:"not null" json:"vde_agent_ip"`
-	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
-	DataSendState  int64  `gorm:"not null" json:"data_send_state"`
-	DataSendErr    string `gorm:"not null" json:"data_send_err"`
-	UpdateTime     int64  `gorm:"not null" json:"update_time"`
-	CreateTime     int64  `gorm:"not null" json:"create_time"`
-}
-
 func (VDESrcDataStatus) TableName() string {
 	return "vde_src_data_status"
 }
@@ -52,6 +41,21 @@ func (m *VDESrcDataStatus) GetOneByID() (*VDESrcDataStatus, error) {
 func (m *VDESrcDataStatus) GetAllByTaskUUID(TaskUUID string) ([]VDESrcDataStatus, error) {
 	result := make([]VDESrcDataStatus, 0)
 	err := DBConn.Table("vde_src_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	return result, err
+}
+
+func (m *VDESrcDataStatus) GetAllByDataSendStatus(DataSendStatus int64) ([]VDESrcDataStatus, error) {
+	result := make([]VDESrcDataStatus, 0)
+	err := DBConn.Table("vde_src_data_status").Where("data_send_state = ?", DataSendStatus).Find(&result).Error
+	return result, err
+}
+
+func (m *VDESrcDataStatus) GetAllByDataSendStatusAndAgentMode(DataSendStatus int64, AgentMode int64) ([]VDESrcDataStatus, error) {
+	result := make([]VDESrcDataStatus, 0)
+	err := DBConn.Table("vde_src_data_status").Where("data_send_state = ? AND agent_mode = ?", DataSendStatus, AgentMode).Find(&result).Error
+	return result, err
+}
+
 func (m *VDESrcDataStatus) GetOneByDataSendStatus(DataSendStatus int64) (bool, error) {
 	return isFound(DBConn.Where("data_send_state = ?", DataSendStatus).First(m))
 }

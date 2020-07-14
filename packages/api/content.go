@@ -299,15 +299,23 @@ func jsonContentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var timeout bool
-	vars := initVars(r)
-
-	if form.Source {
-		(*vars)["_full"] = strOne
 	}
 
 	ret := template.Template2JSON(form.Template, &timeout, vars)
 	jsonResponse(w, &contentResult{Tree: ret})
+}
+
+func getSourceHandler(w http.ResponseWriter, r *http.Request) {
+	page, _, err := pageValue(r)
+	if err != nil {
+		errorResponse(w, err)
+		return
+	}
+	var timeout bool
+	vars := initVars(r)
+	(*vars)["_full"] = strOne
+	ret := template.Template2JSON(page.Value, &timeout, vars)
+
 	jsonResponse(w, &contentResult{Tree: ret})
 }
 

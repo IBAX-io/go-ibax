@@ -23,6 +23,18 @@ func unmarshalColumnVDESrcMember(form *VDESrcMemberForm) (*model.VDESrcMember, e
 	)
 
 	m := &model.VDESrcMember{
+		VDEPubKey:            form.VDEPubKey,
+		VDEComment:           form.VDEComment,
+		VDEName:              form.VDEName,
+		VDEIp:                form.VDEIp,
+		VDEType:              int64(form.VDEType),
+		ContractRunHttp:      form.ContractRunHttp,
+		ContractRunEcosystem: form.ContractRunEcosystem,
+	}
+
+	return m, err
+}
+
 func VDESrcMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
@@ -85,16 +97,6 @@ func VDESrcMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
 		return
 	}
-
-	jsonResponse(w, result)
-}
-
-func VDESrcMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-	id := converter.StrToInt64(params["id"])
-
-	m := &model.VDESrcMember{}
 	m.ID = id
 	if err := m.Delete(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")

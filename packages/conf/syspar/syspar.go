@@ -191,6 +191,22 @@ func updateNodes() (err error) {
 		}
 	}
 	nodes = make(map[string]*HonorNode)
+	nodesByPosition = []*HonorNode{}
+	for i := 0; i < len(items); i++ {
+		nodes[hex.EncodeToString(items[i].PublicKey)] = items[i]
+
+		if !items[i].Stopped {
+			nodesByPosition = append(nodesByPosition, items[i])
+		}
+	}
+
+	return nil
+}
+
+// addHonorNodeKeys adds node by keys to list of nodes
+func addHonorNodeKeys(publicKey []byte) {
+	nodesByPosition = append(nodesByPosition, &HonorNode{
+		PublicKey: publicKey,
 	})
 }
 
@@ -553,21 +569,6 @@ func GetPriceExec(s string) (price int64, ok bool) {
 }
 
 // SysTableColType reloads/updates values of all ecosystem table column data type
-func SysTableColType(dbTransaction *model.DbTransaction) error {
-	var err error
-	mutex.RLock()
-	defer mutex.RUnlock()
-	cacheTableColType, err = model.GetAllTransaction(dbTransaction, `
-		SELECT table_name,column_name,data_type,character_maximum_length
-		FROM information_schema.columns Where table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name ~ '[\d]' AND data_type = 'bytea' ORDER BY ordinal_position ASC;`, -1)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func GetTableColType() []map[string]string {
-	mutex.RLock()
 	defer mutex.RUnlock()
 	return cacheTableColType
 }

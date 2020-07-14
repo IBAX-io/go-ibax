@@ -73,8 +73,10 @@ func CreateDelayTransactionHighRate(data, hash []byte, keyID, highRate int64) *m
 	t := int8(highRate)
 	tx := &model.Transaction{
 		Hash:     hash,
-		Data:     data[:],
-		Type:     getTxTxType(t),
+}
+
+func getTxTxType(rate int8) int8 {
+	ret := int8(1)
 	switch rate {
 	case consts.TxTypeApiContract, consts.TxTypeEcosystemMiner, consts.TxTypeSystemMiner, consts.TxTypeStopNetwork:
 		ret = rate

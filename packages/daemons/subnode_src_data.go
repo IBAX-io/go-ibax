@@ -5,6 +5,23 @@
 
 package daemons
 
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
+func SubNodeSrcData(ctx context.Context, d *daemon) error {
+	var (
+		TaskParms map[string]interface{}
+
 		subnode_src_pubkey   string
 		subnode_dest_pubkey  string
 		subnode_dest_ip      string
@@ -210,17 +227,6 @@ package daemons
 			}
 			continue
 		}
-		if len(subnode_agent_pubkey_slice) != subnode_dest_num {
-			log.WithFields(log.Fields{"error": err}).Error("subnode_agent_pubkey parse error")
-			item.DataState = 3 //Indicates an error in parsing task parameters
-			err = item.Updates()
-			if err != nil {
-				log.WithError(err)
-			}
-			continue
-		}
-		if len(subnode_agent_ip_slice) != subnode_dest_num {
-			log.WithFields(log.Fields{"error": err}).Error("vde_agent_ip parse error")
 			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {

@@ -1,5 +1,11 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package script
+
+import (
+	"fmt"
 	"testing"
 )
 
@@ -47,6 +53,3 @@ func TestLexParser(t *testing.T) {
 		} else if out.String(source) != item.Output {
 			t.Error(`error of lexical parser ` + item.Input)
 			fmt.Println(out.String(source))
-		}
-	}
-}

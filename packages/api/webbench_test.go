@@ -155,15 +155,6 @@ func TestMapJsonTs(t *testing.T) {
 		Count:           3,
 		TotalAmount:     "63000000000000000000",
 	}
-	//Public offering
-	apub := AssignRules{
-		StartBlockID:    1,
-		EndBlockID:      61,
-		IntervalBlockID: 20,
-		Count:           4,
-		TotalAmount:     "105000000000000000000",
-	}
-	//foundation
 	ac := AssignRules{
 		StartBlockID:    21600 * 365,
 		EndBlockID:      INT64_MAX,
@@ -294,3 +285,12 @@ func TestMapJsonTsFirst(t *testing.T) {
 	ret[1] = apri
 	ret[2] = apub
 	ret[3] = ac
+	ret[4] = ad
+	//ret[5] = ae
+	ret[5] = af
+	ret[6] = ag
+	ret[7] = ah
+	data, _ := json.Marshal(ret)
+	fmt.Println(string(data))
+
+}
