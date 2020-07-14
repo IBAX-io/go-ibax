@@ -333,19 +333,6 @@ func TestVMCompile(t *testing.T) {
 				var m map
 				if m {
 					return "empty"
-				}
-				
-				m["test"]=1
-				if m {
-					return "not empty"
-				}
-
-				return error "error"
-			}`, "ifMap", "not empty",
-		},
-		{`func One(list array, name string) string {
-			if list {
-				var row map 
 				row = list[0]
 				return row[name]
 			}
@@ -587,6 +574,20 @@ func TestVMCompile(t *testing.T) {
 				Name string "aaq"
 				Temp
 			}
+			action {
+				$result = $Name
+			}
+		}
+		`, `qqq3.action`, `expecting type of the data field [Ln:5 Col:1]`},
+		{`contract qqq2 {
+			data {
+				Name string "aaq"
+				"awede"
+			}
+			action {
+				$result = $Name
+			}
+		}
 		`, `qqq2.action`, `unexpected tag [Ln:4 Col:6]`},
 		{`contract qqq1 {
 			data {

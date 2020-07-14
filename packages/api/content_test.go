@@ -95,6 +95,15 @@ func TestContent(t *testing.T) {
 			}`},
 				"lang":   {"ru"},
 				"source": {"true"},
+			},
+			`[{"tag":"dbfind","attr":{"name":"pages","source":"src"},"tail":[{"tag":"custom","attr":{"column":"custom_col"},"children":[{"tag":"span","children":[{"tag":"text","text":"test"}]}]}]}]`,
+		},
+		{
+			"content",
+			url.Values{
+				"template": {`Data(Source: src).Custom(custom_col){
+				Span(Body: "test")
+			}`},
 				"lang":   {"ru"},
 				"source": {"true"},
 			},
@@ -116,11 +125,6 @@ func TestContent(t *testing.T) {
 			"content",
 			url.Values{
 				"template": {`
-					Data(src_test,"type"){
-						text
-					}
-					ForList(src_test){
-					If(#type#==text){
 						Span(:#type#)
 					}
 				}`},

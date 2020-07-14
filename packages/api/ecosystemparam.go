@@ -64,12 +64,4 @@ func getEcosystemNameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !found {
-		return
-	}
-
-	jsonResponse(w, &struct {
-		EcosystemName string `json:"ecosystem_name"`
-	}{
-		EcosystemName: ecosystems.Name,
-	})
-}
+		logger.WithFields(log.Fields{"type": consts.NotFound, "ecosystem_id": ecosystemID}).Error("ecosystem by id not found")

@@ -17,3 +17,7 @@ type Install struct {
 func (i *Install) TableName() string {
 	return "install"
 }
+
+// Get is retrieving model from database
+func (i *Install) Get() error {
+	return DBConn.Find(i).Error

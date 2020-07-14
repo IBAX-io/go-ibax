@@ -5,18 +5,6 @@
 package utils
 
 import (
-	"crypto/x509"
-	"encoding/pem"
-	"errors"
-)
-
-var (
-type Cert struct {
-	cert *x509.Certificate
-}
-
-func (c *Cert) Validate(pem []byte) error {
-	roots := x509.NewCertPool()
 	if ok := roots.AppendCertsFromPEM(pem); !ok {
 		return errParseRootCert
 	}

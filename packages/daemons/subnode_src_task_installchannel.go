@@ -102,11 +102,6 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 
 		//if subnode_src_pubkey, ok = TaskParms["subnode_src_pubkey"].(string); !ok {
 		//	log.WithFields(log.Fields{"error": err}).Error("subnode_src_pubkey parse error")
-		//	item.ChannelState = 3 //
-		//	err = item.Updates()
-		//	if err != nil {
-		//		log.WithError(err)
-		//	}
 		//	continue
 		//}
 		if subnode_dest_pubkey, ok = TaskParms["subnode_dest_pubkey"].(string); !ok {
@@ -262,6 +257,10 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 		_, _, _, err = chain_api.PostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
 		if err != nil {
 			item.ChannelState = 2
+			item.ChannelStateErr = err.Error()
+		} else {
+			item.ChannelState = 1
+			item.ChannelStateErr = ""
 		}
 		fmt.Println("Call chain api.PostTxResult OK")
 
