@@ -57,6 +57,14 @@ func prepareWorkDir() (string, error) {
 	childConfigsPath := path.Join(conf.Config.DataDir, childFolder)
 
 	if _, err := os.Stat(childConfigsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(childConfigsPath, 0700); err != nil {
+			log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("creating configs directory")
+			return "", err
+		}
+	}
+
+	return childConfigsPath, nil
+}
 
 // CreateOBS creates one instance of OBS
 func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) error {
@@ -299,17 +307,6 @@ func (mgr *OBSManager) initOBSDir(obsName string) error {
 	}
 
 	return nil
-}
-
-func InitOBSManager() {
-	if !conf.Config.IsOBSMaster() {
-		return
-	}
-
-	execPath, err := os.Executable()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Fatal("on determine executable path")
-	}
 
 	childConfigsPath, err := prepareWorkDir()
 	if err != nil {

@@ -84,6 +84,7 @@ func SendSubNodeSrcDataAgent(host string, TaskUUID string, DataUUID string, Agen
 		Data:               dt,
 	}
 
-
-	return string(resp.Hash)
-}
+	if err = req.Write(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending VDESrcDataAgent request")
+		return "0"
+	}

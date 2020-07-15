@@ -21,15 +21,19 @@ func TestLang(t *testing.T) {
 	utfName := randName("lngutf")
 
 	err := postTx("NewLang", &url.Values{
-			"NewLang",
-			url.Values{
-				"Name":          {utfName},
-				"Trans":         {`{"en": "тест"}`},
-				"ApplicationId": {"1"},
-			},
-			"",
-		},
-		{
+		"Name":          {name},
+		"Trans":         {`{"en": "My test", "fr": "French string", "en-US": "US locale"}`},
+		"ApplicationId": {"1"},
+	})
+	assert.NoError(t, err)
+	var list listResult
+	err = sendGet(`list/languages`, nil, &list)
+	if err != nil {
+		return
+	}
+	id := strconv.FormatInt(list.Count, 10)
+
+	cases := []struct {
 			"NewPage",
 			url.Values{
 				"Name":          {name},

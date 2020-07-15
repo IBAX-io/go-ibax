@@ -4,15 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package publisher
 
-import (
-	"context"
-	"fmt"
-	"strconv"
-	"sync"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
 
 	"github.com/centrifugal/gocent"
 	jwt "github.com/dgrijalva/jwt-go"
@@ -89,3 +80,6 @@ func GetStats() (gocent.InfoResult, error) {
 		return gocent.InfoResult{}, fmt.Errorf("publisher not initialized")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), centrifugoTimeout)
+	defer cancel()
+	return publisher.Info(ctx)
+}

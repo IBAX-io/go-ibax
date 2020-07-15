@@ -57,6 +57,15 @@ func ConvertMap(in interface{}) interface{} {
 			v[i] = ConvertMap(item)
 		}
 	}
+	return in
+}
+
+// LoadMap instantiates a linked hash map and initializing it from map[string]interface{}.
+func LoadMap(init map[string]interface{}) (ret *Map) {
+	ret = NewMap()
+	keys := make([]string, 0, len(init))
+	for key := range init {
+		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 	for _, v := range keys {
@@ -88,10 +97,6 @@ func (m *Map) Set(key string, value interface{}) {
 // Second return parameter is true if key was found, otherwise false.
 func (m *Map) Get(key string) (value interface{}, found bool) {
 	var link *Link
-	link, found = m.m[key]
-	if found {
-		value = link.value
-	} else {
 		value = nil
 	}
 	return

@@ -75,7 +75,8 @@ func TestLimit(t *testing.T) {
 			if v, ok := blocks[item["block"]]; ok {
 				blocks[item["block"]] = v + 1
 			} else {
-	assert.NoError(t, sendGet(`systemparams?names=max_tx_block,max_tx_block_per_user`, nil, &syspar))
+				blocks[item["block"]] = 1
+			}
 
 	var maxusers, maxtx string
 	if syspar.List[0].Name == "max_tx_block" {

@@ -45,6 +45,21 @@ type Block struct {
 	PrevRollbacksHash []byte
 	MrklRoot          []byte
 	BinData           []byte
+	Transactions      []*transaction.Transaction
+	SysUpdate         bool
+	GenBlock          bool // it equals true when we are generating a new block
+	Notifications     []types.Notifications
+}
+
+func (b Block) String() string {
+	return fmt.Sprintf("header: %s, prevHeader: %s", b.Header, b.PrevHeader)
+}
+
+// GetLogger is returns logger
+func (b Block) GetLogger() *log.Entry {
+	return log.WithFields(log.Fields{"block_id": b.Header.BlockID, "block_time": b.Header.Time, "block_wallet_id": b.Header.KeyID,
+		"block_state_id": b.Header.EcosystemID, "block_hash": b.Header.Hash, "block_version": b.Header.Version})
+}
 func (b *Block) IsGenesis() bool {
 	return b.Header.BlockID == 1
 }
@@ -321,17 +336,6 @@ func (b *Block) Check() error {
 	txCounter := make(map[int64]int)
 	txHashes := make(map[string]struct{})
 	for _, t := range b.Transactions {
-		hexHash := string(converter.BinToHex(t.TxHash))
-		// check for duplicate transactions
-		if _, ok := txHashes[hexHash]; ok {
-			logger.WithFields(log.Fields{"tx_hash": hexHash, "type": consts.DuplicateObject}).Error("duplicate transaction")
-			return utils.ErrInfo(fmt.Errorf("duplicate transaction %s", hexHash))
-		}
-		txHashes[hexHash] = struct{}{}
-
-		// check for max transaction per user in one block
-		//txCounter[t.TxKeyID]++
-		if txCounter[t.TxKeyID] > syspar.GetMaxBlockUserTx() {
 			return utils.WithBan(utils.ErrInfo(fmt.Errorf("max_block_user_transactions")))
 		}
 

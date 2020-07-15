@@ -1,12 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package main
-
-import (
-	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 )
@@ -176,6 +168,16 @@ func main() {
 var (
 		alphabet = []byte{`
 	for i, ch := range alpha {
+		out += fmt.Sprintf(`%d,`, ch)
+		if i > 0 && i%24 == 0 {
+			out += "\r\n\t\t\t"
+		}
+	}
+	out += "\r\n\t\t}\r\n"
+
+	var (
+		data States
+	)
 	state2int := map[string]uint{`main`: 0}
 	if err := json.Unmarshal([]byte(states), &data); err == nil {
 		for key := range data {

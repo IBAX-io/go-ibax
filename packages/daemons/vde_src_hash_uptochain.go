@@ -1,13 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"context"
-	"fmt"
 	"net/url"
 	"strconv"
 	"time"
@@ -164,6 +154,12 @@ func VDESrcHashUpToChainState(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
 			time.Sleep(time.Millisecond * 2)
 			continue
+		}
+		chain_apiAddress := blockchain_http
+		chain_apiEcosystemID := int64(ecosystemID)
+
+		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
+		// Login
 		gAuth_chain, _, _, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")

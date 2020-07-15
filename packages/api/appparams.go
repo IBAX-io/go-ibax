@@ -15,10 +15,10 @@ import (
 	"github.com/gorilla/mux"
 
 	log "github.com/sirupsen/logrus"
-}
+)
 
-func (f *appParamsForm) Validate(r *http.Request) error {
-	return f.ecosystemForm.Validate(r)
+type appParamsResult struct {
+	App  string        `json:"app_id"`
 }
 
 func (m Mode) getAppParamsHandler(w http.ResponseWriter, r *http.Request) {

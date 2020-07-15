@@ -1,0 +1,46 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"context"
+	"sync/atomic"
+
+	"github.com/IBAX-io/go-ibax/packages/transaction"
+
+	log "github.com/sirupsen/logrus"
+)
+
+// QueueParserTx parses transaction from the queue
+func QueueParserTx(ctx context.Context, d *daemon) error {
+	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
+		defer atomic.StoreUint32(&d.atomic, 0)
+	} else {
+		return nil
+	}
+	DBLock()
+	defer DBUnlock()
+	//
+	//infoBlock := &model.InfoBlock{}
+	//_, err := infoBlock.Get()
+	//if err != nil {
+	//	d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")
+	//for {
+	//	select {
+	//	case attempt := <-transaction.ChanTxAttempt:
+	//		if attempt {
+	//			err = transaction.ProcessTransactionsAttempt(p.DbTransaction)
+	//			if err != nil {
+	//				d.logger.WithFields(log.Fields{"error": err}).Error("parsing transactions attempt")
+	//				return err
+	//			}
+	//		}
+	//	default:
+	//		return nil
+	//	}
+	//}
+	return nil
+}

@@ -54,6 +54,12 @@ func TestGetInterfaceRow(t *testing.T) {
 }
 
 func TestNewMenuNoError(t *testing.T) {
+	require.NoError(t, keyLogin(1))
+	menuname := "myTestMenu"
+	form := url.Values{"Name": {menuname}, "Value": {`first
+		second
+		third`}, "Title": {`My Test Menu`},
+		"Conditions": {`true`}}
 	assert.NoError(t, postTx(`NewMenu`, &form))
 
 	err := postTx(`NewMenu`, &form)
@@ -71,14 +77,3 @@ func TestEditMenuNoError(t *testing.T) {
 		"Title": {`My edited Test Menu`},
 	}
 	assert.NoError(t, postTx(`EditMenu`, &form))
-}
-
-func TestAppendMenuNoError(t *testing.T) {
-	require.NoError(t, keyLogin(1))
-	form := url.Values{
-		"Id":    {"3"},
-		"Value": {"appended item"},
-	}
-
-	assert.NoError(t, postTx("AppendMenu", &form))
-}

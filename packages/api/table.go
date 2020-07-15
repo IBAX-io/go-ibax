@@ -1,4 +1,14 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -38,25 +48,6 @@ func getTableHandler(w http.ResponseWriter, r *http.Request) {
 	_, err := table.Get(nil, strings.ToLower(params["name"]))
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting table")
-		errorResponse(w, err)
-		return
-	}
-
-	if len(table.Name) == 0 {
-		errorResponse(w, errTableNotFound.Errorf(params["name"]))
-		return
-	}
-
-	var columnsMap map[string]string
-	err = json.Unmarshal([]byte(table.Columns), &columnsMap)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("Unmarshalling table columns to json")
-		errorResponse(w, err)
-		return
-	}
-
-	columns := make([]columnInfo, 0)
-	for key, value := range columnsMap {
 		colType, err := model.GetColumnType(prefix+`_`+params["name"], key)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column type from db")
