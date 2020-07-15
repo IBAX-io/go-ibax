@@ -7,10 +7,16 @@ package model
 import (
 	"github.com/shopspring/decimal"
 )
-	Amount       decimal.Decimal `gorm:"not null default 0" ` //
-	Expired      int64           `gorm:"null" `
-	Status       int64           `gorm:"null"`            //
-	Review       int64           `gorm:"null default 0" ` //
+
+type MineStake struct {
+	ID           int64           `gorm:"primary_key not null"`
+	Number       int64           `gorm:"null" `      //number
+	Devid        int64           `gorm:";not null" ` //devid
+	Keyid        int64           `gorm:"not null" `  //keyid
+	Poolid       int64           `gorm:"not null" `  //
+	MineType     int64           `gorm:"not null"`
+	MineNumber   string          `gorm:"not null"`
+	MineCapacity int64           `gorm:"not null"`
 	Count        int64           `gorm:"null default 0" ` //
 	Stakes       int64           `gorm:"null default 0" ` //
 	Transfers    int64           `gorm:"null"  `          //

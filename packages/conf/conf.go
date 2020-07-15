@@ -271,19 +271,6 @@ func FillRuntimePaths() error {
 
 	if Config.LockFilePath == "" {
 		Config.LockFilePath = filepath.Join(Config.DataDir, consts.DefaultLockFilename)
-	}
-
-	return nil
-}
-
-// FillRuntimeKey fills parameters of keys from runtime parameters
-func FillRuntimeKey() error {
-	keyIDFileName := filepath.Join(Config.KeysDir, consts.KeyIDFilename)
-	keyIDBytes, err := os.ReadFile(keyIDFileName)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "path": keyIDFileName}).Error("reading KeyID file")
-		return err
-	}
 
 	Config.KeyID, err = strconv.ParseInt(string(keyIDBytes), 10, 64)
 	if err != nil {
@@ -332,6 +319,9 @@ func (c GlobalConfig) IsNode() bool {
 //
 //Add sub node processing
 // IsSubNode check running mode
+func (c GlobalConfig) IsSubNode() bool {
+	return RunMode(c.OBSMode).IsSubNode()
+}
 
 func registerCrypto(c CryptoSettings) {
 	crypto.InitCurve(c.Cryptoer)

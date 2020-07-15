@@ -437,23 +437,6 @@ func KeyLogin(apiAddress string, from string, state int64) (gAuth string, gAddre
 	if err != nil {
 		return "", "", "", "", false, err
 	}
-	if len(key) > 64 {
-		key = key[:64]
-	}
-
-	// add  get new uid
-	gAuth = ""
-
-	var ret getUIDResult
-	err = sendGet(apiAddress, gAuth, `getuid`, nil, &ret)
-	if err != nil {
-		return "", "", "", "", false, err
-	}
-	gAuth = ret.Token
-
-	if len(ret.UID) == 0 {
-		return "", "", "", "", false, fmt.Errorf(`getuid has returned empty uid`)
-	}
 
 	var pub string
 
@@ -639,6 +622,9 @@ func PostTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPrivat
 
 		switch field.Type {
 		case "bool":
+			params[name], err = strconv.ParseBool(value)
+		case "int":
+			params[name], err = strconv.ParseInt(value, 10, 64)
 		case "float":
 			params[name], err = strconv.ParseFloat(value, 64)
 			//

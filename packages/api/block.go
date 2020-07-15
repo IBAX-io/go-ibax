@@ -117,19 +117,6 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	blocks, err := model.GetBlockchain(form.BlockID, form.BlockID+form.Count, model.OrderASC)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting blocks range")
-		errorResponse(w, err)
-		return
-	}
-
-	if len(blocks) == 0 {
-		errorResponse(w, errNotFound)
-		return
-	}
-
-	result := map[int64][]TxInfo{}
-	for _, blockModel := range blocks {
-		blck, err := block.UnmarshallBlock(bytes.NewBuffer(blockModel.Data), false)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err, "bolck_id": blockModel.ID}).Error("on unmarshalling block")
 			errorResponse(w, err)
@@ -174,6 +161,16 @@ type TxDetailedInfo struct {
 }
 
 type BlockHeaderInfo struct {
+	BlockID      int64  `json:"block_id"`
+	Time         int64  `json:"time"`
+	EcosystemID  int64  `json:"-"`
+	KeyID        int64  `json:"key_id"`
+	NodePosition int64  `json:"node_position"`
+	Sign         []byte `json:"-"`
+	Hash         []byte `json:"-"`
+	Version      int    `json:"version"`
+}
+
 type BlockDetailedInfo struct {
 	Header        BlockHeaderInfo  `json:"header"`
 	Hash          []byte           `json:"hash"`

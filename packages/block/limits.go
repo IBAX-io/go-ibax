@@ -52,13 +52,6 @@ var (
 	// ErrLimitTime returns when the time limit exceeded
 	ErrLimitTime = errors.New(`Time limit exceeded`)
 )
-
-// NewLimits initializes Limits structure.
-func NewLimits(b *Block) (limits *Limits) {
-	limits = &Limits{Block: b, Limiters: make([]Limiter, 0, 8)}
-	if b == nil {
-		limits.Mode = letPreprocess
-	} else if b.GenBlock {
 		limits.Mode = letGenBlock
 	} else {
 		limits.Mode = letParsing
@@ -108,6 +101,14 @@ func (bl *txMaxLimit) init(b *Block) {
 }
 
 func (bl *txMaxLimit) check(t *transaction.Transaction, mode int) error {
+	bl.Count++
+	if bl.Count+1 > bl.Limit && mode == letPreprocess {
+		return ErrLimitStop
+	}
+	if bl.Count > bl.Limit {
+		return limitError(`txMaxLimit`, `Max tx in the block`)
+	}
+	return nil
 }
 
 // Checking the time of the start of generating block

@@ -443,6 +443,11 @@ func orTag(par parFunc) string {
 		}
 	}
 	return `0`
+}
+
+func alertTag(par parFunc) string {
+	setAllAttr(par)
+	par.Owner.Attr[`alert`] = par.Node.Attr
 	return ``
 }
 
@@ -1394,12 +1399,6 @@ func binaryTag(par parFunc) string {
 	defaultTail(par, `binary`)
 	if par.Node.Attr[`ecosystem`] != nil {
 		ecosystemID = par.Node.Attr[`ecosystem`].(string)
-	} else {
-		ecosystemID = getVar(par.Workspace, `ecosystem_id`)
-	}
-	binary := &model.Binary{}
-	binary.SetTablePrefix(ecosystemID)
-
 	var (
 		ok  bool
 		err error

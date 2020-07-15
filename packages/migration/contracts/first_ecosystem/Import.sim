@@ -48,21 +48,17 @@ contract Import {
                 tbl = "@1" + Str(type)
                 if type == "app_params" {
                     item = DBFind(tbl).Where({"name": name, "ecosystem": $ecosystem_id, "app_id": $ApplicationId}).Row()
-                } else {
-                    item = DBFind(tbl).Where({"name": name, "ecosystem": $ecosystem_id}).Row()
-                }
-                var contractName string
-                if item {
-                    contractName = editors[type]
-                    cdata["Id"] = Int(item["id"])
-                    if type == "contracts" {
-                        if item["conditions"] == "false" {
-                            // ignore updating impossible
-                            contractName = ""
-                        }
-                    } elif type == "menu" {
-                        var menu menuItem string
                         menu = Replace(item["value"], " ", "")
+                        menu = Replace(menu, "\n", "")
+                        menu = Replace(menu, "\r", "")
+                        menuItem = Replace(cdata["Value"], " ", "")
+                        menuItem = Replace(menuItem, "\n", "")
+                        menuItem = Replace(menuItem, "\r", "")
+                        if Contains(menu, menuItem) {
+                            // ignore repeated
+                            contractName = ""
+                        } else {
+                            cdata["Value"] = item["value"] + "\n" + cdata["Value"]
                         }
                     }
                 } else {

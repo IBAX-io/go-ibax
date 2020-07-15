@@ -99,19 +99,6 @@ func parsing(input string, itype int) (*[]token, error) {
 			if prevOper() {
 				return nil, errExp
 			}
-			newToken(item.id, item.pr)
-			continue
-		}
-		switch ch {
-		case '(':
-			if prevNumber() {
-				return nil, errExp
-			}
-			newToken(tkLPar, 3)
-		case ')':
-			if prevOper() {
-				return nil, errExp
-			}
 			newToken(tkRPar, 3)
 		case ' ', '\t', '\n', '\r':
 		default:
@@ -265,6 +252,11 @@ func calculate(exp, etype, prec string) string {
 					stack = append(stack, last)
 					buf[len(buf)-1] = item
 					continue
+				}
+			}
+			buf = append(buf, item)
+		}
+	}
 	for i := len(buf) - 1; i >= 0; i-- {
 		last := buf[i]
 		if last.Type >= tkAdd && last.Type <= tkDiv {
