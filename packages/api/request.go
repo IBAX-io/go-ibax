@@ -45,12 +45,6 @@ func SendRawRequest(rtype, url, auth string, form *url.Values) ([]byte, error) {
 	}
 	req, err := http.NewRequest(rtype, url, ioform)
 	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	if len(auth) > 0 {
-		req.Header.Set("Authorization", jwtPrefix+auth)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -273,6 +267,20 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 
 	ret := &sendTxResult{}
 	err = connect.SendMultipart("sendTx", map[string][]byte{
+		fmt.Sprintf("%x", txhash): data,
+	}, &ret)
+	if err != nil {
+		return
+	}
+	if len(form.Get("nowait")) > 0 {
+		msg = ret.Hashes["data"]
+		return
+	}
+	id, err = connect.WaitTx(ret.Hashes[fmt.Sprintf("%x", txhash)])
+	if id != 0 && err != nil {
+		msg = err.Error()
+		err = nil
+	}
 
 	return
 }
