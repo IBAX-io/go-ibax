@@ -35,12 +35,8 @@ type SmartContract struct {
 }
 
 func newTransaction(smartTx SmartContract, privateKey []byte, internal bool) (data, hash []byte, err error) {
-	var publicKey []byte
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
-		return
-	}
-	smartTx.PublicKey = publicKey
+	hash = crypto.DoubleHash(data)
+	signature, err := crypto.Sign(privateKey, hash)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by node private key")
 		return

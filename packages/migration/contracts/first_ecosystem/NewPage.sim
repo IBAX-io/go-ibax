@@ -22,20 +22,13 @@ contract NewPage {
                 count = max
             }
         }
-        return count
-    }
-
-    conditions {
-        ValidateCondition($Conditions,$ecosystem_id)
-
-        if $ApplicationId == 0 {
-            warning "Application id cannot equal 0"
         }
 
-        if DBFind("pages").Columns("id").Where({name: $Name}).One("id") {
-            warning Sprintf( "Page %s already exists", $Name)
-        }
+        $ValidateCount = preparePageValidateCount($ValidateCount)
 
+        if $ValidateMode {
+            if $ValidateMode != "1" {
+                $ValidateMode = "0"
             }
         }
     }
