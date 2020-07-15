@@ -288,16 +288,6 @@ var forTest = tplList{
 	{`ImageInput(myimg,100,40)`,
 		`[{"tag":"imageinput","attr":{"name":"myimg","ratio":"40","width":"100"}}]`},
 	{`LinkPage(My page,mypage,,"myvar1=Value 1, myvar2=Value2,myvar3=Val(myval)")`,
-		`[{"tag":"linkpage","attr":{"page":"mypage","pageparams":{"myvar1":{"text":"Value 1","type":"text"},"myvar2":{"text":"Value2","type":"text"},"myvar3":{"params":["myval"],"type":"Val"}}},"children":[{"tag":"text","text":"My page"}]}]`},
-	{`Image(/images/myimage.jpg,My photo,myclass).Style(width:100px;)`,
-		`[{"tag":"image","attr":{"alt":"My photo","class":"myclass","src":"/images/myimage.jpg","style":"width:100px;"}}]`},
-	{`Data(mysrc,"id,name",
-		"1",John Silver,2
-		2,"Mark, Smith"
-	)`,
-		`[{"tag":"data","attr":{"columns":["id","name"],"data":[],"error":"record on line 2: wrong number of fields","source":"mysrc","types":["text","text"]}}]`},
-	{`Select(myselect,mysrc,name,id,0,myclass)`,
-		`[{"tag":"select","attr":{"class":"myclass","name":"myselect","namecolumn":"name","source":"mysrc","value":"0","valuecolumn":"id"}}]`},
 	{`Data(mysrc,"id,name"){
 		"1",John Silver
 		2,"Mark, Smith"
@@ -401,4 +391,23 @@ func TestFullJSON(t *testing.T) {
 var forFullTest = tplList{
 	{`Div(){Span(begin "You've" end<hr>)}`, `[{"tag":"div","children":[{"tag":"span","children":[{"tag":"text","text":"begin \"You've\" end\u003chr\u003e"}]}]}]`},
 	{`DBFind(parameters, mysrc).Columns("name,amount").Limit(10)Table(mysrc,"Name=name,Amount=amount").Style(.tbl {boder: 0px;})`,
+		`[{"tag":"dbfind","attr":{"name":"parameters","source":"mysrc"},"tail":[{"tag":"columns","attr":{"columns":"name,amount"}},{"tag":"limit","attr":{"limit":"10"}}]},{"tag":"table","attr":{"columns":"Name=name,Amount=amount","source":"mysrc"},"tail":[{"tag":"style","attr":{"style":".tbl {boder: 0px;}"}}]}]`},
+	{`Simple text +=<b>bold</b>`, `[{"tag":"text","text":"Simple text +=\u003cb\u003ebold\u003c/b\u003e"}]`},
+	{`Div(myclass control, Content of the Div)`, `[{"tag":"div","attr":{"class":"myclass control"},"children":[{"tag":"text","text":"Content of the Div"}]}]`},
+	{`If(true,OK)If(false){Skip}.Else{Span(Else OK)}`,
+		`[{"tag":"if","attr":{"condition":"true"},"children":[{"tag":"text","text":"OK"}]},{"tag":"if","attr":{"condition":"false"},"children":[{"tag":"text","text":"Skip"}],"tail":[{"tag":"else","children":[{"tag":"span","children":[{"tag":"text","text":"Else OK"}]}]}]}]`},
+	{`If(false,First).ElseIf(GetVar(my)){Skip}.ElseIf(1){
+		Second
+	}.ElseIf(true){Third}.Else{Fourth}`,
+		`[{"tag":"if","attr":{"condition":"false"},"children":[{"tag":"text","text":"First"}],"tail":[{"tag":"elseif","attr":{"condition":"GetVar(my)"},"children":[{"tag":"text","text":"Skip"}]},{"tag":"elseif","attr":{"condition":"1"},"children":[{"tag":"text","text":"Second"}]},{"tag":"elseif","attr":{"condition":"true"},"children":[{"tag":"text","text":"Third"}]},{"tag":"else","children":[{"tag":"text","text":"Fourth"}]}]}]`},
+	{`Button(Page: link){My Button}.Alert(ConfirmButton: ConfBtn, CancelButton: CancelBtn, 
+			Text: Alert text, Icon:myicon)`,
+		`[{"tag":"button","attr":{"page":"link"},"children":[{"tag":"text","text":"My Button"}],"tail":[{"tag":"alert","attr":{"cancelbutton":"CancelBtn","confirmbutton":"ConfBtn","icon":"myicon","text":"Alert text"}}]}]`},
+	{`SetVar(testvalue, The new value).(n, param).Span(#testvalue#)`,
+		`[{"tag":"setvar","attr":{"name":"testvalue","value":"The new value"}},{"tag":"setvar","attr":{"name":"n","value":"param"}},{"tag":"text","text":"."},{"tag":"span","children":[{"tag":"text","text":"#testvalue#"}]}]`},
+	{`Include(myblock)`,
+		`[{"tag":"include","attr":{"name":"myblock"}}]`},
+	{`If(true) {OK}.Else {false} If(false, FALSE).ElseIf(1) {Else OK
+			}.Else {Fourth}If(0).Else{ALL right}.What`,
+		`[{"tag":"if","attr":{"condition":"true"},"children":[{"tag":"text","text":"OK"}],"tail":[{"tag":"else","children":[{"tag":"text","text":"false"}]}]},{"tag":"if","attr":{"condition":"false"},"children":[{"tag":"text","text":"FALSE"}],"tail":[{"tag":"elseif","attr":{"condition":"1"},"children":[{"tag":"text","text":"Else OK"}]},{"tag":"else","children":[{"tag":"text","text":"Fourth"}]}]},{"tag":"if","attr":{"condition":"0"},"tail":[{"tag":"else","children":[{"tag":"text","text":"ALL right"}]}]},{"tag":"text","text":".What"}]`},
 }

@@ -1,4 +1,22 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package tcpserver
+
+import (
+	"net"
+	"strings"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/service"
+
+	log "github.com/sirupsen/logrus"
+)
+
+// HandleTCPRequest proceed TCP requests
 func HandleTCPRequest(rw net.Conn) {
 	dType := &network.RequestType{}
 	err := dType.Read(rw)
@@ -29,12 +47,6 @@ func HandleTCPRequest(rw net.Conn) {
 			err = Type3(req, rw)
 		}
 
-	case network.RequestTypeConfirmation:
-		//if service.IsNodePaused() {
-		//	return
-		//}
-
-		req := &network.ConfirmRequest{}
 		if err = req.Read(rw); err == nil {
 			response, err = Type4(req)
 		}

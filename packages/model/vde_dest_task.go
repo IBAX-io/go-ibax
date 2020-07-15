@@ -55,6 +55,17 @@ func (m *VDEDestTaskFromSrc) Create() error {
 
 func (m *VDEDestTaskFromSrc) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEDestTaskFromSrc) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *VDEDestTaskFromSrc) GetAll() ([]VDEDestTaskFromSrc, error) {
+	var result []VDEDestTaskFromSrc
+	err := DBConn.Find(&result).Error
+	return result, err
+}
 func (m *VDEDestTaskFromSrc) GetOneByID() (*VDEDestTaskFromSrc, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
@@ -92,8 +103,6 @@ func (m *VDEDestTaskFromSrc) GetOneByTaskState(TaskState int64) (bool, error) {
 }
 
 func (m *VDEDestTaskFromSrc) GetOneByChainState(ChainState int64) (bool, error) {
-	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
-}
 
 func (m *VDEDestTaskFromSrc) GetAllByContractStateAndChainState(ContractStateSrc int64, ContractStateDest int64, ChainState int64) ([]VDEDestTaskFromSrc, error) {
 	result := make([]VDEDestTaskFromSrc, 0)

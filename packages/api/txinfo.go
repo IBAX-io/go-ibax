@@ -54,20 +54,6 @@ func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, err
 		return nil, err
 	}
 	if found {
-		status.Confirm = int(confirm.Good)
-	}
-	if cntInfo {
-		status.Data, err = smart.TransactionData(ltx.Block, hash)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return &status, nil
-}
-
-func getTxInfoHandler(w http.ResponseWriter, r *http.Request) {
-	form := &txInfoForm{}
-	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
@@ -95,6 +81,17 @@ func getTxInfoMultiHandler(w http.ResponseWriter, r *http.Request) {
 		Hashes []string `json:"hashes"`
 	}
 	if err := json.Unmarshal([]byte(form.Data), &request); err != nil {
+		errorResponse(w, errHashWrong)
+		return
+	}
+	for _, hash := range request.Hashes {
+		status, err := getTxInfo(r, hash, form.ContractInfo)
+		if err != nil {
+			errorResponse(w, err)
+			return
+		}
+		result.Results[hash] = status
+	}
 
 	jsonResponse(w, result)
 }

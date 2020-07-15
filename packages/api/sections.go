@@ -54,17 +54,6 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting table records count")
 		errorResponse(w, errTableNotFound.Errorf(table))
-		return
-	}
-
-	rows, err := q.Offset(form.Offset).Limit(form.Limit).Rows()
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-		errorResponse(w, err)
-		return
-	}
-
-	result.List, err = model.GetResult(rows)
 	if err != nil {
 		errorResponse(w, err)
 		return
@@ -106,3 +95,9 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		item["title"] = language.LangMacro(item["title"], int(client.EcosystemID), form.Lang)
+		sections = append(sections, item)
+	}
+	result.List = sections
+
+	jsonResponse(w, result)
+}

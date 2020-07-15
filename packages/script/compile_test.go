@@ -215,13 +215,6 @@ func TestVMCompile(t *testing.T) {
 					if 101>myval {
 						if myval == 90 {
 						} else {
-							return Sprintf("myval=%d + %s", myval, mystr )
-						}
-					}
-					return "OOPs"
-				}
-				func temp2 string {
-					if true {
 						return params2(51, "Params 2 test")
 					}
 				}
@@ -333,6 +326,19 @@ func TestVMCompile(t *testing.T) {
 				var m map
 				if m {
 					return "empty"
+				}
+				
+				m["test"]=1
+				if m {
+					return "not empty"
+				}
+
+				return error "error"
+			}`, "ifMap", "not empty",
+		},
+		{`func One(list array, name string) string {
+			if list {
+				var row map 
 				row = list[0]
 				return row[name]
 			}
