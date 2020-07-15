@@ -32,11 +32,6 @@ func (g *GRefreshClaims) ContainsClaims(h string) bool {
 		//return true
 		ts := time.Now().Unix()
 		if v.RefreshExpiresAt > ts {
-			*g = *v
-			return true
-		}
-	} else {
-		return false
 	}
 	return false
 }
@@ -46,6 +41,12 @@ func (g *GRefreshClaims) RefreshClaims() {
 	if len(GClaims.cache) == 0 {
 		GClaims.cache = make(map[string]*GRefreshClaims)
 	}
+
+	GClaims.mutex.Lock()
+	defer GClaims.mutex.Unlock()
+
+	GClaims.cache[g.Header] = g
+}
 
 func (g *GRefreshClaims) DeleteClaims() {
 	GClaims.mutex.Lock()

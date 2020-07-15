@@ -44,6 +44,18 @@ func (sp *AppParam) Get(transaction *DbTransaction, app int64, name string) (boo
 func (sp *AppParam) GetAllAppParameters(app int64) ([]AppParam, error) {
 	parameters := make([]AppParam, 0)
 	err := DBConn.Table(sp.TableName()).Where(`ecosystem = ?`, sp.ecosystem).Where(`app_id = ?`, app).Find(&parameters).Error
+	if err != nil {
+		return nil, err
+	}
+	return parameters, nil
+}
+
+// Get is retrieving model from database
+func (sp *AppParam) GetHvlvebalance(transaction *DbTransaction, blockid int64) (decimal.Decimal, error) {
+
+	//var halve,balance string
+	ret := decimal.NewFromFloat(0)
+	var halve, mine_reward AppParam
 	hf, err := isFound(GetDB(transaction).Where("ecosystem=? and app_id=? and name = ?", 1, 1, "halve_interval_blockid").First(&halve))
 	if err != nil {
 		return ret, err
@@ -68,23 +80,6 @@ func (sp *AppParam) GetAllAppParameters(app int64) ([]AppParam, error) {
 		ret2 := ret1 / 1000000000000
 		ret3 := math.Floor(ret2) * 1000000000000
 		ret = decimal.NewFromFloat(ret3)
-		return ret, nil
-	} else {
-		return ret, errors.New("param mine_reward or halve_interval_blockid not ok")
-	}
-}
-
-// Get is retrieving model from database
-func (sp *AppParam) GetFoundationbalance(transaction *DbTransaction) (decimal.Decimal, error) {
-
-	//var halve,balance string
-	ret := decimal.NewFromFloat(0)
-	var bal AppParam
-	hf, err := isFound(GetDB(transaction).Where("ecosystem=? and app_id=? and name = ?", 1, 1, "foundation_reward").First(&bal))
-	if err != nil {
-		return ret, err
-	}
-	if !hf {
 		return ret, errors.New("param  foundation_reward not found")
 	}
 

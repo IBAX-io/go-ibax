@@ -19,18 +19,6 @@ func (FoundationGroup) TableName() string {
 }
 
 // Get is retrieving model from database
-func (m *FoundationGroup) GetByKeyid(transaction *DbTransaction, keyid int64) (bool, error) {
-	return isFound(GetDB(transaction).Where("keyid = ?", keyid).First(m))
-}
-
-// Get is retrieving model from database
-func (m *FoundationGroup) GetByDevid(transaction *DbTransaction, devid int64) (decimal.Decimal, error) {
-	ret := decimal.NewFromFloat(0)
-	var mo MineOwner
-	f, err := mo.GetByTransaction(transaction, devid)
-	if err != nil {
-		return ret, err
-	}
 	if f {
 		fb, err := m.GetByKeyid(transaction, mo.Keyid)
 		if err != nil {
@@ -67,3 +55,5 @@ func (m *FoundationGroup) GetByDevid(transaction *DbTransaction, devid int64) (d
 	} else {
 		return ret, errors.New("mineowner not found")
 	}
+
+}
