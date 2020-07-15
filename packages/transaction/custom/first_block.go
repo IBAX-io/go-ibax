@@ -22,6 +22,18 @@ import (
 )
 
 const (
+	firstEcosystemID = 1
+	firstAppID       = 1
+)
+
+// FirstBlockParser is parser wrapper
+type FirstBlockTransaction struct {
+	Logger        *log.Entry
+	DbTransaction *model.DbTransaction
+	Data          interface{}
+}
+
+// ErrFirstBlockHostIsEmpty host for first block is not specified
 var ErrFirstBlockHostIsEmpty = errors.New("FirstBlockHost is empty")
 
 // Init first block
@@ -33,12 +45,6 @@ func (t *FirstBlockTransaction) Init() error {
 func (t *FirstBlockTransaction) Validate() error {
 	return nil
 }
-
-// Action is fires first block
-func (t *FirstBlockTransaction) Action() error {
-	logger := t.Logger
-	data := t.Data.(*consts.FirstBlock)
-	keyID := crypto.Address(data.PublicKey)
 	nodeKeyID := crypto.Address(data.NodePublicKey)
 	err := model.ExecSchemaEcosystem(nil, firstEcosystemID, keyID, ``, keyID, firstAppID)
 	if err != nil {

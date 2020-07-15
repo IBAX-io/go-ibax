@@ -89,6 +89,23 @@ func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
 				log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
 				continue
 			}
+			//fmt.Println("--SRC :", ContractSrcGetPlusHash)
+			//fmt.Println("--SRC :", contractData)
+			contractDataBase64 := base64.StdEncoding.EncodeToString(contractData)
+			myContractSrcGet = contractDataBase64
+			//fmt.Println("--SRC Base64:", myContractSrcGet)
+			if myContractSrcGetHash, err = crypto.HashHex([]byte(myContractSrcGet)); err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
+				fmt.Println("HashHex Raw data hash failed ")
+				continue
+			}
+
+		} else {
+			myContractSrcGet = item.ContractSrcGet
+			myContractSrcGetHash = item.ContractSrcGetHash
+		}
+		//if item.ContractMode == 2 || item.ContractMode == 3 {
+		if item.ContractMode == 3 || item.ContractMode == 4 {
 			contractData, err := ecies.EccCryptoKey([]byte(ContractDestGetPlusHash), vde_src_pubkey)
 			if err != nil {
 				fmt.Println("error", err)
@@ -204,16 +221,6 @@ func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
 				ContractSrcName: item.ContractSrcName,
 				//ContractSrcGet:       item.ContractSrcGet,
 				//ContractSrcGetHash:   item.ContractSrcGetHash,
-				ContractSrcGet:     myContractSrcGet,
-				ContractSrcGetHash: myContractSrcGetHash,
-				ContractDestName:   item.ContractDestName,
-				//ContractDestGet:      item.ContractDestGet,
-				//ContractDestGetHash:  item.ContractDestGetHash,
-				ContractDestGet:      myContractDestGet,
-				ContractDestGetHash:  myContractDestGetHash,
-				ContractRunHttp:      item.ContractRunHttp,
-				ContractRunEcosystem: item.ContractRunEcosystem,
-				ContractRunParms:     item.ContractRunParms,
 				ContractMode:         item.ContractMode,
 				ContractStateSrc:     item.ContractStateSrc,
 				ContractStateDest:    item.ContractStateDest,

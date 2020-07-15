@@ -40,15 +40,6 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 			result.Expire = converter.Int64ToStr(claims.ExpiresAt - time.Now().Unix())
 			result.KeyID = claims.KeyID
 			jsonResponse(w, result)
-			return
-		}
-	}
-
-	result.UID = converter.Int64ToStr(rand.New(rand.NewSource(time.Now().Unix())).Int63())
-	claims := JWTClaims{
-		UID:         result.UID,
-		EcosystemID: "1",
-		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(jwtUIDExpire).Unix(),
 		},
 	}
@@ -58,3 +49,8 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 		logger := getLogger(r)
 		logger.WithFields(log.Fields{"type": consts.JWTError, "error": err}).Error("generating jwt token")
 		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, result)
+}

@@ -3,6 +3,16 @@ package crypto
 import (
 	"encoding/hex"
 	"fmt"
+)
+
+type Cryptoer interface {
+	genKeyPair() ([]byte, []byte, error)
+	sign(privateKey, data []byte) ([]byte, error)
+	verify(public, data, signature []byte) (bool, error)
+	privateToPublic(key []byte) ([]byte, error)
+}
+
+type Oval struct {
 	name string
 }
 
@@ -57,14 +67,3 @@ func GenHexKeys() (string, string, error) {
 }
 
 func Sign(privateKey, data []byte) ([]byte, error) {
-	return getCryptoer().sign(privateKey, data)
-}
-
-func CheckSign(public, data, signature []byte) (bool, error) {
-	return getCryptoer().verify(public, data, signature)
-}
-
-// PrivateToPublic returns the public key for the specified private key.
-func PrivateToPublic(key []byte) ([]byte, error) {
-	return getCryptoer().privateToPublic(key)
-}

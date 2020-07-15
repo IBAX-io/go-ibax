@@ -2,6 +2,14 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+package notificator
+
+import (
+	"github.com/IBAX-io/go-ibax/packages/types"
+)
+
+type Queue struct {
+	Accounts []*Accounts
 	Roles    []*Roles
 }
 
@@ -13,10 +21,6 @@ type Accounts struct {
 type Roles struct {
 	Ecosystem int64
 	List      []int64
-}
-
-func (q *Queue) Size() int {
-	return len(q.Accounts) + len(q.Roles)
 }
 
 func (q *Queue) AddAccounts(ecosystem int64, list ...string) {

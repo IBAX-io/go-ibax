@@ -58,8 +58,6 @@ func recoverMiddleware(next http.Handler) http.Handler {
 				logger.WithFields(log.Fields{
 					"type":  consts.PanicRecoveredError,
 					"error": err,
-					"stack": string(debug.Stack()),
-				}).Error("panic recovered error")
 				fmt.Println("API Recovered", fmt.Sprintf("%s: %s", err, debug.Stack()))
 				errorResponse(w, errRecovered)
 			}
@@ -131,3 +129,11 @@ func statsdMiddleware(next http.Handler) http.Handler {
 		counterName := statsd.APIRouteCounterName(r.Method, route.GetName())
 		statsd.Client.Inc(counterName+statsd.Count, 1, v)
 		startTime := time.Now()
+
+		defer func() {
+			statsd.Client.TimingDuration(counterName+statsd.Time, time.Since(startTime), v)
+		}()
+
+		next.ServeHTTP(w, r)
+	})
+}

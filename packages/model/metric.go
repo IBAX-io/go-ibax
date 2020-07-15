@@ -16,15 +16,6 @@ const tableNameMetrics = "1_metrics"
 // Metric represents record of system_metrics table
 type Metric struct {
 	ID     int64  `gorm:"primary_key;not null"`
-	Time   int64  `gorm:"not null"`
-	Metric string `gorm:"not null"`
-	Key    string `gorm:"not null"`
-	Value  int64  `gorm:"not null"`
-}
-
-// TableName returns name of table
-func (Metric) TableName() string {
-	return tableNameMetrics
 }
 
 // EcosystemTx represents value of metric
@@ -58,6 +49,16 @@ func GetEcosystemTxPerDay(timeBlock int64) ([]*EcosystemTx, error) {
 
 // GetMetricValues returns aggregated metric values in the time interval
 func GetMetricValues(metric, timeInterval, aggregateFunc, timeBlock string) ([]interface{}, error) {
+	rows, err := DBConn.Table(tableNameMetrics).Select("key,"+aggregateFunc+"(value)").
+		Where("metric = ? AND time >= EXTRACT(EPOCH FROM TIMESTAMP '"+timeBlock+"' - CAST(? AS INTERVAL))",
+			metric, timeInterval).Order("id asc").
+		Group("key, id").Rows()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		result = []interface{}{}
 		key    string
 		value  string
 	)

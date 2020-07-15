@@ -45,11 +45,9 @@ func loadContractTasks() error {
 				CronSpec: cronTask.Cron,
 				Handler: &contract.ContractHandler{
 					Contract: cronTask.Contract,
-				},
-			})
-			if err != nil {
-				return err
-			}
+
+	return nil
+}
 
 // Scheduler starts contracts on schedule
 func Scheduler(ctx context.Context, d *daemon) error {

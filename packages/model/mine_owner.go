@@ -27,21 +27,6 @@ func (m MineOwner) TableName() string {
 }
 
 // Get is retrieving model from database
-func (m *MineOwner) Get(devid int64) (bool, error) {
-	return isFound(DBConn.Where("devid = ? and type = ? and deleted = ? ", devid, 2, 0).First(m))
-}
-
-// Get is retrieving model from database
-func (m *MineOwner) GetByTransaction(transaction *DbTransaction, devid int64) (bool, error) {
-	return isFound(GetDB(transaction).Where("devid = ? and type = ? and deleted = ? ", devid, 2, 0).First(m))
-}
-
-// Get is retrieving model from database
-func (m *MineOwner) GetPool(keyid int64) (bool, error) {
-	return isFound(DBConn.Where("keyid = ? and type = ? ", keyid, 2).Order("id DESC").First(m))
-}
-
-// Get is retrieving model from database
 func (m *MineOwner) GetPoolManage(keyid int64) (bool, error) {
 
 	var k Key
@@ -106,3 +91,6 @@ func (m *MineOwner) GetAllPoolManage(dbt *DbTransaction, ts int64) (map[int64]in
 	for _, v := range mp {
 		ret[v.Devid] = v.Minerid
 	}
+
+	return ret, err
+}
