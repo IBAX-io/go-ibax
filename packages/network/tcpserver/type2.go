@@ -62,8 +62,14 @@ func Type2(rw io.ReadWriter) error {
 }
 
 //// Type2 serves requests from disseminator
+//func Type2(rw io.ReadWriter) (*network.DisTrResponse, error) {
+//	r := &network.DisRequest{}
+//	if err := r.Read(rw); err != nil {
+//		return nil, err
 //	}
 //
+//	binaryData := r.Data
+//	// take the transactions from usual users but not nodes.
 //	if int64(len(binaryData)) > syspar.GetMaxTxSize() {
 //		log.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_size": syspar.GetMaxTxSize(), "size": len(binaryData)}).Error("transaction size exceeds max size")
 //		return nil, utils.ErrInfo("len(txBinData) > max_tx_size")

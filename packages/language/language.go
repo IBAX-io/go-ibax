@@ -160,6 +160,16 @@ func LangText(transaction *model.DbTransaction, in string, state int, accept str
 				return val, true
 			}
 		}
+		return (*lres)[lng], true
+	}
+	return in, false
+}
+
+// LangMacro replaces all inclusions of $resname$ in the incoming text with the corresponding language resources,
+// if they exist
+func LangMacro(input string, state int, accept string) string {
+	if !strings.ContainsRune(input, '$') {
+		return input
 	}
 	syschar := '$'
 	length := utf8.RuneCountInString(input)
@@ -175,17 +185,6 @@ func LangText(transaction *model.DbTransaction, in string, state int, accept str
 		if r != syschar {
 			if isName {
 				name = append(name, r)
-				if len(name) > 64 || r < ' ' {
-					clearname()
-				}
-			} else {
-				result = append(result, r)
-			}
-			continue
-		}
-		if isName {
-			value, ok := LangText(nil, string(name), state, accept)
-			if ok {
 				result = append(result, []rune(value)...)
 				isName = false
 			} else {

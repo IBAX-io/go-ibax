@@ -61,6 +61,9 @@ func GetAllSystemParameters(transaction *DbTransaction) ([]SystemParameter, erro
 
 // ToMap is converting SystemParameter to map
 func (sp *SystemParameter) ToMap() map[string]string {
+	result := make(map[string]string, 0)
+	result["name"] = sp.Name
+	result["value"] = sp.Value
 	result["conditions"] = sp.Conditions
 	return result
 }
@@ -103,12 +106,3 @@ func (sp *SystemParameter) GetPoolBlockRate(dbt *DbTransaction) (int64, error) {
 	f, err := sp.GetTransaction(dbt, `pool_block_rate`)
 	if err != nil {
 		return 0, err
-	}
-	if f {
-		if len(sp.Value) > 0 {
-			return strconv.ParseInt(sp.Value, 10, 64)
-		}
-	}
-
-	return 0, errors.New("pool_block_rate not found")
-}

@@ -88,21 +88,6 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		if sqlBuilder.IsEmptyWhere() {
 			logger.WithFields(log.Fields{"type": consts.NotFound,
 				"error": errWhereUpdate}).Error("update without where")
-			return 0, "", errWhereUpdate
-		}
-	}
-
-			logger.WithFields(log.Fields{"error": err}).Error("on generate rollback info string for update")
-			return 0, "", err
-		}
-
-		updateExpr, err := sqlBuilder.GetSQLUpdateExpr(logData)
-		if err != nil {
-			logger.WithFields(log.Fields{"error": err}).Error("on getting update expression for update")
-			return 0, "", err
-		}
-
-		whereExpr, err := sqlBuilder.GetSQLWhereExpr()
 		if err != nil {
 			logger.WithFields(log.Fields{"error": err}).Error("on getting where expression for update")
 			return 0, "", err

@@ -2,6 +2,25 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+package queryBuilder
+
+import (
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"regexp"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/types"
+
+	log "github.com/sirupsen/logrus"
+)
+
+const (
 	prefTimestamp      = "timestamp"
 	prefTimestampSpace = "timestamp "
 )
@@ -106,24 +125,6 @@ func (b *SQLQueryBuilder) GetSelectExpr() (string, error) {
 	}
 
 	whereExpr, err := b.GetSQLWhereExpr()
-	if err != nil {
-		b.WithFields(log.Fields{"error": err}).Error("on getting sql where statement")
-		return "", err
-	}
-	return fmt.Sprintf(`SELECT %s FROM "%s" %s`, fieldsExpr, b.Table, whereExpr), nil
-}
-
-func (b *SQLQueryBuilder) GetSQLSelectFieldsExpr() (string, error) {
-	if err := b.Prepare(); err != nil {
-		return "", err
-	}
-
-	sqlFields := make([]string, 0, len(b.Fields)+1)
-	sqlFields = append(sqlFields, "id")
-
-	for i := range b.Fields {
-		b.Fields[i] = strings.TrimSpace(strings.ToLower(b.Fields[i]))
-		sqlFields = append(sqlFields, toSQLField(b.Fields[i]))
 	}
 
 	return strings.Join(sqlFields, ","), nil

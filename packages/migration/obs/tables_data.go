@@ -162,12 +162,6 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
 			"new_column": "ContractConditions(\"MainCondition\")"}',
 		'{"name": "ContractConditions(\"MainCondition\")",
 			"value": "ContractConditions(\"MainCondition\")",
-			"conditions": "ContractConditions(\"MainCondition\")"}',
-		'ContractAccess("@1EditTable")'),
-	('17', 'app_params',
-		'{"insert": "ContractConditions(\"MainCondition\")", "update": "ContractConditions(\"MainCondition\")",
-			"new_column": "ContractConditions(\"MainCondition\")"}',
-		'{"app_id": "ContractConditions(\"MainCondition\")",
 			"name": "ContractConditions(\"MainCondition\")",
 			"value": "ContractConditions(\"MainCondition\")",
 			"conditions": "ContractConditions(\"MainCondition\")"}',
@@ -189,3 +183,6 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
 			"key": "false",
 			"value": "true",
 			"account": "false"
+		}',
+		'ContractConditions("MainCondition")');
+`

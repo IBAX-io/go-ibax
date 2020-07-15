@@ -55,8 +55,6 @@ func CreateTransaction(data, hash []byte, keyID, tnow int64) error {
 	tx := &model.Transaction{
 		Hash:     hash,
 		Data:     data[:],
-		Type:     consts.TxTypeApiContract,
-		KeyID:    keyID,
 		HighRate: model.TransactionRateOnBlock,
 		Time:     tnow,
 	}
@@ -73,6 +71,12 @@ func CreateDelayTransactionHighRate(data, hash []byte, keyID, highRate int64) *m
 	t := int8(highRate)
 	tx := &model.Transaction{
 		Hash:     hash,
+		Data:     data[:],
+		Type:     getTxTxType(t),
+		KeyID:    keyID,
+		HighRate: model.GetTxRateByTxType(t),
+	}
+	return tx
 }
 
 func getTxTxType(rate int8) int8 {

@@ -45,6 +45,12 @@ func (t *FirstBlockTransaction) Init() error {
 func (t *FirstBlockTransaction) Validate() error {
 	return nil
 }
+
+// Action is fires first block
+func (t *FirstBlockTransaction) Action() error {
+	logger := t.Logger
+	data := t.Data.(*consts.FirstBlock)
+	keyID := crypto.Address(data.PublicKey)
 	nodeKeyID := crypto.Address(data.NodePublicKey)
 	err := model.ExecSchemaEcosystem(nil, firstEcosystemID, keyID, ``, keyID, firstAppID)
 	if err != nil {
@@ -102,16 +108,6 @@ func (t *FirstBlockTransaction) Validate() error {
 		id, syspar.SysString(`default_ecosystem_menu`), `default`).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting default menu")
-		return utils.ErrInfo(err)
-	}
-	err = smart.LoadContract(t.DbTransaction, 1)
-	if err != nil {
-		return utils.ErrInfo(err)
-	}
-	if err := syspar.SysTableColType(t.DbTransaction); err != nil {
-		return utils.ErrInfo(err)
-	}
-	syspar.SetFirstBlockData(data)
 	return nil
 }
 

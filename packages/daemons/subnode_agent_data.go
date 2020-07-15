@@ -64,6 +64,15 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 	//}
 
 	nodePrivateKey, err := utils.GetNodePrivateKey()
+	if err != nil || len(nodePrivateKey) < 1 {
+		if err == nil {
+			log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
+		}
+		return err
+	}
+
+	// send task data
+	for _, item := range ShareData {
 		//
 		dataBase64, err := base64.StdEncoding.DecodeString(string(item.Data))
 		if err != nil {
@@ -108,13 +117,6 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 		if err != nil {
 			log.WithError(err)
 		}
-
-		//
-		//log_err = item.DataSendErr
-		////Generate a chain request on the log
-		//log_type = 3      //
-		//if LogMode == 3 { //0
-		//	//fmt.Println("There is no need to generate a log")
 		//} else if LogMode == 1 || LogMode == 2 {
 		//	if LogMode == 1 { //1
 		//		chain_state = 5
