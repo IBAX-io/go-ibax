@@ -5,6 +5,12 @@
 
 package cmd
 
+import (
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
+	"path/filepath"
+
 	"github.com/IBAX-io/go-ibax/packages/conf"
 )
 
@@ -53,13 +59,5 @@ func loadConfig(cmd *cobra.Command, args []string) {
 	err := conf.LoadConfig(conf.Config.ConfigPath)
 	if err != nil {
 		log.WithError(err).Fatal("Loading config")
-	}
-}
-
-func loadConfigWKey(cmd *cobra.Command, args []string) {
-	loadConfig(cmd, args)
-	err := conf.FillRuntimeKey()
-	if err != nil {
-		log.WithError(err).Fatal("Filling keys")
 	}
 }

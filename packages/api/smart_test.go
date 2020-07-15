@@ -204,9 +204,6 @@ func TestPage(t *testing.T) {
 	err = postTx(`NewMenu`, &form)
 	assert.Equal(t, fmt.Sprintf(`{"type":"warning","error":"Menu %s already exists"}`, menuname), cutErr(err))
 
-	form = url.Values{"Id": {`7123`}, "Value": {`New Param Value`},
-		"Conditions": {`ContractConditions("MainCondition")`}}
-	err = postTx(`EditParameter`, &form)
 	assert.Equal(t, `{"type":"panic","error":"Item 7123 has not been found"}`, cutErr(err))
 
 	form = url.Values{"Id": {`16`}, "Value": {`Changed Param Value`},
@@ -295,6 +292,17 @@ func TestPage(t *testing.T) {
 
 	form = url.Values{"Name": {name}, "Value": {value}, "ApplicationId": {`1`},
 		"Conditions": {`ContractConditions("MainCondition")`}}
+	assert.NoError(t, postTx(`NewBlock`, &form))
+
+	err = postTx(`NewBlock`, &form)
+	assert.EqualError(t, err, fmt.Sprintf(`{"type":"warning","error":"Block %s already exists"}`, name))
+
+	form = url.Values{"Id": {`1`}, "Name": {name}, "Value": {value},
+		"Conditions": {`ContractConditions("MainCondition")`}}
+	assert.NoError(t, postTx(`EditBlock`, &form))
+
+	form = url.Values{"Id": {`1`}, "Value": {value + `Span(Test)`},
+		"Menu": {menu}, "Conditions": {`ContractConditions("MainCondition")`}}
 	assert.NoError(t, postTx(`EditPage`, &form))
 
 	form = url.Values{"Id": {`1112`}, "Value": {value + `Span(Test)`},

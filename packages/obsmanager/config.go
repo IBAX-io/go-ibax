@@ -1,8 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package obsmanager
 
 import (
 	"fmt"
@@ -53,6 +48,16 @@ func (c ChildOBSConfig) initDBCommand() *exec.Cmd {
 }
 
 func (c ChildOBSConfig) generateKeysCommand() *exec.Cmd {
+	return c.getCommand(genKeysCommand)
+}
+
+func (c ChildOBSConfig) startCommand() *exec.Cmd {
+	return c.getCommand(startCommand)
+}
+
+func (c ChildOBSConfig) configPath() string {
+	return filepath.Join(c.Directory, c.ConfigFileName)
+}
 
 func (c ChildOBSConfig) getCommand(commandName string) *exec.Cmd {
 	args := []string{

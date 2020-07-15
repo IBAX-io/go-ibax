@@ -70,17 +70,23 @@ func GetExcessCommonTokenMovementPerDay(tx *DbTransaction) (amount decimal.Decim
 	err = db.Table("1_history").Select("SUM(amount) as amount").
 		Where("to_timestamp(created_at) > NOW() - interval '24 hours' AND amount > 0").Scan(&res).Error
 
-	return res.Amount, err
-}
-
-// GetExcessFromToTokenMovementPerDay returns from to pairs where sum of amount greather than fromToPerDayLimit per 24 hours
-func GetExcessFromToTokenMovementPerDay(tx *DbTransaction) (excess []MoneyTransfer, err error) {
-	db := GetDB(tx)
 	err = db.Table("1_history").
 		Select("sender_id, recipient_id, SUM(amount) amount").
 		Where("to_timestamp(created_at) > NOW() - interval '24 hours' AND amount > 0").
 		Group("sender_id, recipient_id").
 		Having("SUM(amount) > ?", consts.FromToPerDayLimit).
+		Scan(&excess).Error
+
+	return excess, err
+}
+
+// GetExcessTokenMovementQtyPerBlock returns from to pairs where money transactions count greather than tokenMovementQtyPerBlockLimit per 24 hours
+func GetExcessTokenMovementQtyPerBlock(tx *DbTransaction, blockID int64) (excess []SenderTxCount, err error) {
+	db := GetDB(tx)
+	err = db.Table("1_history").
+		Select("sender_id, count(*) tx_count").
+		Where("block_id = ? AND amount > ?", blockID, 0).
+		Group("sender_id").
 		Having("count(*) > ?", consts.TokenMovementQtyPerBlockLimit).
 		Scan(&excess).Error
 

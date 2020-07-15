@@ -95,13 +95,6 @@ const (
 	TxTypeSystemMiner    = 5
 	TxTypeStopNetwork    = 6
 
-	TxTypeParserFirstBlock  = "FirstBlock"
-	TxTypeSystemServerWork  = "SystemServerWork"
-	TxTypeParserStopNetwork = "StopNetwork"
-
-	TxTypeParserApiContract    = "ApiContract"
-	TxTypeParserEcosystemMiner = "EcosystemMiner"
-	TxTypeParserSystemMiner    = "SystemMiner"
 )
 
 // TxTypes is the list of the embedded transactions
@@ -128,6 +121,15 @@ const (
 	DefaultWorkdirName = "data"
 
 	// DefaultPidFilename is default filename of pid file
+	DefaultPidFilename = "go-ibax.pid"
+
+	// DefaultLockFilename is default filename of lock file
+	DefaultLockFilename = "go-ibax.lock"
+
+	// FirstBlockFilename name of first block binary file
+	FirstBlockFilename = "1block"
+
+	// PrivateKeyFilename name of wallet private key file
 	PrivateKeyFilename = "PrivateKey"
 
 	// PublicKeyFilename name of wallet public key file

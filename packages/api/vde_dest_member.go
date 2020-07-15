@@ -22,14 +22,20 @@ func unmarshalColumnVDEDestMember(form *VDEDestMemberForm) (*model.VDEDestMember
 		err error
 	)
 
-	m := &model.VDEDestMember{
-		VDEPubKey:            form.VDEPubKey,
-		VDEComment:           form.VDEComment,
-		VDEName:              form.VDEName,
 		VDEIp:                form.VDEIp,
 		VDEType:              int64(form.VDEType),
 		ContractRunHttp:      form.ContractRunHttp,
 		ContractRunEcosystem: form.ContractRunEcosystem,
+	}
+
+	return m, err
+}
+
+func VDEDestMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
+	logger := getLogger(r)
 	form := &VDEDestMemberForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
