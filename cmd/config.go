@@ -138,6 +138,24 @@ func init() {
 	configCmd.Flags().StringVar(&conf.Config.TokenMovement.Subject, "tmovSubj", "", "Token movement subject")
 	viper.BindPFlag("TokenMovement.Host", configCmd.Flags().Lookup("tmovHost"))
 	viper.BindPFlag("TokenMovement.Port", configCmd.Flags().Lookup("tmovPort"))
+	viper.BindPFlag("TokenMovement.Username", configCmd.Flags().Lookup("tmovUser"))
+	viper.BindPFlag("TokenMovement.Password", configCmd.Flags().Lookup("tmovPw"))
+	viper.BindPFlag("TokenMovement.To", configCmd.Flags().Lookup("tmovTo"))
+	viper.BindPFlag("TokenMovement.From", configCmd.Flags().Lookup("tmovFrom"))
+	viper.BindPFlag("TokenMovement.Subject", configCmd.Flags().Lookup("tmovSubj"))
+
+	configCmd.Flags().IntVar(&conf.Config.BanKey.BadTime, "badTime", 5, "Period for bad tx (minutes)")
+	configCmd.Flags().IntVar(&conf.Config.BanKey.BanTime, "banTime", 15, "Ban time in minutes")
+	configCmd.Flags().IntVar(&conf.Config.BanKey.BadTx, "badTx", 3, "Maximum bad tx during badTime minutes")
+	viper.BindPFlag("BanKey.BadTime", configCmd.Flags().Lookup("badTime"))
+	viper.BindPFlag("BanKey.BanTime", configCmd.Flags().Lookup("banTime"))
+	viper.BindPFlag("BanKey.BadTx", configCmd.Flags().Lookup("badTx"))
+
+	// Etc
+	configCmd.Flags().StringVar(&conf.Config.PidFilePath, "pid", "",
+		fmt.Sprintf("ibax pid file name (default dataDir/%s)", consts.DefaultPidFilename),
+	)
+	configCmd.Flags().StringVar(&conf.Config.LockFilePath, "lock", "",
 		fmt.Sprintf("ibax lock file name (default dataDir/%s)", consts.DefaultLockFilename),
 	)
 	configCmd.Flags().StringVar(&conf.Config.KeysDir, "keysDir", "", "Keys directory (default dataDir)")
@@ -174,19 +192,6 @@ func init() {
 	viper.BindPFlag("GFiles.GFiles", configCmd.Flags().Lookup("gfs"))
 	viper.BindPFlag("GFiles.Host", configCmd.Flags().Lookup("gFilesHost"))
 
-	// PoolManage
-	configCmd.Flags().BoolVar(&conf.Config.PoolPub.Enable, "poolenable", false, "Enable Pool")
-	configCmd.Flags().BoolVar(&conf.Config.PoolPub.MinersCount, "minerscount", false, "Enable MinersCount")
-	configCmd.Flags().BoolVar(&conf.Config.PoolPub.MininerMap, "mininermap", false, "Enable MininerMap")
-	configCmd.Flags().BoolVar(&conf.Config.PoolPub.TotalCount, "totalcount", false, "Enable TotalCount")
-	configCmd.Flags().BoolVar(&conf.Config.PoolPub.RollBack, "rollback", false, "Enable RollBack")
-	configCmd.Flags().StringVar(&conf.Config.PoolPub.Path, "poolpath", "leveldb", "leveldb path")
-	viper.BindPFlag("PoolPub.Enable", configCmd.Flags().Lookup("poolenable"))
-	viper.BindPFlag("PoolPub.MinersCount", configCmd.Flags().Lookup("minerscount"))
-	viper.BindPFlag("PoolPub.MininerMap", configCmd.Flags().Lookup("mininermap"))
-	viper.BindPFlag("PoolPub.TotalCount", configCmd.Flags().Lookup("totalcount"))
-	viper.BindPFlag("PoolPub.RollBack", configCmd.Flags().Lookup("rollback"))
-	viper.BindPFlag("PoolPub.Path", configCmd.Flags().Lookup("poolpath"))
 	// CryptoSettings
 	configCmd.Flags().StringVar(&conf.Config.CryptoSettings.Hasher, "hasher", "SHA256", "Hash Algorithm")
 	configCmd.Flags().StringVar(&conf.Config.CryptoSettings.Cryptoer, "cryptoer", "ECDSA", "Key and Sign Algorithm")

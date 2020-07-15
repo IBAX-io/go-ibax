@@ -1033,6 +1033,10 @@ main:
 		case isRBrack:
 			break main
 		}
+		switch state {
+		case mustComma:
+			if lexem.Type != isComma {
+				return nil, errUnexpComma
 			}
 			state = mustValue
 		case mustValue:
@@ -1166,15 +1170,6 @@ main:
 				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdFuncName {
 					buffer = buffer[:len(buffer)-1]
 					(*prev).Value = FuncNameCmd{Name: prev.Value.(FuncNameCmd).Name,
-						Count: parcount[len(parcount)-1]}
-					parcount = parcount[:len(parcount)-1]
-					bytecode = append(bytecode, prev)
-				}
-				var tail *ByteCode
-				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdCall || prev.Cmd == cmdCallVari {
-					objInfo := prev.Value.(*ObjInfo)
-					if (objInfo.Type == ObjFunc && objInfo.Value.(*Block).Info.(*FuncInfo).CanWrite) ||
-						(objInfo.Type == ObjExtFunc && objInfo.Value.(ExtFuncInfo).CanWrite) {
 						setWritable(block)
 					}
 					if objInfo.Type == ObjFunc && objInfo.Value.(*Block).Info.(*FuncInfo).Names != nil {

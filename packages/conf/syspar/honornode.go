@@ -52,17 +52,14 @@ func (fn *HonorNode) UnmarshalJSON(b []byte) (err error) {
 	data := honorNodeJSON{}
 	if err = json.Unmarshal(b, &data); err != nil {
 		log.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err, "value": string(b)}).Error("Unmarshalling honor nodes to json")
+		return err
+	}
 
 	fn.TCPAddress = data.TCPAddress
 	fn.APIAddress = data.APIAddress
 	fn.Stopped = data.Stopped
 	if fn.PublicKey, err = crypto.HexToPub(data.PublicKey); err != nil {
 		log.WithFields(log.Fields{"type": consts.ConversionError, "error": err, "value": data.PublicKey}).Error("converting honor nodes public key from hex")
-		return err
-	}
-	fn.UnbanTime = time.Unix(converter.StrToInt64(data.UnbanTime.String()), 0)
-
-	if err = fn.Validate(); err != nil {
 		return err
 	}
 

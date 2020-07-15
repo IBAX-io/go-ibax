@@ -1,14 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"encoding/json"
-	"net/http"
-	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -88,3 +78,7 @@ func getTableHandler(w http.ResponseWriter, r *http.Request) {
 		Read:       table.Permissions.Read,
 		Filter:     table.Permissions.Filter,
 		Conditions: table.Conditions,
+		AppID:      converter.Int64ToStr(table.AppID),
+		Columns:    columns,
+	})
+}

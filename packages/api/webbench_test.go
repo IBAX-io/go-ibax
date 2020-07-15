@@ -46,16 +46,6 @@ const INT64_MAX = int64(^uint64((0)) >> 1)
 
 type AssignRules struct {
 	StartBlockID    int64  `json:"start_blockid"`
-	EndBlockID      int64  `json:"end_blockid"`
-	IntervalBlockID int64  `json:"interval_blockid"`
-	Count           int64  `json:"count"`
-	TotalAmount     string `json:"total_amount"`
-}
-
-func TestMapJson(t *testing.T) {
-	//Private placement
-	//apri := AssignRules{
-	//	StartBlockID:    1,
 	//	EndBlockID:      21600*2*365 + 1,
 	//	IntervalBlockID: 21600 * 365,
 	//	Count:           3,
@@ -155,6 +145,15 @@ func TestMapJsonTs(t *testing.T) {
 		Count:           3,
 		TotalAmount:     "63000000000000000000",
 	}
+	//Public offering
+	apub := AssignRules{
+		StartBlockID:    1,
+		EndBlockID:      61,
+		IntervalBlockID: 20,
+		Count:           4,
+		TotalAmount:     "105000000000000000000",
+	}
+	//foundation
 	ac := AssignRules{
 		StartBlockID:    21600 * 365,
 		EndBlockID:      INT64_MAX,

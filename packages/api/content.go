@@ -284,21 +284,15 @@ type jsonContentForm struct {
 	Template string `schema:"template"`
 	Source   bool   `schema:"source"`
 }
-
-func (f *jsonContentForm) Validate(r *http.Request) error {
-	if len(f.Template) == 0 {
-		return errEmptyTemplate
-	}
-	return nil
-}
-
-func jsonContentHandler(w http.ResponseWriter, r *http.Request) {
-	form := &jsonContentForm{}
-	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
 
+	var timeout bool
+	vars := initVars(r)
+
+	if form.Source {
+		(*vars)["_full"] = strOne
 	}
 
 	ret := template.Template2JSON(form.Template, &timeout, vars)

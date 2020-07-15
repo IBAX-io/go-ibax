@@ -103,13 +103,6 @@ func newVM() *script.VM {
 	vm.Extend(&script.ExtendData{Objects: map[string]interface{}{
 		"Println": fmt.Println,
 		"Sprintf": fmt.Sprintf,
-		"Float":   Float,
-		"Money":   script.ValueToDecimal,
-		`Test`:    testValue,
-	}, AutoPars: map[string]string{
-		`*smart.Contract`: `sc`,
-	}})
-	return vm
 }
 
 func init() {
@@ -469,6 +462,16 @@ func LoadContracts() error {
 	for ; int64(offset) < count; offset += listCount {
 		list, err := contract.GetList(offset, listCount)
 		if err != nil {
+			return logErrorDB(err, "getting list of contracts")
+		}
+		if err = loadContractList(list); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func LoadSysFuncs(vm *script.VM, state int) error {
 	code := `func DBFind(table string).Columns(columns string).Where(where map)
 	.WhereId(id int).Order(order string).Limit(limit int).Offset(offset int).All(all bool) array {
    return DBSelect(table, columns, id, order, offset, limit, where, all)

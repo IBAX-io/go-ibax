@@ -10,17 +10,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-func SendSubNodeAgentData(host string, TaskUUID string, DataUUID string, AgentMode string, TranMode string, DataInfo string, SubNodeSrcPubkey string, SubNodeAgentPubkey string, SubNodeAgentIp string, SubNodeDestPubkey string, SubNodeDestIp string, dt []byte) (hash string) {
-	conn, err := newConnection(host)
-	if err != nil {
-	rt := &network.RequestType{Type: network.RequestTypeSendSubNodeAgentData}
-	if err = rt.Write(conn); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending request type")
-		return "0"
-	}
-
-	req := &network.SubNodeAgentDataRequest{
 		TaskUUID:           TaskUUID,
 		DataUUID:           DataUUID,
 		AgentMode:          AgentMode,

@@ -25,22 +25,17 @@ type SubNodeSrcDataStatus struct {
 	SubNodeAgentIP string `gorm:"column:subnode_agent_ip;not null" json:"subnode_agent_ip"`
 	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
 	DataSendState  int64  `gorm:"not null" json:"data_send_state"`
-	DataSendErr    string `gorm:"not null" json:"data_send_err"`
-	UpdateTime     int64  `gorm:"not null" json:"update_time"`
-	CreateTime     int64  `gorm:"not null" json:"create_time"`
-}
-
-func (SubNodeSrcDataStatus) TableName() string {
-	return "subnode_src_data_status"
-}
-
-func (m *SubNodeSrcDataStatus) Create() error {
-	return DBConn.Create(&m).Error
 }
 
 func (m *SubNodeSrcDataStatus) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
 }
+
+func (m *SubNodeSrcDataStatus) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *SubNodeSrcDataStatus) GetAll() ([]SubNodeSrcDataStatus, error) {
 	var result []SubNodeSrcDataStatus
 	err := DBConn.Find(&result).Error
 	return result, err
