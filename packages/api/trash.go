@@ -20,5 +20,3 @@ func getContract(r *http.Request, name string) *smart.Contract {
 	client := getClient(r)
 	contract := smart.VMGetContract(vm, name, uint32(client.EcosystemID))
 	if contract == nil {
-		return nil
-	}

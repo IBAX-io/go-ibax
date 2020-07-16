@@ -9,13 +9,9 @@ import (
 	"testing"
 
 	"github.com/IBAX-io/go-ibax/packages/types"
-// FROM \"1_keys\" \nWHERE  AND id = -6752330173818123413 AND ecosystem = '1'\n"
 
-// fields="[+amount]"
-// values="[2912910000000]"
-
-// whereF="[id]"
-// whereV="[-6752330173818123413]"
+	log "github.com/sirupsen/logrus"
+)
 
 type TestKeyTableChecker struct {
 	Val bool

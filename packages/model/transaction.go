@@ -11,16 +11,6 @@ import (
 	"gorm.io/gorm/clause"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 )
-
-// This constants contains values of transactions priority
-const (
-	TransactionRateOnBlock transactionRate = iota + 1
-	TransactionRateApiContract
-	TransactionRateSystemServer
-	TransactionRateEcosystemMiner
-	TransactionRateSystemMiner
-	TransactionRateStopNetwork
-)
 const expediteOrder = `high_rate,expedite DESC,time ASC`
 
 type transactionRate int8
@@ -62,6 +52,16 @@ func GetAllUnsentTransactions(limit int) (*[]Transaction, error) {
 		query = query.Limit(limit)
 	}
 	if err := query.Find(&transactions).Error; err != nil {
+		return nil, err
+	}
+	return transactions, nil
+}
+
+// GetTransactionCountAll count all transactions
+func GetTransactionCountAll() (int64, error) {
+	var rowsCount int64
+	if err := DBConn.Table("transactions").Count(&rowsCount).Error; err != nil {
+		return -1, err
 	}
 	return rowsCount, nil
 }

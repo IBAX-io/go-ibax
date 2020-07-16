@@ -10,6 +10,11 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -48,8 +53,6 @@ func Type102(r *network.VDEAgentDataRequest) (*network.VDEAgentDataResponse, err
 		Hash:           hash,
 		DataInfo:       r.DataInfo,
 		VDESrcPubkey:   r.VDESrcPubkey,
-		VDEAgentPubkey: r.VDEAgentPubkey,
-		VDEAgentIp:     r.VDEAgentIp,
 		VDEDestPubkey:  r.VDEDestPubkey,
 		VDEDestIp:      r.VDEDestIp,
 		//Data:         r.Data,

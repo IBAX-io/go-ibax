@@ -18,23 +18,6 @@ import (
 )
 
 func unmarshalColumnVDEScheMember(form *VDEScheMemberForm) (*model.VDEScheMember, error) {
-	var (
-		err error
-	)
-
-	m := &model.VDEScheMember{
-		VDEPubKey:            form.VDEPubKey,
-		VDEComment:           form.VDEComment,
-		VDEName:              form.VDEName,
-		VDEIp:                form.VDEIp,
-		VDEType:              int64(form.VDEType),
-		ContractRunHttp:      form.ContractRunHttp,
-		ContractRunEcosystem: form.ContractRunEcosystem,
-	}
-
-	return m, err
-}
-
 func VDEScheMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
@@ -84,6 +67,16 @@ func VDEScheMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
+		return
+	}
+
+	result, err := m.GetOneByID()
+	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
 		return
 	}

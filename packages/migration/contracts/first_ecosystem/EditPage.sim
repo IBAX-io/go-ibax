@@ -35,9 +35,16 @@ contract EditPage {
     }
 
     action {
-        var pars map
-        if $Value {
-            pars["value"] = $Value
+            pars["conditions"] = $Conditions
+        }
+        if $ValidateCount {
+            pars["validate_count"] = $ValidateCount
+        }
+        if $ValidateMode {
+            if $ValidateMode != "1" {
+                $ValidateMode = "0"
+            }
+            pars["validate_mode"] = $ValidateMode
         }
         if pars {
             DBUpdate("pages", $Id, pars)
