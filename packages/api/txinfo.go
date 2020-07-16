@@ -16,10 +16,6 @@ import (
 
 	"github.com/gorilla/mux"
 )
-
-type txinfoResult struct {
-	BlockID string        `json:"blockid"`
-	Confirm int           `json:"confirm"`
 	Data    *smart.TxInfo `json:"data,omitempty"`
 }
 
@@ -54,6 +50,20 @@ func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, err
 		return nil, err
 	}
 	if found {
+		status.Confirm = int(confirm.Good)
+	}
+	if cntInfo {
+		status.Data, err = smart.TransactionData(ltx.Block, hash)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &status, nil
+}
+
+func getTxInfoHandler(w http.ResponseWriter, r *http.Request) {
+	form := &txInfoForm{}
+	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
