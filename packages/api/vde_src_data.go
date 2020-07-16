@@ -83,8 +83,6 @@ func unmarshalColumnVDESrcData(form *VDESrcDataForm) (*model.VDESrcData, error) 
 //	return m, err
 //}
 
-type VDETaskdataResult struct {
-	TaskUUID string `json:"task_uuid"`
 	DataUUID string `json:"data_uuid"`
 	Hash     string `json:"hash"`
 }
@@ -132,6 +130,14 @@ func VDESrcDataUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	id := converter.StrToInt64(params["id"])
 	form := &VDESrcDataForm{}
 
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m := &model.VDESrcData{}
+
+	if m, err = unmarshalColumnVDESrcData(form); err != nil {
 		errorResponse(w, err)
 		return
 	}

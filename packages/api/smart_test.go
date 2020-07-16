@@ -204,6 +204,9 @@ func TestPage(t *testing.T) {
 	err = postTx(`NewMenu`, &form)
 	assert.Equal(t, fmt.Sprintf(`{"type":"warning","error":"Menu %s already exists"}`, menuname), cutErr(err))
 
+	form = url.Values{"Id": {`7123`}, "Value": {`New Param Value`},
+		"Conditions": {`ContractConditions("MainCondition")`}}
+	err = postTx(`EditParameter`, &form)
 	assert.Equal(t, `{"type":"panic","error":"Item 7123 has not been found"}`, cutErr(err))
 
 	form = url.Values{"Id": {`16`}, "Value": {`Changed Param Value`},
@@ -792,14 +795,6 @@ func TestBytesToString(t *testing.T) {
 			action {
 				$result = BytesToString($Data)
 			}
-		}`},
-		"Conditions":    {"true"},
-		"ApplicationId": {"1"},
-	}))
-
-	content := crypto.RandSeq(100)
-	_, res, err := postTxResult(contract, &contractParams{
-		"Data": []byte(content),
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, content, res)
