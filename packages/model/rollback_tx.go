@@ -1,18 +1,15 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package model
 
 import "gorm.io/gorm"
 
 // RollbackTx is model
 type RollbackTx struct {
 	ID        int64  `gorm:"primary_key;not null"`
-	BlockID   int64  `gorm:"not null" json:"block_id"`
-	TxHash    []byte `gorm:"not null" json:"tx_hash"`
-	NameTable string `gorm:"not null;size:255;column:table_name" json:"table_name"`
-	TableID   string `gorm:"not null;size:255" json:"table_id"`
-	Data      string `gorm:"not null;type:jsonb" json:"data"`
-}
 
 // TableName returns name of table
 func (*RollbackTx) TableName() string {

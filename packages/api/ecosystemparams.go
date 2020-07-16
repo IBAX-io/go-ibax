@@ -3,6 +3,15 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package api
+
+import (
+	"net/http"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -37,12 +46,6 @@ func (m Mode) getEcosystemParamsHandler(w http.ResponseWriter, r *http.Request) 
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all state parameters")
 	}
 
-	result := &ecosystemParamsResult{
-		List: make([]paramResult, 0),
-	}
-
-	acceptNames := form.AcceptNames()
-	for _, item := range list {
 		if len(acceptNames) > 0 && !acceptNames[item.Name] {
 			continue
 		}

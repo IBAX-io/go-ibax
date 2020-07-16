@@ -20,6 +20,21 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+func Type202(r *network.SubNodeAgentDataRequest) (*network.SubNodeAgentDataResponse, error) {
+	nodePrivateKey, err := utils.GetNodePrivateKey()
+	if err != nil || len(nodePrivateKey) < 1 {
+		if err == nil {
+			log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
+			return nil, errors.New("Incorrect private key length")
+		}
+		return nil, err
+	}
+
+	data, err := ecies.EccDeCrypto(r.Data, nodePrivateKey)
+	if err != nil {
+		fmt.Println("EccDeCrypto err!")
+		log.WithError(err)
 		return nil, err
 	}
 
@@ -67,11 +82,6 @@ import (
 		CreateTime: time.Now().Unix(),
 	}
 
-	err = SubNodeDestData.Create()
-	if err != nil {
-		log.WithError(err)
-		return nil, err
-	}
 
 	return resp, nil
 }

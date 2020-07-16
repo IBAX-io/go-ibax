@@ -43,12 +43,6 @@ func (qt *QueueTx) GetByHash(transaction *DbTransaction, hash []byte) (bool, err
 	return isFound(GetDB(transaction).Where("hash = ?", hash).First(qt))
 }
 
-// DeleteQueueTxByHash is deleting queue tx by hash
-func DeleteQueueTxByHash(transaction *DbTransaction, hash []byte) (int64, error) {
-	query := GetDB(transaction).Exec("DELETE FROM queue_tx WHERE hash = ?", hash)
-	return query.RowsAffected, query.Error
-}
-
 // GetQueuedTransactionsCount counting queued transactions
 func GetQueuedTransactionsCount(hash []byte) (int64, error) {
 	var rowsCount int64
@@ -66,6 +60,12 @@ func GetAllUnverifiedAndUnusedTransactions(dbTransaction *DbTransaction, limit i
 		      UNION
 		      SELECT data,
 			     hash,expedite,time
+		      FROM transactions
+		      WHERE verified = 0 AND used = 0
+			)  AS x ORDER BY expedite DESC,time ASC limit ?`
+	var result []*QueueTx
+	err := GetDB(dbTransaction).Raw(query, limit).Scan(&result).Error
+	if err != nil {
 		return nil, err
 	}
 	return result, nil

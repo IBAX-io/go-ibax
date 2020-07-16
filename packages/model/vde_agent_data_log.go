@@ -20,12 +20,22 @@ type VDEAgentDataLog struct {
 	ChainId    int64  `gorm:"not null" json:"chain_id"`
 	ChainErr   string `gorm:"not null" json:"chain_err"`
 
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
 
 func (VDEAgentDataLog) TableName() string {
 	return "vde_agent_data_log"
+}
+
+func (m *VDEAgentDataLog) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *VDEAgentDataLog) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEAgentDataLog) Delete() error {
+	return DBConn.Delete(m).Error
+}
 
 func (m *VDEAgentDataLog) GetAll() ([]VDEAgentDataLog, error) {
 	var result []VDEAgentDataLog

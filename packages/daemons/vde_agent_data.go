@@ -10,6 +10,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+
+	log "github.com/sirupsen/logrus"
+)
+
+func VDEAgentData(ctx context.Context, d *daemon) error {
 	var (
 		LogMode              int64
 		log_type             int64
@@ -96,13 +105,6 @@ import (
 				DataUUID:            item.DataUUID,
 				TaskUUID:            item.TaskUUID,
 				Log:                 DataSendLog,
-				LogType:             log_type,
-				LogSender:           item.VDEAgentPubkey,
-				BlockchainHttp:      blockchain_http,
-				BlockchainEcosystem: blockchain_ecosystem,
-				ChainState:          chain_state,
-				CreateTime:          time.Now().Unix()}
-
 			if err = SrcDataLog.Create(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Insert vde_agent_data_log table failed")
 				continue
