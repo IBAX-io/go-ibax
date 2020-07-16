@@ -16,18 +16,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/network"
 )
 
-var inputs = make([][]byte, 0, 100)
-
-func init() {
-	for i := 0; i < 100; i++ {
-		inputs = append(inputs, []byte(strings.Repeat("B", rand.Intn(194334))))
-	}
-}
-
-type BufCloser struct {
-	*bytes.Buffer
-}
-
 func (bc BufCloser) Close() error {
 	bc.Reset()
 	return nil
@@ -186,6 +174,11 @@ func BenchmarkGetBlockBodiesWithChanReadToStruct(t *testing.B) {
 }
 
 func BenchmarkGetBlockBodiesAsSlice(t *testing.B) {
+	var bts []byte
+	r := BufCloser{bytes.NewBuffer(bts)}
+
+	// dataLen := 4
+	t.ResetTimer()
 	for j := 0; j < t.N; j++ {
 		t.StopTimer()
 		for i := 0; i < 100; i++ {

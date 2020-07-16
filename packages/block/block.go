@@ -182,16 +182,6 @@ func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
 		playTxs model.AfterTxs
 	)
 	logger := b.GetLogger()
-	limits := NewLimits(b)
-	rand := utils.NewRand(b.Header.Time)
-	var timeLimit int64
-	if b.GenBlock {
-		timeLimit = syspar.GetMaxBlockGenerationTime()
-	}
-	proccessedTx := make([]*transaction.Transaction, 0, len(b.Transactions))
-	defer func() {
-		if b.GenBlock {
-			b.Transactions = proccessedTx
 		}
 		if err := model.AfterPlayTxs(dbTransaction, b.Header.BlockID, playTxs, logger); err != nil {
 			batchErr = err
@@ -336,6 +326,17 @@ func (b *Block) Check() error {
 	txCounter := make(map[int64]int)
 	txHashes := make(map[string]struct{})
 	for _, t := range b.Transactions {
+		hexHash := string(converter.BinToHex(t.TxHash))
+		// check for duplicate transactions
+		if _, ok := txHashes[hexHash]; ok {
+			logger.WithFields(log.Fields{"tx_hash": hexHash, "type": consts.DuplicateObject}).Error("duplicate transaction")
+			return utils.ErrInfo(fmt.Errorf("duplicate transaction %s", hexHash))
+		}
+		txHashes[hexHash] = struct{}{}
+
+		// check for max transaction per user in one block
+		//txCounter[t.TxKeyID]++
+		if txCounter[t.TxKeyID] > syspar.GetMaxBlockUserTx() {
 			return utils.WithBan(utils.ErrInfo(fmt.Errorf("max_block_user_transactions")))
 		}
 

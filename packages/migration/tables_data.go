@@ -23,6 +23,23 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "ecosystem": "false"
         }',
         'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
+    ),
+    (next_id('1_tables'), 'keys',
+        '{
+            "insert": "true",
+            "update": "ContractAccess(\"@1TokensTransfer\",\"@1TokensLockoutMember\",\"@1MultiwalletCreate\",\"@1NewToken\",\"@1TeBurn\",\"@1TokensDecDeposit\",\"@1TokensIncDeposit\",\"@1ProfileEdit\",\"@1NewUser\",\"@1GetAssignAvailableAmount\")",
+            "new_column": "ContractConditions(\"@1AdminCondition\")"
+        }',
+        '{
+            "pub": "ContractAccess(\"@1NewUser\")",
+            "amount": "ContractAccess(\"@1TokensTransfer\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1GetAssignAvailableAmount\")",
+            "maxpay": "ContractConditions(\"@1AdminCondition\")",
+            "deposit": "ContractAccess(\"@1TokensDecDeposit\",\"@1TokensIncDeposit\")",
+            "deleted": "ContractConditions(\"@1AdminCondition\")",
+            "blocked": "ContractAccess(\"@1TokensLockoutMember\")",
+            "account": "false",
+            "ecosystem": "false",
+            "multi": "ContractConditions(\"@1AdminCondition\")"
         }',
         'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
     ),
@@ -148,14 +165,6 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "ecosystem": "false"
         }',
         'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
-    ),
-    (next_id('1_tables'), 'roles_participants',
-        '{
-            "insert": "ContractAccess(\"@1RolesAssign\",\"@1VotingDecisionCheck\",\"@1RolesInstall\")",
-            "update": "ContractAccess(\"@1RolesUnassign\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
-        }',
-        '{
             "deleted": "ContractAccess(\"@1RolesUnassign\")",
             "date_deleted": "ContractAccess(\"@1RolesUnassign\")",
             "member": "false",

@@ -108,6 +108,11 @@ func TestRead(t *testing.T) {
 	form = url.Values{"Name": {name}, "InsertPerm": {`ContractConditions("MainCondition")`},
 		"UpdatePerm": {"true"}, "ReadPerm": {`false`}, "NewColumnPerm": {`true`}}
 	assert.NoError(t, postTx(`EditTable`, &form))
+	assert.EqualError(t, postTx(`GetOK`+name, &url.Values{}), `{"type":"panic","error":"Access denied"}`)
+
+	assert.EqualError(t, sendGet(`list/`+name, nil, &ret), `400 {"error":"E_SERVER","msg":"Access denied"}`)
+
+	form = url.Values{"Name": {name}, "InsertPerm": {`ContractConditions("MainCondition")`},
 		"UpdatePerm": {"true"}, "FilterPerm": {`ReadFilter` + name + `()`},
 		"NewColumnPerm": {`ContractConditions("MainCondition")`}}
 	assert.NoError(t, postTx(`EditTable`, &form))
@@ -119,7 +124,3 @@ func TestRead(t *testing.T) {
 	assert.NoError(t, sendPost(`content`, &url.Values{`template`: {
 		`DBFind(` + name + `, src).Limit(2)`}}, &retCont))
 	if !strings.Contains(RawToString(retCont.Tree), `No name`) {
-		t.Errorf(`wrong tree %s`, RawToString(retCont.Tree))
-		return
-	}
-}

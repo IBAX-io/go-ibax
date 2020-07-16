@@ -16,11 +16,6 @@ import (
 )
 
 func TestEscape(t *testing.T) {
-	var cases = []struct {
-		Source   string
-		Expected template.HTML
-	}{
-		{`'test'`, `''test''`},
 		{"`test`", "` + \"`\" + `test` + \"`\" + `"},
 		{`100%`, `100%%`},
 	}
@@ -58,3 +53,5 @@ func TestLoadSource(t *testing.T) {
 		Source:     template.HTML(value + "\n"),
 		Conditions: template.HTML("true"),
 		AppID:      5,
+	}, source)
+}

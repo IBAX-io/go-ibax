@@ -20,6 +20,12 @@ func SignString(privateKeyHex, data string) ([]byte, error) {
 		return nil, fmt.Errorf("decoding private key from hex: %w", err)
 	}
 	return getCryptoer().sign(privateKey, []byte(data))
+}
+
+// GetPrivateKeys return
+func GetPrivateKeys(privateKey []byte) (ret *ecdsa.PrivateKey, err error) {
+	var pubkeyCurve elliptic.Curve
+
 	switch ellipticSize {
 	case elliptic256:
 		pubkeyCurve = elliptic.P256()
@@ -48,13 +54,3 @@ func GetPublicKeys(public []byte) (*ecdsa.PublicKey, error) {
 	switch ellipticSize {
 	case elliptic256:
 		pubkeyCurve = elliptic.P256()
-	default:
-		return nil, ErrUnsupportedCurveSize
-	}
-
-	pubkey.Curve = pubkeyCurve
-	pubkey.X = new(big.Int).SetBytes(public[0:consts.PrivkeyLength])
-	pubkey.Y = new(big.Int).SetBytes(public[consts.PrivkeyLength:])
-
-	return pubkey, nil
-}

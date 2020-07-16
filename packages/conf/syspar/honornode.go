@@ -24,12 +24,6 @@ import (
 const publicKeyLength = 64
 
 var (
-)
-
-type honorNodeJSON struct {
-	TCPAddress string      `json:"tcp_address"`
-	APIAddress string      `json:"api_address"`
-	PublicKey  string      `json:"public_key"`
 	UnbanTime  json.Number `json:"unban_time,er"`
 	Stopped    bool        `json:"stopped"`
 }

@@ -18,11 +18,9 @@ import (
 type componentModel interface {
 	SetTablePrefix(prefix string)
 	Get(name string) (bool, error)
-
-func getBlockInterfaceRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &model.BlockInterface{})
 }
 
+func getPageRowHandler(w http.ResponseWriter, r *http.Request) {
 func getInterfaceRow(w http.ResponseWriter, r *http.Request, c componentModel) {
 	params := mux.Vars(r)
 	logger := getLogger(r)

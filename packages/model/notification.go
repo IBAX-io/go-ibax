@@ -30,6 +30,20 @@ type Notification struct {
 	PageName            string `gorm:"size:255"`
 	DateCreated         int64
 	DateStartProcessing int64
+	DateClosed          int64
+	Closed              bool
+}
+
+// SetTablePrefix set table Prefix
+func (n *Notification) SetTablePrefix(tablePrefix string) {
+	n.ecosystem = converter.StrToInt64(tablePrefix)
+}
+
+// TableName returns table name
+func (n *Notification) TableName() string {
+	if n.ecosystem == 0 {
+		n.ecosystem = 1
+	}
 	return `1_notifications`
 }
 
@@ -77,9 +91,3 @@ func getNotificationCountFilter(users []int64, ecosystemID int64) (filter string
 		usersStrs := []string{}
 		for _, user := range users {
 			usersStrs = append(usersStrs, converter.Int64ToStr(user))
-		}
-		params = append(params, usersStrs)
-	}
-
-	return
-}

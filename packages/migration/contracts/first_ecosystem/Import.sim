@@ -1,21 +1,5 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
-contract Import {
-    data {
-        Data string
-    }
-    conditions {
-        $ApplicationId = 0
-        var app_map map
-        app_map = DBFind("@1buffer_data").Columns("value->app_name").Where({"key": "import_info", "account": $account_id, "ecosystem": $ecosystem_id}).Row()
-        if app_map {
-            var app_id int ival string
-            ival = Str(app_map["value.app_name"])
-            app_id = DBFind("@1applications").Columns("id").Where({"name": ival, "ecosystem": $ecosystem_id}).One("id")
-            if app_id {
-                $ApplicationId = Int(app_id)
-            }
-        }
     }
     action {
         var editors, creators map
@@ -48,6 +32,20 @@ contract Import {
                 tbl = "@1" + Str(type)
                 if type == "app_params" {
                     item = DBFind(tbl).Where({"name": name, "ecosystem": $ecosystem_id, "app_id": $ApplicationId}).Row()
+                } else {
+                    item = DBFind(tbl).Where({"name": name, "ecosystem": $ecosystem_id}).Row()
+                }
+                var contractName string
+                if item {
+                    contractName = editors[type]
+                    cdata["Id"] = Int(item["id"])
+                    if type == "contracts" {
+                        if item["conditions"] == "false" {
+                            // ignore updating impossible
+                            contractName = ""
+                        }
+                    } elif type == "menu" {
+                        var menu menuItem string
                         menu = Replace(item["value"], " ", "")
                         menu = Replace(menu, "\n", "")
                         menu = Replace(menu, "\r", "")

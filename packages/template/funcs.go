@@ -1399,6 +1399,12 @@ func binaryTag(par parFunc) string {
 	defaultTail(par, `binary`)
 	if par.Node.Attr[`ecosystem`] != nil {
 		ecosystemID = par.Node.Attr[`ecosystem`].(string)
+	} else {
+		ecosystemID = getVar(par.Workspace, `ecosystem_id`)
+	}
+	binary := &model.Binary{}
+	binary.SetTablePrefix(ecosystemID)
+
 	var (
 		ok  bool
 		err error
@@ -1422,15 +1428,6 @@ func binaryTag(par parFunc) string {
 	if ok {
 		return binary.Link()
 	}
-
-	return ""
-}
-
-func columntypeTag(par parFunc) string {
-	if len((*par.Pars)["Table"]) > 0 && len((*par.Pars)["Column"]) > 0 {
-		tableName := macro((*par.Pars)[`Table`], par.Workspace.Vars)
-		columnName := macro((*par.Pars)[`Column`], par.Workspace.Vars)
-		tblname := smart.GetTableName(par.Workspace.SmartContract, tableName)
 		colType, err := model.GetColumnType(tblname, columnName)
 		if err == nil {
 			return colType
