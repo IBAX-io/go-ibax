@@ -83,6 +83,14 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 			Name:      names[i],
 		}
 		ra := &model.RolesParticipants{}
+		roles, err := ra.SetTablePrefix(ecosystemID).GetActiveMemberRoles(key.AccountID)
+		if err != nil {
+			errorResponse(w, err)
+			return
+		}
+		for _, r := range roles {
+			var role roleInfo
+			if err := json.Unmarshal([]byte(r.Role), &role); err != nil {
 				logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling role")
 				errorResponse(w, err)
 				return
@@ -97,13 +105,6 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		keysList = append(keysList, keyRes)
-	}
-
-	// in test mode, registration is open in the first ecosystem
-	if len(keysList) == 0 && syspar.IsTestMode() {
-		account = converter.AddressToString(keyID)
-		notify := make([]notifyInfo, 0)
-		notify = append(notify, notifyInfo{})
 		keysList = append(keysList, &keyEcosystemInfo{
 			Ecosystem:     converter.Int64ToStr(ids[0]),
 			Name:          names[0],

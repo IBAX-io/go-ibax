@@ -44,22 +44,6 @@ func Type2(rw io.ReadWriter) error {
 
 		if tran == nil {
 			log.WithFields(log.Fields{"type": consts.ParameterExceeded, "mx_tx_size": syspar.GetMaxTxSize(), "info": "tran nil", "current_size": len(tran)}).Error("transaction size nil")
-			continue
-		}
-
-		rtx := &transaction.RawTransaction{}
-		if err = rtx.Processing(tran); err != nil {
-			return err
-		}
-		rtxs = append(rtxs, rtx.SetRawTx())
-	}
-
-	err = model.SendTxBatches(rtxs)
-	if err != nil {
-		return err
-	}
-	return nil
-}
 
 //// Type2 serves requests from disseminator
 //func Type2(rw io.ReadWriter) (*network.DisTrResponse, error) {
@@ -70,6 +54,11 @@ func Type2(rw io.ReadWriter) error {
 //
 //	binaryData := r.Data
 //	// take the transactions from usual users but not nodes.
+//	_, _, decryptedBinData, err := DecryptData(&binaryData)
+//	if err != nil {
+//		return nil, utils.ErrInfo(err)
+//	}
+//
 //	if int64(len(binaryData)) > syspar.GetMaxTxSize() {
 //		log.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_size": syspar.GetMaxTxSize(), "size": len(binaryData)}).Error("transaction size exceeds max size")
 //		return nil, utils.ErrInfo("len(txBinData) > max_tx_size")

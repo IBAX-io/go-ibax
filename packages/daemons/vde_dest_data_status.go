@@ -6,15 +6,6 @@
 package daemons
 
 import (
-	"context"
-
-	log "github.com/sirupsen/logrus"
-
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
-)
-
 func VDEDestDataStatus(ctx context.Context, d *daemon) error {
 	var (
 		err error
@@ -42,6 +33,13 @@ func VDEDestDataStatus(ctx context.Context, d *daemon) error {
 		if err != nil {
 			//log.WithFields(log.Fields{"error": err}).Error("getting one hash data by TaskUUID ans DataUUID")
 			//time.Sleep(time.Second * 1)
+			continue
+		}
+		if item.Hash == dataHash.Hash {
+			item.HashState = 1 //
+			//fmt.Println("Hash match!")
+		} else {
+			item.HashState = 2 //
 			log.WithFields(log.Fields{"error": err}).Error("Hash does not match！")
 		}
 		err = item.Updates()

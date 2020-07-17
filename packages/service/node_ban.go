@@ -160,17 +160,6 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 			"ProducerNodeID": crypto.Address(producer.PublicKey),
 			"ConsumerNodeID": crypto.Address(currentNode.PublicKey),
 			"BlockID":        blockId,
-			"Timestamp":      blockTime,
-			"Reason":         reason,
-		},
-	}
-
-	txData, txHash, err := tx.NewInternalTransaction(sc, nodePrivateKey)
-	if err != nil {
-		return err
-	}
-
-	return tx.CreateTransaction(txData, txHash, conf.Config.KeyID, sc.Time)
 }
 
 func (nbs *NodesBanService) FilterHosts(hosts []string) ([]string, []string, error) {
@@ -186,3 +175,12 @@ func (nbs *NodesBanService) FilterHosts(hosts []string) ([]string, []string, err
 			banHosts = append(banHosts, n.TCPAddress)
 		} else {
 			goodHosts = append(goodHosts, n.TCPAddress)
+		}
+	}
+	return goodHosts, banHosts, nil
+}
+
+func (nbs *NodesBanService) FilterBannedHosts(hosts []string) (goodHosts []string, err error) {
+	goodHosts, _, err = nbs.FilterHosts(hosts)
+	return
+}

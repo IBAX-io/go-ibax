@@ -182,6 +182,16 @@ func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
 		playTxs model.AfterTxs
 	)
 	logger := b.GetLogger()
+	limits := NewLimits(b)
+	rand := utils.NewRand(b.Header.Time)
+	var timeLimit int64
+	if b.GenBlock {
+		timeLimit = syspar.GetMaxBlockGenerationTime()
+	}
+	proccessedTx := make([]*transaction.Transaction, 0, len(b.Transactions))
+	defer func() {
+		if b.GenBlock {
+			b.Transactions = proccessedTx
 		}
 		if err := model.AfterPlayTxs(dbTransaction, b.Header.BlockID, playTxs, logger); err != nil {
 			batchErr = err
@@ -384,14 +394,6 @@ func (b *Block) CheckHash() (bool, error) {
 
 		if err != nil {
 			if err == crypto.ErrIncorrectSign {
-				if !bytes.Equal(b.PrevRollbacksHash, b.PrevHeader.RollbacksHash) {
-					return false, ErrIncorrectRollbackHash
-				}
-			}
-			logger.WithFields(log.Fields{"error": err, "type": consts.CryptoError}).Error("checking block header sign")
-			return false, utils.ErrInfo(fmt.Errorf("err: %v / block.PrevHeader.BlockID: %d /  block.PrevHeader.Hash: %x / ", err, b.PrevHeader.BlockID, b.PrevHeader.Hash))
-		}
-
 		return resultCheckSign, nil
 	}
 
