@@ -1,6 +1,14 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package tcpclient
+
+import (
+	"errors"
+	"fmt"
+	"net"
+	"strings"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -14,14 +22,6 @@ var wrongAddressError = errors.New("Wrong address")
 func NormalizeHostAddress(address string, defaultPort int64) (string, error) {
 
 	_, _, err := net.SplitHostPort(address)
-	if err != nil {
-		if strings.HasSuffix(err.Error(), "missing port in address") {
-			return fmt.Sprintf("%s:%d", address, defaultPort), nil
-		}
-
-		return "", err
-	}
-
 	return address, nil
 }
 

@@ -29,10 +29,6 @@ func getSystemParamsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := &ecosystemParamsResult{
-		List: make([]paramResult, 0),
-	}
-
-	acceptNames := form.AcceptNames()
 	}
 
 	if len(result.List) == 0 {

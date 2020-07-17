@@ -57,6 +57,6 @@ func (m *VDEDestData) GetOneByTaskUUID(TaskUUID string) (*VDEDestData, error) {
 }
 func (m *VDEDestData) GetAllByTaskUUID(TaskUUID string) ([]VDEDestData, error) {
 	result := make([]VDEDestData, 0)
-func (m *VDEDestData) GetOneByDataStatus(DataStatus int64) (bool, error) {
-	return isFound(DBConn.Where("data_state = ?", DataStatus).First(m))
+	err := DBConn.Table("vde_dest_data").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	return result, err
 }

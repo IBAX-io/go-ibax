@@ -38,6 +38,11 @@ const (
 	sqlSeq     = "seq"
 )
 
+func sqlHeadSequence(name string) string {
+	ret := fmt.Sprintf(`sql("DROP SEQUENCE IF EXISTS %[1]s_id_seq CASCADE;")
+sql("CREATE SEQUENCE %[1]s_id_seq START WITH 1;")`, name)
+
+	return ret + "\r\n" + sqlHead(name)
 }
 
 func sqlHead(name string) string {
@@ -183,21 +188,6 @@ func GetFirstEcosystemScript(wallet int64) (ret string, err error) {
 
 	scripts := []string{
 		firstEcosystemContractsSQL,
-		firstEcosystemPagesDataSQL,
-		firstEcosystemBlocksDataSQL,
-		firstEcosystemDataSQL,
-		firstSystemParametersDataSQL,
-		firstTablesDataSQL,
-	}
-	ret += strings.Join(scripts, "\r\n")
-	return
-}
-
-// GetFirstTableScript returns script to update _tables for first ecosystem
-func GetFirstTableScript(ecosystem int) (string, error) {
-	return sqlTemplate([]string{
-		tablesDataSQL,
-	}, SqlData{Ecosystem: ecosystem})
 }
 
 // GetCommonEcosystemScript returns script with common tables

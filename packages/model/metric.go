@@ -16,10 +16,9 @@ const tableNameMetrics = "1_metrics"
 // Metric represents record of system_metrics table
 type Metric struct {
 	ID     int64  `gorm:"primary_key;not null"`
-}
-
-// EcosystemTx represents value of metric
-type EcosystemTx struct {
+	Time   int64  `gorm:"not null"`
+	Metric string `gorm:"not null"`
+	Key    string `gorm:"not null"`
 	UnixTime  int64
 	Ecosystem string
 	Count     int64

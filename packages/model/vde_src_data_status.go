@@ -12,6 +12,17 @@ type VDESrcDataStatus struct {
 	Data           []byte `gorm:"column:data;not null" json:"data"`
 	DataInfo       string `gorm:"type:jsonb" json:"data_info"`
 	VDESrcPubkey   string `gorm:"not null" json:"vde_src_pubkey"`
+	VDEDestPubkey  string `gorm:"not null" json:"vde_dest_pubkey"`
+	VDEDestIP      string `gorm:"not null" json:"vde_dest_ip"`
+	VDEAgentPubkey string `gorm:"not null" json:"vde_agent_pubkey"`
+	VDEAgentIP     string `gorm:"not null" json:"vde_agent_ip"`
+	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
+	DataSendState  int64  `gorm:"not null" json:"data_send_state"`
+	DataSendErr    string `gorm:"not null" json:"data_send_err"`
+	UpdateTime     int64  `gorm:"not null" json:"update_time"`
+	CreateTime     int64  `gorm:"not null" json:"create_time"`
+}
+
 func (VDESrcDataStatus) TableName() string {
 	return "vde_src_data_status"
 }
@@ -57,5 +68,3 @@ func (m *VDESrcDataStatus) GetAllByDataSendStatusAndAgentMode(DataSendStatus int
 }
 
 func (m *VDESrcDataStatus) GetOneByDataSendStatus(DataSendStatus int64) (bool, error) {
-	return isFound(DBConn.Where("data_send_state = ?", DataSendStatus).First(m))
-}

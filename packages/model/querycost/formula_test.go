@@ -30,6 +30,14 @@ func (t *TestTableRowCounter) RowCount(tx *model.DbTransaction, tableName string
 type QueryCostByFormulaTestSuite struct {
 	suite.Suite
 	queryCoster QueryCoster
+}
+
+func (s *QueryCostByFormulaTestSuite) SetupTest() {
+	s.queryCoster = &FormulaQueryCoster{&TestTableRowCounter{}}
+}
+
+func (s *QueryCostByFormulaTestSuite) TestQueryCostUnknownQueryType() {
+	_, err := s.queryCoster.QueryCost(nil, "UNSELECT * FROM name")
 	assert.Error(s.T(), err)
 	assert.Equal(s.T(), err, UnknownQueryTypeError)
 }
@@ -52,14 +60,6 @@ func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromSelect() {
 func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromInsertNoInto() {
 	_, err := InsertQueryType(`insert "1_keys"(id) values (1)`).GetTableName()
 	assert.Error(s.T(), err)
-	assert.Equal(s.T(), err, IntoStatementMissingError)
-}
-
-func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromInsert() {
-	tableName, err := InsertQueryType("insert into keys(a,b,c) values (1,2,3)").GetTableName()
-	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), tableName, "keys")
-	tableName, err = InsertQueryType(`insert into "1_keys" (a,b,c) values (1,2,3)`).GetTableName()
 	assert.Nil(s.T(), err)
 	assert.Equal(s.T(), tableName, "1_keys")
 }

@@ -437,6 +437,23 @@ func KeyLogin(apiAddress string, from string, state int64) (gAuth string, gAddre
 	if err != nil {
 		return "", "", "", "", false, err
 	}
+	if len(key) > 64 {
+		key = key[:64]
+	}
+
+	// add  get new uid
+	gAuth = ""
+
+	var ret getUIDResult
+	err = sendGet(apiAddress, gAuth, `getuid`, nil, &ret)
+	if err != nil {
+		return "", "", "", "", false, err
+	}
+	gAuth = ret.Token
+
+	if len(ret.UID) == 0 {
+		return "", "", "", "", false, fmt.Errorf(`getuid has returned empty uid`)
+	}
 
 	var pub string
 
@@ -847,17 +864,6 @@ func WaitTx(apiAddress string, gAuth string, hash string) (int64, error) {
 		if ret.Message != nil {
 			errtext, err := json.Marshal(ret.Message)
 			if err != nil {
-				return 0, err
-			}
-			return 0, errors.New(string(errtext))
-		}
-		time.Sleep(time.Second)
-	}
-	return 0, fmt.Errorf(`TxStatus timeout`)
-}
-
-//0312
-func VDEWaitTx(apiAddress string, gAuth string, hash string) (int64, error) {
 	data, err := json.Marshal(&txstatusRequest{
 		Hashes: []string{hash},
 	})
