@@ -20,21 +20,23 @@ type Header struct {
 	EcosystemID int64
 	KeyID       int64
 	NetworkID   int64
-	PublicKey   []byte
-	PrivateFor  []string
-}
-
-// SmartContract is storing smart contract data
-type SmartContract struct {
-	Header
-	TokenEcosystem int64
-	MaxSum         string
-	PayOver        string
-	SignedBy       int64
-	Params         map[string]interface{}
-}
 
 func newTransaction(smartTx SmartContract, privateKey []byte, internal bool) (data, hash []byte, err error) {
+	var publicKey []byte
+	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
+		return
+	}
+	smartTx.PublicKey = publicKey
+
+	if internal {
+		smartTx.SignedBy = crypto.Address(publicKey)
+	}
+
+	if data, err = msgpack.Marshal(smartTx); err != nil {
+		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Error("marshalling smart contract to msgpack")
+		return
+	}
 	hash = crypto.DoubleHash(data)
 	signature, err := crypto.Sign(privateKey, hash)
 	if err != nil {

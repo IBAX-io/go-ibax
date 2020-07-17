@@ -21,8 +21,13 @@ func (sp *StateParameter) TableName() string {
 	if sp.ecosystem == 0 {
 		sp.ecosystem = 1
 	}
-// GetAllStateParameters is returning all state parameters
-func (sp *StateParameter) GetAllStateParameters() ([]StateParameter, error) {
+	return `1_parameters`
+}
+
+// SetTablePrefix is setting table prefix
+func (sp *StateParameter) SetTablePrefix(prefix string) *StateParameter {
+	sp.ecosystem = converter.StrToInt64(prefix)
+	return sp
 	parameters := make([]StateParameter, 0)
 	err := DBConn.Table(sp.TableName()).Where(`ecosystem = ?`, sp.ecosystem).Find(&parameters).Error
 	if err != nil {

@@ -178,13 +178,6 @@ func getPage(r *http.Request) (result *contentResult, err error) {
 		}
 		result = &contentResult{
 			Tree:       ret,
-			Menu:       page.Menu,
-			MenuTree:   retmenu,
-			NodesCount: page.ValidateCount,
-		}
-		success <- true
-	}()
-	go func() {
 		defer wg.Done()
 		if conf.Config.MaxPageGenerationTime == 0 {
 			return
@@ -284,6 +277,17 @@ type jsonContentForm struct {
 	Template string `schema:"template"`
 	Source   bool   `schema:"source"`
 }
+
+func (f *jsonContentForm) Validate(r *http.Request) error {
+	if len(f.Template) == 0 {
+		return errEmptyTemplate
+	}
+	return nil
+}
+
+func jsonContentHandler(w http.ResponseWriter, r *http.Request) {
+	form := &jsonContentForm{}
+	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}

@@ -35,6 +35,10 @@ func SendVDESrcData(host string, TaskUUID string, DataUUID string, AgentMode str
 		VDESrcPubkey:   VDESrcPubkey,
 		VDEAgentPubkey: VDEAgentPubkey,
 		VDEAgentIp:     VDEAgentIp,
+		VDEDestPubkey:  VDEDestPubkey,
+		VDEDestIp:      VDEDestIp,
+		Data:           dt,
+	}
 
 	if err = req.Write(conn); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending VDESrcData request")
@@ -57,7 +61,6 @@ func SendVDESrcDataAgent(host string, TaskUUID string, DataUUID string, AgentMod
 		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": host}).Error("on creating tcp connection")
 		return "0"
 	}
-	defer conn.Close()
 
 	rt := &network.RequestType{Type: network.RequestTypeSendVDESrcDataAgent}
 	if err = rt.Write(conn); err != nil {

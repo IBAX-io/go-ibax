@@ -32,6 +32,15 @@ var (
 	// ErrDBConn database connection error
 	ErrDBConn = errors.New("Database connection error")
 )
+var notAutoIncrement = map[string]bool{
+	"1_keys": true,
+}
+
+// non-self-increasing costs
+const notAutoIncrementCost int64 = 1
+
+type KeyTableChecker struct{}
+
 func (ktc KeyTableChecker) IsKeyTable(tableName string) bool {
 	val, exist := converter.FirstEcosystemTables[tableName]
 	return exist && val
@@ -470,11 +479,6 @@ func InitDB(cfg conf.DBConfig) error {
 	if conf.Config.Redis.Enable {
 		err = RedisInit(conf.Config.Redis.Host, conf.Config.Redis.Port, conf.Config.Redis.Password, conf.Config.Redis.DbName)
 		if err != nil {
-			log.WithFields(log.Fields{
-				"host": conf.Config.Redis.Host, "port": conf.Config.Redis.Port, "db_password": conf.Config.Redis.Password, "db_name": conf.Config.Redis.DbName, "type": consts.DBError,
-			}).Error("can't init redis")
-			return err
-		}
 
 		var rd RedisParams
 		err := rd.Cleardb()

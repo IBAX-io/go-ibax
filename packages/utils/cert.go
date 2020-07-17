@@ -38,15 +38,6 @@ func (c *Cert) EqualBytes(bs ...[]byte) bool {
 		if err != nil {
 			return false
 		}
-
-		if c.cert.Equal(other) {
-			return true
-		}
-	}
-
-	return false
-}
-
 func parseCert(b []byte) (*x509.Certificate, error) {
 	block, _ := pem.Decode(b)
 	if block == nil {
@@ -59,4 +50,13 @@ func parseCert(b []byte) (*x509.Certificate, error) {
 	}
 
 	return cert, nil
+}
+
+func ParseCert(b []byte) (c *Cert, err error) {
+	cert, err := parseCert(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Cert{cert}, nil
 }

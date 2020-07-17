@@ -23,19 +23,12 @@ func TestBalance(t *testing.T) {
 	err := sendGet(`balance/`+gAddress, nil, &ret)
 	if err != nil {
 		t.Error(err)
-		return
-	}
-	if len(ret.Amount) < 10 {
-		t.Error(`too low balance`, ret)
-	}
-	err = sendGet(`balance/3434341`, nil, &ret)
-	if err != nil {
+func TestAssignBalance(t *testing.T) {
+	if err := keyLogin(1); err != nil {
 		t.Error(err)
 		return
 	}
-	if len(ret.Amount) > 0 {
-		t.Error(fmt.Errorf(`wrong balance %s`, ret.Amount))
-		return
+	var ret model.Response
 	err := sendGet(`assignbalance/`+gAddress, nil, &ret)
 	if err != nil {
 		t.Error(err)
