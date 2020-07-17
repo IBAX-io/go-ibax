@@ -2,6 +2,10 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+package network
+
+import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"strings"
@@ -21,14 +25,6 @@ func TestEmptyGetBodyResponse(t *testing.T) {
 	require.NoError(t, emptyRes.Read(r))
 }
 
-func TestWriteReadInts(t *testing.T) {
-	buf := []byte{}
-	b := bytes.NewBuffer(buf)
-	st := uint16(2)
-	require.NoError(t, binary.Write(b, binary.LittleEndian, st))
-
-	var val uint16
-	err := binary.Read(b, binary.LittleEndian, &val)
 	require.NoError(t, err)
 	require.Equal(t, val, st)
 	fmt.Println(val)
