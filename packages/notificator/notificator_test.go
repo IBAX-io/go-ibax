@@ -173,6 +173,19 @@ func TestStatsChanged(t *testing.T) {
 				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
+			},
+
+			new: []notificationRecord{
+				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
+				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
+				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
+			},
+			result: false,
+		},
+		// no old records add new record
+		tsc{
+			old: []notificationRecord{},
+			new: []notificationRecord{
 				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
@@ -190,8 +203,6 @@ func TestStatsChanged(t *testing.T) {
 			result: true,
 		},
 		// old has value - now nil
-		tsc{
-			old: []notificationRecord{
 				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},

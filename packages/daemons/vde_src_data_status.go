@@ -6,20 +6,6 @@
 package daemons
 
 import (
-	"context"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
-
-	log "github.com/sirupsen/logrus"
-)
-
-func VDESrcDataStatus(ctx context.Context, d *daemon) error {
-	m := &model.VDESrcDataStatus{}
-	//ShareData, err := m.GetAllByDataSendStatus(0) //
 	//ShareData, err := m.GetAllByDataSendStatusAndAgentMode(0, 0) //
 	ShareData, err := m.GetAllByDataSendStatusAndAgentMode(0, 2) //sendstatus:0
 	if err != nil {
@@ -36,6 +22,12 @@ func VDESrcDataStatus(ctx context.Context, d *daemon) error {
 	for _, item := range ShareData {
 		//ItemDataBytes := item.Data
 		ItemDataBytes, err := ecies.EccCryptoKey(item.Data, item.VDEDestPubkey)
+		if err != nil {
+			log.WithError(err)
+			continue
+		}
+		//fmt.Println("item.AgentMode:", converter.Int64ToStr(item.AgentMode))
+		//hash := tcpclient.SendVDESrcData(item.VDEDestIP,item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), item.DataInfo, ItemDataBytes)
 		hash := tcpclient.SendVDESrcData(item.VDEDestIP, item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), item.DataInfo, item.VDESrcPubkey, item.VDEAgentPubkey, item.VDEAgentIP, item.VDEDestPubkey, item.VDEDestIP, ItemDataBytes)
 		if string(hash) == "0" {
 			//item.DataSendState = 3 //

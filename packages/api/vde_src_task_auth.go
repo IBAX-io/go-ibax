@@ -42,6 +42,19 @@ func VDESrcTaskAuthCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	form := &VDESrcTaskAuthForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.VDESrcTaskAuth{}
+	if m, err = unmarshalColumnVDESrcTaskAuth(form); err != nil {
+		fmt.Println(err)
+		errorResponse(w, err)
+		return
+	}
+
+	m.CreateTime = time.Now().Unix()
+
+	if err = m.Create(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
 
 	model.DBConn.Last(&m)
@@ -54,11 +67,6 @@ func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	id := converter.StrToInt64(params["id"])
-	form := &VDESrcTaskAuthForm{}
-
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)
 		return

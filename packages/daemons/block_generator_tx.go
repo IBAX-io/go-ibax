@@ -55,12 +55,6 @@ func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*model.Transaction, e
 
 func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]interface{}) (*model.Transaction, error) {
 	vm := smart.GetVM()
-	contract := smart.VMGetContract(vm, callDelayedContract, uint32(firstEcosystemID))
-	info := contract.Info()
-
-	smartTx := tx.SmartContract{
-		Header: tx.Header{
-			ID:          int(info.ID),
 			Time:        dtx.time,
 			EcosystemID: firstEcosystemID,
 			KeyID:       keyID,
@@ -72,3 +66,12 @@ func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]int
 
 	privateKey, err := hex.DecodeString(dtx.privateKey)
 	if err != nil {
+		return nil, err
+	}
+
+	txData, txHash, err := tx.NewInternalTransaction(smartTx, privateKey)
+	if err != nil {
+		return nil, err
+	}
+	return tx.CreateDelayTransactionHighRate(txData, txHash, keyID, highRate), nil
+}

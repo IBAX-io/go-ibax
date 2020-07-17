@@ -189,6 +189,16 @@ func VDEAgentLogUpToChainState(ctx context.Context, d *daemon) error {
 
 		} else if blockId == 0 {
 			//item.ChainState = 3
+			item.ChainState = 1 //find check
+			item.ChainErr = err.Error()
+		} else {
+			//fmt.Println("VDEWaitTx! err: ", err)
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		err = item.Updates()
+		if err != nil {
+			fmt.Println("Update VDEAgentLog table err: ", err)
 			log.WithFields(log.Fields{"error": err}).Error("Update VDEAgentLog table!")
 			time.Sleep(time.Millisecond * 2)
 			continue
@@ -197,4 +207,3 @@ func VDEAgentLogUpToChainState(ctx context.Context, d *daemon) error {
 	} //for
 
 	return nil
-}
