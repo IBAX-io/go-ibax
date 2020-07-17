@@ -1,4 +1,12 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package main
+
+import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 )
@@ -135,19 +143,6 @@ var (
 		}
 }`
 )
-
-func main() {
-	var alpha [129]byte
-	for ind, ch := range alphabet {
-		i := byte(ind)
-		switch ch {
-		case ' ':
-			alpha[0x09] = i
-			alpha[0x0d] = i
-			alpha[' '] = i
-		case '1':
-			for k := '1'; k <= '9'; k++ {
-				alpha[k] = i
 			}
 		case 'a':
 			for k := 'A'; k <= 'Z'; k++ {

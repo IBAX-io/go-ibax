@@ -39,6 +39,19 @@ func compareHash(data []byte, urlHash string) bool {
 	return hex.EncodeToString(hash) == urlHash
 }
 
+func getDataHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	table, column := params["table"], params["column"]
+
+	data, err := model.GetColumnByID(table, column, params["id"])
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting data from table")
+		errorResponse(w, errNotFound)
+		return
+	}
+
 	if !compareHash([]byte(data), params["hash"]) {
 		errorResponse(w, errHashWrong)
 		return
@@ -47,14 +60,6 @@ func compareHash(data []byte, urlHash string) bool {
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Write([]byte(data))
-	return
-}
-
-func getBinaryHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
 	bin := model.Binary{}
 	found, err := bin.GetByID(converter.StrToInt64(params["id"]))
 	if err != nil {

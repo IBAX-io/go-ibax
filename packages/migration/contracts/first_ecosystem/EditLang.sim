@@ -1,9 +1,5 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
-contract EditLang {
-    data {
-        Id int
-        Trans string
     }
 
     conditions {
@@ -13,3 +9,5 @@ contract EditLang {
 
     action {
         EditLanguage($Id, $lang["name"], $Trans)
+    }
+}

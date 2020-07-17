@@ -7,6 +7,14 @@ package ecies
 
 import (
 	"encoding/hex"
+	"fmt"
+	"testing"
+
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+)
+
+// HexToBytes converts the hexadecimal representation to []byte
+func HexToBytes(hexdata string) ([]byte, error) {
 	return hex.DecodeString(hexdata)
 }
 
@@ -36,13 +44,3 @@ func TestEccencryptoKey(t *testing.T) {
 		fmt.Println(err2)
 	}
 
-	cryptText, _ := EccPubEncrypt(plainText, pub)
-	fmt.Println("ECC：", hex.EncodeToString(cryptText))
-
-	msg, err := EccPriDeCrypt(cryptText, pri)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("ECC：", string(msg))
-
-}

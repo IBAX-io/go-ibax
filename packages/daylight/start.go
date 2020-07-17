@@ -59,6 +59,18 @@ func killOld() {
 
 		KillPid(pidMap["pid"])
 		if fmt.Sprintf("%s", err) != "null" {
+			// give 15 sec to end the previous process
+			for i := 0; i < 10; i++ {
+				if _, err := os.Stat(conf.Config.GetPidPath()); err == nil {
+					time.Sleep(time.Second)
+				} else {
+					break
+				}
+			}
+		}
+	}
+}
+
 func initLogs() error {
 	switch conf.Config.Log.LogFormat {
 	case "json":
@@ -200,17 +212,6 @@ func Start() {
 	if conf.Config.FuncBench {
 		log.Warning("Warning! Access checking is disabled in some built-in functions")
 	}
-
-	f := utils.LockOrDie(conf.Config.LockFilePath)
-	defer f.Unlock()
-	if err := utils.MakeDirectory(conf.Config.TempDir); err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.TempDir}).Error("can't create temporary directory")
-		Exit(1)
-	}
-
-	if conf.Config.PoolPub.Enable {
-		if conf.Config.Redis.Enable {
-			err = model.RedisInit(conf.Config.Redis.Host, conf.Config.Redis.Port, conf.Config.Redis.Password, conf.Config.Redis.DbName)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"host": conf.Config.Redis.Host, "port": conf.Config.Redis.Port, "db_password": conf.Config.Redis.Password, "db_name": conf.Config.Redis.DbName, "type": consts.DBError,
