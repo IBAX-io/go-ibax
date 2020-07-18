@@ -46,11 +46,12 @@ func (b *BlockID) GetbyName(name string) (bool, error) {
 	if err := b.Unmarshal([]byte(rp.Value)); err != nil {
 		return false, err
 	}
-				return false, err
-			}
-			if num > count {
-				return true, err
-			} else {
+	return true, nil
+}
+
+//Get by name
+func (b *BlockID) GetRangeByName(n1, n2 string, count int64) (bool, error) {
+	var nb1, nb2 BlockID
 				return false, err
 			}
 			//return false, err

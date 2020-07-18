@@ -6,12 +6,6 @@
 package model
 
 import (
-	"time"
-)
-
-// StopDaemon is model
-func (sd *StopDaemon) TableName() string {
-	return "stop_daemons"
 }
 
 // Create is creating record of model

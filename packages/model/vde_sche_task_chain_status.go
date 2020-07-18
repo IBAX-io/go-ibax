@@ -35,6 +35,16 @@ type VDEScheTaskChainStatus struct {
 	TaskRunState    int64  `gorm:"not null" json:"task_run_state"`
 	TaskRunStateErr string `gorm:"not null" json:"task_run_state_err"`
 
+	TxHash     string `gorm:"not null" json:"tx_hash"`
+	ChainState int64  `gorm:"not null" json:"chain_state"`
+	BlockId    int64  `gorm:"not null" json:"block_id"`
+	ChainId    int64  `gorm:"not null" json:"chain_id"`
+	ChainErr   string `gorm:"not null" json:"chain_err"`
+
+	UpdateTime int64 `gorm:"not null" json:"update_time"`
+	CreateTime int64 `gorm:"not null" json:"create_time"`
+}
+
 func (VDEScheTaskChainStatus) TableName() string {
 	return "vde_sche_task_chain_status"
 }
@@ -106,13 +116,6 @@ func (m *VDEScheTaskChainStatus) GetOneByChainState(ChainState int64) (bool, err
 func (m *VDEScheTaskChainStatus) GetAllByContractStateAndChainState(ContractStateSrc int64, ContractStateDest int64, ChainState int64) ([]VDEScheTaskChainStatus, error) {
 	result := make([]VDEScheTaskChainStatus, 0)
 	err := DBConn.Table("vde_sche_task_chain_status").Where("contract_state_src = ? AND contract_state_dest = ? AND chain_state = ?", ContractStateSrc, ContractStateDest, ChainState).Find(&result).Error
-	return result, err
-}
-
-func (m *VDEScheTaskChainStatus) GetAllByContractStateSrc(ContractStateSrc int64) ([]VDEScheTaskChainStatus, error) {
-	result := make([]VDEScheTaskChainStatus, 0)
-	err := DBConn.Table("vde_sche_task_chain_status").Where("contract_state_src = ?", ContractStateSrc).Find(&result).Error
-	return result, err
 }
 
 func (m *VDEScheTaskChainStatus) GetAllByContractStateDest(ContractStateDest int64) ([]VDEScheTaskChainStatus, error) {

@@ -5,14 +5,6 @@
 
 package model
 
-import (
-	"fmt"
-)
-
-// Cron represents record of {prefix}_cron table
-type Cron struct {
-	tableName string
-	ID        int64
 	Cron      string
 	Contract  string
 }
@@ -39,6 +31,7 @@ func (c *Cron) GetAllCronTasks() ([]*Cron, error) {
 	return crons, err
 }
 
+// UID returns unique identifier for cron task
 func (c *Cron) UID() string {
 	return fmt.Sprintf("%s_%d", c.tableName, c.ID)
 }

@@ -24,6 +24,15 @@ func TestBlockTimeCounter(t *testing.T) {
 
 	queue, err := btc.queue(at)
 	assert.NoError(t, err)
+	assert.Equal(t, 2, queue)
+
+	np, err := btc.nodePosition(at)
+	assert.NoError(t, err)
+	assert.Equal(t, 2, np)
+
+	nextTime, err := btc.nextTime(at, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, time.Unix(25, 0).Add(1*time.Millisecond), nextTime)
 
 	start, end, err := btc.RangeByTime(at)
 	assert.NoError(t, err)
@@ -37,12 +46,6 @@ func TestRangeByTime(t *testing.T) {
 		start:       time.Unix(1532977623, 0),
 		duration:    4 * time.Second,
 		numberNodes: 1,
-	}
-
-	st, end, err := btc.RangeByTime(time.Unix(1533062723, 0))
-	require.NoError(t, err)
-	fmt.Println(st.Unix(), end.Unix())
-
 	st, end, err = btc.RangeByTime(time.Unix(1533062724, 0))
 	require.NoError(t, err)
 	fmt.Println(st.Unix(), end.Unix())

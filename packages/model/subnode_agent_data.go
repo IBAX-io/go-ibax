@@ -19,11 +19,7 @@ type SubNodeAgentData struct {
 	//SubNodeDestIP        string `gorm:"not null" json:"subnode_dest_ip"`
 	SubNodeDestIP string `gorm:"column:subnode_dest_ip;not null" json:"subnode_dest_ip"`
 	//SubNodeAgentPubkey   string `gorm:"not null" json:"subnode_agent_pubkey"`
-func (SubNodeAgentData) TableName() string {
-	return "subnode_agent_data"
-}
-
-func (m *SubNodeAgentData) Create() error {
+	SubNodeAgentPubkey string `gorm:"column:subnode_agent_pubkey;not null" json:"subnode_agent_pubkey"`
 	return DBConn.Create(&m).Error
 }
 

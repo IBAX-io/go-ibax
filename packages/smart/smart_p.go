@@ -60,6 +60,19 @@ const (
 	nNewLangJoint        = "NewLangJoint"
 	nNewTable            = "NewTable"
 	nNewTableJoint       = "NewTableJoint"
+	nNewUser             = "NewUser"
+	nBlockReward         = "BlockReward"
+	nCallDelayedContract = "CallDelayedContract"
+)
+
+//SignRes contains the data of the signature
+type SignRes struct {
+	Param string `json:"name"`
+	Text  string `json:"text"`
+}
+
+// TxSignJSON is a structure for additional signs of transaction
+type TxSignJSON struct {
 	ForSign string    `json:"forsign"`
 	Field   string    `json:"field"`
 	Title   string    `json:"title"`
@@ -411,9 +424,6 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 
 	id, err := model.GetNextID(sc.DbTransaction, "1_ecosystems")
 	if err != nil {
-		return 0, logErrorDB(err, "generating next ecosystem id")
-	}
-
 	appID, err := model.GetNextID(sc.DbTransaction, "1_applications")
 	if err != nil {
 		return 0, logErrorDB(err, "generating next application id")

@@ -45,11 +45,8 @@ func TestLexParser(t *testing.T) {
 	}
 	for _, item := range test {
 		source := []rune(item.Input)
-		if out, err := lexParser(source); err != nil {
-			if err.Error() != item.Output {
-				fmt.Println(string(source))
-				t.Error(`error of lexical parser ` + err.Error())
-			}
-		} else if out.String(source) != item.Output {
 			t.Error(`error of lexical parser ` + item.Input)
 			fmt.Println(out.String(source))
+		}
+	}
+}

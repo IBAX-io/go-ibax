@@ -34,17 +34,6 @@ func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
 		myContractSrcGetHash  string
 		myContractDestGet     string
 		myContractDestGetHash string
-	)
-
-	m := &model.VDESrcTask{}
-	SrcTask, err := m.GetAllByContractStateAndChainState(1, 0, 0) //0
-	if err != nil {
-		time.Sleep(time.Millisecond * 2)
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
-		return err
-	}
-	if len(SrcTask) == 0 {
-		//log.Info("Sche task not found")
 		time.Sleep(time.Millisecond * 2)
 		return nil
 	}
@@ -221,6 +210,16 @@ func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
 				ContractSrcName: item.ContractSrcName,
 				//ContractSrcGet:       item.ContractSrcGet,
 				//ContractSrcGetHash:   item.ContractSrcGetHash,
+				ContractSrcGet:     myContractSrcGet,
+				ContractSrcGetHash: myContractSrcGetHash,
+				ContractDestName:   item.ContractDestName,
+				//ContractDestGet:      item.ContractDestGet,
+				//ContractDestGetHash:  item.ContractDestGetHash,
+				ContractDestGet:      myContractDestGet,
+				ContractDestGetHash:  myContractDestGetHash,
+				ContractRunHttp:      item.ContractRunHttp,
+				ContractRunEcosystem: item.ContractRunEcosystem,
+				ContractRunParms:     item.ContractRunParms,
 				ContractMode:         item.ContractMode,
 				ContractStateSrc:     item.ContractStateSrc,
 				ContractStateDest:    item.ContractStateDest,

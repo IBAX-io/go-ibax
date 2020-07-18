@@ -46,15 +46,6 @@ func VDEScheTaskFromSrcInstallContractSrc(ctx context.Context, d *daemon) error 
 	for _, item := range ScheTask {
 		//fmt.Println("ScheTask:", item.TaskUUID)
 		blockchain_http = item.ContractRunHttp
-		blockchain_ecosystem = item.ContractRunEcosystem
-		//fmt.Println("ContractRunHttp and ContractRunEcosystem:", blockchain_http, blockchain_ecosystem)
-		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("encode error")
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		//api.ApiAddress = blockchain_http
 		//api.ApiEcosystemID = int64(ecosystemID)
 		vde_sche_apiAddress := blockchain_http
 		vde_sche_apiEcosystemID := int64(ecosystemID)
@@ -73,6 +64,14 @@ func VDEScheTaskFromSrcInstallContractSrc(ctx context.Context, d *daemon) error 
 		ContractSrc := item.ContractSrcGet
 
 		form := url.Values{
+			`Value`:         {ContractSrc},
+			"ApplicationId": {"1"},
+			`Conditions`:    {`true`}}
+
+		ContractName := `@1NewContract`
+		//_, _, _, err = api.PostTxResult(ContractName, &form)
+		_, _, _, err = vde_api.PostTxResult(vde_sche_apiAddress, vde_sche_apiEcosystemID, gAuth_sche, gPrivate_sche, ContractName, &form)
+		if err != nil {
 			item.ContractStateSrc = 2
 			item.ContractStateSrcErr = err.Error()
 		} else {

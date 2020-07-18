@@ -28,6 +28,13 @@ type Ecosystem struct {
 
 // TableName returns name of table
 // only first ecosystem has this entity
+func (sys *Ecosystem) TableName() string {
+	return ecosysTable
+}
+
+// GetAllSystemStatesIDs is retrieving all ecosystems ids
+func GetAllSystemStatesIDs() ([]int64, []string, error) {
+	if !IsTable(ecosysTable) {
 		return nil, nil, nil
 	}
 
@@ -65,7 +72,3 @@ func (sys *Ecosystem) IsOpenMultiFee() bool {
 			if multi == 1 {
 				return true
 			}
-		}
-	}
-	return false
-}

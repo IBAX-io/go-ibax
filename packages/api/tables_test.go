@@ -55,6 +55,12 @@ func TestTable(t *testing.T) {
 func TestTableName(t *testing.T) {
 	if err := keyLogin(1); err != nil {
 		t.Error(err)
+		return
+	}
+	form := url.Values{"Name": {`кириллица`}, "Columns": {`[{"name":"MyName","type":"varchar", "index": "0", 
+		"conditions":{"update":"true", "read":"true"}}]`}, "ApplicationId": {"1"},
+		"Permissions": {`{"insert": "true", "update" : "true", "new_column": "true"}`}}
+	assert.EqualError(t, postTx(`NewTable`, &form),
 		`{"type":"panic","error":"Name кириллица must only contain latin, digit and '_', '-' characters"}`)
 
 	form = url.Values{"Name": {`latin`}, "Columns": {`[{"name":"колонка","type":"varchar", "index": "0", 
@@ -125,17 +131,6 @@ func TestTableName(t *testing.T) {
 	}
 }
 
-func TestJSONTable(t *testing.T) {
-	assert.NoError(t, keyLogin(1))
-
-	name := randName(`json`)
-	form := url.Values{"Name": {name}, "Columns": {`[{"name":"MyName","type":"varchar", "index": "0", 
-		"conditions":"true"}, {"name":"Doc", "type":"json","index": "0", "conditions":"true"}]`},
-		"ApplicationId": {`1`}, "Permissions": {`{"insert": "true", "update" : "true", "new_column": "true"}`}}
-	assert.NoError(t, postTx(`NewTable`, &form))
-
-	checkGet := func(want string) {
-		_, msg, err := postTxResult(name+`Get`, &url.Values{"Id": {`2`}})
 		assert.NoError(t, err)
 		assert.Equal(t, want, msg)
 	}

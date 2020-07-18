@@ -11,10 +11,6 @@ contract DeveloperCondition {
         if EcosysParam("founder_account") == AddressToId($account_id) {
             return
         }
-
-        // check for Developer role
-        }
-        if !RoleAccess(Int(role_id)) {
             warning Sprintf(LangRes("@1x_not_access_action"),"DeveloperCondition")
         }
     }
