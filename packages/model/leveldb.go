@@ -1,20 +1,25 @@
 package model
 
-import (
-	"fmt"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/syndtr/goleveldb/leveldb/iterator"
-	"github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/syndtr/goleveldb/leveldb/util"
-	"reflect"
-	"strings"
-)
-
-var DBlevel *leveldb.DB
-var GLeveldbIsactive bool
-
 type levelDBGetterPutterDeleter interface {
 	Get([]byte, *opt.ReadOptions) ([]byte, error)
+	Put([]byte, []byte, *opt.WriteOptions) error
+	Write(batch *leveldb.Batch, wo *opt.WriteOptions) error
+	Delete([]byte, *opt.WriteOptions) error
+	NewIterator(slice *util.Range, ro *opt.ReadOptions) iterator.Iterator
+}
+
+func GetLevelDB(tx *leveldb.Transaction) levelDBGetterPutterDeleter {
+	if tx != nil {
+		return tx
+	}
+	return DBlevel
+}
+
+func prefixFunc(prefix string) func([]byte) []byte {
+	return func(hash []byte) []byte {
+		return []byte(prefix + string(hash))
+	}
+}
 
 func prefixStringFunc(prefix string) func(key string) []byte {
 	return func(key string) []byte {

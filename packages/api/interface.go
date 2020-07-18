@@ -4,23 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 
 package api
-
-import (
-	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
 type componentModel interface {
 	SetTablePrefix(prefix string)
 	Get(name string) (bool, error)
 }
 
 func getPageRowHandler(w http.ResponseWriter, r *http.Request) {
+	getInterfaceRow(w, r, &model.Page{})
+}
+
+func getMenuRowHandler(w http.ResponseWriter, r *http.Request) {
+	getInterfaceRow(w, r, &model.Menu{})
+}
+
+func getBlockInterfaceRowHandler(w http.ResponseWriter, r *http.Request) {
+	getInterfaceRow(w, r, &model.BlockInterface{})
+}
+
 func getInterfaceRow(w http.ResponseWriter, r *http.Request, c componentModel) {
 	params := mux.Vars(r)
 	logger := getLogger(r)

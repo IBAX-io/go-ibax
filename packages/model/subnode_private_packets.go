@@ -41,14 +41,6 @@ func (pp *PrivatePackets) GetDataByHash(dbTransaction *DbTransaction, Hash strin
 
 // DeleteByHash is deleting private packet by hash
 func (pp *PrivatePackets) DeleteByHash(dbTransaction *DbTransaction) error {
-	return GetDB(dbTransaction).Exec("DELETE FROM subnode_private_packets WHERE hash = ?", pp.Hash).Error
-}
-
-type PrivateFilePackets struct {
-	TaskUUID   string `gorm:"column:task_uuid;not null" json:"task_uuid"`
-	TaskName   string `gorm:"column:task_name;not null" json:"task_name"`
-	TaskSender string `gorm:"column:task_sender;not null" json:"task_sender"`
-	TaskType   string `gorm:"column:task_type;not null" json:"task_type"`
 	Name       string `gorm:"column:name;not null" json:"name"`
 	MimeType   string `gorm:"column:mimetype;not null" json:"mimetype"`
 	Hash       string `gorm:"not null" json:"hash"`
@@ -148,4 +140,9 @@ func (pp *PrivateFilePacketsAll) GetDataByHash(dbTransaction *DbTransaction, Has
 // DeleteByHash is deleting privatefile packet by hash
 func (pp *PrivateFilePacketsAll) DeleteByHash(dbTransaction *DbTransaction) error {
 	return GetDB(dbTransaction).Exec("DELETE FROM 2_subnode_share_data_502 WHERE hash = ?", pp.Hash).Error
+}
+
+// Create is creating record of model
+func (pp *PrivateFilePacketsAll) Create() error {
+	return DBConn.Create(&pp).Error
 }

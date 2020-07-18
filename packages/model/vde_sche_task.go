@@ -9,22 +9,6 @@ type VDEScheTask struct {
 	TaskUUID   string `gorm:"not null" json:"task_uuid"`
 	TaskName   string `gorm:"not null" json:"task_name"`
 	TaskSender string `gorm:"not null" json:"task_sender"`
-	Comment    string `gorm:"not null" json:"comment"`
-	Parms      string `gorm:"type:jsonb" json:"parms"`
-	TaskType   int64  `gorm:"not null" json:"task_type"`
-	TaskState  int64  `gorm:"not null" json:"task_state"`
-
-	ContractSrcName     string `gorm:"not null" json:"contract_src_name"`
-	ContractSrcGet      string `gorm:"not null" json:"contract_src_get"`
-	ContractSrcGetHash  string `gorm:"not null" json:"contract_src_get_hash"`
-	ContractDestName    string `gorm:"not null" json:"contract_dest_name"`
-	ContractDestGet     string `gorm:"not null" json:"contract_dest_get"`
-	ContractDestGetHash string `gorm:"not null" json:"contract_dest_get_hash"`
-	ContractMode        int64  `gorm:"not null" json:"contract_mode"`
-
-	ContractStateSrc     int64  `gorm:"not null" json:"contract_state_src"`
-	ContractStateDest    int64  `gorm:"not null" json:"contract_state_dest"`
-	ContractStateSrcErr  string `gorm:"not null" json:"contract_state_src_err"`
 	ContractStateDestErr string `gorm:"not null" json:"contract_state_dest_err"`
 
 	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
@@ -159,6 +143,14 @@ type VDEScheTaskFromSrc struct {
 
 	//TxHash                 string `gorm:"not null" json:"tx_hash"`
 	//ChainState             int64  `gorm:"not null" json:"chain_state"`
+	//BlockId                int64  `gorm:"not null" json:"block_id"`
+	//ChainId                int64  `gorm:"not null" json:"chain_id"`
+	//ChainErr               string `gorm:"not null" json:"chain_err"`
+
+	UpdateTime int64 `gorm:"not null" json:"update_time"`
+	CreateTime int64 `gorm:"not null" json:"create_time"`
+}
+
 func (VDEScheTaskFromSrc) TableName() string {
 	return "vde_sche_task_from_src"
 }

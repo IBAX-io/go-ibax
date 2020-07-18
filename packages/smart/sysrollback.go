@@ -64,10 +64,6 @@ func SysRollbackView(DbTransaction *model.DbTransaction, sysData SysRollData) er
 	err := model.DropView(DbTransaction, sysData.TableName)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("dropping view")
-		return err
-	}
-	return nil
-}
 
 // SysRollbackColumn is rolling back column
 func SysRollbackColumn(DbTransaction *model.DbTransaction, sysData SysRollData) error {
@@ -138,6 +134,12 @@ func SysSetContractWallet(tblid, state int64, wallet int64) error {
 // SysRollbackEditContract rollbacks the contract
 func SysRollbackEditContract(transaction *model.DbTransaction, sysData SysRollData,
 	EcosystemID string) error {
+
+	fields, err := model.GetOneRowTransaction(transaction, `select * from "1_contracts" where id=?`,
+		sysData.ID).String()
+	if err != nil {
+		return err
+	}
 	if len(fields["value"]) > 0 {
 		var owner *script.OwnerInfo
 		for i, item := range smartVM.Block.Children {
