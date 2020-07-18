@@ -6,10 +6,12 @@ import (
 
 func TestBatches(t *testing.T) {
 	var (
-	hashDeles = append(hashDeles, []byte("s"))
+		logTxs = new(logTxser)
+		txs    = new(txser)
+		queues = new(queueser) //old not check that
+		batch  []Batcher
+	)
+	var hashDeles ArrHashes
 
-	batch = append(batch, logTxs, txs, queues)
-	for _, d := range batch {
-		d.BatchFindByHash(nil, hashDeles)
-	}
+	hashDeles = append(hashDeles, []byte("s"))
 }

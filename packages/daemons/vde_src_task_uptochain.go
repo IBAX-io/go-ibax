@@ -107,12 +107,6 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 			"ContractRunParms":     {item.ContractRunParms},
 
 			"ContractMode": {converter.Int64ToStr(item.ContractMode)},
-			`CreateTime`:   {converter.Int64ToStr(time.Now().Unix())},
-		}
-
-		ContractName := `@1VDEShareTaskCreate`
-		_, txHash, _, err := chain_api.VDEPostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
-		if err != nil {
 			fmt.Println("Send VDESrcTask to chain err: ", err)
 			log.WithFields(log.Fields{"error": err}).Error("Send VDESrcTask to chain!")
 			time.Sleep(time.Second * 5)
@@ -170,6 +164,19 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 	}
 	if SrcChainInfo == nil {
 		log.Info("Src chain info not found")
+		//fmt.Println("Src chain info not found")
+		time.Sleep(time.Millisecond * 100)
+		return nil
+	}
+
+	blockchain_http = SrcChainInfo.BlockchainHttp
+	blockchain_ecosystem = SrcChainInfo.BlockchainEcosystem
+	//fmt.Println("SrcChainInfo:", blockchain_http, blockchain_ecosystem)
+
+	// deal with task data
+	for _, item := range SrcTask {
+		//fmt.Println("SrcTask:", item.TaskUUID)
+
 		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")

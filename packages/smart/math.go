@@ -8,6 +8,13 @@ import (
 	"math"
 	"strconv"
 )
+
+func parseFloat(x interface{}) (float64, error) {
+	var (
+		fx  float64
+		err error
+	)
+	switch v := x.(type) {
 	case float64:
 		fx = v
 	case int64:
@@ -52,21 +59,6 @@ func Log(x interface{}) (float64, error) {
 
 // Log10 returns the decimal logarithm of x
 func Log10(x interface{}) (float64, error) {
-	fx, err := parseFloat(x)
-	if err != nil {
-		return 0, err
-	}
-	if fx = math.Log10(fx); isValidFloat(fx) {
-		return fx, nil
-	}
-	return 0, errFloatResult
-}
-
-// Pow returns x**y, the base-x exponential of y
-func Pow(x, y interface{}) (float64, error) {
-	fx, err := parseFloat(x)
-	if err != nil {
-		return 0, err
 	}
 	fy, err := parseFloat(y)
 	if err != nil {

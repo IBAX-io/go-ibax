@@ -32,6 +32,16 @@ func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrd
 		return nil, err
 	}
 
+	// send the type of data
+	rt := &network.RequestType{Type: network.RequestTypeBlockCollection}
+	if err = rt.Write(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing data type block body to connection")
+		return nil, err
+	}
+
+	req := &network.GetBodiesRequest{
+		BlockID:      uint32(blockID),
+		ReverseOrder: reverseOrder,
 	}
 
 	if err = req.Write(conn); err != nil {
@@ -103,13 +113,6 @@ func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int6
 			if intErr < 0 {
 				log.WithFields(log.Fields{"type": consts.ConversionError, "error": ErrorWrongSizeBytes}).Error("on convert size body")
 				errChan <- ErrorWrongSizeBytes
-				return
-			}
-
-			bodyEndIndx := bodyStartIndx + int64(size)
-			body := bodyBuf[bodyStartIndx:bodyEndIndx]
-			if readed, err := io.ReadFull(src, body); err != nil {
-				log.WithFields(log.Fields{"type": consts.IOError, "size": size, "readed": readed, "error": err}).Error("on reading block body")
 				errChan <- err
 				return
 			}

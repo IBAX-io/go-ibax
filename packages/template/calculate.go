@@ -38,23 +38,6 @@ type token struct {
 type opFunc func()
 
 var (
-	errExp            = errors.New(`wrong expression`)
-	errDiv            = errors.New(`dividing by zero`)
-	errPrecIsNegative = errors.New(`precision is negative`)
-	errWhere          = errors.New(`Where has wrong format`)
-)
-
-func parsing(input string, itype int) (*[]token, error) {
-	var err error
-
-	tokens := make([]token, 0)
-	newToken := func(itype int, value interface{}) {
-		tokens = append(tokens, token{itype, value})
-	}
-	prevNumber := func() bool {
-		return len(tokens) > 0 && tokens[len(tokens)-1].Type == tkNumber
-	}
-	prevOper := func() bool {
 		return len(tokens) > 0 && (tokens[len(tokens)-1].Type >= tkAdd &&
 			tokens[len(tokens)-1].Type <= tkDiv)
 	}
@@ -96,6 +79,19 @@ func parsing(input string, itype int) (*[]token, error) {
 			numlen = 0
 		}
 		if item, ok := ops[ch]; ok {
+			if prevOper() {
+				return nil, errExp
+			}
+			newToken(item.id, item.pr)
+			continue
+		}
+		switch ch {
+		case '(':
+			if prevNumber() {
+				return nil, errExp
+			}
+			newToken(tkLPar, 3)
+		case ')':
 			if prevOper() {
 				return nil, errExp
 			}

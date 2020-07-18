@@ -157,6 +157,16 @@ var forTest = tplList{
 		P(Body: #vStartDate# #vEndDate# #vCmpDate#)
 	}.Custom(custom_name){
 		P(Body: #vStartDate# #vEndDate# #vCmpDate#)
+	}`,
+		`[{"tag":"data","attr":{"columns":["startdate","enddate","custom_id","custom_name"],"data":[["2017-12-10 10:11","2017-12-12 12:13","[{"tag":"p","children":[{"tag":"text","text":"2017-12-10 10:11 2017-12-12 12:13 -1"}]}]","[{"tag":"p","children":[{"tag":"text","text":"2017-12-10 10:11 2017-12-12 12:13 -1"}]}]"],["2017-12-17 16:17","2017-12-15 14:15","[{"tag":"p","children":[{"tag":"text","text":"2017-12-17 16:17 2017-12-15 14:15 1"}]}]","[{"tag":"p","children":[{"tag":"text","text":"2017-12-17 16:17 2017-12-15 14:15 1"}]}]"]],"source":"mysrc","types":["text","text","tags","tags"]}}]`},
+	{`Strong(SysParam(taxes_size))`,
+		`[{"tag":"strong","children":[{"tag":"text","text":"3"}]}]`},
+	{`SetVar(Name: vDateNow, Value: Now("YYYY-MM-DD HH:MI")) 
+		SetVar(Name: simple, Value: TestFunc(my value)) 
+		SetVar(Name: vStartDate, Value: DateTime(DateTime: #vDateNow#, Format: "YYYY-MM-DD HH:MI"))
+		SetVar(Name: vCmpStartDate, Value: CmpTime(#vStartDate#,#vDateNow#))
+		Span(#vCmpStartDate# #simple#)`,
+		`[{"tag":"span","children":[{"tag":"text","text":"-1 TestFunc(my value)"}]}]`},
 	{`Input(Type: text, Value: Now(MMYY))`,
 		`[{"tag":"input","attr":{"type":"text","value":"Now(MMYY)"}}]`},
 	{`Button(Body: LangRes(savex), Class: btn btn-primary, Contract: EditProfile, 
@@ -403,20 +413,6 @@ func TestStringToBinary(t *testing.T) {
 	_, account, err := postTxResult(contract, &form)
 	assert.NoError(t, err)
 
-	form = url.Values{
-		"template": {`SetVar(link, Binary(Name: ` + filename + `, AppID: 1, Account: "` + account + `"))#link#`},
-	}
-
-	var ret struct {
-		Tree []struct {
-			Link string `json:"text"`
-		} `json:"tree"`
-	}
-	assert.NoError(t, sendPost(`content`, &form, &ret))
-
-	resp, err := http.Get(apiAddress + consts.ApiPath + ret.Tree[0].Link)
-	if err != nil {
-		t.Error(err)
 		return
 	}
 	defer resp.Body.Close()

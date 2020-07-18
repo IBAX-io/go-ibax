@@ -50,6 +50,16 @@ var (
 	// ErrLimitStop returns when the generation of the block should be stopped
 	ErrLimitStop = errors.New(`stop generating block`)
 	// ErrLimitTime returns when the time limit exceeded
+	ErrLimitTime = errors.New(`Time limit exceeded`)
+)
+
+// NewLimits initializes Limits structure.
+func NewLimits(b *Block) (limits *Limits) {
+	limits = &Limits{Block: b, Limiters: make([]Limiter, 0, 8)}
+	if b == nil {
+		limits.Mode = letPreprocess
+	} else if b.GenBlock {
+		limits.Mode = letGenBlock
 	} else {
 		limits.Mode = letParsing
 	}
@@ -219,15 +229,6 @@ func (bl *txMaxSize) init(b *Block) {
 	bl.LimitTx = syspar.GetMaxTxSize()
 }
 
-func (bl *txMaxSize) check(t *transaction.Transaction, mode int) error {
-	size := int64(len(t.TxFullData))
-	if size > bl.LimitTx {
-		return limitError(`txMaxSize`, `Max size of tx`)
-	}
-	bl.Size += size
-	if bl.Size > bl.LimitBlock {
-		if mode == letPreprocess {
-			return ErrLimitStop
 		}
 		return limitError(`txMaxSize`, `Max size of the block`)
 	}
