@@ -15,17 +15,11 @@ var GLeveldbIsactive bool
 
 type levelDBGetterPutterDeleter interface {
 	Get([]byte, *opt.ReadOptions) ([]byte, error)
-	Put([]byte, []byte, *opt.WriteOptions) error
-	Write(batch *leveldb.Batch, wo *opt.WriteOptions) error
-	Delete([]byte, *opt.WriteOptions) error
-	NewIterator(slice *util.Range, ro *opt.ReadOptions) iterator.Iterator
-}
 
-func GetLevelDB(tx *leveldb.Transaction) levelDBGetterPutterDeleter {
-	if tx != nil {
-		return tx
+func prefixStringFunc(prefix string) func(key string) []byte {
+	return func(key string) []byte {
+		return []byte(prefix + key)
 	}
-	return DBlevel
 }
 
 func Init_leveldb(filename string) error {

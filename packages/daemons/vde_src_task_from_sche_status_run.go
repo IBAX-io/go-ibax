@@ -66,21 +66,6 @@ func VDESrcTaskFromScheStatusRun(ctx context.Context, d *daemon) error {
 			continue
 		}
 		vde_sche_apiAddress := blockchain_http
-		vde_sche_apiEcosystemID := int64(ecosystemID)
-
-		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
-		// Login
-		gAuth_sche, _, gPrivate_sche, _, _, err := vde_api.KeyLogin(vde_sche_apiAddress, src, vde_sche_apiEcosystemID)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Login VDE sche failure")
-			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-		//fmt.Println("Login VDE sche OK!")
-
-		err = json.Unmarshal([]byte(item.ContractRunParms), &ContractRunParms)
-		if err != nil {
-			fmt.Println("Error parsing ContractRunParms parameter!")
 			log.Info("Error parsing ContractRunParms parameter")
 			log.WithError(err)
 			time.Sleep(time.Millisecond * 2)
@@ -192,6 +177,20 @@ func VDESrcTaskFromScheStatusRunState(ctx context.Context, d *daemon) error {
 
 		blockchain_http = item.ContractRunHttp
 		blockchain_ecosystem = item.ContractRunEcosystem
+		//fmt.Println("SrcChainInfo:", blockchain_http, blockchain_ecosystem)
+
+		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("blockchain_ecosystem encode error")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		vde_sche_apiAddress := blockchain_http
+		vde_sche_apiEcosystemID := int64(ecosystemID)
+
+		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
+		// Login
+		gAuth_sche, _, _, _, _, err := vde_api.KeyLogin(vde_sche_apiAddress, src, vde_sche_apiEcosystemID)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login VDE sche chain failure")
 			time.Sleep(time.Millisecond * 2)

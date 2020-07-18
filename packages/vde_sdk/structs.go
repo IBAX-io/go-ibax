@@ -2,18 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package vde_sdk
-
-type getUIDResult struct {
-	UID         string `json:"uid,omitempty"`
-	Token       string `json:"token,omitempty"`
-	Expire      string `json:"expire,omitempty"`
-	EcosystemID string `json:"ecosystem_id,omitempty"`
-	KeyID       string `json:"key_id,omitempty"`
-	Address     string `json:"address,omitempty"`
-	NetworkID   string `json:"network_id,omitempty"`
-}
-
 type loginResult struct {
 	Token       string        `json:"token,omitempty"`
 	EcosystemID string        `json:"ecosystem_id,omitempty"`
@@ -46,6 +34,9 @@ type txstatusError struct {
 	Id    string `json:"id,omitempty"`
 }
 
+type txstatusResult struct {
+	BlockID string         `json:"blockid"`
+	Message *txstatusError `json:"errmsg,omitempty"`
 	Result  string         `json:"result"`
 }
 

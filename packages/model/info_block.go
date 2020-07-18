@@ -11,10 +11,20 @@ import (
 
 // InfoBlock is model
 type InfoBlock struct {
-	Hash           []byte `gorm:"not null"`
-	EcosystemID    int64  `gorm:"not null default 0"`
-	KeyID          int64  `gorm:"not null default 0"`
-	NodePosition   string `gorm:"not null default 0"`
+	Time           int64  `gorm:"not null"`
+	CurrentVersion string `gorm:"not null"`
+	Sent           int8   `gorm:"not null"`
+	RollbacksHash  []byte `gorm:"not null"`
+}
+
+// TableName returns name of table
+func (ib *InfoBlock) TableName() string {
+	return "info_block"
+}
+
+// Get is retrieving model from database
+func (ib *InfoBlock) Get() (bool, error) {
+	return isFound(DBConn.Last(ib))
 }
 
 // Update is update model

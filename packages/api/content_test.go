@@ -81,22 +81,6 @@ func TestContent(t *testing.T) {
 		},
 		{
 			"content",
-			url.Values{
-				"template": {"SetVar(mytest, myvar)Div(myclass, Span(#mytest#) Div(mypar){Span(test)}#mytest#)"},
-				"source":   {"true"},
-			},
-			`[{"tag":"setvar","attr":{"name":"mytest","value":"myvar"}},{"tag":"div","attr":{"class":"myclass"},"children":[{"tag":"span","children":[{"tag":"text","text":"#mytest#"}]},{"tag":"div","attr":{"class":"mypar"},"children":[{"tag":"span","children":[{"tag":"text","text":"test"}]}]},{"tag":"text","text":"#mytest#"}]}]`,
-		},
-		{
-			"content",
-			url.Values{
-				"template": {`DBFind(Name: pages, Source: src).Custom(custom_col){
-				Span(Body: "test")
-			}`},
-				"lang":   {"ru"},
-				"source": {"true"},
-			},
-			`[{"tag":"dbfind","attr":{"name":"pages","source":"src"},"tail":[{"tag":"custom","attr":{"column":"custom_col"},"children":[{"tag":"span","children":[{"tag":"text","text":"test"}]}]}]}]`,
 		},
 		{
 			"content",
@@ -125,6 +109,11 @@ func TestContent(t *testing.T) {
 			"content",
 			url.Values{
 				"template": {`
+					Data(src_test,"type"){
+						text
+					}
+					ForList(src_test){
+					If(#type#==text){
 						Span(:#type#)
 					}
 				}`},

@@ -340,6 +340,23 @@ func VDEDestTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 		time.Sleep(time.Millisecond * 100)
 		return err
 	}
+	if DestChainInfo == nil {
+		log.Info("Dest chain info not found")
+		//fmt.Println("Dest chain info not found")
+		time.Sleep(time.Millisecond * 100)
+		return nil
+	}
+
+	blockchain_http = DestChainInfo.BlockchainHttp
+	blockchain_ecosystem = DestChainInfo.BlockchainEcosystem
+	//fmt.Println("DestChainInfo:", blockchain_http, blockchain_ecosystem)
+
+	ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("VDEDestTaskScheGetFromChain encode error")
+		time.Sleep(2 * time.Second)
+		return err
+	}
 	//api.ApiAddress = blockchain_http
 	//api.ApiEcosystemID = int64(ecosystemID)
 	chain_apiAddress := blockchain_http
@@ -357,20 +374,6 @@ func VDEDestTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 	//fmt.Println("Login OK!")
 	_, NodePublicKey, err := utils.VDEGetNodeKeys()
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("GetNodeKeys")
-		return err
-	}
-	nodePrivateKey, err := utils.GetNodePrivateKey()
-	if err != nil || len(nodePrivateKey) < 1 {
-		if err == nil {
-			log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
-		}
-		return err
-	}
-
-	create_time := converter.Int64ToStr(DestTaskTime.ScheUpdateTime)
-	//where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "contract_mode": "1"}` //1
-	//where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": "1"}`
 	//where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": {"$in": [1,3]}}`
 	where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": {"$in": [2,4]}}`
 	//fmt.Println("where_str:",where_str)

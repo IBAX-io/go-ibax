@@ -96,20 +96,6 @@ func (t *Table) GetColumns(transaction *DbTransaction, name, jsonKey string) (ma
 	rows, err := GetDB(transaction).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(columns`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
 	if err != nil {
 		return nil, err
-	}
-	defer rows.Close()
-	var key, value string
-	result := map[string]string{}
-	for rows.Next() {
-		rows.Scan(&key, &value)
-		result[key] = value
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
 
 // GetPermissions returns table permissions by name
 func (t *Table) GetPermissions(transaction *DbTransaction, name, jsonKey string) (map[string]string, error) {
@@ -197,6 +183,13 @@ func GetTableListQuery(table string, ecosystemID int64) *gorm.DB {
 
 //
 func SubNodeGetTableQuery(table string, ecosystemID int64) *gorm.DB {
+	//if converter.FirstEcosystemTables[table] {
+	//	return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)
+	//}
+	return DBConn.Table(converter.SubNodeParseTable(table, ecosystemID))
+}
+
+//
 func VDEGetTableQuery(table string, ecosystemID int64) *gorm.DB {
 	//if converter.FirstEcosystemTables[table] {
 	//	return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)

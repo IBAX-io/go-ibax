@@ -70,17 +70,6 @@ func VDEAgentMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
-	id := converter.StrToInt64(params["id"])
-	form := &VDEAgentMemberForm{}
-
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err)
-		return
-	}
-
-	m := &model.VDEAgentMember{}
-
-	if m, err = unmarshalColumnVDEAgentMember(form); err != nil {
 		errorResponse(w, err)
 		return
 	}
@@ -116,6 +105,19 @@ func VDEAgentMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 }
 
 func VDEAgentMemberListHandlre(w http.ResponseWriter, r *http.Request) {
+	logger := getLogger(r)
+	srcData := model.VDEAgentMember{}
+
+	result, err := srcData.GetAll()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
+		errorResponse(w, err)
+		return
+	}
+	jsonResponse(w, result)
+}
+
+func VDEAgentMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 

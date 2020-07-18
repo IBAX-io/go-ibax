@@ -97,13 +97,6 @@ type tailInfo struct {
 	Last bool
 }
 
-type forTails struct {
-	Tails map[string]tailInfo
-}
-
-func newSource(par parFunc) {
-	if par.Node.Attr[`source`] == nil {
-		return
 	}
 	par.Workspace.SetSource(par.Node.Attr[`source`].(string), &Source{
 		Columns: par.Node.Attr[`columns`].(*[]string),
@@ -577,6 +570,12 @@ main:
 						if rune(input[next]) == modes[1][0] {
 							isBody = true
 							break
+						}
+						if rune(input[next]) == ' ' || rune(input[next]) == '\t' {
+							next++
+							continue
+						}
+						break
 					}
 					if isBody {
 						mode = 1
