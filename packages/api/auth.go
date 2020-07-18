@@ -36,21 +36,17 @@ type JWTClaims struct {
 	EcosystemID string `json:"ecosystem_id,omitempty"`
 	KeyID       string `json:"key_id,omitempty"`
 	AccountID   string `json:"account_id,omitempty"`
-	RoleID      string `json:"role_id,omitempty"`
-	IsMobile    bool   `json:"is_mobile,omitempty"`
-	jwt.StandardClaims
-}
-
-func generateJWTToken(claims JWTClaims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
-}
-
-func generateNewJWTToken(claims JWTClaims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	ret, err := token.SignedString(jwtSecret)
 	if err == nil {
 		gr := GRefreshClaims{
+			Header:           ret,
+			Refresh:          ret,
+			ExpiresAt:        claims.ExpiresAt,
+			RefreshExpiresAt: claims.ExpiresAt,
+		}
+		gr.RefreshClaims()
+	}
+	return ret, err
 }
 
 func generateRefreshJWTToken(claims JWTClaims, h string) (string, error) {

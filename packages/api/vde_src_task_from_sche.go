@@ -56,6 +56,9 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 		ContractRunParms:     converter.MarshalJson(contract_run_parms),
 
 		ContractMode: int64(form.ContractMode),
+
+		ContractStateSrc:     int64(form.ContractStateSrc),
+		ContractStateDest:    int64(form.ContractStateDest),
 		ContractStateSrcErr:  form.ContractStateSrcErr,
 		ContractStateDestErr: form.ContractStateDestErr,
 
@@ -70,11 +73,6 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 	}
 
 	return m, err
-}
-
-func VDESrcTaskFromScheCreateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
 	)
 	logger := getLogger(r)
 	form := &VDESrcTaskFromScheForm{}

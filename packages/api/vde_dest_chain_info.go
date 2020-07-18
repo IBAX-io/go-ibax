@@ -3,6 +3,13 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package api
+
+import (
+	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 
@@ -24,13 +31,6 @@ func unmarshalColumnVDEDestChainInfo(form *VDEDestChainInfoForm) (*model.VDEDest
 	return m, err
 }
 
-func VDEDestChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
-	)
-	logger := getLogger(r)
-	form := &VDEDestChainInfoForm{}
-	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}

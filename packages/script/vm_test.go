@@ -5,8 +5,6 @@
 package script
 
 import (
-	"testing"
-
 		{int64(1), 8}, {int(1), 8},
 		{float32(1), 4}, {float64(1), 8},
 		{"test", 4},

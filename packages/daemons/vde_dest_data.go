@@ -385,16 +385,6 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 		//		log.WithFields(log.Fields{"error": err}).Error("vde_agent_ip parse error")
 		//		item.DataState = 3 //Indicates an error in parsing task parameters
 		//		err = item.Updates()
-		//		if err != nil {
-		//			log.WithError(err)
-		//		}
-		//		continue
-		//	}
-		//	if agent_mode, ok = TaskParms["agent_mode"].(string); !ok {
-		//		log.WithFields(log.Fields{"error": err}).Error("agent_mode parse error")
-		//		item.DataState = 3 //Indicates an error in parsing task parameters
-		//		err = item.Updates()
-		//		if err != nil {
 		//			log.WithError(err)
 		//		}
 		//		continue
@@ -449,6 +439,14 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 		//fmt.Println("TaskParms:",TaskParms)
 		// fmt.Println("TaskParms:")
 		//fmt.Println("vde_src_pubkey:", vde_src_pubkey)
+		//fmt.Println("vde_dest_pubkey:", vde_dest_pubkey)
+		//fmt.Println("vde_dest_ip:", vde_dest_ip)
+		//fmt.Println("vde_agent_pubkey:", vde_agent_pubkey)
+		//fmt.Println("vde_agent_ip:", vde_agent_ip)
+		//fmt.Println("agent_mode,hash_mode,log_mode:", agent_mode, hash_mode, log_mode)
+		//fmt.Println("blockchain_http,blockchain_ecosystem:", blockchain_http, blockchain_ecosystem)
+
+		//Hash validity
 
 		if hash_mode == "1" { //1HASH，2HASHnot
 			myHashState = 0 //

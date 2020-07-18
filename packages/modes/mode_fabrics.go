@@ -56,6 +56,17 @@ func (v BCEcosysIDValidator) Validate(formEcosysID, clientEcosysID int64, le *lo
 	if err != nil {
 		le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting next id of ecosystems")
 		return 0, err
+	}
+
+	if formEcosysID >= count {
+		le.WithFields(log.Fields{"state_id": formEcosysID, "count": count, "type": consts.ParameterExceeded}).Error("ecosystem is larger then max count")
+		return 0, api.ErrEcosystemNotFound
+	}
+
+	return formEcosysID, nil
+}
+
+type OBSEcosysIDValidator struct{}
 
 func (OBSEcosysIDValidator) Validate(id, clientID int64, le *log.Entry) (int64, error) {
 	return consts.DefaultOBS, nil
@@ -71,18 +82,6 @@ func GetEcosystemIDValidator() types.EcosystemIDValidator {
 
 type BCEcosystemNameGetter struct{}
 
-func (ng BCEcosystemNameGetter) GetEcosystemName(id int64) (string, error) {
-	ecosystem := &model.Ecosystem{}
-	found, err := ecosystem.Get(nil, id)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting ecosystem from db")
-		return "", err
-	}
-
-	if !found {
-		log.WithFields(log.Fields{"type": consts.NotFound, "id": id, "error": api.ErrEcosystemNotFound}).Error("ecosystem not found")
-		return "", err
-	}
 
 	return ecosystem.Name, nil
 }

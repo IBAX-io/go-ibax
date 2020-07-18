@@ -332,6 +332,15 @@ func TestBatchNewMineTotal(t *testing.T) {
 			`Gps`:             {rows[i][16]},
 			`Ver`:             {rows[i][17]},
 			`Version`:         {rows[i][18]},
+			`ValidTime`:       {vt},
+			`StartTime`:       {converter.Int64ToStr(st)},
+			`EndTime`:         {converter.Int64ToStr(et)},
+		}
+		_, _, err := postTxResult(`NewMineInfo`, &form)
+		assert.NoError(t, err)
+
+		form = url.Values{
+			`DevAddr`:       {rows[i][1]},
 			`Status`:        {`1`},
 			`IP`:            {rows[i][14]},
 			`Location`:      {rows[i][15]},
@@ -651,8 +660,6 @@ func TestVotingDecisionAccept(t *testing.T) {
 	}
 	_, _, err := postTxResult(rnd, &form)
 	assert.NoError(t, err)
-}
-
 //The original pool owner-initiate a request to transfer the pool
 func TestSwitchPoolRequest(t *testing.T) {
 	assert.NoError(t, keyLoginex(1, "3"))

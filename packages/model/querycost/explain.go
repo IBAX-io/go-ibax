@@ -39,6 +39,12 @@ func explainQueryCost(transaction *model.DbTransaction, withAnalyze bool, query 
 	dec.UseNumber()
 	if err := dec.Decode(&queryPlan); err != nil {
 		log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("decoding query plan from JSON")
+		return 0, err
+	}
+	if len(queryPlan) == 0 {
+		log.Error("Query plan is empty")
+		return 0, errors.New("Query plan is empty")
+	}
 	firstNode := queryPlan[0]
 	var plan interface{}
 	var ok bool
@@ -56,18 +62,3 @@ func explainQueryCost(transaction *model.DbTransaction, withAnalyze bool, query 
 	totalCost, ok := planMap["Total Cost"]
 	if !ok {
 		return 0, errors.New("PlanMap has no TotalCost")
-	}
-
-	totalCostNum, ok := totalCost.(json.Number)
-	if !ok {
-		log.Error("PlanMap has no TotalCost")
-		return 0, errors.New("Total cost is not a number")
-	}
-
-	totalCostF64, err := totalCostNum.Float64()
-	if err != nil {
-		log.Error("Total cost is not a number")
-		return 0, err
-	}
-	return int64(totalCostF64), nil
-}

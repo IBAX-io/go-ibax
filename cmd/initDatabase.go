@@ -9,10 +9,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/model"
-)
-
 // initDatabaseCmd represents the initDatabase command
 var initDatabaseCmd = &cobra.Command{
 	Use:    "initDatabase",
@@ -23,3 +19,5 @@ var initDatabaseCmd = &cobra.Command{
 			log.WithError(err).Fatal("init db")
 		}
 		log.Info("initDatabase completed")
+	},
+}

@@ -4,21 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package model
-
-import (
-	"fmt"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-)
-
-const (
-	notificationTableSuffix = "_notifications"
-
-	NotificationTypeSingle = 1
-	NotificationTypeRole   = 2
-)
-
-// Notification structure
 type Notification struct {
 	ecosystem           int64
 	ID                  int64  `gorm:"primary_key;not null"`
@@ -91,3 +76,9 @@ func getNotificationCountFilter(users []int64, ecosystemID int64) (filter string
 		usersStrs := []string{}
 		for _, user := range users {
 			usersStrs = append(usersStrs, converter.Int64ToStr(user))
+		}
+		params = append(params, usersStrs)
+	}
+
+	return
+}
