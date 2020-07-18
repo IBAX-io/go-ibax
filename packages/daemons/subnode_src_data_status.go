@@ -1,19 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"context"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -88,6 +73,16 @@ func SubNodeSrcDataStatusAgent(ctx context.Context, d *daemon) error {
 		//fmt.Println("item.AgentMode:", converter.Int64ToStr(item.AgentMode))
 
 		hash := tcpclient.SendSubNodeSrcDataAgent(item.SubNodeAgentIP, item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), converter.Int64ToStr(item.TranMode), item.DataInfo, item.SubNodeSrcPubkey, item.SubNodeAgentPubkey, item.SubNodeAgentIP, item.SubNodeDestPubkey, item.SubNodeDestIP, ItemDataBytes)
+		if string(hash) == "0" {
+			//item.DataSendState = 3 //
+			item.DataSendState = 0 //
+			item.DataSendErr = "Network error"
+		} else if string(hash) == string(item.Hash) {
+			item.DataSendState = 1 //
+		} else {
+			item.DataSendState = 2 //
+			item.DataSendErr = "Hash mismatch"
+		}
 		err = item.Updates()
 		if err != nil {
 			log.WithError(err)

@@ -31,6 +31,13 @@ func unmarshalColumnVDEDestChainInfo(form *VDEDestChainInfoForm) (*model.VDEDest
 	return m, err
 }
 
+func VDEDestChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
+	logger := getLogger(r)
+	form := &VDEDestChainInfoForm{}
+	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
@@ -76,14 +83,6 @@ func VDEDestChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	m.ID = id
 	m.UpdateTime = time.Now().Unix()
-	if err = m.Updates(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
-		return
-	}
-
-	result, err := m.GetOneByID()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
 		return
 	}
 

@@ -1,14 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package rollback
-
-import (
-	"bytes"
-	"strconv"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/pkg/errors"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -44,6 +35,12 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 			if err != nil {
 				return errors.WithMessagef(err, "block_id: %d", block.ID)
 			}
+		}
+		blocks = blocks[:0]
+	}
+	block := &model.Block{}
+	_, err = block.Get(blockID)
+	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block")
 		return err
 	}

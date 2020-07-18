@@ -100,6 +100,22 @@ const (
 	TxTypeParserStopNetwork = "StopNetwork"
 
 	TxTypeParserApiContract    = "ApiContract"
+	TxTypeParserEcosystemMiner = "EcosystemMiner"
+	TxTypeParserSystemMiner    = "SystemMiner"
+)
+
+// TxTypes is the list of the embedded transactions
+var TxTypes = map[int64]string{
+	TxTypeFirstBlock:     TxTypeParserFirstBlock,
+	TxTypeApiContract:    TxTypeParserApiContract,
+	TxTypeSystemServer:   TxTypeSystemServerWork,
+	TxTypeEcosystemMiner: TxTypeParserEcosystemMiner,
+	TxTypeSystemMiner:    TxTypeParserSystemMiner,
+	TxTypeStopNetwork:    TxTypeParserStopNetwork,
+}
+
+// ApiPath is the beginning of the api url
+var ApiPath = `/api/v2/`
 
 // BuildInfo should be defined through -ldflags
 var BuildInfo string
@@ -148,8 +164,6 @@ const (
 	TCPConnTimeout = 5 * time.Second
 
 	// TxRequestExpire is expiration time for request of transaction
-	TxRequestExpire = 1 * time.Minute
-
 	// DefaultTempDirName is default name of temporary directory
 	DefaultTempDirName = "ibax-temp"
 

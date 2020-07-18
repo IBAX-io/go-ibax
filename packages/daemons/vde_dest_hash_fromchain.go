@@ -60,12 +60,19 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 
 	chaininfo := &model.VDEDestChainInfo{}
 	DestChainInfo, err := chaininfo.Get()
-	if err != nil {
-		//log.WithFields(log.Fields{"error": err}).Error("VDE Dest fromchain getting chain info")
-		log.Info("Dest chain info not found")
-		time.Sleep(time.Millisecond * 100)
-		return err
 	}
+	if DestChainInfo == nil {
+		log.Info("Dest chain info not found")
+		//fmt.Println("Dest chain info not found")
+		time.Sleep(time.Millisecond * 100)
+		return nil
+	}
+
+	blockchain_http = DestChainInfo.BlockchainHttp
+	blockchain_ecosystem = DestChainInfo.BlockchainEcosystem
+	//fmt.Println("DestChainInfo:", blockchain_http, blockchain_ecosystem)
+
+	ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("encode error")
 		time.Sleep(time.Millisecond * 2)

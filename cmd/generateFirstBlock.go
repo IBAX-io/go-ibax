@@ -26,6 +26,18 @@ import (
 var stopNetworkBundleFilepath string
 var testBlockchain bool
 var privateBlockchain bool
+
+// generateFirstBlockCmd represents the generateFirstBlock command
+var generateFirstBlockCmd = &cobra.Command{
+	Use:    "generateFirstBlock",
+	Short:  "First generation",
+	PreRun: loadConfigWKey,
+	Run: func(cmd *cobra.Command, args []string) {
+		block, err := genesisBlock()
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block marshalling")
+		}
+		os.WriteFile(conf.Config.FirstBlockPath, block, 0644)
 		log.Info("first block generated")
 	},
 }
@@ -107,4 +119,3 @@ func genesisBlock() ([]byte, error) {
 		Hash:          []byte(`0`),
 		RollbacksHash: []byte(`0`),
 	}, "")
-}

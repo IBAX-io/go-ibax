@@ -31,12 +31,6 @@ func SendVDESrcData(host string, TaskUUID string, DataUUID string, AgentMode str
 		TaskUUID:       TaskUUID,
 		DataUUID:       DataUUID,
 		AgentMode:      AgentMode,
-		DataInfo:       DataInfo,
-		VDESrcPubkey:   VDESrcPubkey,
-		VDEAgentPubkey: VDEAgentPubkey,
-		VDEAgentIp:     VDEAgentIp,
-		VDEDestPubkey:  VDEDestPubkey,
-		VDEDestIp:      VDEDestIp,
 		Data:           dt,
 	}
 
@@ -76,6 +70,20 @@ func SendVDESrcDataAgent(host string, TaskUUID string, DataUUID string, AgentMod
 		DataInfo:       DataInfo,
 		VDESrcPubkey:   VDESrcPubkey,
 		VDEAgentPubkey: VDEAgentPubkey,
+		VDEAgentIp:     VDEAgentIp,
+		VDEDestPubkey:  VDEDestPubkey,
+		VDEDestIp:      VDEDestIp,
+		Data:           dt,
+	}
+
+	if err = req.Write(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending VDESrcDataAgent request")
+		return "0"
+	}
+
+	resp := &network.VDESrcDataResponse{}
+
+	if err = resp.Read(conn); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("receiving VDESrcDataAgent response")
 		return "0"
 	}
