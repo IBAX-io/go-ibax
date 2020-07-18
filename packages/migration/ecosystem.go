@@ -101,16 +101,6 @@ func sqlConvert(in []string) (ret string, err error) {
 	var item string
 	funcs := template.FuncMap{
 		"head":    sqlHead,
-		"footer":  sqlEnd,
-		"headseq": sqlHeadSequence,
-	}
-	sqlTmpl := template.New("sql").Funcs(funcs)
-	for _, sql := range in {
-		var (
-			tmpl *template.Template
-			out  bytes.Buffer
-		)
-
 		if tmpl, err = sqlTmpl.Parse(sql); err != nil {
 			return
 		}
@@ -188,6 +178,21 @@ func GetFirstEcosystemScript(wallet int64) (ret string, err error) {
 
 	scripts := []string{
 		firstEcosystemContractsSQL,
+		firstEcosystemPagesDataSQL,
+		firstEcosystemBlocksDataSQL,
+		firstEcosystemDataSQL,
+		firstSystemParametersDataSQL,
+		firstTablesDataSQL,
+	}
+	ret += strings.Join(scripts, "\r\n")
+	return
+}
+
+// GetFirstTableScript returns script to update _tables for first ecosystem
+func GetFirstTableScript(ecosystem int) (string, error) {
+	return sqlTemplate([]string{
+		tablesDataSQL,
+	}, SqlData{Ecosystem: ecosystem})
 }
 
 // GetCommonEcosystemScript returns script with common tables

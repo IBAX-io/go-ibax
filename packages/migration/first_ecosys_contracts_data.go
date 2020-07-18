@@ -224,6 +224,14 @@ VALUES
         EditLanguage($Id, $lang["name"], $Trans)
     }
 }
+', '1', 'ContractConditions("MainCondition")', '1', '1'),
+	(next_id('1_contracts'), 'EditMenu', 'contract EditMenu {
+    data {
+        Id int
+        Value string "optional"
+        Title string "optional"
+        Conditions string "optional"
+    }
     func onlyConditions() bool {
         return $Conditions && !$Value && !$Title
     }
@@ -290,14 +298,6 @@ VALUES
         var pars map
         if $Value {
             pars["value"] = $Value
-        }
-        if $Menu {
-            pars["menu"] = $Menu
-        }
-        if $Conditions {
-            pars["conditions"] = $Conditions
-        }
-        if $ValidateCount {
             pars["validate_count"] = $ValidateCount
         }
         if $ValidateMode {

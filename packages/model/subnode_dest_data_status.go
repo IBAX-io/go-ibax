@@ -8,15 +8,6 @@ package model
 type SubNodeDestDataStatus struct {
 	ID       int64  `gorm:"primary_key; not null" json:"id"`
 	DataUUID string `gorm:"not null" json:"data_uuid"`
-	TaskUUID string `gorm:"not null" json:"task_uuid"`
-	Hash     string `gorm:"not null" json:"hash"`
-	Data     []byte `gorm:"not null" json:"data"`
-	DataInfo string `gorm:"type:jsonb" json:"data_info"`
-	//SubNodeSrcPubkey     string `gorm:"not null" json:"subnode_src_pubkey"`
-	SubNodeSrcPubkey string `gorm:"column:subnode_src_pubkey;not null" json:"subnode_src_pubkey"`
-	//SubNodeDestPubkey    string `gorm:"not null" json:"subnode_dest_pubkey"`
-	SubNodeDestPubkey string `gorm:"column:subnode_dest_pubkey;not null" json:"subnode_dest_pubkey"`
-	//SubNodeDestIP        string `gorm:"not null" json:"subnode_dest_ip"`
 	SubNodeDestIP string `gorm:"column:subnode_dest_ip;not null" json:"subnode_dest_ip"`
 	//SubNodeAgentPubkey   string `gorm:"not null" json:"subnode_agent_pubkey"`
 	SubNodeAgentPubkey string `gorm:"column:subnode_agent_pubkey;not null" json:"subnode_agent_pubkey"`
@@ -63,6 +54,22 @@ func (m *SubNodeDestDataStatus) GetOneByDataUUID(DataUUID string) (*SubNodeDestD
 	return m, err
 }
 func (m *SubNodeDestDataStatus) GetOneByTaskUUID(TaskUUID string) (*SubNodeDestDataStatus, error) {
+	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+	return m, err
+}
+func (m *SubNodeDestDataStatus) GetAllByTaskUUID(TaskUUID string) ([]SubNodeDestDataStatus, error) {
+	result := make([]SubNodeDestDataStatus, 0)
+	err := DBConn.Table("subnode_dest_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeDestDataStatus) GetAllByDataStatus(AuthState int64, SignState int64, HashState int64) ([]SubNodeDestDataStatus, error) {
+	result := make([]SubNodeDestDataStatus, 0)
+	err := DBConn.Table("subnode_dest_data_status").Where("auth_state = ? AND sign_state = ? AND hash_state = ?", AuthState, SignState, HashState).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeDestDataStatus) GetAllByHashState(HashState int64) ([]SubNodeDestDataStatus, error) {
 	result := make([]SubNodeDestDataStatus, 0)
 	err := DBConn.Table("subnode_dest_data_status").Where("hash_state = ?", HashState).Find(&result).Error
 	return result, err
