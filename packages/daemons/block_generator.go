@@ -127,11 +127,6 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	// Block generation will be started only if we have transactions
-	if len(trs) == 0 {
-		return nil
-	}
-
 	header := &utils.BlockData{
 		BlockID:      prevBlock.BlockID + 1,
 		Time:         st.Unix(),
@@ -187,6 +182,10 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 		return nil, err
 	}
 
+	limits := block.NewLimits(nil)
+
+	type badTxStruct struct {
+		hash  []byte
 		msg   string
 		keyID int64
 	}

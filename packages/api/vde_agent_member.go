@@ -116,19 +116,18 @@ func VDEAgentMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 }
 
 func VDEAgentMemberListHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
 	logger := getLogger(r)
-	srcData := model.VDEAgentMember{}
 
-	result, err := srcData.GetAll()
+	id := converter.StrToInt64(params["id"])
+	srcData := model.VDEAgentMember{}
+	srcData.ID = id
+	result, err := srcData.GetOneByID()
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
+		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
 		errorResponse(w, err)
 		return
 	}
-	jsonResponse(w, result)
-}
-
-func VDEAgentMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, result)
 }

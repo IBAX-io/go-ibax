@@ -118,6 +118,8 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 			time.Sleep(time.Second * 5)
 			continue
 		}
+		fmt.Println("Send chain Contract to run, ContractName:", ContractName)
+
 		item.ChainState = 1
 		item.TxHash = txHash
 		item.BlockId = 0
@@ -168,19 +170,6 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 	}
 	if SrcChainInfo == nil {
 		log.Info("Src chain info not found")
-		//fmt.Println("Src chain info not found")
-		time.Sleep(time.Millisecond * 100)
-		return nil
-	}
-
-	blockchain_http = SrcChainInfo.BlockchainHttp
-	blockchain_ecosystem = SrcChainInfo.BlockchainEcosystem
-	//fmt.Println("SrcChainInfo:", blockchain_http, blockchain_ecosystem)
-
-	// deal with task data
-	for _, item := range SrcTask {
-		//fmt.Println("SrcTask:", item.TaskUUID)
-
 		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")

@@ -5,3 +5,4 @@
 
 package obs
 
+var sectionsDataSQL = `

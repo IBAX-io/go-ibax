@@ -312,6 +312,19 @@ func filesMv(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s := shell.NewShell(conf.GetGFilesHost())
+	resp, err := s.Request("files/mv",
+		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Source,
+		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Dest).
+		Send(context.Background())
+	if err != nil {
+		errorResponse(w, err)
+		return
+
+	}
+	defer resp.Close()
+	if resp.Error != nil {
+		errorResponse(w, resp.Error)
+		return
 	}
 
 	jsonResponse(w, nil)
@@ -374,16 +387,6 @@ func filesLs(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse(w, out)
 }
-
-func ls(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	s := shell.NewShell(conf.GetGFilesHost())
-	list, err := s.List(fmt.Sprintf("/ipfs/%s", params["hash"]))
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-	jsonResponse(w, list)
 }
 
 func getFileData(r *http.Request, prefix, key string) error {

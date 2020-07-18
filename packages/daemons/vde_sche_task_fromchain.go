@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
 	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -52,15 +53,6 @@ type sche_VDEShareTaskResult struct {
 		ContractState        string `json:"contract_state"`
 		UpdateTime           string `json:"update_time"`
 		CreateTime           string `json:"create_time"`
-		Deleted              string `json:"deleted"`
-		DateDeleted          string `json:"date_deleted"`
-	} `json:"list"`
-}
-
-//Getting task information from the chain
-func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
-
-	// not open
 	time.Sleep(time.Millisecond * 1000 * 20)
 	return nil
 
