@@ -23,6 +23,11 @@ type Binary struct {
 	MimeType  string
 }
 
+// SetTablePrefix is setting table prefix
+func (b *Binary) SetTablePrefix(prefix string) {
+	b.ecosystem = converter.StrToInt64(prefix)
+}
+
 // SetTableName sets name of table
 func (b *Binary) SetTableName(tableName string) {
 	ecosystem, _ := converter.ParseName(tableName)
@@ -50,5 +55,3 @@ func (b *Binary) Link() string {
 
 // GetByID is retrieving model from db by id
 func (b *Binary) GetByID(id int64) (bool, error) {
-	return isFound(DBConn.Where("id=?", id).First(b))
-}

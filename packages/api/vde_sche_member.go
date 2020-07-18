@@ -8,16 +8,27 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
 func unmarshalColumnVDEScheMember(form *VDEScheMemberForm) (*model.VDEScheMember, error) {
+	var (
+		err error
+	)
+
+	m := &model.VDEScheMember{
+		VDEPubKey:            form.VDEPubKey,
+		VDEComment:           form.VDEComment,
+		VDEName:              form.VDEName,
+		VDEIp:                form.VDEIp,
+		VDEType:              int64(form.VDEType),
+		ContractRunHttp:      form.ContractRunHttp,
+		ContractRunEcosystem: form.ContractRunEcosystem,
+	}
+
+	return m, err
+}
+
 func VDEScheMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error

@@ -1,7 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
 
 package api
 
@@ -77,6 +73,17 @@ func TestLimit(t *testing.T) {
 			} else {
 				blocks[item["block"]] = 1
 			}
+		}
+		if wantBlocks > 0 && len(blocks) != wantBlocks {
+			return fmt.Errorf(`wrong number of blocks %d != %d`, len(blocks), wantBlocks)
+		}
+		return nil
+	}
+	sendList()
+	assert.NoError(t, checkList(10, 1))
+
+	var syspar ecosystemParamsResult
+	assert.NoError(t, sendGet(`systemparams?names=max_tx_block,max_tx_block_per_user`, nil, &syspar))
 
 	var maxusers, maxtx string
 	if syspar.List[0].Name == "max_tx_block" {

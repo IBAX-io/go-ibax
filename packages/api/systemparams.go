@@ -29,12 +29,11 @@ func getSystemParamsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := &ecosystemParamsResult{
+		List: make([]paramResult, 0),
 	}
 
-	if len(result.List) == 0 {
-		errorResponse(w, errParamNotFound.Errorf(form.Names), http.StatusBadRequest)
-		return
-	}
-
-	jsonResponse(w, result)
-}
+	acceptNames := form.AcceptNames()
+	for _, item := range list {
+		if len(acceptNames) > 0 && !acceptNames[item.Name] {
+			continue
+		}

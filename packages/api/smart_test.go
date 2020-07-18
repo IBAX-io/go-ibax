@@ -329,8 +329,6 @@ func TestNewTableOnly(t *testing.T) {
 
 	var ret tableResult
 	require.NoError(t, sendGet(`table/`+name, nil, &ret))
-	fmt.Printf("%+v\n", ret)
-}
 
 func TestUpperTable(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
@@ -795,6 +793,14 @@ func TestBytesToString(t *testing.T) {
 			action {
 				$result = BytesToString($Data)
 			}
+		}`},
+		"Conditions":    {"true"},
+		"ApplicationId": {"1"},
+	}))
+
+	content := crypto.RandSeq(100)
+	_, res, err := postTxResult(contract, &contractParams{
+		"Data": []byte(content),
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, content, res)

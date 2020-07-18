@@ -130,25 +130,20 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 	}
 	//fmt.Println("Login OK!")
 
+	_, NodePublicKey, err := utils.VDEGetNodeKeys()
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("GetNodeKeys")
+		return err
+	}
+	nodePrivateKey, err := utils.GetNodePrivateKey()
+	if err != nil || len(nodePrivateKey) < 1 {
+		if err == nil {
+			log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
 		}
 		return err
 	}
 	create_time := converter.Int64ToStr(SrcTaskTime.ScheUpdateTime)
 	//where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "contract_mode": "1"}` //1
-	//where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": "1"}`
-	//where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": {"$in": [1,3]}}`
-	where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": {"$in": [2,4]}}`
-	//fmt.Println("where_str:",where_str)
-	form := url.Values{
-		`where`: {where_str},
-	}
-	//var lret interface{}
-	t_struct := src_VDEShareTaskResult{}
-	url := `listWhere` + `/vde_share_task`
-	//err = api.SendPost(url, &form, &t_struct)
-	err = chain_api.SendPost(chain_apiAddress, gAuth_chain, url, &form, &t_struct)
-	if err != nil {
-		fmt.Println("error", err)
 		return err
 	}
 	if len(t_struct.List) == 0 {

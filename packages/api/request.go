@@ -45,23 +45,15 @@ func SendRawRequest(rtype, url, auth string, form *url.Values) ([]byte, error) {
 	}
 	req, err := http.NewRequest(rtype, url, ioform)
 	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	if len(auth) > 0 {
+		req.Header.Set("Authorization", jwtPrefix+auth)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(`%d %s`, resp.StatusCode, strings.TrimSpace(string(data)))
-	}
-
-	return data, nil
 }
 
 func SendRequest(rtype, url, auth string, form *url.Values, v interface{}) error {

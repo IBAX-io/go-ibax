@@ -197,13 +197,6 @@ func LoadConfigToVar(path string, v *GlobalConfig) error {
 func GetConfigFromPath(path string) (*GlobalConfig, error) {
 	log.WithFields(log.Fields{"path": path}).Info("Loading obs config")
 
-	_, err := os.Stat(path)
-	if os.IsNotExist(err) {
-		return nil, errors.Errorf("Unable to load config file %s", path)
-	}
-
-	viper.SetConfigFile(path)
-	err = viper.ReadInConfig()
 	if err != nil {
 		return nil, errors.Wrapf(err, "reading config")
 	}
@@ -271,6 +264,19 @@ func FillRuntimePaths() error {
 
 	if Config.LockFilePath == "" {
 		Config.LockFilePath = filepath.Join(Config.DataDir, consts.DefaultLockFilename)
+	}
+
+	return nil
+}
+
+// FillRuntimeKey fills parameters of keys from runtime parameters
+func FillRuntimeKey() error {
+	keyIDFileName := filepath.Join(Config.KeysDir, consts.KeyIDFilename)
+	keyIDBytes, err := os.ReadFile(keyIDFileName)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "path": keyIDFileName}).Error("reading KeyID file")
+		return err
+	}
 
 	Config.KeyID, err = strconv.ParseInt(string(keyIDBytes), 10, 64)
 	if err != nil {
