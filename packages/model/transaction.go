@@ -11,6 +11,16 @@ import (
 	"gorm.io/gorm/clause"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 )
+
+// This constants contains values of transactions priority
+const (
+	TransactionRateOnBlock transactionRate = iota + 1
+	TransactionRateApiContract
+	TransactionRateSystemServer
+	TransactionRateEcosystemMiner
+	TransactionRateSystemMiner
+	TransactionRateStopNetwork
+)
 const expediteOrder = `high_rate,expedite DESC,time ASC`
 
 type transactionRate int8
@@ -101,9 +111,6 @@ func MarkTransactionSent(transactionHash []byte) (int64, error) {
 // MarkTransactionSentBatches is marking transaction as sent
 func MarkTransactionSentBatches(hashArr [][]byte) error {
 	return DBConn.Exec("UPDATE transactions SET sent  = 1 WHERE hash in(?)", hashArr).Error
-}
-
-// MarkTransactionUsed is marking transaction as used
 func MarkTransactionUsed(transaction *DbTransaction, transactionHash []byte) (int64, error) {
 	query := GetDB(transaction).Exec("UPDATE transactions SET used = 1 WHERE hash = ?", transactionHash)
 	return query.RowsAffected, query.Error

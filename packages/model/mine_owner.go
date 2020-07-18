@@ -27,12 +27,22 @@ func (m MineOwner) TableName() string {
 }
 
 // Get is retrieving model from database
-func (m *MineOwner) GetPoolManage(keyid int64) (bool, error) {
+func (m *MineOwner) Get(devid int64) (bool, error) {
+	return isFound(DBConn.Where("devid = ? and type = ? and deleted = ? ", devid, 2, 0).First(m))
+}
 
-	var k Key
-	d := k.SetTablePrefix(1)
-	f1, err1 := d.Get(nil, keyid)
-	if err1 != nil {
+// Get is retrieving model from database
+func (m *MineOwner) GetByTransaction(transaction *DbTransaction, devid int64) (bool, error) {
+	return isFound(GetDB(transaction).Where("devid = ? and type = ? and deleted = ? ", devid, 2, 0).First(m))
+}
+
+// Get is retrieving model from database
+func (m *MineOwner) GetPool(keyid int64) (bool, error) {
+	return isFound(DBConn.Where("keyid = ? and type = ? ", keyid, 2).Order("id DESC").First(m))
+}
+
+// Get is retrieving model from database
+func (m *MineOwner) GetPoolManage(keyid int64) (bool, error) {
 		return false, err1
 	}
 
