@@ -112,17 +112,6 @@ func parseEcosystem(in string) (string, string) {
 func pageValue(r *http.Request) (*model.Page, string, error) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
-	client := getClient(r)
-
-	var ecosystem string
-	page := &model.Page{}
-	name := params["name"]
-	if strings.HasPrefix(name, `@`) {
-		ecosystem, name = parseEcosystem(name)
-		if len(name) == 0 {
-			logger.WithFields(log.Fields{
-				"type":  consts.NotFound,
-				"value": params["name"],
 			}).Debug("page not found")
 			return nil, ``, errNotFound
 		}
@@ -178,6 +167,13 @@ func getPage(r *http.Request) (result *contentResult, err error) {
 		}
 		result = &contentResult{
 			Tree:       ret,
+			Menu:       page.Menu,
+			MenuTree:   retmenu,
+			NodesCount: page.ValidateCount,
+		}
+		success <- true
+	}()
+	go func() {
 		defer wg.Done()
 		if conf.Config.MaxPageGenerationTime == 0 {
 			return

@@ -41,16 +41,6 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 	if err != nil {
 		time.Sleep(time.Millisecond * 200)
 		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data chain")
-		return err
-	}
-	if len(SrcTaskDataChain) == 0 {
-		//log.Info("Src task data chain not found")
-		time.Sleep(time.Millisecond * 2)
-		return nil
-	}
-
-	// deal with task data
-	for _, item := range SrcTaskDataChain {
 		//fmt.Println("TaskUUID:", item.TaskUUID)
 		blockchain_table = item.BlockchainTable
 		blockchain_http = item.BlockchainHttp
@@ -221,6 +211,19 @@ func SubNodeSrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		blockId, err := chain_api.VDEWaitTx(chain_apiAddress, gAuth_chain, string(item.TxHash))
 		if blockId > 0 {
 			item.BlockId = blockId
+			item.ChainId = converter.StrToInt64(err.Error())
+			item.ChainState = 2
+			item.ChainErr = ""
+
+		} else if blockId == 0 {
+			//item.ChainState = 3
+			item.ChainState = 1 //
+			item.ChainErr = err.Error()
+		} else {
+			//fmt.Println("VDEWaitTx! err: ", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
 		err = item.Updates()
 		if err != nil {
 			fmt.Println("Update SubNodeSrcDataChainStatus table err: ", err)

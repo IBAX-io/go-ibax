@@ -1,3 +1,16 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 
@@ -164,11 +177,6 @@ type DataList struct {
 }
 type VDEDestDataStatusList struct {
 	Count int64      `json:"count"`
-	List  []DataList `json:"list"`
-}
-
-//type VDEDestDataStatusList struct {
-//	Count string `json:"count"`
 //	List []struct {
 //		ID string `json:"id"`
 //		DataUUID         string `json:"data_uuid"`
