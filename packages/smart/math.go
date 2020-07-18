@@ -8,13 +8,6 @@ import (
 	"math"
 	"strconv"
 )
-
-func parseFloat(x interface{}) (float64, error) {
-	var (
-		fx  float64
-		err error
-	)
-	switch v := x.(type) {
 	case float64:
 		fx = v
 	case int64:
@@ -89,6 +82,12 @@ func Pow(x, y interface{}) (float64, error) {
 func Round(x interface{}) (int64, error) {
 	fx, err := parseFloat(x)
 	if err != nil {
+		return 0, err
+	}
+	if fx = math.Round(fx); isValidFloat(fx) {
+		return int64(fx), nil
+	}
+	return 0, errFloatResult
 }
 
 // Sqrt returns the square root of x

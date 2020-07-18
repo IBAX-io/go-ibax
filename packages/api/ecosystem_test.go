@@ -2,6 +2,12 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"fmt"
+	"net/url"
 	"testing"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto"
@@ -207,17 +213,6 @@ func TestAppParams(t *testing.T) {
 	form = url.Values{"Value": {`contract ` + rnd + `Par { data {} conditions {} action
 	{ var row map
 		row=JSONDecode(AppParam(1, "` + rnd + `2", 1))
-	    $result = row["par1"] }
-	}`}, "Conditions": {"true"}, `ApplicationId`: {`1`}}
-	assert.NoError(t, postTx(`NewContract`, &form))
-
-	_, msg, err := postTxResult(rnd+`Par`, &form)
-	assert.NoError(t, err)
-	assert.Equal(t, "value 1", msg)
-
-	forTest := tplList{{`AppParam(` + rnd + `1, 1, Source: myname)`,
-		`[{"tag":"data","attr":{"columns":["id","name"],"data":[["1","simple string"],["2","index"]],"source":"myname","types":["text","text"]}}]`},
-		{`SetVar(myapp, 1)AppParam(` + rnd + `2, App: #myapp#)`,
 			`[{"tag":"text","text":"{"par1":"value 1", "par2":"value 2"}"}]`}}
 	for _, item := range forTest {
 		var ret contentResult
