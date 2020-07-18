@@ -36,6 +36,16 @@ func CheckClockDrift() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	//fmt.Println("drift:"+ strconv.FormatInt(drift.Milliseconds(),10))
+	if drift < -driftThreshold || drift > driftThreshold {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+// sntpDrift does a naive time resolution against an NTP server and returns the
+// measured drift. This method uses the simple version of NTP. It's not precise
 // but should be fine for these purposes.
 //
 // Note, it executes two extra measurements compared to the number of requested
@@ -75,23 +85,5 @@ func sntpDrift(measurements int) (time.Duration, error) {
 		}
 		elapsed := time.Since(sent)
 
-		// Reconstruct the time from the reply data
-		sec := uint64(reply[43]) | uint64(reply[42])<<8 | uint64(reply[41])<<16 | uint64(reply[40])<<24
-		frac := uint64(reply[47]) | uint64(reply[46])<<8 | uint64(reply[45])<<16 | uint64(reply[44])<<24
-
-		nanosec := sec*1e9 + (frac*1e9)>>32
-
-		t := time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(nanosec)).Local()
-
-		// Calculate the drift based on an assumed answer time of RRT/2
-		drifts = append(drifts, sent.Sub(t)+elapsed/2)
-	}
-	// Calculate average drif (drop two extremities to avoid outliers)
-	sort.Sort(durationSlice(drifts))
-
-	drift := time.Duration(0)
-	for i := 1; i < len(drifts)-1; i++ {
-		drift += drifts[i]
-	}
 	return drift / time.Duration(measurements), nil
 }

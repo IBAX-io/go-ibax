@@ -11,15 +11,6 @@ type Confirmation struct {
 	Good    int32 `gorm:"not null"`
 	Bad     int32 `gorm:"not null"`
 	Time    int64 `gorm:"not null"`
-}
-
-// GetGoodBlock returns last good block
-func (c *Confirmation) GetGoodBlock(goodCount int) (bool, error) {
-	return isFound(DBConn.Where("good >= ?", goodCount).Last(&c))
-}
-
-// GetConfirmation returns if block with blockID exists
-func (c *Confirmation) GetConfirmation(blockID int64) (bool, error) {
 	return isFound(DBConn.Where("block_id= ?", blockID).First(&c))
 }
 
@@ -60,3 +51,11 @@ func (c *Confirmation) CheckAllowGenBlock() (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if f {
+		if prevBlock.BlockID-c.BlockID < 1 {
+			return true, nil
+		}
+	}
+
+	return false, err
+}

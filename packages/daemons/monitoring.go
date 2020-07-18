@@ -20,6 +20,14 @@ import (
 
 // Monitoring starts monitoring
 func Monitoring(w http.ResponseWriter, r *http.Request) {
+	var buf bytes.Buffer
+
+	infoBlock := &model.InfoBlock{}
+	_, err := infoBlock.Get()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")
+		logError(w, fmt.Errorf("can't get info block: %s", err))
+		return
 	}
 	addKey(&buf, "info_block_id", infoBlock.BlockID)
 	addKey(&buf, "info_block_hash", converter.BinToHex(infoBlock.Hash))
@@ -27,15 +35,6 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 	addKey(&buf, "info_block_key_id", infoBlock.KeyID)
 	addKey(&buf, "info_block_ecosystem_id", infoBlock.EcosystemID)
 	addKey(&buf, "info_block_node_position", infoBlock.NodePosition)
-	addKey(&buf, "honor_nodes_count", syspar.GetNumberOfNodes())
-
-	block := &model.Block{}
-	_, err = block.GetMaxBlock()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting max block")
-		logError(w, fmt.Errorf("can't get max block: %s", err))
-		return
-	}
 	addKey(&buf, "last_block_id", block.ID)
 	addKey(&buf, "last_block_hash", converter.BinToHex(block.Hash))
 	addKey(&buf, "last_block_time", block.Time)

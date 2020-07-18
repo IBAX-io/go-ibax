@@ -50,9 +50,6 @@ var (
 	// ErrLimitStop returns when the generation of the block should be stopped
 	ErrLimitStop = errors.New(`stop generating block`)
 	// ErrLimitTime returns when the time limit exceeded
-	ErrLimitTime = errors.New(`Time limit exceeded`)
-)
-		limits.Mode = letGenBlock
 	} else {
 		limits.Mode = letParsing
 	}

@@ -65,3 +65,8 @@ func TestEvalIf(t *testing.T) {
 				t.Error(`error of ifeval ` + item.Input + ` ` + err.Error())
 			}
 		} else {
+			if fmt.Sprint(out) != item.Output {
+				t.Error(`error of ifeval ` + item.Input + ` Output:` + fmt.Sprint(out))
+			}
+		}
+	}

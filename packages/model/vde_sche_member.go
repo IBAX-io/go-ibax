@@ -7,6 +7,18 @@ package model
 type VDEScheMember struct {
 	ID                   int64  `gorm:"primary_key; not null" json:"id"`
 	VDEPubKey            string `gorm:"not null" json:"vde_pub_key"`
+	VDEComment           string `gorm:"not null" json:"vde_comment"`
+	VDEName              string `gorm:"not null" json:"vde_name"`
+	VDEIp                string `gorm:"not null" json:"vde_ip"`
+	VDEType              int64  `gorm:"not null" json:"vde_type"`
+func (VDEScheMember) TableName() string {
+	return "vde_sche_member"
+}
+
+func (m *VDEScheMember) Create() error {
+	return DBConn.Create(&m).Error
+}
+
 func (m *VDEScheMember) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
 }

@@ -64,6 +64,13 @@ func ExecSubSchema() error {
 	}
 	return nil
 }
+
+// ExecOBSSchema is executing schema for off blockchainService
+func ExecOBSSchema(id int, wallet int64) error {
+
+	if conf.Config.IsSupportingOBS() {
+		if err := migration.InitMigrate(&MigrationHistory{}); err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on executing obs script")
 			return err
 		}
 
@@ -120,7 +127,3 @@ func UpdateSchema() error {
 		b := &Block{}
 		if found, err := b.GetMaxBlock(); !found {
 			return err
-		}
-	}
-	return migration.UpdateMigrate(&MigrationHistory{})
-}

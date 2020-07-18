@@ -197,6 +197,19 @@ func VDEScheTaskChainStatus(ctx context.Context, d *daemon) error {
 				myContractDestGetHash = item.ContractDestGetHash
 			}
 			//Generate data send request
+			ScheTaskChainStatusDest := model.VDEScheTaskChainStatus{
+				TaskUUID:        item.TaskUUID,
+				TaskName:        item.TaskName,
+				TaskSender:      item.TaskSender,
+				TaskReceiver:    vde_dest_pubkey_item,
+				Comment:         item.Comment,
+				Parms:           item.Parms,
+				TaskType:        item.TaskType,
+				TaskState:       item.TaskState,
+				ContractSrcName: item.ContractSrcName,
+				//ContractSrcGet:       item.ContractSrcGet,
+				//ContractSrcGetHash:   item.ContractSrcGetHash,
+				ContractSrcGet:     myContractSrcGet,
 				ContractSrcGetHash: myContractSrcGetHash,
 				ContractDestName:   item.ContractDestName,
 				//ContractDestGet:      item.ContractDestGet,
@@ -232,17 +245,6 @@ func VDEScheTaskChainStatus(ctx context.Context, d *daemon) error {
 		}
 	} //for
 	time.Sleep(time.Millisecond * 100)
-	return nil
-}
-
-//Search a chain request
-func VDEScheTaskChainStatusState(ctx context.Context, d *daemon) error {
-	var (
-		err             error
-		TaskParms       map[string]interface{}
-		vde_src_pubkey  string
-		vde_dest_pubkey string
-		ok              bool
 	)
 
 	m := &model.VDEScheTask{}

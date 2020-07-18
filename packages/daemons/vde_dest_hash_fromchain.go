@@ -24,6 +24,18 @@ import (
 )
 
 type dest_VDEDestDataHashResult struct {
+	Count string `json:"count"`
+	List  []struct {
+		ID         string `json:"id"`
+		TaskUUID   string `json:"task_uuid"`
+		DataUUID   string `json:"data_uuid"`
+		Hash       string `json:"hash"`
+		UpdateTime string `json:"update_time"`
+		CreateTime string `json:"create_time"`
+	} `json:"list"`
+}
+
+//Getting task data hash from the chain
 func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 	var (
 		blockchain_http      string
@@ -54,18 +66,6 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 		time.Sleep(time.Millisecond * 100)
 		return err
 	}
-	if DestChainInfo == nil {
-		log.Info("Dest chain info not found")
-		//fmt.Println("Dest chain info not found")
-		time.Sleep(time.Millisecond * 100)
-		return nil
-	}
-
-	blockchain_http = DestChainInfo.BlockchainHttp
-	blockchain_ecosystem = DestChainInfo.BlockchainEcosystem
-	//fmt.Println("DestChainInfo:", blockchain_http, blockchain_ecosystem)
-
-	ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("encode error")
 		time.Sleep(time.Millisecond * 2)

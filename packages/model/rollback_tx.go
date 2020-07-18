@@ -10,6 +10,12 @@ import "gorm.io/gorm"
 // RollbackTx is model
 type RollbackTx struct {
 	ID        int64  `gorm:"primary_key;not null"`
+	BlockID   int64  `gorm:"not null" json:"block_id"`
+	TxHash    []byte `gorm:"not null" json:"tx_hash"`
+	NameTable string `gorm:"not null;size:255;column:table_name" json:"table_name"`
+	TableID   string `gorm:"not null;size:255" json:"table_id"`
+	Data      string `gorm:"not null;type:jsonb" json:"data"`
+}
 
 // TableName returns name of table
 func (*RollbackTx) TableName() string {
@@ -45,17 +51,6 @@ func (rt *RollbackTx) DeleteByHash(dbTransaction *DbTransaction) error {
 
 // DeleteByHashAndTableName is deleting tx by hash and table name
 func (rt *RollbackTx) DeleteByHashAndTableName(transaction *DbTransaction) error {
-	return GetDB(transaction).Where("tx_hash = ? and table_name = ?", rt.TxHash, rt.NameTable).Delete(rt).Error
-}
-
-func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
-	if len(rts) == 0 {
-		return nil
-	}
-	rollbackSys := &RollbackTx{}
-	var err error
-	if rollbackSys.ID, err = GetNextID(&DbTransaction{conn: dbTx}, rollbackSys.TableName()); err != nil {
-		return err
 	}
 	for i := 1; i < len(rts)+1; i++ {
 		rts[i-1].ID = rollbackSys.ID + int64(i) - 1

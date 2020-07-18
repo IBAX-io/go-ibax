@@ -295,18 +295,6 @@ func GetColumnDataTypeCharMaxLength(tableName, columnName string) (map[string]st
 // GetAllColumnTypes returns column types for table
 func GetAllColumnTypes(tblname string) ([]map[string]string, error) {
 	return GetAll(`SELECT column_name, data_type
-		FROM information_schema.columns
-		WHERE table_name = ?
-		ORDER BY ordinal_position ASC`, -1, tblname)
-}
-
-func DataTypeToColumnType(dataType string) string {
-	var itype string
-	switch {
-	case dataType == "character varying":
-		itype = `varchar`
-	case dataType == `bigint`:
-		itype = "number"
 	case dataType == `jsonb`:
 		itype = "json"
 	case strings.HasPrefix(dataType, `timestamp`):
@@ -479,6 +467,11 @@ func InitDB(cfg conf.DBConfig) error {
 	if conf.Config.Redis.Enable {
 		err = RedisInit(conf.Config.Redis.Host, conf.Config.Redis.Port, conf.Config.Redis.Password, conf.Config.Redis.DbName)
 		if err != nil {
+			log.WithFields(log.Fields{
+				"host": conf.Config.Redis.Host, "port": conf.Config.Redis.Port, "db_password": conf.Config.Redis.Password, "db_name": conf.Config.Redis.DbName, "type": consts.DBError,
+			}).Error("can't init redis")
+			return err
+		}
 
 		var rd RedisParams
 		err := rd.Cleardb()

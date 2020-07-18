@@ -17,13 +17,8 @@ type VDESrcChainInfo struct {
 func (VDESrcChainInfo) TableName() string {
 	return "vde_src_chain_info"
 }
-
-func (m *VDESrcChainInfo) Create() error {
-	return DBConn.Create(&m).Error
-}
-
-func (m *VDESrcChainInfo) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
+func (m *VDESrcChainInfo) Get() (*VDESrcChainInfo, error) {
+	err := DBConn.First(&m).Error
 	return m, err
 }
 

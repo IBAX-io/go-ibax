@@ -34,6 +34,17 @@ func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
 		myContractSrcGetHash  string
 		myContractDestGet     string
 		myContractDestGetHash string
+	)
+
+	m := &model.VDESrcTask{}
+	SrcTask, err := m.GetAllByContractStateAndChainState(1, 0, 0) //0
+	if err != nil {
+		time.Sleep(time.Millisecond * 2)
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
+		return err
+	}
+	if len(SrcTask) == 0 {
+		//log.Info("Sche task not found")
 		time.Sleep(time.Millisecond * 2)
 		return nil
 	}
@@ -310,17 +321,4 @@ func VDESrcTaskChainStatusState(ctx context.Context, d *daemon) error {
 				break
 			}
 		} //for
-		if src_uptochain_flag == 1 && dest_uptochain_flag == 1 {
-			item.ChainState = 2
-			item.UpdateTime = time.Now().Unix()
-			err = item.Updates()
-			if err != nil {
-				fmt.Println("Update VDEScheTask table err: ", err)
-				log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
-				time.Sleep(time.Millisecond * 2)
-				continue
-			}
-		}
-	} //for
-	return nil
 }

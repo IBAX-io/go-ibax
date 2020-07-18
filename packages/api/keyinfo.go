@@ -27,14 +27,6 @@ type notifyInfo struct {
 	Count  int64  `json:"count"`
 }
 
-type keyInfoResult struct {
-	Account    string              `json:"account"`
-	Ecosystems []*keyEcosystemInfo `json:"ecosystems"`
-}
-
-type keyEcosystemInfo struct {
-	Ecosystem     string       `json:"ecosystem"`
-	Name          string       `json:"name"`
 	Roles         []roleInfo   `json:"roles,omitempty"`
 	Notifications []notifyInfo `json:"notifications,omitempty"`
 }
@@ -105,6 +97,13 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		keysList = append(keysList, keyRes)
+	}
+
+	// in test mode, registration is open in the first ecosystem
+	if len(keysList) == 0 && syspar.IsTestMode() {
+		account = converter.AddressToString(keyID)
+		notify := make([]notifyInfo, 0)
+		notify = append(notify, notifyInfo{})
 		keysList = append(keysList, &keyEcosystemInfo{
 			Ecosystem:     converter.Int64ToStr(ids[0]),
 			Name:          names[0],
