@@ -32,17 +32,6 @@ func unmarshalColumnSubNodeSrcTask(form *SubNodeSrcTaskForm) (*model.SubNodeSrcT
 	}
 	err = json.Unmarshal([]byte(form.TaskRunParms), &task_run_parms)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("unmarshal TaskRunParms error")
-		return nil, err
-	}
-	//fmt.Println("TaskType,TaskState:", form.TaskType, int64(form.TaskType), form.TaskState, int64(form.TaskState))
-	m := &model.SubNodeSrcTask{
-		TaskUUID:   form.TaskUUID,
-		TaskName:   form.TaskName,
-		TaskSender: form.TaskSender,
-		Comment:    form.Comment,
-		Parms:      converter.MarshalJson(parms),
-		TaskType:   int64(form.TaskType),
 		TaskState:  int64(form.TaskState),
 
 		TaskRunParms: converter.MarshalJson(task_run_parms),
@@ -112,6 +101,12 @@ func SubNodeSrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	m.UpdateTime = time.Now().Unix()
 	if err = m.Updates(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
+		return
+	}
+
+	result, err := m.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
 		return
 	}
 

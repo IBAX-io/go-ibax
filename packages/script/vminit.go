@@ -165,15 +165,6 @@ type OwnerInfo struct {
 	TableID  int64  `json:"tableid"`
 	WalletID int64  `json:"walletid"`
 	TokenID  int64  `json:"tokenid"`
-}
-
-// Block contains all information about compiled block {...} and its children
-type Block struct {
-	Objects  map[string]*ObjInfo
-	Type     int
-	Owner    *OwnerInfo
-	Info     interface{}
-	Parent   *Block
 	Vars     []reflect.Type
 	Code     ByteCodes
 	Children Blocks
@@ -525,6 +516,14 @@ func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (inte
 
 // GetSettings returns the value of the parameter
 func GetSettings(rt *RunTime, cntname, name string) (interface{}, error) {
+	contract, ok := rt.vm.Objects[cntname]
+	if !ok {
+		log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError}).Error("unknown contract")
+		return nil, fmt.Errorf(`unknown contract %s`, cntname)
+	}
+	cblock := contract.Value.(*Block)
+	if cblock.Info.(*ContractInfo).Settings != nil {
+		if val, ok := cblock.Info.(*ContractInfo).Settings[name]; ok {
 			return val, nil
 		}
 	}

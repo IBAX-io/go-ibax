@@ -23,15 +23,6 @@ type Roles struct {
 	List      []int64
 }
 
-func (q *Queue) AddAccounts(ecosystem int64, list ...string) {
-	q.Accounts = append(q.Accounts, &Accounts{
-		Ecosystem: ecosystem,
-		List:      list,
-	})
-}
-
-func (q *Queue) AddRoles(ecosystem int64, list ...int64) {
-	q.Roles = append(q.Roles, &Roles{
 		Ecosystem: ecosystem,
 		List:      list,
 	})

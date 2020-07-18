@@ -25,14 +25,6 @@ func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockDa
 	var signed []byte
 	logger := log.WithFields(log.Fields{"block_id": header.BlockID, "block_hash": header.Hash, "block_time": header.Time, "block_version": header.Version, "block_wallet_id": header.KeyID, "block_state_id": header.EcosystemID})
 
-	for _, tr := range trData {
-		mrklArray = append(mrklArray, converter.BinToHex(crypto.DoubleHash(tr)))
-		blockDataTx = append(blockDataTx, converter.EncodeLengthPlusData(tr)...)
-	}
-
-	if key != "" {
-		if len(mrklArray) == 0 {
-			mrklArray = append(mrklArray, []byte("0"))
 		}
 		mrklRoot, err := utils.MerkleTreeRoot(mrklArray)
 		if err != nil {
@@ -65,6 +57,18 @@ func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockDa
 
 	return buf.Bytes(), nil
 }
+
+func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
+	header, prev, err := utils.ParseBlockHeader(blockBuffer)
+	if err != nil {
+		return nil, err
+	}
+
+	logger := log.WithFields(log.Fields{"block_id": header.BlockID, "block_time": header.Time, "block_wallet_id": header.KeyID,
+		"block_state_id": header.EcosystemID, "block_hash": header.Hash, "block_version": header.Version})
+	transactions := make([]*transaction.Transaction, 0)
+
+	var mrklSlice [][]byte
 
 	// parse transactions
 	for blockBuffer.Len() > 0 {

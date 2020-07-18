@@ -27,6 +27,11 @@ func Type100(r *network.VDESrcDataRequest) (*network.VDESrcDataResponse, error) 
 			log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
 			return nil, errors.New("Incorrect private key length")
 		}
+		return nil, err
+	}
+
+	data, err := ecies.EccDeCrypto(r.Data, nodePrivateKey)
+	if err != nil {
 		fmt.Println("EccDeCrypto err!")
 		log.WithError(err)
 		return nil, err
@@ -63,5 +68,3 @@ func Type100(r *network.VDESrcDataRequest) (*network.VDESrcDataResponse, error) 
 		return nil, err
 	}
 
-	return resp, nil
-}

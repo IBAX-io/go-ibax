@@ -22,6 +22,10 @@ func unmarshalColumnVDEDestMember(form *VDEDestMemberForm) (*model.VDEDestMember
 		err error
 	)
 
+	m := &model.VDEDestMember{
+		VDEPubKey:            form.VDEPubKey,
+		VDEComment:           form.VDEComment,
+		VDEName:              form.VDEName,
 		VDEIp:                form.VDEIp,
 		VDEType:              int64(form.VDEType),
 		ContractRunHttp:      form.ContractRunHttp,
@@ -110,15 +114,6 @@ func VDEDestMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, "ok")
 }
-
-func VDEDestMemberListHandlre(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
-	srcData := model.VDEDestMember{}
-
-	result, err := srcData.GetAll()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
-		errorResponse(w, err)
 		return
 	}
 	jsonResponse(w, result)

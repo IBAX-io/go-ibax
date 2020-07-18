@@ -20,8 +20,6 @@ func QueueParserTx(ctx context.Context, d *daemon) error {
 		defer atomic.StoreUint32(&d.atomic, 0)
 	} else {
 		return nil
-	}
-	DBLock()
 	defer DBUnlock()
 	//
 	//infoBlock := &model.InfoBlock{}
@@ -34,6 +32,12 @@ func QueueParserTx(ctx context.Context, d *daemon) error {
 	//	d.logger.Debug("no blocks for parsing")
 	//	return nil
 	//}
+
+	p := new(transaction.Transaction)
+	err := transaction.ProcessTransactionsQueue(p.DbTransaction)
+	if err != nil {
+		d.logger.WithFields(log.Fields{"error": err}).Error("parsing transactions")
+		return err
 	}
 	//for {
 	//	select {

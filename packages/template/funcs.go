@@ -1404,22 +1404,6 @@ func binaryTag(par parFunc) string {
 	}
 	binary := &model.Binary{}
 	binary.SetTablePrefix(ecosystemID)
-
-	var (
-		ok  bool
-		err error
-	)
-
-	if par.Node.Attr["id"] != nil {
-		ok, err = binary.GetByID(converter.StrToInt64(macro(par.Node.Attr["id"].(string), par.Workspace.Vars)))
-	} else {
-		ok, err = binary.Get(
-			converter.StrToInt64(par.ParamWithMacros("AppID")),
-			par.ParamWithMacros("Account"),
-			par.ParamWithMacros("Name"),
-		)
-	}
-
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting record from db")
 		return err.Error()
@@ -1428,6 +1412,15 @@ func binaryTag(par parFunc) string {
 	if ok {
 		return binary.Link()
 	}
+
+	return ""
+}
+
+func columntypeTag(par parFunc) string {
+	if len((*par.Pars)["Table"]) > 0 && len((*par.Pars)["Column"]) > 0 {
+		tableName := macro((*par.Pars)[`Table`], par.Workspace.Vars)
+		columnName := macro((*par.Pars)[`Column`], par.Workspace.Vars)
+		tblname := smart.GetTableName(par.Workspace.SmartContract, tableName)
 		colType, err := model.GetColumnType(tblname, columnName)
 		if err == nil {
 			return colType

@@ -224,14 +224,6 @@ VALUES
         EditLanguage($Id, $lang["name"], $Trans)
     }
 }
-', '1', 'ContractConditions("MainCondition")', '1', '1'),
-	(next_id('1_contracts'), 'EditMenu', 'contract EditMenu {
-    data {
-        Id int
-        Value string "optional"
-        Title string "optional"
-        Conditions string "optional"
-    }
     func onlyConditions() bool {
         return $Conditions && !$Value && !$Title
     }
@@ -831,6 +823,12 @@ VALUES
 	}
 	conditions {
 		$id = PubToID($NewPubkey)
+		if $id == 0 {
+			error "Wrong pubkey"
+		}
+		if DBFind("keys").Columns("id").WhereId($id).One("id") != nil {
+			error "User already exists"
+		}
 	}
 	action {
 		$pub = HexToPub($NewPubkey)

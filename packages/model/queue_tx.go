@@ -23,7 +23,11 @@ func (qt *QueueTx) TableName() string {
 	return "queue_tx"
 }
 
-// DeleteTx is deleting tx
+}
+
+// Create is creating record of model
+func (qt *QueueTx) Create() error {
+	return DBConn.Create(qt).Error
 }
 
 // GetByHash is retrieving model from database by hash
