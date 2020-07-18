@@ -135,19 +135,6 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 	nbs.m.Lock()
 	for _, fn := range nbs.honorNodes {
 		if bytes.Equal(fn.PublicKey, syspar.GetNodePubKey()) {
-			currentNode = fn
-			break
-		}
-	}
-	nbs.m.Unlock()
-
-	if len(currentNode.PublicKey) == 0 {
-		return errors.New("cant find current node in honor nodes list")
-	}
-
-	vm := smart.GetVM()
-	contract := smart.VMGetContract(vm, "NewBadBlock", 1)
-	info := contract.Block.Info.(*script.ContractInfo)
 
 	sc := tx.SmartContract{
 		Header: tx.Header{
@@ -160,6 +147,17 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 			"ProducerNodeID": crypto.Address(producer.PublicKey),
 			"ConsumerNodeID": crypto.Address(currentNode.PublicKey),
 			"BlockID":        blockId,
+			"Timestamp":      blockTime,
+			"Reason":         reason,
+		},
+	}
+
+	txData, txHash, err := tx.NewInternalTransaction(sc, nodePrivateKey)
+	if err != nil {
+		return err
+	}
+
+	return tx.CreateTransaction(txData, txHash, conf.Config.KeyID, sc.Time)
 }
 
 func (nbs *NodesBanService) FilterHosts(hosts []string) ([]string, []string, error) {

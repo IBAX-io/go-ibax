@@ -33,11 +33,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/theckman/go-flock"
 	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-)
-
-const (
-	firstBlock   = 1
 	minBlockSize = 9
 )
 
@@ -332,6 +327,16 @@ func MerkleTreeRoot(dataArray [][]byte) ([]byte, error) {
 
 	ret := result[int32(len(result)-1)]
 	return []byte(ret[0]), nil
+}
+
+// TypeInt returns the identifier of the embedded transaction
+func TypeInt(txType string) int64 {
+	for k, v := range consts.TxTypes {
+		if v == txType {
+			return int64(k)
+		}
+	}
+	return 0
 }
 
 // GetCurrentDir returns the current directory

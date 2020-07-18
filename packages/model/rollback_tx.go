@@ -17,18 +17,6 @@ type RollbackTx struct {
 	Data      string `gorm:"not null;type:jsonb" json:"data"`
 }
 
-// TableName returns name of table
-func (*RollbackTx) TableName() string {
-	return "rollback_tx"
-}
-
-// GetRollbackTransactions is returns rollback transactions
-func (rt *RollbackTx) GetRollbackTransactions(dbTransaction *DbTransaction, transactionHash []byte) ([]map[string]string, error) {
-	return GetAllTx(dbTransaction, "SELECT * from rollback_tx WHERE tx_hash = ? ORDER BY ID DESC", -1, transactionHash)
-}
-
-// GetBlockRollbackTransactions returns records of rollback by blockID
-func (rt *RollbackTx) GetBlockRollbackTransactions(dbTransaction *DbTransaction, blockID int64) ([]RollbackTx, error) {
 	var rollbackTransactions []RollbackTx
 	err := GetDB(dbTransaction).Where("block_id = ?", blockID).Order("id asc").Find(&rollbackTransactions).Error
 	return rollbackTransactions, err
@@ -51,6 +39,17 @@ func (rt *RollbackTx) DeleteByHash(dbTransaction *DbTransaction) error {
 
 // DeleteByHashAndTableName is deleting tx by hash and table name
 func (rt *RollbackTx) DeleteByHashAndTableName(transaction *DbTransaction) error {
+	return GetDB(transaction).Where("tx_hash = ? and table_name = ?", rt.TxHash, rt.NameTable).Delete(rt).Error
+}
+
+func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
+	if len(rts) == 0 {
+		return nil
+	}
+	rollbackSys := &RollbackTx{}
+	var err error
+	if rollbackSys.ID, err = GetNextID(&DbTransaction{conn: dbTx}, rollbackSys.TableName()); err != nil {
+		return err
 	}
 	for i := 1; i < len(rts)+1; i++ {
 		rts[i-1].ID = rollbackSys.ID + int64(i) - 1

@@ -14,10 +14,6 @@ type dbMock struct {
 }
 
 func (dbm *dbMock) CurrentVersion() (string, error) {
-	return dbm.versions[len(dbm.versions)-1], nil
-}
-
-func (dbm *dbMock) ApplyMigration(version, query string) error {
 	dbm.versions = append(dbm.versions, version)
 	return nil
 }
@@ -61,3 +57,7 @@ func TestMockMigration(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	if v, _ := db.CurrentVersion(); v != "0.0.2" {
+		t.Errorf("current version expected 0.0.2 get %s", v)
+	}
+}
