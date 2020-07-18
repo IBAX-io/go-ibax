@@ -32,16 +32,6 @@ func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrd
 		return nil, err
 	}
 
-	// send the type of data
-	rt := &network.RequestType{Type: network.RequestTypeBlockCollection}
-	if err = rt.Write(conn); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing data type block body to connection")
-		return nil, err
-	}
-
-	req := &network.GetBodiesRequest{
-		BlockID:      uint32(blockID),
-		ReverseOrder: reverseOrder,
 	}
 
 	if err = req.Write(conn); err != nil {
@@ -54,6 +44,18 @@ func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrd
 		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on getting blocks count")
 		return nil, err
 	}
+
+	if blocksCount == 0 {
+		return nil, fmt.Errorf("host: %s does'nt contains blocks", host)
+	}
+
+	blocksChan, errChan := GetBlockBodiesChan(ctx, conn, blocksCount)
+	go func() {
+		for err := range errChan {
+			if err != nil {
+				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on reading block bodies")
+			}
+		}
 	}()
 
 	return blocksChan, nil

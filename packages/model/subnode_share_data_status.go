@@ -82,22 +82,10 @@ func (m *ShareDataStatus) GetChainShareTaskStatus() (bool, error) {
 //	//Data         []byte `gorm:"not null" json:"data"`
 //	Dist         string `gorm:"type:jsonb" json:"dist"`
 //	//TcpSendState int64  `gorm:"not null" json:"tcp_send_state"`
-//	TcpSendStateFlag string  `gorm:"not null" json:"tcp_send_state_flag"`
-//	//Ecosystem    int64  `gorm:"not null" json:"ecosystem"`
-//	//BlockId      int64  `gorm:"not null" json:"block_id"`
-//	//TxHash       []byte `gorm:"not null" json:"tx_hash"`
-//	//ChainID      int64  `gorm:"not null" json:"chain_id"`
-//	//ChainState   int64  `gorm:"not null" json:"chain_state"`    //1:send  2:success  3:error
-//	//ChainErr     string `json:"chain_err"`                      // error text
-//	//Time         int64  `gorm:"not null" json:"time"`
-//}
-//
-//func (SDStatus) TableName() string {
-//	return "subnode_share_data_status"
-//}
-//
-//
 //func (s *SDStatus)GetShareTaskCount() (int64, error) {
+//	var taskCount int64
+//	row := DBConn.Raw("SELECT COUNT(*) task_count FROM subnode_share_data_status").Select("task_count").Row()
+//	err := row.Scan(&taskCount)
 //
 //	return taskCount, err
 //}

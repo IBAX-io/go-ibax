@@ -9,18 +9,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/network"
 
 	log "github.com/sirupsen/logrus"
-)
-
-//func SendVDESrcData(host string, TaskUUID string, DataUUID string, AgentMode string, DataInfo string, dt []byte ) (hash string) {
-func SendVDESrcData(host string, TaskUUID string, DataUUID string, AgentMode string, DataInfo string, VDESrcPubkey string, VDEAgentPubkey string, VDEAgentIp string, VDEDestPubkey string, VDEDestIp string, dt []byte) (hash string) {
-
-	conn, err := newConnection(host)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": host}).Error("on creating tcp connection")
-		return "0"
-	}
-	defer conn.Close()
-
 	rt := &network.RequestType{Type: network.RequestTypeSendVDESrcData}
 	if err = rt.Write(conn); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending request type")
@@ -61,6 +49,7 @@ func SendVDESrcDataAgent(host string, TaskUUID string, DataUUID string, AgentMod
 		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": host}).Error("on creating tcp connection")
 		return "0"
 	}
+	defer conn.Close()
 
 	rt := &network.RequestType{Type: network.RequestTypeSendVDESrcDataAgent}
 	if err = rt.Write(conn); err != nil {
