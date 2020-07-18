@@ -39,6 +39,21 @@ const MIN_CONFIRMED_NODES = 0
 // DOWNLOAD_CHAIN_TRY_COUNT is number of attempt
 const DOWNLOAD_CHAIN_TRY_COUNT = 10
 
+// MAX_TX_FORW How fast could the time of transaction pass
+const MAX_TX_FORW = 600
+
+// MAX_TX_BACK transaction may wander in the net for a day and then get into a block
+const MAX_TX_BACK = 86400
+
+// ERROR_TIME is error time
+const ERROR_TIME = 1
+
+// ROUND_FIX is rounding constant
+const ROUND_FIX = 0.00000000001
+
+// READ_TIMEOUT is timeout for TCP
+const READ_TIMEOUT = 20
+
 // WRITE_TIMEOUT is timeout for TCP
 const WRITE_TIMEOUT = 20
 
@@ -85,22 +100,6 @@ const (
 	TxTypeParserStopNetwork = "StopNetwork"
 
 	TxTypeParserApiContract    = "ApiContract"
-	TxTypeParserEcosystemMiner = "EcosystemMiner"
-	TxTypeParserSystemMiner    = "SystemMiner"
-)
-
-// TxTypes is the list of the embedded transactions
-var TxTypes = map[int64]string{
-	TxTypeFirstBlock:     TxTypeParserFirstBlock,
-	TxTypeApiContract:    TxTypeParserApiContract,
-	TxTypeSystemServer:   TxTypeSystemServerWork,
-	TxTypeEcosystemMiner: TxTypeParserEcosystemMiner,
-	TxTypeSystemMiner:    TxTypeParserSystemMiner,
-	TxTypeStopNetwork:    TxTypeParserStopNetwork,
-}
-
-// ApiPath is the beginning of the api url
-var ApiPath = `/api/v2/`
 
 // BuildInfo should be defined through -ldflags
 var BuildInfo string

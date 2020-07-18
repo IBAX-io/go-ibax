@@ -4,6 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 
 package api
+func TestHistory(t *testing.T) {
+	if err := keyLogin(1); err != nil {
+		t.Error(err)
+		return
+	}
 
 	var ret historyResult
 	err := sendGet("history/pages/1", nil, &ret)

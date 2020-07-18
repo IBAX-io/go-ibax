@@ -45,8 +45,6 @@ func HandleTCPRequest(rw net.Conn) {
 		req := &network.StopNetworkRequest{}
 		if err = req.Read(rw); err == nil {
 			err = Type3(req, rw)
-		}
-
 		if err = req.Read(rw); err == nil {
 			response, err = Type4(req)
 		}

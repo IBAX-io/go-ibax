@@ -1,3 +1,8 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package obsmanager
 
 import (
 	"fmt"
@@ -53,17 +58,5 @@ func (c ChildOBSConfig) generateKeysCommand() *exec.Cmd {
 
 func (c ChildOBSConfig) startCommand() *exec.Cmd {
 	return c.getCommand(startCommand)
-}
-
-func (c ChildOBSConfig) configPath() string {
-	return filepath.Join(c.Directory, c.ConfigFileName)
-}
-
-func (c ChildOBSConfig) getCommand(commandName string) *exec.Cmd {
-	args := []string{
-		commandName,
-		fmt.Sprintf("--config=%s", c.configPath()),
-	}
-
 	return exec.Command(c.Executable, args...)
 }

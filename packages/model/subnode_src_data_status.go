@@ -25,6 +25,17 @@ type SubNodeSrcDataStatus struct {
 	SubNodeAgentIP string `gorm:"column:subnode_agent_ip;not null" json:"subnode_agent_ip"`
 	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
 	DataSendState  int64  `gorm:"not null" json:"data_send_state"`
+	DataSendErr    string `gorm:"not null" json:"data_send_err"`
+	UpdateTime     int64  `gorm:"not null" json:"update_time"`
+	CreateTime     int64  `gorm:"not null" json:"create_time"`
+}
+
+func (SubNodeSrcDataStatus) TableName() string {
+	return "subnode_src_data_status"
+}
+
+func (m *SubNodeSrcDataStatus) Create() error {
+	return DBConn.Create(&m).Error
 }
 
 func (m *SubNodeSrcDataStatus) Updates() error {
@@ -54,14 +65,6 @@ func (m *SubNodeSrcDataStatus) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcDa
 func (m *SubNodeSrcDataStatus) GetAllByDataSendStatus(DataSendStatus int64) ([]SubNodeSrcDataStatus, error) {
 	result := make([]SubNodeSrcDataStatus, 0)
 	err := DBConn.Table("subnode_src_data_status").Where("data_send_state = ?", DataSendStatus).Find(&result).Error
-	return result, err
-}
-
-func (m *SubNodeSrcDataStatus) GetAllByDataSendStatusAndAgentMode(DataSendStatus int64, AgentMode int64) ([]SubNodeSrcDataStatus, error) {
-	result := make([]SubNodeSrcDataStatus, 0)
-	err := DBConn.Table("subnode_src_data_status").Where("data_send_state = ? AND agent_mode = ?", DataSendStatus, AgentMode).Find(&result).Error
-	return result, err
-}
 
 func (m *SubNodeSrcDataStatus) GetOneByDataSendStatus(DataSendStatus int64) (bool, error) {
 	return isFound(DBConn.Where("data_send_state = ?", DataSendStatus).First(m))

@@ -1,8 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *--------------------------------------------------------------------------------------------*/
-
-package migration
 
 var firstDelayedContractsDataSQL = `INSERT INTO "1_delayed_contracts"
 		("id", "contract", "key_id", "block_id", "every_block", "high_rate", "conditions")

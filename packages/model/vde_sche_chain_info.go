@@ -12,6 +12,15 @@ type VDEScheChainInfo struct {
 
 	UpdateTime int64 `gorm:"not null" json:"update_time"`
 	CreateTime int64 `gorm:"not null" json:"create_time"`
+}
+
+func (VDEScheChainInfo) TableName() string {
+	return DBConn.Create(&m).Error
+}
+
+func (m *VDEScheChainInfo) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
 
 func (m *VDEScheChainInfo) Delete() error {
 	return DBConn.Delete(m).Error
