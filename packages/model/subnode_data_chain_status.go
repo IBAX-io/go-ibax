@@ -18,18 +18,6 @@ type SubNodeSrcDataChainStatus struct {
 	BlockchainTable     string `gorm:"not null" json:"blockchain_table"`
 	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
 	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
-
-	TxHash     string `gorm:"not null" json:"tx_hash"`
-	ChainState int64  `gorm:"not null" json:"chain_state"`
-	BlockId    int64  `gorm:"not null" json:"block_id"`
-	ChainId    int64  `gorm:"not null" json:"chain_id"`
-	ChainErr   string `gorm:"not null" json:"chain_err"`
-
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
-func (SubNodeSrcDataChainStatus) TableName() string {
 	return "subnode_src_data_chain_status"
 }
 
@@ -66,5 +54,12 @@ func (m *SubNodeSrcDataChainStatus) GetOneByTaskUUID(TaskUUID string) (*SubNodeS
 	return m, err
 }
 
+func (m *SubNodeSrcDataChainStatus) GetAllByChainState(ChainState int64) ([]SubNodeSrcDataChainStatus, error) {
+	result := make([]SubNodeSrcDataChainStatus, 0)
+	err := DBConn.Table("subnode_src_data_chain_status").Where("chain_state = ?", ChainState).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeSrcDataChainStatus) GetOneByChainState(ChainState int64) (bool, error) {
 	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
 }

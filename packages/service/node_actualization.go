@@ -28,11 +28,6 @@ type NodeActualizer struct {
 func NewNodeActualizer(availableBlockchainGap int64) NodeActualizer {
 	return NodeActualizer{
 		availableBlockchainGap: availableBlockchainGap,
-	}
-}
-
-// Run is starting node monitoring
-func (n *NodeActualizer) Run(ctx context.Context) {
 	go func() {
 		log.Info("Node Actualizer monitoring starting")
 		for {
@@ -51,6 +46,18 @@ func (n *NodeActualizer) Run(ctx context.Context) {
 				log.Info("Node Actualizer is pausing node activity")
 				n.pauseNodeActivity()
 			}
+
+			if actual && IsNodePaused() {
+				log.Info("Node Actualizer is resuming node activity")
+				n.resumeNodeActivity()
+			}
+
+			time.Sleep(time.Second * 5)
+		}
+	}()
+}
+
+func (n *NodeActualizer) checkBlockchainActuality(ctx context.Context) (bool, error) {
 	curBlock := &model.InfoBlock{}
 	_, err := curBlock.Get()
 	if err != nil {
