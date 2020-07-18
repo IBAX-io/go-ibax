@@ -19,18 +19,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/model"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-
-	log "github.com/sirupsen/logrus"
-)
-
-var (
-	ErrNodesUnavailable = errors.New("All nodes unvailabale")
-)
-
-func sendRawTransacitionsToHost(host string, packet []byte) error {
-	con, err := newConnection(host)
-	if err != nil {
 		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": host}).Error("on creating tcp connection")
 		return err
 	}
@@ -226,6 +214,17 @@ func resieveRequiredTransactions(con net.Conn) (response []byte, err error) {
 func parseTxHashesFromResponse(resp []byte) (hashes [][]byte) {
 	hashes = make([][]byte, 0, len(resp)/consts.HashSize)
 	for len(resp) >= consts.HashSize {
+		hashes = append(hashes, converter.BytesShift(&resp, consts.HashSize))
+	}
+
+	return
+}
+
+func sendDisseminatorRequest(con net.Conn, requestType network.ReqTypesFlag, packet []byte) (err error) {
+	/*
+		Packet format:
+		type  2 bytes
+		len   4 bytes
 		data  len bytes
 	*/
 	// type

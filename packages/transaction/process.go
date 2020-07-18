@@ -42,6 +42,21 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 		if len(tx.TxSmart.Expedite) > 0 {
 			expedite, err = decimal.NewFromString(tx.TxSmart.Expedite)
 			if err != nil {
+				return err
+			}
+		}
+		newTx := &model.Transaction{
+			Hash:     hs,
+			Data:     binaryTx,
+			Type:     int8(tx.TxType),
+			KeyID:    tx.TxKeyID,
+			Expedite: expedite,
+			Time:     tx.TxTime,
+			Verified: 1,
+			Used:     0,
+			Sent:     0,
+		}
+		trxs = append(trxs, newTx)
 		hashes = append(hashes, hs)
 	}
 
@@ -58,4 +73,3 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 		}
 	}
 	return nil
-}

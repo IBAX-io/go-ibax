@@ -12,23 +12,6 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "insert": "ContractAccess(\"@1NewDelayedContract\")",
             "update": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
-        }',
-        '{
-            "contract": "ContractAccess(\"@1EditDelayedContract\")",
-            "key_id": "ContractAccess(\"@1EditDelayedContract\")",
-            "block_id": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
-            "every_block": "ContractAccess(\"@1EditDelayedContract\")",
-            "counter": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
-            "high_rate": "ContractAccess(\"@1EditDelayedContract\")",
-            "limit": "ContractAccess(\"@1EditDelayedContract\")",
-            "deleted": "ContractAccess(\"@1EditDelayedContract\")",
-            "conditions": "ContractAccess(\"@1EditDelayedContract\")"
-        }',
-        'ContractConditions("@1AdminCondition")'
-    ),
-    (next_id('1_tables'), 'ecosystems',
-        '{
-            "insert": "ContractAccess(\"@1NewEcosystem\")",
             "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1NewToken\",\"@1TeChange\",\"@1TeBurn\")",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',
@@ -85,6 +68,16 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "ban_time": "ContractAccess(\"@1CheckNodesBan\")",
             "reason": "ContractAccess(\"@1CheckNodesBan\")"
         }',
+        'ContractConditions("@1AdminCondition")'
+    ),
+    (next_id('1_tables'), 'time_zones',
+        '{
+            "insert": "false",
+            "update": "false",
+            "new_column": "false"
+        }',
+        '{
+            "name": "false",
             "offset": "false"
         }',
         'ContractConditions("@1AdminCondition")'

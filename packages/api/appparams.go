@@ -19,6 +19,16 @@ import (
 
 type appParamsResult struct {
 	App  string        `json:"app_id"`
+	List []paramResult `json:"list"`
+}
+
+type appParamsForm struct {
+	ecosystemForm
+	paramsForm
+}
+
+func (f *appParamsForm) Validate(r *http.Request) error {
+	return f.ecosystemForm.Validate(r)
 }
 
 func (m Mode) getAppParamsHandler(w http.ResponseWriter, r *http.Request) {
@@ -46,18 +56,6 @@ func (m Mode) getAppParamsHandler(w http.ResponseWriter, r *http.Request) {
 
 	result := &appParamsResult{
 		App:  params["appID"],
-		List: make([]paramResult, 0),
-	}
-
-	acceptNames := form.AcceptNames()
-	for _, item := range list {
-		if len(acceptNames) > 0 && !acceptNames[item.Name] {
-			continue
-		}
-		result.List = append(result.List, paramResult{
-			ID:         converter.Int64ToStr(item.ID),
-			Name:       item.Name,
-			Value:      item.Value,
 			Conditions: item.Conditions,
 		})
 	}

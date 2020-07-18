@@ -85,6 +85,14 @@ func init() {
 	viper.BindPFlag("DB.Password", configCmd.Flags().Lookup("dbPassword"))
 	viper.BindPFlag("DB.LockTimeout", configCmd.Flags().Lookup("dbLockTimeout"))
 	viper.BindPFlag("DB.IdleInTxTimeout", configCmd.Flags().Lookup("dbIdleInTxTimeout"))
+	viper.BindPFlag("DB.MaxIdleConns", configCmd.Flags().Lookup("dbMaxIdleConns"))
+	viper.BindPFlag("DB.MaxOpenConns", configCmd.Flags().Lookup("dbMaxOpenConns"))
+
+	//Redis
+	configCmd.Flags().BoolVar(&conf.Config.Redis.Enable, "redisenable", false, "enable redis")
+	configCmd.Flags().StringVar(&conf.Config.Redis.Host, "redishost", "localhost", "redis host")
+	configCmd.Flags().StringVar(&conf.Config.Redis.Port, "redisport", "6379", "redis port")
+	configCmd.Flags().IntVar(&conf.Config.Redis.DbName, "redisdb", 0, "redis db")
 	configCmd.Flags().StringVar(&conf.Config.Redis.Password, "redispassword", "123456", "redis password")
 
 	viper.BindPFlag("Redis.Enable", configCmd.Flags().Lookup("redisenable"))
@@ -119,15 +127,6 @@ func init() {
 	viper.BindPFlag("Log.LogFormat", configCmd.Flags().Lookup("logFormat"))
 	viper.BindPFlag("Log.Syslog.Facility", configCmd.Flags().Lookup("syslogFacility"))
 	viper.BindPFlag("Log.Syslog.Tag", configCmd.Flags().Lookup("syslogTag"))
-
-	// TokenMovement
-	configCmd.Flags().StringVar(&conf.Config.TokenMovement.Host, "tmovHost", "", "Token movement host")
-	configCmd.Flags().IntVar(&conf.Config.TokenMovement.Port, "tmovPort", 0, "Token movement port")
-	configCmd.Flags().StringVar(&conf.Config.TokenMovement.Username, "tmovUser", "", "Token movement username")
-	configCmd.Flags().StringVar(&conf.Config.TokenMovement.Password, "tmovPw", "", "Token movement password")
-	configCmd.Flags().StringVar(&conf.Config.TokenMovement.To, "tmovTo", "", "Token movement to field")
-	configCmd.Flags().StringVar(&conf.Config.TokenMovement.From, "tmovFrom", "", "Token movement from field")
-	configCmd.Flags().StringVar(&conf.Config.TokenMovement.Subject, "tmovSubj", "", "Token movement subject")
 	viper.BindPFlag("TokenMovement.Host", configCmd.Flags().Lookup("tmovHost"))
 	viper.BindPFlag("TokenMovement.Port", configCmd.Flags().Lookup("tmovPort"))
 	viper.BindPFlag("TokenMovement.Username", configCmd.Flags().Lookup("tmovUser"))

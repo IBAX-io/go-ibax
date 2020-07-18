@@ -11,23 +11,6 @@ import (
 	"sync/atomic"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	log "github.com/sirupsen/logrus"
-)
-
-/* Take the block from the queue. If this block has the bigger block id than the last block from our chain, then find the fork
- * If fork begins less then variables->rollback_blocks blocks ago, than
- *  - get the whole chain of blocks
- *  - roll back data from our blocks
- *  - insert the frontal data from a new chain
- *  - if there is no error, then roll back our data from the blocks
- *  - and insert new data
- *  - if there are errors, then roll back to the former data
- * */
 
 // QueueParserBlocks parses and applies blocks from the queue
 func QueueParserBlocks(ctx context.Context, d *daemon) error {
@@ -81,3 +64,6 @@ func QueueParserBlocks(ctx context.Context, d *daemon) error {
 	blockID := queueBlock.BlockID
 
 	host := utils.GetHostPort(nodeHost)
+	// update our chain till maxBlockID from the host
+	return UpdateChain(ctx, d, host, blockID)
+}

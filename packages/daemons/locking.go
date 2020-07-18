@@ -36,6 +36,21 @@ func WaitDB(ctx context.Context) error {
 			if model.DBConn != nil && CheckDB() {
 				return nil
 			}
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+// CheckDB check if installation complete or not
+func CheckDB() bool {
+	install := &model.Install{}
+
+	err := install.Get()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting install")
+	}
+
 	if install.Progress == model.ProgressComplete {
 		return true
 	}
@@ -46,10 +61,4 @@ func WaitDB(ctx context.Context) error {
 // DBLock locks daemons
 func DBLock() {
 	mutex.Lock()
-}
-
-// DBUnlock unlocks database
-func DBUnlock() {
-	transaction.CleanCache()
-	mutex.Unlock()
 }

@@ -213,16 +213,6 @@ func TestMoney(t *testing.T) {
 	err := sendPost(`content`, &url.Values{`template`: {`Money(` + string(money) + `)`}}, &ret)
 	if err != nil {
 		t.Error(err)
-		return
-	}
-	if RawToString(ret.Tree) != `[{"tag":"text","text":"invalid money value"}]` {
-		t.Errorf(`wrong value %s`, RawToString(ret.Tree))
-	}
-}
-
-func TestMobile(t *testing.T) {
-	var ret contentResult
-	gMobile = true
 	if err := keyLogin(1); err != nil {
 		t.Error(err)
 		return
@@ -413,6 +403,20 @@ func TestStringToBinary(t *testing.T) {
 	_, account, err := postTxResult(contract, &form)
 	assert.NoError(t, err)
 
+	form = url.Values{
+		"template": {`SetVar(link, Binary(Name: ` + filename + `, AppID: 1, Account: "` + account + `"))#link#`},
+	}
+
+	var ret struct {
+		Tree []struct {
+			Link string `json:"text"`
+		} `json:"tree"`
+	}
+	assert.NoError(t, sendPost(`content`, &form, &ret))
+
+	resp, err := http.Get(apiAddress + consts.ApiPath + ret.Tree[0].Link)
+	if err != nil {
+		t.Error(err)
 		return
 	}
 	defer resp.Body.Close()

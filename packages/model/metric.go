@@ -19,6 +19,16 @@ type Metric struct {
 	Time   int64  `gorm:"not null"`
 	Metric string `gorm:"not null"`
 	Key    string `gorm:"not null"`
+	Value  int64  `gorm:"not null"`
+}
+
+// TableName returns name of table
+func (Metric) TableName() string {
+	return tableNameMetrics
+}
+
+// EcosystemTx represents value of metric
+type EcosystemTx struct {
 	UnixTime  int64
 	Ecosystem string
 	Count     int64
@@ -64,8 +74,6 @@ func GetMetricValues(metric, timeInterval, aggregateFunc, timeBlock string) ([]i
 	defer rows.Close()
 	for rows.Next() {
 		if err := rows.Scan(&key, &value); err != nil {
-			return nil, err
-		}
 
 		result = append(result, types.LoadMap(map[string]interface{}{
 			"key":   key,

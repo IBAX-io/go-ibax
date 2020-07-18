@@ -5,6 +5,13 @@
 package tcpserver
 
 import (
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -27,17 +34,6 @@ func Type201(r *network.SubNodeSrcDataAgentRequest) (*network.SubNodeSrcDataAgen
 	data, err := ecies.EccDeCrypto(r.Data, nodePrivateKey)
 	if err != nil {
 		fmt.Println("EccDeCrypto err!")
-		log.WithError(err)
-		return nil, err
-	}
-
-	//hash, err := crypto.HashHex(r.Data)
-	hash, err := crypto.HashHex(data)
-	if err != nil {
-		log.WithError(err)
-		return nil, err
-	}
-	resp := &network.SubNodeSrcDataAgentResponse{}
 	resp.Hash = hash
 
 	//

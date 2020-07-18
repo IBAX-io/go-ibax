@@ -84,6 +84,16 @@ func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 	}
 }
 
+// Levels returns list of levels
+func (hook *SyslogHook) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
+
+func syslogFacility(facility string) b_syslog.Priority {
+	return syslogFacilityPriority[facility]
+		"auth":     b_syslog.LOG_AUTH,
+		"syslog":   b_syslog.LOG_SYSLOG,
+		"lpr":      b_syslog.LOG_LPR,
 		"news":     b_syslog.LOG_NEWS,
 		"uucp":     b_syslog.LOG_UUCP,
 		"cron":     b_syslog.LOG_CRON,
