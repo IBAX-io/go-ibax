@@ -28,16 +28,11 @@ func GetLevelDB(tx *leveldb.Transaction) levelDBGetterPutterDeleter {
 	return DBlevel
 }
 
-func prefixFunc(prefix string) func([]byte) []byte {
-	return func(hash []byte) []byte {
-		return []byte(prefix + string(hash))
-	}
-}
-
-func prefixStringFunc(prefix string) func(key string) []byte {
-	return func(key string) []byte {
-		return []byte(prefix + key)
-	}
+func Init_leveldb(filename string) error {
+	var err error
+	DBlevel, err = leveldb.OpenFile(filename, nil)
+	if err == nil {
+		GLeveldbIsactive = true
 	}
 
 	//go Deal_MintCount()

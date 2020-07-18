@@ -20,5 +20,11 @@ var startCmd = &cobra.Command{
 	Short:  "Starting node",
 	PreRun: loadConfigWKey,
 	Run: func(cmd *cobra.Command, args []string) {
-	startCmd.Flags().BoolVar(&conf.Config.FuncBench, "funcBench", false, "Disable access checking in some built-in functions for benchmarks")
+		daylight.Start()
+	},
 }
+
+func init() {
+	time.Local = time.UTC
+	startCmd.Flags().BoolVar(&conf.Config.TestRollBack, "testRollBack", false, "Starts special set of daemons")
+	startCmd.Flags().BoolVar(&conf.Config.FuncBench, "funcBench", false, "Disable access checking in some built-in functions for benchmarks")

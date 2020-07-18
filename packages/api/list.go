@@ -377,13 +377,6 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
 		errorResponse(w, err)
 		return
-	}
-
-	result := new(sumResult)
-	if count > 0 {
-		sum, err := model.GetSumColumn(table, form.Column, where)
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
 			errorResponse(w, errTableNotFound.Errorf(table))
 			return
 		}
@@ -413,6 +406,22 @@ func getSubNodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+	q := model.SubNodeGetTableQuery(params["name"], client.EcosystemID)
+
+	if len(form.Columns) > 0 {
+		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
+	}
+
+	if len(form.InWhere) > 0 {
+		inWhere, _, err := template.ParseObject([]rune(form.InWhere))
+		switch v := inWhere.(type) {
+		case string:
+			if len(v) == 0 {
+				where = `true`
+			} else {
+				errorResponse(w, errors.New(`Where has wrong format`))
+				return
+			}
 		case map[string]interface{}:
 			where, err = qb.GetWhere(types.LoadMap(v))
 			if err != nil {

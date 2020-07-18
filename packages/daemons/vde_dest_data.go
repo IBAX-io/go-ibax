@@ -353,6 +353,19 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 		//			log.WithError(err)
 		//		}
 		//		continue
+		//	}
+		//	if vde_dest_pubkey, ok = TaskParms["vde_dest_pubkey"].(string); !ok {
+		//		log.WithFields(log.Fields{"error": err}).Error("vde_dest_pubkey parse error")
+		//		item.DataState = 3 //Indicates an error in parsing task parameters
+		//		err = item.Updates()
+		//		if err != nil {
+		//			log.WithError(err)
+		//		}
+		//		continue
+		//	}
+		//	if vde_dest_ip, ok = TaskParms["vde_dest_ip"].(string); !ok {
+		//		log.WithFields(log.Fields{"error": err}).Error("vde_dest_ip parse error")
+		//		item.DataState = 3 //Indicates an error in parsing task parameters
 		//		err = item.Updates()
 		//		if err != nil {
 		//			log.WithError(err)
@@ -365,17 +378,6 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 		//		err = item.Updates()
 		//		if err != nil {
 		//			log.WithError(err)
-		//		}
-		//		continue
-		//	}
-		//	if vde_agent_ip, ok = TaskParms["vde_agent_ip"].(string); !ok {
-		//		log.WithFields(log.Fields{"error": err}).Error("vde_agent_ip parse error")
-		//		item.DataState = 3 //Indicates an error in parsing task parameters
-		//		err = item.Updates()
-		//		if err != nil {
-		//			log.WithError(err)
-		//		}
-		//		continue
 		//	}
 		//	if agent_mode, ok = TaskParms["agent_mode"].(string); !ok {
 		//		log.WithFields(log.Fields{"error": err}).Error("agent_mode parse error")

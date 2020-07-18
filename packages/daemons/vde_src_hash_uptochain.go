@@ -134,6 +134,17 @@ func VDESrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		time.Sleep(time.Millisecond * 2)
 		return err
 	}
+	if len(SrcTaskDataHash) == 0 {
+		//log.Info("Src task data hash not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
+	//chaininfo := &model.VDESrcChainInfo{}
+	//SrcChainInfo, err := chaininfo.Get()
+	//if err != nil {
+	//	log.WithFields(log.Fields{"error": err}).Error("VDE Src uptochain getting chain info")
+	//	time.Sleep(time.Second * 30)
+	//	return err
 	//}
 	//if SrcChainInfo == nil {
 	//	//log.Info("Src chain info not found")
@@ -161,13 +172,6 @@ func VDESrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		// Login
 		gAuth_chain, _, _, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
-			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-		//fmt.Println("Login OK!")
-
-		blockId, err := chain_api.VDEWaitTx(chain_apiAddress, gAuth_chain, string(item.TxHash))
 		if blockId > 0 {
 			item.BlockId = blockId
 			item.ChainId = converter.StrToInt64(err.Error())

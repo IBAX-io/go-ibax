@@ -58,6 +58,10 @@ type contract struct {
 	Source     template.HTML
 	Conditions template.HTML
 	AppID      string
+}
+
+type meta struct {
+	AppID      string
 	Conditions string
 }
 
@@ -133,12 +137,6 @@ func loadSource(srcPath string) (*contract, error) {
 
 func loadSources(srcPaths []string) ([]*contract, error) {
 	sources := make([]*contract, 0)
-
-	for _, srcPath := range srcPaths {
-		err := filepath.Walk(srcPath, func(path string, info os.FileInfo, err error) error {
-			if filepath.Ext(path) != ext {
-				return nil
-			}
 
 			source, err := loadSource(path)
 			if err != nil {

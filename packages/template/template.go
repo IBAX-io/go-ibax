@@ -272,6 +272,15 @@ func replace(input string, level *[]string, vars *map[string]Var) string {
 	for _, r := range input {
 		if r != syschar {
 			if isName {
+				name = append(name, r)
+				if len(name) > 64 || r <= ' ' {
+					clearname()
+				}
+			} else {
+				result = append(result, r)
+			}
+			continue
+		}
 		if isName {
 			if varValue, ok := (*vars)[string(name)]; ok {
 				value := varValue.Value
@@ -568,12 +577,6 @@ main:
 						if rune(input[next]) == modes[1][0] {
 							isBody = true
 							break
-						}
-						if rune(input[next]) == ' ' || rune(input[next]) == '\t' {
-							next++
-							continue
-						}
-						break
 					}
 					if isBody {
 						mode = 1

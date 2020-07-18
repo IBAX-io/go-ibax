@@ -32,6 +32,16 @@ type WalletHistory struct {
 	Money        string
 }
 
+type walletHistoryForm struct {
+	Limit      int    `schema:"limit"`
+	Page       int    `schema:"page"`
+	SearchType string `schema:"searchType"`
+}
+
+func (f *walletHistoryForm) Validate(r *http.Request) error {
+	if len(f.SearchType) == 0 {
+		f.SearchType = ""
+	}
 	return nil
 }
 func getWalletHistory(w http.ResponseWriter, r *http.Request) {
@@ -68,16 +78,6 @@ func getWalletHistory(w http.ResponseWriter, r *http.Request) {
 						walletHistory.Money = converter.ChainMoney(history.Amount.String())
 						walletHistory.BlockID = history.BlockID
 						walletHistory.SenderID = history.SenderID
-						walletHistory.RecipientID = history.RecipientID
-						walletHistory.TxHash = hex.EncodeToString(history.TxHash)
-						walletHistory.Comment = history.Comment
-						walletHistory.CreatedAt = history.CreatedAt
-						walletHistory.ID = history.ID
-						walletHistory.SenderAdd = smart.IDToAddress(history.SenderID)
-						walletHistory.RecipientAdd = smart.IDToAddress(history.RecipientID)
-						walletHistories = append(walletHistories, walletHistory)
-					}
-					jsonResponse(w, walletHistories)
 				} else {
 					jsonResponse(w, make([]string, 0, 0))
 				}

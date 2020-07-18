@@ -96,6 +96,11 @@ func loadLang(transaction *model.DbTransaction, state int) error {
 			log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "value": ilist["res"], "error": err}).Error("Unmarshalling json")
 		}
 		for key, val := range ires {
+			ires[strings.ToLower(key)] = val
+		}
+		res[ilist[`name`]] = &ires
+	}
+	mutex.Lock()
 	defer mutex.Unlock()
 	if _, ok := lang[state]; !ok {
 		lang[state] = &cacheLang{}
@@ -117,15 +122,6 @@ func LangText(transaction *model.DbTransaction, in string, state int, accept str
 	}
 	if state == 0 {
 		return in, false
-	}
-	if _, ok := lang[state]; !ok {
-		if err := loadLang(transaction, state); err != nil {
-			return err.Error(), false
-		}
-	}
-	mutex.RLock()
-	defer mutex.RUnlock()
-	langs := strings.Split(accept, `,`)
 	if _, ok := (*lang[state]).res[in]; !ok {
 		return in, false
 	}
