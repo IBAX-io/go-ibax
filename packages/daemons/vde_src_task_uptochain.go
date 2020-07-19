@@ -35,19 +35,6 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 	SrcTask, err := m.GetAllByContractStateAndChainState(1, 0, 0) //0
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-	if len(SrcTask) == 0 {
-		//log.Info("Src task not found")
-		time.Sleep(time.Millisecond * 2)
-		return nil
-	}
-
-	chaininfo := &model.VDESrcChainInfo{}
-	SrcChainInfo, err := chaininfo.Get()
-	if err != nil {
-		//log.WithFields(log.Fields{"error": err}).Error("VDE Src uptochain getting chain info")
 		log.Info("Src chain info not found")
 		time.Sleep(time.Millisecond * 100)
 		return err
@@ -107,6 +94,12 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 			"ContractRunParms":     {item.ContractRunParms},
 
 			"ContractMode": {converter.Int64ToStr(item.ContractMode)},
+			`CreateTime`:   {converter.Int64ToStr(time.Now().Unix())},
+		}
+
+		ContractName := `@1VDEShareTaskCreate`
+		_, txHash, _, err := chain_api.VDEPostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
+		if err != nil {
 			fmt.Println("Send VDESrcTask to chain err: ", err)
 			log.WithFields(log.Fields{"error": err}).Error("Send VDESrcTask to chain!")
 			time.Sleep(time.Second * 5)

@@ -61,4 +61,3 @@ func CheckDB() bool {
 // DBLock locks daemons
 func DBLock() {
 	mutex.Lock()
-}
