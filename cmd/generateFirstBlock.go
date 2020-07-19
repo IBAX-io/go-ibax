@@ -79,14 +79,6 @@ func genesisBlock() ([]byte, error) {
 		var err error
 		fp := filepath.Join(conf.Config.KeysDir, stopNetworkBundleFilepath)
 		if stopNetworkCert, err = os.ReadFile(fp); err != nil {
-			log.WithError(err).WithFields(log.Fields{"filepath": fp}).Fatal("Reading cert data")
-		}
-	}
-
-	if len(stopNetworkCert) == 0 {
-		log.Warn("the fullchain of certificates for a network stopping is not specified")
-	}
-
 	var tx []byte
 	var test int64
 	var pb uint64
@@ -119,3 +111,4 @@ func genesisBlock() ([]byte, error) {
 		Hash:          []byte(`0`),
 		RollbacksHash: []byte(`0`),
 	}, "")
+}

@@ -141,21 +141,6 @@ var forTest = tplList{
 	`, `[{"tag":"jsontosource","attr":{"columns":["key","value"],"data":[["params","{\"ggg1\":\"ggg2\"}"],["title","some text"]],"source":"src_params","types":["text","text"]}},{"tag":"table","attr":{"source":"src_params"}}]`},
 	{`SetVar(outer, [{"obj1_key1": "obj1_value1"},{"obj2_key2": "obj2_value2"}])
 	ArrayToSource(outer, #outer#)
-	ForList(outer){
-		JsonToSource(inner, #value#)
-		ForList(inner){
-			Div(){
-				#key#:#value#
-			}
-		}
-	}`, `[{"tag":"arraytosource","attr":{"columns":["key","value"],"data":[["0","{\"obj1_key1\": \"obj1_value1\"}"],["1","{\"obj2_key2\": \"obj2_value2\"}"]],"source":"outer","types":["text","text"]}},{"tag":"forlist","attr":{"source":"outer"},"children":[{"tag":"jsontosource","attr":{"columns":["key","value"],"data":[["obj1_key1","obj1_value1"]],"source":"inner","types":["text","text"]}},{"tag":"forlist","attr":{"source":"inner"},"children":[{"tag":"div","children":[{"tag":"text","text":"obj1_key1:obj1_value1"}]}]},{"tag":"jsontosource","attr":{"columns":["key","value"],"data":[["obj2_key2","obj2_value2"]],"source":"inner","types":["text","text"]}},{"tag":"forlist","attr":{"source":"inner"},"children":[{"tag":"div","children":[{"tag":"text","text":"obj2_key2:obj2_value2"}]}]}]}]`},
-	{`SetVar(ok,"My:string,value")Hint( [col1,col2] , {"test": Test val, ok: #ok#}, 
-	   {"mypar1":"myval1, 2", mypar2: [1, #ok#], "qqq": {name: John, "lastName": "Smith"}} )`,
-		`[{"tag":"hint","attr":{"icon":"[col1,col2]","text":"{\"mypar1\":\"myval1, 2\", mypar2: [1, My:string,value], \"qqq\": {name: John, \"lastName\": \"Smith\"}}","title":"{\"test\": Test val, ok: My:string,value}"}}]`},
-	{`Hint( [col1,col2] , {"test": Test val}, 
-	   {"mypar1":"myval1, 2", mypar2: [1, 20], "qqq": {name: John, "lastName": "Smith"}} )`,
-		`[{"tag":"hint","attr":{"icon":"[col1,col2]","text":"{\"mypar1\":\"myval1, 2\", mypar2: [1, 20], \"qqq\": {name: John, \"lastName\": \"Smith\"}}","title":"{\"test\": Test val}"}}]`},
-	{`SetVar(ok,"My:string,value")Hint( [col1,col2] , {"test": Test val, ok: #ok#}, 
 	   {"mypar1":"myval1, 2", mypar2: [1, #ok#], "qqq": {name: John, "lastName": "Smith"}} )`,
 		`[{"tag":"hint","attr":{"icon":"[col1,col2]","text":"{\"mypar1\":\"myval1, 2\", mypar2: [1, My:string,value], \"qqq\": {name: John, \"lastName\": \"Smith\"}}","title":"{\"test\": Test val, ok: My:string,value}"}}]`},
 	{`Hint(Title: some text, Icon: default, Text: This is hint text)`,
@@ -288,6 +273,16 @@ var forTest = tplList{
 	{`ImageInput(myimg,100,40)`,
 		`[{"tag":"imageinput","attr":{"name":"myimg","ratio":"40","width":"100"}}]`},
 	{`LinkPage(My page,mypage,,"myvar1=Value 1, myvar2=Value2,myvar3=Val(myval)")`,
+		`[{"tag":"linkpage","attr":{"page":"mypage","pageparams":{"myvar1":{"text":"Value 1","type":"text"},"myvar2":{"text":"Value2","type":"text"},"myvar3":{"params":["myval"],"type":"Val"}}},"children":[{"tag":"text","text":"My page"}]}]`},
+	{`Image(/images/myimage.jpg,My photo,myclass).Style(width:100px;)`,
+		`[{"tag":"image","attr":{"alt":"My photo","class":"myclass","src":"/images/myimage.jpg","style":"width:100px;"}}]`},
+	{`Data(mysrc,"id,name",
+		"1",John Silver,2
+		2,"Mark, Smith"
+	)`,
+		`[{"tag":"data","attr":{"columns":["id","name"],"data":[],"error":"record on line 2: wrong number of fields","source":"mysrc","types":["text","text"]}}]`},
+	{`Select(myselect,mysrc,name,id,0,myclass)`,
+		`[{"tag":"select","attr":{"class":"myclass","name":"myselect","namecolumn":"name","source":"mysrc","value":"0","valuecolumn":"id"}}]`},
 	{`Data(mysrc,"id,name"){
 		"1",John Silver
 		2,"Mark, Smith"
