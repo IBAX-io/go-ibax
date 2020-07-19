@@ -48,18 +48,6 @@ func (m *VDEDestDataStatus) GetAll() ([]VDEDestDataStatus, error) {
 	return result, err
 }
 func (m *VDEDestDataStatus) GetOneByID() (*VDEDestDataStatus, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
-func (m *VDEDestDataStatus) GetOneByDataUUID(DataUUID string) (*VDEDestDataStatus, error) {
-	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
-	return m, err
-}
-func (m *VDEDestDataStatus) GetOneByTaskUUID(TaskUUID string) (*VDEDestDataStatus, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
-}
-func (m *VDEDestDataStatus) GetAllByTaskUUID(TaskUUID string) ([]VDEDestDataStatus, error) {
 	result := make([]VDEDestDataStatus, 0)
 	err := DBConn.Table("vde_dest_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
@@ -78,6 +66,15 @@ func (m *VDEDestDataStatus) GetAllByHashState(HashState int64) ([]VDEDestDataSta
 }
 
 func (m *VDEDestDataStatus) GetAllBySignState(SignState int64) ([]VDEDestDataStatus, error) {
+	result := make([]VDEDestDataStatus, 0)
+	err := DBConn.Table("vde_dest_data_status").Where("sign_state = ?", SignState).Find(&result).Error
+	return result, err
+}
+
+func (m *VDEDestDataStatus) GetAllByTaskUUIDAndDataStatus(TaskUUID string, AuthState int64, SignState int64, HashState int64) ([]VDEDestDataStatus, error) {
+	result := make([]VDEDestDataStatus, 0)
+	err := DBConn.Table("vde_dest_data_status").Where("task_uuid = ? AND auth_state = ? AND sign_state = ? AND hash_state = ?", TaskUUID, AuthState, SignState, HashState).Find(&result).Error
+	return result, err
 }
 
 func (m *VDEDestDataStatus) GetAllByTaskUUIDAndDataStatusAndTime(TaskUUID string, AuthState int64, SignState int64, HashState int64, BTime int64, ETime int64) ([]VDEDestDataStatus, error) {

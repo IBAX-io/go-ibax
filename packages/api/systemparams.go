@@ -15,14 +15,13 @@ import (
 )
 
 func getSystemParamsHandler(w http.ResponseWriter, r *http.Request) {
-	form := &paramsForm{}
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
+	result := &ecosystemParamsResult{
+		List: make([]paramResult, 0),
 	}
 
-	logger := getLogger(r)
-
+	acceptNames := form.AcceptNames()
+	for _, item := range list {
+		if len(acceptNames) > 0 && !acceptNames[item.Name] {
 			continue
 		}
 		result.List = append(result.List, paramResult{

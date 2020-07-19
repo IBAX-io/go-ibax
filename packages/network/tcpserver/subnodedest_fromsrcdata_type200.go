@@ -38,6 +38,16 @@ func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse,
 		return nil, err
 	}
 
+	//hash, err := crypto.HashHex(r.Data)
+	hash, err := crypto.HashHex(data)
+	if err != nil {
+		log.WithError(err)
+		return nil, err
+	}
+	resp := &network.SubNodeSrcDataResponse{}
+	resp.Hash = hash
+
+	//
 	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
 	if len(NodePrivateKey) < 1 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
@@ -68,13 +78,6 @@ func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse,
 		SubNodeDestIP:      r.SubNodeDestIp,
 		//Data:         r.Data,
 		//Data:         data,
-		Data:       []byte(encodeDataString),
-		CreateTime: time.Now().Unix(),
-	}
-
-	err = SubNodeDestData.Create()
-	if err != nil {
-		log.WithError(err)
 		return nil, err
 	}
 

@@ -1,19 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"bytes"
-	"fmt"
-	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -44,6 +31,15 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 		logError(w, fmt.Errorf("can't get max block: %s", err))
 		return
 	}
+	addKey(&buf, "last_block_id", block.ID)
+	addKey(&buf, "last_block_hash", converter.BinToHex(block.Hash))
+	addKey(&buf, "last_block_time", block.Time)
+	addKey(&buf, "last_block_wallet", block.KeyID)
+	addKey(&buf, "last_block_state", block)
+	addKey(&buf, "last_block_transactions", block.Tx)
+
+	trCount, err := model.GetTransactionCountAll()
+	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction count all")
 		logError(w, fmt.Errorf("can't get transactions count: %s", err))
 		return

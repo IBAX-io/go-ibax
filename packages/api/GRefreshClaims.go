@@ -18,20 +18,14 @@ type GRefreshClaimsCache struct {
 }
 
 var GClaims = &GRefreshClaimsCache{cache: make(map[string]*GRefreshClaims)}
-
-func (g *GRefreshClaims) ContainsClaims(h string) bool {
-
-	if len(GClaims.cache) == 0 {
-		return false
-	}
-
-	GClaims.mutex.RLock()
-	defer GClaims.mutex.RUnlock()
-	// key exist
-	if v, ok := GClaims.cache[h]; ok {
 		//return true
 		ts := time.Now().Unix()
 		if v.RefreshExpiresAt > ts {
+			*g = *v
+			return true
+		}
+	} else {
+		return false
 	}
 	return false
 }

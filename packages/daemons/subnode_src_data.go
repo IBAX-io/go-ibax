@@ -284,17 +284,6 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 		if tran_mode == "1" { //hash upto chain
 			//Generate data hash upto chain request
 			SrcDataChainStatus := model.SubNodeSrcDataChainStatus{
-				DataUUID:            item.DataUUID,
-				TaskUUID:            item.TaskUUID,
-				Hash:                item.Hash,
-				Data:                item.Data,
-				DataInfo:            item.DataInfo,
-				TranMode:            converter.StrToInt64(tran_mode),
-				SubNodeDestPubkey:   subnode_dest_pubkey,
-				BlockchainTable:     blockchain_table,
-				BlockchainHttp:      blockchain_http,
-				BlockchainEcosystem: blockchain_ecosystem,
-				CreateTime:          time.Now().Unix()}
 			if err = SrcDataChainStatus.Create(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Insert subnode_src_data_chain_status table failed")
 				continue
@@ -326,6 +315,25 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 		}
 
 		////Generate a chain request on the log
+		//if log_mode == "1" || log_mode == "2" { //1,2 Log
+		//
+		//	if log_mode == "1" { //1
+		//		chain_state = 5
+		//	} else {
+		//		chain_state = 0
+		//	}
+		//
+		//	DataSendLog := "TaskUUID:" + item.TaskUUID + " DataUUID:" + item.DataUUID
+		//	LogType := int64(1) //src log
+		//	SrcDataLog := model.VDESrcDataLog{
+		//		DataUUID:            item.DataUUID,
+		//		TaskUUID:            item.TaskUUID,
+		//		Log:                 DataSendLog,
+		//		LogType:             LogType,
+		//		LogSender:           vde_src_pubkey,
+		//		BlockchainHttp:      blockchain_http,
+		//		BlockchainEcosystem: blockchain_ecosystem,
+		//		ChainState:          chain_state,
 		//		CreateTime:          time.Now().Unix()}
 		//
 		//	if err = SrcDataLog.Create(); err != nil {
