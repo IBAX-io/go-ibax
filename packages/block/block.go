@@ -394,6 +394,14 @@ func (b *Block) CheckHash() (bool, error) {
 
 		if err != nil {
 			if err == crypto.ErrIncorrectSign {
+				if !bytes.Equal(b.PrevRollbacksHash, b.PrevHeader.RollbacksHash) {
+					return false, ErrIncorrectRollbackHash
+				}
+			}
+			logger.WithFields(log.Fields{"error": err, "type": consts.CryptoError}).Error("checking block header sign")
+			return false, utils.ErrInfo(fmt.Errorf("err: %v / block.PrevHeader.BlockID: %d /  block.PrevHeader.Hash: %x / ", err, b.PrevHeader.BlockID, b.PrevHeader.Hash))
+		}
+
 		return resultCheckSign, nil
 	}
 
@@ -412,12 +420,6 @@ func InsertBlockWOForks(data []byte, genBlock, firstBlock bool) error {
 	}
 
 	err = block.PlaySafe()
-	if err != nil {
-		return err
-	}
-
-	log.WithFields(log.Fields{"block_id": block.Header.BlockID}).Debug("block was inserted successfully")
-	return nil
 }
 
 var (

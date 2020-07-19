@@ -21,7 +21,3 @@ func WithBan(err error) error {
 		err: err,
 	}
 }
-
-func IsBanError(err error) bool {
-	err = errors.Cause(err)
-	if _, ok := err.(*BanError); ok {

@@ -165,6 +165,14 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "ecosystem": "false"
         }',
         'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
+    ),
+    (next_id('1_tables'), 'roles_participants',
+        '{
+            "insert": "ContractAccess(\"@1RolesAssign\",\"@1VotingDecisionCheck\",\"@1RolesInstall\")",
+            "update": "ContractAccess(\"@1RolesUnassign\")",
+            "new_column": "ContractConditions(\"@1AdminCondition\")"
+        }',
+        '{
             "deleted": "ContractAccess(\"@1RolesUnassign\")",
             "date_deleted": "ContractAccess(\"@1RolesUnassign\")",
             "member": "false",
@@ -254,13 +262,6 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "name": "false",
             "value": "ContractAccess(\"@1EditParameter\",\"@1AddAssignMember\",\"@1DelAssignMember\")",
             "conditions": "ContractAccess(\"@1EditParameter\")",
-            "permissions": "ContractConditions(\"@1AdminCondition\")",
-            "ecosystem": "false"
-        }',
-        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
-    ),
-    (next_id('1_tables'), 'app_params',
-        '{
             "insert": "ContractConditions(\"DeveloperCondition\")",
             "update": "ContractAccess(\"@1EditAppParam\",\"@1VotingUpdateAssign\")",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
