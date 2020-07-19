@@ -44,12 +44,27 @@ func Type2(rw io.ReadWriter) error {
 
 		if tran == nil {
 			log.WithFields(log.Fields{"type": consts.ParameterExceeded, "mx_tx_size": syspar.GetMaxTxSize(), "info": "tran nil", "current_size": len(tran)}).Error("transaction size nil")
+			continue
+		}
+
+		rtx := &transaction.RawTransaction{}
+		if err = rtx.Processing(tran); err != nil {
+			return err
+		}
+		rtxs = append(rtxs, rtx.SetRawTx())
+	}
+
+	err = model.SendTxBatches(rtxs)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 //// Type2 serves requests from disseminator
 //func Type2(rw io.ReadWriter) (*network.DisTrResponse, error) {
 //	r := &network.DisRequest{}
 //	if err := r.Read(rw); err != nil {
-//		return nil, err
 //	}
 //
 //	binaryData := r.Data

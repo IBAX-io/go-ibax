@@ -45,6 +45,14 @@ func HandleTCPRequest(rw net.Conn) {
 		req := &network.StopNetworkRequest{}
 		if err = req.Read(rw); err == nil {
 			err = Type3(req, rw)
+		}
+
+	case network.RequestTypeConfirmation:
+		//if service.IsNodePaused() {
+		//	return
+		//}
+
+		req := &network.ConfirmRequest{}
 		if err = req.Read(rw); err == nil {
 			response, err = Type4(req)
 		}
@@ -142,6 +150,3 @@ func TcpListener(laddr string) error {
 			}
 		}
 	}()
-
-	return nil
-}
