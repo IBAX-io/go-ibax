@@ -25,6 +25,13 @@ import (
 func Disseminator(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
 		defer atomic.StoreUint32(&d.atomic, 0)
+	} else {
+		return nil
+	}
+	DBLock()
+	defer DBUnlock()
+
+	isHonorNode := true
 	myNodePosition, err := syspar.GetThisNodePosition()
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("finding node")
@@ -132,5 +139,3 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 		}
 	}
 
-	return nil
-}

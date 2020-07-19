@@ -141,6 +141,13 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //
 //	if t.TxKeyID == 0 {
 //		errStr := "undefined keyID"
+//		return errors.New(errStr)
+//	}
+//	var found bool
+//	tx := &model.Transaction{}
+//	found, err = tx.Get(hash)
+//	if err != nil {
+//		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction by hash")
 //		return utils.ErrInfo(err)
 //	}
 //	if found {
@@ -149,23 +156,6 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transaction by hash")
 //			return utils.ErrInfo(err)
 //		}
-//	}
-//	// put with verified=1
-//	var expedite decimal.Decimal
-//	if len(t.TxSmart.Expedite) > 0 {
-//		expedite, err = decimal.NewFromString(t.TxSmart.Expedite)
-//		if err != nil {
-//			return utils.ErrInfo(err)
-//		}
-//	}
-//	newTx := &model.Transaction{
-//		Hash:     hash,
-//		Data:     binaryTx,
-//		Type:     int8(t.TxType),
-//		KeyID:    t.TxKeyID,
-//		Expedite: expedite,
-//		Time:     t.TxTime,
-//		Verified: 1,
 //	}
 //	err = newTx.Create()
 //	if err != nil {

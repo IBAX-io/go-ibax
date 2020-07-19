@@ -45,11 +45,6 @@ func (m Mode) getEcosystemParamHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, &paramResult{
-		ID:         converter.Int64ToStr(sp.ID),
-		Name:       sp.Name,
-		Value:      sp.Value,
-		Conditions: sp.Conditions,
-	})
 }
 
 func getEcosystemNameHandler(w http.ResponseWriter, r *http.Request) {
@@ -65,3 +60,13 @@ func getEcosystemNameHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if !found {
 		logger.WithFields(log.Fields{"type": consts.NotFound, "ecosystem_id": ecosystemID}).Error("ecosystem by id not found")
+		errorResponse(w, errParamNotFound.Errorf("name"))
+		return
+	}
+
+	jsonResponse(w, &struct {
+		EcosystemName string `json:"ecosystem_name"`
+	}{
+		EcosystemName: ecosystems.Name,
+	})
+}

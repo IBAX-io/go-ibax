@@ -18,4 +18,4 @@ func (hook HexHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }
 
-// Fire the log entry
+}

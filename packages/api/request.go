@@ -54,6 +54,20 @@ func SendRawRequest(rtype, url, auth string, form *url.Values) ([]byte, error) {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(`%d %s`, resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+
+	return data, nil
 }
 
 func SendRequest(rtype, url, auth string, form *url.Values, v interface{}) error {
@@ -297,7 +311,3 @@ func (connect *Connect) Login() error {
 	form := url.Values{"pubkey": {connect.PublicKey}, "signature": {hex.EncodeToString(sign)},
 		`ecosystem`: {`1`}, "role_id": {"0"}}
 	var logret loginResult
-	err = connect.SendPost(`login`, &form, &logret)
-	connect.Auth = logret.Token
-	return err
-}

@@ -49,16 +49,6 @@ func getCryptoer() Cryptoer {
 		return &ECDSA{}
 	default:
 		panic(fmt.Errorf("crypto is not supported yet or empty"))
-	}
-}
-
-// GenKeyPair generates a random pair of private and public binary keys.
-func GenKeyPair() ([]byte, []byte, error) {
-	return getCryptoer().genKeyPair()
-}
-
-// GenHexKeys generates a random pair of private and public hex keys.
-func GenHexKeys() (string, string, error) {
 	priv, pub, err := getCryptoer().genKeyPair()
 	if err != nil {
 		return ``, ``, err
@@ -67,3 +57,14 @@ func GenHexKeys() (string, string, error) {
 }
 
 func Sign(privateKey, data []byte) ([]byte, error) {
+	return getCryptoer().sign(privateKey, data)
+}
+
+func CheckSign(public, data, signature []byte) (bool, error) {
+	return getCryptoer().verify(public, data, signature)
+}
+
+// PrivateToPublic returns the public key for the specified private key.
+func PrivateToPublic(key []byte) ([]byte, error) {
+	return getCryptoer().privateToPublic(key)
+}

@@ -157,6 +157,15 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 	//	f, err := bi.GetRangeByName(consts.MintMax, consts.ChainMax, 2000)
 	//	fmt.Println(f, err)
 	//	if err != nil {
+	//		return err
+	//	}
+	//	if f {
+	//		time.Sleep(4 * time.Second)
+	//		return errors.New("deal mint blockid please wait")
+	//	}
+	//}
+
+	d.logger.WithFields(log.Fields{"min_block": curBlock.BlockID, "max_block": maxBlockID, "count": maxBlockID - curBlock.BlockID}).Info("starting downloading blocks")
 	for blockID := curBlock.BlockID + 1; blockID <= maxBlockID; blockID += int64(network.BlocksPerRequest) {
 
 		if loopErr := func() error {
@@ -209,10 +218,6 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 
 func banNodePause(host string, blockID, blockTime int64, err error) {
 	if err == nil || !utils.IsBanError(err) {
-		return
-	}
-
-	reason := err.Error()
 	//log.WithFields(log.Fields{"host": host, "block_id": blockID, "block_time": blockTime, "err": err}).Error("ban node")
 
 	n, err := syspar.GetNodeByHost(host)

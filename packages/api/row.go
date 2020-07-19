@@ -60,15 +60,6 @@ func getRowHandler(w http.ResponseWriter, r *http.Request) {
 	if converter.FirstEcosystemTables[params["name"]] {
 		q = q.Table(table).Where(col+" = ? and ecosystem = ?", params["id"], client.EcosystemID)
 	} else {
-		q = q.Table(table).Where(col+" = ?", params["id"])
-	}
-
-	if len(form.Columns) > 0 {
-		q = q.Select(form.Columns)
-	result, err := model.GetResult(rows)
-	if err != nil {
-		errorResponse(w, err)
-		return
 	}
 
 	if len(result) == 0 {

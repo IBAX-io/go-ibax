@@ -7,8 +7,6 @@ package cmd
 
 import (
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-
 // initDatabaseCmd represents the initDatabase command
 var initDatabaseCmd = &cobra.Command{
 	Use:    "initDatabase",
