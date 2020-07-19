@@ -41,12 +41,11 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 	if err != nil {
 		time.Sleep(time.Millisecond * 200)
 		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data chain")
-		//fmt.Println("TaskUUID:", item.TaskUUID)
-		blockchain_table = item.BlockchainTable
-		blockchain_http = item.BlockchainHttp
-		blockchain_ecosystem = item.BlockchainEcosystem
-		fmt.Println("blockchain_http:", blockchain_http, blockchain_ecosystem, blockchain_table)
-
+		return err
+	}
+	if len(SrcTaskDataChain) == 0 {
+		//log.Info("Src task data chain not found")
+		time.Sleep(time.Millisecond * 2)
 		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")

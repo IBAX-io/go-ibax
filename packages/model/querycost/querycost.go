@@ -12,8 +12,9 @@ import (
 type QueryCosterType int
 
 const (
-func (*ExplainQueryCoster) QueryCost(transaction *model.DbTransaction, query string, args ...interface{}) (int64, error) {
-	return explainQueryCost(transaction, true, query, args...)
+	ExplainQueryCosterType        QueryCosterType = iota
+	ExplainAnalyzeQueryCosterType QueryCosterType = iota
+	FormulaQueryCosterType        QueryCosterType = iota
 }
 
 type ExplainAnalyzeQueryCoster struct {

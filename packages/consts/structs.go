@@ -36,9 +36,6 @@ type FirstBlock struct {
 	PrivateBlockchain     uint64
 }
 
-type StopNetwork struct {
-	TxHeader
-	StopNetworkCert []byte
 }
 
 // Don't forget to insert the structure in init() - list
@@ -53,6 +50,16 @@ func init() {
 	}
 
 	for _, item := range list {
+		blockStructs[reflect.TypeOf(item).Name()] = reflect.TypeOf(item)
+	}
+}
+
+// MakeStruct is only used for FirstBlock now
+func MakeStruct(name string) interface{} {
+	v := reflect.New(blockStructs[name]) //.Elem()
+	return v.Interface()
+}
+
 // IsStruct is only used for FirstBlock now
 func IsStruct(tx int64) bool {
 	return tx == TxTypeFirstBlock || tx == TxTypeStopNetwork

@@ -45,20 +45,26 @@ func Floor(x interface{}) (int64, error) {
 	return 0, errFloatResult
 }
 
-// Log returns the natural logarithm of x
-func Log(x interface{}) (float64, error) {
-	fx, err := parseFloat(x)
-	if err != nil {
-		return 0, err
-	}
-	if fx = math.Log(fx); isValidFloat(fx) {
-		return fx, nil
-	}
 	return 0, errFloatResult
 }
 
 // Log10 returns the decimal logarithm of x
 func Log10(x interface{}) (float64, error) {
+	fx, err := parseFloat(x)
+	if err != nil {
+		return 0, err
+	}
+	if fx = math.Log10(fx); isValidFloat(fx) {
+		return fx, nil
+	}
+	return 0, errFloatResult
+}
+
+// Pow returns x**y, the base-x exponential of y
+func Pow(x, y interface{}) (float64, error) {
+	fx, err := parseFloat(x)
+	if err != nil {
+		return 0, err
 	}
 	fy, err := parseFloat(y)
 	if err != nil {
