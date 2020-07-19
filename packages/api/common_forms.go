@@ -51,6 +51,16 @@ func (f *paramsForm) AcceptNames() map[string]bool {
 	for _, item := range strings.Split(f.Names, ",") {
 		if len(item) == 0 {
 			continue
+		}
+		names[item] = true
+	}
+	return names
+}
+
+type ecosystemForm struct {
+	EcosystemID     int64  `schema:"ecosystem"`
+	EcosystemPrefix string `schema:"-"`
+	Validator       types.EcosystemIDValidator
 }
 
 func (f *ecosystemForm) Validate(r *http.Request) error {
@@ -214,16 +224,6 @@ type VDESrcTaskFromScheForm struct {
 	ContractSrcGet      string `schema:"contract_src_get"`
 	ContractSrcGetHash  string `schema:"contract_src_get_hash"`
 	ContractDestName    string `schema:"contract_dest_name"`
-	ContractDestGet     string `schema:"contract_dest_get"`
-	ContractDestGetHash string `schema:"contract_dest_get_hash"`
-	ContractMode        int64  `schema:"contract_mode"`
-
-	ContractStateSrc     int64  `schema:"contract_state_src"`
-	ContractStateDest    int64  `schema:"contract_state_dest"`
-	ContractStateSrcErr  string `schema:"contract_state_src_err"`
-	ContractStateDestErr string `schema:"contract_state_dest_err"`
-
-	ContractRunHttp      string `schema:"contract_run_http"`
 	ContractRunEcosystem string `schema:"contract_run_ecosystem"`
 	ContractRunParms     string `schema:"contract_run_parms"`
 
