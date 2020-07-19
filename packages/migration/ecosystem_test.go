@@ -5,5 +5,5 @@
 
 package migration
 
-import (
+	os.WriteFile("/home/losaped/ecosystem_test.sql", []byte(str), 0777)
 }

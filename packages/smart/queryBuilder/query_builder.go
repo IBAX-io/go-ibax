@@ -65,18 +65,6 @@ func (b *SQLQueryBuilder) Prepare() error {
 	if len(idNames) == 2 {
 		b.keyName = idNames[1]
 
-		if b.KeyTableChkr.IsKeyTable(b.keyName) {
-			b.isKeyTable = true
-			if b.TxEcoID > 1 {
-				if b.Table == "1_keys" {
-					b.keyEcosystem = idNames[0]
-				} else {
-					b.keyEcosystem = converter.Int64ToStr(b.TxEcoID)
-				}
-			} else {
-				b.keyEcosystem = idNames[0]
-			}
-			b.Table = `1_` + b.keyName
 
 			if contains, ecosysIndx := isParamsContainsEcosystem(b.Fields, b.FieldValues); contains {
 				if b.Where.IsEmpty() {
@@ -125,6 +113,24 @@ func (b *SQLQueryBuilder) GetSelectExpr() (string, error) {
 	}
 
 	whereExpr, err := b.GetSQLWhereExpr()
+	if err != nil {
+		b.WithFields(log.Fields{"error": err}).Error("on getting sql where statement")
+		return "", err
+	}
+	return fmt.Sprintf(`SELECT %s FROM "%s" %s`, fieldsExpr, b.Table, whereExpr), nil
+}
+
+func (b *SQLQueryBuilder) GetSQLSelectFieldsExpr() (string, error) {
+	if err := b.Prepare(); err != nil {
+		return "", err
+	}
+
+	sqlFields := make([]string, 0, len(b.Fields)+1)
+	sqlFields = append(sqlFields, "id")
+
+	for i := range b.Fields {
+		b.Fields[i] = strings.TrimSpace(strings.ToLower(b.Fields[i]))
+		sqlFields = append(sqlFields, toSQLField(b.Fields[i]))
 	}
 
 	return strings.Join(sqlFields, ","), nil

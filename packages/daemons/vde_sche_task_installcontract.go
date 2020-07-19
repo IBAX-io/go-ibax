@@ -11,18 +11,6 @@ import (
 	"net/url"
 	"strconv"
 	"time"
-
-	vde_api "github.com/IBAX-io/go-ibax/packages/vde_sdk"
-
-	"path/filepath"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
-//Install task contract
 func VDEScheTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 	var (
 		blockchain_http      string
@@ -191,6 +179,16 @@ func VDEScheTaskInstallContractDest(ctx context.Context, d *daemon) error {
 //		blockchain_ecosystem string
 //		err                  error
 //	)
+//
+//	m := &model.VDEScheTaskFromSrc{}
+//	ScheTask, err := m.GetAllByContractStateSrc(0) //0
+//	if err != nil {
+//		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
+//		return err
+//	}
+//	if len(ScheTask) == 0 {
+//		//log.Info("Sche task not found")
+//		time.Sleep(time.Millisecond * 100)
 //		return nil
 //	}
 //

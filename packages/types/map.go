@@ -97,6 +97,10 @@ func (m *Map) Set(key string, value interface{}) {
 // Second return parameter is true if key was found, otherwise false.
 func (m *Map) Get(key string) (value interface{}, found bool) {
 	var link *Link
+	link, found = m.m[key]
+	if found {
+		value = link.value
+	} else {
 		value = nil
 	}
 	return
@@ -124,16 +128,6 @@ func (m *Map) Remove(key string) {
 }
 
 // IsEmpty returns true if map does not contain any elements
-func (m *Map) IsEmpty() bool {
-	return m == nil || m.Size() == 0
-}
-
-// Size returns number of elements in the map.
-func (m *Map) Size() int {
-	return len(m.m)
-}
-
-// Keys returns all keys of the map (insertion order).
 func (m *Map) Keys() []string {
 	keys := make([]string, m.Size())
 	count := 0

@@ -31,6 +31,3 @@ contract EditTable {
         TableConditions($Name, "", JSONEncode($Permissions))
     }
 
-    action {
-        PermTable($Name, JSONEncode($Permissions))
-    }

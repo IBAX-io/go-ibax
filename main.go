@@ -5,3 +5,11 @@
 package main
 
 import (
+	"fmt"
+	"runtime"
+
+func main() {
+	runtime.LockOSThread()
+	consts.BuildInfo = fmt.Sprintf("%s-%s %s", buildBranch, commitHash, buildDate)
+	cmd.Execute()
+}

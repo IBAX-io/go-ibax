@@ -45,12 +45,6 @@ func (ktc KeyTableChecker) IsKeyTable(tableName string) bool {
 	val, exist := converter.FirstEcosystemTables[tableName]
 	return exist && val
 }
-
-type NextIDGetter struct {
-	Tx *DbTransaction
-}
-
-func (g NextIDGetter) GetNextID(tableName string) (int64, error) {
 	return GetNextID(g.Tx, tableName)
 }
 func isFound(db *gorm.DB) (bool, error) {
@@ -295,6 +289,18 @@ func GetColumnDataTypeCharMaxLength(tableName, columnName string) (map[string]st
 // GetAllColumnTypes returns column types for table
 func GetAllColumnTypes(tblname string) ([]map[string]string, error) {
 	return GetAll(`SELECT column_name, data_type
+		FROM information_schema.columns
+		WHERE table_name = ?
+		ORDER BY ordinal_position ASC`, -1, tblname)
+}
+
+func DataTypeToColumnType(dataType string) string {
+	var itype string
+	switch {
+	case dataType == "character varying":
+		itype = `varchar`
+	case dataType == `bigint`:
+		itype = "number"
 	case dataType == `jsonb`:
 		itype = "json"
 	case strings.HasPrefix(dataType, `timestamp`):

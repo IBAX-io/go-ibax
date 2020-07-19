@@ -56,17 +56,6 @@ func (m *ShareDataStatus) GetAllByTaskUUID(TaskUUID string) ([]ShareDataStatus, 
 	result := make([]ShareDataStatus, 0)
 	err := DBConn.Table("subnode_share_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
-}
-
-func (m *ShareDataStatus) GetOneByTcpStatus(tcp_send_state int64) (bool, error) {
-	return isFound(DBConn.Where("tcp_send_state = ?", tcp_send_state).First(m))
-}
-
-func (m *ShareDataStatus) GetShareTaskStatusAndTcpStatus(chain_state, tcp_send_state int) (bool, error) {
-	return isFound(DBConn.Where("chain_state = ? AND tcp_send_state = ?", chain_state, tcp_send_state).First(m))
-}
-
-func (m *ShareDataStatus) GetChainShareTaskStatus() (bool, error) {
 	return isFound(DBConn.Where("chain_state = 1").First(m))
 }
 
@@ -82,6 +71,21 @@ func (m *ShareDataStatus) GetChainShareTaskStatus() (bool, error) {
 //	//Data         []byte `gorm:"not null" json:"data"`
 //	Dist         string `gorm:"type:jsonb" json:"dist"`
 //	//TcpSendState int64  `gorm:"not null" json:"tcp_send_state"`
+//	TcpSendStateFlag string  `gorm:"not null" json:"tcp_send_state_flag"`
+//	//Ecosystem    int64  `gorm:"not null" json:"ecosystem"`
+//	//BlockId      int64  `gorm:"not null" json:"block_id"`
+//	//TxHash       []byte `gorm:"not null" json:"tx_hash"`
+//	//ChainID      int64  `gorm:"not null" json:"chain_id"`
+//	//ChainState   int64  `gorm:"not null" json:"chain_state"`    //1:send  2:success  3:error
+//	//ChainErr     string `json:"chain_err"`                      // error text
+//	//Time         int64  `gorm:"not null" json:"time"`
+//}
+//
+//func (SDStatus) TableName() string {
+//	return "subnode_share_data_status"
+//}
+//
+//
 //func (s *SDStatus)GetShareTaskCount() (int64, error) {
 //	var taskCount int64
 //	row := DBConn.Raw("SELECT COUNT(*) task_count FROM subnode_share_data_status").Select("task_count").Row()

@@ -43,6 +43,15 @@ var (
 	nodePublicKey  string
 	authNet        = map[string]string{}
 )
+
+func loginNetwork(urlPath string) (connect *api.Connect, err error) {
+	if len(nodePrivateKey) == 0 {
+		var pubKey []byte
+		nodePrivateKey = syspar.GetNodePrivKey()
+		if pubKey, err = crypto.PrivateToPublic(nodePrivateKey); err != nil {
+			return
+		}
+		nodeKeyID = crypto.Address(pubKey)
 		nodePublicKey = crypto.PubToHex(pubKey)
 	}
 	connect = &api.Connect{
@@ -68,19 +77,6 @@ func SendExternalTransaction() error {
 	toWait := map[string][]model.ExternalBlockchain{}
 	incAttempt := func(id int64) {
 		if err = model.IncExternalAttempt(id); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("IncAttempt")
-		}
-	}
-	sendResult := func(item model.ExternalBlockchain, block, errCode int64, resText string) {
-		defer func() {
-			delList = append(delList, item.Id)
-		}()
-		if len(item.ResultContract) == 0 {
-			return
-		}
-		if err := transaction.CreateContract(item.ResultContract, nodeKeyID,
-			map[string]interface{}{
-				"Status": errCode,
 				"Msg":    resText,
 				"Block":  block,
 				"UID":    item.Uid,

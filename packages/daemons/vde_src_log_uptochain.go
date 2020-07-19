@@ -5,19 +5,6 @@
 
 package daemons
 
-import (
-	"context"
-	"fmt"
-	"net/url"
-	"strconv"
-	"time"
-
-	"path/filepath"
-
-	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -78,6 +65,17 @@ func VDESrcLogUpToChain(ctx context.Context, d *daemon) error {
 		gAuth_chain, _, gPrivate_chain, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		//fmt.Println("Login OK!")
+
+		form := url.Values{
+			"TaskUUID":  {item.TaskUUID},
+			"DataUUID":  {item.DataUUID},
+			"Log":       {item.Log},
+			"LogType":   {converter.Int64ToStr(item.LogType)},
+			"LogSender": {item.LogSender},
 
 			`CreateTime`: {converter.Int64ToStr(time.Now().Unix())},
 		}

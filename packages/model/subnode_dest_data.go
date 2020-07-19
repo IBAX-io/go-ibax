@@ -36,10 +36,17 @@ func (SubNodeDestData) TableName() string {
 func (m *SubNodeDestData) Create() error {
 	return DBConn.Create(&m).Error
 }
-	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
-	return m, err
+
+func (m *SubNodeDestData) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
 }
-func (m *SubNodeDestData) GetOneByTaskUUID(TaskUUID string) (*SubNodeDestData, error) {
+
+func (m *SubNodeDestData) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *SubNodeDestData) GetAll() ([]SubNodeDestData, error) {
+	var result []SubNodeDestData
 	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
 	return m, err
 }
