@@ -5,6 +5,5 @@ contract EditColumn {
         TableName string
         Name string
         Permissions string
-        PermColumn($TableName, $Name, $Permissions)
     }
-}
+

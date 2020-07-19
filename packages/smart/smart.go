@@ -103,6 +103,13 @@ func newVM() *script.VM {
 	vm.Extend(&script.ExtendData{Objects: map[string]interface{}{
 		"Println": fmt.Println,
 		"Sprintf": fmt.Sprintf,
+		"Float":   Float,
+		"Money":   script.ValueToDecimal,
+		`Test`:    testValue,
+	}, AutoPars: map[string]string{
+		`*smart.Contract`: `sc`,
+	}})
+	return vm
 }
 
 func init() {
@@ -482,15 +489,6 @@ func One(list array, name string) string {
 	   var row map 
 	   row = list[0]
 	   if Contains(name, "->") {
-		   var colfield array
-		   var val string
-		   colfield = Split(ToLower(name), "->")
-		   val = row[Join(colfield, ".")]
-		   if !val && row[colfield[0]] {
-			   var fields map
-			   var i int
-			   fields = JSONToMap(row[colfield[0]])
-			   val = fields[colfield[1]]
 			   i = 2
 			   while i < Len(colfield) {
 					if GetType(val) == "map[string]interface {}" {

@@ -33,6 +33,11 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/theckman/go-flock"
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+)
+
+const (
+	firstBlock   = 1
 	minBlockSize = 9
 )
 
@@ -155,17 +160,6 @@ func ErrInfoFmt(err string, a ...interface{}) error {
 // ErrInfo formats the error message
 func ErrInfo(verr interface{}, additionally ...string) error {
 	var err error
-	switch verr.(type) {
-	case error:
-		err = verr.(error)
-	case string:
-		err = errors.New(verr.(string))
-	}
-	if err != nil {
-		if len(additionally) > 0 {
-			return fmt.Errorf("%s # %s (%s)", err, additionally, Caller(1))
-		}
-		return fmt.Errorf("%s (%s)", err, Caller(1))
 	}
 	return err
 }

@@ -65,11 +65,3 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 		if errTx != nil {
 			return errTx
 		}
-	}
-	if len(hashes) > 0 {
-		errQTx := model.DeleteQueueTxs(dbTransaction, hashes)
-		if errQTx != nil {
-			return errQTx
-		}
-	}
-	return nil

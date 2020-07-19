@@ -35,6 +35,19 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 	SrcTask, err := m.GetAllByContractStateAndChainState(1, 0, 0) //0
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
+	if len(SrcTask) == 0 {
+		//log.Info("Src task not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
+
+	chaininfo := &model.VDESrcChainInfo{}
+	SrcChainInfo, err := chaininfo.Get()
+	if err != nil {
+		//log.WithFields(log.Fields{"error": err}).Error("VDE Src uptochain getting chain info")
 		log.Info("Src chain info not found")
 		time.Sleep(time.Millisecond * 100)
 		return err
@@ -144,20 +157,6 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 	}
 	if len(SrcTask) == 0 {
 		//log.Info("Src task not found")
-		time.Sleep(time.Millisecond * 2)
-		return nil
-	}
-	chaininfo := &model.VDESrcChainInfo{}
-	SrcChainInfo, err := chaininfo.Get()
-	if err != nil {
-		//log.WithFields(log.Fields{"error": err}).Error("VDE Src uptochain getting chain info")
-		log.Info("Src chain info not found")
-		time.Sleep(time.Millisecond * 100)
-		return err
-	}
-	if SrcChainInfo == nil {
-		log.Info("Src chain info not found")
-		//fmt.Println("Src chain info not found")
 		time.Sleep(time.Millisecond * 100)
 		return nil
 	}

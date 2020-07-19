@@ -10,11 +10,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
 //Scheduling task to run
 func VDESrcTaskStatus(ctx context.Context, d *daemon) error {
 	var (
@@ -86,6 +81,10 @@ func VDESrcTaskStatus(ctx context.Context, d *daemon) error {
 			}
 			item.TaskRunState = 3
 			item.UpdateTime = time.Now().Unix()
+			err = item.Updates()
+			if err != nil {
+				fmt.Println("Update VDESrcTask table err: ", err)
+				log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTask table!")
 				time.Sleep(time.Millisecond * 2)
 				continue
 			}

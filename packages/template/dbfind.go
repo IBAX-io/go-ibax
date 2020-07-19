@@ -34,6 +34,16 @@ func dbfindExpressionLongText(column string) string {
 		substr(%s, 1, %d),
 		CASE WHEN length(%[1]s)>%[2]d THEN md5(%[1]s) END) "%[1]s"`, column, substringLength)
 }
+
+type valueLink struct {
+	title string
+
+	id     string
+	table  string
+	column string
+	hash   string
+}
+
 func (vl *valueLink) link() string {
 	if len(vl.hash) > 0 {
 		return fmt.Sprintf("/data/%s/%s/%s/%s", vl.table, vl.id, vl.column, vl.hash)
@@ -159,14 +169,6 @@ main:
 		}
 		if ch != ' ' {
 			prev = ch
-		}
-	}
-	if prev == ',' {
-		return nil, i, fmt.Errorf(errComma)
-	}
-	if start < i {
-		if last := trimString(in[start:i]); len(last) > 0 {
-			if mapMode {
 				ret.(*types.Map).Set(key, last)
 			} else {
 				if len(key) > 0 {

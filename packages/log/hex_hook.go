@@ -18,4 +18,9 @@ func (hook HexHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }
 
+// Fire the log entry
+func (hook HexHook) Fire(entry *logrus.Entry) error {
+	for i := range entry.Data {
+	}
+	return nil
 }

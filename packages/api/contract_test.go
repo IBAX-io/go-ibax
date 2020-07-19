@@ -415,22 +415,6 @@ var contracts = []smartContract{
 		{nil, map[string]string{`ok`: "{\n\t\"ok\": 10,\n\t\"arr\": [\n\t\t\"first\",\n\t\t\"<second>\"\n\t]\n}",
 			`json`: "{\"ok\":10,\"arr\":[\"first\",\"<second>\"]}"}},
 	}},
-	{`GuestKey`, `contract GuestKey {
-		action {
-			Test("result", $guest_key)
-		}
-	}`, []smartParams{
-		{nil, map[string]string{`result`: `4544233900443112470`}},
-	}},
-	{`TestCyr`, `contract TestCyr {
-		data {}
-		conditions { }
-		action {
-		   //тест
-		   var a map
-		   a["тест"] = "тест"
-		   Test("ok", a["тест"])
-		}
 	}`, []smartParams{
 		{nil, map[string]string{`ok`: `тест`}},
 	}},
@@ -692,6 +676,11 @@ var contracts = []smartContract{
 					list array
 				}
 				action {
+					Test("multiform",  $list[0]+$list[1])
+				}
+			}`,
+		[]smartParams{
+			{map[string]string{`list[]`: `2`, `list[0]`: `start`, `list[1]`: `finish`}, map[string]string{`multiform`: `startfinish`}},
 		}},
 	{`errTestMessage`, `contract errTestMessage {
 			conditions {

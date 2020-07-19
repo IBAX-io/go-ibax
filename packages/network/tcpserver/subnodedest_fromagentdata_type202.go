@@ -46,20 +46,6 @@ func Type202(r *network.SubNodeAgentDataRequest) (*network.SubNodeAgentDataRespo
 	}
 	resp := &network.SubNodeAgentDataResponse{}
 	resp.Hash = hash
-
-	//
-	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
-	if len(NodePrivateKey) < 1 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
-		err = errors.New(`empty node private key`)
-		return nil, err
-	}
-	eccData, err := ecies.EccCryptoKey(data, NodePublicKey)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
-		return nil, err
-	}
-	encodeDataString := base64.StdEncoding.EncodeToString(eccData)
 	////
 
 	AgentMode := converter.StrToInt64(r.AgentMode)
@@ -82,6 +68,11 @@ func Type202(r *network.SubNodeAgentDataRequest) (*network.SubNodeAgentDataRespo
 		CreateTime: time.Now().Unix(),
 	}
 
+	err = SubNodeDestData.Create()
+	if err != nil {
+		log.WithError(err)
+		return nil, err
+	}
 
 	return resp, nil
 }

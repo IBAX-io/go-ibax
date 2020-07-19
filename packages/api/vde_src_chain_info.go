@@ -6,6 +6,19 @@
 package api
 
 import (
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+func unmarshalColumnVDESrcChainInfo(form *VDESrcChainInfoForm) (*model.VDESrcChainInfo, error) {
+	var (
 		err error
 	)
 
@@ -82,13 +95,6 @@ func VDESrcChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, result)
-}
-
-func VDESrcChainInfoDeleteHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-	id := converter.StrToInt64(params["id"])
-
 	m := &model.VDESrcChainInfo{}
 	m.ID = id
 	if err := m.Delete(); err != nil {

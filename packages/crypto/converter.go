@@ -32,7 +32,9 @@ func GetWalletIDByPublicKey(publicKey []byte) (int64, error) {
 // HexToPub encodes hex string to []byte of pub key
 func HexToPub(pub string) ([]byte, error) {
 	key, err := hex.DecodeString(pub)
-	if err != nil {
-		return nil, err
+func PubToHex(pub []byte) string {
+	if len(pub) == 64 {
+		pub = append([]byte{4}, pub...)
 	}
-	return CutPub(key), nil
+	return hex.EncodeToString(pub)
+}

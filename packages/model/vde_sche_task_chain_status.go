@@ -1,17 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package model
-
-type VDEScheTaskChainStatus struct {
-	ID           int64  `gorm:"primary_key; not null" json:"id"`
-	TaskUUID     string `gorm:"not null" json:"task_uuid"`
-	TaskName     string `gorm:"not null" json:"task_name"`
-	TaskSender   string `gorm:"not null" json:"task_sender"`
-	TaskReceiver string `gorm:"not null" json:"task_receiver"`
-	Comment      string `gorm:"not null" json:"comment"`
-	Parms        string `gorm:"type:jsonb" json:"parms"`
 	TaskType     int64  `gorm:"not null" json:"task_type"`
 	TaskState    int64  `gorm:"not null" json:"task_state"`
 
@@ -97,6 +84,17 @@ func (m *VDEScheTaskChainStatus) GetOneByTaskUUIDAndReceiverAndChainState(TaskUU
 
 func (m *VDEScheTaskChainStatus) GetAllByTaskState(TaskState int64) ([]VDEScheTaskChainStatus, error) {
 	result := make([]VDEScheTaskChainStatus, 0)
+	err := DBConn.Table("vde_sche_task_chain_status").Where("task_state = ?", TaskState).Find(&result).Error
+	return result, err
+}
+
+func (m *VDEScheTaskChainStatus) GetOneByTaskState(TaskState int64) (bool, error) {
+	return isFound(DBConn.Where("task_state = ?", TaskState).First(m))
+}
+
+func (m *VDEScheTaskChainStatus) GetOneByContractState(ContractState int64) (bool, error) {
+	return isFound(DBConn.Where("contract_state = ?", ContractState).First(m))
+}
 
 func (m *VDEScheTaskChainStatus) GetOneByChainState(ChainState int64) (bool, error) {
 	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
