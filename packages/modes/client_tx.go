@@ -78,6 +78,13 @@ func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key i
 			if !fo {
 				return "", errors.New("mineowner keyid not found")
 			}
+		}
+
+		if err := model.SendTx(rtx, rtx.SmartTx().KeyID); err != nil {
+			le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("sending tx")
+			return "", err
+		}
+
 		return string(converter.BinToHex(rtx.Hash())), nil
 	}
 
@@ -93,22 +100,6 @@ func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key i
 	var rtxs []*model.RawTx
 	for _, txData := range txDatas {
 		rtx := &transaction.RawTransaction{}
-		if err = rtx.Processing(txData); err != nil {
-			return nil, err
-		}
-		rtxs = append(rtxs, rtx.SetRawTx())
-		retTx = append(retTx, rtx.HashStr())
-	}
-	err = model.SendTxBatches(rtxs)
-	return
-}
-
-type ObsTxPreprocessor struct{}
-
-func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, le *log.Entry) (string, error) {
-
-	tx, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txData), true)
-	if err != nil {
 		le.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("on unmarshaling user tx")
 		return "", err
 	}

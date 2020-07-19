@@ -25,6 +25,14 @@ func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockDa
 	var signed []byte
 	logger := log.WithFields(log.Fields{"block_id": header.BlockID, "block_hash": header.Hash, "block_time": header.Time, "block_version": header.Version, "block_wallet_id": header.KeyID, "block_state_id": header.EcosystemID})
 
+	for _, tr := range trData {
+		mrklArray = append(mrklArray, converter.BinToHex(crypto.DoubleHash(tr)))
+		blockDataTx = append(blockDataTx, converter.EncodeLengthPlusData(tr)...)
+	}
+
+	if key != "" {
+		if len(mrklArray) == 0 {
+			mrklArray = append(mrklArray, []byte("0"))
 		}
 		mrklRoot, err := utils.MerkleTreeRoot(mrklArray)
 		if err != nil {
@@ -74,15 +82,6 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 	for blockBuffer.Len() > 0 {
 		transactionSize, err := converter.DecodeLengthBuf(blockBuffer)
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("transaction size is 0")
-			return nil, fmt.Errorf("bad block format (%s)", err)
-		}
-		if blockBuffer.Len() < int(transactionSize) {
-			logger.WithFields(log.Fields{"size": blockBuffer.Len(), "match_size": int(transactionSize), "type": consts.SizeDoesNotMatch}).Error("transaction size does not matches encoded length")
-			return nil, fmt.Errorf("bad block format (transaction len is too big: %d)", transactionSize)
-		}
-
-		if transactionSize == 0 {
 			logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("transaction size is 0")
 			return nil, fmt.Errorf("transaction size is 0")
 		}

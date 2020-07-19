@@ -6,18 +6,6 @@ contract CallDelayedContract {
 	}
 
 	conditions {
-		HonorNodeCondition()
-
-		var rows array
-		rows = DBFind("@1delayed_contracts").Where({"id": $Id, "deleted": 0})
-
-		if !Len(rows) {
-			warning Sprintf(LangRes("@1template_delayed_contract_not_exist"), $Id)
-		}
-		$cur = rows[0]
-		$limit = Int($cur["limit"])
-		$counter = Int($cur["counter"])
-
 		if $block < Int($cur["block_id"]) {
 			warning Sprintf(LangRes("@1template_delayed_contract_error"), $Id, $cur["block_id"], $block)
 		}
@@ -32,6 +20,8 @@ contract CallDelayedContract {
 
 		var block_id int
 		block_id = $block
+		if $limit == 0 || $limit > $counter {
+			block_id = block_id + Int($cur["every_block"])
 		}
 
 		DBUpdate("@1delayed_contracts", $Id, {"counter": $counter, "block_id": block_id})

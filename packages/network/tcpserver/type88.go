@@ -19,6 +19,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+func Type88(r *network.PrivateDateRequest) (*network.PrivateDateResponse, error) {
+	node_pri := syspar.GetNodePrivKey()
+	data, err := ecies.EccDeCrypto(r.Data, node_pri)
+	if err != nil {
+		log.WithError(err)
+		return nil, err
+	}
+	//hash, err := crypto.HashHex(r.Data)
+	hash, err := crypto.HashHex(data)
+	if err != nil {
 		log.WithError(err)
 		return nil, err
 	}
@@ -54,6 +65,3 @@ import (
 		log.WithFields(log.Fields{"error": err}).Error("Create PrivatePackets table record error")
 		return nil, err
 	}
-
-	return resp, nil
-}

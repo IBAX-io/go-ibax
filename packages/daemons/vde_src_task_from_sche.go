@@ -1,5 +1,12 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"context"
 	"fmt"
 	"time"
 
@@ -29,11 +36,6 @@ func VDESrcTaskFromScheStatus(ctx context.Context, d *daemon) error {
 			TaskStatus := &model.VDESrcTaskFromScheStatus{}
 			TaskStatus.TaskUUID = item.TaskUUID
 			TaskStatus.ContractRunHttp = item.ContractRunHttp
-			TaskStatus.ContractRunEcosystem = item.ContractRunEcosystem
-			TaskStatus.ContractRunParms = item.ContractRunParms
-			TaskStatus.ContractSrcName = item.ContractSrcName
-			TaskStatus.CreateTime = time.Now().Unix()
-			err = TaskStatus.Create()
 			if err != nil {
 				fmt.Println("Create VDESrcTaskStatus table err: ", err)
 				log.WithFields(log.Fields{"error": err}).Error("Create VDESrcTaskStatus table!")
