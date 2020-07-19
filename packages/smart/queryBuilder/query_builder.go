@@ -65,6 +65,18 @@ func (b *SQLQueryBuilder) Prepare() error {
 	if len(idNames) == 2 {
 		b.keyName = idNames[1]
 
+		if b.KeyTableChkr.IsKeyTable(b.keyName) {
+			b.isKeyTable = true
+			if b.TxEcoID > 1 {
+				if b.Table == "1_keys" {
+					b.keyEcosystem = idNames[0]
+				} else {
+					b.keyEcosystem = converter.Int64ToStr(b.TxEcoID)
+				}
+			} else {
+				b.keyEcosystem = idNames[0]
+			}
+			b.Table = `1_` + b.keyName
 
 			if contains, ecosysIndx := isParamsContainsEcosystem(b.Fields, b.FieldValues); contains {
 				if b.Where.IsEmpty() {
@@ -393,16 +405,6 @@ func toSQLField(rawField string) string {
 
 	if strings.Contains(rawField, `->`) {
 		return rawField[:strings.Index(rawField, `->`)]
-	}
-
-	return wrapString(rawField, `"`)
-}
-
-func wrapString(raw, wrapper string) string {
-	return wrapper + raw + wrapper
-}
-
-func escapeSingleQuotes(val string) string {
 	return strings.Replace(val, `'`, `''`, -1)
 }
 

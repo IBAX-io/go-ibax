@@ -19,6 +19,18 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/model"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	ErrNodesUnavailable = errors.New("All nodes unvailabale")
+)
+
+func sendRawTransacitionsToHost(host string, packet []byte) error {
+	con, err := newConnection(host)
+	if err != nil {
 		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": host}).Error("on creating tcp connection")
 		return err
 	}
@@ -42,20 +54,6 @@ func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []model.Tr
 		return err
 	}
 
-	var wg sync.WaitGroup
-	var errCount int32
-	for _, h := range hosts {
-		if err := ctx.Err(); err != nil {
-			log.Debug("exit by context error")
-			return err
-		}
-
-		wg.Add(1)
-		go func(host string, pak []byte) {
-			defer wg.Done()
-
-			if err := sendRawTransacitionsToHost(host, pak); err != nil {
-				atomic.AddInt32(&errCount, 1)
 			}
 		}(h, packet)
 	}

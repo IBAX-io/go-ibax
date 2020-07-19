@@ -88,6 +88,25 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		if sqlBuilder.IsEmptyWhere() {
 			logger.WithFields(log.Fields{"type": consts.NotFound,
 				"error": errWhereUpdate}).Error("update without where")
+			return 0, "", errWhereUpdate
+		}
+	}
+
+	if !sqlBuilder.Where.IsEmpty() && len(logData) > 0 {
+		var err error
+		rollbackInfoStr, err = sqlBuilder.GenerateRollBackInfoString(logData)
+		if err != nil {
+			logger.WithFields(log.Fields{"error": err}).Error("on generate rollback info string for update")
+			return 0, "", err
+		}
+
+		updateExpr, err := sqlBuilder.GetSQLUpdateExpr(logData)
+		if err != nil {
+			logger.WithFields(log.Fields{"error": err}).Error("on getting update expression for update")
+			return 0, "", err
+		}
+
+		whereExpr, err := sqlBuilder.GetSQLWhereExpr()
 		if err != nil {
 			logger.WithFields(log.Fields{"error": err}).Error("on getting where expression for update")
 			return 0, "", err
@@ -151,16 +170,6 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 func (sc *SmartContract) insert(fields []string, ivalues []interface{},
 	table string) (int64, string, error) {
 	return sc.selectiveLoggingAndUpd(fields, ivalues, table, nil, !sc.OBS && sc.Rollback, false)
-}
-
-func (sc *SmartContract) updateWhere(fields []string, values []interface{},
-	table string, where *types.Map) (int64, string, error) {
-	return sc.selectiveLoggingAndUpd(fields, values, table, where, !sc.OBS && sc.Rollback, true)
-}
-
-func (sc *SmartContract) update(fields []string, values []interface{},
-	table string, whereField string, whereValue interface{}) (int64, string, error) {
-	return sc.updateWhere(fields, values, table, types.LoadMap(map[string]interface{}{
 		whereField: fmt.Sprint(whereValue)}))
 }
 

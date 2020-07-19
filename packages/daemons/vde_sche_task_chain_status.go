@@ -245,10 +245,11 @@ func VDEScheTaskChainStatus(ctx context.Context, d *daemon) error {
 		}
 	} //for
 	time.Sleep(time.Millisecond * 100)
-	)
+	return nil
+}
 
-	m := &model.VDEScheTask{}
-	ScheTask, err := m.GetAllByContractStateAndChainState(1, 1, 1) //0Indicates that the contract has not been installed, 1 means that the contract is successfully installed, 2 means that the contract is not installed successfully; 0 means that the contract has not been uploaded yet, and 1 means that a request has been generated
+//Search a chain request
+func VDEScheTaskChainStatusState(ctx context.Context, d *daemon) error {
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
 		time.Sleep(time.Millisecond * 2)

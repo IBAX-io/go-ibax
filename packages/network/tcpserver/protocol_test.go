@@ -4,11 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package tcpserver
 
-import (
-	"bytes"
-	"fmt"
-
-	"testing"
 
 	"reflect"
 
@@ -18,6 +13,23 @@ import (
 )
 
 func TestReadRequest(t *testing.T) {
+	type testStruct struct {
+		Id   uint32
+		Data []byte
+	}
+
+	request := &bytes.Buffer{}
+	request.Write(converter.DecToBin(10, 4))
+	request.Write(converter.DecToBin(len("test"), 4))
+	request.Write([]byte("test"))
+
+	test := &testStruct{}
+	err := ReadRequest(test, request)
+	if err != nil {
+		t.Errorf("read request return err: %s", err)
+	}
+	if test.Id != 10 {
+		t.Errorf("bad id value")
 	}
 	if string(test.Data) != "test" {
 		t.Errorf("bad data value: %+v", string(test.Data))
