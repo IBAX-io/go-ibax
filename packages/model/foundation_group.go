@@ -19,8 +19,11 @@ func (FoundationGroup) TableName() string {
 }
 
 // Get is retrieving model from database
-	if f {
-		fb, err := m.GetByKeyid(transaction, mo.Keyid)
+func (m *FoundationGroup) GetByKeyid(transaction *DbTransaction, keyid int64) (bool, error) {
+	return isFound(GetDB(transaction).Where("keyid = ?", keyid).First(m))
+}
+
+// Get is retrieving model from database
 		if err != nil {
 			return ret, err
 		}

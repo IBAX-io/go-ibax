@@ -24,6 +24,16 @@ import (
 
 const (
 	multipartBuf      = 100000 // the buffer size for ParseMultipartForm
+	multipartFormData = "multipart/form-data"
+	contentType       = "Content-Type"
+)
+
+type Mode struct {
+	EcosysIDValidator  types.EcosystemIDValidator
+	EcosysNameGetter   types.EcosystemNameGetter
+	EcosysLookupGetter types.EcosystemLookupGetter
+	ContractRunner     types.SmartContractRunner
+	ClientTxProcessor  types.ClientTxPreprocessor
 }
 
 // Client represents data of client
@@ -59,11 +69,6 @@ func errorResponse(w http.ResponseWriter, err error, code ...int) {
 	}
 
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	if len(code) == 0 {
-		w.WriteHeader(et.Status)
-	} else {
-		w.WriteHeader(code[0])
-	}
 
 	jsonResponse(w, et)
 }
