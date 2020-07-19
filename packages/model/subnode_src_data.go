@@ -9,6 +9,18 @@ type SubNodeSrcData struct {
 	ID         int64  `gorm:"primary_key; not null" json:"id"`
 	DataUUID   string `gorm:"not null" json:"data_uuid"`
 	TaskUUID   string `gorm:"not null" json:"task_uuid"`
+	Hash       string `gorm:"not null" json:"hash"`
+	Data       []byte `gorm:"not null" json:"data"`
+	DataInfo   string `gorm:"type:jsonb" json:"data_info"`
+	DataState  int64  `gorm:"not null" json:"data_state"`
+	DataErr    string `gorm:"not null" json:"data_err"`
+	UpdateTime int64  `gorm:"not null" json:"update_time"`
+	CreateTime int64  `gorm:"not null" json:"create_time"`
+}
+
+func (SubNodeSrcData) TableName() string {
+	return "subnode_src_data"
+}
 
 func (m *SubNodeSrcData) Create() error {
 	return DBConn.Create(&m).Error
@@ -24,21 +36,6 @@ func (m *SubNodeSrcData) Delete() error {
 
 func (m *SubNodeSrcData) GetAll() ([]SubNodeSrcData, error) {
 	var result []SubNodeSrcData
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *SubNodeSrcData) GetOneByID() (*SubNodeSrcData, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
-
-func (m *SubNodeSrcData) GetOneByDataUUID(DataUUID string) (*SubNodeSrcData, error) {
-	err := DBConn.Where("data_uuid = ?", DataUUID).First(&m).Error
-	return m, err
-}
-func (m *SubNodeSrcData) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcData, error) {
-	result := make([]SubNodeSrcData, 0)
-	err := DBConn.Table("subnode_src_data").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
 }
 

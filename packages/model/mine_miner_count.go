@@ -10,13 +10,7 @@ type MineCount struct {
 	MineCapacity int64 `gorm:"null default 0" ` //
 	Count        int64 `gorm:"null default 0" ` //
 	Stime        int64 `gorm:"not null" `       //
-	Etime        int64 `gorm:"not null" `       //
+		Order("poolid asc, devid asc").
+		Find(&mp).Error
+	return mp, err
 }
-
-// TableName returns name of table
-func (MineCount) TableName() string {
-	return `1_v_miner_count`
-}
-
-func (m *MineCount) GetActiveMiner(dbt *DbTransaction, time int64) ([]MineCount, error) {
-	var mp []MineCount

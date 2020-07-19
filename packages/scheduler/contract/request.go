@@ -69,18 +69,6 @@ func NodeContract(Name string) (result contractResult, err error) {
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing node uid")
 		return
-	}
-	form := url.Values{"pubkey": {NodePublicKey}, "signature": {hex.EncodeToString(sign)},
-		`ecosystem`: {converter.Int64ToStr(1)}}
-	var logret authResult
-	err = sendAPIRequest(`POST`, `login`, &form, &logret, auth)
-	if err != nil {
-		return
-	}
-	auth = logret.Token
-	form = url.Values{`obs`: {`true`}}
-	err = sendAPIRequest(`POST`, `node/`+Name, &form, &result, auth)
-	if err != nil {
 		return
 	}
 	return
@@ -123,3 +111,7 @@ func sendAPIRequest(rtype, url string, form *url.Values, v interface{}, auth str
 
 	if err = json.Unmarshal(data, v); err != nil {
 		log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling api answer")
+		return err
+	}
+	return nil
+}

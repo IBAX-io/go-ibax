@@ -3,6 +3,16 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package smart
+
+import (
+	"bytes"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	xl "github.com/360EntSecGroup-Skylar/excelize"
+	log "github.com/sirupsen/logrus"
 )
 
 // GetDataFromXLSX returns json by parameters range
@@ -44,15 +54,3 @@ func GetRowsCountXLSX(sc *SmartContract, binaryID, sheetNum int64) (int64, error
 func excelBookFromStoredBinary(sc *SmartContract, binaryID int64) (*xl.File, error) {
 	bin := &model.Binary{}
 	bin.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
-	found, err := bin.GetByID(binaryID)
-	if err != nil {
-		return nil, err
-	}
-
-	if !found {
-		log.WithFields(log.Fields{"binary_id": binaryID}).Error("binary_id not found")
-		return nil, nil
-	}
-
-	return xl.OpenReader(bytes.NewReader(bin.Data))
-}

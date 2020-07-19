@@ -15,6 +15,10 @@ type VDEScheChainInfo struct {
 }
 
 func (VDEScheChainInfo) TableName() string {
+	return "vde_sche_chain_info"
+}
+
+func (m *VDEScheChainInfo) Create() error {
 	return DBConn.Create(&m).Error
 }
 
@@ -38,5 +42,3 @@ func (m *VDEScheChainInfo) GetAll() ([]VDEScheChainInfo, error) {
 }
 func (m *VDEScheChainInfo) GetOneByID() (*VDEScheChainInfo, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}

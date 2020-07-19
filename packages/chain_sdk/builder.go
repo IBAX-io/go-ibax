@@ -16,18 +16,6 @@ import (
 // Header is contain header data
 type Header struct {
 	ID          int
-	Time        int64
-	EcosystemID int64
-	KeyID       int64
-	NetworkID   int64
-	PublicKey   []byte
-	PrivateFor  []string
-}
-
-// SmartContract is storing smart contract data
-type SmartContract struct {
-	Header
-	TokenEcosystem int64
 	MaxSum         string
 	PayOver        string
 	SignedBy       int64
@@ -81,3 +69,8 @@ func CreateTransaction(data, hash []byte, keyID int64) error {
 		HighRate: model.TransactionRateOnBlock,
 	}
 	if err := tx.Create(); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating new transaction")
+		return err
+	}
+	return nil
+}*/

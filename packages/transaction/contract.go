@@ -23,8 +23,13 @@ const (
 
 func CreateContract(contractName string, keyID int64, params map[string]interface{},
 	privateKey []byte) error {
-			NetworkID:   conf.Config.NetworkID,
-		},
+	ecosysID, _ := converter.ParseName(contractName)
+	if ecosysID == 0 {
+		ecosysID = 1
+	}
+	contract := smart.GetContract(contractName, uint32(ecosysID))
+	if contract == nil {
+		return fmt.Errorf(errUnknownContract, contractName)
 		Params: params,
 	}
 	txData, _, err := tx.NewTransaction(sc, privateKey)
