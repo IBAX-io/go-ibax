@@ -86,12 +86,12 @@ func SendTxBatches(rtxs []*RawTx) error {
 		}
 		rawTxs = append(rawTxs, ts)
 		qtx := &QueueTx{
-			return err
+			Hash:     rtx.Hash,
+			Data:     rtx.Data,
+			Expedite: rtx.GetExpedite(),
+			Time:     rtx.Time,
 		}
-		if err := tx.Create(&qtxs).Error; err != nil {
-			return err
-		}
-		return nil
-	})
-
-}
+		qtxs = append(qtxs, qtx)
+	}
+	return DBConn.Clauses(clause.OnConflict{DoNothing: true}).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&rawTxs).Error; err != nil {

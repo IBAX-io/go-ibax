@@ -24,19 +24,6 @@ type SyslogHook struct {
 	SyslogNetwork string
 	SyslogRaddr   string
 }
-
-// NewSyslogHook creats SyslogHook
-func NewSyslogHook(appName, facility string) (*SyslogHook, error) {
-	b_syslog.Openlog(appName, b_syslog.LOG_PID, syslogFacility(facility))
-	return &SyslogHook{nil, "", "localhost"}, nil
-}
-
-// Fire the log entry
-func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
-	line, err := entry.String()
-	jsonMap := map[string]interface{}{}
-	if err := json.Unmarshal([]byte(line), &jsonMap); err == nil {
-		delete(jsonMap, "time")
 		delete(jsonMap, "level")
 		delete(jsonMap, "fields.time")
 		if bString, err := json.Marshal(jsonMap); err == nil {
@@ -91,6 +78,14 @@ func (hook *SyslogHook) Levels() []logrus.Level {
 
 func syslogFacility(facility string) b_syslog.Priority {
 	return syslogFacilityPriority[facility]
+}
+
+func init() {
+	syslogFacilityPriority = map[string]b_syslog.Priority{
+		"kern":     b_syslog.LOG_KERN,
+		"user":     b_syslog.LOG_USER,
+		"mail":     b_syslog.LOG_MAIL,
+		"daemon":   b_syslog.LOG_DAEMON,
 		"auth":     b_syslog.LOG_AUTH,
 		"syslog":   b_syslog.LOG_SYSLOG,
 		"lpr":      b_syslog.LOG_LPR,

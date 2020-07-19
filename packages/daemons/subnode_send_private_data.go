@@ -21,13 +21,16 @@ import (
 
 func SendPrivateData(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
-
-	// TcpSendState 0.unsent 1.success 2.fail to send
-	m := &model.ShareDataStatus{}
-	found, _ = m.GetOneByTcpStatus(0)
-	if found {
-		time.Sleep(time.Millisecond * 100)
+		defer atomic.StoreUint32(&d.atomic, 0)
+	} else {
 		return nil
+	}
+	var (
+		tcpstr    string
+		dist      map[string]interface{}
+		found, ok bool
+		err       error
+
 	}
 
 	if m.TaskType == "1" { //1 create table，not need to send

@@ -6,15 +6,15 @@
 package querycost
 
 import (
-	"github.com/IBAX-io/go-ibax/packages/model"
-)
+type QueryCoster interface {
+	QueryCost(*model.DbTransaction, string, ...interface{}) (int64, error)
+}
 
-type QueryCosterType int
+type ExplainQueryCoster struct {
+}
 
-const (
-	ExplainQueryCosterType        QueryCosterType = iota
-	ExplainAnalyzeQueryCosterType QueryCosterType = iota
-	FormulaQueryCosterType        QueryCosterType = iota
+func (*ExplainQueryCoster) QueryCost(transaction *model.DbTransaction, query string, args ...interface{}) (int64, error) {
+	return explainQueryCost(transaction, true, query, args...)
 }
 
 type ExplainAnalyzeQueryCoster struct {

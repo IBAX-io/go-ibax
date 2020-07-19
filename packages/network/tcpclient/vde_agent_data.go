@@ -28,10 +28,6 @@ func SendVDEAgentData(host string, TaskUUID string, DataUUID string, AgentMode s
 	req := &network.VDEAgentDataRequest{
 		TaskUUID:       TaskUUID,
 		DataUUID:       DataUUID,
-		AgentMode:      AgentMode,
-		DataInfo:       DataInfo,
-		VDESrcPubkey:   VDESrcPubkey,
-		VDEAgentPubkey: VDEAgentPubkey,
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending VDESrcData request")
 		return "0"
 	}

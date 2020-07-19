@@ -31,22 +31,6 @@ const (
 	perBlockTokenMovementEvent = 3
 )
 
-var lastLimitEvents map[uint8]time.Time
-
-func init() {
-	lastLimitEvents = make(map[uint8]time.Time, 0)
-}
-
-func sendEmail(conf conf.TokenMovementConfig, message string) error {
-	auth := smtp.PlainAuth("", conf.Username, conf.Password, conf.Host)
-	to := []string{conf.To}
-	msg := []byte(fmt.Sprintf("From: %s\r\n", conf.From) +
-		fmt.Sprintf("To: %s\r\n", conf.To) +
-		fmt.Sprintf("Subject: %s\r\n", conf.Subject) +
-		"\r\n" +
-		fmt.Sprintf("%s\r\n", message))
-	err := smtp.SendMail(fmt.Sprintf("%s:%d", conf.Host, conf.Port), auth, conf.From, to, msg)
-	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("sending email")
 	}
 	return err
@@ -93,3 +77,16 @@ func CheckTokenMovementLimits(tx *model.DbTransaction, conf conf.TokenMovementCo
 	}
 
 	if len(messages) > 0 {
+		sendEmail(conf, strings.Join(messages, "\n"))
+	}
+}
+
+// checks needed only if we have'nt prevent events or if event older then 1 day
+func needCheck(event uint8) bool {
+	t, ok := lastLimitEvents[event]
+	if !ok {
+		return true
+	}
+
+	return time.Now().Sub(t) >= 24*time.Hour
+}

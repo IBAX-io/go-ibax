@@ -2,20 +2,9 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-package main
-
-import (
-	"fmt"
-	"html/template"
-	"os"
-	"path/filepath"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
-
-func TestEscape(t *testing.T) {
+		Expected template.HTML
+	}{
+		{`'test'`, `''test''`},
 		{"`test`", "` + \"`\" + `test` + \"`\" + `"},
 		{`100%`, `100%%`},
 	}
