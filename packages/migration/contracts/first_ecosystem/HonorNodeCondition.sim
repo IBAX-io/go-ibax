@@ -1,4 +1,5 @@
 // +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
 contract HonorNodeCondition {
 	conditions {
 		var account_key int
@@ -7,5 +8,3 @@ contract HonorNodeCondition {
 			return
 		}
 		warning "HonorNodeCondition: Sorry, you do not have access to this action"
-	}
-}

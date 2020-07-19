@@ -19,7 +19,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
 		log.WithError(err)
 		return nil, err
 	}
