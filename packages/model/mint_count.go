@@ -87,10 +87,6 @@ func (m *MinterCount) Changes(dbt *DbTransaction) (*MintCount, error) {
 	}
 	if m.Devid == 0 {
 		return &mc, nil
-	}
-
-	var ap AppParam
-	am, err := ap.GetHvlvebalance(dbt, mc.BlockId)
 	if err != nil {
 		return &mc, err
 	}
@@ -197,6 +193,18 @@ func (m *MintCount) Get(id int64) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func (m *MinterCount) Insert_redisdb(dbt *DbTransaction) error {
+	mc, err := m.Changes(dbt)
+	if err != nil {
+		return err
+	}
+	val, err := mc.Marshal()
+	if err != nil {
+		return err
+	}
+	rp := RedisParams{
 		Key:   MintPrefix + strconv.FormatInt(m.BlockId, 10),
 		Value: string(val),
 	}

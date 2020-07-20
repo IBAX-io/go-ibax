@@ -33,16 +33,11 @@ const (
 )
 
 // the commands for operations in expressions are listed below
-const (
-	cmdNot = iota | 0x0100
-	cmdSign
-)
-
-const (
-	cmdAdd = iota | 0x0200
-	cmdSub
-	cmdMul
-	cmdDiv
+	cmdOr
+	cmdEqual
+	cmdNotEq
+	cmdLess
+	cmdNotLess
 	cmdGreat
 	cmdNotGreat
 

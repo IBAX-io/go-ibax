@@ -4,10 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package tcpclient
 
-import (
-	"context"
-	"encoding/binary"
-	"errors"
 	"fmt"
 	"io"
 
@@ -113,6 +109,13 @@ func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int6
 			if intErr < 0 {
 				log.WithFields(log.Fields{"type": consts.ConversionError, "error": ErrorWrongSizeBytes}).Error("on convert size body")
 				errChan <- ErrorWrongSizeBytes
+				return
+			}
+
+			bodyEndIndx := bodyStartIndx + int64(size)
+			body := bodyBuf[bodyStartIndx:bodyEndIndx]
+			if readed, err := io.ReadFull(src, body); err != nil {
+				log.WithFields(log.Fields{"type": consts.IOError, "size": size, "readed": readed, "error": err}).Error("on reading block body")
 				errChan <- err
 				return
 			}

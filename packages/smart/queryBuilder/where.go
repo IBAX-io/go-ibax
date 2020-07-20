@@ -190,21 +190,11 @@ func GetWhere(inWhere *types.Map) (string, error) {
 				ret, err := GetWhere(value)
 				if err == errWhereFalse {
 					cond = append(cond, ret)
-				ival := escape(value)
-				if ival == `$isnull` {
-					ival = fmt.Sprintf(`%s is null`, key)
 				} else {
-					ival = fmt.Sprintf(`%s = '%s'`, key, ival)
+					if err != nil {
+						return ``, err
+					}
+					cond = append(cond, fmt.Sprintf(`(%s %s)`, key, ret))
 				}
-				cond = append(cond, ival)
-			}
-		}
-	}
-	if len(cond) > 0 {
-		where = strings.Join(cond, ` and `)
-		if err := CheckNow(where); err != nil {
-			return ``, err
-		}
-	}
-	return where, nil
+			default:
 }

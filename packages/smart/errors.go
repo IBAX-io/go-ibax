@@ -40,15 +40,6 @@ const (
 	eKeyNotFound         = `sender %s has not been found`
 	eEcoKeyNotFound      = `sender %s has not been found in ecosystem %d`
 	eEcoKeyDisable       = `%s disable in ecosystem %d`
-	eEcoFuelRate         = `fuel rate must be greater than 0 or empty in ecosystem %d`
-	eEcoCurrentBalance   = `current balance is not enough in ecosystem %d, at least [%s] difference`
-)
-
-var (
-	errDelayedContract    = errors.New(`incorrect delayed contract`)
-	errAccessDenied       = errors.New(`access denied`)
-	errConditionEmpty     = errors.New(`conditions is empty`)
-	errContractNotFound   = errors.New(`contract has not been found`)
 	errTaxes              = errors.New("not enough money to pay the taxes fee")
 	errEmptyColumn        = errors.New(`column name is empty`)
 	errWrongColumn        = errors.New(`column name cannot begin with digit`)
@@ -71,6 +62,15 @@ var (
 	errNegPrice           = errors.New(`price value is negative`)
 	errOneContract        = errors.New(`only one contract must be in the record`)
 	errPermEmpty          = errors.New(`permissions are empty`)
+	errRecursion          = errors.New("recursion detected")
+	errSameColumns        = errors.New(`there are the same columns`)
+	errTableName          = errors.New(`the name of the table cannot begin with @`)
+	errTableEmptyName     = errors.New(`the table name cannot be empty`)
+	errUndefColumns       = errors.New(`columns are undefined`)
+	errUpdNotExistRecord  = errors.New(`update for not existing record`)
+	errWrongSignature     = errors.New(`wrong signature`)
+	errIncorrectParameter = errors.New(`incorrect parameter of the condition function`)
+	errParseTransaction   = errors.New(`parse transaction`)
 	errWhereUpdate        = errors.New(`there is not Where in Update request`)
 	errNotValidUTF        = errors.New(`result is not valid utf-8 string`)
 	errFloat              = errors.New(`incorrect float value`)
