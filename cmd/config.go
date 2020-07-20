@@ -44,16 +44,6 @@ var configCmd = &cobra.Command{
 			log.WithError(err).Fatal("Saving config")
 		}
 
-		log.Infof("Config is saved to %s", configPath)
-	},
-}
-
-func init() {
-	viper.SetEnvPrefix("CHAIN")
-	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-
-	// Command flags
 	configCmd.Flags().String("path", "", "Generate config to (default dataDir/config.toml)")
 
 	// TCP Server
@@ -72,6 +62,11 @@ func init() {
 	configCmd.Flags().StringVar(&conf.Config.DB.Host, "dbHost", "127.0.0.1", "DB host")
 	configCmd.Flags().IntVar(&conf.Config.DB.Port, "dbPort", 5432, "DB port")
 	configCmd.Flags().StringVar(&conf.Config.DB.Name, "dbName", "ibax", "DB name")
+	configCmd.Flags().StringVar(&conf.Config.DB.User, "dbUser", "postgres", "DB username")
+	configCmd.Flags().StringVar(&conf.Config.DB.Password, "dbPassword", "123456", "DB password")
+	configCmd.Flags().IntVar(&conf.Config.DB.LockTimeout, "dbLockTimeout", 5000, "DB lock timeout")
+	configCmd.Flags().IntVar(&conf.Config.DB.IdleInTxTimeout, "dbIdleInTxTimeout", 5000, "DB idle tx timeout")
+	configCmd.Flags().IntVar(&conf.Config.DB.MaxIdleConns, "dbMaxIdleConns", 5, "DB sets the maximum number of connections in the idle connection pool")
 	configCmd.Flags().IntVar(&conf.Config.DB.MaxOpenConns, "dbMaxOpenConns", 100, "sets the maximum number of open connections to the database")
 	viper.BindPFlag("DB.Name", configCmd.Flags().Lookup("dbName"))
 	viper.BindPFlag("DB.Host", configCmd.Flags().Lookup("dbHost"))

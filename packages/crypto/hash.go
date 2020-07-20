@@ -1,15 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package crypto
-
-import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-)
-
 type hashProvider int
 
 const (
@@ -54,3 +44,8 @@ func (h *SHA256) _Hash(msg []byte) []byte {
 func hashSHA256(msg []byte) []byte {
 	hash := sha256.Sum256(msg)
 	return hash[:]
+}
+
+func HashHex(input []byte) (string, error) {
+	return hex.EncodeToString(getHasher().hash(input)), nil
+}

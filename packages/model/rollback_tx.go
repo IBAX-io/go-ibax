@@ -7,6 +7,8 @@ package model
 
 import "gorm.io/gorm"
 
+// RollbackTx is model
+type RollbackTx struct {
 	ID        int64  `gorm:"primary_key;not null"`
 	BlockID   int64  `gorm:"not null" json:"block_id"`
 	TxHash    []byte `gorm:"not null" json:"tx_hash"`
@@ -41,15 +43,6 @@ func (rt *RollbackTx) GetRollbackTxsByTableIDAndTableName(tableID, tableName str
 	}
 	return rollbackTx, nil
 }
-
-// DeleteByHash is deleting rollbackTx by hash
-func (rt *RollbackTx) DeleteByHash(dbTransaction *DbTransaction) error {
-	return GetDB(dbTransaction).Exec("DELETE FROM rollback_tx WHERE tx_hash = ?", rt.TxHash).Error
-}
-
-// DeleteByHashAndTableName is deleting tx by hash and table name
-func (rt *RollbackTx) DeleteByHashAndTableName(transaction *DbTransaction) error {
-	return GetDB(transaction).Where("tx_hash = ? and table_name = ?", rt.TxHash, rt.NameTable).Delete(rt).Error
 }
 
 func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {

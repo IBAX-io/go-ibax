@@ -13,3 +13,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+
+	jsonResponse(w, result)
+}

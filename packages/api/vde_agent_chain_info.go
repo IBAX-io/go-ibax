@@ -71,18 +71,25 @@ func VDEAgentChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
-	id := converter.StrToInt64(params["id"])
-	form := &VDEAgentChainInfoForm{}
-
-	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)
 		return
 	}
 
-	m := &model.VDEAgentChainInfo{}
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
+		return
+	}
 
-	if m, err = unmarshalColumnVDEAgentChainInfo(form); err != nil {
-		errorResponse(w, err)
+	result, err := m.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
+		return
+	}
+
+	jsonResponse(w, result)
+}
 
 func VDEAgentChainInfoDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)

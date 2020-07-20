@@ -50,18 +50,3 @@ func Type88(r *network.PrivateDateRequest) (*network.PrivateDateResponse, error)
 	}
 	encodeDataString := base64.StdEncoding.EncodeToString(eccData)
 	////
-
-	privatePackets := model.PrivatePackets{
-		Hash: hash,
-		//Data: r.Data,
-		//
-		//Data: data,
-		Data: []byte(encodeDataString),
-		Time: time.Now().Unix(),
-	}
-
-	err = privatePackets.Create()
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("Create PrivatePackets table record error")
-		return nil, err
-	}

@@ -15,16 +15,16 @@ var zeroTime time.Time
 
 // Handler represents interface of task handler
 type Handler interface {
-	Run(*Task)
+
+// String returns description of task
+func (t *Task) String() string {
+	return fmt.Sprintf("%s %s", t.ID, t.CronSpec)
 }
 
-// Task represents task
-type Task struct {
-	ID       string
-	CronSpec string
-
-	Handler Handler
-
+// ParseCron parsed cron format
+func (t *Task) ParseCron() error {
+	if len(t.CronSpec) == 0 {
+		return nil
 	}
 
 	var err error
