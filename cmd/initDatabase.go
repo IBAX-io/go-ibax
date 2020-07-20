@@ -7,10 +7,7 @@ package cmd
 
 import (
 	log "github.com/sirupsen/logrus"
-// initDatabaseCmd represents the initDatabase command
-var initDatabaseCmd = &cobra.Command{
-	Use:    "initDatabase",
-	Short:  "Initializing database",
+	"github.com/spf13/cobra"
 	PreRun: loadConfigWKey,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := model.InitDB(conf.Config.DB); err != nil {

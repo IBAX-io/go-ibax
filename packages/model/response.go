@@ -11,6 +11,14 @@ package model
 //	Msg    string `json:"msg" example:"success"`
 //}
 
+type Response struct {
+	// 40003, " %s illegal media file type"
+	//
+	Code    int         `json:"code" example:1` // 0:
+	Data    interface{} `json:"data" example:""`
+	Message string      `json:"message" example:""` //
+}
+
 // TableName returns name of table
 func (r *Response) ReturnFailureString(str string) {
 	//r.Status = 200
@@ -26,6 +34,3 @@ func (r *Response) ReturnFailureString(str string) {
 // TableName returns name of table
 func (r *Response) Return(dat interface{}, ct CodeType) {
 	r.Code = ct.Code
-	r.Message = ct.Message
-	r.Data = dat
-}

@@ -1,10 +1,7 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package model
-
-type VDESrcTaskTime struct {
+	ScheUpdateTime int64 `gorm:"not null" json:"sche_update_time"`
+	CreateTime     int64 `gorm:"not null" json:"create_time"`
+}
 
 func (VDESrcTaskTime) TableName() string {
 	return "vde_src_task_time"

@@ -11,8 +11,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
+	BytesPool.Put(buf)
 
-func TestBytesPoolGet(t *testing.T) {
+	newBuf := BytesPool.Get(12832256)
+	require.Equal(t, 16777216, len(newBuf))
 
 	require.Equal(t, newBuf[:5], short)
 	fmt.Println(newBuf[:6])

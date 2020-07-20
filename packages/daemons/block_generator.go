@@ -75,14 +75,6 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 
 	//if !NtpDriftFlag {
 	//	d.logger.WithFields(log.Fields{"type": consts.Ntpdate}).Error("ntp time not ntpdate")
-	//	return nil
-	//}
-
-	//var cf model.Confirmation
-	//cfg, err := cf.CheckAllowGenBlock()
-	//if err != nil {
-	//	d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Debug("confirmation block not allow")
-	//	return err
 	//}
 	//
 	//if !cfg {
@@ -125,6 +117,11 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	trs, err := processTransactions(d.logger, txs, done, st.Unix())
 	if err != nil {
 		return err
+	}
+
+	// Block generation will be started only if we have transactions
+	if len(trs) == 0 {
+		return nil
 	}
 
 	header := &utils.BlockData{

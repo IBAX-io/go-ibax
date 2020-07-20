@@ -34,14 +34,25 @@ func TestLang(t *testing.T) {
 	id := strconv.FormatInt(list.Count, 10)
 
 	cases := []struct {
+		url    string
+		form   url.Values
+		expect string
+	}{
+		{
+			"NewLang",
+			url.Values{
+				"Name":          {utfName},
+				"Trans":         {`{"en": "тест"}`},
+				"ApplicationId": {"1"},
+			},
+			"",
+		},
+		{
 			"NewPage",
 			url.Values{
 				"Name":          {name},
 				"Value":         {fmt.Sprintf("Span($@1%s$)", name)},
 				"Menu":          {"default_menu"},
-				"Conditions":    {`ContractConditions("MainCondition")`},
-				"ApplicationId": {"1"},
-			},
 			"",
 		},
 		{

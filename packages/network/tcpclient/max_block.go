@@ -78,16 +78,6 @@ func hostWithMaxBlock(ctx context.Context, hosts []string) (bestHost string, max
 	for _, h := range hosts {
 		if ctx.Err() != nil {
 			log.WithFields(log.Fields{"error": ctx.Err(), "type": consts.ContextError}).Error("context error")
-			return "", maxBlockID, ctx.Err()
-		}
-
-		wg.Add(1)
-
-		go func(host string) {
-			blockID, err := getMaxBlock(host)
-			defer wg.Done()
-
-			resultChan <- blockAndHost{
 				host:    host,
 				blockID: blockID,
 				err:     err,
@@ -99,6 +89,12 @@ func hostWithMaxBlock(ctx context.Context, hosts []string) (bestHost string, max
 	var errCount int
 	for i := 0; i < len(hosts); i++ {
 		bl := <-resultChan
+
+		if bl.err != nil {
+			errCount++
+			continue
+		}
+
 		// If blockID is maximal then the current host is the best
 		if bl.blockID > maxBlockID {
 			maxBlockID = bl.blockID

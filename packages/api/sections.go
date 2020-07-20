@@ -28,6 +28,12 @@ func (f *sectionsForm) Validate(r *http.Request) error {
 		return err
 	}
 
+	if len(f.Lang) == 0 {
+		f.Lang = r.Header.Get("Accept-Language")
+	}
+
+	return nil
+}
 
 func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 	form := &sectionsForm{}
@@ -41,19 +47,6 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	table := "1_sections"
-	q := model.GetDB(nil).Table(table).Where("ecosystem = ? AND status > 0", client.EcosystemID).Order("id ASC")
-
-	result := new(listResult)
-	err := q.Count(&result.Count).Error
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting table records count")
-		errorResponse(w, errTableNotFound.Errorf(table))
-		return
-	}
-
-	rows, err := q.Offset(form.Offset).Limit(form.Limit).Rows()
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
 		errorResponse(w, err)
 		return
 	}
