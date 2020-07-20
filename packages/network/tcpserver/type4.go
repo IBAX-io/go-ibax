@@ -1,14 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package tcpserver
-
-import (
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -23,3 +13,11 @@ func Type4(r *network.ConfirmRequest) (*network.ConfirmResponse, error) {
 		resp.Hash = hash[:]
 	} else {
 		resp.Hash = block.Hash // can we send binary data ?
+	}
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "block_id": r.BlockID}).Error("Getting block")
+	} else if len(block.Hash) == 0 {
+		log.WithFields(log.Fields{"type": consts.DBError, "block_id": r.BlockID}).Warning("Block not found")
+	}
+	return resp, nil
+}

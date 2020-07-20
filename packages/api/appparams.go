@@ -19,19 +19,18 @@ import (
 
 type appParamsResult struct {
 	App  string        `json:"app_id"`
-	List []paramResult `json:"list"`
-}
+		ecosystemForm: ecosystemForm{
+			Validator: m.EcosysIDValidator,
+		},
+	}
 
-type appParamsForm struct {
-	ecosystemForm
-	paramsForm
-}
+	if err := parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
 
-func (f *appParamsForm) Validate(r *http.Request) error {
-	return f.ecosystemForm.Validate(r)
-}
-
-func (m Mode) getAppParamsHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
 
 	ap := &model.AppParam{}
 	ap.SetTablePrefix(form.EcosystemPrefix)

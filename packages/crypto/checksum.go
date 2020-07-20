@@ -20,6 +20,13 @@ func init() {
 	table64 = crc64.MakeTable(crc64.ECMA)
 }
 
+// CalcChecksum is calculates checksum
+func CalcChecksum(input []byte) (uint64, error) {
+	switch checksumProv {
+	case _CRC64:
+		return calcCRC64(input), nil
+	default:
+		return 0, ErrUnknownProvider
 	}
 }
 
@@ -35,13 +42,5 @@ func checkSum(val []byte) int {
 		digit := int(ch - '0')
 		if i&1 == 1 {
 			one += digit
-		} else {
-			two += digit
-		}
-	}
-	checksum := (two + 3*one) % 10
-	if checksum > 0 {
-		checksum = 10 - checksum
-	}
 	return checksum
 }

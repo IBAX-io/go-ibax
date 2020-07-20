@@ -16,10 +16,15 @@ import (
 // Header is contain header data
 type Header struct {
 	ID          int
-	Time        int64
-	EcosystemID int64
-	KeyID       int64
-	NetworkID   int64
+// SmartContract is storing smart contract data
+type SmartContract struct {
+	Header
+	TokenEcosystem int64
+	MaxSum         string
+	PayOver        string
+	SignedBy       int64
+	Params         map[string]interface{}
+}
 
 func newTransaction(smartTx SmartContract, privateKey []byte, internal bool) (data, hash []byte, err error) {
 	var publicKey []byte

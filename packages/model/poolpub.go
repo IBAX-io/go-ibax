@@ -2,12 +2,16 @@ package model
 
 var (
 	MintCountCh = make(chan *MinterCount, 10)
-	//			//time.Sleep(4000)
-	//		}
-	//		//time.Sleep(5*time.Second)
-	//		//MintCountDealCh<-dat
-	//	}
-	//
-	//}
+)
+
+func Put_MintCount() error {
+
+	return nil
+}
+
+func Deal_MintCount() error {
+	//for {
+	//	select {
+	//	case dat := <-MintCountCh:
 	return nil
 }

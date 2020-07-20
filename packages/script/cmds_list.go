@@ -1,3 +1,6 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package script
 
@@ -40,12 +43,6 @@ const (
 	cmdSub
 	cmdMul
 	cmdDiv
-	cmdAnd
-	cmdOr
-	cmdEqual
-	cmdNotEq
-	cmdLess
-	cmdNotLess
 	cmdGreat
 	cmdNotGreat
 

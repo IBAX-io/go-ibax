@@ -220,20 +220,6 @@ var obsimp = `{
             "Conditions": "true"
         }
     ],
-    "languages": [
-        {
-            "Name": "est2",
-            "Trans": "{\"en\":\"yeye\",\"te\":\"knfek\"}"
-        }
-    ],
-    "contracts": [
-        {
-            "Name": "testCont2",
-            "Value": "contract testCont2 {\n    data {\n\n    }\n\n    conditions {\n\n    }\n\n    action {\n        $result=\"privet\"\n    }\n}",
-            "Conditions": "true"
-        }
-    ],
-    "tables": [
         {
             "Name": "tests2",
             "Columns": "[{\"name\":\"name\",\"type\":\"text\",\"conditions\":\"true\"}]",
@@ -477,6 +463,15 @@ func TestCron(t *testing.T) {
 			}
 		`},
 		"Conditions": {`ContractConditions("MainCondition")`},
+		"obs":        {"true"},
+	})
+
+	till := time.Now().Format(time.RFC3339)
+	err := postTx("NewCron", &url.Values{
+		"Cron":       {"* * * * *"},
+		"Contract":   {"TestCron"},
+		"Conditions": {`ContractConditions("MainCondition")`},
+		"Till":       {till},
 		"obs":        {"true"},
 	})
 	if err != nil {

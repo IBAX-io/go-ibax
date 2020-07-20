@@ -16,16 +16,6 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/transaction"
-	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-
-	log "github.com/sirupsen/logrus"
-)
 
 var ErrDiffKey = errors.New("Different keys")
 
@@ -100,6 +90,22 @@ func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key i
 	var rtxs []*model.RawTx
 	for _, txData := range txDatas {
 		rtx := &transaction.RawTransaction{}
+		if err = rtx.Processing(txData); err != nil {
+			return nil, err
+		}
+		rtxs = append(rtxs, rtx.SetRawTx())
+		retTx = append(retTx, rtx.HashStr())
+	}
+	err = model.SendTxBatches(rtxs)
+	return
+}
+
+type ObsTxPreprocessor struct{}
+
+func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, le *log.Entry) (string, error) {
+
+	tx, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txData), true)
+	if err != nil {
 		le.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("on unmarshaling user tx")
 		return "", err
 	}

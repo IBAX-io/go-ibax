@@ -68,3 +68,4 @@ func (m *VDESrcDataStatus) GetAllByDataSendStatusAndAgentMode(DataSendStatus int
 }
 
 func (m *VDESrcDataStatus) GetOneByDataSendStatus(DataSendStatus int64) (bool, error) {
+	return isFound(DBConn.Where("data_send_state = ?", DataSendStatus).First(m))

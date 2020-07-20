@@ -31,20 +31,17 @@ func loadContractTasks() error {
 			return nil
 		}
 
-		c := model.Cron{}
-		c.SetTablePrefix(fmt.Sprintf("%d", stateID))
-		tasks, err := c.GetAllCronTasks()
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get all cron tasks")
-			return err
-		}
-
-		for _, cronTask := range tasks {
-			err = scheduler.UpdateTask(&scheduler.Task{
 				ID:       cronTask.UID(),
 				CronSpec: cronTask.Cron,
 				Handler: &contract.ContractHandler{
 					Contract: cronTask.Contract,
+				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }

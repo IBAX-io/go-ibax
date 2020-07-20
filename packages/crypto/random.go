@@ -6,7 +6,5 @@ package crypto
 
 import (
 	"math/rand"
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
-}
+	"time"
+)

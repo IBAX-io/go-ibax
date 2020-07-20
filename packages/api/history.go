@@ -9,19 +9,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
-const rollbackHistoryLimit = 100
-
-type historyResult struct {
-	List []map[string]string `json:"list"`
-}
-
 func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
@@ -46,3 +33,8 @@ func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, err)
 			return
 		}
+		rollbackList = append(rollbackList, rollback)
+	}
+
+	jsonResponse(w, &historyResult{rollbackList})
+}

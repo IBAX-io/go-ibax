@@ -64,6 +64,18 @@ func VDEScheTaskFromSrcInstallContractSrc(ctx context.Context, d *daemon) error 
 		//err := api.KeyLogin(src, api.ApiEcosystemID)
 		gAuth_sche, _, gPrivate_sche, _, _, err := vde_api.KeyLogin(vde_sche_apiAddress, src, vde_sche_apiEcosystemID)
 		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		//fmt.Println("Login OK!")
+
+		ContractSrc := item.ContractSrcGet
+
+		form := url.Values{
+			`Value`:         {ContractSrc},
+			"ApplicationId": {"1"},
+			`Conditions`:    {`true`}}
 
 		ContractName := `@1NewContract`
 		//_, _, _, err = api.PostTxResult(ContractName, &form)
@@ -130,14 +142,6 @@ func VDEScheTaskFromSrcInstallContractDest(ctx context.Context, d *daemon) error
 
 		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
 		// Login
-		//err := api.KeyLogin(src, api.ApiEcosystemID)
-		gAuth_sche, _, gPrivate_sche, _, _, err := vde_api.KeyLogin(vde_sche_apiAddress, src, vde_sche_apiEcosystemID)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
-			time.Sleep(time.Second * 2)
-			continue
-		}
-		//fmt.Println("Login OK!")
 
 		ContractDest := item.ContractDestGet
 
