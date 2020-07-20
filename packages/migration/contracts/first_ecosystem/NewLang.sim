@@ -8,12 +8,6 @@ contract NewLang {
     }
 
     conditions {
-        if $ApplicationId == 0 {
-            warning "Application id cannot equal 0"
-        }
-
-        if DBFind("languages").Columns("id").Where({name: $Name}).One("id") {
-            warning Sprintf( "Language resource %s already exists", $Name)
         }
 
         EvalCondition("parameters", "changing_language", "value")
@@ -21,3 +15,5 @@ contract NewLang {
 
     action {
         CreateLanguage($Name, $Trans)
+    }
+}

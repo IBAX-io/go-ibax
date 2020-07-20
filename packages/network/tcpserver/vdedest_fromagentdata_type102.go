@@ -52,11 +52,12 @@ func Type102(r *network.VDEAgentDataRequest) (*network.VDEAgentDataResponse, err
 		AgentMode:      AgentMode,
 		Hash:           hash,
 		DataInfo:       r.DataInfo,
-		VDESrcPubkey:   r.VDESrcPubkey,
-		VDEAgentPubkey: r.VDEAgentPubkey,
-		VDEAgentIp:     r.VDEAgentIp,
-		VDEDestPubkey:  r.VDEDestPubkey,
-		VDEDestIp:      r.VDEDestIp,
+
+	err = VDEDestData.Create()
+	if err != nil {
+		log.WithError(err)
+		return nil, err
+	}
 
 	return resp, nil
 }
