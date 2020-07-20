@@ -839,22 +839,6 @@ func dbfindTag(par parFunc) string {
 			if par.Node.Attr[`prefix`] != nil {
 				setVar(par.Workspace, prefix+`_`+strings.Replace(icol, `.`, `_`, -1), ival)
 			}
-			row[i] = ival
-		}
-		data = append(data, row)
-	}
-	if perm != nil && len(perm[`filter`]) > 0 {
-		result := make([]interface{}, len(data))
-		for i, item := range data {
-			row := make(map[string]string)
-			for j, col := range columnNames {
-				row[col] = item[j]
-			}
-			result[i] = reflect.ValueOf(row).Interface()
-		}
-		fltResult, err := smart.VMEvalIf(sc.VM, perm[`filter`], uint32(sc.TxSmart.EcosystemID),
-			&map[string]interface{}{
-				`data`:         result,
 				`ecosystem_id`: sc.TxSmart.EcosystemID,
 				`key_id`:       sc.TxSmart.KeyID, `sc`: sc,
 				`block_time`: 0, `time`: sc.TxSmart.Time})
@@ -1404,6 +1388,22 @@ func binaryTag(par parFunc) string {
 	}
 	binary := &model.Binary{}
 	binary.SetTablePrefix(ecosystemID)
+
+	var (
+		ok  bool
+		err error
+	)
+
+	if par.Node.Attr["id"] != nil {
+		ok, err = binary.GetByID(converter.StrToInt64(macro(par.Node.Attr["id"].(string), par.Workspace.Vars)))
+	} else {
+		ok, err = binary.Get(
+			converter.StrToInt64(par.ParamWithMacros("AppID")),
+			par.ParamWithMacros("Account"),
+			par.ParamWithMacros("Name"),
+		)
+	}
+
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting record from db")
 		return err.Error()

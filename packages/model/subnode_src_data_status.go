@@ -39,8 +39,6 @@ func (m *SubNodeSrcDataStatus) Create() error {
 }
 
 func (m *SubNodeSrcDataStatus) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
 	return result, err
 }
 func (m *SubNodeSrcDataStatus) GetOneByID() (*SubNodeSrcDataStatus, error) {

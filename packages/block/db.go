@@ -100,6 +100,19 @@ func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error 
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
 		return err
+	}
+
+	b := &model.Block{
+		ID:            blockID,
+		Hash:          block.Header.Hash,
+		Data:          block.BinData,
+		EcosystemID:   block.Header.EcosystemID,
+		KeyID:         block.Header.KeyID,
+		NodePosition:  block.Header.NodePosition,
+		Time:          block.Header.Time,
+		RollbacksHash: rollbacksHash,
+		Tx:            int32(len(block.Transactions)),
+	}
 	validBlockTime := true
 	if blockID > 1 {
 		exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Time, 0), int(b.NodePosition))
@@ -176,9 +189,3 @@ func GetDataFromFirstBlock() (data *consts.FirstBlock, ok bool) {
 	t := pb.Transactions[0]
 	data, ok = t.TxPtr.(*consts.FirstBlock)
 	if !ok {
-		log.WithFields(log.Fields{"type": consts.ParserError}).Error("getting data of first block")
-		return
-	}
-	syspar.SysUpdate(nil)
-	return
-}

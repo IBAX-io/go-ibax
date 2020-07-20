@@ -9,6 +9,13 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
+	"time"
+
+	vde_api "github.com/IBAX-io/go-ibax/packages/vde_sdk"
+
+	"path/filepath"
+
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/model"
 
@@ -80,17 +87,6 @@ func VDESrcTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 		} else {
 			item.ContractStateSrc = 1
 			item.ContractStateSrcErr = ""
-		}
-		//fmt.Println("Call api.PostTxResult Src OK")
-
-		item.UpdateTime = time.Now().Unix()
-		err = item.Updates()
-		if err != nil {
-			fmt.Println("Update VDEScheTask table err: ", err)
-			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
-			time.Sleep(time.Millisecond * 2)
-			continue
-		}
 
 	} //for
 

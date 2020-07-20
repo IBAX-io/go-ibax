@@ -67,12 +67,6 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 
 		//TxHash:     form.TxHash,
 		//ChainState: int64(form.ChainState),
-		//BlockId:    int64(form.BlockId),
-		//ChainId:    int64(form.ChainId),
-		//ChainErr:   form.ChainErr,
-	}
-
-	return m, err
 	)
 	logger := getLogger(r)
 	form := &VDESrcTaskFromScheForm{}

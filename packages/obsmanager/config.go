@@ -66,7 +66,3 @@ func (c ChildOBSConfig) configPath() string {
 
 func (c ChildOBSConfig) getCommand(commandName string) *exec.Cmd {
 	args := []string{
-		commandName,
-		fmt.Sprintf("--config=%s", c.configPath()),
-	}
-

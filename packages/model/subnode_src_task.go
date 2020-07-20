@@ -5,6 +5,10 @@
 
 package model
 
+type SubNodeSrcTask struct {
+	ID         int64  `gorm:"primary_key; not null" json:"id"`
+	TaskUUID   string `gorm:"not null" json:"task_uuid"`
+	TaskName   string `gorm:"not null" json:"task_name"`
 	TaskSender string `gorm:"not null" json:"task_sender"`
 	Comment    string `gorm:"not null" json:"comment"`
 	Parms      string `gorm:"type:jsonb" json:"parms"`
@@ -19,22 +23,6 @@ package model
 	ChannelStateErr string `gorm:"not null" json:"channel_state_err"`
 
 	//TxHash     string `gorm:"not null" json:"tx_hash"`
-	//ChainState int64  `gorm:"not null" json:"chain_state"`
-	//BlockId    int64  `gorm:"not null" json:"block_id"`
-	//ChainId    int64  `gorm:"not null" json:"chain_id"`
-	//ChainErr   string `gorm:"not null" json:"chain_err"`
-
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
-func (SubNodeSrcTask) TableName() string {
-	return "subnode_src_task"
-}
-
-func (m *SubNodeSrcTask) Create() error {
-	return DBConn.Create(&m).Error
-}
 
 func (m *SubNodeSrcTask) Updates() error {
 	return DBConn.Model(m).Updates(m).Error

@@ -125,6 +125,22 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spfm.SetTablePrefix(converter.Int64ToStr(client.EcosystemID))
+	if ok, err := spfm.Get(nil, "free_membership"); err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting free_membership parameter")
+		errorResponse(w, err)
+		return
+	} else if ok {
+		fm = converter.StrToInt64(spfm.Value)
+	}
+	publicKey = account.PublicKey
+	isExistPub = len(publicKey) == 0
+
+	isCan := func(a, e bool) bool {
+		return !a || (a && e)
+	}
+	if isCan(isAccount, isExistPub) {
+		if !(fm == 1 || client.EcosystemID == 1) {
+			errorResponse(w, errEcoNotOpen.Errorf(client.EcosystemID))
 			return
 		}
 	}
@@ -294,17 +310,6 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	result.NotifyKey, result.Timestamp, err = publisher.GetJWTCent(wallet, form.Expire)
 	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-
-	ra := &model.RolesParticipants{}
-	roles, err := ra.SetTablePrefix(client.EcosystemID).GetActiveMemberRoles(account.AccountID)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting roles")
-		errorResponse(w, err)
-		return
-	}
 
 	for _, r := range roles {
 		var res map[string]string

@@ -4,17 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 package api
-type componentModel interface {
-	SetTablePrefix(prefix string)
-	Get(name string) (bool, error)
-}
 
-func getPageRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &model.Page{})
-}
+import (
+	"net/http"
 
-func getMenuRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &model.Menu{})
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
 }
 
 func getBlockInterfaceRowHandler(w http.ResponseWriter, r *http.Request) {
