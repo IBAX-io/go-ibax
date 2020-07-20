@@ -125,22 +125,6 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	spfm.SetTablePrefix(converter.Int64ToStr(client.EcosystemID))
-	if ok, err := spfm.Get(nil, "free_membership"); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting free_membership parameter")
-		errorResponse(w, err)
-		return
-	} else if ok {
-		fm = converter.StrToInt64(spfm.Value)
-	}
-	publicKey = account.PublicKey
-	isExistPub = len(publicKey) == 0
-
-	isCan := func(a, e bool) bool {
-		return !a || (a && e)
-	}
-	if isCan(isAccount, isExistPub) {
-		if !(fm == 1 || client.EcosystemID == 1) {
-			errorResponse(w, errEcoNotOpen.Errorf(client.EcosystemID))
 			return
 		}
 	}
@@ -156,6 +140,22 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if isCan(isAccount, isExistPub) {
+
+			publicKey = form.PublicKey.Bytes()
+			if len(publicKey) == 0 {
+				logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty")
+				errorResponse(w, errEmptyPublic)
+				return
+			}
+
+			nodePrivateKey := syspar.GetNodePrivKey()
+
+			contract := smart.GetContract("NewUser", 1)
+			sc := tx.SmartContract{
+				Header: tx.Header{
+					ID:          int(contract.Block.Info.(*script.ContractInfo).ID),
+					Time:        time.Now().Unix(),
+					EcosystemID: 1,
 					KeyID:       conf.Config.KeyID,
 					NetworkID:   conf.Config.NetworkID,
 				},

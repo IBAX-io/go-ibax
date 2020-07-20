@@ -102,25 +102,6 @@ func (s UpdateQueryType) GetTableName() (string, error) {
 	queryFields := strings.Fields(string(s))
 	setFieldIndex := strSliceIndex(queryFields, Set)
 	if setFieldIndex == 0 {
-		return "", SetStatementMissingError
-	}
-	return strings.Trim(queryFields[setFieldIndex-1], Quote), nil
-}
-
-func (s UpdateQueryType) CalculateCost(rowCount int64) int64 {
-	return UpdateCost + int64(UpdateRowCoeff*float64(rowCount))
-}
-
-type InsertQueryType string
-
-func (s InsertQueryType) GetTableName() (string, error) {
-	queryFields := strings.Fields(string(s))
-	intoFieldIndex := strSliceIndex(queryFields, Into)
-	if intoFieldIndex == 0 {
-		return "", IntoStatementMissingError
-	}
-	tableNameValuesField := queryFields[intoFieldIndex+1]
-	tableName := ""
 	lparenIndex := strings.Index(tableNameValuesField, Lparen)
 	if lparenIndex > 0 {
 		tableName = tableNameValuesField[:lparenIndex]
@@ -147,6 +128,19 @@ func (s DeleteQueryType) GetTableName() (string, error) {
 		return "", DeleteMinimumThreeFieldsError
 	}
 	return strings.Trim(queryFields[fromFieldIndex+1], Quote), nil
+}
+
+func (s DeleteQueryType) CalculateCost(rowCount int64) int64 {
+	return DeleteCost + int64(DeleteRowCoeff*float64(rowCount))
+}
+
+func (f *FormulaQueryCoster) QueryCost(transaction *model.DbTransaction, query string, args ...interface{}) (int64, error) {
+	cleanedQuery := strings.TrimSpace(strings.ToLower(query))
+	var queryType QueryType
+	switch {
+	case strings.HasPrefix(cleanedQuery, Select):
+		queryType = SelectQueryType(cleanedQuery)
+	case strings.HasPrefix(cleanedQuery, Insert):
 		queryType = InsertQueryType(cleanedQuery)
 	case strings.HasPrefix(cleanedQuery, Update):
 		queryType = UpdateQueryType(cleanedQuery)

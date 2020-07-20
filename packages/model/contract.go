@@ -12,6 +12,14 @@ type Contract struct {
 	tableName   string
 	ID          int64  `json:"id,omitempty"`
 	Name        string `json:"name,omitempty"`
+	Value       string `json:"value,omitempty"`
+	WalletID    int64  `json:"wallet_id,omitempty"`
+	Active      bool   `json:"active,omitempty"`
+	TokenID     int64  `json:"token_id,omitempty"`
+	Conditions  string `json:"conditions,omitempty"`
+	AppID       int64  `json:"app_id,omitempty"`
+	EcosystemID int64  `gorm:"column:ecosystem" json:"ecosystem_id,omitempty"`
+}
 
 // TableName returns name of table
 func (c *Contract) TableName() string {
@@ -31,21 +39,6 @@ func (c *Contract) GetFromEcosystem(db *DbTransaction, ecosystem int64) ([]Contr
 	err := GetDB(db).Table(c.TableName()).Where("ecosystem = ?", ecosystem).Order("id asc").Find(&result).Error
 	return *result, err
 }
-
-// Count returns count of records in table
-func (c *Contract) Count() (count int64, err error) {
-	err = DBConn.Table(c.TableName()).Count(&count).Error
-	return
-}
-
-func (c *Contract) GetListByEcosystem(offset, limit int) ([]Contract, error) {
-	var list []Contract
-	err := DBConn.Table(c.TableName()).Offset(offset).Limit(limit).
-		Order("id asc").Where("ecosystem = ?", c.EcosystemID).
-		Find(&list).Error
-	return list, err
-}
-
 func (c *Contract) CountByEcosystem() (n int64, err error) {
 	err = DBConn.Table(c.TableName()).Where("ecosystem = ?", c.EcosystemID).Count(&n).Error
 	return

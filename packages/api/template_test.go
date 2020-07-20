@@ -213,6 +213,16 @@ func TestMoney(t *testing.T) {
 	err := sendPost(`content`, &url.Values{`template`: {`Money(` + string(money) + `)`}}, &ret)
 	if err != nil {
 		t.Error(err)
+		return
+	}
+	if RawToString(ret.Tree) != `[{"tag":"text","text":"invalid money value"}]` {
+		t.Errorf(`wrong value %s`, RawToString(ret.Tree))
+	}
+}
+
+func TestMobile(t *testing.T) {
+	var ret contentResult
+	gMobile = true
 	if err := keyLogin(1); err != nil {
 		t.Error(err)
 		return
@@ -231,12 +241,6 @@ func TestMoney(t *testing.T) {
 func TestCutoff(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
 
-	name := randName(`tbl`)
-	form := url.Values{
-		"Name": {name},
-		"Columns": {`[
-			{"name":"name","type":"varchar", "index": "1", "conditions":"true"},
-			{"name":"long_text", "type":"text", "index":"0", "conditions":"true"},
 			{"name":"short_text", "type":"varchar", "index":"0", "conditions":"true"}
 			]`},
 		"Permissions":   {`{"insert": "true", "update" : "true", "new_column": "true"}`},

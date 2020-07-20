@@ -71,6 +71,19 @@ func BenchmarkGetBlockBodiesWithChanReadAll(t *testing.B) {
 //===================================================GetBlockBodiesChanByBlock
 
 // 500	   2264475 ns/op	  109001 B/op	     108 allocs/op with pool size 12832256
+func BenchmarkGetBlockBodiesChanByBlockWithSyncPool(t *testing.B) {
+	var bts []byte
+	r := BufCloser{bytes.NewBuffer(bts)}
+
+	t.ResetTimer()
+	for j := 0; j < t.N; j++ {
+		t.StopTimer()
+		for i := 0; i < 100; i++ {
+			resp := network.GetBodyResponse{
+				Data: inputs[i],
+			}
+
+			// fmt.Println("lenData", len(inputs[i]))
 			resp.Write(r)
 		}
 
@@ -176,13 +189,6 @@ func BenchmarkGetBlockBodiesAsSlice(t *testing.B) {
 	var bts []byte
 	r := BufCloser{bytes.NewBuffer(bts)}
 
-	// dataLen := 4
-	t.ResetTimer()
-	for j := 0; j < t.N; j++ {
-		t.StopTimer()
-		for i := 0; i < 100; i++ {
-			resp := network.GetBodyResponse{
-				Data: inputs[i],
 			}
 
 			resp.Write(r)

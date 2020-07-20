@@ -21,6 +21,13 @@ func (ta *TransactionsAttempts) GetByHash(dbTransaction *DbTransaction, hash []b
 	return isFound(GetDB(dbTransaction).Where("hash = ?", hash).First(&ta))
 }
 
+// IncrementTxAttemptCount increases attempt column
+func IncrementTxAttemptCount(dbTransaction *DbTransaction, transactionHash []byte) (int64, error) {
+	ta := &TransactionsAttempts{}
+	found, err := ta.GetByHash(dbTransaction, transactionHash)
+	if err != nil {
+		return 0, err
+	}
 	if found {
 		if ta.Attempt > 125 {
 			return int64(ta.Attempt), nil
@@ -52,9 +59,4 @@ func FindTxAttemptCount(dbTransaction *DbTransaction, count int) ([]*Transaction
 		return rs, err
 	}
 	return rs, nil
-}
-
-// GetByHash returns TransactionsAttempts existence by hash
-func DeleteTransactionsAttemptsByHash(dbTransaction *DbTransaction, hash []byte) error {
-	return GetDB(dbTransaction).Table("transactions_attempts").Delete(&TransactionsAttempts{}, hash).Error
 }
