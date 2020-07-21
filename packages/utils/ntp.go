@@ -23,9 +23,6 @@ const (
 
 // durationSlice attaches the methods of sort.Interface to []time.Duration,
 // sorting in increasing order.
-type durationSlice []time.Duration
-
-func (s durationSlice) Len() int           { return len(s) }
 func (s durationSlice) Less(i, j int) bool { return s[i] < s[j] }
 func (s durationSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
@@ -85,5 +82,23 @@ func sntpDrift(measurements int) (time.Duration, error) {
 		}
 		elapsed := time.Since(sent)
 
+		// Reconstruct the time from the reply data
+		sec := uint64(reply[43]) | uint64(reply[42])<<8 | uint64(reply[41])<<16 | uint64(reply[40])<<24
+		frac := uint64(reply[47]) | uint64(reply[46])<<8 | uint64(reply[45])<<16 | uint64(reply[44])<<24
+
+		nanosec := sec*1e9 + (frac*1e9)>>32
+
+		t := time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC).Add(time.Duration(nanosec)).Local()
+
+		// Calculate the drift based on an assumed answer time of RRT/2
+		drifts = append(drifts, sent.Sub(t)+elapsed/2)
+	}
+	// Calculate average drif (drop two extremities to avoid outliers)
+	sort.Sort(durationSlice(drifts))
+
+	drift := time.Duration(0)
+	for i := 1; i < len(drifts)-1; i++ {
+		drift += drifts[i]
+	}
 	return drift / time.Duration(measurements), nil
 }

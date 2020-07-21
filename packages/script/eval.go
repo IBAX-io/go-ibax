@@ -20,6 +20,16 @@ type evalCode struct {
 var (
 	evals = make(map[uint64]*evalCode)
 )
+
+// CompileEval compiles conditional exppression
+func (vm *VM) CompileEval(input string, state uint32) error {
+	source := `func eval bool { return ` + input + `}`
+	block, err := vm.CompileBlock([]rune(source), &OwnerInfo{StateID: state})
+	if err == nil {
+		crc, err := crypto.CalcChecksum([]byte(input))
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("calculating compile eval input checksum")
+
 			return err
 		}
 		evals[crc] = &evalCode{Source: input, Code: block}
@@ -54,4 +64,3 @@ func (vm *VM) EvalIf(input string, state uint32, vars *map[string]interface{}) (
 		return valueToBool(ret[0]), nil
 	}
 	return false, err
-}

@@ -39,6 +39,14 @@ func Type1(rw io.ReadWriter) error {
 	 *  data structure
 	 *  type - 1 byte. 0 - block, 1 - list of transactions
 	 *  {if type==1}:
+	 *  <any number of the next sets>
+	 *   tx_hash - 32 bytes
+	 * </>
+	 * {if type==0}:
+	 *  block_id - 3 bytes
+	 *  hash - 32 bytes
+	 * <any number of the next sets>
+	 *   tx_hash - 32 bytes
 	 * </>
 	 * */
 
@@ -117,8 +125,6 @@ func resieveTxBodies(con io.Reader) ([]byte, error) {
 
 func processBlock(buf *bytes.Buffer, honorNodeID int64) error {
 	infoBlock := &model.InfoBlock{}
-	found, err := infoBlock.Get()
-	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting cur block ID")
 		return utils.ErrInfo(err)
 	}

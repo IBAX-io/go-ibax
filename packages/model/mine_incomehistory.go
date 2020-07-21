@@ -8,15 +8,12 @@ import (
 //MineIncomehistory example
 type MineIncomehistory struct {
 	ID                      int64           `gorm:"primary_key;not null"`
-	Devid                   int64           `gorm:"not null"`
-	Number                  string          `gorm:"not null" `
-	Poolid                  int64           `gorm:"not null" `
-	Keyid                   int64           `gorm:"not null"`
-	Mineid                  int64           `gorm:"not null"`
-	Amount                  decimal.Decimal `gorm:"not null"`
-	Type                    int64           `gorm:"not null"`
-	Capacitys               int64           `gorm:"not null" `
-	Nonce                   int64           `gorm:"not null" `
+}
+
+//DayMineIncomehistory example
+type DayMineIncomehistory struct {
+	Amount decimal.Decimal `json:"amount"`
+	Time   int64           `json:"time"`
 }
 
 // TableName returns name of table

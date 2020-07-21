@@ -46,6 +46,17 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 	if len(SrcTaskDataChain) == 0 {
 		//log.Info("Src task data chain not found")
 		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
+
+	// deal with task data
+	for _, item := range SrcTaskDataChain {
+		//fmt.Println("TaskUUID:", item.TaskUUID)
+		blockchain_table = item.BlockchainTable
+		blockchain_http = item.BlockchainHttp
+		blockchain_ecosystem = item.BlockchainEcosystem
+		fmt.Println("blockchain_http:", blockchain_http, blockchain_ecosystem, blockchain_table)
+
 		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
@@ -82,14 +93,6 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 			}
 			node_pubkey_slice := strings.Split(item.SubNodeDestPubkey, ";")
 			chain_api.ApiPrivateFor = append(chain_api.ApiPrivateFor, node_pubkey_slice...)
-
-			ContractName := `@1SubNodeSrcHashCreate`
-			_, txHash, _, err = chain_api.VDEPostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
-			if err != nil {
-				fmt.Println("Send SubNodeSrcData to chain err: ", err)
-				log.WithFields(log.Fields{"error": err}).Error("Send SubNodeSrcData to chain!")
-				time.Sleep(time.Second * 5)
-				continue
 			}
 			fmt.Println("Send chain Contract to run, ContractName:", ContractName)
 

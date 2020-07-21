@@ -116,6 +116,20 @@ var forTest = tplList{
 	{`SetVar(t,7)
 		Button(Body: Span(my#t#)).ErrorRedirect(PageParams: name=Val(#t#val), PageName: "v#t#", ErrorID: myerr).ErrorRedirect(PageParams: par=#t#, PageName: "qqq", ErrorID: err1)`,
 		`[{"tag":"button","attr":{"errredirect":{"err1":{"errorid":"err1","pagename":"qqq","pageparams":{"par":{"text":"7","type":"text"}}},"myerr":{"errorid":"myerr","pagename":"v7","pageparams":{"name":{"params":["7val"],"type":"Val"}}}}},"children":[{"tag":"span","children":[{"tag":"text","text":"my7"}]}]}]`},
+	{`SetVar(my,Val)Div().Hide(Test = #my#, Test2=qwerty).Show(Param=#my##my#)`,
+		`[{"tag":"div","attr":{"hide":[{"Test":"Val","Test2":"qwerty"}],"show":[{"Param":"ValVal"}]}}]`},
+	{`SetVar(my,Val)Div().Show(Test = #my#, Test2=qwerty).Show(Param=#my##my#)`,
+		`[{"tag":"div","attr":{"show":[{"Test":"Val","Test2":"qwerty"},{"Param":"ValVal"}]}}]`},
+	{`SetVar(my,Val)Div().Show(Test = #my#, Test2=qwerty)`,
+		`[{"tag":"div","attr":{"show":[{"Test":"Val","Test2":"qwerty"}]}}]`},
+	{`SetVar(my, My Value)Div(){qqq}.Show(Test=#my#)`,
+		`[{"tag":"div","attr":{"show":[{"Test":"My Value"}]},"children":[{"tag":"text","text":"qqq"}]}]`},
+	{`SetVar(outer, [{"obj1_key1": "obj1_value1"},{"obj2_key2": "obj2_value2"}])
+	ArrayToSource(outer, #outer#, p1)`, `[{"tag":"arraytosource","attr":{"columns":["p1_key","p1_value"],"data":[["0","{\"obj1_key1\": \"obj1_value1\"}"],["1","{\"obj2_key2\": \"obj2_value2\"}"]],"prefix":"p1","source":"outer","types":["text","text"]}}]`},
+	{`SetVar(json, {"title": "Are you agree to send money?", "params": {"ggg1": "ggg2"}})
+	JsonToSource(src_json, #json#, a1)
+	
+	ForList(src_json){
 		If(#a1_key# == params){
 			JsonToSource(src_params, #a1_value#, a2)
 			Table(src_params)
@@ -139,22 +153,6 @@ var forTest = tplList{
 	   {"mypar1":"myval1, 2", mypar2: [1, #ok#], "qqq": {name: John, "lastName": "Smith"}} )`,
 		`[{"tag":"hint","attr":{"icon":"[col1,col2]","text":"{\"mypar1\":\"myval1, 2\", mypar2: [1, My:string,value], \"qqq\": {name: John, \"lastName\": \"Smith\"}}","title":"{\"test\": Test val, ok: My:string,value}"}}]`},
 	{`Hint( [col1,col2] , {"test": Test val}, 
-	   {"mypar1":"myval1, 2", mypar2: [1, 20], "qqq": {name: John, "lastName": "Smith"}} )`,
-		`[{"tag":"hint","attr":{"icon":"[col1,col2]","text":"{\"mypar1\":\"myval1, 2\", mypar2: [1, 20], \"qqq\": {name: John, \"lastName\": \"Smith\"}}","title":"{\"test\": Test val}"}}]`},
-	{`SetVar(ok,"My:string,value")Hint( [col1,col2] , {"test": Test val, ok: #ok#}, 
-	   {"mypar1":"myval1, 2", mypar2: [1, #ok#], "qqq": {name: John, "lastName": "Smith"}} )`,
-		`[{"tag":"hint","attr":{"icon":"[col1,col2]","text":"{\"mypar1\":\"myval1, 2\", mypar2: [1, My:string,value], \"qqq\": {name: John, \"lastName\": \"Smith\"}}","title":"{\"test\": Test val, ok: My:string,value}"}}]`},
-	{`Hint(Title: some text, Icon: default, Text: This is hint text)`,
-		`[{"tag":"hint","attr":{"icon":"default","text":"This is hint text","title":"some text"}}]`},
-	{`AddToolButton(Title: Open, Page: default).Popup(Width: 50, Header: Test)`,
-		`[{"tag":"addtoolbutton","attr":{"page":"default","popup":{"header":"Test","width":"50"},"title":"Open"}}]`},
-	{`SetVar(ok, OK)Input(Type: text, Value: #ok# Now(YY))Input(Type:text, Value: #ok# Some text)`,
-		`[{"tag":"input","attr":{"type":"text","value":"OK Now(YY)"}},{"tag":"input","attr":{"type":"text","value":"OK Some text"}}]`},
-	{`SetVar(format, MMYY)Now(#format#,1 day)Now()`, `[{"tag":"text","text":"Now(MMYY,1 day)Now()"}]`},
-	{`SetVar(digit, 2)Money(12345, #digit#)=Money(#digit#, #digit#)=Money(123456000, 7)=Money(12, -3)`,
-		`[{"tag":"text","text":"123.45"},{"tag":"text","text":"=0.02"},{"tag":"text","text":"=12.3456"},{"tag":"text","text":"=12000"}]`},
-	{`SetVar(textc, test)Code(P(Some #textc#))CodeAsIs(P(No Some #textc#))Div(){CodeAsIs(Text:#textc#)}`,
-		`[{"tag":"code","attr":{"text":"P(Some test)"}},{"tag":"code","attr":{"text":"P(No Some #textc#)"}},{"tag":"div","children":[{"tag":"code","attr":{"text":"#textc#"}}]}]`},
 	{`SetVar("Name1", "Value1")GetVar("Name1")#Name1#Span(#Name1#)SetVar("Name1", "Value2")GetVar("Name1")#Name1#
 		SetVar("Name1", "Value3")#Name1#`, `[{"tag":"text","text":"Value1"},{"tag":"text","text":"Value1"},{"tag":"span","children":[{"tag":"text","text":"Value1"}]},{"tag":"text","text":"Value2"},{"tag":"text","text":"Value2\n\t\t"},{"tag":"text","text":"Value3"}]`},
 	{`Data(src1, "name,value,cost"){

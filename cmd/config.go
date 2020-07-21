@@ -44,6 +44,16 @@ var configCmd = &cobra.Command{
 			log.WithError(err).Fatal("Saving config")
 		}
 
+		log.Infof("Config is saved to %s", configPath)
+	},
+}
+
+func init() {
+	viper.SetEnvPrefix("CHAIN")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	// Command flags
 	configCmd.Flags().String("path", "", "Generate config to (default dataDir/config.toml)")
 
 	// TCP Server
@@ -87,19 +97,6 @@ var configCmd = &cobra.Command{
 
 	viper.BindPFlag("Redis.Enable", configCmd.Flags().Lookup("redisenable"))
 	viper.BindPFlag("Redis.Host", configCmd.Flags().Lookup("redishost"))
-	viper.BindPFlag("Redis.Port", configCmd.Flags().Lookup("redisport"))
-	viper.BindPFlag("Redis.Dbname", configCmd.Flags().Lookup("redisdb"))
-	viper.BindPFlag("Redis.Password", configCmd.Flags().Lookup("redispassword"))
-	// StatsD
-	configCmd.Flags().StringVar(&conf.Config.StatsD.Host, "statsdHost", "127.0.0.1", "StatsD host")
-	configCmd.Flags().IntVar(&conf.Config.StatsD.Port, "statsdPort", 8125, "StatsD port")
-	configCmd.Flags().StringVar(&conf.Config.StatsD.Name, "statsdName", "chain", "StatsD name")
-	viper.BindPFlag("StatsD.Host", configCmd.Flags().Lookup("statsdHost"))
-	viper.BindPFlag("StatsD.Port", configCmd.Flags().Lookup("statsdPort"))
-	viper.BindPFlag("StatsD.Name", configCmd.Flags().Lookup("statsdName"))
-
-	// Centrifugo
-	configCmd.Flags().StringVar(&conf.Config.Centrifugo.Secret, "centSecret", "127.0.0.1", "Centrifugo secret")
 	configCmd.Flags().StringVar(&conf.Config.Centrifugo.URL, "centUrl", "127.0.0.1", "Centrifugo URL")
 	configCmd.Flags().StringVar(&conf.Config.Centrifugo.Key, "centKey", "127.0.0.1", "Centrifugo API key")
 	viper.BindPFlag("Centrifugo.Secret", configCmd.Flags().Lookup("centSecret"))

@@ -83,16 +83,12 @@ func VDEDestChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	m.ID = id
 	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
 		return
 	}
 
-	jsonResponse(w, result)
-}
-
-func VDEDestChainInfoDeleteHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-	id := converter.StrToInt64(params["id"])
+	result, err := m.GetOneByID()
 
 	m := &model.VDEDestChainInfo{}
 	m.ID = id
