@@ -136,6 +136,15 @@ func daemonLoop(ctx context.Context, goRoutineName string, handler func(context.
 			handler(ctx, d)
 			statsd.Client.TimingDuration(counterName+statsd.Time, time.Now().Sub(startTime), 1.0)
 		}
+	}
+}
+
+// StartDaemons starts daemons
+func StartDaemons(ctx context.Context, daemonsToStart []string) {
+	go WaitStopTime()
+
+	daemonsTable := make(map[string]string)
+	go func() {
 		for {
 			daemonNameAndTime := <-MonitorDaemonCh
 			daemonsTable[daemonNameAndTime[0]] = daemonNameAndTime[1]
@@ -200,14 +209,6 @@ func Ntp_Work(ctx context.Context) {
 					count, err := sp.GetNumberOfHonorNodes()
 					if err != nil {
 						log.WithFields(log.Fields{"Ntp_Work GetNumberOfHonorNodes  err": err.Error()}).Error("GetNumberOfHonorNodes")
-					} else {
-						if NtpDriftFlag && count > 1 {
-							NtpDriftFlag = false
-						}
-					}
-
-				}
-			}
 
 		}
 	}

@@ -548,27 +548,25 @@ func IsPrivateBlockchain() bool {
 	return len(par) > 0 && par != `0` && par != `false`
 }
 
-func GetMaxCost() int64 {
-	cost := GetMaxTxFuel()
-	if cost == 0 {
-		cost = CostDefault
-	}
-	return cost
-}
-
-func GetAccessExec(s string) string {
-	return SysString(AccessExec + s)
-}
-
-func GetPriceExec(s string) (price int64, ok bool) {
-	if ok = HasSys(PriceExec + s); !ok {
-		return
-	}
-	price = SysInt64(PriceExec + s)
 	return
 }
 
 // SysTableColType reloads/updates values of all ecosystem table column data type
+func SysTableColType(dbTransaction *model.DbTransaction) error {
+	var err error
+	mutex.RLock()
+	defer mutex.RUnlock()
+	cacheTableColType, err = model.GetAllTransaction(dbTransaction, `
+		SELECT table_name,column_name,data_type,character_maximum_length
+		FROM information_schema.columns Where table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name ~ '[\d]' AND data_type = 'bytea' ORDER BY ordinal_position ASC;`, -1)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetTableColType() []map[string]string {
+	mutex.RLock()
 	defer mutex.RUnlock()
 	return cacheTableColType
 }
