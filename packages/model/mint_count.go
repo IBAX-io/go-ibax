@@ -77,19 +77,6 @@ func (m *MinterCount) Changes(dbt *DbTransaction) (*MintCount, error) {
 	var miners []MineStakeCount
 	mc := MintCount{
 		Keyid:    m.Keyid,
-		Mineid:   m.Mineid,
-		Devid:    m.Devid,
-		Capacity: m.Capacity,
-		Nonce:    m.Nonce,
-		BlockId:  m.BlockId,
-		Hash:     m.Hash,
-		Time:     m.Time,
-	}
-	if m.Devid == 0 {
-		return &mc, nil
-	if err != nil {
-		return &mc, err
-	}
 
 	fm, err := ap.GetFoundationbalance(dbt)
 	if err != nil {

@@ -30,6 +30,12 @@ func (m Mode) GetAppParamHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
 	ap := &model.AppParam{}
+	ap.SetTablePrefix(form.EcosystemPrefix)
+	name := params["name"]
+	if !found {
+		logger.WithFields(log.Fields{"type": consts.NotFound, "key": name}).Error("app parameter not found")
+		errorResponse(w, errParamNotFound.Errorf(name))
+		return
 	}
 
 	jsonResponse(w, &paramResult{

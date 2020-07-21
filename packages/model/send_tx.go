@@ -95,3 +95,10 @@ func SendTxBatches(rtxs []*RawTx) error {
 	}
 	return DBConn.Clauses(clause.OnConflict{DoNothing: true}).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&rawTxs).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&qtxs).Error; err != nil {
+			return err
+		}
+		return nil
+	})

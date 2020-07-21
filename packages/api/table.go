@@ -1,6 +1,21 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 type columnInfo struct {
@@ -24,23 +39,6 @@ type tableResult struct {
 func getTableHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
-	client := getClient(r)
-	prefix := client.Prefix()
-
-	table := &model.Table{}
-	table.SetTablePrefix(prefix)
-
-	_, err := table.Get(nil, strings.ToLower(params["name"]))
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting table")
-		errorResponse(w, err)
-		return
-	}
-
-	if len(table.Name) == 0 {
-		errorResponse(w, errTableNotFound.Errorf(params["name"]))
-		return
-	}
 
 	var columnsMap map[string]string
 	err = json.Unmarshal([]byte(table.Columns), &columnsMap)

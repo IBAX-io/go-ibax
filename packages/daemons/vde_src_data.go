@@ -63,6 +63,14 @@ func VDESrcData(ctx context.Context, d *daemon) error {
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("VDESrcData VDESrcTask getting one task by TaskUUID")
 			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		if len(ShareTask) > 0 {
+			TaskParms_Str = ShareTask[0].Parms
+		} else {
+			m2 := &model.VDESrcTaskFromSche{}
+			ShareTask2, err := m2.GetAllByTaskUUIDAndTaskState(item.TaskUUID, 1) //1
+			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("VDESrcData VDESrcTask getting one task by TaskUUID")
 				time.Sleep(time.Millisecond * 2)
 				continue
@@ -343,8 +351,3 @@ func VDESrcData(ctx context.Context, d *daemon) error {
 		err = item.Updates()
 		if err != nil {
 			log.WithError(err)
-			continue
-		}
-	} //for
-	return nil
-}

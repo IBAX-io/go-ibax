@@ -387,6 +387,16 @@ func filesLs(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse(w, out)
 }
+
+func ls(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	s := shell.NewShell(conf.GetGFilesHost())
+	list, err := s.List(fmt.Sprintf("/ipfs/%s", params["hash"]))
+	if err != nil {
+		errorResponse(w, err)
+		return
+	}
+	jsonResponse(w, list)
 }
 
 func getFileData(r *http.Request, prefix, key string) error {
@@ -421,18 +431,6 @@ func getFileData(r *http.Request, prefix, key string) error {
 		count2, err := fileByte.Read(dataBytes)
 		if err == io.EOF {
 			file3.Close()
-			//os.Remove(tempName)
-			break
-		}
-		file2.Write(dataBytes[:count2])
-		total += count2
-		toltemp += count2
-		file3.Seek(0, 0)
-		totalStr = strconv.Itoa(total)
-		file3.WriteString(totalStr)
-		//if total > 30000{
-		// panic("")
-		//}
 	}
 
 	return nil
