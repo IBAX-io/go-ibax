@@ -32,9 +32,6 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 		tx := &Transaction{}
 		tx, err = UnmarshallTransaction(bytes.NewBuffer(binaryTx), true)
 		if err != nil {
-			return err
-		}
-		err = tx.CheckTime(checkTime)
 		if err != nil {
 			return err
 		}
@@ -65,3 +62,12 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 		if errTx != nil {
 			return errTx
 		}
+	}
+	if len(hashes) > 0 {
+		errQTx := model.DeleteQueueTxs(dbTransaction, hashes)
+		if errQTx != nil {
+			return errQTx
+		}
+	}
+	return nil
+}

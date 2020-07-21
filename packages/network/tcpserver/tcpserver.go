@@ -72,21 +72,6 @@ func HandleTCPRequest(rw net.Conn) {
 			response, err = Type200(req)
 		}
 	case network.RequestTypeSendSubNodeSrcDataAgent:
-		req := &network.SubNodeSrcDataAgentRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type201(req)
-		}
-	case network.RequestTypeSendSubNodeAgentData:
-		req := &network.SubNodeAgentDataRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type202(req)
-		}
-	//
-	case network.RequestTypeSendVDESrcData:
-		req := &network.VDESrcDataRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type100(req)
-		}
 	case network.RequestTypeSendVDESrcDataAgent:
 		req := &network.VDESrcDataAgentRequest{}
 		if err = req.Read(rw); err == nil {
@@ -150,3 +135,6 @@ func TcpListener(laddr string) error {
 			}
 		}
 	}()
+
+	return nil
+}
