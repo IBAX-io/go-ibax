@@ -66,6 +66,14 @@ func (m Mode) getBalanceHandler(w http.ResponseWriter, r *http.Request) {
 func (m Mode) getMyAssignBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	client := getClient(r)
 	logger := getLogger(r)
+	ret := model.Response{}
+	form := &ecosystemForm{
+		Validator: m.EcosysIDValidator,
+	}
+	if err := parseForm(r, form); err != nil {
+		//errorResponse(w, err, http.StatusBadRequest)
+		ret.Return(nil, model.CodeRequestformat.Errorf(err))
+		JsonCodeResponse(w, &ret)
 		return
 	}
 
@@ -80,16 +88,3 @@ func (m Mode) getMyAssignBalanceHandler(w http.ResponseWriter, r *http.Request) 
 	key := &model.AssignGetInfo{}
 	fg, balance, total_balance, err := key.GetBalance(nil, keyID)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting Key for wallet")
-		ret.Return(nil, model.CodeDBfinderr.Errorf(err))
-		JsonCodeResponse(w, &ret)
-		return
-	}
-
-	ret.Return(myAssignBalanceResult{
-		Show:    fg,
-		Amount:  balance.String(),
-		Balance: total_balance.String(),
-	}, model.CodeSuccess)
-	JsonCodeResponse(w, &ret)
-}

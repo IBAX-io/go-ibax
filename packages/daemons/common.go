@@ -82,17 +82,6 @@ var daemonsList = map[string]func(context.Context, *daemon) error{
 	"VDESrcTaskStatusRun":                   VDESrcTaskStatusRun,
 	"VDESrcTaskStatusRunState":              VDESrcTaskStatusRunState,
 	"VDESrcTaskFromScheStatus":              VDESrcTaskFromScheStatus,
-	"VDESrcTaskFromScheStatusRun":           VDESrcTaskFromScheStatusRun,
-	"VDESrcTaskFromScheStatusRunState":      VDESrcTaskFromScheStatusRunState,
-	"VDEAgentLogUpToChain":                  VDEAgentLogUpToChain,
-	"VDEScheTaskChainStatus":                VDEScheTaskChainStatus,
-	"VDEScheTaskChainStatusState":           VDEScheTaskChainStatusState,
-	"VDESrcTaskChainStatus":                 VDESrcTaskChainStatus,
-	"VDESrcTaskChainStatusState":            VDESrcTaskChainStatusState,
-	"VDESrcTaskAuthChainStatus":             VDESrcTaskAuthChainStatus,
-	"VDESrcTaskAuthChainStatusState":        VDESrcTaskAuthChainStatusState,
-	"VDEScheTaskSrcGetFromChain":            VDEScheTaskSrcGetFromChain,
-	"VDEScheTaskFromSrcInstallContractSrc":  VDEScheTaskFromSrcInstallContractSrc,
 	"VDEScheTaskFromSrcInstallContractDest": VDEScheTaskFromSrcInstallContractDest,
 }
 
@@ -209,6 +198,14 @@ func Ntp_Work(ctx context.Context) {
 					count, err := sp.GetNumberOfHonorNodes()
 					if err != nil {
 						log.WithFields(log.Fields{"Ntp_Work GetNumberOfHonorNodes  err": err.Error()}).Error("GetNumberOfHonorNodes")
+					} else {
+						if NtpDriftFlag && count > 1 {
+							NtpDriftFlag = false
+						}
+					}
+
+				}
+			}
 
 		}
 	}

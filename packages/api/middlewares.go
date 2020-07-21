@@ -14,6 +14,16 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/service"
 	"github.com/IBAX-io/go-ibax/packages/statsd"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+func authRequire(next func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		client := getClient(r)
+		if client != nil && client.KeyID != 0 {
+			next(w, r)
 			return
 		}
 
@@ -42,16 +52,6 @@ func loggerMiddleware(next http.Handler) http.Handler {
 
 func recoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				logger := getLogger(r)
-				logger.WithFields(log.Fields{
-					"type":  consts.PanicRecoveredError,
-					"error": err,
-					"stack": string(debug.Stack()),
-				}).Error("panic recovered error")
-				fmt.Println("API Recovered", fmt.Sprintf("%s: %s", err, debug.Stack()))
-				errorResponse(w, errRecovered)
 			}
 		}()
 		next.ServeHTTP(w, r)

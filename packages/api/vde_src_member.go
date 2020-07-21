@@ -113,11 +113,9 @@ func VDESrcMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, "ok")
+	}
+	jsonResponse(w, result)
 }
-
-func VDESrcMemberListHandlre(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
-	srcData := model.VDESrcMember{}
 
 func VDESrcMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)

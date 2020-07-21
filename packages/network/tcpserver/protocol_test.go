@@ -4,15 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 package tcpserver
 
+import (
+	"bytes"
+	"fmt"
+
+	"testing"
 
 	"reflect"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
-	"github.com/stretchr/testify/require"
-)
-
-func TestReadRequest(t *testing.T) {
 	type testStruct struct {
 		Id   uint32
 		Data []byte

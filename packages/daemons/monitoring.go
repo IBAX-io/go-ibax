@@ -1,6 +1,19 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"bytes"
+	"fmt"
+	"net/http"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -17,18 +30,6 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	addKey(&buf, "info_block_id", infoBlock.BlockID)
-	addKey(&buf, "info_block_hash", converter.BinToHex(infoBlock.Hash))
-	addKey(&buf, "info_block_time", infoBlock.Time)
-	addKey(&buf, "info_block_key_id", infoBlock.KeyID)
-	addKey(&buf, "info_block_ecosystem_id", infoBlock.EcosystemID)
-	addKey(&buf, "info_block_node_position", infoBlock.NodePosition)
-	addKey(&buf, "honor_nodes_count", syspar.GetNumberOfNodes())
-
-	block := &model.Block{}
-	_, err = block.GetMaxBlock()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting max block")
-		logError(w, fmt.Errorf("can't get max block: %s", err))
 		return
 	}
 	addKey(&buf, "last_block_id", block.ID)

@@ -89,7 +89,6 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 			"TaskUUID":     {item.TaskUUID},
 			"TaskName":     {item.TaskName},
 			"TaskSender":   {item.TaskSender},
-			"TaskReceiver": {item.TaskReceiver},
 			"Comment":      {item.Comment},
 			"Parms":        {item.Parms},
 			"TaskType":     {converter.Int64ToStr(item.TaskType)},
@@ -157,6 +156,20 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 	}
 	if len(SrcTask) == 0 {
 		//log.Info("Src task not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
+	chaininfo := &model.VDESrcChainInfo{}
+	SrcChainInfo, err := chaininfo.Get()
+	if err != nil {
+		//log.WithFields(log.Fields{"error": err}).Error("VDE Src uptochain getting chain info")
+		log.Info("Src chain info not found")
+		time.Sleep(time.Millisecond * 100)
+		return err
+	}
+	if SrcChainInfo == nil {
+		log.Info("Src chain info not found")
+		//fmt.Println("Src chain info not found")
 		time.Sleep(time.Millisecond * 100)
 		return nil
 	}

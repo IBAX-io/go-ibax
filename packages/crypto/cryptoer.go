@@ -41,14 +41,14 @@ func (o Oval) String() string {
 	return o.name
 }
 
-func getCryptoer() Cryptoer {
-	switch curve.name {
-	case cSM2:
-		return &SM2{}
-	case cECDSA:
-		return &ECDSA{}
-	default:
-		panic(fmt.Errorf("crypto is not supported yet or empty"))
+
+// GenKeyPair generates a random pair of private and public binary keys.
+func GenKeyPair() ([]byte, []byte, error) {
+	return getCryptoer().genKeyPair()
+}
+
+// GenHexKeys generates a random pair of private and public hex keys.
+func GenHexKeys() (string, string, error) {
 	priv, pub, err := getCryptoer().genKeyPair()
 	if err != nil {
 		return ``, ``, err

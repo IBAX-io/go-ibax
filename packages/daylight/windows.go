@@ -5,11 +5,15 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package daylight
 
-	log "github.com/sirupsen/logrus"
-)
+import (
+	"fmt"
+	"os/exec"
+	"regexp"
+	"time"
 
-// KillPid kills the process with the specified pid
+	"github.com/IBAX-io/go-ibax/packages/consts"
 func KillPid(pid string) error {
 	if model.DBConn != nil {
 		sd := &model.StopDaemon{StopTime: time.Now().Unix()}

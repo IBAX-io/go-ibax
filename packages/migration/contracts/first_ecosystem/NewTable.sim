@@ -6,10 +6,9 @@ contract NewTable {
         Name string
         Columns string
         Permissions string
+        CreateTable($Name, $Columns, $Permissions, $ApplicationId)
     }
-    conditions {
-        if $ApplicationId == 0 {
-            warning "Application id cannot equal 0"
-        }
-        TableConditions($Name, $Columns, $Permissions)
+    func price() int {
+        return SysParamInt("table_price")
     }
+}

@@ -21,17 +21,15 @@ const node RunMode = "NONE"
 const subNode RunMode = "SubNode"
 
 // IsOBSMaster returns true if mode equal obsMaster
+func (rm RunMode) IsOBSMaster() bool {
+	return rm == obsMaster
+}
+
+// IsOBS returns true if mode equal obs
+func (rm RunMode) IsOBS() bool {
+	return rm == obs
+}
+
+// IsNode returns true if mode not equal to any OBS
 func (rm RunMode) IsNode() bool {
 	return rm == node
-}
-
-// IsSupportingOBS returns true if mode support obs
-func (rm RunMode) IsSupportingOBS() bool {
-	return rm.IsOBS() || rm.IsOBSMaster()
-}
-
-//
-//Add sub node processing
-func (rm RunMode) IsSubNode() bool {
-	return rm == subNode
-}

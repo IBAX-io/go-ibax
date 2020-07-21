@@ -142,13 +142,20 @@ func VDEDestDataStatusListHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse(w, result)
 }
+
+func VDEDestDataStatusByIDHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	id := converter.StrToInt64(params["id"])
+	srcData := model.VDEDestDataStatus{}
+	srcData.ID = id
+	result, err := srcData.GetOneByID()
+	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query data by ID failed")
 		errorResponse(w, err)
 		return
 	}
-
-	jsonResponse(w, result)
-}
 
 type DataList struct {
 	ID             int64  `json:"id"`

@@ -32,6 +32,17 @@ func unmarshalColumnSubNodeSrcTask(form *SubNodeSrcTaskForm) (*model.SubNodeSrcT
 	}
 	err = json.Unmarshal([]byte(form.TaskRunParms), &task_run_parms)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("unmarshal TaskRunParms error")
+		return nil, err
+	}
+	//fmt.Println("TaskType,TaskState:", form.TaskType, int64(form.TaskType), form.TaskState, int64(form.TaskState))
+	m := &model.SubNodeSrcTask{
+		TaskUUID:   form.TaskUUID,
+		TaskName:   form.TaskName,
+		TaskSender: form.TaskSender,
+		Comment:    form.Comment,
+		Parms:      converter.MarshalJson(parms),
+		TaskType:   int64(form.TaskType),
 		TaskState:  int64(form.TaskState),
 
 		TaskRunParms: converter.MarshalJson(task_run_parms),
@@ -122,16 +133,6 @@ func SubNodeSrcTaskDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	m.ID = id
 	if err := m.Delete(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
-	}
-
-	jsonResponse(w, "ok")
-}
-
-func SubNodeSrcTaskListHandlre(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
-	srcData := model.SubNodeSrcTask{}
-
-	result, err := srcData.GetAll()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
 		errorResponse(w, err)

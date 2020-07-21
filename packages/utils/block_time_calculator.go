@@ -5,6 +5,19 @@
 package utils
 
 import (
+	"time"
+
+	"github.com/pkg/errors"
+)
+
+// BlockTimeCalculator calculating block generation time
+type BlockTimeCalculator struct {
+	clock         Clock
+	blocksCounter intervalBlocksCounter
+
+	firstBlockTime      time.Time
+	blockGenerationTime time.Duration
+	blocksGap           time.Duration
 
 	nodesCount int64
 }
@@ -20,14 +33,6 @@ var TimeError = errors.New("current time before first block")
 var DuplicateBlockError = errors.New("block with that time interval already exists in db")
 
 func NewBlockTimeCalculator(firstBlockTime time.Time, generationTime, blocksGap time.Duration, nodesCount int64) BlockTimeCalculator {
-	return BlockTimeCalculator{
-		clock:         &ClockWrapper{},
-		blocksCounter: &blocksCounter{},
-
-		firstBlockTime:      firstBlockTime,
-		blockGenerationTime: generationTime,
-		blocksGap:           blocksGap,
-		nodesCount:          nodesCount,
 	}
 }
 
