@@ -11,6 +11,18 @@ import (
 	"net/url"
 	"strconv"
 	"time"
+
+	vde_api "github.com/IBAX-io/go-ibax/packages/vde_sdk"
+
+	"path/filepath"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
+//Install task contract
 func VDEScheTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 	var (
 		blockchain_http      string
@@ -317,11 +329,6 @@ func VDEScheTaskInstallContractDest(ctx context.Context, d *daemon) error {
 //			item.ContractStateDest = 1
 //			item.ContractStateDestErr = ""
 //		}
-//		//fmt.Println("Call api.PostTxResult Dest OK")
-//
-//		item.UpdateTime = time.Now().Unix()
-//		err = item.Updates()
-//		if err != nil {
 //			fmt.Println("Update VDEScheTask table err: ", err)
 //			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
 //			time.Sleep(time.Millisecond * 2)

@@ -26,6 +26,9 @@ var migrations = []*migration{
 	&migration{"0.0.1", migrationInitial, true},
 
 	// Initial schema
+	&migration{"0.1.5", migrationInitialTables, true},
+	&migration{"0.1.6", migrationInitialSchema, false},
+}
 
 var migrationsSub = &migration{"0.1.7", migrationInitialTablesSub, true}
 
@@ -99,15 +102,6 @@ func migrate(db database, appVer string, migrations []*migration) error {
 		}
 		if m.template {
 			m.data, err = sqlConvert([]string{m.data})
-			if err != nil {
-				return err
-			}
-		}
-		err = db.ApplyMigration(m.version, m.data)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "err": err, "version": m.version}).Errorf("apply migration")
-			return err
-		}
 
 		log.WithFields(log.Fields{"version": m.version}).Debug("apply migration")
 	}

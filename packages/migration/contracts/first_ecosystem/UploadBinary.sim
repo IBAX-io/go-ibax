@@ -25,7 +25,8 @@ contract UploadBinary {
     action {
         var hash string
         hash = Hash($Data)
-        if $DataMimeType == "" {
-            $DataMimeType = "application/octet-stream"
+                "name": $Name, "data": $Data, "hash": hash, "mime_type": $DataMimeType, "ecosystem": $ecosystem_id})
         }
+        $result = $Id
+    }
 }

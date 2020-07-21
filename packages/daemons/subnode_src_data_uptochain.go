@@ -93,6 +93,14 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 			}
 			node_pubkey_slice := strings.Split(item.SubNodeDestPubkey, ";")
 			chain_api.ApiPrivateFor = append(chain_api.ApiPrivateFor, node_pubkey_slice...)
+
+			ContractName := `@1SubNodeSrcHashCreate`
+			_, txHash, _, err = chain_api.VDEPostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
+			if err != nil {
+				fmt.Println("Send SubNodeSrcData to chain err: ", err)
+				log.WithFields(log.Fields{"error": err}).Error("Send SubNodeSrcData to chain!")
+				time.Sleep(time.Second * 5)
+				continue
 			}
 			fmt.Println("Send chain Contract to run, ContractName:", ContractName)
 
@@ -153,19 +161,6 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 		//item.BlockId = 0
 		//item.ChainErr = ""
 		item.UpdateTime = time.Now().Unix()
-		err = item.Updates()
-		if err != nil {
-			fmt.Println("Update SubNodeSrcDataChainStatus table err: ", err)
-			log.WithFields(log.Fields{"error": err}).Error("Update SubNodeSrcDataChainStatus table!")
-			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-	} //for
-	return nil
-}
-
-//Query the status of the chain on the scheduling task data hash information
-func SubNodeSrcHashUpToChainState(ctx context.Context, d *daemon) error {
 	var (
 		blockchain_http      string
 		blockchain_ecosystem string
