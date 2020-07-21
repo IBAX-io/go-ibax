@@ -6,15 +6,7 @@
 package daemons
 
 import (
-func VDEDestDataStatus(ctx context.Context, d *daemon) error {
-	var (
-		err error
-	)
-
-	m := &model.VDEDestDataStatus{}
-	ShareData, err := m.GetAllByHashState(0) //0not to deal，1deal ok，2fail,3
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated dest data status")
+	"context"
 		time.Sleep(time.Millisecond * 2)
 		return err
 	}

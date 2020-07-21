@@ -33,6 +33,12 @@ func (s *Scheduler) AddTask(t *Task) error {
 	log.WithFields(log.Fields{"task": t.String()}).Info("task added")
 
 	return nil
+}
+
+// UpdateTask updates task
+func (s *Scheduler) UpdateTask(t *Task) error {
+	err := t.ParseCron()
+	if err != nil {
 		log.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("parse cron format")
 		return err
 	}
@@ -42,17 +48,6 @@ func (s *Scheduler) AddTask(t *Task) error {
 
 	entries := s.cron.Entries()
 	for _, entry := range entries {
-		task := entry.Schedule.(*Task)
-		if task.ID == t.ID {
-			*task = *t
-			log.WithFields(log.Fields{"task": t.String()}).Info("task updated")
-			return nil
-		}
-
-		continue
-	}
-
-	s.cron.Schedule(t, t)
 	log.WithFields(log.Fields{"task": t.String()}).Info("task added")
 
 	return nil

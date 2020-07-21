@@ -20,14 +20,6 @@ func (s *SM2) genKeyPair() ([]byte, []byte, error) {
 	return priv.D.Bytes(), append(converter.FillLeft(priv.PublicKey.X.Bytes()), converter.FillLeft(priv.PublicKey.Y.Bytes())...), nil
 }
 
-func (s *SM2) sign(privateKey, data []byte) ([]byte, error) {
-	pubkeyCurve := sm2.P256Sm2()
-	bi := new(big.Int).SetBytes(privateKey)
-	priv := new(sm2.PrivateKey)
-	priv.PublicKey.Curve = pubkeyCurve
-	priv.D = bi
-	priv.PublicKey.X, priv.PublicKey.Y = pubkeyCurve.ScalarBaseMult(bi.Bytes())
-	ret, err := priv.Sign(rand.Reader, data, nil)
 	return ret, err
 }
 
@@ -63,3 +55,6 @@ func (s *SM2) privateToPublic(key []byte) ([]byte, error) {
 	priv := new(sm2.PrivateKey)
 	priv.PublicKey.Curve = pubkeyCurve
 	priv.D = bi
+	priv.PublicKey.X, priv.PublicKey.Y = pubkeyCurve.ScalarBaseMult(key)
+	return append(converter.FillLeft(priv.PublicKey.X.Bytes()), converter.FillLeft(priv.PublicKey.Y.Bytes())...), nil
+}

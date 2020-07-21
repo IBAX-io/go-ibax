@@ -24,6 +24,15 @@ func (m *FoundationGroup) GetByKeyid(transaction *DbTransaction, keyid int64) (b
 }
 
 // Get is retrieving model from database
+func (m *FoundationGroup) GetByDevid(transaction *DbTransaction, devid int64) (decimal.Decimal, error) {
+	ret := decimal.NewFromFloat(0)
+	var mo MineOwner
+	f, err := mo.GetByTransaction(transaction, devid)
+	if err != nil {
+		return ret, err
+	}
+	if f {
+		fb, err := m.GetByKeyid(transaction, mo.Keyid)
 		if err != nil {
 			return ret, err
 		}
@@ -38,21 +47,6 @@ func (m *FoundationGroup) GetByKeyid(transaction *DbTransaction, keyid int64) (b
 			return ret, err
 		}
 		if !fs {
-			return ret, errors.New("foundation_balance not found")
-		}
-		var ap AppParam
-		fa, err := ap.GetFoundationbalance(transaction)
-		if err != nil {
-			return ret, err
-		}
-		ret, err = decimal.NewFromString(sp.Value)
-		if err != nil {
-			return ret, err
-		}
-		if fa.LessThanOrEqual(ret) {
-			return fa, nil
-		} else {
-			return ret, nil
 		}
 
 	} else {

@@ -7,19 +7,11 @@ package model
 
 import "github.com/IBAX-io/go-ibax/packages/converter"
 
-// Page is model
-type Page struct {
-	ecosystem     int64
-	ID            int64  `gorm:"primary_key;not null" json:"id,omitempty"`
-	Name          string `gorm:"not null" json:"name,omitempty"`
-	Value         string `gorm:"not null" json:"value,omitempty"`
-	Menu          string `gorm:"not null;size:255" json:"menu,omitempty"`
-	ValidateCount int64  `gorm:"not null" json:"nodesCount,omitempty"`
-	AppID         int64  `gorm:"column:app_id;not null" json:"app_id,omitempty"`
 	Conditions    string `gorm:"not null" json:"conditions,omitempty"`
 }
 
 // SetTablePrefix is setting table prefix
+func (p *Page) SetTablePrefix(prefix string) {
 	p.ecosystem = converter.StrToInt64(prefix)
 }
 

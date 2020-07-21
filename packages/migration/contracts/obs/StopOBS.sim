@@ -3,9 +3,4 @@
 contract StopOBS {
 		data {
 			OBSName string
-		action {
-			$OBSName = ToLower($OBSName)
-			StopOBSProcess($OBSName)
-			$result = "OBS " + $OBSName + " stopped"
 		}
-}

@@ -3,6 +3,12 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package daemons
+
+import (
+	"context"
+	"time"
+
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -95,9 +101,3 @@ func SubNodeSrcDataStatusAgent(ctx context.Context, d *daemon) error {
 		err = item.Updates()
 		if err != nil {
 			log.WithError(err)
-		}
-
-	} //for
-
-	return nil
-}
