@@ -10,9 +10,8 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/IBAX-io/go-ibax/packages/converter"
-)
-
+		return
+	}
 	if converter.StrToInt64(strconv.FormatInt(ret.Count, 10)) < 7 {
 		t.Error(fmt.Errorf(`The number of records %d < 7`, ret.Count))
 		return

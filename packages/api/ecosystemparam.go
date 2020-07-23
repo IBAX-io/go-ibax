@@ -45,6 +45,11 @@ func (m Mode) getEcosystemParamHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, &paramResult{
+		ID:         converter.Int64ToStr(sp.ID),
+		Name:       sp.Name,
+		Value:      sp.Value,
+		Conditions: sp.Conditions,
+	})
 }
 
 func getEcosystemNameHandler(w http.ResponseWriter, r *http.Request) {
@@ -65,8 +70,3 @@ func getEcosystemNameHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, &struct {
-		EcosystemName string `json:"ecosystem_name"`
-	}{
-		EcosystemName: ecosystems.Name,
-	})
-}

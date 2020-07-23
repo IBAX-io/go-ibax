@@ -122,19 +122,6 @@ func VDEScheTaskUpToChain(ctx context.Context, d *daemon) error {
 		item.TxHash = txHash
 		item.BlockId = 0
 		item.ChainErr = ""
-		item.UpdateTime = time.Now().Unix()
-		err = item.Updates()
-		if err != nil {
-			fmt.Println("Update VDEScheTask table err: ", err)
-			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
-			time.Sleep(time.Millisecond * 100)
-			continue
-		}
-	} //for
-	time.Sleep(time.Millisecond * 100)
-	return nil
-}
-
 //Query the status of the chain on the scheduling task information
 func VDEScheTaskUpToChainState(ctx context.Context, d *daemon) error {
 	var (
@@ -144,6 +131,20 @@ func VDEScheTaskUpToChainState(ctx context.Context, d *daemon) error {
 	)
 
 	m := &model.VDEScheTaskChainStatus{}
+	ScheTask, err := m.GetAllByContractStateAndChainState(1, 1, 1) //0 not install contract，1 installed，2 fail； 1up to chain
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
+	if len(ScheTask) == 0 {
+		//log.Info("Sche task not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
+	chaininfo := &model.VDEScheChainInfo{}
+	ScheChainInfo, err := chaininfo.Get()
+	if err != nil {
 		//log.WithFields(log.Fields{"error": err}).Error("VDE Sche uptochain getting chain info")
 		log.Info("Sche chain info not found")
 		time.Sleep(time.Millisecond * 100)

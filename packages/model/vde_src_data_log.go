@@ -4,8 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package model
 
-type VDESrcDataLog struct {
-	ID                  int64  `gorm:"primary_key; not null" json:"id"`
 	ChainErr   string `gorm:"not null" json:"chain_err"`
 
 	UpdateTime int64 `gorm:"not null" json:"update_time"`

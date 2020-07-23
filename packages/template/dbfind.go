@@ -160,15 +160,8 @@ main:
 					if len(key) > 0 {
 						ret = append(ret.([]interface{}), types.LoadMap(map[string]interface{}{key: val}))
 						key = ``
-					} else {
-						ret = append(ret.([]interface{}), val)
-					}
-				}
-			}
-			start = i + 1
-		}
-		if ch != ' ' {
-			prev = ch
+		if last := trimString(in[start:i]); len(last) > 0 {
+			if mapMode {
 				ret.(*types.Map).Set(key, last)
 			} else {
 				if len(key) > 0 {

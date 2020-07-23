@@ -107,12 +107,6 @@ func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := m.GetOneByID()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
-		return
-	}
-
 	jsonResponse(w, result)
 }
 
@@ -156,6 +150,9 @@ func VDEDestDataStatusByIDHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+
+	jsonResponse(w, result)
+}
 
 type DataList struct {
 	ID             int64  `json:"id"`

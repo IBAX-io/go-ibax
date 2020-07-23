@@ -111,6 +111,9 @@ func MarkTransactionSent(transactionHash []byte) (int64, error) {
 // MarkTransactionSentBatches is marking transaction as sent
 func MarkTransactionSentBatches(hashArr [][]byte) error {
 	return DBConn.Exec("UPDATE transactions SET sent  = 1 WHERE hash in(?)", hashArr).Error
+}
+
+// MarkTransactionUsed is marking transaction as used
 func MarkTransactionUsed(transaction *DbTransaction, transactionHash []byte) (int64, error) {
 	query := GetDB(transaction).Exec("UPDATE transactions SET used = 1 WHERE hash = ?", transactionHash)
 	return query.RowsAffected, query.Error
@@ -195,8 +198,3 @@ func GetManyTransactions(dbtx *DbTransaction, hashes [][]byte) ([]Transaction, e
 
 func (t *Transaction) GetStopNetwork() (bool, error) {
 	return isFound(DBConn.Where("type = ?", consts.TxTypeStopNetwork).First(t))
-}
-
-func (t *Transaction) GetTransactionRateStopNetwork() bool {
-	return t.HighRate == TransactionRateStopNetwork
-}

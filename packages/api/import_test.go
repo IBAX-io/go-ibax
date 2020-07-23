@@ -45,19 +45,21 @@ func ImportApps(path, appname string) error {
 		vals := converter.MarshalJson(damap.(*types.Map).Values()[1])
 
 		params2 := url.Values{`Data`: {vals}}
+		_, _, err = postTxResult("Import", &params2)
+		if err != nil {
+			return err
+		}
+		fmt.Println("successful import ", val["Name"], "---------------")
+	} else {
+		return errors.New("nil data")
+	}
+	return nil
+}
+func TestImportApps(t *testing.T) {
+	assert.NoError(t, keyLogin(1))
 	path, err := os.Getwd()
 	assert.NoError(t, err)
 	assert.NoError(t, ImportApps(path, "system"))
-	assert.NoError(t, ImportApps(path, "conditions"))
-	assert.NoError(t, ImportApps(path, "basic"))
-	//assert.NoError(t, ImportApps(path, "lang_res"))
-	assert.NoError(t, ImportApps(path, "platform_apps/ecosystems_catalog"))
-	assert.NoError(t, ImportApps(path, "platform_apps/token_emission"))
-	form := url.Values{}
-	assert.NoError(t, postTx(`@1RolesInstall`, &form))
-	fmt.Println("successful RolesInstall ")
-
-	//form = url.Values{"SetDefault": {"yes"}}
 	//assert.NoError(t, postTx(`@1VotingTemplatesInstall`, &form))
 	//fmt.Println("successful VotingTemplatesInstall ")
 	//nodePub := `0498b18e551493a269b6f419d7784d26c8e3555638e80897c69997ef9f211e21d5d0b8adeeaab0e0e750e720ddf3048ec55d613ba5dee3fdfd4e7c17d346731e9b`
