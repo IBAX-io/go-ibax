@@ -7,19 +7,6 @@ package api
 import (
 	"encoding/json"
 	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
-type roleInfo struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
 }
 
 type notifyInfo struct {
@@ -27,6 +14,14 @@ type notifyInfo struct {
 	Count  int64  `json:"count"`
 }
 
+type keyInfoResult struct {
+	Account    string              `json:"account"`
+	Ecosystems []*keyEcosystemInfo `json:"ecosystems"`
+}
+
+type keyEcosystemInfo struct {
+	Ecosystem     string       `json:"ecosystem"`
+	Name          string       `json:"name"`
 	Roles         []roleInfo   `json:"roles,omitempty"`
 	Notifications []notifyInfo `json:"notifications,omitempty"`
 }

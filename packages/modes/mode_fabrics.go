@@ -81,7 +81,17 @@ func GetEcosystemIDValidator() types.EcosystemIDValidator {
 }
 
 type BCEcosystemNameGetter struct{}
+	ecosystem := &model.Ecosystem{}
+	found, err := ecosystem.Get(nil, id)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting ecosystem from db")
+		return "", err
+	}
 
+	if !found {
+		log.WithFields(log.Fields{"type": consts.NotFound, "id": id, "error": api.ErrEcosystemNotFound}).Error("ecosystem not found")
+		return "", err
+	}
 
 	return ecosystem.Name, nil
 }

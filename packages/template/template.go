@@ -97,6 +97,13 @@ type tailInfo struct {
 	Last bool
 }
 
+type forTails struct {
+	Tails map[string]tailInfo
+}
+
+func newSource(par parFunc) {
+	if par.Node.Attr[`source`] == nil {
+		return
 	}
 	par.Workspace.SetSource(par.Node.Attr[`source`].(string), &Source{
 		Columns: par.Node.Attr[`columns`].(*[]string),
@@ -201,21 +208,6 @@ func processToText(par parFunc, input string) (out string) {
 	}
 	return
 }
-
-func ifValue(val string, workspace *Workspace) bool {
-	var sep string
-
-	val = parseArg(val, workspace)
-
-	if strings.Index(val, `;base64`) < 0 {
-		for _, item := range []string{`==`, `!=`, `<=`, `>=`, `<`, `>`} {
-			if strings.Index(val, item) >= 0 {
-				sep = item
-				break
-			}
-		}
-	}
-	cond := []string{val}
 	if len(sep) > 0 {
 		cond = strings.SplitN(val, sep, 2)
 		cond[0], cond[1] = macro(strings.Trim(strings.TrimSpace(cond[0]), `"`), workspace.Vars),

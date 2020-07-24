@@ -33,19 +33,6 @@ func UpdateNotifications(ecosystemID int64, accounts []string) {
 	}
 }
 
-// UpdateRolesNotifications send stats about unreaded messages to centrifugo for ecosystem
-func UpdateRolesNotifications(ecosystemID int64, roles []int64) {
-	members, _ := model.GetRoleMembers(nil, ecosystemID, roles)
-	UpdateNotifications(ecosystemID, members)
-}
-
-func getEcosystemNotificationStats(ecosystemID int64, users []string) (map[string]*[]notificationRecord, error) {
-	result, err := model.GetNotificationsCount(ecosystemID, users)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting notification count")
-		return nil, err
-	}
-
 	return parseRecipientNotification(result, ecosystemID), nil
 }
 
@@ -82,3 +69,11 @@ func parseRecipientNotification(rows []model.NotificationsCount, systemID int64)
 func sendUserStats(account string, stats []notificationRecord) {
 	rawStats, err := json.Marshal(stats)
 	if err != nil {
+		log.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("notification statistic")
+	}
+
+	err = publisher.Write(account, string(rawStats))
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Debug("writing to centrifugo")
+	}
+}
