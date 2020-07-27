@@ -32,6 +32,14 @@ func RollbackBlock(data []byte) error {
 	b := &model.Block{}
 	if _, err = b.GetMaxBlock(); err != nil {
 		return err
+	}
+
+	if err != nil {
+		dbTransaction.Rollback()
+		return err
+	}
+
+	if err = b.DeleteById(dbTransaction, bl.Header.BlockID); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		dbTransaction.Rollback()
 		return err

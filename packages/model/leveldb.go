@@ -1,14 +1,18 @@
 package model
 
-type levelDBGetterPutterDeleter interface {
-	Get([]byte, *opt.ReadOptions) ([]byte, error)
-	Put([]byte, []byte, *opt.WriteOptions) error
-	Write(batch *leveldb.Batch, wo *opt.WriteOptions) error
-	Delete([]byte, *opt.WriteOptions) error
-	NewIterator(slice *util.Range, ro *opt.ReadOptions) iterator.Iterator
-}
+import (
+	"fmt"
+	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/iterator"
+	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/syndtr/goleveldb/leveldb/util"
+	"reflect"
+	"strings"
+)
 
-func GetLevelDB(tx *leveldb.Transaction) levelDBGetterPutterDeleter {
+var DBlevel *leveldb.DB
+var GLeveldbIsactive bool
+
 	if tx != nil {
 		return tx
 	}

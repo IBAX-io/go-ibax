@@ -15,9 +15,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-)
-
-const (
+	}
+	contract := smart.GetContract(contractName, uint32(ecosysID))
 	if contract == nil {
 		return fmt.Errorf(errUnknownContract, contractName)
 	}

@@ -82,6 +82,17 @@ var daemonsList = map[string]func(context.Context, *daemon) error{
 	"VDESrcTaskStatusRun":                   VDESrcTaskStatusRun,
 	"VDESrcTaskStatusRunState":              VDESrcTaskStatusRunState,
 	"VDESrcTaskFromScheStatus":              VDESrcTaskFromScheStatus,
+	"VDESrcTaskFromScheStatusRun":           VDESrcTaskFromScheStatusRun,
+	"VDESrcTaskFromScheStatusRunState":      VDESrcTaskFromScheStatusRunState,
+	"VDEAgentLogUpToChain":                  VDEAgentLogUpToChain,
+	"VDEScheTaskChainStatus":                VDEScheTaskChainStatus,
+	"VDEScheTaskChainStatusState":           VDEScheTaskChainStatusState,
+	"VDESrcTaskChainStatus":                 VDESrcTaskChainStatus,
+	"VDESrcTaskChainStatusState":            VDESrcTaskChainStatusState,
+	"VDESrcTaskAuthChainStatus":             VDESrcTaskAuthChainStatus,
+	"VDESrcTaskAuthChainStatusState":        VDESrcTaskAuthChainStatusState,
+	"VDEScheTaskSrcGetFromChain":            VDEScheTaskSrcGetFromChain,
+	"VDEScheTaskFromSrcInstallContractSrc":  VDEScheTaskFromSrcInstallContractSrc,
 	"VDEScheTaskFromSrcInstallContractDest": VDEScheTaskFromSrcInstallContractDest,
 }
 
@@ -163,13 +174,6 @@ func StartDaemons(ctx context.Context, daemonsToStart []string) {
 			continue
 		}
 
-		log.WithFields(log.Fields{"daemon_name": name}).Warning("unknown daemon name")
-	}
-}
-
-func getHostPort(h string) string {
-	if strings.Contains(h, ":") {
-		return h
 	}
 	return fmt.Sprintf("%s:%d", h, consts.DEFAULT_TCP_PORT)
 }

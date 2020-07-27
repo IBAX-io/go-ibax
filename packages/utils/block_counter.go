@@ -7,10 +7,3 @@ package utils
 import "github.com/IBAX-io/go-ibax/packages/model"
 
 type intervalBlocksCounter interface {
-	count(state blockGenerationState) (int, error)
-}
-
-type blocksCounter struct {
-}
-	return len(blocks), nil
-}

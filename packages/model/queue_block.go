@@ -21,9 +21,9 @@ func (qb *QueueBlock) Get() (bool, error) {
 func (qb *QueueBlock) GetQueueBlockByHash(hash []byte) (bool, error) {
 	return isFound(DBConn.Where("hash = ?", hash).First(qb))
 }
+}
 
-// Delete is deleting queue
-func (qb *QueueBlock) Delete() error {
-	return DBConn.Delete(qb).Error
+// Create is creating record of model
+func (qb *QueueBlock) Create() error {
 	return DBConn.Create(qb).Error
 }
