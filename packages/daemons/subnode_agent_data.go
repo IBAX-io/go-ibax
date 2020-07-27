@@ -110,13 +110,6 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 			log.Info("Send successfully")
 		} else {
 			item.DataSendState = 2
-			item.DataSendErr = "Hash mismatch"
-			log.Info("Hash mismatch")
-		}
-		err = item.Updates()
-		if err != nil {
-			log.WithError(err)
-		}
 		//} else if LogMode == 1 || LogMode == 2 {
 		//	if LogMode == 1 { //1
 		//		chain_state = 5

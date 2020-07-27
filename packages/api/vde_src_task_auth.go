@@ -65,12 +65,6 @@ func VDESrcTaskAuthCreateHandlre(w http.ResponseWriter, r *http.Request) {
 func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
-	)
-	params := mux.Vars(r)
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err)
-		return
-	}
 
 	m := &model.VDESrcTaskAuth{}
 

@@ -508,18 +508,6 @@ func GetRbBlocks1() int64 {
 func HasSys(name string) bool {
 	mutex.RLock()
 	_, ok := cache[name]
-	mutex.RUnlock()
-	return ok
-}
-
-// SetFirstBlockData sets data of first block to global variable
-func SetFirstBlockData(data *consts.FirstBlock) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	firstBlockData = data
-
-	// If list of nodes is empty, then used node from the first block
 	if len(nodesByPosition) == 0 {
 		addHonorNodeKeys(firstBlockData.NodePublicKey)
 
@@ -548,6 +536,23 @@ func IsPrivateBlockchain() bool {
 	return len(par) > 0 && par != `0` && par != `false`
 }
 
+func GetMaxCost() int64 {
+	cost := GetMaxTxFuel()
+	if cost == 0 {
+		cost = CostDefault
+	}
+	return cost
+}
+
+func GetAccessExec(s string) string {
+	return SysString(AccessExec + s)
+}
+
+func GetPriceExec(s string) (price int64, ok bool) {
+	if ok = HasSys(PriceExec + s); !ok {
+		return
+	}
+	price = SysInt64(PriceExec + s)
 	return
 }
 

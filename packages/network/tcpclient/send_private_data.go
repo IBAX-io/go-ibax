@@ -33,15 +33,6 @@ func SentPrivateData(host string, dt []byte) (hash string) {
 		Data: dt,
 	}
 
-	if err = req.Write(conn); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending privatedata request")
-		time.Sleep(time.Millisecond * 100)
-		return "0"
-	}
-
-	resp := &network.PrivateDateResponse{}
-
-	if err = resp.Read(conn); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("receiving privatedata response")
 		time.Sleep(time.Millisecond * 100)
 		return "0"
@@ -74,6 +65,12 @@ func SentPrivateFile(host string, TaskUUID string, TaskName string, TaskSender s
 		FileName:   FileName,
 		MimeType:   MimeType,
 		Data:       dt,
+	}
+
+	if err = req.Write(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending privatefile request")
+		time.Sleep(time.Millisecond * 100)
+		return "0"
 	}
 
 	resp := &network.PrivateFileResponse{}

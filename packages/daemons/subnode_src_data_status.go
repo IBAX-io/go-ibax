@@ -96,8 +96,10 @@ func SubNodeSrcDataStatusAgent(ctx context.Context, d *daemon) error {
 			item.DataSendState = 1 //
 		} else {
 			item.DataSendState = 2 //
-			item.DataSendErr = "Hash mismatch"
-		}
-		err = item.Updates()
-		if err != nil {
 			log.WithError(err)
+		}
+
+	} //for
+
+	return nil
+}

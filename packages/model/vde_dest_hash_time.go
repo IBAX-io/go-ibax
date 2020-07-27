@@ -10,6 +10,10 @@ type VDEDestHashTime struct {
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
+func (VDEDestHashTime) TableName() string {
+	return "vde_dest_hash_time"
+}
+
 func (m *VDEDestHashTime) Create() error {
 	return DBConn.Create(&m).Error
 }
@@ -31,8 +35,4 @@ func (m *VDEDestHashTime) GetAll() ([]VDEDestHashTime, error) {
 	var result []VDEDestHashTime
 	err := DBConn.Find(&result).Error
 	return result, err
-}
-func (m *VDEDestHashTime) GetOneByID() (*VDEDestHashTime, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
 }

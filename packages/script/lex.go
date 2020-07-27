@@ -151,17 +151,6 @@ var (
 // Lexem contains information about language item
 type Lexem struct {
 	Type   uint32 // Type of the lexem
-	Ext    uint32
-	Value  interface{} // Value of lexem
-	Line   uint16      // Line of the lexem
-	Column uint32      // Position inside the line
-}
-
-// GetLogger returns logger
-func (l Lexem) GetLogger() *log.Entry {
-	return log.WithFields(log.Fields{"lex_type": l.Type, "lex_line": l.Line, "lex_column": l.Column})
-}
-
 type ifBuf struct {
 	count int
 	pair  int
@@ -317,6 +306,15 @@ func lexParser(input []rune) (Lexems, error) {
 								&Lexem{lexSys | ('{' << 8), 0, uint32('{'), uint16(line), lexOff - offline + 1})
 							lexID = lexKeyword | (keyIf << 8)
 							value = uint32(keyIf)
+							ifbuf[len(ifbuf)-1].count++
+						}
+					case keyAction, keyCond:
+						if len(lexems) > 0 {
+							lexf := *lexems[len(lexems)-1]
+							if lexf.Type&0xff != lexKeyword || lexf.Value.(uint32) != keyFunc {
+								lexems = append(lexems, &Lexem{lexKeyword | (keyFunc << 8), 0,
+									keyFunc, uint16(line), lexOff - offline + 1})
+							}
 						}
 						value = name
 					case keyTrue:

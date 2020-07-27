@@ -7,6 +7,23 @@ package daemons
 
 import (
 	"context"
+
+	log "github.com/sirupsen/logrus"
+
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+)
+
+func VDEDestDataStatus(ctx context.Context, d *daemon) error {
+	var (
+		err error
+	)
+
+	m := &model.VDEDestDataStatus{}
+	ShareData, err := m.GetAllByHashState(0) //0not to deal，1deal ok，2fail,3
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated dest data status")
 		time.Sleep(time.Millisecond * 2)
 		return err
 	}
@@ -36,10 +53,3 @@ import (
 		}
 		err = item.Updates()
 		if err != nil {
-			log.WithError(err)
-			continue
-		}
-
-	} //for
-	return nil
-}

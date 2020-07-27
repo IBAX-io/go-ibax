@@ -1,20 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
-
-import (
-	"fmt"
-
-	"github.com/shopspring/decimal"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-)
-
-// Key is model
-type Key struct {
 	ecosystem    int64
 	accountKeyID int64 `gorm:"-"`
 
@@ -55,6 +40,20 @@ func (m *Key) CapableAmount() decimal.Decimal {
 	}
 	if maxpay.GreaterThan(decimal.New(0, 0)) && maxpay.LessThan(amount) {
 		amount = maxpay
+	}
+	return amount
+}
+
+// Get is retrieving model from database
+func (m *Key) Get(db *DbTransaction, wallet int64) (bool, error) {
+	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
+}
+
+// GetTr is retrieving model from database
+func (m *Key) GetTr(db *DbTransaction, wallet int64) (bool, error) {
+	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
+}
+
 func (m *Key) AccountKeyID() int64 {
 	if m.accountKeyID == 0 {
 		m.accountKeyID = converter.StringToAddress(m.AccountID)

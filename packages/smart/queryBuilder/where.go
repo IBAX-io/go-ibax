@@ -98,18 +98,6 @@ func GetWhere(inWhere *types.Map) (string, error) {
 		switch value := v.(type) {
 		case []interface{}:
 			var list []string
-			for _, ival := range value {
-				switch avalue := ival.(type) {
-				case *types.Map:
-					where, err := GetWhere(avalue)
-					if err != nil {
-						return ``, err
-					}
-					if len(where) > 0 {
-						list = append(list, where)
-					}
-				}
-			}
 			if len(list) > 0 {
 				ret = fmt.Sprintf(`(%s)`, strings.Join(list, ` `+action+` `))
 			}
@@ -197,4 +185,21 @@ func GetWhere(inWhere *types.Map) (string, error) {
 					cond = append(cond, fmt.Sprintf(`(%s %s)`, key, ret))
 				}
 			default:
+				ival := escape(value)
+				if ival == `$isnull` {
+					ival = fmt.Sprintf(`%s is null`, key)
+				} else {
+					ival = fmt.Sprintf(`%s = '%s'`, key, ival)
+				}
+				cond = append(cond, ival)
+			}
+		}
+	}
+	if len(cond) > 0 {
+		where = strings.Join(cond, ` and `)
+		if err := CheckNow(where); err != nil {
+			return ``, err
+		}
+	}
+	return where, nil
 }

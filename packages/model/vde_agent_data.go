@@ -23,14 +23,25 @@ type VDEAgentData struct {
 	CreateTime     int64  `gorm:"not null" json:"create_time"`
 }
 
-func (VDEAgentData) TableName() string {
-	return "vde_agent_data"
-}
-
 func (m *VDEAgentData) Create() error {
 	return DBConn.Create(&m).Error
 }
 
+func (m *VDEAgentData) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEAgentData) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *VDEAgentData) GetAll() ([]VDEAgentData, error) {
+	var result []VDEAgentData
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *VDEAgentData) GetOneByID() (*VDEAgentData, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
 }
 func (m *VDEAgentData) GetOneByDataUUID(DataUUID string) (*VDEAgentData, error) {

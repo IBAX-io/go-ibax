@@ -157,17 +157,6 @@ type CryptoSettings struct {
 // Config global parameters
 var Config GlobalConfig
 
-// GetPidPath returns path to pid file
-func (c *GlobalConfig) GetPidPath() string {
-	return c.PidFilePath
-}
-
-// LoadConfig from configFile
-// the function has side effect updating global var Config
-func LoadConfig(path string) error {
-	log.WithFields(log.Fields{"path": path}).Info("Loading config")
-	err := LoadConfigToVar(path, &Config)
-	if err != nil {
 		panic(err)
 	}
 	registerCrypto(Config.CryptoSettings)
@@ -197,6 +186,13 @@ func LoadConfigToVar(path string, v *GlobalConfig) error {
 func GetConfigFromPath(path string) (*GlobalConfig, error) {
 	log.WithFields(log.Fields{"path": path}).Info("Loading obs config")
 
+	_, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return nil, errors.Errorf("Unable to load config file %s", path)
+	}
+
+	viper.SetConfigFile(path)
+	err = viper.ReadInConfig()
 	if err != nil {
 		return nil, errors.Wrapf(err, "reading config")
 	}

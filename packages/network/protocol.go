@@ -63,9 +63,6 @@ func (rt *RequestType) Read(r io.Reader) error {
 }
 
 func (rt *RequestType) Write(w io.Writer) error {
-	return binary.Write(w, binary.LittleEndian, rt.Type)
-}
-
 // MaxBlockResponse is max block response
 type MaxBlockResponse struct {
 	BlockID int64
@@ -288,6 +285,21 @@ func ReadSlice(r io.Reader) ([]byte, error) {
 		return nil, fmt.Errorf("wrong sizebuf")
 	}
 
+	data := make([]byte, size)
+	if _, err := io.ReadFull(r, data); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on reading block body")
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func ReadSliceWithMaxSize(r io.Reader, maxSize uint64) ([]byte, error) {
+	sizeBuf := make([]byte, 4)
+	if _, err := io.ReadFull(r, sizeBuf); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on reading bytes slice size")
+		return nil, err
+	}
 
 	size, errInt := binary.Uvarint(sizeBuf)
 	if errInt <= 0 {
