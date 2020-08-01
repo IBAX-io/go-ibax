@@ -20,22 +20,6 @@ type tableInfo struct {
 	Count string `json:"count"`
 }
 
-type tablesResult struct {
-	Count int64       `json:"count"`
-	List  []tableInfo `json:"list"`
-}
-
-func getTablesHandler(w http.ResponseWriter, r *http.Request) {
-	form := &paginatorForm{}
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadGateway)
-		return
-	}
-
-	client := getClient(r)
-	logger := getLogger(r)
-	prefix := client.Prefix()
-
 	table := &model.Table{}
 	table.SetTablePrefix(prefix)
 
@@ -69,3 +53,12 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting count from table")
 			errorResponse(w, err)
+			return
+		}
+
+		result.List[i].Name = item["name"]
+		result.List[i].Count = converter.Int64ToStr(count)
+	}
+
+	jsonResponse(w, result)
+}

@@ -23,6 +23,9 @@ const (
 
 // durationSlice attaches the methods of sort.Interface to []time.Duration,
 // sorting in increasing order.
+type durationSlice []time.Duration
+
+func (s durationSlice) Len() int           { return len(s) }
 func (s durationSlice) Less(i, j int) bool { return s[i] < s[j] }
 func (s durationSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
@@ -44,8 +47,6 @@ func CheckClockDrift() (bool, error) {
 // sntpDrift does a naive time resolution against an NTP server and returns the
 // measured drift. This method uses the simple version of NTP. It's not precise
 // but should be fine for these purposes.
-//
-// Note, it executes two extra measurements compared to the number of requested
 // ones to be able to discard the two extremes as outliers.
 func sntpDrift(measurements int) (time.Duration, error) {
 	// Resolve the address of the NTP server

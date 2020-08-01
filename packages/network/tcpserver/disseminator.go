@@ -125,6 +125,8 @@ func resieveTxBodies(con io.Reader) ([]byte, error) {
 
 func processBlock(buf *bytes.Buffer, honorNodeID int64) error {
 	infoBlock := &model.InfoBlock{}
+	found, err := infoBlock.Get()
+	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting cur block ID")
 		return utils.ErrInfo(err)
 	}
@@ -236,12 +238,6 @@ func saveNewTransactions(binaryTxs []byte) error {
 		if int64(len(binaryTxs)) < txSize {
 			log.WithFields(log.Fields{"type": consts.ProtocolError, "size": txSize, "len": len(binaryTxs)}).Error("incorrect binary txs len")
 			return utils.ErrInfo(errors.New("bad transactions packet"))
-		}
-
-		txBinData := converter.BytesShift(&binaryTxs, txSize)
-		if len(txBinData) == 0 {
-			log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("binaryTxs is empty")
-			return utils.ErrInfo(errors.New("len(txBinData) == 0"))
 		}
 
 		if int64(len(txBinData)) > syspar.GetMaxTxSize() {

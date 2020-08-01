@@ -332,20 +332,6 @@ func CreateLanguage(sc *SmartContract, name, trans string) (id int64, err error)
 		"ecosystem": idStr, "res": trans})); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting new language")
 		return 0, err
-	}
-	return id, nil
-}
-
-// EditLanguage edits language
-func EditLanguage(sc *SmartContract, id int64, name, trans string) error {
-	if err := validateAccess(sc, "EditLanguage"); err != nil {
-		return err
-	}
-	if err := language.UpdateLang(int(sc.TxSmart.EcosystemID), name, trans); err != nil {
-		return err
-	}
-	if _, err := DBUpdate(sc, `@1languages`, id,
-		types.LoadMap(map[string]interface{}{"name": name, "res": trans})); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting new language")
 		return err
 	}
@@ -424,6 +410,9 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 
 	id, err := model.GetNextID(sc.DbTransaction, "1_ecosystems")
 	if err != nil {
+		return 0, logErrorDB(err, "generating next ecosystem id")
+	}
+
 	appID, err := model.GetNextID(sc.DbTransaction, "1_applications")
 	if err != nil {
 		return 0, logErrorDB(err, "generating next application id")

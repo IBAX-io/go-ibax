@@ -14,10 +14,17 @@ import (
 	"github.com/gorilla/mux"
 )
 
-		if result, err := model.GetTxRecord(nil, hashStr); err == nil {
-			resultList = append(resultList, result)
-		}
+func getTxRecord(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	hashes := params["hashes"]
+
+	var (
+		hashList   []string
+		resultList []interface{}
+	)
+	if len(hashes) > 0 {
+		hashList = strings.Split(hashes, ",")
 	}
-	jsonResponse(w, &resultList)
-	return
+	for _, hashStr := range hashList {
+
 }

@@ -64,20 +64,6 @@ func TestRead(t *testing.T) {
 				while i < Len($data) {
 					row = $data[i]
 					if i == 1 || i == 3 {
-						row["my"] = "No name"
-						$data[i] = row
-					}
-					i = i+ 1
-				}
-				return true
-			}`,
-	}
-	for _, contract := range contList {
-		form = url.Values{"Value": {fmt.Sprintf(contract, name)}, "ApplicationId": {`1`},
-			"Conditions": {`true`}}
-		assert.NoError(t, postTx(`NewContract`, &form))
-	}
-	assert.NoError(t, postTx(name, &url.Values{}))
 
 	assert.EqualError(t, postTx(`GetData`+name, &url.Values{}), `{"type":"panic","error":"Access denied"}`)
 	assert.NoError(t, sendPost(`content`, &url.Values{`template`: {
@@ -124,3 +110,7 @@ func TestRead(t *testing.T) {
 	assert.NoError(t, sendPost(`content`, &url.Values{`template`: {
 		`DBFind(` + name + `, src).Limit(2)`}}, &retCont))
 	if !strings.Contains(RawToString(retCont.Tree), `No name`) {
+		t.Errorf(`wrong tree %s`, RawToString(retCont.Tree))
+		return
+	}
+}

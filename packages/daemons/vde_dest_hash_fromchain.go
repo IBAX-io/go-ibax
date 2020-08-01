@@ -60,6 +60,11 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 
 	chaininfo := &model.VDEDestChainInfo{}
 	DestChainInfo, err := chaininfo.Get()
+	if err != nil {
+		//log.WithFields(log.Fields{"error": err}).Error("VDE Dest fromchain getting chain info")
+		log.Info("Dest chain info not found")
+		time.Sleep(time.Millisecond * 100)
+		return err
 	}
 	if DestChainInfo == nil {
 		log.Info("Dest chain info not found")
@@ -111,20 +116,6 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 	url := `listWhere` + `/vde_share_hash`
 	//err = api.SendPost(url, &form, &t_struct)
 	//if err != nil {
-	//	fmt.Println("error", err)
-	//	return err
-	//}
-	err = chain_api.SendPost(chain_apiAddress, gAuth_chain, url, &form, &t_struct)
-	if err != nil {
-		fmt.Println("error", err)
-		return err
-	}
-	if len(t_struct.List) == 0 {
-		//log.Info("DEDestDataHashResult not found, sleep...")
-		//fmt.Println("DEDestDataHashResult not found, sleep...")
-		time.Sleep(time.Second * 2)
-		return nil
-	}
 
 	//utils.Print_json(t_struct)
 	for _, DataHashItem := range t_struct.List {

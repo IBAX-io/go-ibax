@@ -9,12 +9,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -110,6 +104,20 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 			log.Info("Send successfully")
 		} else {
 			item.DataSendState = 2
+			item.DataSendErr = "Hash mismatch"
+			log.Info("Hash mismatch")
+		}
+		err = item.Updates()
+		if err != nil {
+			log.WithError(err)
+		}
+
+		//
+		//log_err = item.DataSendErr
+		////Generate a chain request on the log
+		//log_type = 3      //
+		//if LogMode == 3 { //0
+		//	//fmt.Println("There is no need to generate a log")
 		//} else if LogMode == 1 || LogMode == 2 {
 		//	if LogMode == 1 { //1
 		//		chain_state = 5

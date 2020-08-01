@@ -14,6 +14,16 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 )
+
+type HonorNodeJSON struct {
+	TCPAddress string `json:"tcp_address"`
+	APIAddress string `json:"api_address"`
+	PublicKey  string `json:"public_key"`
+	UnbanTime  string `json:"unban_time"`
+	Stopped    bool   `json:"stopped"`
+}
+
+type NetworkResult struct {
 	NetworkID     string          `json:"network_id"`
 	CentrifugoURL string          `json:"centrifugo_url"`
 	Test          bool            `json:"test"`
@@ -24,9 +34,6 @@ import (
 func GetNodesJSON() []HonorNodeJSON {
 	nodes := make([]HonorNodeJSON, 0)
 	for _, node := range syspar.GetNodes() {
-		nodes = append(nodes, HonorNodeJSON{
-			TCPAddress: node.TCPAddress,
-			APIAddress: node.APIAddress,
 			PublicKey:  crypto.PubToHex(node.PublicKey),
 			UnbanTime:  strconv.FormatInt(node.UnbanTime.Unix(), 10),
 		})
