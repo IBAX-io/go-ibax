@@ -1,4 +1,15 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package transaction
+
+import (
+	"bytes"
+	"encoding/hex"
+	"fmt"
+	"math/rand"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -112,7 +123,6 @@ func (rtx *RawTransaction) Processing(txData []byte) error {
 	}
 	if len(strings.TrimSpace(rtx.SmartTx().Lang)) > 2 {
 		return fmt.Errorf(`localization size is greater than 2`)
-	}
 	var PublicKeys [][]byte
 	PublicKeys = append(PublicKeys, crypto.CutPub(rtx.SmartTx().PublicKey))
 	_, err := utils.CheckSign(PublicKeys, rtx.Hash(), rtx.Signature(), false)

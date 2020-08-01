@@ -8,16 +8,9 @@
 package log
 
 import (
-	"github.com/sirupsen/logrus"
-)
-
-// SyslogHook to send logs via syslog.
-type SyslogHook struct {
-	SyslogNetwork string
-	SyslogRaddr   string
+	return nil
 }
 
-func NewSyslogHook(appName, facility string) (*SyslogHook, error) {
-	return &SyslogHook{"", "localhost"}, nil
+func (hook *SyslogHook) Levels() []logrus.Level {
+	return logrus.AllLevels
 }
-

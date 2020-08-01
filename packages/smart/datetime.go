@@ -6,16 +6,6 @@ package smart
 
 import (
 	"time"
-
-	"github.com/pkg/errors"
-)
-
-const (
-	dateTimeFormat = "2006-01-02 15:04:05"
-)
-
-// Date formats timestamp to specified date format
-func Date(timeFormat string, timestamp int64) string {
 	t := time.Unix(timestamp, 0)
 	return t.Format(timeFormat)
 }
@@ -60,3 +50,8 @@ func UnixDateTimeLocation(value, locationName string) (int64, error) {
 
 	t, err := time.ParseInLocation(dateTimeFormat, value, loc)
 	if err != nil {
+		return 0, errors.Wrap(err, "Parse time")
+	}
+
+	return t.Unix(), nil
+}

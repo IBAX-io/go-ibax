@@ -12,11 +12,3 @@ import (
 )
 
 // ContractHandler represents contract handler
-type ContractHandler struct {
-	Contract string
-}
-
-	}
-
-	log.WithFields(log.Fields{"task": t.String(), "contract": ch.Contract}).Info("run contract task")
-}

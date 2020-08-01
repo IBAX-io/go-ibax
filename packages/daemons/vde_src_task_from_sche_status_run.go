@@ -9,17 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
-	"strconv"
-	"time"
-
-	vde_api "github.com/IBAX-io/go-ibax/packages/vde_sdk"
-
-	"path/filepath"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -53,6 +42,21 @@ func VDESrcTaskFromScheStatusRun(ctx context.Context, d *daemon) error {
 		return nil
 	}
 	// deal with task data
+	for _, item := range SrcTask {
+		//fmt.Println("SrcTask:", item.TaskUUID)
+		blockchain_http = item.ContractRunHttp
+		blockchain_ecosystem = item.ContractRunEcosystem
+		//fmt.Println("ContractRun:", blockchain_http, blockchain_ecosystem)
+
+		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("blockchain_ecosystem encode error")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		vde_sche_apiAddress := blockchain_http
+		vde_sche_apiEcosystemID := int64(ecosystemID)
+
 		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
 		// Login
 		gAuth_sche, _, gPrivate_sche, _, _, err := vde_api.KeyLogin(vde_sche_apiAddress, src, vde_sche_apiEcosystemID)
