@@ -135,6 +135,20 @@ func VDESrcTaskStatusRun(ctx context.Context, d *daemon) error {
 
 			//
 			//item.ChainState = 4
+			item.ChainState = 3
+			item.ChainErr = err.Error()
+			item.UpdateTime = time.Now().Unix()
+			err = item.Updates()
+			if err != nil {
+				fmt.Println("Update VDESrcTaskStatus table err: ", err)
+				log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTaskStatus table!")
+			}
+			time.Sleep(time.Second * 5)
+			continue
+		}
+		fmt.Println("Send VDE src Contract to run, ContractName:", ContractName)
+
+		item.ChainState = 1
 		item.TxHash = txHash
 		item.BlockId = 0
 		item.ChainErr = ""
@@ -213,22 +227,6 @@ func VDESrcTaskStatusRunState(ctx context.Context, d *daemon) error {
 			item.ChainState = 2
 			item.ChainErr = ""
 			ThisScrTask.TaskRunState = 1
-		} else if blockId == 0 {
-			//fmt.Println("call src task VDEWaitTx! err: ", item.ChainErr)
-			item.ChainState = 3
-			item.ChainErr = err.Error()
-			ThisScrTask.TaskRunState = 2
-			ThisScrTask.TaskRunStateErr = err.Error()
-		} else {
-			//fmt.Println("call src task VDEWaitTx! err: ", err)
-			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-
-		item.UpdateTime = time.Now().Unix()
-		err = item.Updates()
-		if err != nil {
-			fmt.Println("Update VDESrcTask table err: ", err)
 			log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTask table!")
 			time.Sleep(time.Millisecond * 2)
 			continue

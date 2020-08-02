@@ -15,17 +15,6 @@ type SubNodeDestData struct {
 	//SubNodeSrcPubkey     string `gorm:"not null" json:"subnode_src_pubkey"`
 	SubNodeSrcPubkey string `gorm:"column:subnode_src_pubkey;not null" json:"subnode_src_pubkey"`
 	//SubNodeDestPubkey    string `gorm:"not null" json:"subnode_dest_pubkey"`
-	SubNodeDestPubkey string `gorm:"column:subnode_dest_pubkey;not null" json:"subnode_dest_pubkey"`
-	//SubNodeDestIP        string `gorm:"not null" json:"subnode_dest_ip"`
-	SubNodeDestIP string `gorm:"column:subnode_dest_ip;not null" json:"subnode_dest_ip"`
-	//SubNodeAgentPubkey   string `gorm:"not null" json:"subnode_agent_pubkey"`
-	SubNodeAgentPubkey string `gorm:"column:subnode_agent_pubkey;not null" json:"subnode_agent_pubkey"`
-	//SubNodeAgentIP       string `gorm:"not null" json:"subnode_agent_ip"`
-	SubNodeAgentIP string `gorm:"column:subnode_agent_ip;not null" json:"subnode_agent_ip"`
-	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
-	TranMode       int64  `gorm:"not null" json:"tran_mode"`
-	DataState      int64  `gorm:"not null" json:"data_state"`
-	UpdateTime     int64  `gorm:"not null" json:"update_time"`
 	CreateTime     int64  `gorm:"not null" json:"create_time"`
 }
 
@@ -47,6 +36,18 @@ func (m *SubNodeDestData) Delete() error {
 
 func (m *SubNodeDestData) GetAll() ([]SubNodeDestData, error) {
 	var result []SubNodeDestData
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *SubNodeDestData) GetOneByID() (*SubNodeDestData, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
+}
+func (m *SubNodeDestData) GetOneByDataUUID(DataUUID string) (*SubNodeDestData, error) {
+	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
+	return m, err
+}
+func (m *SubNodeDestData) GetOneByTaskUUID(TaskUUID string) (*SubNodeDestData, error) {
 	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
 	return m, err
 }

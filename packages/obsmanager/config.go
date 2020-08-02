@@ -26,16 +26,6 @@ type ChildOBSConfig struct {
 	ConfigFileName string
 	LogTo          string
 	LogLevel       string
-	HTTPPort       int
-}
-
-func (c ChildOBSConfig) configCommand() *exec.Cmd {
-
-	args := []string{
-		"config",
-		fmt.Sprintf("--path=%s", c.configPath()),
-		fmt.Sprintf("--dbUser=%s", c.DBUser),
-		fmt.Sprintf("--dbPassword=%s", c.DBPassword),
 		fmt.Sprintf("--dbName=%s", c.Name),
 		fmt.Sprintf("--httpPort=%d", c.HTTPPort),
 		fmt.Sprintf("--dataDir=%s", c.Directory),
@@ -66,3 +56,9 @@ func (c ChildOBSConfig) configPath() string {
 
 func (c ChildOBSConfig) getCommand(commandName string) *exec.Cmd {
 	args := []string{
+		commandName,
+		fmt.Sprintf("--config=%s", c.configPath()),
+	}
+
+	return exec.Command(c.Executable, args...)
+}

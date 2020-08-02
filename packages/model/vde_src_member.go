@@ -1,12 +1,8 @@
 /*---------------------------------------------------------------------------------------------
-	VDEType              int64  `gorm:"not null" json:"vde_type"`
-	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
-	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
-
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
 func (VDESrcMember) TableName() string {
 	return "vde_src_member"
 }

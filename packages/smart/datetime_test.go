@@ -10,6 +10,12 @@ import (
 
 func TestDateTimeLocation(t *testing.T) {
 	type args struct {
+		unix         int64
+		locationName string
+	}
+	tests := []struct {
+		name    string
+		args    args
 		want    string
 		wantErr bool
 	}{
@@ -32,10 +38,6 @@ func TestDateTimeLocation(t *testing.T) {
 }
 
 func TestUnixDateTimeLocation(t *testing.T) {
-	type args struct {
-		value        string
-		locationName string
-	}
 	tests := []struct {
 		name    string
 		args    args
