@@ -508,6 +508,18 @@ func GetRbBlocks1() int64 {
 func HasSys(name string) bool {
 	mutex.RLock()
 	_, ok := cache[name]
+	mutex.RUnlock()
+	return ok
+}
+
+// SetFirstBlockData sets data of first block to global variable
+func SetFirstBlockData(data *consts.FirstBlock) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	firstBlockData = data
+
+	// If list of nodes is empty, then used node from the first block
 	if len(nodesByPosition) == 0 {
 		addHonorNodeKeys(firstBlockData.NodePublicKey)
 
@@ -578,9 +590,3 @@ func GetTableColType() []map[string]string {
 
 func IsByteColumn(table, column string) bool {
 	for _, row := range GetTableColType() {
-		if row["table_name"] == table && row["column_name"] == column {
-			return true
-		}
-	}
-	return false
-}
