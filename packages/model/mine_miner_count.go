@@ -10,7 +10,6 @@ type MineCount struct {
 	MineCapacity int64 `gorm:"null default 0" ` //
 	Count        int64 `gorm:"null default 0" ` //
 	Stime        int64 `gorm:"not null" `       //
-		Order("poolid asc, devid asc").
-		Find(&mp).Error
+	Etime        int64 `gorm:"not null" `       //
 	return mp, err
 }

@@ -5,4 +5,13 @@
 package utils
 
 import (
-	"testing"
+	}
+
+	rand := NewRand(0)
+	for _, values := range cases {
+		r := rand.BytesSeed([]byte("reset"))
+		for _, v := range values {
+			assert.Equal(t, v, r.Int63())
+		}
+	}
+}

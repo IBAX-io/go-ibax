@@ -1,18 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
-
-import (
-	"github.com/shopspring/decimal"
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-)
-
-// This constants contains values of transactions priority
 const (
 	TransactionRateOnBlock transactionRate = iota + 1
 	TransactionRateApiContract
@@ -198,3 +185,8 @@ func GetManyTransactions(dbtx *DbTransaction, hashes [][]byte) ([]Transaction, e
 
 func (t *Transaction) GetStopNetwork() (bool, error) {
 	return isFound(DBConn.Where("type = ?", consts.TxTypeStopNetwork).First(t))
+}
+
+func (t *Transaction) GetTransactionRateStopNetwork() bool {
+	return t.HighRate == TransactionRateStopNetwork
+}

@@ -151,16 +151,19 @@ var (
 // Lexem contains information about language item
 type Lexem struct {
 	Type   uint32 // Type of the lexem
-type ifBuf struct {
-	count int
-	pair  int
-	stop  bool
+	Ext    uint32
+	Value  interface{} // Value of lexem
+	Line   uint16      // Line of the lexem
+	Column uint32      // Position inside the line
 }
 
-// Lexems is a slice of lexems
-type Lexems []*Lexem
+// GetLogger returns logger
+func (l Lexem) GetLogger() *log.Entry {
+	return log.WithFields(log.Fields{"lex_type": l.Type, "lex_line": l.Line, "lex_column": l.Column})
+}
 
-// The lexical analysis is based on the finite machine which is described in the file
+type ifBuf struct {
+	count int
 // tools/lextable/lextable.go. lextable.go generates a representation of a finite machine as an array
 // and records it in the file lex_table.go. In fact, the lexTable array is a set of states and
 // depending on the next sign, the machine goes into a new state.

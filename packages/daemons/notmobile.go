@@ -19,6 +19,14 @@ import (
 )
 
 /*
+#include <stdio.h>
+#include <signal.h>
+
+extern void go_callback_int();
+static inline void SigBreak_Handler(int n_signal){
+    printf("closed\n");
+	go_callback_int();
+	"C"
 )
 
 //export go_callback_int

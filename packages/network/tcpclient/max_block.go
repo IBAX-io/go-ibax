@@ -14,21 +14,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
-)
-
-func HostWithMaxBlock(ctx context.Context, hosts []string) (bestHost string, maxBlockID int64, err error) {
-	if len(hosts) == 0 {
-		return "", -1, nil
-	}
-
-	return hostWithMaxBlock(ctx, hosts)
-}
-
-func GetMaxBlockID(host string) (blockID int64, err error) {
-	return getMaxBlock(host)
-}
-
-func getMaxBlock(host string) (blockID int64, err error) {
 	con, err := newConnection(host)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.ConnectionError, "host": host}).Debug("error connecting to host")
@@ -92,6 +77,20 @@ func hostWithMaxBlock(ctx context.Context, hosts []string) (bestHost string, max
 				blockID: blockID,
 				err:     err,
 			}
+		}(h)
+	}
+	wg.Wait()
+
+	var errCount int
+	for i := 0; i < len(hosts); i++ {
+		bl := <-resultChan
+
+		if bl.err != nil {
+			errCount++
+			continue
+		}
+
+		// If blockID is maximal then the current host is the best
 		if bl.blockID > maxBlockID {
 			maxBlockID = bl.blockID
 			bestHost = bl.host
