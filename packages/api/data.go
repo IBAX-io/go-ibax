@@ -3,16 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package api
-
-import (
-	"crypto/md5"
-	"encoding/hex"
-	"fmt"
-	"net/http"
-	"strings"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -85,3 +75,10 @@ func getBinaryHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, errHashWrong)
 		return
 	}
+
+	w.Header().Set("Content-Type", bin.MimeType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, bin.Name))
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Write(bin.Data)
+	return
+}

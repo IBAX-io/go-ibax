@@ -57,10 +57,6 @@ func getBlockInfoHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	params := mux.Vars(r)
 
-	blockID := converter.StrToInt64(params["id"])
-	block := model.Block{}
-	found, err := block.Get(blockID)
-	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block")
 		errorResponse(w, err)
 		return
@@ -117,6 +113,19 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	blocks, err := model.GetBlockchain(form.BlockID, form.BlockID+form.Count, model.OrderASC)
 	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting blocks range")
+		errorResponse(w, err)
+		return
+	}
+
+	if len(blocks) == 0 {
+		errorResponse(w, errNotFound)
+		return
+	}
+
+	result := map[int64][]TxInfo{}
+	for _, blockModel := range blocks {
+		blck, err := block.UnmarshallBlock(bytes.NewBuffer(blockModel.Data), false)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err, "bolck_id": blockModel.ID}).Error("on unmarshalling block")
 			errorResponse(w, err)
