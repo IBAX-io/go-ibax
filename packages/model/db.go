@@ -45,6 +45,12 @@ func (ktc KeyTableChecker) IsKeyTable(tableName string) bool {
 	val, exist := converter.FirstEcosystemTables[tableName]
 	return exist && val
 }
+
+type NextIDGetter struct {
+	Tx *DbTransaction
+}
+
+func (g NextIDGetter) GetNextID(tableName string) (int64, error) {
 	return GetNextID(g.Tx, tableName)
 }
 func isFound(db *gorm.DB) (bool, error) {
@@ -393,20 +399,6 @@ func GetNextID(transaction *DbTransaction, table string) (int64, error) {
 	rows, err := GetDB(transaction).Raw(`select id from "` + table + `" order by id desc limit 1`).Rows()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("selecting next id from table")
-		return 0, err
-	}
-	rows.Next()
-	rows.Scan(&id)
-	rows.Close()
-	return id + 1, err
-}
-
-// IsTable returns is table exists
-func IsTable(tblname string) bool {
-	var name string
-	err := DBConn.Table("information_schema.tables").
-		Where("table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name=?", tblname).
-		Select("table_name").Row().Scan(&name)
 	if err != nil {
 		return false
 	}

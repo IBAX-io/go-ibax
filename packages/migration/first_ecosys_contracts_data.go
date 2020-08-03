@@ -64,11 +64,6 @@ VALUES
 
 		var params map
 		CallContract($cur["contract"], params)
-	}
-}
-', '1', 'ContractConditions("MainCondition")', '1', '1'),
-	(next_id('1_contracts'), 'CheckNodesBan', 'contract CheckNodesBan {
-	action {
 		UpdateNodesBan($block_time)
 	}
 }
@@ -298,6 +293,14 @@ VALUES
         var pars map
         if $Value {
             pars["value"] = $Value
+        }
+        if $Menu {
+            pars["menu"] = $Menu
+        }
+        if $Conditions {
+            pars["conditions"] = $Conditions
+        }
+        if $ValidateCount {
             pars["validate_count"] = $ValidateCount
         }
         if $ValidateMode {
