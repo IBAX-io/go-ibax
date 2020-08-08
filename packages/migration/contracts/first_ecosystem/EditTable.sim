@@ -12,6 +12,12 @@ contract EditTable {
     conditions {
         if !$InsertPerm {
             info("Insert condition is empty")
+        }
+        if !$UpdatePerm {
+            info("Update condition is empty")
+        }
+        var permissions map
+        permissions["insert"] = $InsertPerm
         permissions["update"] = $UpdatePerm
         permissions["new_column"] = $NewColumnPerm
         if $ReadPerm {

@@ -120,13 +120,6 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 	}
 
 	// mark all transactions and block as sent
-	if block != nil {
-		err = block.MarkSent()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marking block sent")
-			return err
-		}
-	}
 
 	if trs != nil {
 		var hashArr [][]byte
@@ -139,3 +132,5 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 		}
 	}
 
+	return nil
+}

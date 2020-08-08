@@ -241,6 +241,12 @@ func TestMobile(t *testing.T) {
 func TestCutoff(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
 
+	name := randName(`tbl`)
+	form := url.Values{
+		"Name": {name},
+		"Columns": {`[
+			{"name":"name","type":"varchar", "index": "1", "conditions":"true"},
+			{"name":"long_text", "type":"text", "index":"0", "conditions":"true"},
 			{"name":"short_text", "type":"varchar", "index":"0", "conditions":"true"}
 			]`},
 		"Permissions":   {`{"insert": "true", "update" : "true", "new_column": "true"}`},
@@ -315,16 +321,6 @@ var imageData = `iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAIAAACRXR/mAAAACXBIWXMAAAsTAAA
 
 func TestBinary(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
-
-	data, err := base64.StdEncoding.DecodeString(imageData)
-	assert.NoError(t, err)
-
-	file := types.NewFile()
-	file.Set("Body", data)
-
-	params := contractParams{
-		"ApplicationId": "1",
-		"Name":          "file",
 		"Data":          file,
 	}
 

@@ -38,6 +38,23 @@ type token struct {
 type opFunc func()
 
 var (
+	errExp            = errors.New(`wrong expression`)
+	errDiv            = errors.New(`dividing by zero`)
+	errPrecIsNegative = errors.New(`precision is negative`)
+	errWhere          = errors.New(`Where has wrong format`)
+)
+
+func parsing(input string, itype int) (*[]token, error) {
+	var err error
+
+	tokens := make([]token, 0)
+	newToken := func(itype int, value interface{}) {
+		tokens = append(tokens, token{itype, value})
+	}
+	prevNumber := func() bool {
+		return len(tokens) > 0 && tokens[len(tokens)-1].Type == tkNumber
+	}
+	prevOper := func() bool {
 		return len(tokens) > 0 && (tokens[len(tokens)-1].Type >= tkAdd &&
 			tokens[len(tokens)-1].Type <= tkDiv)
 	}
@@ -154,24 +171,6 @@ func calcExp(tokens []token, resType int, prec string) string {
 	}
 	for _, item := range tokens {
 		if item.Type == tkNumber {
-			stack = append(stack, item.Value)
-		} else {
-			if len(stack) < 2 {
-				return errExp.Error()
-			}
-			top = len(stack) - 1
-			if item.Type == tkDiv {
-				switch resType {
-				case expInt:
-					if stack[top].(int64) == 0 {
-						return errDiv.Error()
-					}
-				case expFloat:
-					if stack[top].(float64) == 0 {
-						return errDiv.Error()
-					}
-				case expMoney:
-					if stack[top].(decimal.Decimal).Cmp(decimal.New(0, 0)) == 0 {
 						return errDiv.Error()
 					}
 				}

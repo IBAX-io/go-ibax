@@ -332,6 +332,20 @@ func CreateLanguage(sc *SmartContract, name, trans string) (id int64, err error)
 		"ecosystem": idStr, "res": trans})); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting new language")
 		return 0, err
+	}
+	return id, nil
+}
+
+// EditLanguage edits language
+func EditLanguage(sc *SmartContract, id int64, name, trans string) error {
+	if err := validateAccess(sc, "EditLanguage"); err != nil {
+		return err
+	}
+	if err := language.UpdateLang(int(sc.TxSmart.EcosystemID), name, trans); err != nil {
+		return err
+	}
+	if _, err := DBUpdate(sc, `@1languages`, id,
+		types.LoadMap(map[string]interface{}{"name": name, "res": trans})); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting new language")
 		return err
 	}
@@ -534,14 +548,6 @@ func BndWallet(sc *SmartContract, tblid int64, state int64) error {
 	}
 
 	return SetContractWallet(sc, tblid, state, sc.TxSmart.KeyID)
-}
-
-// UnbndWallet sets Active status of the contract in smartVM
-func UnbndWallet(sc *SmartContract, tblid int64, state int64) error {
-	if err := validateAccess(sc, "UnbindWallet"); err != nil {
-		return err
-	}
-
 	if _, _, err := sc.update([]string{"wallet_id"}, []interface{}{0}, "1_contracts", "id", tblid); err != nil {
 		log.WithFields(log.Fields{"error": err, "contract_id": tblid}).Error("on updating contract wallet")
 		return err
