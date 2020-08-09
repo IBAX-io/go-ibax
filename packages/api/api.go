@@ -38,9 +38,6 @@ type Mode struct {
 
 // Client represents data of client
 type Client struct {
-	KeyID         int64
-	AccountID     string
-	EcosystemID   int64
 	EcosystemName string
 	RoleID        int64
 	IsMobile      bool
@@ -69,6 +66,11 @@ func errorResponse(w http.ResponseWriter, err error, code ...int) {
 	}
 
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if len(code) == 0 {
+		w.WriteHeader(et.Status)
+	} else {
+		w.WriteHeader(code[0])
+	}
 
 	jsonResponse(w, et)
 }

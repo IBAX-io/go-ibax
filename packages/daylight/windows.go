@@ -6,16 +6,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daylight
-
-import (
-	"fmt"
-	"os/exec"
-	"regexp"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-func KillPid(pid string) error {
-	if model.DBConn != nil {
 		sd := &model.StopDaemon{StopTime: time.Now().Unix()}
 		err := sd.Create()
 		if err != nil {

@@ -1,2 +1,9 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
+contract HonorNodeCondition {
+	conditions {
+		var account_key int
+		account_key = AddressToId($account_id)
+		if IsHonorNodeKey(account_key) {
+			return
+		}

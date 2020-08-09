@@ -18,3 +18,4 @@ type getTestResult struct {
 }
 
 func getTestHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)

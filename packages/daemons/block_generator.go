@@ -75,6 +75,14 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 
 	//if !NtpDriftFlag {
 	//	d.logger.WithFields(log.Fields{"type": consts.Ntpdate}).Error("ntp time not ntpdate")
+	//	return nil
+	//}
+
+	//var cf model.Confirmation
+	//cfg, err := cf.CheckAllowGenBlock()
+	//if err != nil {
+	//	d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Debug("confirmation block not allow")
+	//	return err
 	//}
 	//
 	//if !cfg {
@@ -94,8 +102,6 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting previous block")
 		return err
-	}
-
 	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
 	if len(NodePrivateKey) < 1 {
 		d.logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")

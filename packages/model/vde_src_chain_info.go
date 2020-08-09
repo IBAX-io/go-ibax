@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package model
 
-type VDESrcChainInfo struct {
 	ID                  int64  `gorm:"primary_key; not null" json:"id"`
 	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
 	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
@@ -31,6 +30,14 @@ func (m *VDESrcChainInfo) Delete() error {
 }
 
 func (m *VDESrcChainInfo) Get() (*VDESrcChainInfo, error) {
+	err := DBConn.First(&m).Error
+	return m, err
+}
+
+func (m *VDESrcChainInfo) GetAll() ([]VDESrcChainInfo, error) {
+	var result []VDESrcChainInfo
+	err := DBConn.Find(&result).Error
+	return result, err
 }
 func (m *VDESrcChainInfo) GetOneByID() (*VDESrcChainInfo, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error

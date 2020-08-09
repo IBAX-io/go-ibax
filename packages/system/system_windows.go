@@ -1,3 +1,10 @@
+// +build windows
+
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package system
 
 import (
 	"os"
@@ -39,10 +46,5 @@ void kill_childproc( DWORD myprocID) {
 	}
 }
 */
-import "C"
-
-// lstrcmp( pe.szExeFile, TEXT("tmp_daylight.exe")) != 0 && lstrcmp( pe.szExeFile, TEXT("daylight.exe")) != 0
-
-func killChildProc() {
 	C.kill_childproc(C.DWORD(os.Getpid()))
 }
