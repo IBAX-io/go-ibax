@@ -5,19 +5,6 @@
 
 package daemons
 
-import (
-	"context"
-	"encoding/json"
-	"strings"
-	"sync/atomic"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
-
-	log "github.com/sirupsen/logrus"
-)
 
 func SendPrivateData(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
@@ -31,6 +18,18 @@ func SendPrivateData(ctx context.Context, d *daemon) error {
 		found, ok bool
 		err       error
 
+		tran_mode     string
+		node_filename string
+		mimetype      string
+		node_pubkey   string
+	)
+
+	// TcpSendState 0.unsent 1.success 2.fail to send
+	m := &model.ShareDataStatus{}
+	found, _ = m.GetOneByTcpStatus(0)
+	if found {
+		time.Sleep(time.Millisecond * 100)
+		return nil
 	}
 
 	if m.TaskType == "1" { //1 create table，not need to send

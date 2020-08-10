@@ -143,6 +143,19 @@ var (
 		}
 }`
 )
+
+func main() {
+	var alpha [129]byte
+	for ind, ch := range alphabet {
+		i := byte(ind)
+		switch ch {
+		case ' ':
+			alpha[0x09] = i
+			alpha[0x0d] = i
+			alpha[' '] = i
+		case '1':
+			for k := '1'; k <= '9'; k++ {
+				alpha[k] = i
 			}
 		case 'a':
 			for k := 'A'; k <= 'Z'; k++ {
@@ -193,17 +206,6 @@ var (
 					val = 0xff0000
 				} else {
 					val = uint32(state2int[sval[0]] << 16) // new state
-				}
-				val |= uint32(lexem[sval[1]] << 8) // lexem
-				cmds := strings.Split(sval[2], ` `)
-				var flag uint32
-				for _, icmd := range cmds {
-					flag |= flags[icmd]
-				}
-				val |= flag
-				for _, ch := range []byte(skey) {
-					var ind int
-					switch ch {
 					case 'd':
 						ind = 0
 					case 'n':

@@ -41,11 +41,7 @@ func TestMockMigration(t *testing.T) {
 
 	db := createDBMock("0.0.0")
 	err = migrate(
-		db, appVer,
-		[]*migration{
-			&migration{"0.0.1", ""},
-			&migration{"0.0.2", ""},
-		},
+	err = migrate(db, appVer, []*migration{
 		&migration{"0.0.3", ""},
 	})
 	if err != nil {

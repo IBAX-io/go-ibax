@@ -19,10 +19,12 @@ import (
 func TestGetUID(t *testing.T) {
 	var ret getUIDResult
 	err := sendGet(`getuid`, nil, &ret)
-	sign, err := crypto.SignString(priv, `LOGIN`+ret.NetworkID+ret.UID)
 	if err != nil {
+		var v map[string]string
+		json.Unmarshal([]byte(err.Error()[4:]), &v)
 		t.Error(err)
 		return
+	}
 	}
 	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)}}
 	var lret loginResult

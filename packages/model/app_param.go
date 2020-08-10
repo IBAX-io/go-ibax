@@ -12,15 +12,16 @@ import (
 )
 
 // AppParam is model
-		sp.ecosystem = 1
-	}
-	return `1_app_params`
+type AppParam struct {
+	ecosystem  int64
+	ID         int64  `gorm:"primary_key;not null"`
+	AppID      int64  `gorm:"not null"`
+	Name       string `gorm:"not null;size:100"`
+	Value      string `gorm:"not null"`
+	Conditions string `gorm:"not null"`
 }
 
-// SetTablePrefix is setting table prefix
-func (sp *AppParam) SetTablePrefix(tablePrefix string) {
-	sp.ecosystem = converter.StrToInt64(tablePrefix)
-}
+// TableName returns name of table
 
 // Get is retrieving model from database
 func (sp *AppParam) Get(transaction *DbTransaction, app int64, name string) (bool, error) {

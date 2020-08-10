@@ -6,17 +6,6 @@
 package model
 
 import (
-	"encoding/json"
-	"fmt"
-	"strconv"
-)
-
-const ecosysTable = "1_ecosystems"
-
-// Ecosystem is model
-type Ecosystem struct {
-	ID             int64 `gorm:"primary_key;not null"`
-	Name           string
 	IsValued       bool
 	EmissionAmount string `gorm:"type:jsonb"`
 	TokenTitle     string
@@ -58,6 +47,17 @@ func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
 	return isFound(GetDB(dbTx).First(sys, "id = ?", id))
 }
 
+// Delete is deleting record
+func (sys *Ecosystem) Delete(transaction *DbTransaction) error {
+	return GetDB(transaction).Delete(sys).Error
+}
+
+func (sys *Ecosystem) IsOpenMultiFee() bool {
+	if len(sys.Info) > 0 {
+		var info map[string]interface{}
+		json.Unmarshal([]byte(sys.Info), &info)
+		if v, ok := info["multi_fee"]; ok {
+			multi, _ := strconv.Atoi(fmt.Sprint(v))
 			if multi == 1 {
 				return true
 			}

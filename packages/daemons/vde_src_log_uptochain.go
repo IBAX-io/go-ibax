@@ -5,6 +5,19 @@
 
 package daemons
 
+import (
+	"context"
+	"fmt"
+	"net/url"
+	"strconv"
+	"time"
+
+	"path/filepath"
+
+	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -124,12 +137,6 @@ func VDESrcLogUpToChainState(ctx context.Context, d *daemon) error {
 		return err
 	}
 	if len(SrcTaskDataLog) == 0 {
-		//log.Info("Src task data log not found")
-		time.Sleep(time.Millisecond * 2)
-		return nil
-	}
-	//chaininfo := &model.VDESrcChainInfo{}
-	//SrcChainInfo, err := chaininfo.Get()
 	//if err != nil {
 	//	log.WithFields(log.Fields{"error": err}).Error("VDE Src uptochain getting chain info")
 	//	time.Sleep(time.Second * 30)

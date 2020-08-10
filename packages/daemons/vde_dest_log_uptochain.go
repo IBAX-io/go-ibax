@@ -13,16 +13,6 @@ import (
 	"time"
 
 	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
-
-	"path/filepath"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
 //Scheduling task data log information up the chain
 func VDEDestLogUpToChain(ctx context.Context, d *daemon) error {
 	var (
@@ -173,6 +163,19 @@ func VDEDestLogUpToChainState(ctx context.Context, d *daemon) error {
 		// Login
 		gAuth_chain, _, _, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
 		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		//fmt.Println("Login OK!")
+
+		blockId, err := chain_api.VDEWaitTx(chain_apiAddress, gAuth_chain, string(item.TxHash))
+		if blockId > 0 {
+			item.BlockId = blockId
+			item.ChainId = converter.StrToInt64(err.Error())
+			item.ChainState = 2
+			item.ChainErr = ""
+
 		} else if blockId == 0 {
 			//item.ChainState = 3
 			item.ChainState = 1 //

@@ -1,6 +1,6 @@
 /*---------------------------------------------------------------------------------------------
-	ID       int64
-	BannedAt time.Time
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
 	BanTime  time.Duration
 	Reason   string
 }

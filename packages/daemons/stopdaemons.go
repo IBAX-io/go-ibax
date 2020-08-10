@@ -22,13 +22,6 @@ func WaitStopTime() {
 	var first bool
 	for {
 		if model.DBConn == nil {
-			time.Sleep(time.Second * 3)
-			continue
-		}
-		if !first {
-			err := model.Delete(nil, "stop_daemons", "")
-			if err != nil {
-				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting from stop daemons")
 			}
 			first = true
 		}
@@ -36,6 +29,14 @@ func WaitStopTime() {
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting stop_time from StopDaemons")
 		}
+		if dExists > 0 {
+			utils.CancelFunc()
+			for i := 0; i < utils.DaemonsCount; i++ {
+				name := <-utils.ReturnCh
+				log.WithFields(log.Fields{"daemon_name": name}).Debug("daemon stopped")
+			}
+
+			err := model.GormClose()
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("gorm close")
 			}

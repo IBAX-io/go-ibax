@@ -52,6 +52,16 @@ func loggerMiddleware(next http.Handler) http.Handler {
 
 func recoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				logger := getLogger(r)
+				logger.WithFields(log.Fields{
+					"type":  consts.PanicRecoveredError,
+					"error": err,
+					"stack": string(debug.Stack()),
+				}).Error("panic recovered error")
+				fmt.Println("API Recovered", fmt.Sprintf("%s: %s", err, debug.Stack()))
+				errorResponse(w, errRecovered)
 			}
 		}()
 		next.ServeHTTP(w, r)
@@ -108,15 +118,6 @@ func (m Mode) clientMiddleware(next http.Handler) http.Handler {
 			// create client with default ecosystem
 			client = &Client{EcosystemID: 1}
 		}
-		r = setClient(r, client)
-		next.ServeHTTP(w, r)
-	})
-}
-
-func statsdMiddleware(next http.Handler) http.Handler {
-	const v = 1.0
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		route := mux.CurrentRoute(r)
 
 		counterName := statsd.APIRouteCounterName(r.Method, route.GetName())
 		statsd.Client.Inc(counterName+statsd.Count, 1, v)

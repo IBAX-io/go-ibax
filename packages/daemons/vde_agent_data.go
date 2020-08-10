@@ -18,6 +18,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func VDEAgentData(ctx context.Context, d *daemon) error {
+	var (
+		LogMode              int64
+		log_type             int64
+		log_err              string
+		chain_state          int64
+		blockchain_http      string
+		blockchain_ecosystem string
 	)
 	m := &model.VDEAgentData{}
 	ShareData, err := m.GetAllByDataSendStatus(0) //0 not send，1 success，2 fail
@@ -39,18 +47,6 @@ import (
 		time.Sleep(time.Millisecond * 100)
 		return err
 	}
-	if AgentChainInfo == nil {
-		log.Info("Agent chain info not found")
-		//fmt.Println("Agent chain info not found")
-		LogMode = 0 //0
-		blockchain_http = ""
-		blockchain_ecosystem = ""
-	} else {
-		LogMode = AgentChainInfo.LogMode
-		blockchain_http = AgentChainInfo.BlockchainHttp
-		blockchain_ecosystem = AgentChainInfo.BlockchainEcosystem
-	}
-
 	// send task data
 	for _, item := range ShareData {
 		//ItemDataBytes := item.Data

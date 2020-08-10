@@ -2,3 +2,5 @@
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract NewEcosystem {
 	data {
+		Name  string
+	}

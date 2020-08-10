@@ -61,6 +61,15 @@ func killOld() {
 		if fmt.Sprintf("%s", err) != "null" {
 			// give 15 sec to end the previous process
 			for i := 0; i < 10; i++ {
+		}
+	}
+}
+
+func initLogs() error {
+	switch conf.Config.Log.LogFormat {
+	case "json":
+		log.SetFormatter(&log.JSONFormatter{})
+	default:
 		log.SetFormatter(&log.TextFormatter{})
 	}
 	switch conf.Config.Log.LogTo {
