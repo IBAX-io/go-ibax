@@ -83,19 +83,22 @@ func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 		return nil
 	}
 }
-		"lpr":      b_syslog.LOG_LPR,
-		"news":     b_syslog.LOG_NEWS,
-		"uucp":     b_syslog.LOG_UUCP,
-		"cron":     b_syslog.LOG_CRON,
-		"authpriv": b_syslog.LOG_AUTHPRIV,
-		"ftp":      b_syslog.LOG_FTP,
-		"local0":   b_syslog.LOG_LOCAL0,
-		"local1":   b_syslog.LOG_LOCAL1,
-		"local2":   b_syslog.LOG_LOCAL2,
-		"local3":   b_syslog.LOG_LOCAL3,
-		"local4":   b_syslog.LOG_LOCAL4,
-		"local5":   b_syslog.LOG_LOCAL5,
-		"local6":   b_syslog.LOG_LOCAL6,
-		"local7":   b_syslog.LOG_LOCAL7,
+
+// Levels returns list of levels
+func (hook *SyslogHook) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
+
+func syslogFacility(facility string) b_syslog.Priority {
+	return syslogFacilityPriority[facility]
+}
+
+func init() {
+	syslogFacilityPriority = map[string]b_syslog.Priority{
+		"kern":     b_syslog.LOG_KERN,
+		"user":     b_syslog.LOG_USER,
+		"mail":     b_syslog.LOG_MAIL,
+		"daemon":   b_syslog.LOG_DAEMON,
+		"auth":     b_syslog.LOG_AUTH,
 	}
 }

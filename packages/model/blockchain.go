@@ -1,9 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
 
 import (
 	"time"
@@ -66,6 +60,21 @@ func GetBlockchain(startBlockID int64, endblockID int64, order ordering) ([]Bloc
 	return *blockchain, nil
 }
 
+// GetBlocks is retrieving limited chain of blocks from database
+func (b *Block) GetBlocks(startFromID int64, limit int) ([]Block, error) {
+	var err error
+	blockchain := new([]Block)
+	if startFromID > 0 {
+		err = DBConn.Order("id desc").Limit(limit).Where("id > ?", startFromID).Find(&blockchain).Error
+	} else {
+		err = DBConn.Order("id desc").Limit(limit).Find(&blockchain).Error
+	}
+	return *blockchain, err
+}
+
+// GetBlocksFrom is retrieving ordered chain of blocks from database
+func (b *Block) GetBlocksFrom(startFromID int64, ordering string, limit int) ([]Block, error) {
+	var err error
 	blockchain := new([]Block)
 	if limit == 0 {
 		err = DBConn.Order("id "+ordering).Where("id > ?", startFromID).Find(&blockchain).Error

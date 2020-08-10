@@ -33,16 +33,6 @@ func (m *VDESrcData) Delete() error {
 	return DBConn.Delete(m).Error
 }
 
-func (m *VDESrcData) GetAll() ([]VDESrcData, error) {
-	var result []VDESrcData
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *VDESrcData) GetOneByID() (*VDESrcData, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
-
 func (m *VDESrcData) GetOneByDataUUID(DataUUID string) (*VDESrcData, error) {
 	err := DBConn.Where("data_uuid = ?", DataUUID).First(&m).Error
 	return m, err
@@ -61,3 +51,4 @@ func (m *VDESrcData) GetAllByDataStatus(DataStatus int64) ([]VDESrcData, error) 
 
 func (m *VDESrcData) GetOneByDataStatus(DataStatus int64) (bool, error) {
 	return isFound(DBConn.Where("data_state = ?", DataStatus).First(m))
+}

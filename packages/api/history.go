@@ -9,12 +9,19 @@ import (
 	"encoding/json"
 	"net/http"
 
-func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-	client := getClient(r)
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
 
-	table := client.Prefix() + "_" + params["name"]
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+const rollbackHistoryLimit = 100
+
+type historyResult struct {
+	List []map[string]string `json:"list"`
+}
+
 	rollbackTx := &model.RollbackTx{}
 	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(params["id"], table, rollbackHistoryLimit)
 	if err != nil {

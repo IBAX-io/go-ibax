@@ -77,6 +77,19 @@ func SendExternalTransaction() error {
 	toWait := map[string][]model.ExternalBlockchain{}
 	incAttempt := func(id int64) {
 		if err = model.IncExternalAttempt(id); err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("IncAttempt")
+		}
+	}
+	sendResult := func(item model.ExternalBlockchain, block, errCode int64, resText string) {
+		defer func() {
+			delList = append(delList, item.Id)
+		}()
+		if len(item.ResultContract) == 0 {
+			return
+		}
+		if err := transaction.CreateContract(item.ResultContract, nodeKeyID,
+			map[string]interface{}{
+				"Status": errCode,
 				"Msg":    resText,
 				"Block":  block,
 				"UID":    item.Uid,
@@ -176,10 +189,3 @@ func SendExternalTransaction() error {
 // ExternalNetwork sends txinfo to the external network
 func ExternalNetwork(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
-		defer atomic.StoreUint32(&d.atomic, 0)
-	} else {
-		return nil
-	}
-	d.sleepTime = externalDeamonTimeout * time.Second
-	return SendExternalTransaction()
-}

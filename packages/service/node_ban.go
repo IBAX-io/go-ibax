@@ -124,17 +124,16 @@ func (nbs *NodesBanService) localBan(node syspar.HonorNode) {
 	nbs.localBannedNodes[crypto.Address(node.PublicKey)] = localBannedNode{
 		HonorNode:      &node,
 		LocalUnBanTime: time.Unix(te, 0),
-		//LocalUnBanTime: time.Now().Add(syspar.GetLocalNodeBanTime()),
 	}
-}
+	nbs.m.Unlock()
 
-func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, blockTime int64, reason string) error {
-	nodePrivateKey := syspar.GetNodePrivKey()
+	if len(currentNode.PublicKey) == 0 {
+		return errors.New("cant find current node in honor nodes list")
+	}
 
-	var currentNode syspar.HonorNode
-	nbs.m.Lock()
-	for _, fn := range nbs.honorNodes {
-		if bytes.Equal(fn.PublicKey, syspar.GetNodePubKey()) {
+	vm := smart.GetVM()
+	contract := smart.VMGetContract(vm, "NewBadBlock", 1)
+	info := contract.Block.Info.(*script.ContractInfo)
 
 	sc := tx.SmartContract{
 		Header: tx.Header{

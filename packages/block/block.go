@@ -296,23 +296,6 @@ func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
 		playTxs.Rts = append(playTxs.Rts, t.RollBackTx...)
 		proccessedTx = append(proccessedTx, t)
 	}
-
-	return nil
-}
-
-// Check is checking block
-func (b *Block) Check() error {
-	if b.IsGenesis() {
-		return nil
-	}
-	logger := b.GetLogger()
-	if b.PrevHeader == nil || b.PrevHeader.BlockID != b.Header.BlockID-1 {
-		if err := b.readPreviousBlockFromBlockchainTable(); err != nil {
-			logger.WithFields(log.Fields{"type": consts.InvalidObject}).Error("block id is larger then previous more than on 1")
-			return err
-		}
-	}
-	if b.Header.Time > time.Now().Unix() {
 		logger.WithFields(log.Fields{"type": consts.ParameterExceeded}).Error("block time is larger than now")
 		return ErrIncorrectBlockTime
 	}
@@ -420,6 +403,12 @@ func InsertBlockWOForks(data []byte, genBlock, firstBlock bool) error {
 	}
 
 	err = block.PlaySafe()
+	if err != nil {
+		return err
+	}
+
+	log.WithFields(log.Fields{"block_id": block.Header.BlockID}).Debug("block was inserted successfully")
+	return nil
 }
 
 var (

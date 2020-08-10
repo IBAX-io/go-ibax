@@ -206,15 +206,16 @@ var (
 					val = 0xff0000
 				} else {
 					val = uint32(state2int[sval[0]] << 16) // new state
-					case 'd':
-						ind = 0
-					case 'n':
-						ind = 1
-					case 's':
-						ind = 2
-					case 'q':
-						ind = 3
-					case 'Q':
+				}
+				val |= uint32(lexem[sval[1]] << 8) // lexem
+				cmds := strings.Split(sval[2], ` `)
+				var flag uint32
+				for _, icmd := range cmds {
+					flag |= flags[icmd]
+				}
+				val |= flag
+				for _, ch := range []byte(skey) {
+					var ind int
 						ind = 4
 					case 'r':
 						ind = AlphaSize - 1

@@ -77,6 +77,23 @@ func (m *MinterCount) Changes(dbt *DbTransaction) (*MintCount, error) {
 	var miners []MineStakeCount
 	mc := MintCount{
 		Keyid:    m.Keyid,
+		Mineid:   m.Mineid,
+		Devid:    m.Devid,
+		Capacity: m.Capacity,
+		Nonce:    m.Nonce,
+		BlockId:  m.BlockId,
+		Hash:     m.Hash,
+		Time:     m.Time,
+	}
+	if m.Devid == 0 {
+		return &mc, nil
+	}
+
+	var ap AppParam
+	am, err := ap.GetHvlvebalance(dbt, mc.BlockId)
+	if err != nil {
+		return &mc, err
+	}
 
 	fm, err := ap.GetFoundationbalance(dbt)
 	if err != nil {
@@ -170,18 +187,6 @@ func (m *MintCount) Get(id int64) (bool, error) {
 		if err == nil {
 			err = m.Unmarshal([]byte(rp.Value))
 			return true, err
-		}
-		if err.Error() == "redis: nil" {
-			break
-		} else {
-			time.Sleep(200 * time.Millisecond)
-		}
-
-	}
-
-	return false, nil
-}
-
 func (m *MinterCount) Insert_redisdb(dbt *DbTransaction) error {
 	mc, err := m.Changes(dbt)
 	if err != nil {

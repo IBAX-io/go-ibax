@@ -56,16 +56,6 @@ func PrivateToPublicHex(hexkey string) (string, error) {
 	pubKey, err := crypto.PrivateToPublic(key)
 	if err != nil {
 		return ``, err
-	}
-	return hex.EncodeToString(pubKey), nil
-}
-
-func sendRawRequest(apiAddress string, gAuth string, rtype, url string, form *url.Values) ([]byte, error) {
-	client := &http.Client{}
-	var ioform io.Reader
-	if form != nil {
-		ioform = strings.NewReader(form.Encode())
-	}
 	req, err := http.NewRequest(rtype, apiAddress+consts.ApiPath+url, ioform)
 	if err != nil {
 		return nil, err
@@ -259,6 +249,23 @@ func postTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPrivat
 		value := form.Get(name)
 
 		if len(value) == 0 {
+			continue
+		}
+
+		switch field.Type {
+		case "bool":
+			params[name], err = strconv.ParseBool(value)
+		case "int":
+			params[name], err = strconv.ParseInt(value, 10, 64)
+		case "float":
+			params[name], err = strconv.ParseFloat(value, 64)
+		case "string", "money":
+			params[name] = value
+		case "file", "bytes":
+			if cp, ok := form.(*contractParams); !ok {
+				err = fmt.Errorf("Form is not *contractParams type")
+			} else {
+				params[name] = cp.GetRaw(name)
 			}
 		}
 

@@ -94,11 +94,6 @@ func (b *SQLQueryBuilder) Prepare() error {
 		return err
 	}
 
-	values, err := converter.InterfaceSliceToStr(b.FieldValues)
-	if err != nil {
-		b.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("on convert field values to string")
-		return err
-	}
 
 	b.stringValues = values
 	b.prepared = true
@@ -405,6 +400,16 @@ func toSQLField(rawField string) string {
 
 	if strings.Contains(rawField, `->`) {
 		return rawField[:strings.Index(rawField, `->`)]
+	}
+
+	return wrapString(rawField, `"`)
+}
+
+func wrapString(raw, wrapper string) string {
+	return wrapper + raw + wrapper
+}
+
+func escapeSingleQuotes(val string) string {
 	return strings.Replace(val, `'`, `''`, -1)
 }
 
