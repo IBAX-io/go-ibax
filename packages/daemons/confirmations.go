@@ -151,5 +151,3 @@ func IsReachable(host string, blockID int64, ch0 chan string, logger *log.Entry)
 	case reachable := <-ch:
 		ch0 <- reachable
 	case <-time.After(consts.WAIT_CONFIRMED_NODES * time.Second):
-		ch0 <- "0"
-	}

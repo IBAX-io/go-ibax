@@ -18,6 +18,12 @@ const (
 	eUnknownIdent    = `unknown identifier %s`
 	eWrongVar        = `wrong var %v`
 	eDataType        = `expecting type of the data field [Ln:%d Col:%d]`
+	eDataName        = `expecting name of the data field [Ln:%d Col:%d]`
+	eDataTag         = `unexpected tag [Ln:%d Col:%d]`
+)
+
+var (
+	errContractPars    = errors.New(`wrong contract parameters`)
 	errWrongCountPars  = errors.New(`wrong count of parameters`)
 	errDivZero         = errors.New(`divided by zero`)
 	errUnsupportedType = errors.New(`unsupported combination of types in the operator`)
@@ -35,4 +41,3 @@ const (
 	errSelfAssignment  = errors.New(`self assignment`)
 	errEndExp          = errors.New(`unexpected end of the expression`)
 	errOper            = errors.New(`unexpected operator; expecting operand`)
-)

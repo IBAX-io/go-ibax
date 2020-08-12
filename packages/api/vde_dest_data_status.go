@@ -49,6 +49,20 @@ func unmarshalColumnVDEDestDataStatus(form *VDEDestDataStatusForm) (*model.VDEDe
 	return m, err
 }
 
+func VDEDestDataStatusCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
+
+	logger := getLogger(r)
+	form := &VDEDestDataStatusForm{}
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.VDEDestDataStatus{}
+	if m, err = unmarshalColumnVDEDestDataStatus(form); err != nil {
+		fmt.Println(err)
 		errorResponse(w, err)
 		return
 	}
@@ -182,15 +196,6 @@ type VDEDestDataStatusList struct {
 //		VDEAgentIp       string `json:"vde_agent_ip"`
 //		AgentMode        int64  `json:"agent_mode"`
 //		CreateTime       int64  `json:"create_time"`
-//	} `json:"list"`
-//}
-
-func VDEDestDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err            error
-		DataStatusList VDEDestDataStatusList
-	)
-
 	logger := getLogger(r)
 	form := &ListVDEDestDataStatusForm{}
 	if err = parseForm(r, form); err != nil {

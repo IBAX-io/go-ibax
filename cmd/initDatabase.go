@@ -8,11 +8,5 @@ package cmd
 import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	PreRun: loadConfigWKey,
-	Run: func(cmd *cobra.Command, args []string) {
-		if err := model.InitDB(conf.Config.DB); err != nil {
-			log.WithError(err).Fatal("init db")
-		}
-		log.Info("initDatabase completed")
-	},
-}
+
+	"github.com/IBAX-io/go-ibax/packages/conf"

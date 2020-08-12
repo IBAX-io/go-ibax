@@ -58,6 +58,23 @@ type dest_VDEShareTaskResult struct {
 	} `json:"list"`
 }
 
+//Getting task information from the chain
+func VDEDestTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
+	var (
+		blockchain_http      string
+		blockchain_ecosystem string
+		SrcUpdateTime        string
+		err                  error
+
+		myContractSrcGet      string
+		myContractSrcGetHash  string
+		myContractDestGet     string
+		myContractDestGetHash string
+
+		ContractSrcGetHashHex  string
+		ContractDestGetHashHex string
+	)
+
 	tasktime := &model.VDEDestTaskTime{}
 	DestTaskTime, err := tasktime.Get()
 	if err != nil {
@@ -283,19 +300,6 @@ type dest_VDEShareTaskResult struct {
 
 	return nil
 }
-
-//Getting task information from the chain
-func VDEDestTaskScheGetFromChain(ctx context.Context, d *daemon) error {
-	var (
-		blockchain_http      string
-		blockchain_ecosystem string
-		ScheUpdateTime       string
-		err                  error
-
-		myContractSrcGet      string
-		myContractSrcGetHash  string
-		myContractDestGet     string
-		myContractDestGetHash string
 
 		ContractSrcGetHashHex  string
 		ContractDestGetHashHex string

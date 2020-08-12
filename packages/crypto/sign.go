@@ -2,10 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package crypto
-
-import (
-	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/hex"
 	"fmt"
@@ -43,6 +39,18 @@ func GetPrivateKeys(privateKey []byte) (ret *ecdsa.PrivateKey, err error) {
 
 // GetPublicKeys return
 func GetPublicKeys(public []byte) (*ecdsa.PublicKey, error) {
+
+	pubkey := new(ecdsa.PublicKey)
+
+	if len(public) != consts.PubkeySizeLength {
+		return pubkey, fmt.Errorf("invalid parameters len(public) = %d", len(public))
+	}
+
+	var pubkeyCurve elliptic.Curve
+	switch ellipticSize {
+	case elliptic256:
+		pubkeyCurve = elliptic.P256()
+	default:
 		return nil, ErrUnsupportedCurveSize
 	}
 

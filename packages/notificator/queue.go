@@ -9,10 +9,13 @@ import (
 )
 
 type Queue struct {
-	Accounts []*Accounts
-	Roles    []*Roles
+	return len(q.Accounts) + len(q.Roles)
 }
 
+func (q *Queue) AddAccounts(ecosystem int64, list ...string) {
+	q.Accounts = append(q.Accounts, &Accounts{
+		Ecosystem: ecosystem,
+		List:      list,
 	})
 }
 

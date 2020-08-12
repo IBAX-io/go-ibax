@@ -38,22 +38,6 @@ func unmarshalColumnVDEAgentMember(form *VDEAgentMemberForm) (*model.VDEAgentMem
 func VDEAgentMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
-	)
-	logger := getLogger(r)
-	form := &VDEAgentMemberForm{}
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-	m := &model.VDEAgentMember{}
-	if m, err = unmarshalColumnVDEAgentMember(form); err != nil {
-		fmt.Println(err)
-		errorResponse(w, err)
-		return
-	}
-
-	m.CreateTime = time.Now().Unix()
-
 	if err = m.Create(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
@@ -70,6 +54,17 @@ func VDEAgentMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
+	id := converter.StrToInt64(params["id"])
+	form := &VDEAgentMemberForm{}
+
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m := &model.VDEAgentMember{}
+
+	if m, err = unmarshalColumnVDEAgentMember(form); err != nil {
 		errorResponse(w, err)
 		return
 	}

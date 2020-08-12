@@ -22,8 +22,6 @@ func RegisterRoutes() http.Handler {
 
 	r := api.NewRouter(m)
 	if !conf.Config.IsSupportingOBS() {
-		m.SetBlockchainRoutes(r)
-
 	//0303
 	if conf.Config.IsSupportingOBS() {
 		m.SetVDESrcRoutes(r)

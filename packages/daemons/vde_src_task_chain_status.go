@@ -164,16 +164,6 @@ func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
 		fmt.Println("Insert vde_src_task_chain_status table ok")
 		vde_dest_pubkey_slice := strings.Split(vde_dest_pubkey, ";")
 		for index, vde_dest_pubkey_item := range vde_dest_pubkey_slice {
-			//
-			//if item.ContractMode == 2 || item.ContractMode == 3 {
-			if item.ContractMode == 3 || item.ContractMode == 4 {
-				contractData, err := ecies.EccCryptoKey([]byte(ContractSrcGetPlusHash), vde_dest_pubkey_item)
-				if err != nil {
-					fmt.Println("error", err)
-					log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
-					continue
-				}
-				contractDataBase64 := base64.StdEncoding.EncodeToString(contractData)
 				myContractSrcGet = contractDataBase64
 
 				if myContractSrcGetHash, err = crypto.HashHex([]byte(myContractSrcGet)); err != nil {
@@ -321,4 +311,17 @@ func VDESrcTaskChainStatusState(ctx context.Context, d *daemon) error {
 				break
 			}
 		} //for
+		if src_uptochain_flag == 1 && dest_uptochain_flag == 1 {
+			item.ChainState = 2
+			item.UpdateTime = time.Now().Unix()
+			err = item.Updates()
+			if err != nil {
+				fmt.Println("Update VDEScheTask table err: ", err)
+				log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
+				time.Sleep(time.Millisecond * 2)
+				continue
+			}
+		}
+	} //for
+	return nil
 }

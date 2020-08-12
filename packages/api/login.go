@@ -32,7 +32,6 @@ import (
 func nonceSalt() string {
 	return fmt.Sprintf("LOGIN%d", conf.Config.NetworkID)
 }
-
 type loginForm struct {
 	EcosystemID int64          `schema:"ecosystem"`
 	Expire      int64          `schema:"expire"`
@@ -310,6 +309,17 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	result.NotifyKey, result.Timestamp, err = publisher.GetJWTCent(wallet, form.Expire)
 	if err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	ra := &model.RolesParticipants{}
+	roles, err := ra.SetTablePrefix(client.EcosystemID).GetActiveMemberRoles(account.AccountID)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting roles")
+		errorResponse(w, err)
+		return
+	}
 
 	for _, r := range roles {
 		var res map[string]string

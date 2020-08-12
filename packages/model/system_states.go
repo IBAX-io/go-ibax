@@ -6,6 +6,17 @@
 package model
 
 import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+)
+
+const ecosysTable = "1_ecosystems"
+
+// Ecosystem is model
+type Ecosystem struct {
+	ID             int64 `gorm:"primary_key;not null"`
+	Name           string
 	IsValued       bool
 	EmissionAmount string `gorm:"type:jsonb"`
 	TokenTitle     string
@@ -21,16 +32,6 @@ func (sys *Ecosystem) TableName() string {
 	return ecosysTable
 }
 
-// GetAllSystemStatesIDs is retrieving all ecosystems ids
-func GetAllSystemStatesIDs() ([]int64, []string, error) {
-	if !IsTable(ecosysTable) {
-		return nil, nil, nil
-	}
-
-	ecosystems := new([]Ecosystem)
-	if err := DBConn.Order("id asc").Find(&ecosystems).Error; err != nil {
-		return nil, nil, err
-	}
 
 	ids := make([]int64, len(*ecosystems))
 	names := make([]string, len(*ecosystems))
