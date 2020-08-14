@@ -116,10 +116,14 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 	url := `listWhere` + `/vde_share_hash`
 	//err = api.SendPost(url, &form, &t_struct)
 	//if err != nil {
-
-	//utils.Print_json(t_struct)
-	for _, DataHashItem := range t_struct.List {
-		//fmt.Println("DataHashItem:", DataHashItem.ID, DataHashItem.TaskUUID)
+	//	fmt.Println("error", err)
+	//	return err
+	//}
+	err = chain_api.SendPost(chain_apiAddress, gAuth_chain, url, &form, &t_struct)
+	if err != nil {
+		fmt.Println("error", err)
+		return err
+	}
 		m := &model.VDEDestDataHash{}
 		m.TaskUUID = DataHashItem.TaskUUID
 		m.DataUUID = DataHashItem.DataUUID

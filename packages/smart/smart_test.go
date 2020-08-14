@@ -56,7 +56,10 @@ func TestNewContract(t *testing.T) {
 	}
 }
 
-func TestCheckAppend(t *testing.T) {
+			list = Append(list, "naw_value")
+			Println(list)
+		}
+	}`
 
 	owner := script.OwnerInfo{
 		StateID:  1,

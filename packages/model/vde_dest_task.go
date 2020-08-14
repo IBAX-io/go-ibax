@@ -28,16 +28,6 @@ type VDEDestTaskFromSrc struct {
 	ContractMode int64 `gorm:"not null" json:"contract_mode"`
 
 	ContractStateSrc     int64  `gorm:"not null" json:"contract_state_src"`
-	ContractStateDest    int64  `gorm:"not null" json:"contract_state_dest"`
-	ContractStateSrcErr  string `gorm:"not null" json:"contract_state_src_err"`
-	ContractStateDestErr string `gorm:"not null" json:"contract_state_dest_err"`
-
-	TaskRunState    int64  `gorm:"not null" json:"task_run_state"`
-	TaskRunStateErr string `gorm:"not null" json:"task_run_state_err"`
-
-	//TxHash                 string `gorm:"not null" json:"tx_hash"`
-	//ChainState             int64  `gorm:"not null" json:"chain_state"`
-	//BlockId                int64  `gorm:"not null" json:"block_id"`
 	//ChainId                int64  `gorm:"not null" json:"chain_id"`
 	//ChainErr               string `gorm:"not null" json:"chain_err"`
 
@@ -55,6 +45,20 @@ func (m *VDEDestTaskFromSrc) Create() error {
 
 func (m *VDEDestTaskFromSrc) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEDestTaskFromSrc) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *VDEDestTaskFromSrc) GetAll() ([]VDEDestTaskFromSrc, error) {
+	var result []VDEDestTaskFromSrc
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *VDEDestTaskFromSrc) GetOneByID() (*VDEDestTaskFromSrc, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
 }
 
 func (m *VDEDestTaskFromSrc) GetAllByTaskUUID(TaskUUID string) ([]VDEDestTaskFromSrc, error) {

@@ -8,13 +8,6 @@ package model
 import (
 	"github.com/shopspring/decimal"
 )
-
-// QueueTx is model
-type QueueTx struct {
-	Hash     []byte          `gorm:"primary_key;not null"`
-	Data     []byte          `gorm:"not null"`
-	FromGate int             `gorm:"not null"`
-	Expedite decimal.Decimal `gorm:"not null"`
 	Time     int64           `gorm:"not null"`
 }
 
@@ -23,6 +16,14 @@ func (qt *QueueTx) TableName() string {
 	return "queue_tx"
 }
 
+// DeleteTx is deleting tx
+func (qt *QueueTx) DeleteTx(transaction *DbTransaction) error {
+	return GetDB(transaction).Delete(qt).Error
+}
+
+// Save is saving model
+func (qt *QueueTx) Save(transaction *DbTransaction) error {
+	return GetDB(transaction).Save(qt).Error
 }
 
 // Create is creating record of model

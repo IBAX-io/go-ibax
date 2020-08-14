@@ -12,15 +12,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
-
-// SingleResult is a structure for the single result
-type SingleResult struct {
-	result []byte
-	err    error
-}
-
-// Single is retrieving single result
-func Single(transaction *DbTransaction, query string, args ...interface{}) *SingleResult {
 	var result []byte
 	err := GetDB(transaction).Raw(query, args...).Row().Scan(&result)
 	switch {
@@ -291,6 +282,13 @@ func GetOneRowTransaction(transaction *DbTransaction, query string, args ...inte
 	return &OneRow{all[0], nil}
 }
 
+// GetOneRow returns one row
+func GetOneRow(query string, args ...interface{}) *OneRow {
+	return GetOneRowTransaction(nil, query, args...)
+}
+
+func GetRows(tableName, columns string, offset, limit int) ([]map[string]string, error) {
+	query := DBConn.Table(tableName).Order("id").Offset(offset).Limit(limit)
 	if len(columns) > 0 {
 		columns = "id," + columns
 		query = query.Select(columns)

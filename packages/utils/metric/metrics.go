@@ -19,6 +19,9 @@ const (
 	metricEcosystemMembers = "ecosystem_members"
 	metricEcosystemTx      = "ecosystem_tx"
 )
+		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get all system states ids")
+		return nil, err
+	}
 
 	now := time.Unix(timeBlock, 0)
 	unixDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local).Unix()

@@ -82,6 +82,3 @@ func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64) error {
 	}
 	sqlStr := fmt.Sprintf("UPDATE transactions_status SET error = CASE hash %s END , block_id  = %d WHERE hash in(?)", upStr, newBlockID)
 	return dbTx.Exec(sqlStr, hashArr).Error
-}
-
-// SetError is updating transaction status error

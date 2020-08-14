@@ -55,8 +55,6 @@ func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*model.Transaction, e
 
 func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]interface{}) (*model.Transaction, error) {
 	vm := smart.GetVM()
-			Time:        dtx.time,
-			EcosystemID: firstEcosystemID,
 			KeyID:       keyID,
 			NetworkID:   conf.Config.NetworkID,
 		},

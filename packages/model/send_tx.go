@@ -6,12 +6,6 @@ import (
 	"gorm.io/gorm"
 
 	"gorm.io/gorm/clause"
-
-	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-)
-
 type RawTransaction interface {
 	Bytes() []byte
 	Hash() []byte
@@ -102,3 +96,5 @@ func SendTxBatches(rtxs []*RawTx) error {
 		}
 		return nil
 	})
+
+}
