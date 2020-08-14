@@ -84,7 +84,4 @@ func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64) error {
 	return dbTx.Exec(sqlStr, hashArr).Error
 }
 
-// UpdatePenalty is updating penalty
-func (ts *TransactionStatus) UpdatePenalty(transaction *DbTransaction, transactionHash []byte) error {
-	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("penalty", 1).Error
-}
+// SetError is updating transaction status error

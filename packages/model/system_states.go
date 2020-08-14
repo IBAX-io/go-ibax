@@ -22,16 +22,14 @@ type Ecosystem struct {
 	TokenTitle     string
 	TokenName      string
 	TypeEmission   int64
-	TypeWithdraw   int64
-	Info           string `gorm:"type:jsonb"`
-}
+	if !IsTable(ecosysTable) {
+		return nil, nil, nil
+	}
 
-// TableName returns name of table
-// only first ecosystem has this entity
-func (sys *Ecosystem) TableName() string {
-	return ecosysTable
-}
-
+	ecosystems := new([]Ecosystem)
+	if err := DBConn.Order("id asc").Find(&ecosystems).Error; err != nil {
+		return nil, nil, err
+	}
 
 	ids := make([]int64, len(*ecosystems))
 	names := make([]string, len(*ecosystems))

@@ -660,6 +660,8 @@ func TestVotingDecisionAccept(t *testing.T) {
 	}
 	_, _, err := postTxResult(rnd, &form)
 	assert.NoError(t, err)
+}
+
 //The original pool owner-initiate a request to transfer the pool
 func TestSwitchPoolRequest(t *testing.T) {
 	assert.NoError(t, keyLoginex(1, "3"))
@@ -937,16 +939,6 @@ func TestNewMineStakeRule(t *testing.T) {
 		`Capacity`:      {`1`},
 		`AmountUnit`:    {`1000`},
 		`AmountMin`:     {`3`},
-		`AmountMax`:     {`10`},
-		`AmountInc`:     {`3`},
-		`TimeUnit`:      {`30`},
-		`TimeMin`:       {`2`},
-		`TimeMax`:       {`10`},
-		`TimeInc`:       {`2`},
-		`Type`:          {`3`},
-		`Param1`:        {`30`},
-		`Param2`:        {`20`},
-		`Param3`:        {`99999`},
 		`InviterType`:   {`2`},
 		`InviterParam1`: {`30`},
 		`InviterParam2`: {`20`},
