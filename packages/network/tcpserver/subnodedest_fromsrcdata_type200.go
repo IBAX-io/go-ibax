@@ -54,13 +54,12 @@ func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse,
 		err = errors.New(`empty node private key`)
 		return nil, err
 	}
-	eccData, err := ecies.EccCryptoKey(data, NodePublicKey)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
-		return nil, err
-	}
-	encodeDataString := base64.StdEncoding.EncodeToString(eccData)
-	////
+		TaskUUID:           r.TaskUUID,
+		DataUUID:           r.DataUUID,
+		AgentMode:          AgentMode,
+		TranMode:           TranMode,
+		Hash:               hash,
+		DataInfo:           r.DataInfo,
 		SubNodeSrcPubkey:   r.SubNodeSrcPubkey,
 		SubNodeAgentPubkey: r.SubNodeAgentPubkey,
 		SubNodeAgentIP:     r.SubNodeAgentIp,

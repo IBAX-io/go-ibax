@@ -9,23 +9,6 @@ import (
 	"path"
 	"runtime"
 	"strings"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-
-	"github.com/sirupsen/logrus"
-)
-
-// ContextHook storing nothing but behavior
-type ContextHook struct{}
-
-// Levels returns all log levels
-func (hook ContextHook) Levels() []logrus.Level {
-	return logrus.AllLevels
-}
-
-// Fire the log entry
-func (hook ContextHook) Fire(entry *logrus.Entry) error {
 	var pc []uintptr
 	if _, skip := entry.Data["nocontext"]; skip {
 		delete(entry.Data, "nocontext")
@@ -50,6 +33,11 @@ func (hook ContextHook) Fire(entry *logrus.Entry) error {
 				entry.Data["line"] = line
 				entry.Data["time"] = time.Now().Format(time.RFC3339)
 				if conf.Config.Log.LogLevel != "DEBUG" {
+					break
+				}
+			}
+			if count >= 1 {
+				if count == 1 {
 					entry.Data["from"] = []string{}
 				}
 				entry.Data["from"] = append(entry.Data["from"].([]string), path.Base(name))

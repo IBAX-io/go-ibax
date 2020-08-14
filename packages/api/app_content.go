@@ -23,21 +23,20 @@ type appContentResult struct {
 	Contracts []model.Contract       `json:"contracts"`
 }
 
-	logger := getLogger(r)
-	params := mux.Vars(r)
+func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
+	form := &appParamsForm{
+		ecosystemForm: ecosystemForm{
+			Validator: m.EcosysIDValidator,
+		},
+	}
 
-	bi := &model.BlockInterface{}
-	p := &model.Page{}
-	c := &model.Contract{}
-	appID := converter.StrToInt64(params["appID"])
-	ecosystemID := converter.StrToInt64(form.EcosystemPrefix)
-
-	blocks, err := bi.GetByApp(appID, ecosystemID)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting block interfaces by appID")
-		errorResponse(w, err)
+	if err := parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
+
+	logger := getLogger(r)
+	params := mux.Vars(r)
 
 	pages, err := p.GetByApp(appID, ecosystemID)
 	if err != nil {

@@ -8,13 +8,6 @@ package migration
 import (
 	"fmt"
 	"strconv"
-	"strings"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/migration/updates"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -37,6 +30,11 @@ var migrationsCLB = &migration{"0.1.8", migrationInitialTablesCLB, true}
 var updateMigrations = []*migration{
 	&migration{"3.1.0", updates.M310, false},
 	&migration{"3.2.0", updates.M320, false},
+}
+
+type migration struct {
+	version  string
+	data     string
 	template bool
 }
 

@@ -152,6 +152,16 @@ var sqlFirstEcosystemCommon = `
 		t.Column("id", "bigint", {"default": "0"})
 		t.Column("name", "string", {"default": "", "size": 255})
 		t.Column("value", "text", {"default": ""})
+		t.Column("conditions", "text", {"default": ""})
+		t.Column("permissions", "jsonb", {"null": true})
+		t.Column("ecosystem", "bigint", {"default": "1"})
+	{{footer "primary" "unique(ecosystem, name)" "index(ecosystem, name)"}}
+
+	{{head "1_history"}}
+		t.Column("id", "bigint", {"default": "0"})
+		t.Column("sender_id", "bigint", {"default": "0"})
+		t.Column("recipient_id", "bigint", {"default": "0"})
+		t.Column("sender_balance", "decimal(30)", {"default": "0"})
 		t.Column("recipient_balance", "decimal(30)", {"default": "0"})
 		t.Column("amount", "decimal(30)", {"default": "0"})
 		t.Column("comment", "text", {"default": ""})
@@ -193,18 +203,6 @@ var sqlFirstEcosystemCommon = `
 		t.Column("creator", "jsonb", {"default": "{}"})
 		t.Column("date_created", "bigint", {"default": "0"})
 		t.Column("date_deleted", "bigint", {"default": "0"})
-		t.Column("company_id", "bigint", {"default": "0"})
-		t.Column("roles_access", "jsonb", {"null": true})
-		t.Column("image_id", "bigint", {"default": "0"})
-		t.Column("ecosystem", "bigint", {"default": "1"})
-	{{footer "primary" "index(ecosystem, deleted)"}}
-	add_index("1_roles", ["ecosystem", "role_type"], {})
-
-	{{head "1_roles_participants"}}
-		t.Column("id", "bigint", {"default": "0"})
-		t.Column("role", "jsonb", {"null": true})
-		t.Column("member", "jsonb", {"null": true})
-		t.Column("appointed", "jsonb", {"null": true})
 		t.Column("date_created", "bigint", {"default": "0"})
 		t.Column("date_deleted", "bigint", {"default": "0"})
 		t.Column("deleted", "bigint", {"default": "0"})

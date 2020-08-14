@@ -28,16 +28,6 @@ type Notification struct {
 	PageParams          string `gorm:"type:jsonb`
 	ProcessingInfo      string `gorm:"type:jsonb`
 	PageName            string `gorm:"size:255"`
-	DateCreated         int64
-	DateStartProcessing int64
-	DateClosed          int64
-	Closed              bool
-}
-
-// SetTablePrefix set table Prefix
-func (n *Notification) SetTablePrefix(tablePrefix string) {
-	n.ecosystem = converter.StrToInt64(tablePrefix)
-}
 
 // TableName returns table name
 func (n *Notification) TableName() string {
@@ -88,3 +78,12 @@ func getNotificationCountFilter(users []int64, ecosystemID int64) (filter string
 
 	if len(users) > 0 {
 		filter += `AND recipient->>'member_id' IN (?) `
+		usersStrs := []string{}
+		for _, user := range users {
+			usersStrs = append(usersStrs, converter.Int64ToStr(user))
+		}
+		params = append(params, usersStrs)
+	}
+
+	return
+}

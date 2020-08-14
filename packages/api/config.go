@@ -18,11 +18,12 @@ import (
 )
 
 type configOptionHandler func(w http.ResponseWriter, option string) error
-		logger.WithFields(log.Fields{"type": consts.EmptyObject, "error": "option not specified"}).Error("on getting option in config handler")
-		errorResponse(w, errNotFound)
-		return
-	}
 
+func getConfigOptionHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	if len(params["option"]) == 0 {
 	switch params["option"] {
 	case "centrifugo":
 		centrifugoAddressHandler(w, r)

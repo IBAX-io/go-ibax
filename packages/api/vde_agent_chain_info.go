@@ -43,20 +43,6 @@ func VDEAgentChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m := &model.VDEAgentChainInfo{}
-	if m, err = unmarshalColumnVDEAgentChainInfo(form); err != nil {
-		fmt.Println(err)
-		errorResponse(w, err)
-		return
-	}
-	//
-	if m.LogMode == 0 {
-		m.LogMode = 3 //not log
-	}
-
-	m.CreateTime = time.Now().Unix()
-
-	if err = m.Create(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
 
 	model.DBConn.Last(&m)
@@ -71,6 +57,17 @@ func VDEAgentChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
+	id := converter.StrToInt64(params["id"])
+	form := &VDEAgentChainInfoForm{}
+
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m := &model.VDEAgentChainInfo{}
+
+	if m, err = unmarshalColumnVDEAgentChainInfo(form); err != nil {
 		errorResponse(w, err)
 		return
 	}
