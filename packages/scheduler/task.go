@@ -35,5 +35,9 @@ func (t *Task) String() string {
 
 // ParseCron parsed cron format
 func (t *Task) ParseCron() error {
-	t.Handler.Run(t)
-}
+	if len(t.CronSpec) == 0 {
+		return nil
+	}
+
+	var err error
+	t.schedule, err = Parse(t.CronSpec)

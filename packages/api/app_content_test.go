@@ -19,6 +19,11 @@ func TestAppContent(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 		return
-		t.Error("incorrent pages count")
 	}
-}
+
+	if len(ret.Blocks) == 0 {
+		t.Error("incorrect blocks count")
+	}
+
+	if len(ret.Contracts) == 0 {
+		t.Error("incorrect contracts count")

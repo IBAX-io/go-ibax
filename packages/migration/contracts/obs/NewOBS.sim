@@ -12,9 +12,10 @@ contract NewOBS {
             if Size($OBSName) == 0 {
                 warning "OBSName was not received"
             }
-            if Contains($OBSName, " ") {
-                error "OBSName can not contain spaces"
+            if Size($DBUser) == 0 {
+                warning "DBUser was not received"
             }
+            if Size($DBPassword) == 0 {
                 warning "DBPassword was not received"
             }
             if $OBSAPIPort <= 0  {

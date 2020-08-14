@@ -108,15 +108,17 @@ func (t *FirstBlockTransaction) Action() error {
 		id, syspar.SysString(`default_ecosystem_menu`), `default`).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting default menu")
+		return utils.ErrInfo(err)
+	}
+	err = smart.LoadContract(t.DbTransaction, 1)
+	if err != nil {
+		return utils.ErrInfo(err)
+	}
+	if err := syspar.SysTableColType(t.DbTransaction); err != nil {
+		return utils.ErrInfo(err)
+	}
+	syspar.SetFirstBlockData(data)
 	return nil
 }
 
-// Rollback first block
-func (t *FirstBlockTransaction) Rollback() error {
-	return nil
-}
-
-// Header is returns first block header
-func (t FirstBlockTransaction) Header() *tx.Header {
-	return nil
 }

@@ -164,6 +164,8 @@ const (
 	TCPConnTimeout = 5 * time.Second
 
 	// TxRequestExpire is expiration time for request of transaction
+	TxRequestExpire = 1 * time.Minute
+
 	// DefaultTempDirName is default name of temporary directory
 	DefaultTempDirName = "ibax-temp"
 
@@ -193,19 +195,6 @@ const (
 
 	NoneOBS     = "none"
 	DBFindLimit = 10000
-)
-
-const (
-	MintMax           = "mint_max"
-	ChainMax          = "chain_max"
-	MintSettlementMax = "mint_settlement_max"
-	MintDetial        = "mint_detial"
-)
-
-const (
-	SavePointMarkBlock = "block"
-	SavePointMarkTx    = "tx"
-)
 
 func Version() string {
 	return strings.TrimSpace(strings.Join([]string{VERSION, BuildInfo}, " "))

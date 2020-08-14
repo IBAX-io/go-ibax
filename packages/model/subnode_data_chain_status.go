@@ -1,16 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
-
-type SubNodeSrcDataChainStatus struct {
-	ID       int64  `gorm:"primary_key; not null" json:"id"`
-	DataUUID string `gorm:"not null" json:"data_uuid"`
-	TaskUUID string `gorm:"not null" json:"task_uuid"`
-	Hash     string `gorm:"not null" json:"hash"`
-	Data     []byte `gorm:"column:data;not null" json:"data"`
 	DataInfo string `gorm:"type:jsonb" json:"data_info"`
 	TranMode int64  `gorm:"not null" json:"tran_mode"`
 	//SubNodeDestPubkey      string `gorm:"not null" json:"subnode_dest_pubkey"`
@@ -27,6 +14,14 @@ type SubNodeSrcDataChainStatus struct {
 
 	UpdateTime int64 `gorm:"not null" json:"update_time"`
 	CreateTime int64 `gorm:"not null" json:"create_time"`
+}
+
+func (SubNodeSrcDataChainStatus) TableName() string {
+	return "subnode_src_data_chain_status"
+}
+
+func (m *SubNodeSrcDataChainStatus) Create() error {
+	return DBConn.Create(&m).Error
 }
 
 func (m *SubNodeSrcDataChainStatus) Updates() error {

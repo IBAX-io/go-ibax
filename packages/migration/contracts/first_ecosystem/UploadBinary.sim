@@ -20,13 +20,4 @@ contract UploadBinary {
             if $ApplicationId == 0 {
                 warning LangRes("@1aid_cannot_zero")
             }
-        }
-    }
-    action {
-        var hash string
-        hash = Hash($Data)
-                "name": $Name, "data": $Data, "hash": hash, "mime_type": $DataMimeType, "ecosystem": $ecosystem_id})
-        }
-        $result = $Id
-    }
 }

@@ -79,17 +79,6 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 
 	ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("encode error")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-
-	//chain_api.ApiAddress = blockchain_http
-	//chain_api.ApiEcosystemID = int64(ecosystemID)
-
-	chain_apiAddress := blockchain_http
-	chain_apiEcosystemID := int64(ecosystemID)
-
 	src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
 	// Login
 	//if err := api.KeyLogin(src, chain_api.ApiEcosystemID); err != nil {
@@ -124,6 +113,16 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 		fmt.Println("error", err)
 		return err
 	}
+	if len(t_struct.List) == 0 {
+		//log.Info("DEDestDataHashResult not found, sleep...")
+		//fmt.Println("DEDestDataHashResult not found, sleep...")
+		time.Sleep(time.Second * 2)
+		return nil
+	}
+
+	//utils.Print_json(t_struct)
+	for _, DataHashItem := range t_struct.List {
+		//fmt.Println("DataHashItem:", DataHashItem.ID, DataHashItem.TaskUUID)
 		m := &model.VDEDestDataHash{}
 		m.TaskUUID = DataHashItem.TaskUUID
 		m.DataUUID = DataHashItem.DataUUID

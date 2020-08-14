@@ -45,5 +45,6 @@ func (p *bytePool) Get(size int64) []byte {
 	p.pools[power] = pool
 	return pool.Get().([]byte)
 }
-	}
+
+func (p *bytePool) Put(buf []byte) {
 }
