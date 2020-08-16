@@ -65,12 +65,15 @@ func VDESrcTaskAuthCreateHandlre(w http.ResponseWriter, r *http.Request) {
 func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
+	)
+	params := mux.Vars(r)
+	logger := getLogger(r)
 
-	m := &model.VDESrcTaskAuth{}
+	id := converter.StrToInt64(params["id"])
+	form := &VDESrcTaskAuthForm{}
 
-	if m, err = unmarshalColumnVDESrcTaskAuth(form); err != nil {
+	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)
-		return
 	}
 
 	m.ID = id

@@ -1175,16 +1175,6 @@ func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64
 			return 0, nil, logErrorDB(err, "scanning next row")
 		}
 		row := types.NewMap()
-		for i, col := range values {
-			var value string
-			if col != nil {
-				value = string(col)
-			}
-			row.Set(cols[i], value)
-		}
-		result = append(result, reflect.ValueOf(row).Interface())
-	}
-	if perm != nil && len(perm[`filter`]) > 0 {
 		fltResult, err := VMEvalIf(
 			sc.VM, perm[`filter`], uint32(sc.TxSmart.EcosystemID),
 			sc.getExtend(),
@@ -1212,6 +1202,10 @@ func DBUpdateExt(sc *SmartContract, tblname string, where *types.Map,
 	}
 	columns, val, err := mapToParams(values)
 	if err != nil {
+		return
+	}
+	if err = sc.AccessColumns(tblname, &columns, true); err != nil {
+		return
 	}
 	qcost, _, err = sc.updateWhere(columns, val, tblname, where)
 	return

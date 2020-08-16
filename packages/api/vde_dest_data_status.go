@@ -188,14 +188,12 @@ type VDEDestDataStatusList struct {
 //		TaskUUID         string `json:"task_uuid"`
 //		Hash             string `json:"hash"`
 //		Data             []byte `json:"data"`
-//		DataInfo         string `json:"data_info"`
-//		VDESrcPubkey     string `json:"vde_src_pubkey"`
-//		VDEDestPubkey    string `json:"vde_dest_pubkey"`
-//		VDEDestIp        string `json:"vde_dest_ip"`
-//		VDEAgentPubkey   string `json:"vde_agent_pubkey"`
-//		VDEAgentIp       string `json:"vde_agent_ip"`
-//		AgentMode        int64  `json:"agent_mode"`
-//		CreateTime       int64  `json:"create_time"`
+func VDEDestDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err            error
+		DataStatusList VDEDestDataStatusList
+	)
+
 	logger := getLogger(r)
 	form := &ListVDEDestDataStatusForm{}
 	if err = parseForm(r, form); err != nil {

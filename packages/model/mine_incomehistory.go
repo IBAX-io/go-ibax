@@ -8,6 +8,19 @@ import (
 //MineIncomehistory example
 type MineIncomehistory struct {
 	ID                      int64           `gorm:"primary_key;not null"`
+	Devid                   int64           `gorm:"not null"`
+	Number                  string          `gorm:"not null" `
+	Poolid                  int64           `gorm:"not null" `
+	Keyid                   int64           `gorm:"not null"`
+	Mineid                  int64           `gorm:"not null"`
+	Amount                  decimal.Decimal `gorm:"not null"`
+	Type                    int64           `gorm:"not null"`
+	Capacitys               int64           `gorm:"not null" `
+	Nonce                   int64           `gorm:"not null" `
+	Foundation              decimal.Decimal `gorm:"not null" `
+	Mine_incomehistory_hash []byte          `gorm:"not null`
+	Block_id                int64           `gorm:"not null"`
+	Date_created            int64           `gorm:"not null default 0"`
 }
 
 //DayMineIncomehistory example
@@ -29,10 +42,6 @@ func (m *MineIncomehistory) Get(id int64) (bool, error) {
 // Get is retrieving model from database
 func (m *MineIncomehistory) GetDelay(id int64) (bool, error) {
 	for i := 0; i < 10; i++ {
-		f, err := isFound(DBConn.Where("block_id = ?", id).First(m))
-		if f && err == nil {
-			return f, err
-		} else {
 			time.Sleep(1 * time.Second)
 		}
 	}

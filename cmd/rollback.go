@@ -18,16 +18,6 @@ import (
 )
 
 var blockID int64
-
-// rollbackCmd represents the rollback command
-var rollbackCmd = &cobra.Command{
-	Use:    "rollback",
-	Short:  "Rollback blockchain to blockID",
-	PreRun: loadConfigWKey,
-	Run: func(cmd *cobra.Command, args []string) {
-		f := utils.LockOrDie(conf.Config.LockFilePath)
-		defer f.Unlock()
-
 		if err := model.GormInit(
 			conf.Config.DB.Host,
 			conf.Config.DB.Port,
@@ -40,6 +30,16 @@ var rollbackCmd = &cobra.Command{
 		}
 		if err := syspar.SysUpdate(nil); err != nil {
 			log.WithError(err).Error("can't read system parameters")
+		}
+		if err := syspar.SysTableColType(nil); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("updating sys table col type")
+		}
+
+		smart.InitVM()
+		if err := smart.LoadContracts(); err != nil {
+			log.WithError(err).Fatal("loading contracts")
+			return
+		}
 		err := rollback.ToBlockID(blockID, nil, log.WithFields(log.Fields{}))
 		if err != nil {
 			log.WithError(err).Fatal("rollback to block id")

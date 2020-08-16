@@ -1,17 +1,17 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
-	ecosystem    int64
-	accountKeyID int64 `gorm:"-"`
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
-	ID          int64  `gorm:"primary_key;not null"`
-	AccountID   string `gorm:"column:account;not null"`
-	PublicKey   []byte `gorm:"column:pub;not null"`
-	Amount      string `gorm:"not null"`
-	Mintsurplus string `gorm:"not null"`
-	Maxpay      string `gorm:"not null"`
-	Deleted     int64  `gorm:"not null"`
-	Blocked     int64  `gorm:"not null"`
-}
+package model
+
+import (
+	"fmt"
+
+	"github.com/shopspring/decimal"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+)
 
 // SetTablePrefix is setting table prefix
 func (m *Key) SetTablePrefix(prefix int64) *Key {

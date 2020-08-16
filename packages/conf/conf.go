@@ -54,20 +54,6 @@ type RedisConfig struct {
 
 // StatsDConfig statd connection parameters
 type StatsDConfig struct {
-	Host string // ipaddr, hostname, or "0.0.0.0"
-	Port int    // must be in range 1..65535
-	Name string
-}
-
-// CentrifugoConfig connection params
-type CentrifugoConfig struct {
-	Secret string
-	URL    string
-	Key    string
-}
-
-// Syslog represents parameters of syslog
-type Syslog struct {
 	Facility string
 	Tag      string
 }
@@ -157,6 +143,17 @@ type CryptoSettings struct {
 // Config global parameters
 var Config GlobalConfig
 
+// GetPidPath returns path to pid file
+func (c *GlobalConfig) GetPidPath() string {
+	return c.PidFilePath
+}
+
+// LoadConfig from configFile
+// the function has side effect updating global var Config
+func LoadConfig(path string) error {
+	log.WithFields(log.Fields{"path": path}).Info("Loading config")
+	err := LoadConfigToVar(path, &Config)
+	if err != nil {
 		panic(err)
 	}
 	registerCrypto(Config.CryptoSettings)

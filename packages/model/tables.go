@@ -75,24 +75,6 @@ func (t *Table) Get(transaction *DbTransaction, name string) (bool, error) {
 func (t *Table) Create(transaction *DbTransaction) error {
 	return GetDB(transaction).Create(t).Error
 }
-
-// Delete is deleting model from database
-func (t *Table) Delete(transaction *DbTransaction) error {
-	return GetDB(transaction).Delete(t).Error
-}
-
-// IsExistsByPermissionsAndTableName returns columns existence by permission and table name
-func (t *Table) IsExistsByPermissionsAndTableName(transaction *DbTransaction, columnName, tableName string) (bool, error) {
-	return isFound(GetDB(transaction).Where(`ecosystem = ? AND (columns-> ? ) is not null AND name = ?`,
-		t.Ecosystem, columnName, tableName).First(t))
-}
-
-// GetColumns returns columns from database
-func (t *Table) GetColumns(transaction *DbTransaction, name, jsonKey string) (map[string]string, error) {
-	keyStr := ""
-	if jsonKey != "" {
-		keyStr = `->'` + jsonKey + `'`
-	}
 	rows, err := GetDB(transaction).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(columns`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
 	if err != nil {
 		return nil, err
@@ -175,6 +157,12 @@ func (t *Table) GetAll(prefix string) ([]Table, error) {
 
 // GetRowConditionsByTableNameAndID returns value of `conditions` field for table row by id
 func GetRowConditionsByTableNameAndID(transaction *DbTransaction, tblname string, id int64) (string, error) {
+	sql := `SELECT conditions FROM "` + tblname + `" WHERE id = ? LIMIT 1`
+	return Single(transaction, sql, id).String()
+}
+
+func GetTableQuery(table string, ecosystemID int64) *gorm.DB {
+	if converter.FirstEcosystemTables[table] {
 		return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)
 	}
 

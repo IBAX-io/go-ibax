@@ -16,6 +16,10 @@ import (
 
 	"github.com/gorilla/mux"
 )
+
+type txinfoResult struct {
+	BlockID string        `json:"blockid"`
+	Confirm int           `json:"confirm"`
 	Data    *smart.TxInfo `json:"data,omitempty"`
 }
 
@@ -99,9 +103,4 @@ func getTxInfoMultiHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			errorResponse(w, err)
 			return
-		}
-		result.Results[hash] = status
-	}
-
-	jsonResponse(w, result)
 }
