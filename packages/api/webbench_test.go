@@ -22,6 +22,24 @@ func Benchmark_GetMiner(b *testing.B) {
 func Benchmark_GetMinerTimeConsumingFunction(b *testing.B) {
 	b.StopTimer() //
 
+	//
+	st, _ := miner.MakeMiningPoolData(100000000)
+	b.StartTimer() //
+	for i := 0; i < b.N; i++ {
+		dl := rand.Intn(st)
+		miner.GetMiner(dl)
+	}
+}
+
+func Benchmark_MapJson(b *testing.B) {
+	st, _ := miner.MakeMiningPoolData(100000000)
+	//assert.NoError(t, err)
+	for i := 0; i < b.N; i++ { //use b.N for looping
+		dl := rand.Intn(st)
+		miner.GetMiner(dl)
+	}
+}
+
 const INT64_MAX = int64(^uint64((0)) >> 1)
 
 //const INT_MIN = ^INT_MAX
@@ -254,17 +272,6 @@ func TestMapJsonTsFirst(t *testing.T) {
 		IntervalBlockID: 21600 * 30,
 		Count:           48,
 		TotalAmount:     "315000000000000000000",
-	}
-
-	//mine
-	ag := AssignRules{
-		StartBlockID:    21600 * 365,
-		EndBlockID:      INT64_MAX,
-		IntervalBlockID: 1,
-		TotalAmount:     "1128750000000000000000",
-	}
-
-	//founder
 	ah := AssignRules{
 		StartBlockID:    1,
 		EndBlockID:      INT64_MAX,

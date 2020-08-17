@@ -7,25 +7,6 @@ package updates
 var M310 = `
 
 UPDATE "1_system_parameters" 
-	SET name = 'price_exec_get_contract_by_name'
-	WHERE name = 'price_exec_contract_by_name';
-
-UPDATE "1_system_parameters" 
-	SET name = 'price_exec_get_contract_by_id'
-	WHERE name = 'price_exec_contract_by_id';
-
-INSERT INTO "1_system_parameters" (id, name, value, conditions) VALUES
-	(next_id('1_system_parameters'), 'price_exec_send_external_transaction', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_get_block', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_int', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_get_map_keys', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_pub_to_hex', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_sqrt', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_json_encode_indent', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_encode_base64', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_sorted_keys', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_hex_to_pub', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_throw', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_create_contract', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_edit_language', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_date_time', '50', 'ContractAccess("@1UpdateSysParam")'),
@@ -48,6 +29,10 @@ INSERT INTO "1_system_parameters" (id, name, value, conditions) VALUES
 	(next_id('1_system_parameters'), 'price_exec_del_table', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_string_to_bytes', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_date_time_location', '50', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'), 'price_exec_h_mac', '50', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'), 'price_exec_hex_to_bytes', '50', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'), 'price_exec_split', '50', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'), 'price_exec_get_column_type', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_unix_date_time_location', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_contract_conditions', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_random', '50', 'ContractAccess("@1UpdateSysParam")'),

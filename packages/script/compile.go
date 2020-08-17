@@ -508,16 +508,6 @@ func fIf(buf *[]*Block, state int, lexem *Lexem) error {
 }
 
 func fWhile(buf *[]*Block, state int, lexem *Lexem) error {
-	(*(*buf)[len(*buf)-2]).Code = append((*(*buf)[len(*buf)-2]).Code, &ByteCode{cmdWhile,
-		lexem.Line, (*buf)[len(*buf)-1]})
-	(*(*buf)[len(*buf)-2]).Code = append((*(*buf)[len(*buf)-2]).Code, &ByteCode{cmdContinue,
-		lexem.Line, 0})
-	return nil
-}
-
-func fContinue(buf *[]*Block, state int, lexem *Lexem) error {
-	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, &ByteCode{cmdContinue,
-		lexem.Line, 0})
 	return nil
 }
 
@@ -909,6 +899,15 @@ func (vm *VM) findObj(name string, block *[]*Block) (ret *ObjInfo, owner *Block)
 }
 
 func (vm *VM) getInitValue(lexems *Lexems, ind *int, block *[]*Block) (value mapItem, err error) {
+	var (
+		subArr []mapItem
+		subMap *types.Map
+	)
+	i := *ind
+	lexem := (*lexems)[i]
+
+	switch lexem.Type {
+	case isLBrack:
 		subArr, err = vm.getInitArray(lexems, &i, block)
 		if err == nil {
 			value = mapItem{Type: mapArray, Value: subArr}

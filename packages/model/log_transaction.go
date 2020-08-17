@@ -5,11 +5,7 @@
 
 package model
 
-}
-
-// GetByHash returns LogTransactions existence by hash
-func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
-	return isFound(DBConn.Where("hash = ?", hash).First(lt))
+import "gorm.io/gorm"
 }
 
 // Create is creating record of model

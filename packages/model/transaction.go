@@ -1,5 +1,18 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package model
+
+import (
+	"github.com/shopspring/decimal"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+)
+
+// This constants contains values of transactions priority
 const (
 	TransactionRateOnBlock transactionRate = iota + 1
 	TransactionRateApiContract
@@ -125,13 +138,6 @@ func (t *Transaction) Read(hash []byte) (bool, error) {
 
 // Get is retrieving model from database
 func (t *Transaction) Get(transactionHash []byte) (bool, error) {
-	return isFound(DBConn.Where("hash = ?", transactionHash).First(t))
-}
-
-// GetVerified is checking transaction verification by hash
-func (t *Transaction) GetVerified(transactionHash []byte) (bool, error) {
-	return isFound(DBConn.Where("hash = ? AND verified = 1", transactionHash).First(t))
-}
 
 func (t *Transaction) BeforeCreate(db *gorm.DB) error {
 	if t.HighRate == 0 {
