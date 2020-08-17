@@ -30,6 +30,16 @@ func (btc *BlockTimeCounter) NodePosition(t time.Time) int {
 
 // ValidateBlock checks conformity between time and nodePosition
 func (btc *BlockTimeCounter) ValidateBlock(t time.Time, nodePosition int) bool {
+	return btc.NodePosition(t) == nodePosition
+}
+
+func (btc *BlockTimeCounter) BlockForTimeExists(t time.Time, nodePosition int) (bool, error) {
+	startInterval, endInterval := btc.RangesByTime(t)
+
+	b := &model.Block{}
+	blocks, err := b.GetNodeBlocksAtTime(startInterval, endInterval, int64(nodePosition))
+	if err != nil {
+		return false, err
 	}
 
 	if len(blocks) != 0 {
@@ -70,5 +80,3 @@ func NewBlockTimeCounter() *BlockTimeCounter {
 		start:       time.Unix(int64(firstBlock.Time), 0),
 		duration:    blockGenerationDuration + blocksGapDuration,
 		numberNodes: int(syspar.GetCountOfActiveNodes()),
-	}
-}

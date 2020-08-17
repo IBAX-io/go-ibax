@@ -48,6 +48,15 @@ func EccPubEncrypt(plainText []byte, pub *ecdsa.PublicKey) (cryptText []byte, er
 	publicKey := ImportECDSAPublic(pub)
 	//
 	crypttext, err := Encrypt(rand.Reader, publicKey, plainText, nil, nil)
+
+	return crypttext, err
+
+}
+
+//
+func EccPriDeCrypt(cryptText []byte, priv *ecdsa.PrivateKey) (msg []byte, err error) { //
+	privateKey := ImportECDSA(priv)
+
 	//
 	plainText, err := privateKey.Decrypt(cryptText, nil, nil)
 
@@ -70,6 +79,3 @@ func EccDeCrypto(cryptoText []byte, prikey []byte) ([]byte, error) {
 	pri, err := crypto.GetPrivateKeys(prikey)
 	if err != nil {
 		return nil, err
-	}
-	return EccPriDeCrypt(cryptoText, pri)
-}

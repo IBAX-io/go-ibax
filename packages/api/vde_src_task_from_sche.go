@@ -67,6 +67,17 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 
 		//TxHash:     form.TxHash,
 		//ChainState: int64(form.ChainState),
+		//BlockId:    int64(form.BlockId),
+		//ChainId:    int64(form.ChainId),
+		//ChainErr:   form.ChainErr,
+	}
+
+	return m, err
+}
+
+func VDESrcTaskFromScheCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
 	)
 	logger := getLogger(r)
 	form := &VDESrcTaskFromScheForm{}
@@ -74,11 +85,6 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
-	m := &model.VDESrcTaskFromSche{}
-	if m, err = unmarshalColumnVDESrcTaskFromSche(form); err != nil {
-		fmt.Println(err)
-		errorResponse(w, err)
-		return
 	}
 
 	m.CreateTime = time.Now().Unix()

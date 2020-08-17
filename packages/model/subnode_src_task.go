@@ -23,6 +23,22 @@ type SubNodeSrcTask struct {
 	ChannelStateErr string `gorm:"not null" json:"channel_state_err"`
 
 	//TxHash     string `gorm:"not null" json:"tx_hash"`
+	//ChainState int64  `gorm:"not null" json:"chain_state"`
+	//BlockId    int64  `gorm:"not null" json:"block_id"`
+	//ChainId    int64  `gorm:"not null" json:"chain_id"`
+	//ChainErr   string `gorm:"not null" json:"chain_err"`
+
+	UpdateTime int64 `gorm:"not null" json:"update_time"`
+	CreateTime int64 `gorm:"not null" json:"create_time"`
+}
+
+func (SubNodeSrcTask) TableName() string {
+	return "subnode_src_task"
+}
+
+func (m *SubNodeSrcTask) Create() error {
+	return DBConn.Create(&m).Error
+}
 
 func (m *SubNodeSrcTask) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
@@ -47,15 +63,6 @@ func (m *SubNodeSrcTask) GetAllByTaskUUIDAndTaskState(TaskUUID string, TaskState
 	err := DBConn.Table("subnode_src_task").Where("task_uuid = ? AND task_state=?", TaskUUID, TaskState).Find(&result).Error
 	return result, err
 }
-
-func (m *SubNodeSrcTask) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcTask, error) {
-	result := make([]SubNodeSrcTask, 0)
-	err := DBConn.Table("subnode_src_task").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
-}
-
-func (m *SubNodeSrcTask) GetOneByTaskUUID(TaskUUID string) (*SubNodeSrcTask, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
 	return m, err
 }
 

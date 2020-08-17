@@ -104,12 +104,6 @@ func (t *FirstBlockTransaction) Action() error {
 	if err != nil {
 		return utils.ErrInfo(err)
 	}
-	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_menu" (id,name,value,title,conditions) values(?, 'default_menu', ?, ?, 'ContractAccess("@1EditMenu")')`,
-		id, syspar.SysString(`default_ecosystem_menu`), `default`).Error
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting default menu")
-		return utils.ErrInfo(err)
-	}
 	err = smart.LoadContract(t.DbTransaction, 1)
 	if err != nil {
 		return utils.ErrInfo(err)
@@ -121,4 +115,12 @@ func (t *FirstBlockTransaction) Action() error {
 	return nil
 }
 
+// Rollback first block
+func (t *FirstBlockTransaction) Rollback() error {
+	return nil
+}
+
+// Header is returns first block header
+func (t FirstBlockTransaction) Header() *tx.Header {
+	return nil
 }

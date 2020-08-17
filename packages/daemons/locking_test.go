@@ -24,6 +24,15 @@ func createTables(t *testing.T, db *sql.DB) {
 		"script_name" string NOT NULL DEFAULT '',
 		"info" text NOT NULL DEFAULT '',
 		"uniq" integer NOT NULL DEFAULT '0'
+	);
+	CREATE TABLE "install" (
+		"progress" text NOT NULL DEFAULT ''
+	);
+	`
+	var err error
+	_, err = db.Exec(sql)
+	if err != nil {
+		t.Fatalf("%s", err)
 	}
 }
 
@@ -45,18 +54,3 @@ func TestWait(t *testing.T) {
 	install := &model.Install{}
 	install.Progress = "complete"
 	err = install.Create()
-	if err != nil {
-		t.Fatalf("save failed: %s", err)
-	}
-
-	ctx, scf := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer func() {
-		ctx.Done()
-		scf()
-	}()
-
-	err = WaitDB(ctx)
-	if err != nil {
-		t.Errorf("wait failed: %s", err)
-	}
-}

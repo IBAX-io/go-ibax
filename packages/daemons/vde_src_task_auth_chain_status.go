@@ -10,16 +10,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
-//Generate a chain request
 func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
 	var (
 		err error
@@ -65,6 +55,9 @@ func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
 		}
 		//Generate a chain request
 		ContractSrcGetPlusHash := srcTask.ContractSrcGetHash + srcTask.ContractSrcGet
+		ContractDestGetPlusHash := srcTask.ContractDestGetHash + srcTask.ContractDestGet
+
+		//fmt.Println("--ContractSrcGetPlusHash ", ContractSrcGetPlusHash)
 		//fmt.Println("--ContractDestGetPlusHash ", ContractDestGetPlusHash)
 
 		//

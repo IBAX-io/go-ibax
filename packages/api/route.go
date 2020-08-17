@@ -97,19 +97,6 @@ func (m Mode) SetBlockchainRoutes(r Router) {
 	api.HandleFunc("/assignbalance/{wallet}", authRequire(m.getMyAssignBalanceHandler)).Methods("GET")
 	api.HandleFunc("/block/{id}", getBlockInfoHandler).Methods("GET")
 	api.HandleFunc("/maxblockid", getMaxBlockHandler).Methods("GET")
-	api.HandleFunc("/blocks", getBlocksTxInfoHandler).Methods("GET")
-	api.HandleFunc("/detailed_blocks", getBlocksDetailedInfoHandler).Methods("GET")
-	api.HandleFunc("/ecosystemparams", authRequire(m.getEcosystemParamsHandler)).Methods("GET")
-	api.HandleFunc("/systemparams", authRequire(getSystemParamsHandler)).Methods("GET")
-	api.HandleFunc("/ecosystemparam/{name}", authRequire(m.getEcosystemParamHandler)).Methods("GET")
-	api.HandleFunc("/ecosystemname", getEcosystemNameHandler).Methods("GET")
-	api.HandleFunc("/mintcount/{id}", m.getMintCountHandler).Methods("GET")
-}
-
-func SetOtherCommonRoutes(api *mux.Router, m Mode) {
-	api.HandleFunc("/member/{ecosystem}/{account}", getMemberHandler).Methods("GET")
-	api.HandleFunc("/listWhere/{name}", authRequire(getListWhereHandler)).Methods("POST")
-	api.HandleFunc("/nodelistWhere/{name}", authRequire(getnodeListWhereHandler)).Methods("POST")
 	api.HandleFunc("/sumWhere/{name}", authRequire(getsumWhereHandler)).Methods("POST")
 	api.HandleFunc("/metrics/blockper/{node}", blocksCountByNodeHandler).Methods("GET")
 	// Open database data APIS
@@ -139,6 +126,18 @@ func (m Mode) SetGafsRoutes(r Router) {
 	//gafs.HandleFunc("/file/ls/{hash}", authRequire(fileLs)).Methods("GET")
 	//gafs.HandleFunc("/ls/{hash}", authRequire(ls)).Methods("GET")
 }
+
+func setOtherBlockChainRoutes(api *mux.Router, m Mode) {
+	api.HandleFunc("/myBalance", authRequire(m.getMyBalanceHandler)).Methods("GET")
+	api.HandleFunc("/walletHistory", authRequire(getWalletHistory)).Methods("GET")
+	api.HandleFunc("/tx_record/{hashes}", (getTxRecord)).Methods("GET")
+}
+
+//
+func (m Mode) SetSubNodeRoutes(r Router) {
+	api := r.GetAPIVersion("/api/v2")
+	api.HandleFunc("/shareData/create", shareDataCreate).Methods("POST")
+	api.HandleFunc("/shareData/update/{id}", shareDataUpdateHandlre).Methods("POST")
 	api.HandleFunc("/shareData/delete/{id}", shareDataDeleteHandlre).Methods("POST")
 
 	api.HandleFunc("/shareData/list", shareDataListHandlre).Methods("GET")

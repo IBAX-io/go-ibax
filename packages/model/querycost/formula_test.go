@@ -33,19 +33,6 @@ type QueryCostByFormulaTestSuite struct {
 }
 
 func (s *QueryCostByFormulaTestSuite) SetupTest() {
-	s.queryCoster = &FormulaQueryCoster{&TestTableRowCounter{}}
-}
-
-func (s *QueryCostByFormulaTestSuite) TestQueryCostUnknownQueryType() {
-	_, err := s.queryCoster.QueryCost(nil, "UNSELECT * FROM name")
-	assert.Error(s.T(), err)
-	assert.Equal(s.T(), err, UnknownQueryTypeError)
-}
-
-func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromSelectNoTable() {
-	tableName, err := SelectQueryType("select 3").GetTableName()
-	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), tableName, "")
 }
 
 func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromSelect() {
@@ -103,6 +90,16 @@ func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromDelete() {
 	tableName, err := DeleteQueryType("delete from keys").GetTableName()
 	assert.Nil(s.T(), err)
 	assert.Equal(s.T(), tableName, "keys")
+	tableName, err = DeleteQueryType(`delete from "1_keys" where a = 1`).GetTableName()
+	assert.Nil(s.T(), err)
+	assert.Equal(s.T(), tableName, "1_keys")
+}
+
+func (s *QueryCostByFormulaTestSuite) TestQueryCostSelect() {
+	cost, err := s.queryCoster.QueryCost(nil, "SELECT * FROM small WHERE id = ?", 3)
+	assert.Nil(s.T(), err)
+	assert.Equal(s.T(), cost, SelectQueryType("").CalculateCost(tableRowCount))
+}
 
 func (s *QueryCostByFormulaTestSuite) TestQueryCostUpdate() {
 	cost, err := s.queryCoster.QueryCost(nil, "UPDATE small SET a = ?", 3)

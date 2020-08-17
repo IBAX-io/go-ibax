@@ -58,17 +58,21 @@ $    go-ibax initDatabase
 
 ```bash
 $    go-ibax start
+
+https://127.0.0.1:7079/api/v2/getuid
+http://127.0.0.1:7079/api/v2/getuid
+
+https://127.0.0.1:8000
+http://127.0.0.1:8000
+
+
+docker build -t ibax/go-ibax -f Dockerfile .
+
+docker build -t ibax/go-ibax-src -f Dockerfile_src .
+
 ```
 
 
-# docker run
 
-```bash
-
-docker volume prune -f
-docker-compose down
-
-docker-compose build
-docker-compose up
 
 
