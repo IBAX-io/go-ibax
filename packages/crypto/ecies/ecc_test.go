@@ -44,3 +44,7 @@ func TestEccencryptoKey(t *testing.T) {
 		fmt.Println(err2)
 	}
 
+	cryptText, _ := EccPubEncrypt(plainText, pub)
+	fmt.Println("ECC：", hex.EncodeToString(cryptText))
+
+	msg, err := EccPriDeCrypt(cryptText, pri)

@@ -11,6 +11,10 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
 type contractsResult struct {
 	Count string              `json:"count"`
 	List  []map[string]string `json:"list"`
@@ -41,10 +45,6 @@ func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all")
 		errorResponse(w, err)
 		return
-	}
-
-	list := make([]map[string]string, len(contracts))
-	for i, c := range contracts {
 		list[i] = c.ToMap()
 		list[i]["address"] = converter.AddressToString(c.WalletID)
 	}

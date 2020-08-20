@@ -22,3 +22,14 @@ func TestHistory(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	if len(ret.List) == 0 {
+		t.Error(stdErrors.New("History should not be empty"))
+	}
+
+	err = sendGet("history/pages/1000", nil, &ret)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if len(ret.List) != 0 {
+		t.Error(stdErrors.New("History should be empty"))

@@ -28,6 +28,14 @@ func TestReadRequest(t *testing.T) {
 	request.Write(converter.DecToBin(len("test"), 4))
 	request.Write([]byte("test"))
 
+	test := &testStruct{}
+	err := ReadRequest(test, request)
+	if err != nil {
+		t.Errorf("read request return err: %s", err)
+	}
+	if test.Id != 10 {
+		t.Errorf("bad id value")
+	}
 	if string(test.Data) != "test" {
 		t.Errorf("bad data value: %+v", string(test.Data))
 	}
@@ -102,15 +110,6 @@ func TestRequestType(t *testing.T) {
 }
 
 func TestGetBodiesRequest(t *testing.T) {
-	source := GetBodiesRequest{
-		BlockID:      33,
-		ReverseOrder: true,
-	}
-
-	buf := bytes.Buffer{}
-	require.NoError(t, source.Write(&buf))
-
-	target := GetBodiesRequest{}
 	require.NoError(t, target.Read(&buf))
 	fmt.Printf("%+v %+v\n", source, target)
 	require.Equal(t, source, target)
