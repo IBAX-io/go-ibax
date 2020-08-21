@@ -1,3 +1,11 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewApplication {
+    data {
+        Name string
+        Conditions string
+    }
+
     conditions {
         ValidateCondition($Conditions, $ecosystem_id)
 
@@ -9,8 +17,3 @@
             warning Sprintf( "Application %s already exists", $Name)
         }
     }
-
-    action {
-        $result = DBInsert("applications", {name: $Name,conditions: $Conditions})
-    }
-}

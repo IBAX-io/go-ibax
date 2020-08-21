@@ -31,6 +31,16 @@ func loadContractTasks() error {
 			return nil
 		}
 
+		c := model.Cron{}
+		c.SetTablePrefix(fmt.Sprintf("%d", stateID))
+		tasks, err := c.GetAllCronTasks()
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get all cron tasks")
+			return err
+		}
+
+		for _, cronTask := range tasks {
+			err = scheduler.UpdateTask(&scheduler.Task{
 				ID:       cronTask.UID(),
 				CronSpec: cronTask.Cron,
 				Handler: &contract.ContractHandler{
@@ -39,17 +49,6 @@ func loadContractTasks() error {
 			})
 			if err != nil {
 				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-// Scheduler starts contracts on schedule
-func Scheduler(ctx context.Context, d *daemon) error {
-	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
-		defer atomic.StoreUint32(&d.atomic, 0)
 	} else {
 		return nil
 	}

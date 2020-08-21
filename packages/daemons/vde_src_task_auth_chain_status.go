@@ -10,6 +10,16 @@ import (
 	"encoding/base64"
 	"fmt"
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
+//Generate a chain request
 func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
 	var (
 		err error
@@ -98,16 +108,6 @@ func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
 			//fmt.Println("--DEST  :", contractData)
 			contractDataBase64 := base64.StdEncoding.EncodeToString(contractData)
 			myContractDestGet = contractDataBase64
-			//fmt.Println("--DEST  :", myContractDestGet)
-			if myContractDestGetHash, err = crypto.HashHex([]byte(myContractDestGet)); err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
-				fmt.Println("HashHex Raw data hash failed ")
-				continue
-			}
-
-		} else {
-			myContractDestGet = srcTask.ContractDestGet
-			myContractDestGetHash = srcTask.ContractDestGetHash
 		}
 
 		SrcTaskChainStatusAuth := model.VDESrcTaskChainStatus{

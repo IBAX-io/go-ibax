@@ -59,16 +59,6 @@ func CheckLogTx(txHash []byte, transactions, txQueue bool) error {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting verified transaction")
 			return utils.ErrInfo(err)
 		}
-		if isfound {
-			log.WithFields(log.Fields{"tx_hash": tx.Hash, "type": consts.DuplicateObject}).Error("double tx in transactions")
-			return ErrDuplicatedTx
-		}
-	}
-
-	return nil
-}
-
-// DeleteQueueTx deletes a transaction from the queue
 func DeleteQueueTx(dbTransaction *model.DbTransaction, hash []byte) error {
 	delQueueTx := &model.QueueTx{Hash: hash}
 	err := delQueueTx.DeleteTx(dbTransaction)
@@ -148,6 +138,16 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //	found, err = tx.Get(hash)
 //	if err != nil {
 //		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction by hash")
+//		return utils.ErrInfo(err)
+//	}
+//	if found {
+//		err = model.DeleteTransactionByHash(dbTransaction, hash)
+//		if err != nil {
+//			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transaction by hash")
+//			return utils.ErrInfo(err)
+//		}
+//	}
+//	// put with verified=1
 //	var expedite decimal.Decimal
 //	if len(t.TxSmart.Expedite) > 0 {
 //		expedite, err = decimal.NewFromString(t.TxSmart.Expedite)

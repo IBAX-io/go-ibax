@@ -7,12 +7,6 @@ contract NewCron {
 			Limit      int "optional"
 			Till       string "optional date"
 			Conditions string
-		}
-		conditions {
-			ValidateCondition($Conditions,$ecosystem_id)
-			ValidateCron($Cron)
-		}
-		action {
 			if !$Till {
 				$Till = "1970-01-01 00:00:00"
 			}
@@ -23,3 +17,4 @@ contract NewCron {
 				counter:$Limit, till: $Till,conditions: $Conditions})
 			UpdateCron($result)
 		}
+	}

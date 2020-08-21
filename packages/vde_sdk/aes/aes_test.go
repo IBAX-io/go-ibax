@@ -29,9 +29,4 @@ func TestAesEncryptAndDecrypt(t *testing.T) {
 	bytesPass, err := base64.StdEncoding.DecodeString(pass64)
 	if err != nil {
 		fmt.Println(err)
-	if err != nil {
-		fmt.Println(err)
 		return
-	}
-	fmt.Printf("aesdecrypto:%s\n", tpass)
-}

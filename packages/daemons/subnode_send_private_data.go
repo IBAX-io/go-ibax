@@ -5,6 +5,12 @@
 
 package daemons
 
+import (
+	"context"
+	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+
+	log "github.com/sirupsen/logrus"
+)
 
 func SendPrivateData(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {

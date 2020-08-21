@@ -12,22 +12,6 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/statsd"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	log "github.com/sirupsen/logrus"
-)
-
-var (
-	// MonitorDaemonCh is monitor daemon channel
-	MonitorDaemonCh = make(chan []string, 100)
-	NtpDriftFlag    = false
-)
-
 type daemon struct {
 	goRoutineName string
 	sleepTime     time.Duration
@@ -174,6 +158,13 @@ func StartDaemons(ctx context.Context, daemonsToStart []string) {
 			continue
 		}
 
+		log.WithFields(log.Fields{"daemon_name": name}).Warning("unknown daemon name")
+	}
+}
+
+func getHostPort(h string) string {
+	if strings.Contains(h, ":") {
+		return h
 	}
 	return fmt.Sprintf("%s:%d", h, consts.DEFAULT_TCP_PORT)
 }
