@@ -19,14 +19,6 @@ import (
 )
 
 func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) error {
-	rollbackTx := &model.RollbackTx{
-		BlockID:   sc.BlockData.BlockID,
-		TxHash:    sc.TxHash,
-		NameTable: table,
-		TableID:   tableID,
-		Data:      rollbackInfoStr,
-	}
-	sc.RollBackTx = append(sc.RollBackTx, rollbackTx)
 	err := rollbackTx.Create(sc.DbTransaction)
 	if err != nil {
 		return logErrorDB(err, "creating rollback tx")
@@ -156,6 +148,8 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 			idNames := strings.SplitN(sqlBuilder.Table, `_`, 2)
 			if len(idNames) == 2 {
 				if sqlBuilder.KeyTableChkr.IsKeyTable(idNames[1]) {
+					tid = sqlBuilder.TableID() + "," + sqlBuilder.GetEcosystem()
+				}
 			}
 		}
 		if err := addRollback(sc, sqlBuilder.Table, tid, rollbackInfoStr); err != nil {

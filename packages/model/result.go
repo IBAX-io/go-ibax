@@ -12,6 +12,15 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
+
+// SingleResult is a structure for the single result
+type SingleResult struct {
+	result []byte
+	err    error
+}
+
+// Single is retrieving single result
+func Single(transaction *DbTransaction, query string, args ...interface{}) *SingleResult {
 	var result []byte
 	err := GetDB(transaction).Raw(query, args...).Row().Scan(&result)
 	switch {
@@ -27,17 +36,6 @@ import (
 func (r *SingleResult) Int64() (int64, error) {
 	if r.err != nil {
 		return 0, r.err
-	}
-	return converter.BytesToInt64(r.result), nil
-}
-
-// Int converts bytes to int
-func (r *SingleResult) Int() (int, error) {
-	if r.err != nil {
-		return 0, r.err
-	}
-	return converter.BytesToInt(r.result), nil
-}
 
 // Float64 converts string to float64
 func (r *SingleResult) Float64() (float64, error) {

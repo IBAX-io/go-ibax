@@ -45,18 +45,6 @@ func getTxStatus(r *http.Request, hash string) (*txstatusResult, error) {
 		return nil, err
 	}
 	if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound, "key": []byte(converter.HexToBin(hash))}).Error("getting transaction status by hash")
-		return nil, errHashNotFound
-	}
-	checkErr := func() {
-		if len(ts.Error) > 0 {
-			if err := json.Unmarshal([]byte(ts.Error), &status.Message); err != nil {
-				logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "text": ts.Error, "error": err}).Warn("unmarshalling txstatus error")
-				status.Message = &txstatusError{
-					Type:  "txError",
-					Error: ts.Error,
-				}
-			}
 		}
 	}
 	if ts.BlockID > 0 {
@@ -99,3 +87,5 @@ func getTxStatusHandler(w http.ResponseWriter, r *http.Request) {
 		result.Results[hash] = status
 	}
 
+	jsonResponse(w, result)
+}

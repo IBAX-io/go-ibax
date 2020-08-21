@@ -11,14 +11,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/script"
 )
-
-type TestSmart struct {
-	Input  string
-	Output string
-}
-
-func TestNewContract(t *testing.T) {
-	test := []TestSmart{
 		{`contract NewCitizen {
 			data {
 				Public bytes
@@ -56,6 +48,10 @@ func TestNewContract(t *testing.T) {
 	}
 }
 
+func TestCheckAppend(t *testing.T) {
+	appendTestContract := `contract AppendTest {
+		action {
+			var list array
 			list = Append(list, "naw_value")
 			Println(list)
 		}

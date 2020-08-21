@@ -41,7 +41,3 @@ func (m Mode) getMintCountHandler(w http.ResponseWriter, r *http.Request) {
 			JsonCodeResponse(w, &ret)
 			return
 		}
-	} else {
-		return
-	}
-}
