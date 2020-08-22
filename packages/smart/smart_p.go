@@ -362,16 +362,6 @@ func GetContractByName(sc *SmartContract, name string) int64 {
 	if info == nil {
 		return 0
 	}
-
-	return info.Owner.TableID
-}
-
-// GetContractById returns the name of the contract with this id
-func GetContractById(sc *SmartContract, id int64) string {
-	_, ret, err := DBSelect(sc, "contracts", "value", id, `id`, 0, 1, nil, false)
-	if err != nil || len(ret) != 1 {
-		logErrorDB(err, "getting contract name")
-		return ``
 	}
 
 	re := regexp.MustCompile(`(?is)^\s*contract\s+([\d\w_]+)\s*{`)
@@ -548,6 +538,14 @@ func BndWallet(sc *SmartContract, tblid int64, state int64) error {
 	}
 
 	return SetContractWallet(sc, tblid, state, sc.TxSmart.KeyID)
+}
+
+// UnbndWallet sets Active status of the contract in smartVM
+func UnbndWallet(sc *SmartContract, tblid int64, state int64) error {
+	if err := validateAccess(sc, "UnbindWallet"); err != nil {
+		return err
+	}
+
 	if _, _, err := sc.update([]string{"wallet_id"}, []interface{}{0}, "1_contracts", "id", tblid); err != nil {
 		log.WithFields(log.Fields{"error": err, "contract_id": tblid}).Error("on updating contract wallet")
 		return err

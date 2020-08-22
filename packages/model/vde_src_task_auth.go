@@ -15,6 +15,11 @@ type VDESrcTaskAuth struct {
 
 	UpdateTime int64 `gorm:"not null" json:"update_time"`
 	CreateTime int64 `gorm:"not null" json:"create_time"`
+}
+
+func (VDESrcTaskAuth) TableName() string {
+	return "vde_src_task_auth"
+}
 
 func (m *VDESrcTaskAuth) Create() error {
 	return DBConn.Create(&m).Error
@@ -50,6 +55,3 @@ func (m *VDESrcTaskAuth) GetAllByChainState(ChainState int64) ([]VDESrcTaskAuth,
 }
 
 func (m *VDESrcTaskAuth) GetOneByTaskUUID(TaskUUID string) (*VDESrcTaskAuth, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
-}

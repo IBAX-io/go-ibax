@@ -191,21 +191,6 @@ func (bl *txUserEcosysLimit) check(t *transaction.Transaction, mode int) error {
 		if user, ok := val.TxUsers[keyID]; ok {
 			if user+1 > val.Limit && mode == letPreprocess {
 				return ErrLimitSkip
-			}
-			if user > val.Limit {
-				return limitError(`txUserEcosysLimit`, `Max tx from one user %d in ecosystem %d`,
-					keyID, ecosystemID)
-			}
-			val.TxUsers[keyID] = user + 1
-		} else {
-			val.TxUsers[keyID] = 1
-		}
-	} else {
-		limit := syspar.GetMaxBlockUserTx()
-		sp := &model.StateParameter{}
-		sp.SetTablePrefix(converter.Int64ToStr(ecosystemID))
-		found, err := sp.Get(t.DbTransaction, `max_tx_block_per_user`)
-		if err != nil {
 			return limitError(`txUserEcosysLimit`, err.Error())
 		}
 		if found {
@@ -229,6 +214,15 @@ func (bl *txMaxSize) init(b *Block) {
 	bl.LimitTx = syspar.GetMaxTxSize()
 }
 
+func (bl *txMaxSize) check(t *transaction.Transaction, mode int) error {
+	size := int64(len(t.TxFullData))
+	if size > bl.LimitTx {
+		return limitError(`txMaxSize`, `Max size of tx`)
+	}
+	bl.Size += size
+	if bl.Size > bl.LimitBlock {
+		if mode == letPreprocess {
+			return ErrLimitStop
 		}
 		return limitError(`txMaxSize`, `Max size of the block`)
 	}

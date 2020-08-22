@@ -14,6 +14,13 @@ type VDESrcTaskTime struct {
 func (VDESrcTaskTime) TableName() string {
 	return "vde_src_task_time"
 }
+
+func (m *VDESrcTaskTime) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *VDESrcTaskTime) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
 }
 
 func (m *VDESrcTaskTime) Delete() error {
@@ -33,4 +40,3 @@ func (m *VDESrcTaskTime) GetAll() ([]VDESrcTaskTime, error) {
 func (m *VDESrcTaskTime) GetOneByID() (*VDESrcTaskTime, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
-}

@@ -38,6 +38,9 @@ type Mode struct {
 
 // Client represents data of client
 type Client struct {
+	KeyID         int64
+	AccountID     string
+	EcosystemID   int64
 	EcosystemName string
 	RoleID        int64
 	IsMobile      bool
@@ -113,13 +116,4 @@ func isMultipartForm(r *http.Request) bool {
 
 type hexValue struct {
 	value []byte
-}
-
-func (hv hexValue) Bytes() []byte {
-	return hv.value
-}
-
-func (hv *hexValue) UnmarshalText(v []byte) (err error) {
-	hv.value, err = hex.DecodeString(string(v))
-	return
 }

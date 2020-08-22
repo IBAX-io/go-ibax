@@ -4,17 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package api
-
-import (
-	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
 type myBalanceResult struct {
 	Amount string `json:"amount"`
 	Money  string `json:"money"`
@@ -33,6 +22,13 @@ func (m Mode) getMyBalanceHandler(w http.ResponseWriter, r *http.Request) {
 
 	keyID := client.KeyID
 	if keyID == 0 {
+		logger.WithFields(log.Fields{"type": consts.ConversionError, "value": converter.Int64ToStr(keyID)}).Error("converting wallet to address")
+		errorResponse(w, errInvalidWallet.Errorf(converter.Int64ToStr(keyID)))
+		return
+	}
+
+	key := &model.Key{}
+	key.SetTablePrefix(form.EcosystemID)
 	_, err := key.Get(nil, keyID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting Key for wallet")

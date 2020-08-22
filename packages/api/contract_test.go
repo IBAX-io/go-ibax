@@ -415,6 +415,22 @@ var contracts = []smartContract{
 		{nil, map[string]string{`ok`: "{\n\t\"ok\": 10,\n\t\"arr\": [\n\t\t\"first\",\n\t\t\"<second>\"\n\t]\n}",
 			`json`: "{\"ok\":10,\"arr\":[\"first\",\"<second>\"]}"}},
 	}},
+	{`GuestKey`, `contract GuestKey {
+		action {
+			Test("result", $guest_key)
+		}
+	}`, []smartParams{
+		{nil, map[string]string{`result`: `4544233900443112470`}},
+	}},
+	{`TestCyr`, `contract TestCyr {
+		data {}
+		conditions { }
+		action {
+		   //тест
+		   var a map
+		   a["тест"] = "тест"
+		   Test("ok", a["тест"])
+		}
 	}`, []smartParams{
 		{nil, map[string]string{`ok`: `тест`}},
 	}},
@@ -1254,18 +1270,6 @@ func TestGlobalVars(t *testing.T) {
 	}
 
 	form = url.Values{`Value`: {`
-		contract a_` + rnd + ` {
-			data { Par string}
-			conditions {}
-			action {
-				var params map
-				params["Test"] = "TEST"
-				$aaa = 123
-				if $Par == "b" {
-				    $result = CallContract("b_` + rnd + `", params)
-				} else {
-				    $result = CallContract("c_` + rnd + `", params) + c_` + rnd + `("Test","OK")
-				}
 			}
 		}`}, "ApplicationId": {"1"}, `Conditions`: {`true`}}
 	err = postTx(`NewContract`, &form)

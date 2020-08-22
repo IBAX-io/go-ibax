@@ -79,6 +79,17 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 
 	ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("encode error")
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
+
+	//chain_api.ApiAddress = blockchain_http
+	//chain_api.ApiEcosystemID = int64(ecosystemID)
+
+	chain_apiAddress := blockchain_http
+	chain_apiEcosystemID := int64(ecosystemID)
+
 	src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
 	// Login
 	//if err := api.KeyLogin(src, chain_api.ApiEcosystemID); err != nil {
@@ -131,17 +142,6 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 		m.BlockchainEcosystem = blockchain_ecosystem
 		m.CreateTime = converter.StrToInt64(DataHashItem.CreateTime)
 
-		if err = m.Create(); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Failed to insert vde_dest_data_hash table")
-			break
-		}
-		fmt.Println("insert vde_dest_data_hash table ok, DataUUID:", DataHashItem.DataUUID)
-		UpdateTime = DataHashItem.CreateTime
-	}
-
-	DestHashTime.UpdateTime = converter.StrToInt64(UpdateTime)
-	err = DestHashTime.Updates()
-	if err != nil {
 		fmt.Println("Update UpdateTime table err: ", err)
 		log.WithFields(log.Fields{"error": err}).Error("Update UpdateTime table!")
 		time.Sleep(time.Millisecond * 2)

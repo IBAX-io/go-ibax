@@ -46,6 +46,12 @@ func TestRangeByTime(t *testing.T) {
 		start:       time.Unix(1532977623, 0),
 		duration:    4 * time.Second,
 		numberNodes: 1,
+	}
+
+	st, end, err := btc.RangeByTime(time.Unix(1533062723, 0))
+	require.NoError(t, err)
+	fmt.Println(st.Unix(), end.Unix())
+
 	st, end, err = btc.RangeByTime(time.Unix(1533062724, 0))
 	require.NoError(t, err)
 	fmt.Println(st.Unix(), end.Unix())
@@ -74,5 +80,3 @@ func TestBlockOnlineTime(t *testing.T) {
 	}
 	if exists {
 		fmt.Println("exist")
-	}
-}

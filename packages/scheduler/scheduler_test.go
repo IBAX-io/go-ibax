@@ -39,20 +39,6 @@ type mockHandler struct {
 
 func (mh *mockHandler) Run(t *Task) {
 	mh.count++
-}
-
-// This test required timeout 60s
-// go test -timeout 60s
-func TestTask(t *testing.T) {
-	var taskID = "task1"
-	sch := NewScheduler()
-
-	task := &Task{ID: taskID}
-
-	nextTime := task.Next(time.Now())
-	if nextTime != zeroTime {
-		t.Error("error")
-	}
 
 	task = &Task{CronSpec: "60 * * * *"}
 	err := sch.AddTask(task)
@@ -68,6 +54,14 @@ func TestTask(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	handler := &mockHandler{}
+	task = &Task{ID: taskID, CronSpec: "* * * * *", Handler: handler}
+	sch.UpdateTask(task)
+
+	now := time.Now()
+	time.Sleep(task.Next(now).Sub(now) + time.Second)
+
 	if handler.count == 0 {
 		t.Error("task not running")
 	}
