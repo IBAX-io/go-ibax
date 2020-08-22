@@ -73,8 +73,20 @@ func (t *Table) Get(transaction *DbTransaction, name string) (bool, error) {
 
 // Create is creating record of model
 func (t *Table) Create(transaction *DbTransaction) error {
-	return GetDB(transaction).Create(t).Error
 }
+
+// IsExistsByPermissionsAndTableName returns columns existence by permission and table name
+func (t *Table) IsExistsByPermissionsAndTableName(transaction *DbTransaction, columnName, tableName string) (bool, error) {
+	return isFound(GetDB(transaction).Where(`ecosystem = ? AND (columns-> ? ) is not null AND name = ?`,
+		t.Ecosystem, columnName, tableName).First(t))
+}
+
+// GetColumns returns columns from database
+func (t *Table) GetColumns(transaction *DbTransaction, name, jsonKey string) (map[string]string, error) {
+	keyStr := ""
+	if jsonKey != "" {
+		keyStr = `->'` + jsonKey + `'`
+	}
 	rows, err := GetDB(transaction).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(columns`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
 	if err != nil {
 		return nil, err

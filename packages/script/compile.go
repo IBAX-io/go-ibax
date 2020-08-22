@@ -481,15 +481,6 @@ func fFtail(buf *[]*Block, state int, lexem *Lexem) error {
 		}
 	}
 	return nil
-}
-
-func fFNameParam(buf *[]*Block, state int, lexem *Lexem) error {
-	block := (*buf)[len(*buf)-1]
-
-	fblock := block.Info.(*FuncInfo)
-	if fblock.Names == nil {
-		names := make(map[string]FuncName)
-		fblock.Names = &names
 	}
 	for key := range *fblock.Names {
 		if key[0] == '_' {
@@ -508,6 +499,16 @@ func fIf(buf *[]*Block, state int, lexem *Lexem) error {
 }
 
 func fWhile(buf *[]*Block, state int, lexem *Lexem) error {
+	(*(*buf)[len(*buf)-2]).Code = append((*(*buf)[len(*buf)-2]).Code, &ByteCode{cmdWhile,
+		lexem.Line, (*buf)[len(*buf)-1]})
+	(*(*buf)[len(*buf)-2]).Code = append((*(*buf)[len(*buf)-2]).Code, &ByteCode{cmdContinue,
+		lexem.Line, 0})
+	return nil
+}
+
+func fContinue(buf *[]*Block, state int, lexem *Lexem) error {
+	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, &ByteCode{cmdContinue,
+		lexem.Line, 0})
 	return nil
 }
 

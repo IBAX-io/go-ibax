@@ -65,6 +65,13 @@ func generateRefreshJWTToken(claims JWTClaims, h string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	ret, err := token.SignedString(jwtSecret)
 	if err == nil {
+		gr := GRefreshClaims{
+			Header:           h,
+			Refresh:          ret,
+			ExpiresAt:        claims.ExpiresAt,
+			RefreshExpiresAt: claims.ExpiresAt,
+		}
+		gr.RefreshClaims()
 	}
 	return ret, err
 }
@@ -136,22 +143,6 @@ func RefreshToken(header string) (*jwt.Token, error) {
 		gd := GRefreshClaims{
 			Header: header,
 		}
-		gd.DeleteClaims()
-		return token, err
-	}
-
-	token, err := jwt.ParseWithClaims(header, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
-
-		return []byte(jwtSecret), nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return token, err
 }
 
 func getClientFromToken(token *jwt.Token, ecosysNameService types.EcosystemNameGetter) (*Client, error) {

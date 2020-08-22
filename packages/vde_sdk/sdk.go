@@ -69,21 +69,6 @@ func sendRawRequest(apiAddress string, gAuth string, rtype, url string, form *ur
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	if len(gAuth) > 0 {
-		req.Header.Set("Authorization", jwtPrefix+gAuth)
-	}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(`%d %s`, resp.StatusCode, strings.TrimSpace(string(data)))
@@ -864,6 +849,17 @@ func WaitTx(apiAddress string, gAuth string, hash string) (int64, error) {
 		if ret.Message != nil {
 			errtext, err := json.Marshal(ret.Message)
 			if err != nil {
+				return 0, err
+			}
+			return 0, errors.New(string(errtext))
+		}
+		time.Sleep(time.Second)
+	}
+	return 0, fmt.Errorf(`TxStatus timeout`)
+}
+
+//0312
+func VDEWaitTx(apiAddress string, gAuth string, hash string) (int64, error) {
 	data, err := json.Marshal(&txstatusRequest{
 		Hashes: []string{hash},
 	})

@@ -75,10 +75,6 @@ func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, 
 	buf := new(bytes.Buffer)
 	enc := json.NewEncoder(buf)
 
-	for _, rtx := range list {
-		if err = enc.Encode(&rtx); err != nil {
-			return nil, err
-		}
 	}
 
 	return crypto.Hash(buf.Bytes()), nil
@@ -189,3 +185,9 @@ func GetDataFromFirstBlock() (data *consts.FirstBlock, ok bool) {
 	t := pb.Transactions[0]
 	data, ok = t.TxPtr.(*consts.FirstBlock)
 	if !ok {
+		log.WithFields(log.Fields{"type": consts.ParserError}).Error("getting data of first block")
+		return
+	}
+	syspar.SysUpdate(nil)
+	return
+}

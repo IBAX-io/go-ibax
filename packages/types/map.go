@@ -26,17 +26,6 @@ type Link struct {
 // to keep the elements in insertion order
 type Map struct {
 	m    map[string]*Link
-	head *Link
-	tail *Link
-}
-
-func newLink(key string, value interface{}) *Link {
-	return &Link{key: key, value: value, next: nil, prev: nil}
-}
-
-// NewMap instantiates a linked hash map.
-func NewMap() *Map {
-	return &Map{m: make(map[string]*Link), head: nil, tail: nil}
 }
 
 func ConvertMap(in interface{}) interface{} {
@@ -92,6 +81,14 @@ func (m *Map) Set(key string, value interface{}) {
 		link.value = value
 	}
 }
+
+// Get searches the element in the map by key and returns its value or nil if key doesn't exists.
+// Second return parameter is true if key was found, otherwise false.
+func (m *Map) Get(key string) (value interface{}, found bool) {
+	var link *Link
+	link, found = m.m[key]
+	if found {
+		value = link.value
 	} else {
 		value = nil
 	}

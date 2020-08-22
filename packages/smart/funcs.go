@@ -1175,6 +1175,16 @@ func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64
 			return 0, nil, logErrorDB(err, "scanning next row")
 		}
 		row := types.NewMap()
+		for i, col := range values {
+			var value string
+			if col != nil {
+				value = string(col)
+			}
+			row.Set(cols[i], value)
+		}
+		result = append(result, reflect.ValueOf(row).Interface())
+	}
+	if perm != nil && len(perm[`filter`]) > 0 {
 		fltResult, err := VMEvalIf(
 			sc.VM, perm[`filter`], uint32(sc.TxSmart.EcosystemID),
 			sc.getExtend(),
@@ -1962,14 +1972,6 @@ func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
 		data, err := marshalJSON(honorNodes, `honor nodes`)
 		if err != nil {
 			return err
-		}
-
-		_, err = UpdateSysParam(smartContract, syspar.HonorNodes, string(data), "")
-		if err != nil {
-			return logErrorDB(err, "updating honor nodes")
-		}
-	}
-
 	return nil
 }
 

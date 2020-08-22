@@ -38,16 +38,6 @@ func unmarshalColumnVDESrcTask(form *VDESrcTaskForm) (*model.VDESrcTask, error) 
 	}
 	//fmt.Println("TaskType,TaskState:", form.TaskType, int64(form.TaskType), form.TaskState, int64(form.TaskState))
 	m := &model.VDESrcTask{
-		TaskUUID:            form.TaskUUID,
-		TaskName:            form.TaskName,
-		TaskSender:          form.TaskSender,
-		Comment:             form.Comment,
-		Parms:               converter.MarshalJson(parms),
-		TaskType:            int64(form.TaskType),
-		TaskState:           int64(form.TaskState),
-		ContractSrcName:     form.ContractSrcName,
-		ContractSrcGet:      form.ContractSrcGet,
-		ContractSrcGetHash:  form.ContractSrcGetHash,
 		ContractDestName:    form.ContractDestName,
 		ContractDestGet:     form.ContractDestGet,
 		ContractDestGetHash: form.ContractDestGetHash,
@@ -81,6 +71,16 @@ func VDESrcTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		ContractSrcGetHashHex  string
 		ContractDestGetHashHex string
 		err                    error
+	)
+	logger := getLogger(r)
+	form := &VDESrcTaskForm{}
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.VDESrcTask{}
+	if m, err = unmarshalColumnVDESrcTask(form); err != nil {
+		fmt.Println(err)
 		errorResponse(w, err)
 		return
 	}

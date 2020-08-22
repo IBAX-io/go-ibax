@@ -125,23 +125,6 @@ main:
 						}
 					}
 				} else {
-					ret.(*types.Map).Set(key, par)
-					key = ``
-				}
-			} else {
-				if len(key) > 0 {
-					par = types.LoadMap(map[string]interface{}{key: par})
-					key = ``
-				}
-				ret = append(ret.([]interface{}), par)
-			}
-			i += off
-			start = i + 1
-		case '"':
-			quote = !quote
-		case ':':
-			if len(key) == 0 {
-				key = trimString(in[start:i])
 				start = i + 1
 			}
 		case ',':
@@ -160,6 +143,21 @@ main:
 					if len(key) > 0 {
 						ret = append(ret.([]interface{}), types.LoadMap(map[string]interface{}{key: val}))
 						key = ``
+					} else {
+						ret = append(ret.([]interface{}), val)
+					}
+				}
+			}
+			start = i + 1
+		}
+		if ch != ' ' {
+			prev = ch
+		}
+	}
+	if prev == ',' {
+		return nil, i, fmt.Errorf(errComma)
+	}
+	if start < i {
 		if last := trimString(in[start:i]); len(last) > 0 {
 			if mapMode {
 				ret.(*types.Map).Set(key, last)
