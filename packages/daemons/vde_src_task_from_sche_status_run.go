@@ -9,6 +9,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strconv"
+	"time"
+
+	vde_api "github.com/IBAX-io/go-ibax/packages/vde_sdk"
+
+	"path/filepath"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -154,18 +165,6 @@ func VDESrcTaskFromScheStatusRunState(ctx context.Context, d *daemon) error {
 		blockchain_ecosystem string
 		err                  error
 	)
-
-	m := &model.VDESrcTaskFromScheStatus{}
-	SrcTask, err := m.GetAllByChainState(1) //1
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-	if len(SrcTask) == 0 {
-		//log.Info("Src task not found")
-		time.Sleep(time.Millisecond * 2)
-		return nil
 	}
 
 	// deal with task data

@@ -33,14 +33,6 @@ func prefixFunc(prefix string) func([]byte) []byte {
 		return []byte(prefix + string(hash))
 	}
 }
-
-func prefixStringFunc(prefix string) func(key string) []byte {
-	return func(key string) []byte {
-		return []byte(prefix + key)
-	}
-}
-
-func Init_leveldb(filename string) error {
 	var err error
 	DBlevel, err = leveldb.OpenFile(filename, nil)
 	if err == nil {
@@ -65,6 +57,16 @@ func DBGetAllKey(prefix string, bvalue bool) (*[]string, error) {
 	var (
 		ret []string
 		//key []string
+	)
+	found := prefix != "nil"
+	iter := DBlevel.NewIterator(nil, nil)
+	for iter.Next() {
+		key := string(iter.Key())
+		if found {
+			if strings.HasPrefix(key, prefix) {
+				if bvalue {
+					value := string(iter.Value())
+					s := fmt.Sprintf("Key[%s]=[%s]\n", key, value)
 					ret = append(ret, s)
 				} else {
 					ret = append(ret, key)

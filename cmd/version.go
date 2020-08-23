@@ -1,6 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 package cmd
@@ -19,3 +17,5 @@ var versionCmd = &cobra.Command{
 	Short: "Show version",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(consts.Version())
+	},
+}

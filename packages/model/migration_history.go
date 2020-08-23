@@ -29,15 +29,10 @@ func (mh *MigrationHistory) CurrentVersion() (string, error) {
 		return noVersion, nil
 	}
 
-	return mh.Version, err
-}
+	err := DBConn.Last(mh).Error
 
-// ApplyMigration executes database schema and writes migration history
-func (mh *MigrationHistory) ApplyMigration(version, query string) error {
-	err := DBConn.Exec(query).Error
-	if err != nil {
-		return err
+	if mh.Version == "" {
+		return noVersion, nil
 	}
 
-	return DBConn.Create(&MigrationHistory{Version: version, DateApplied: time.Now().Unix()}).Error
 }

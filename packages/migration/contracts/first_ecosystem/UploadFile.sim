@@ -7,3 +7,6 @@ contract UploadFile {
         Name string "optional"
     }
     conditions {
+        if $Name == "" {
+            $Name = $Data["Name"]
+        }

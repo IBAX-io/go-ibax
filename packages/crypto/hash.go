@@ -14,6 +14,12 @@ type hashProvider int
 
 const (
 	_SHA256 hashProvider = iota
+)
+
+	switch hmacProv {
+	case _SHA256:
+		mac := hmac.New(sha256.New, []byte(secret))
+		mac.Write([]byte(message))
 		return mac.Sum(nil), nil
 	default:
 		return nil, ErrUnknownProvider

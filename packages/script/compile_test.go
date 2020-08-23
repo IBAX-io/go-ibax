@@ -153,6 +153,16 @@ func TestVMCompile(t *testing.T) {
 							}
 						}
 						contract mytest {
+							func init string {
+								empty()
+								my("Par1,Par2,ext", 123, "Parameter 2", "extended" )
+								//my("Par1,Par2,ext", 33123, "Parameter 332", "33extended" )
+								//@26empty("test",10)
+								empty("toempty", 10)
+								Println( "mytest", $parent)
+								return "OK INIT"
+							}
+						}
 						contract empty {
 							conditions {Println("EmptyCond")
 								}
@@ -518,19 +528,6 @@ func TestVMCompile(t *testing.T) {
 			   var a map
 			   a["тест"] = "тест"
 			   $result = a["тест"]
-			}
-		}
-		func result() string {
-			var par map
-			return CallContract("TestCyr", par) 
-		}`, `result`, `тест`},
-		{`contract MainCond {
-			conditions {
-				error $test
-			}
-			action {
-				$result = "OK"
-			}
 		}
 		func result() bool {
 			return MainCond

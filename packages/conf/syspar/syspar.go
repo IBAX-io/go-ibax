@@ -150,15 +150,6 @@ func SysUpdate(dbTransaction *model.DbTransaction) error {
 		if err = updateNodes(); err != nil {
 			return err
 		}
-	}
-	getParams := func(name string) (map[int64]string, error) {
-		res := make(map[int64]string)
-		if len(cache[name]) > 0 {
-			ifuels := make([][]string, 0)
-			err = json.Unmarshal([]byte(cache[name]), &ifuels)
-			if err != nil {
-				log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling params from json")
-				return res, err
 			}
 			for _, item := range ifuels {
 				if len(item) < 2 {
@@ -590,3 +581,9 @@ func GetTableColType() []map[string]string {
 
 func IsByteColumn(table, column string) bool {
 	for _, row := range GetTableColType() {
+		if row["table_name"] == table && row["column_name"] == column {
+			return true
+		}
+	}
+	return false
+}

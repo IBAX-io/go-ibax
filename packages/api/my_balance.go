@@ -4,7 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 package api
-type myBalanceResult struct {
+
+import (
 	Amount string `json:"amount"`
 	Money  string `json:"money"`
 }

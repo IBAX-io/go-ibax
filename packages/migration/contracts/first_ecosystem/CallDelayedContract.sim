@@ -13,12 +13,24 @@ contract CallDelayedContract {
 
 		if !Len(rows) {
 			warning Sprintf(LangRes("@1template_delayed_contract_not_exist"), $Id)
-		var block_id int
-		block_id = $block
-		if $limit == 0 || $limit > $counter {
-			block_id = block_id + Int($cur["every_block"])
+		}
+		$cur = rows[0]
+		$limit = Int($cur["limit"])
+		$counter = Int($cur["counter"])
+
+		if $block < Int($cur["block_id"]) {
+			warning Sprintf(LangRes("@1template_delayed_contract_error"), $Id, $cur["block_id"], $block)
 		}
 
+		if $limit > 0 && $counter >= $limit {
+			warning Sprintf(LangRes("@1template_delayed_contract_limited"), $Id)
+		}
+	}
+
+	action {
+		$counter = $counter + 1
+
+		var block_id int
 		DBUpdate("@1delayed_contracts", $Id, {"counter": $counter, "block_id": block_id})
 
 		var params map
