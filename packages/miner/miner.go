@@ -30,6 +30,15 @@ func NewMint(dbt *model.DbTransaction, prevHash []byte, time, blockid int64, log
 		db:       dbt,
 		prevHash: prevHash,
 		time:     time,
+		blockid:  blockid,
+		logger:   log,
+	}
+}
+
+func (m *mint) MinerTime() (capacities, nonce, devid int64, err error) {
+	nonce, capacities, err = m.makeMiningPoolTime()
+	if err != nil || nonce == 0 {
+		return
 	}
 	random := crypto.Address(m.prevHash)
 	if random < 0 {
@@ -93,20 +102,6 @@ func (m *mint) getMiners() (map[int64]int64, []model.MineCount, int64, error) {
 		capacity += mine.MineCapacity
 	}
 
-	minerpow := model.MineInvitepowadd{}
-	minerpows, err := minerpow.GetALL(m.db, m.time)
-	if err != nil {
-		return nil, nil, 0, err
-	}
-
-	for _, mine := range minerpows {
-		v, ok := mineCount[mine.Devid]
-		if ok {
-			mineCount[mine.Devid] = v + mine.Count
-		}
-	}
-	return mineCount, miners, capacity, err
-}
 
 func (m *mint) getMintRandom(remainder int64) int64 {
 	num := len(m.minerPool)

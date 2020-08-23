@@ -26,19 +26,24 @@ func TestParse(t *testing.T) {
 
 			continue
 		}
-
-		if expectedErr != "" {
-			t.Errorf("cron: %s, error: %s\n", cronSpec, err)
-		}
-	}
-}
-
-type mockHandler struct {
-	count int
 }
 
 func (mh *mockHandler) Run(t *Task) {
 	mh.count++
+}
+
+// This test required timeout 60s
+// go test -timeout 60s
+func TestTask(t *testing.T) {
+	var taskID = "task1"
+	sch := NewScheduler()
+
+	task := &Task{ID: taskID}
+
+	nextTime := task.Next(time.Now())
+	if nextTime != zeroTime {
+		t.Error("error")
+	}
 
 	task = &Task{CronSpec: "60 * * * *"}
 	err := sch.AddTask(task)

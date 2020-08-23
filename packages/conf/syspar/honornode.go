@@ -33,6 +33,19 @@ var (
 type honorNodeJSON struct {
 	TCPAddress string      `json:"tcp_address"`
 	APIAddress string      `json:"api_address"`
+	PublicKey  string      `json:"public_key"`
+	UnbanTime  json.Number `json:"unban_time,er"`
+	Stopped    bool        `json:"stopped"`
+}
+
+// HonorNode is storing honor node data
+type HonorNode struct {
+	TCPAddress string
+	APIAddress string
+	PublicKey  []byte
+	UnbanTime  time.Time
+	Stopped    bool
+}
 
 // UnmarshalJSON is custom json unmarshaller
 func (fn *HonorNode) UnmarshalJSON(b []byte) (err error) {
@@ -60,19 +73,6 @@ func (fn *HonorNode) UnmarshalJSON(b []byte) (err error) {
 
 func (fn *HonorNode) MarshalJSON() ([]byte, error) {
 	jfn := honorNodeJSON{
-		TCPAddress: fn.TCPAddress,
-		APIAddress: fn.APIAddress,
-		PublicKey:  crypto.PubToHex(fn.PublicKey),
-		UnbanTime:  json.Number(strconv.FormatInt(fn.UnbanTime.Unix(), 10)),
-	}
-
-	data, err := json.Marshal(jfn)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("Marshalling honor nodes to json")
-		return nil, err
-	}
-
-	return data, nil
 }
 
 // ValidateURL returns error if the URL is invalid

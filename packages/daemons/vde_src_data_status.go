@@ -5,15 +5,6 @@
 
 package daemons
 
-import (
-	"context"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -95,5 +86,15 @@ func VDESrcDataStatusAgent(ctx context.Context, d *daemon) error {
 		} else if string(hash) == string(item.Hash) {
 			item.DataSendState = 1 //
 		} else {
+			item.DataSendState = 2 //
+			item.DataSendErr = "Hash mismatch"
+		}
+		err = item.Updates()
+		if err != nil {
+			log.WithError(err)
+		}
+
+	} //for
+
 	return nil
 }

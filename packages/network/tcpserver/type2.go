@@ -65,6 +65,7 @@ func Type2(rw io.ReadWriter) error {
 //func Type2(rw io.ReadWriter) (*network.DisTrResponse, error) {
 //	r := &network.DisRequest{}
 //	if err := r.Read(rw); err != nil {
+//		return nil, err
 //	}
 //
 //	binaryData := r.Data
@@ -134,18 +135,6 @@ func DecryptData(binaryTx *[]byte) ([]byte, []byte, []byte, error) {
 	if len(*binaryTx) == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("binary tx is empty")
 		return nil, nil, nil, utils.ErrInfo("len(*binaryTx) == 0")
-	}
-
-	nodeKeyPrivate, _ := utils.GetNodeKeys()
-	if len(nodeKeyPrivate) == 0 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
-		return nil, nil, nil, utils.ErrInfo("len(nodePrivateKey) == 0")
-	}
-
-	block, _ := pem.Decode([]byte(nodeKeyPrivate))
-	if block == nil || block.Type != "RSA PRIVATE KEY" {
-		log.WithFields(log.Fields{"type": consts.CryptoError}).Error("No valid PEM data found")
-		return nil, nil, nil, utils.ErrInfo("No valid PEM data found")
 	}
 
 	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)

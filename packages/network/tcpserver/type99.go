@@ -31,11 +31,6 @@ func Type99(r *network.PrivateFileRequest) (*network.PrivateFileResponse, error)
 	}
 	resp := &network.PrivateFileResponse{}
 	resp.Hash = hash
-
-	PrivateFilePackets := model.PrivateFilePackets{
-
-		TaskUUID:   r.TaskUUID,
-		TaskName:   r.TaskName,
 		return nil, err
 	}
 

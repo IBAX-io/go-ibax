@@ -179,12 +179,6 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 		//	err = item.Updates()
 		//	if err != nil {
 		//		log.WithError(err)
-		//	}
-		//	continue
-		//}
-		if blockchain_table, ok = TaskParms["blockchain_table"].(string); !ok {
-			log.WithFields(log.Fields{"error": err}).Error("blockchain_table parse error")
-			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {
 				log.WithError(err)
@@ -284,6 +278,17 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 		if tran_mode == "1" { //hash upto chain
 			//Generate data hash upto chain request
 			SrcDataChainStatus := model.SubNodeSrcDataChainStatus{
+				DataUUID:            item.DataUUID,
+				TaskUUID:            item.TaskUUID,
+				Hash:                item.Hash,
+				Data:                item.Data,
+				DataInfo:            item.DataInfo,
+				TranMode:            converter.StrToInt64(tran_mode),
+				SubNodeDestPubkey:   subnode_dest_pubkey,
+				BlockchainTable:     blockchain_table,
+				BlockchainHttp:      blockchain_http,
+				BlockchainEcosystem: blockchain_ecosystem,
+				CreateTime:          time.Now().Unix()}
 			if err = SrcDataChainStatus.Create(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Insert subnode_src_data_chain_status table failed")
 				continue

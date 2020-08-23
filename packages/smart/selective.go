@@ -19,6 +19,14 @@ import (
 )
 
 func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) error {
+	rollbackTx := &model.RollbackTx{
+		BlockID:   sc.BlockData.BlockID,
+		TxHash:    sc.TxHash,
+		NameTable: table,
+		TableID:   tableID,
+		Data:      rollbackInfoStr,
+	}
+	sc.RollBackTx = append(sc.RollBackTx, rollbackTx)
 	err := rollbackTx.Create(sc.DbTransaction)
 	if err != nil {
 		return logErrorDB(err, "creating rollback tx")
@@ -29,14 +37,6 @@ func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) erro
 func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []interface{},
 	table string, inWhere *types.Map, generalRollback bool, exists bool) (int64, string, error) {
 
-	var (
-		cost            int64
-		rollbackInfoStr string
-		logData         map[string]string
-	)
-
-	logger := sc.GetLogger()
-	if generalRollback && sc.BlockData == nil {
 		logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("Block is undefined")
 		return 0, ``, fmt.Errorf(`it is impossible to write to DB when Block is undefined`)
 	}

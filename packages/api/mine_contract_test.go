@@ -939,6 +939,16 @@ func TestNewMineStakeRule(t *testing.T) {
 		`Capacity`:      {`1`},
 		`AmountUnit`:    {`1000`},
 		`AmountMin`:     {`3`},
+		`AmountMax`:     {`10`},
+		`AmountInc`:     {`3`},
+		`TimeUnit`:      {`30`},
+		`TimeMin`:       {`2`},
+		`TimeMax`:       {`10`},
+		`TimeInc`:       {`2`},
+		`Type`:          {`3`},
+		`Param1`:        {`30`},
+		`Param2`:        {`20`},
+		`Param3`:        {`99999`},
 		`InviterType`:   {`2`},
 		`InviterParam1`: {`30`},
 		`InviterParam2`: {`20`},
@@ -1204,12 +1214,6 @@ func TestMoneySignTokenSend(t *testing.T) {
 	//}
 	//size := 1000000
 	//big := make([]byte, size)
-	//rand.Seed(time.Now().UnixNano())
-	//for i := 0; i < size; i++ {
-	//	big[i] = '0' + byte(rand.Intn(10))
-	//}
-	//form = url.Values{`Amount`: {string(big)}, `Recipient`: {`0005-2070-2000-0006-0200`}}
-	//if err := postTx(`TokensSend`, &form); err.Error() != `400 {"error": "E_LIMITFORSIGN", "msg": "Length of forsign is too big (1000106)" , "params": ["1000106"]}` {
 	//	t.Error(err)
 	//	return
 	//}

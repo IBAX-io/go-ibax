@@ -72,15 +72,6 @@ func (t *FirstBlockTransaction) Action() error {
 		return utils.ErrInfo(err)
 	}
 
-	err = model.GetDB(t.DbTransaction).Exec(`Update "1_system_parameters" SET value = ? where name = 'private_blockchain'`, strconv.FormatUint(data.PrivateBlockchain, 10)).Error
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating private_blockchain")
-		return utils.ErrInfo(err)
-	}
-
-	if err = syspar.SysUpdate(t.DbTransaction); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
-		return utils.ErrInfo(err)
 	}
 
 	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_keys" (id,account,pub,amount) values(?,?,?,?),(?,?,?,?)`,
@@ -102,6 +93,12 @@ func (t *FirstBlockTransaction) Action() error {
 	}
 	id, err = model.GetNextID(t.DbTransaction, "1_menu")
 	if err != nil {
+		return utils.ErrInfo(err)
+	}
+	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_menu" (id,name,value,title,conditions) values(?, 'default_menu', ?, ?, 'ContractAccess("@1EditMenu")')`,
+		id, syspar.SysString(`default_ecosystem_menu`), `default`).Error
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting default menu")
 		return utils.ErrInfo(err)
 	}
 	err = smart.LoadContract(t.DbTransaction, 1)
