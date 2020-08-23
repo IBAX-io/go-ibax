@@ -1,3 +1,11 @@
+module github.com/IBAX-io/go-ibax
+
+go 1.16
+
+require (
+	github.com/360EntSecGroup-Skylar/excelize v1.4.1
+	github.com/BurntSushi/toml v0.3.1
+	github.com/blackjack/syslog v0.0.0-20130922064354-4ea3f32c1eb1
 	github.com/btcsuite/btcd v0.21.0-beta // indirect
 	github.com/cactus/go-statsd-client/v5 v5.0.0
 	github.com/centrifugal/gocent v2.1.0+incompatible
@@ -39,12 +47,6 @@
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.7.1
-	github.com/stretchr/objx v0.3.0 // indirect
-	github.com/stretchr/testify v1.6.1
-	github.com/syndtr/goleveldb v1.0.0
-	github.com/theckman/go-flock v0.8.0
-	github.com/tjfoc/gmsm v1.4.1
-	github.com/vmihailenco/msgpack/v5 v5.3.4
 	golang.org/x/sys v0.0.0-20210908233432-aa78b53d3365 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/ini.v1 v1.61.0 // indirect

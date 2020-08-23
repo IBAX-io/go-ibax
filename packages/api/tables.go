@@ -23,6 +23,11 @@ type tableInfo struct {
 type tablesResult struct {
 	Count int64       `json:"count"`
 	List  []tableInfo `json:"list"`
+}
+
+func getTablesHandler(w http.ResponseWriter, r *http.Request) {
+	form := &paginatorForm{}
+	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadGateway)
 		return
 	}
@@ -67,8 +72,6 @@ type tablesResult struct {
 			return
 		}
 
-		result.List[i].Name = item["name"]
-		result.List[i].Count = converter.Int64ToStr(count)
 	}
 
 	jsonResponse(w, result)

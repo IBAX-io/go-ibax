@@ -19,14 +19,6 @@ type Handler interface {
 }
 
 // Task represents task
-type Task struct {
-	ID       string
-	CronSpec string
-
-	Handler Handler
-
-	schedule cron.Schedule
-}
 
 // String returns description of task
 func (t *Task) String() string {
@@ -41,3 +33,18 @@ func (t *Task) ParseCron() error {
 
 	var err error
 	t.schedule, err = Parse(t.CronSpec)
+	return err
+}
+
+// Next returns time for next task
+func (t *Task) Next(tm time.Time) time.Time {
+	if len(t.CronSpec) == 0 {
+		return zeroTime
+	}
+	return t.schedule.Next(tm)
+}
+
+// Run executes task
+func (t *Task) Run() {
+	t.Handler.Run(t)
+}

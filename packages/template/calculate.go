@@ -171,6 +171,24 @@ func calcExp(tokens []token, resType int, prec string) string {
 	}
 	for _, item := range tokens {
 		if item.Type == tkNumber {
+			stack = append(stack, item.Value)
+		} else {
+			if len(stack) < 2 {
+				return errExp.Error()
+			}
+			top = len(stack) - 1
+			if item.Type == tkDiv {
+				switch resType {
+				case expInt:
+					if stack[top].(int64) == 0 {
+						return errDiv.Error()
+					}
+				case expFloat:
+					if stack[top].(float64) == 0 {
+						return errDiv.Error()
+					}
+				case expMoney:
+					if stack[top].(decimal.Decimal).Cmp(decimal.New(0, 0)) == 0 {
 						return errDiv.Error()
 					}
 				}
@@ -192,17 +210,6 @@ func calcExp(tokens []token, resType int, prec string) string {
 		if resType == expFloat {
 			return decimal.NewFromFloat(stack[0].(float64)).Round(int32(precInt)).String()
 		}
-		if resType == expMoney {
-			money := stack[0].(decimal.Decimal)
-			return money.Round(int32(precInt)).String()
-		}
-	}
-	if resType == expFloat {
-		decStr, _ := decimal.NewFromString(fmt.Sprintf("%f", stack[0].(float64)))
-		return decStr.String()
-	}
-	if resType == expMoney {
-		return stack[0].(decimal.Decimal).String()
 	}
 	return fmt.Sprint(stack[0])
 }

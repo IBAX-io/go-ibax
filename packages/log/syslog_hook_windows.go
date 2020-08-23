@@ -7,7 +7,7 @@
 
 package log
 
-import (
+func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 

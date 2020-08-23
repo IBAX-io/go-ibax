@@ -899,6 +899,14 @@ func errredirTag(par parFunc) string {
 	setAllAttr(par)
 	if len((*par.Pars)[`ErrorID`]) == 0 {
 		return ``
+	}
+	if par.Owner.Attr[`errredirect`] == nil {
+		par.Owner.Attr[`errredirect`] = make(map[string]map[string]interface{})
+	}
+	par.Owner.Attr[`errredirect`].(map[string]map[string]interface{})[(*par.Pars)[`ErrorID`]] =
+		par.Node.Attr
+	return ``
+}
 
 func popupTag(par parFunc) string {
 	setAllAttr(par)
@@ -985,14 +993,6 @@ func includeTag(par parFunc) string {
 		ecosystem, tblname := converter.ParseName(name)
 		prefix := getVar(par.Workspace, `ecosystem_id`)
 		if ecosystem != 0 {
-			prefix = converter.Int64ToStr(ecosystem)
-			name = tblname
-		}
-		bi.SetTablePrefix(prefix)
-		found, err := bi.Get(name)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block by name")
-			return err.Error()
 		}
 		if !found {
 			log.WithFields(log.Fields{"type": consts.NotFound, "name": (*par.Pars)[`Name`]}).Error("include block not found")

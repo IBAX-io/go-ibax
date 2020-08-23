@@ -57,3 +57,16 @@ func (m *VDEDestDataHash) GetAllByTaskUUID(TaskUUID string) ([]VDEDestDataHash, 
 func (m *VDEDestDataHash) GetOneByTaskUUID(TaskUUID string) (*VDEDestDataHash, error) {
 	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
 	return m, err
+}
+
+}
+
+func (m *VDEDestDataHash) GetAllByChainState(ChainState int64) ([]VDEDestDataHash, error) {
+	result := make([]VDEDestDataHash, 0)
+	err := DBConn.Table("vde_dest_data_hash").Where("chain_state = ?", ChainState).Find(&result).Error
+	return result, err
+}
+
+func (m *VDEDestDataHash) GetOneByChainState(ChainState int64) (bool, error) {
+	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
+}

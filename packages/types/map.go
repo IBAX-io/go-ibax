@@ -26,6 +26,17 @@ type Link struct {
 // to keep the elements in insertion order
 type Map struct {
 	m    map[string]*Link
+	head *Link
+	tail *Link
+}
+
+func newLink(key string, value interface{}) *Link {
+	return &Link{key: key, value: value, next: nil, prev: nil}
+}
+
+// NewMap instantiates a linked hash map.
+func NewMap() *Map {
+	return &Map{m: make(map[string]*Link), head: nil, tail: nil}
 }
 
 func ConvertMap(in interface{}) interface{} {
@@ -154,19 +165,6 @@ func (m *Map) Clear() {
 	m.head = nil
 	m.tail = nil
 }
-
-// String returns a string representation of container
-func (m *Map) String() string {
-	str := "map["
-	for current := m.head; current != nil; current = current.next {
-		str += fmt.Sprintf("%v:%v ", current.key, current.value)
-	}
-	return strings.TrimRight(str, " ") + "]"
-}
-
-func (m *Map) MarshalJSON() ([]byte, error) {
-	s := "{"
-	for current := m.head; current != nil; current = current.next {
 		k := current.key
 		escaped := strings.Replace(k, `"`, `\"`, -1)
 		s = s + `"` + escaped + `":`

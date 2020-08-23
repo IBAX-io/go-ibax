@@ -33,10 +33,13 @@ func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) erro
 	}
 	return nil
 }
+		cost            int64
+		rollbackInfoStr string
+		logData         map[string]string
+	)
 
-func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []interface{},
-	table string, inWhere *types.Map, generalRollback bool, exists bool) (int64, string, error) {
-
+	logger := sc.GetLogger()
+	if generalRollback && sc.BlockData == nil {
 		logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("Block is undefined")
 		return 0, ``, fmt.Errorf(`it is impossible to write to DB when Block is undefined`)
 	}

@@ -8,6 +8,15 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
 func unmarshalColumnVDESrcMember(form *VDESrcMemberForm) (*model.VDESrcMember, error) {
 	var (
 		err error
@@ -109,15 +118,6 @@ func VDESrcMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 func VDESrcMemberListHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	srcData := model.VDESrcMember{}
-
-	result, err := srcData.GetAll()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
-		errorResponse(w, err)
-		return
-	}
-	jsonResponse(w, result)
-}
 
 func VDESrcMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)

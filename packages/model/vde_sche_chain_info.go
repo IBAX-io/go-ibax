@@ -1,6 +1,11 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+type VDEScheChainInfo struct {
+}
 
 func (m *VDEScheChainInfo) Create() error {
 	return DBConn.Create(&m).Error

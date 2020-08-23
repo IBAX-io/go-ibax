@@ -11,9 +11,3 @@ package daylight
 import (
 	"syscall"
 
-	"github.com/IBAX-io/go-ibax/packages/converter"
-
-	log "github.com/sirupsen/logrus"
-	}
-	return nil
-}

@@ -39,15 +39,15 @@ func (m *VDEDestDataStatus) Updates() error {
 }
 
 func (m *VDEDestDataStatus) Delete() error {
-	return DBConn.Delete(m).Error
+func (m *VDEDestDataStatus) GetOneByDataUUID(DataUUID string) (*VDEDestDataStatus, error) {
+	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
+	return m, err
 }
-
-func (m *VDEDestDataStatus) GetAll() ([]VDEDestDataStatus, error) {
-	var result []VDEDestDataStatus
-	err := DBConn.Find(&result).Error
-	return result, err
+func (m *VDEDestDataStatus) GetOneByTaskUUID(TaskUUID string) (*VDEDestDataStatus, error) {
+	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+	return m, err
 }
-func (m *VDEDestDataStatus) GetOneByID() (*VDEDestDataStatus, error) {
+func (m *VDEDestDataStatus) GetAllByTaskUUID(TaskUUID string) ([]VDEDestDataStatus, error) {
 	result := make([]VDEDestDataStatus, 0)
 	err := DBConn.Table("vde_dest_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err

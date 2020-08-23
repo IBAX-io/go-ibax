@@ -94,6 +94,11 @@ func (b *SQLQueryBuilder) Prepare() error {
 		return err
 	}
 
+	values, err := converter.InterfaceSliceToStr(b.FieldValues)
+	if err != nil {
+		b.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("on convert field values to string")
+		return err
+	}
 
 	b.stringValues = values
 	b.prepared = true
@@ -339,13 +344,6 @@ func (b SQLQueryBuilder) toSQLValue(rawValue, rawField string) string {
 	return wrapString(escapeSingleQuotes(rawValue), "'")
 }
 
-func (b SQLQueryBuilder) normalizeValues() error {
-	for i, v := range b.FieldValues {
-		switch val := v.(type) {
-		case string:
-			if strings.HasPrefix(strings.TrimSpace(val), prefTimestamp) {
-				if err := CheckNow(val); err != nil {
-					return err
 				}
 			}
 
