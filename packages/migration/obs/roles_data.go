@@ -1,12 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package obs
-
-import "github.com/IBAX-io/go-ibax/packages/consts"
-
 	(next_id('1_roles'),'', 'Chain Consensus asbl', '0', '3', '{}', '{"rids": "1"}', '%[1]d'),
 	(next_id('1_roles'),'', 'Candidate for validators', '0', '3', '{}', '{}', '%[1]d'),
 	(next_id('1_roles'),'', 'Validator', '0', '3', '{}', '{}', '%[1]d'),

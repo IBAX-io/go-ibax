@@ -2,16 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package protocols
-
-import (
-	"errors"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-)
 
 // BlockTimeChecker allow check queue to generate current block
 type BlockTimeChecker interface {
@@ -131,4 +121,15 @@ func (btc *BlockTimeCounter) TimeToGenerate(at time.Time, nodePosition int) (boo
 }
 
 // NewBlockTimeCounter return initialized BlockTimeCounter
+func NewBlockTimeCounter() *BlockTimeCounter {
+	firstBlock, _ := syspar.GetFirstBlockData()
+	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
+	blocksGapDuration := time.Second * time.Duration(syspar.GetGapsBetweenBlocks())
+	btc := BlockTimeCounter{
+		start:       time.Unix(int64(firstBlock.Time), 0),
+		duration:    blockGenerationDuration + blocksGapDuration,
+		numberNodes: int(syspar.GetCountOfActiveNodes()),
+	}
+
+	return &btc
 }

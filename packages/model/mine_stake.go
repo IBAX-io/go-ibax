@@ -1,13 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package model
-
-	Poolid       int64           `gorm:"not null" `  //
-	MineType     int64           `gorm:"not null"`
-	MineNumber   string          `gorm:"not null"`
-	MineCapacity int64           `gorm:"not null"`
 	Cycle        int64           `gorm:"not null" `           //
 	Amount       decimal.Decimal `gorm:"not null default 0" ` //
 	Expired      int64           `gorm:"null" `

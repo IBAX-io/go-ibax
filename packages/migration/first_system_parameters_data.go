@@ -1,13 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package migration
-
-var firstSystemParametersDataSQL = `
-INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES 
-	(next_id('1_system_parameters'),'default_ecosystem_page', 'If(#ecosystem_id# > 1){Include(@1welcome)}', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'default_ecosystem_menu', '', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'default_ecosystem_contract', '', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'gap_between_blocks', '2', 'ContractAccess("@1UpdateSysParam")'),
@@ -59,6 +52,17 @@ INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_system_parameters'),'price_exec_flush_contract', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_exec_eval', '10', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_exec_len', '5', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_bind_wallet', '10', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_unbind_wallet', '10', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_create_ecosystem', '100', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_table_conditions', '100', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_create_table', '100', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_perm_table', '100', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_column_condition', '50', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_create_column', '50', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_perm_column', '50', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_json_to_map', '50', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'max_block_generation_time', '2000', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'block_reward','10','ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'incorrect_blocks_per_day','10','ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'node_ban_time','86400000','ContractAccess("@1UpdateSysParam")'),

@@ -15,17 +15,6 @@ import (
 )
 
 // rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:   "go-ibax",
-	Short: "ibax application",
-}
-
-func init() {
-	rootCmd.AddCommand(
-		generateFirstBlockCmd,
-		generateKeysCmd,
-		initDatabaseCmd,
-		rollbackCmd,
 		startCmd,
 		configCmd,
 		stopNetworkCmd,
@@ -59,5 +48,13 @@ func loadConfig(cmd *cobra.Command, args []string) {
 	err := conf.LoadConfig(conf.Config.ConfigPath)
 	if err != nil {
 		log.WithError(err).Fatal("Loading config")
+	}
+}
+
+func loadConfigWKey(cmd *cobra.Command, args []string) {
+	loadConfig(cmd, args)
+	err := conf.FillRuntimeKey()
+	if err != nil {
+		log.WithError(err).Fatal("Filling keys")
 	}
 }

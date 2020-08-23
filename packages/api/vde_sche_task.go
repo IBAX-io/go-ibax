@@ -166,16 +166,6 @@ func VDEScheTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 	if m.ContractMode == 0 {
 		m.ContractMode = 4 //encryption up to chain
-	}
-
-	m.ID = id
-	m.UpdateTime = time.Now().Unix()
-	if err = m.Updates(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
-		return
-	}
-
-	result, err := m.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
 		return
@@ -217,6 +207,13 @@ func VDEScheTaskByIDHandlre(w http.ResponseWriter, r *http.Request) {
 
 	id := converter.StrToInt64(params["id"])
 	srcData := model.VDEScheTask{}
+	srcData.ID = id
+	result, err := srcData.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("The query task data by ID failed")
+		errorResponse(w, err)
+		return
+	}
 
 	jsonResponse(w, result)
 }

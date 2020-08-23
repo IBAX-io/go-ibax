@@ -85,6 +85,11 @@ func VDESrcTaskFromScheCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
+	m := &model.VDESrcTaskFromSche{}
+	if m, err = unmarshalColumnVDESrcTaskFromSche(form); err != nil {
+		fmt.Println(err)
+		errorResponse(w, err)
+		return
 	}
 
 	m.CreateTime = time.Now().Unix()
@@ -159,9 +164,6 @@ func VDESrcTaskFromScheListHandlre(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"error": err}).Error("Error reading sche task data list")
 		errorResponse(w, err)
 		return
-	}
-	jsonResponse(w, result)
-}
 
 func VDESrcTaskFromScheByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)

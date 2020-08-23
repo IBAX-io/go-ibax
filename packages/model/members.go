@@ -10,15 +10,9 @@ import "github.com/IBAX-io/go-ibax/packages/converter"
 // Member represents a ecosystem member
 type Member struct {
 	ecosystem  int64
-
-// SetTablePrefix is setting table prefix
-func (m *Member) SetTablePrefix(prefix string) {
-	m.ecosystem = converter.StrToInt64(prefix)
-}
-
-// TableName returns name of table
-func (m *Member) TableName() string {
-	if m.ecosystem == 0 {
+	ID         int64  `gorm:"primary_key;not null"`
+	MemberName string `gorm:"not null"`
+	ImageID    *int64
 		m.ecosystem = 1
 	}
 	return `1_members`

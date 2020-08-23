@@ -62,17 +62,6 @@ func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, err
 			return nil, err
 		}
 	}
-	return &status, nil
-}
-
-func getTxInfoHandler(w http.ResponseWriter, r *http.Request) {
-	form := &txInfoForm{}
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-
-	params := mux.Vars(r)
 	status, err := getTxInfo(r, params["hash"], form.ContractInfo)
 	if err != nil {
 		errorResponse(w, err)
@@ -103,4 +92,9 @@ func getTxInfoMultiHandler(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			errorResponse(w, err)
 			return
+		}
+		result.Results[hash] = status
+	}
+
+	jsonResponse(w, result)
 }

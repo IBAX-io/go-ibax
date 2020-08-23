@@ -27,19 +27,6 @@ func VDEScheTaskChainStatus(ctx context.Context, d *daemon) error {
 		err             error
 		TaskParms       map[string]interface{}
 		vde_src_pubkey  string
-		vde_dest_pubkey string
-		ok              bool
-
-		myContractSrcGet      string
-		myContractSrcGetHash  string
-		myContractDestGet     string
-		myContractDestGetHash string
-	)
-
-	m := &model.VDEScheTask{}
-	ScheTask, err := m.GetAllByContractStateAndChainState(1, 1, 0) //0Indicates that the contract has not been installed, 1 means that the contract is successfully installed, 2 means that the contract is not installed successfully; 0 means that the contract has not been uploaded yet, and 1 means that a request has been generated
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
 		return err
 	}
 	if len(ScheTask) == 0 {
@@ -250,6 +237,16 @@ func VDEScheTaskChainStatus(ctx context.Context, d *daemon) error {
 
 //Search a chain request
 func VDEScheTaskChainStatusState(ctx context.Context, d *daemon) error {
+	var (
+		err             error
+		TaskParms       map[string]interface{}
+		vde_src_pubkey  string
+		vde_dest_pubkey string
+		ok              bool
+	)
+
+	m := &model.VDEScheTask{}
+	ScheTask, err := m.GetAllByContractStateAndChainState(1, 1, 1) //0Indicates that the contract has not been installed, 1 means that the contract is successfully installed, 2 means that the contract is not installed successfully; 0 means that the contract has not been uploaded yet, and 1 means that a request has been generated
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
 		time.Sleep(time.Millisecond * 2)
