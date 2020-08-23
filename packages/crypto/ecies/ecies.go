@@ -66,6 +66,17 @@ func (prv *PrivateKey) ExportECDSA() *ecdsa.PrivateKey {
 	pubECDSA := pub.ExportECDSA()
 	return &ecdsa.PrivateKey{PublicKey: *pubECDSA, D: prv.D}
 }
+
+// Import an ECDSA private key as an ECIES private key.
+func ImportECDSA(prv *ecdsa.PrivateKey) *PrivateKey {
+	pub := ImportECDSAPublic(&prv.PublicKey)
+	return &PrivateKey{*pub, prv.D}
+}
+
+// Generate an elliptic curve public / private keypair. If params is nil,
+// the recommended default parameters for the key will be chosen.
+func GenerateKey(rand io.Reader, curve elliptic.Curve, params *ECIESParams) (prv *PrivateKey, err error) {
+	pb, x, y, err := elliptic.GenerateKey(curve, rand)
 	if err != nil {
 		return
 	}
@@ -147,17 +158,6 @@ func concatKDF(hash hash.Hash, z, s1 []byte, kdLen int) (k []byte, err error) {
 
 	counter := []byte{0, 0, 0, 1}
 	k = make([]byte, 0)
-
-	for i := 0; i <= reps; i++ {
-		hash.Write(counter)
-		hash.Write(z)
-		hash.Write(s1)
-		k = append(k, hash.Sum(nil)...)
-		hash.Reset()
-		incCounter(counter)
-	}
-
-	k = k[:kdLen]
 	return
 }
 
