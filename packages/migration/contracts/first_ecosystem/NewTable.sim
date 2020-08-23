@@ -14,4 +14,3 @@ contract NewTable {
         TableConditions($Name, $Columns, $Permissions)
     }
     
-    action {

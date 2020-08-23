@@ -61,6 +61,12 @@ func killOld() {
 		if fmt.Sprintf("%s", err) != "null" {
 			// give 15 sec to end the previous process
 			for i := 0; i < 10; i++ {
+				if _, err := os.Stat(conf.Config.GetPidPath()); err == nil {
+					time.Sleep(time.Second)
+				} else {
+					break
+				}
+			}
 		}
 	}
 }
@@ -243,18 +249,6 @@ func Start() {
 	initStatsd()
 
 	err = initLogs()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "logs init failed: %v\n", utils.ErrInfo(err))
-		Exit(1)
-	}
-
-	rand.Seed(time.Now().UTC().UnixNano())
-
-	// save the current pid and version
-	if err := savePid(); err != nil {
-		log.Errorf("can't create pid: %s", err)
-		Exit(1)
-	}
 	defer delPidFile()
 
 	smart.InitVM()
