@@ -18,6 +18,14 @@ type VDESrcTask struct {
 	ContractSrcGet      string `gorm:"not null" json:"contract_src_get"`
 	ContractSrcGetHash  string `gorm:"not null" json:"contract_src_get_hash"`
 	ContractDestName    string `gorm:"not null" json:"contract_dest_name"`
+	ContractDestGet     string `gorm:"not null" json:"contract_dest_get"`
+	ContractDestGetHash string `gorm:"not null" json:"contract_dest_get_hash"`
+
+	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
+	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
+	ContractRunParms     string `gorm:"type:jsonb" json:"contract_run_parms"`
+
+	ContractMode int64 `gorm:"not null" json:"contract_mode"`
 
 	ContractStateSrc     int64  `gorm:"not null" json:"contract_state_src"`
 	ContractStateDest    int64  `gorm:"not null" json:"contract_state_dest"`
@@ -76,22 +84,6 @@ func (m *VDESrcTask) GetAllByTaskUUID(TaskUUID string) ([]VDESrcTask, error) {
 }
 
 // func (m *VDESrcTask) GetOneByTaskUUID(TaskUUID string) (*VDESrcTask, bool) {
-// 	var (
-// 		result VDESrcTask
-// 		b	bool
-// 	)
-// 	b = DBConn.Where("task_uuid = ?", TaskUUID).First(m).RecordNotFound()
-// 	return &result, b
-// }
-func (m *VDESrcTask) GetOneByTaskUUID(TaskUUID string) (*VDESrcTask, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
-}
-
-func (m *VDESrcTask) GetOneByTaskUUIDAndTaskState(TaskUUID string, TaskState int64) (*VDESrcTask, error) {
-	err := DBConn.Where("task_uuid=? AND task_state=?", TaskUUID, TaskState).First(&m).Error
-	return m, err
-}
 func (m *VDESrcTask) GetAllByTaskState(TaskState int64) ([]VDESrcTask, error) {
 	result := make([]VDESrcTask, 0)
 	err := DBConn.Table("vde_src_task").Where("task_state = ?", TaskState).Find(&result).Error
