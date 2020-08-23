@@ -7,6 +7,11 @@ package aes
 
 import (
 	"encoding/base64"
+	"fmt"
+	"testing"
+)
+
+		return
 	}
 
 	pass64 := base64.StdEncoding.EncodeToString(xpass)

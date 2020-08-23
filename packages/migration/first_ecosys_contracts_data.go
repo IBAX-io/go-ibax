@@ -64,6 +64,11 @@ VALUES
 
 		var params map
 		CallContract($cur["contract"], params)
+	}
+}
+', '1', 'ContractConditions("MainCondition")', '1', '1'),
+	(next_id('1_contracts'), 'CheckNodesBan', 'contract CheckNodesBan {
+	action {
 		UpdateNodesBan($block_time)
 	}
 }
@@ -950,17 +955,6 @@ VALUES
     data {
         ApplicationId int
         Data file
-        Name string "optional"
-    }
-    conditions {
-        if $Name == "" {
-            $Name = $Data["Name"]
-        }
-        $Body = $Data["Body"]
-        $DataMimeType = $Data["MimeType"]
-    }
-    action {
-        $Id = @1UploadBinary("ApplicationId,Name,Data,DataMimeType", $ApplicationId, $Name, $Body, $DataMimeType)
         $result = $Id
     }
 }

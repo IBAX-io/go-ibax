@@ -5,8 +5,7 @@ contract EditApplication {
         ApplicationId int
         Conditions string "optional"
     }
-        if pars {
-            DBUpdate("applications", $ApplicationId, pars)
-        }
+    func onlyConditions() bool {
+        return $Conditions && false
     }
 }

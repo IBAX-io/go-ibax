@@ -4,10 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package tcpserver
 
-import (
-	"errors"
-	"fmt"
-	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -68,3 +64,5 @@ func Type100(r *network.VDESrcDataRequest) (*network.VDESrcDataResponse, error) 
 		return nil, err
 	}
 
+	return resp, nil
+}

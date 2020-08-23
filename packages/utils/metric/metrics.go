@@ -19,6 +19,11 @@ const (
 	metricEcosystemMembers = "ecosystem_members"
 	metricEcosystemTx      = "ecosystem_tx"
 )
+
+// CollectMetricDataForEcosystemTables returns metrics for some tables of ecosystems
+func CollectMetricDataForEcosystemTables(timeBlock int64) (metricValues []*Value, err error) {
+	stateIDs, _, err := model.GetAllSystemStatesIDs()
+	if err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get all system states ids")
 		return nil, err
 	}
@@ -53,17 +58,6 @@ const (
 		metricValues = append(metricValues, &Value{
 			Time:   unixDate,
 			Metric: metricEcosystemMembers,
-			Key:    tablePrefix,
-			Value:  membersCount,
-		})
-	}
-
-	return metricValues, nil
-}
-
-// CollectMetricDataForEcosystemTx returns metrics for transactions of ecosystems
-func CollectMetricDataForEcosystemTx(timeBlock int64) (metricValues []*Value, err error) {
-	ecosystemTx, err := model.GetEcosystemTxPerDay(timeBlock)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get ecosystem transactions by period")
 		return nil, err

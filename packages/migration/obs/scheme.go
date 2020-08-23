@@ -87,6 +87,17 @@ var schemaOBS = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
 		"delete" bigint NOT NULL DEFAULT '0',
 		"ecosystem" bigint NOT NULL DEFAULT '1'
 		);
+	  ALTER TABLE ONLY "%[1]d_sections" ADD CONSTRAINT "%[1]d_sections_pkey" PRIMARY KEY (id);
+
+		DROP TABLE IF EXISTS "%[1]d_menu";
+		CREATE TABLE "%[1]d_menu" (
+			"id" bigint  NOT NULL DEFAULT '0',
+			"name" character varying(255) UNIQUE NOT NULL DEFAULT '',
+			"title" character varying(255) NOT NULL DEFAULT '',
+			"value" text NOT NULL DEFAULT '',
+			"conditions" text NOT NULL DEFAULT '',
+			"ecosystem" bigint NOT NULL DEFAULT '1'
+		);
 		ALTER TABLE ONLY "%[1]d_menu" ADD CONSTRAINT "%[1]d_menu_pkey" PRIMARY KEY (id);
 		CREATE INDEX "%[1]d_menu_index_name" ON "%[1]d_menu" (name);
 
@@ -286,7 +297,6 @@ var schemaOBS = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
 		ALTER TABLE ONLY "%[1]d_system_parameters" ADD CONSTRAINT "%[1]d_system_parameters_pkey" PRIMARY KEY (id);
 		CREATE INDEX "%[1]d_system_parameters_index_name" ON "%[1]d_system_parameters" (name);
 
-		DROP TABLE IF EXISTS "%[1]d_cron";
 	  CREATE TABLE "%[1]d_cron" (
 		  "id"        bigint NOT NULL DEFAULT '0',
 		  "owner"	  bigint NOT NULL DEFAULT '0',

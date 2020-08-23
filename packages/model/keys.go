@@ -9,9 +9,13 @@ import (
 	"fmt"
 
 	"github.com/shopspring/decimal"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-)
+	PublicKey   []byte `gorm:"column:pub;not null"`
+	Amount      string `gorm:"not null"`
+	Mintsurplus string `gorm:"not null"`
+	Maxpay      string `gorm:"not null"`
+	Deleted     int64  `gorm:"not null"`
+	Blocked     int64  `gorm:"not null"`
+}
 
 // SetTablePrefix is setting table prefix
 func (m *Key) SetTablePrefix(prefix int64) *Key {

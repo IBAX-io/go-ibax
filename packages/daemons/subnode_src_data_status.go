@@ -91,11 +91,8 @@ func SubNodeSrcDataStatusAgent(ctx context.Context, d *daemon) error {
 		if string(hash) == "0" {
 			//item.DataSendState = 3 //
 			item.DataSendState = 0 //
-			item.DataSendErr = "Network error"
-		} else if string(hash) == string(item.Hash) {
-			item.DataSendState = 1 //
-		} else {
-			item.DataSendState = 2 //
+		err = item.Updates()
+		if err != nil {
 			log.WithError(err)
 		}
 
