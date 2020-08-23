@@ -5,6 +5,21 @@
 
 package model
 
+import (
+	"time"
+)
+
+// StopDaemon is model
+type StopDaemon struct {
+	StopTime int64 `gorm:"not null"`
+}
+
+// TableName returns name of table
+func (sd *StopDaemon) TableName() string {
+	return "stop_daemons"
+}
+
+// Create is creating record of model
 func (sd *StopDaemon) Create() error {
 	return DBConn.Create(sd).Error
 }
@@ -20,7 +35,3 @@ func (sd *StopDaemon) Get() (bool, error) {
 }
 
 // SetStopNow is updating daemon stopping time to now
-func SetStopNow() error {
-	stopTime := &StopDaemon{StopTime: time.Now().Unix()}
-	return stopTime.Create()
-}

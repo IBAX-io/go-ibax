@@ -7,15 +7,6 @@ package modes
 import (
 	"net/http"
 
-	"github.com/IBAX-io/go-ibax/packages/api"
-	"github.com/IBAX-io/go-ibax/packages/conf"
-)
-		EcosysNameGetter:   BuildEcosystemNameGetter(),
-		EcosysLookupGetter: BuildEcosystemLookupGetter(),
-		ContractRunner:     GetSmartContractRunner(),
-		ClientTxProcessor:  GetClientTxPreprocessor(),
-	}
-
 	r := api.NewRouter(m)
 	if !conf.Config.IsSupportingOBS() {
 		m.SetBlockchainRoutes(r)

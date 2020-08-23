@@ -8,21 +8,10 @@ import (
 	"fmt"
 	"testing"
 )
-}
 
-func TestEvalIf(t *testing.T) {
-	test := []TestComp{
-		{`Multi(45, $citizenId")`, `there is not pair`},
-		{"34 + `45` < 0", `runtime panic error`},
-		{"Multi( (34+35)*2, Multi( $citizenId, 56))== 1 || Multi( (34+35)*2, Multi( $citizenId, 56))== 0", `false`},
-		{"5 + 9 > 10", `true`},
-		{"34 == 45", `false`},
-		{"1345", `true`},
-		{"13/13-1", `false`},
-		{"7665 > ($citizenId-48000)", "false"},
-		{"56788 + 1 >= $citizenId", "true"},
-		{"76 < $citizenId", "true"},
-		{"56789 <= $citizenId", "true"},
+type TestComp struct {
+	Input  string
+	Output string
 		{"56 == 56", "true"},
 		{"37 != 37", "false"},
 		{"!!(1-1)", "false"},

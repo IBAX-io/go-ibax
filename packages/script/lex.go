@@ -164,6 +164,14 @@ func (l Lexem) GetLogger() *log.Entry {
 
 type ifBuf struct {
 	count int
+	pair  int
+	stop  bool
+}
+
+// Lexems is a slice of lexems
+type Lexems []*Lexem
+
+// The lexical analysis is based on the finite machine which is described in the file
 // tools/lextable/lextable.go. lextable.go generates a representation of a finite machine as an array
 // and records it in the file lex_table.go. In fact, the lexTable array is a set of states and
 // depending on the next sign, the machine goes into a new state.
@@ -201,10 +209,6 @@ func lexParser(input []rune) (Lexems, error) {
 			todo(rune(' '))
 		} else {
 			todo(input[off])
-		}
-		if curState == lexError {
-			return nil, fmt.Errorf(`unknown lexem %s [Ln:%d Col:%d]`,
-				string(input[off:off+1]), line, off-offline+1)
 		}
 		if (flags & lexfSkip) != 0 {
 			off++

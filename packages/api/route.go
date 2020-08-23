@@ -97,6 +97,19 @@ func (m Mode) SetBlockchainRoutes(r Router) {
 	api.HandleFunc("/assignbalance/{wallet}", authRequire(m.getMyAssignBalanceHandler)).Methods("GET")
 	api.HandleFunc("/block/{id}", getBlockInfoHandler).Methods("GET")
 	api.HandleFunc("/maxblockid", getMaxBlockHandler).Methods("GET")
+	api.HandleFunc("/blocks", getBlocksTxInfoHandler).Methods("GET")
+	api.HandleFunc("/detailed_blocks", getBlocksDetailedInfoHandler).Methods("GET")
+	api.HandleFunc("/ecosystemparams", authRequire(m.getEcosystemParamsHandler)).Methods("GET")
+	api.HandleFunc("/systemparams", authRequire(getSystemParamsHandler)).Methods("GET")
+	api.HandleFunc("/ecosystemparam/{name}", authRequire(m.getEcosystemParamHandler)).Methods("GET")
+	api.HandleFunc("/ecosystemname", getEcosystemNameHandler).Methods("GET")
+	api.HandleFunc("/mintcount/{id}", m.getMintCountHandler).Methods("GET")
+}
+
+func SetOtherCommonRoutes(api *mux.Router, m Mode) {
+	api.HandleFunc("/member/{ecosystem}/{account}", getMemberHandler).Methods("GET")
+	api.HandleFunc("/listWhere/{name}", authRequire(getListWhereHandler)).Methods("POST")
+	api.HandleFunc("/nodelistWhere/{name}", authRequire(getnodeListWhereHandler)).Methods("POST")
 	api.HandleFunc("/sumWhere/{name}", authRequire(getsumWhereHandler)).Methods("POST")
 	api.HandleFunc("/metrics/blockper/{node}", blocksCountByNodeHandler).Methods("GET")
 	// Open database data APIS
@@ -290,8 +303,3 @@ func NewRouter(m Mode) Router {
 func WithCors(h http.Handler) http.Handler {
 	return handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
-		handlers.AllowedMethods([]string{"GET", "HEAD", "POST"}),
-		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "X-Requested-With"}),
-		handlers.MaxAge(corsMaxAge),
-	)(h)
-}

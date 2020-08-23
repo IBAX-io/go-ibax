@@ -10,11 +10,16 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
+		return
+	}
 
-	log "github.com/sirupsen/logrus"
-)
+	logger := getLogger(r)
 
-func getSystemParamsHandler(w http.ResponseWriter, r *http.Request) {
+	list, err := model.GetAllSystemParameters(nil)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all system parameters")
+	}
+
 	result := &ecosystemParamsResult{
 		List: make([]paramResult, 0),
 	}
