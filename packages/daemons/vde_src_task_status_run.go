@@ -138,14 +138,6 @@ func VDESrcTaskStatusRun(ctx context.Context, d *daemon) error {
 			item.ChainState = 3
 			item.ChainErr = err.Error()
 			item.UpdateTime = time.Now().Unix()
-			err = item.Updates()
-			if err != nil {
-				fmt.Println("Update VDESrcTaskStatus table err: ", err)
-				log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTaskStatus table!")
-			}
-			time.Sleep(time.Second * 5)
-			continue
-		}
 		fmt.Println("Send VDE src Contract to run, ContractName:", ContractName)
 
 		item.ChainState = 1
@@ -219,6 +211,15 @@ func VDESrcTaskStatusRunState(ctx context.Context, d *daemon) error {
 		}
 		//fmt.Println("Login VDE src OK!")
 
+		blockId, err := vde_api.VDEWaitTx(vde_src_apiAddress, gAuth_src, string(item.TxHash))
+		if blockId > 0 {
+			//fmt.Println("call src task VDEWaitTx! OK!")
+			item.BlockId = blockId
+			item.ChainId = converter.StrToInt64(err.Error())
+			item.ChainState = 2
+			item.ChainErr = ""
+			ThisScrTask.TaskRunState = 1
+		} else if blockId == 0 {
 			//fmt.Println("call src task VDEWaitTx! err: ", item.ChainErr)
 			item.ChainState = 3
 			item.ChainErr = err.Error()

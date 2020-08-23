@@ -22,6 +22,18 @@ type Block struct {
 	Tx            int32  `gorm:"not null"`
 }
 
+// TableName returns name of table
+func (Block) TableName() string {
+	return "block_chain"
+}
+
+// Create is creating record of model
+func (b *Block) Create(transaction *DbTransaction) error {
+	return GetDB(transaction).Create(b).Error
+}
+
+// Get is retrieving model from database
+func (b *Block) Get(blockID int64) (bool, error) {
 	return isFound(DBConn.Where("id = ?", blockID).First(b))
 }
 
@@ -49,15 +61,6 @@ func GetBlockchain(startBlockID int64, endblockID int64, order ordering) ([]Bloc
 	}
 
 	if query.Error != nil {
-		return nil, err
-	}
-	return *blockchain, nil
-}
-
-// GetBlocks is retrieving limited chain of blocks from database
-func (b *Block) GetBlocks(startFromID int64, limit int) ([]Block, error) {
-	var err error
-	blockchain := new([]Block)
 	if startFromID > 0 {
 		err = DBConn.Order("id desc").Limit(limit).Where("id > ?", startFromID).Find(&blockchain).Error
 	} else {

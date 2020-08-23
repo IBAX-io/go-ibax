@@ -17,8 +17,8 @@ type Cron struct {
 	Contract  string
 }
 
-// SetTablePrefix is setting table prefix
-func (c *Cron) SetTablePrefix(prefix string) {
+// GetAllCronTasks is returning all cron tasks
+func (c *Cron) GetAllCronTasks() ([]*Cron, error) {
 	var crons []*Cron
 	err := DBConn.Table(c.TableName()).Find(&crons).Error
 	return crons, err

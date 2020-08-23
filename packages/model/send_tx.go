@@ -1,11 +1,3 @@
-package model
-
-import (
-	"errors"
-
-	"gorm.io/gorm"
-
-	"gorm.io/gorm/clause"
 type RawTransaction interface {
 	Bytes() []byte
 	Hash() []byte

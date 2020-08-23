@@ -5,16 +5,6 @@ contract NewBlock {
         ApplicationId int
         Name string
         Value string
-            warning "Application id cannot equal 0"
-        }
-
-        if DBFind("blocks").Columns("id").Where({name:$Name}).One("id") {
-            warning Sprintf( "Block %s already exists", $Name)
-        }
+        Conditions string
     }
 
-    action {
-        DBInsert("blocks", {name: $Name, value: $Value, conditions: $Conditions,
-              app_id: $ApplicationId})
-    }
-}

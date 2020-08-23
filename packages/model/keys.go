@@ -9,27 +9,20 @@ import (
 	"fmt"
 
 	"github.com/shopspring/decimal"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+)
+
+// Key is model
+type Key struct {
+	ecosystem    int64
+	accountKeyID int64 `gorm:"-"`
+
+	ID          int64  `gorm:"primary_key;not null"`
+	AccountID   string `gorm:"column:account;not null"`
 	PublicKey   []byte `gorm:"column:pub;not null"`
 	Amount      string `gorm:"not null"`
 	Mintsurplus string `gorm:"not null"`
-	Maxpay      string `gorm:"not null"`
-	Deleted     int64  `gorm:"not null"`
-	Blocked     int64  `gorm:"not null"`
-}
-
-// SetTablePrefix is setting table prefix
-func (m *Key) SetTablePrefix(prefix int64) *Key {
-	m.ecosystem = prefix
-	return m
-}
-
-// TableName returns name of table
-func (m Key) TableName() string {
-	if m.ecosystem == 0 {
-		m.ecosystem = 1
-	}
-	return `1_keys`
-}
 func (m *Key) Disable() bool {
 	return m.Deleted != 0 || m.Blocked != 0
 }

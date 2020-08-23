@@ -681,6 +681,15 @@ VALUES
     }
 
     conditions {
+        ValidateCondition($Conditions, $ecosystem_id)
+
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
+        }
+
+        if DBFind("blocks").Columns("id").Where({name:$Name}).One("id") {
+            warning Sprintf( "Block %s already exists", $Name)
+        }
     }
 
     action {
@@ -1078,15 +1087,6 @@ VALUES
             $DataMimeType = "application/octet-stream"
         }
         if $Id != 0 {
-            DBUpdate("@1binaries", $Id, {"data": $Data, "hash": hash, "mime_type": $DataMimeType})
-        } else {
-            $Id = DBInsert("@1binaries", {"app_id": $ApplicationId, "account": $UserID,
-                "name": $Name, "data": $Data, "hash": hash, "mime_type": $DataMimeType, "ecosystem": $ecosystem_id})
-        }
-        $result = $Id
-    }
-}
-', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
 	(next_id('1_contracts'), 'UploadFile', 'contract UploadFile {
     data {
         ApplicationId int
