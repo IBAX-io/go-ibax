@@ -53,6 +53,15 @@ type sche_VDEShareTaskResult struct {
 		ContractState        string `json:"contract_state"`
 		UpdateTime           string `json:"update_time"`
 		CreateTime           string `json:"create_time"`
+		Deleted              string `json:"deleted"`
+		DateDeleted          string `json:"date_deleted"`
+	} `json:"list"`
+}
+
+//Getting task information from the chain
+func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
+
+	// not open
 	time.Sleep(time.Millisecond * 1000 * 20)
 	return nil
 
@@ -277,16 +286,6 @@ type sche_VDEShareTaskResult struct {
 			if err = m.Updates(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Failed to update table")
 			}
-		} else {
-			if err = m.Create(); err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
-			}
-		}
-		SrcUpdateTime = ShareTaskItem.CreateTime
-	}
-
-	ScheTaskTime.SrcUpdateTime = converter.StrToInt64(SrcUpdateTime)
-	err = ScheTaskTime.Updates()
 	if err != nil {
 		fmt.Println("Update SrcUpdateTime table err: ", err)
 		log.WithFields(log.Fields{"error": err}).Error("Update SrcUpdateTime table!")

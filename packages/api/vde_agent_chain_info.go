@@ -43,6 +43,20 @@ func VDEAgentChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m := &model.VDEAgentChainInfo{}
+	if m, err = unmarshalColumnVDEAgentChainInfo(form); err != nil {
+		fmt.Println(err)
+		errorResponse(w, err)
+		return
+	}
+	//
+	if m.LogMode == 0 {
+		m.LogMode = 3 //not log
+	}
+
+	m.CreateTime = time.Now().Unix()
+
+	if err = m.Create(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
 
 	model.DBConn.Last(&m)
@@ -114,14 +128,6 @@ func VDEAgentChainInfoListHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse(w, result)
 }
-
-func VDEAgentChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	id := converter.StrToInt64(params["id"])
-	srcData := model.VDEAgentChainInfo{}
-	srcData.ID = id
 	result, err := srcData.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query chain info data by ID failed")

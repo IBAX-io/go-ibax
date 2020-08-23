@@ -45,6 +45,14 @@ func BenchmarkGetBlockBodiesWithChanReadAll(t *testing.B) {
 			resp := network.GetBodyResponse{
 				Data: inputs[i],
 			}
+
+			resp.Write(r)
+		}
+
+		ctxDone, cancel := context.WithCancel(context.Background())
+
+		t.StartTimer()
+		blocksC, errC := GetBlockBodiesChanReadAll(ctxDone, r, 100)
 		// blocksC, errC := GetBlockBodiesChan(ctxDone, r, 100)
 		go func() {
 			err := <-errC
@@ -195,14 +203,6 @@ func BenchmarkGetBlockBodiesAsSlice(t *testing.B) {
 
 		ctxDone, cancel := context.WithCancel(context.Background())
 
-		t.StartTimer()
-		blocks, err := GetBlockBodiesReadAll(ctxDone, r, 100)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		for i := 0; i < len(blocks); i++ {
-			blocks[i] = blocks[i][:0]
 		}
 		cancel()
 	}

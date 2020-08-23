@@ -50,3 +50,8 @@ func Type88(r *network.PrivateDateRequest) (*network.PrivateDateResponse, error)
 	}
 	encodeDataString := base64.StdEncoding.EncodeToString(eccData)
 	////
+
+	privatePackets := model.PrivatePackets{
+		Hash: hash,
+		//Data: r.Data,
+		//

@@ -11,6 +11,21 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
 
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+type componentModel interface {
+	SetTablePrefix(prefix string)
+	Get(name string) (bool, error)
+}
+
+func getPageRowHandler(w http.ResponseWriter, r *http.Request) {
+	getInterfaceRow(w, r, &model.Page{})
+}
+
+func getMenuRowHandler(w http.ResponseWriter, r *http.Request) {
+	getInterfaceRow(w, r, &model.Menu{})
 }
 
 func getBlockInterfaceRowHandler(w http.ResponseWriter, r *http.Request) {
@@ -29,8 +44,3 @@ func getInterfaceRow(w http.ResponseWriter, r *http.Request, c componentModel) {
 		return
 	} else if !ok {
 		errorResponse(w, errNotFound)
-		return
-	}
-
-	jsonResponse(w, c)
-}

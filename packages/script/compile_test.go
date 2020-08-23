@@ -153,16 +153,6 @@ func TestVMCompile(t *testing.T) {
 							}
 						}
 						contract mytest {
-							func init string {
-								empty()
-								my("Par1,Par2,ext", 123, "Parameter 2", "extended" )
-								//my("Par1,Par2,ext", 33123, "Parameter 332", "33extended" )
-								//@26empty("test",10)
-								empty("toempty", 10)
-								Println( "mytest", $parent)
-								return "OK INIT"
-							}
-						}
 						contract empty {
 							conditions {Println("EmptyCond")
 								}
@@ -215,6 +205,13 @@ func TestVMCompile(t *testing.T) {
 					if 101>myval {
 						if myval == 90 {
 						} else {
+							return Sprintf("myval=%d + %s", myval, mystr )
+						}
+					}
+					return "OOPs"
+				}
+				func temp2 string {
+					if true {
 						return params2(51, "Params 2 test")
 					}
 				}

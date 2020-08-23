@@ -106,7 +106,10 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 
 	_, maxBlockID, err := tcpclient.HostWithMaxBlock(ctx, remoteHosts)
 	if err != nil {
-		log.WithFields(log.Fields{"maxBlockID": maxBlockID, "curBlockID": curBlock.BlockID, "Gap": n.availableBlockchainGap}).Info("blockchain is stale, stopping node relevance")
+		if err == tcpclient.ErrNodesUnavailable {
+			return false, nil
+		}
+		return false, errors.Wrapf(err, "choosing best host")
 		return false, nil
 	}
 

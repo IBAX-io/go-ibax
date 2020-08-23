@@ -4,6 +4,10 @@
  *--------------------------------------------------------------------------------------------*/
 package api
 
+import (
+	"encoding/json"
+	"net/http"
+
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -134,9 +138,3 @@ func (m Mode) getNotifications(ecosystemID int64, key *model.Key) ([]notifyInfo,
 		}
 
 		list = append(list, notifyInfo{
-			RoleID: converter.Int64ToStr(n.RoleID),
-			Count:  n.Count,
-		})
-	}
-	return list, nil
-}
