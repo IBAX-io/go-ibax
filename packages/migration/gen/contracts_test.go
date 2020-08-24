@@ -15,10 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-}
-
-func tempContract(appID int, conditions, value string) (string, error) {
-	file, err := os.CreateTemp("", "contract")
 	if err != nil {
 		return "", err
 	}

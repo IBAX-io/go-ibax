@@ -37,6 +37,20 @@ func (t *StopNetworkTransaction) Validate() error {
 		t.Logger.WithError(err).Error("validating tx")
 		return err
 	}
+
+	return nil
+}
+
+func (t *StopNetworkTransaction) validate() error {
+	data := t.Data.(*consts.StopNetwork)
+	cert, err := utils.ParseCert(data.StopNetworkCert)
+	if err != nil {
+		return err
+	}
+
+	fbdata, err := syspar.GetFirstBlockData()
+	if err != nil {
+		return err
 	}
 
 	if err = cert.Validate(fbdata.StopNetworkCertBundle); err != nil {
@@ -59,11 +73,5 @@ func (t *StopNetworkTransaction) Action() error {
 	t.Logger.Warn(messageNetworkStopping)
 	return ErrNetworkStopping
 }
-
-func (t *StopNetworkTransaction) Rollback() error {
-	return nil
-}
-
-func (t StopNetworkTransaction) Header() *tx.Header {
 	return nil
 }

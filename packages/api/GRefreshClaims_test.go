@@ -30,3 +30,5 @@ func TestMapRefresh(t *testing.T) {
 			gr := GRefreshClaims{
 				Header:           "abc",
 				Refresh:          "cd",
+				ExpiresAt:        dt,
+				RefreshExpiresAt: dt,

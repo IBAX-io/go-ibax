@@ -17,3 +17,6 @@ contract NewApplication {
             warning Sprintf( "Application %s already exists", $Name)
         }
     }
+
+    action {
+        $result = DBInsert("applications", {name: $Name,conditions: $Conditions})
