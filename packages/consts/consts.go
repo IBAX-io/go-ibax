@@ -9,6 +9,12 @@ import (
 	"fmt"
 	"strings"
 	"time"
+)
+
+// VERSION is current version
+const VERSION = "1.3.0"
+
+const BvRollbackHash = 2
 const BvIncludeRollbackHash = 3
 
 // BlockVersion is block version
@@ -140,19 +146,6 @@ const (
 	NodePrivateKeyFilename = "NodePrivateKey"
 
 	// NodePublicKeyFilename name of node public key file
-	NodePublicKeyFilename = "NodePublicKey"
-
-	// KeyIDFilename generated KeyID
-	KeyIDFilename = "KeyID"
-
-	// RollbackResultFilename rollback result file
-	RollbackResultFilename = "rollback_result"
-
-	// FromToPerDayLimit day limit token transfer between accounts
-	FromToPerDayLimit = 10000
-
-	// TokenMovementQtyPerBlockLimit block limit token transfer
-	TokenMovementQtyPerBlockLimit = 100
 
 	// TCPConnTimeout timeout of tcp connection
 	TCPConnTimeout = 5 * time.Second
