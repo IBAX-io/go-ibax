@@ -20,15 +20,6 @@ func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []interface{}, e
 	err = db.Table("rollback_tx").Where("tx_hash = ?", []byte(converter.HexToBin(hashStr))).Find(&rollbackTxs).Error
 	if err != nil {
 		return
-	}
-	for _, rtx := range rollbackTxs {
-		id := rtx.TableID
-		tableName := rtx.NameTable
-		if tableName == `1_keys` {
-			continue
-		}
-		rows, err := db.Table(tableName).Exec(`select * from "` + tableName + `" where id = ` + id).Rows()
-		defer rows.Close()
 		if err == nil {
 			cols, er := rows.Columns()
 			if er != nil {
@@ -41,6 +32,20 @@ func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []interface{}, e
 			}
 			for rows.Next() {
 				err = rows.Scan(scanArgs...)
+				if err == nil {
+					row := make(map[string]interface{})
+					for i, col := range values {
+						var value string
+						if col != nil {
+							value = string(col)
+						}
+						row[cols[i]] = value
+					}
+					resultList = append(resultList, reflect.ValueOf(row).Interface())
+				}
+			}
+		}
+
 	}
 
 	return

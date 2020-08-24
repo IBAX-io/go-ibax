@@ -373,18 +373,6 @@ var contracts = []smartContract{
 			var a1 array
 			var a2 map
 			$a1 = []
-			$a2 = {}
-			Test("result", "ok")
-		}
-	}`, []smartParams{
-		{nil, map[string]string{`result`: `ok`}},
-	}},
-
-	{`FmtMoney`, `contract FmtMoney {
-		action {
-			Test("result", FormatMoney("123456789", 0))
-			$num2 = "5500000"
-			$num1 = "12345672372"
 			Test("t1", FormatMoney($num1, -1))  //123456723720
 			Test("t2", FormatMoney($num1, 0))   //12345672372
 			Test("t3", FormatMoney($num1, 1))   //1234567237,2
@@ -1270,6 +1258,18 @@ func TestGlobalVars(t *testing.T) {
 	}
 
 	form = url.Values{`Value`: {`
+		contract a_` + rnd + ` {
+			data { Par string}
+			conditions {}
+			action {
+				var params map
+				params["Test"] = "TEST"
+				$aaa = 123
+				if $Par == "b" {
+				    $result = CallContract("b_` + rnd + `", params)
+				} else {
+				    $result = CallContract("c_` + rnd + `", params) + c_` + rnd + `("Test","OK")
+				}
 			}
 		}`}, "ApplicationId": {"1"}, `Conditions`: {`true`}}
 	err = postTx(`NewContract`, &form)

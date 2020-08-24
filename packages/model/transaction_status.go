@@ -43,20 +43,6 @@ func (ts *TransactionStatus) Get(transactionHash []byte) (bool, error) {
 func (ts *TransactionStatus) UpdateBlockID(transaction *DbTransaction, newBlockID int64, transactionHash []byte) error {
 	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("block_id", newBlockID).Error
 }
-
-type updateBlockMsg struct {
-	Hash []byte
-	Msg  string
-}
-
-var updBlockMsg []updateBlockMsg
-
-// SetTransactionStatusBlockMsg is updating block msg
-func SetTransactionStatusBlockMsg(transaction *DbTransaction, newBlockID int64, msg string, transactionHash []byte) error {
-	if len(msg) > 255 {
-		msg = msg[:255]
-	}
-	if !conf.Config.IsOBSMaster() {
 		updBlockMsg = append(updBlockMsg, updateBlockMsg{Msg: msg, Hash: transactionHash})
 		return nil
 	}
@@ -82,3 +68,14 @@ func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64) error {
 	}
 	sqlStr := fmt.Sprintf("UPDATE transactions_status SET error = CASE hash %s END , block_id  = %d WHERE hash in(?)", upStr, newBlockID)
 	return dbTx.Exec(sqlStr, hashArr).Error
+}
+
+// SetError is updating transaction status error
+func (ts *TransactionStatus) SetError(transaction *DbTransaction, errorText string, transactionHash []byte) error {
+	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("error", errorText).Error
+}
+
+// UpdatePenalty is updating penalty
+func (ts *TransactionStatus) UpdatePenalty(transaction *DbTransaction, transactionHash []byte) error {
+	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("penalty", 1).Error
+}

@@ -4,6 +4,13 @@ contract NewLang {
     data {
         ApplicationId int
         Name string
+        Trans string
+    }
+        if DBFind("languages").Columns("id").Where({name: $Name}).One("id") {
+            warning Sprintf( "Language resource %s already exists", $Name)
+        }
+
+        EvalCondition("parameters", "changing_language", "value")
     }
 
     action {

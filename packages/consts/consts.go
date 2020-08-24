@@ -9,12 +9,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-)
-
-// VERSION is current version
-const VERSION = "1.3.0"
-
-const BvRollbackHash = 2
 const BvIncludeRollbackHash = 3
 
 // BlockVersion is block version
@@ -195,6 +189,19 @@ const (
 
 	NoneOBS     = "none"
 	DBFindLimit = 10000
+)
+
+const (
+	MintMax           = "mint_max"
+	ChainMax          = "chain_max"
+	MintSettlementMax = "mint_settlement_max"
+	MintDetial        = "mint_detial"
+)
+
+const (
+	SavePointMarkBlock = "block"
+	SavePointMarkTx    = "tx"
+)
 
 func Version() string {
 	return strings.TrimSpace(strings.Join([]string{VERSION, BuildInfo}, " "))

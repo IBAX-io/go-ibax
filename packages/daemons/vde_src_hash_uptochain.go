@@ -20,12 +20,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 
-	log "github.com/sirupsen/logrus"
-)
-
-//Scheduling task data hash information up the chain
-func VDESrcHashUpToChain(ctx context.Context, d *daemon) error {
-	var (
 		blockchain_http      string
 		blockchain_ecosystem string
 		err                  error
@@ -197,6 +191,11 @@ func VDESrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		err = item.Updates()
 		if err != nil {
 			fmt.Println("Update VDESrcHash table err: ", err)
+			log.WithFields(log.Fields{"error": err}).Error("Update VDESrcHash table!")
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		fmt.Println("VDE Src Run chain Contract ok, TxHash:", string(item.TxHash))
 	} //for
 	return nil
 }

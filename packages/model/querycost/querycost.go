@@ -20,6 +20,15 @@ const (
 type QueryCoster interface {
 	QueryCost(*model.DbTransaction, string, ...interface{}) (int64, error)
 }
+
+type ExplainQueryCoster struct {
+}
+}
+
+func (*ExplainAnalyzeQueryCoster) QueryCost(transaction *model.DbTransaction, query string, args ...interface{}) (int64, error) {
+	return explainQueryCost(transaction, true, query, args...)
+}
+
 func GetQueryCoster(tp QueryCosterType) QueryCoster {
 	switch tp {
 	case ExplainQueryCosterType:

@@ -4,6 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 package notificator
 
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/shopspring/decimal"
+
+	"net/smtp"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -86,11 +98,3 @@ func CheckTokenMovementLimits(tx *model.DbTransaction, conf conf.TokenMovementCo
 }
 
 // checks needed only if we have'nt prevent events or if event older then 1 day
-func needCheck(event uint8) bool {
-	t, ok := lastLimitEvents[event]
-	if !ok {
-		return true
-	}
-
-	return time.Now().Sub(t) >= 24*time.Hour
-}

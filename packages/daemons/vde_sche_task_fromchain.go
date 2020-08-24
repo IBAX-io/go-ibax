@@ -37,17 +37,6 @@ type sche_VDEShareTaskResult struct {
 		TaskSender           string `json:"task_sender"`
 		TaskReceiver         string `json:"task_receiver"`
 		Comment              string `json:"comment"`
-		Parms                string `json:"parms"`
-		TaskType             string `json:"task_type"`
-		TaskState            string `json:"task_state"`
-		ContractSrcName      string `json:"contract_src_name"`
-		ContractSrcGet       string `json:"contract_src_get"`
-		ContractSrcGetHash   string `json:"contract_src_get_hash"`
-		ContractDestName     string `json:"contract_dest_name"`
-		ContractDestGet      string `json:"contract_dest_get"`
-		ContractDestGetHash  string `json:"contract_dest_get_hash"`
-		ContractRunHttp      string `json:"contract_run_http"`
-		ContractRunEcosystem string `json:"contract_run_ecosystem"`
 		ContractRunParms     string `json:"contract_run_parms"`
 		ContractMode         string `json:"contract_mode"`
 		ContractState        string `json:"contract_state"`
@@ -286,6 +275,16 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 			if err = m.Updates(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Failed to update table")
 			}
+		} else {
+			if err = m.Create(); err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
+			}
+		}
+		SrcUpdateTime = ShareTaskItem.CreateTime
+	}
+
+	ScheTaskTime.SrcUpdateTime = converter.StrToInt64(SrcUpdateTime)
+	err = ScheTaskTime.Updates()
 	if err != nil {
 		fmt.Println("Update SrcUpdateTime table err: ", err)
 		log.WithFields(log.Fields{"error": err}).Error("Update SrcUpdateTime table!")

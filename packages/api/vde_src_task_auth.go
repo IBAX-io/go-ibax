@@ -31,6 +31,19 @@ func unmarshalColumnVDESrcTaskAuth(form *VDESrcTaskAuthForm) (*model.VDESrcTaskA
 		ChainState:           form.ChainState,
 	}
 
+	return m, err
+}
+
+func VDESrcTaskAuthCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
+	logger := getLogger(r)
+	form := &VDESrcTaskAuthForm{}
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
 	m := &model.VDESrcTaskAuth{}
 	if m, err = unmarshalColumnVDESrcTaskAuth(form); err != nil {
 		fmt.Println(err)
@@ -70,15 +83,6 @@ func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-
-	m.ID = id
-	m.UpdateTime = time.Now().Unix()
-	if err = m.Updates(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
-		return
-	}
-
-	result, err := m.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
 		return
