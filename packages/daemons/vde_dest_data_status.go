@@ -4,15 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daemons
-
-import (
-	"context"
-
-	log "github.com/sirupsen/logrus"
-
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
 )
 
 func VDEDestDataStatus(ctx context.Context, d *daemon) error {
@@ -57,3 +48,6 @@ func VDEDestDataStatus(ctx context.Context, d *daemon) error {
 			continue
 		}
 
+	} //for
+	return nil
+}

@@ -1,3 +1,15 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"encoding/json"
+	//"encoding/json"
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -159,9 +171,6 @@ func SubNodeSrcDataByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	srcData.ID = id
 	result, err := srcData.GetOneByID()
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query task data by ID failed")
-		errorResponse(w, err)
-		return
 	}
 
 	jsonResponse(w, result)

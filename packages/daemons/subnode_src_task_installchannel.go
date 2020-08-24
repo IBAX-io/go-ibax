@@ -1,3 +1,6 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 package daemons
@@ -108,20 +111,6 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 		//}
 		if subnode_dest_pubkey, ok = TaskParms["subnode_dest_pubkey"].(string); !ok {
 			log.WithFields(log.Fields{"error": err}).Error("subnode_dest_pubkey parse error")
-			item.ChannelState = 3 //Indicates an error in parsing task parameters
-			err = item.Updates()
-			if err != nil {
-				log.WithError(err)
-			}
-			continue
-		}
-		node_pubkey_slice := strings.Split(subnode_dest_pubkey, ";")
-
-		//if subnode_dest_ip, ok = TaskParms["subnode_dest_ip"].(string); !ok {
-		//	log.WithFields(log.Fields{"error": err}).Error("subnode_dest_ip parse error")
-		//	item.ChannelState = 3 //Indicates an error in parsing task parameters
-		//	err = item.Updates()
-		//	if err != nil {
 		//		log.WithError(err)
 		//	}
 		//	continue

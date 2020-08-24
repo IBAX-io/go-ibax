@@ -10,18 +10,20 @@ import (
 	"strconv"
 	"testing"
 
-		return
-	}
-	if converter.StrToInt64(strconv.FormatInt(ret.Count, 10)) < 7 {
-		t.Error(fmt.Errorf(`The number of records %d < 7`, ret.Count))
-		return
-	}
-	err = sendGet(`list/qwert`, nil, &ret)
-	if err.Error() != `404 {"error":"E_TABLENOTFOUND","msg":"Table 1_qwert has not been found"}` {
+	"github.com/IBAX-io/go-ibax/packages/converter"
+)
+
+func TestList(t *testing.T) {
+	if err := keyLogin(1); err != nil {
 		t.Error(err)
 		return
 	}
-	var retTable tableResult
+	var ret listResult
+	err := sendGet(`list/contracts`, nil, &ret)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	for _, item := range []string{`app_params`, `parameters`} {
 		err = sendGet(`table/`+item, nil, &retTable)
 		if err != nil {
