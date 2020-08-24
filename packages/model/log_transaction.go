@@ -2,12 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-package model
-
-import "gorm.io/gorm"
-}
-
 // Create is creating record of model
 func (lt *LogTransaction) Create(transaction *DbTransaction) error {
 	return GetDB(transaction).Create(lt).Error

@@ -23,12 +23,6 @@ func (c *Confirmation) GetConfirmation(blockID int64) (bool, error) {
 	return isFound(DBConn.Where("block_id= ?", blockID).First(&c))
 }
 
-// Save is saving model
-func (c *Confirmation) Save() error {
-	return DBConn.Save(c).Error
-}
-
-// GetGoodBlockLast returns last good block
 func (c *Confirmation) GetGoodBlockLast() (bool, error) {
 	var sp SystemParameter
 	count, err := sp.GetNumberOfHonorNodes()
@@ -44,6 +38,13 @@ func (c *Confirmation) CheckAllowGenBlock() (bool, error) {
 	_, err := prevBlock.Get()
 	if err != nil {
 		return false, err
+	}
+
+	var sp SystemParameter
+	count, err := sp.GetNumberOfHonorNodes()
+	if err != nil {
+		return false, err
+	}
 
 	if count == 0 {
 		return true, nil

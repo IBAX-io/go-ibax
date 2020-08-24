@@ -14,7 +14,6 @@ import (
 
 type BlockTimeCounter struct {
 	start       time.Time
-	duration    time.Duration
 	numberNodes int
 }
 
@@ -80,3 +79,5 @@ func NewBlockTimeCounter() *BlockTimeCounter {
 		start:       time.Unix(int64(firstBlock.Time), 0),
 		duration:    blockGenerationDuration + blocksGapDuration,
 		numberNodes: int(syspar.GetCountOfActiveNodes()),
+	}
+}

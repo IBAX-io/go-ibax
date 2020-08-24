@@ -1,12 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"encoding/hex"
 	"encoding/json"
 	"net/url"
 	"testing"
@@ -25,6 +18,16 @@ func TestGetUID(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	gAuth = ret.Token
+	priv, pub, err := crypto.GenHexKeys()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	sign, err := crypto.SignString(priv, `LOGIN`+ret.NetworkID+ret.UID)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)}}
 	var lret loginResult

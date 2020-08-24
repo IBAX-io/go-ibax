@@ -123,6 +123,7 @@ func (rtx *RawTransaction) Processing(txData []byte) error {
 	}
 	if len(strings.TrimSpace(rtx.SmartTx().Lang)) > 2 {
 		return fmt.Errorf(`localization size is greater than 2`)
+	}
 	var PublicKeys [][]byte
 	PublicKeys = append(PublicKeys, crypto.CutPub(rtx.SmartTx().PublicKey))
 	_, err := utils.CheckSign(PublicKeys, rtx.Hash(), rtx.Signature(), false)
@@ -260,8 +261,6 @@ func (t *Transaction) fillTxData(fieldInfos []*script.FieldInfo, params map[stri
 	t.TxData, err = smart.FillTxData(fieldInfos, params)
 	if err != nil {
 		return err
-	}
-	return nil
 }
 
 func (t *Transaction) parseFromContract(fillData bool) error {

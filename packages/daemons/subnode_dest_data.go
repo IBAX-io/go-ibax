@@ -4,12 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daemons
-
-import (
-	"context"
-	"fmt"
-	"time"
-
 	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
@@ -31,6 +25,13 @@ func SubNodeDestData(ctx context.Context, d *daemon) error {
 		//log.Info("task data not found")
 		time.Sleep(time.Millisecond * 2)
 		return nil
+	}
+
+	// deal with task data
+	for _, item := range ShareData {
+		//fmt.Println("TaskUUID,DataUUID:", item.TaskUUID, item.DataUUID)
+		if item.TranMode == 1 { //1 hash uptochain
+			DestDataHash := model.SubNodeDestDataHash{
 				DataUUID:           item.DataUUID,
 				TaskUUID:           item.TaskUUID,
 				Hash:               item.Hash,

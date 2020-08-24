@@ -102,6 +102,8 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting previous block")
 		return err
+	}
+
 	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
 	if len(NodePrivateKey) < 1 {
 		d.logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
@@ -174,9 +176,6 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 	p := new(transaction.Transaction)
 
 	//verify transactions
-	//err := transaction.ProcessTransactionsQueue(p.DbTransaction)
-	//if err != nil {
-	//	return nil, err
 	//}
 
 	trs, err := model.GetAllUnusedTransactions(p.DbTransaction, syspar.GetMaxTxCount())

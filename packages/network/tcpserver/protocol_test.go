@@ -1,11 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package tcpserver
-
-import (
-	"bytes"
 	"fmt"
 
 	"testing"
@@ -110,6 +102,15 @@ func TestRequestType(t *testing.T) {
 }
 
 func TestGetBodiesRequest(t *testing.T) {
+	source := GetBodiesRequest{
+		BlockID:      33,
+		ReverseOrder: true,
+	}
+
+	buf := bytes.Buffer{}
+	require.NoError(t, source.Write(&buf))
+
+	target := GetBodiesRequest{}
 	require.NoError(t, target.Read(&buf))
 	fmt.Printf("%+v %+v\n", source, target)
 	require.Equal(t, source, target)

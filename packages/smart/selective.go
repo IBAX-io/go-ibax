@@ -33,6 +33,11 @@ func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) erro
 	}
 	return nil
 }
+
+func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []interface{},
+	table string, inWhere *types.Map, generalRollback bool, exists bool) (int64, string, error) {
+
+	var (
 		cost            int64
 		rollbackInfoStr string
 		logData         map[string]string
@@ -155,16 +160,6 @@ func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) erro
 				}
 			}
 		}
-		if err := addRollback(sc, sqlBuilder.Table, tid, rollbackInfoStr); err != nil {
-			return 0, sqlBuilder.TableID(), err
-		}
-	}
-	return cost, sqlBuilder.TableID(), nil
-}
-
-func (sc *SmartContract) insert(fields []string, ivalues []interface{},
-	table string) (int64, string, error) {
-	return sc.selectiveLoggingAndUpd(fields, ivalues, table, nil, !sc.OBS && sc.Rollback, false)
 }
 
 func (sc *SmartContract) updateWhere(fields []string, values []interface{},

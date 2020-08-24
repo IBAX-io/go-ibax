@@ -13,20 +13,20 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-)
-
-func SubNodeAgentData(ctx context.Context, d *daemon) error {
 	var (
 	//LogMode              int64
 	//log_type             int64
 	//log_err              string
 	//chain_state          int64
+	//blockchain_http      string
+	//blockchain_ecosystem string
+	)
+	m := &model.SubNodeAgentData{}
+	ShareData, err := m.GetAllByDataSendStatus(0) //0not send，1success，2fail
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all unsent task data")
+		time.Sleep(time.Millisecond * 2)
+		return err
 	}
 	if len(ShareData) == 0 {
 		//log.Info("task data from agent to dest not found")

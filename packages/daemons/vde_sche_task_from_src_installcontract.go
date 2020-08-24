@@ -107,12 +107,19 @@ func VDEScheTaskFromSrcInstallContractSrc(ctx context.Context, d *daemon) error 
 func VDEScheTaskFromSrcInstallContractDest(ctx context.Context, d *daemon) error {
 	var (
 		blockchain_http      string
-		time.Sleep(time.Millisecond * 2)
-		return nil
-	}
+		blockchain_ecosystem string
+		err                  error
+	)
 
-	// deal with task data
-	for _, item := range ScheTask {
+	m := &model.VDEScheTaskFromSrc{}
+	ScheTask, err := m.GetAllByContractStateDest(0) //0not install，1 intalled，2 fail
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
+		return err
+	}
+	if len(ScheTask) == 0 {
+		//log.Info("Sche task not found")
+		time.Sleep(time.Millisecond * 2)
 		//fmt.Println("ScheTask:", item.TaskUUID)
 		blockchain_http = item.ContractRunHttp
 		blockchain_ecosystem = item.ContractRunEcosystem
