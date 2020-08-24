@@ -93,9 +93,6 @@ var (
 	},
 	"ddot": {
 		".": ["main", "ident", "pop next"],
-		"d": ["error", "", ""]
-	},
-	"and": {
 			"&": ["main", "oper", "pop next"],
 			"d": ["error", "", ""]
 		},
@@ -216,6 +213,16 @@ var (
 				val |= flag
 				for _, ch := range []byte(skey) {
 					var ind int
+					switch ch {
+					case 'd':
+						ind = 0
+					case 'n':
+						ind = 1
+					case 's':
+						ind = 2
+					case 'q':
+						ind = 3
+					case 'Q':
 						ind = 4
 					case 'r':
 						ind = AlphaSize - 1

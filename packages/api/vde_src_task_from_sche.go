@@ -164,6 +164,9 @@ func VDESrcTaskFromScheListHandlre(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"error": err}).Error("Error reading sche task data list")
 		errorResponse(w, err)
 		return
+	}
+	jsonResponse(w, result)
+}
 
 func VDESrcTaskFromScheByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -174,22 +177,6 @@ func VDESrcTaskFromScheByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	srcData.ID = id
 	result, err := srcData.GetOneByID()
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query sche task data by ID failed")
-		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
-}
-
-func VDESrcTaskFromScheByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	srcData := model.VDESrcTaskFromSche{}
-	result, err := srcData.GetAllByTaskUUID(params["taskuuid"])
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query sche task data by TaskUUID failed")
 		errorResponse(w, err)
 		return
 	}

@@ -2,6 +2,16 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+package protocols
+
+import (
+	"errors"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+)
 
 // BlockTimeChecker allow check queue to generate current block
 type BlockTimeChecker interface {
@@ -114,10 +124,6 @@ func (btc *BlockTimeCounter) RangeByTime(t time.Time) (start, end time.Time, err
 func (btc *BlockTimeCounter) TimeToGenerate(at time.Time, nodePosition int) (bool, error) {
 	if nodePosition >= btc.numberNodes {
 		return false, WrongNodePositionError
-	}
-
-	position, err := btc.nodePosition(at)
-	return position == nodePosition, err
 }
 
 // NewBlockTimeCounter return initialized BlockTimeCounter

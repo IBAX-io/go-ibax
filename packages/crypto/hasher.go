@@ -24,6 +24,23 @@ type Hasher interface {
 
 type Hval struct {
 	name string
+}
+
+const (
+	hSM3    = "SM3"
+	hSHA256 = "SHA256"
+)
+
+var hal Hval
+var Hal = &hal
+
+func (h Hval) String() string {
+	return h.name
+}
+
+func getHasher() Hasher {
+	switch hal.name {
+	case hSM3:
 		return &SM3{}
 	case hSHA256:
 		return &SHA256{}
@@ -39,23 +56,6 @@ func InitHash(s string) {
 		return
 	case hSHA256:
 		hal.name = hSHA256
-		return
-	}
-	panic(fmt.Errorf("hash [%v] is not supported yet", s))
-}
-
-func GetHMAC(secret string, message string) ([]byte, error) {
-	return getHasher().getHMAC(secret, message)
-}
-
-func Hash(msg []byte) []byte {
-	return getHasher().hash(msg)
-}
-
-func DoubleHash(msg []byte) []byte {
-	return getHasher().doubleHash(msg)
-}
-
 // Address gets int64 address from the public key
 func Address(pubKey []byte) int64 {
 	pubKey = CutPub(pubKey)

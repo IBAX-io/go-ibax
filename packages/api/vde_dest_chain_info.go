@@ -38,6 +38,18 @@ func VDEDestChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	form := &VDEDestChainInfoForm{}
 	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.VDEDestChainInfo{}
+	if m, err = unmarshalColumnVDEDestChainInfo(form); err != nil {
+		fmt.Println(err)
+		errorResponse(w, err)
+		return
+	}
+
+	m.CreateTime = time.Now().Unix()
+
 	if err = m.Create(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
@@ -124,7 +136,3 @@ func VDEDestChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"error": err}).Error("The query chain info data by ID failed")
 		errorResponse(w, err)
 		return
-	}
-
-	jsonResponse(w, result)
-}

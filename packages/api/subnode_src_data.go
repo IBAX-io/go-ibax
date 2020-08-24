@@ -52,17 +52,6 @@ func unmarshalColumnSubNodeSrcData(form *SubNodeSrcDataForm) (*model.SubNodeSrcD
 		Data:     taskdata.Data,
 		DataInfo: converter.MarshalJson(datainfo),
 		//DataState: int64(form.DataState),
-		//DataErr:   form.DataErr,
-	}
-
-	return m, err
-}
-
-type subnode_taskdataResult struct {
-	TaskUUID string `json:"task_uuid"`
-	DataUUID string `json:"data_uuid"`
-	Hash     string `json:"hash"`
-}
 
 func SubNodeSrcDataCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -171,6 +160,9 @@ func SubNodeSrcDataByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	srcData.ID = id
 	result, err := srcData.GetOneByID()
 	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("The query task data by ID failed")
+		errorResponse(w, err)
+		return
 	}
 
 	jsonResponse(w, result)

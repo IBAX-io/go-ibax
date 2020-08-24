@@ -144,6 +144,13 @@ func VDESrcHashUpToChainState(ctx context.Context, d *daemon) error {
 	//if err != nil {
 	//	log.WithFields(log.Fields{"error": err}).Error("VDE Src uptochain getting chain info")
 	//	time.Sleep(time.Second * 30)
+	//	return err
+	//}
+	//if SrcChainInfo == nil {
+	//	//log.Info("Src chain info not found")
+	//	fmt.Println("Src chain info not found")
+	//	time.Sleep(time.Second * 5)
+	//	return nil
 	//}
 
 	// deal with task data
@@ -190,11 +197,6 @@ func VDESrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		err = item.Updates()
 		if err != nil {
 			fmt.Println("Update VDESrcHash table err: ", err)
-			log.WithFields(log.Fields{"error": err}).Error("Update VDESrcHash table!")
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		fmt.Println("VDE Src Run chain Contract ok, TxHash:", string(item.TxHash))
 	} //for
 	return nil
 }

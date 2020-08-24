@@ -25,3 +25,4 @@ func TestCalcMem(t *testing.T) {
 		{map[string]string{"test": "test"}, 12},
 	}
 
+	for _, v := range cases {
