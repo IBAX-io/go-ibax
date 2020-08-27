@@ -39,16 +39,6 @@ func TestGetInterfaceRow(t *testing.T) {
 	}
 
 	assert.NoError(t, keyLogin(1))
-
-	for _, c := range cases {
-		name := randName("component")
-		form := url.Values{
-			"Name": {name}, "Value": {"value"}, "Menu": {"default_menu"}, "Title": {"title"},
-			"Conditions": {"true"},
-		}
-		assert.NoError(t, postTx(c.contract, &form))
-		result := map[string]interface{}{}
-		assert.NoError(t, sendGet(c.url+name, &url.Values{}, &result))
 		checkEqualAttrs(form, result, c.equalAttrs)
 	}
 }
@@ -77,3 +67,14 @@ func TestEditMenuNoError(t *testing.T) {
 		"Title": {`My edited Test Menu`},
 	}
 	assert.NoError(t, postTx(`EditMenu`, &form))
+}
+
+func TestAppendMenuNoError(t *testing.T) {
+	require.NoError(t, keyLogin(1))
+	form := url.Values{
+		"Id":    {"3"},
+		"Value": {"appended item"},
+	}
+
+	assert.NoError(t, postTx("AppendMenu", &form))
+}

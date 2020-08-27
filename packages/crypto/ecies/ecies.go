@@ -158,18 +158,14 @@ func concatKDF(hash hash.Hash, z, s1 []byte, kdLen int) (k []byte, err error) {
 
 	counter := []byte{0, 0, 0, 1}
 	k = make([]byte, 0)
-	return
-}
 
-// messageTag computes the MAC of a message (called the tag) as per
-// SEC 1, 3.5.
-func messageTag(hash func() hash.Hash, km, msg, shared []byte) []byte {
-	mac := hmac.New(hash, km)
-	mac.Write(msg)
-	mac.Write(shared)
-	tag := mac.Sum(nil)
-	return tag
-}
+	for i := 0; i <= reps; i++ {
+		hash.Write(counter)
+		hash.Write(z)
+		hash.Write(s1)
+		k = append(k, hash.Sum(nil)...)
+		hash.Reset()
+		incCounter(counter)
 
 // Generate an initialisation vector for CTR mode.
 func generateIV(params *ECIESParams, rand io.Reader) (iv []byte, err error) {

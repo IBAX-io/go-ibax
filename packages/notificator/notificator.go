@@ -39,6 +39,9 @@ func UpdateRolesNotifications(ecosystemID int64, roles []int64) {
 	UpdateNotifications(ecosystemID, members)
 }
 
+func getEcosystemNotificationStats(ecosystemID int64, users []string) (map[string]*[]notificationRecord, error) {
+	result, err := model.GetNotificationsCount(ecosystemID, users)
+	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting notification count")
 		return nil, err
 	}
@@ -55,22 +58,6 @@ func parseRecipientNotification(rows []model.NotificationsCount, systemID int64)
 		}
 
 		roleNotifications := notificationRecord{
-			EcosystemID:  converter.Int64ToStr(systemID),
-			RoleID:       converter.Int64ToStr(r.RoleID),
-			RecordsCount: r.Count,
-		}
-
-		nr, ok := recipientNotifications[r.Account]
-		if ok {
-			*nr = append(*nr, roleNotifications)
-			continue
-		}
-
-		records := []notificationRecord{
-			roleNotifications,
-		}
-
-		recipientNotifications[r.Account] = &records
 	}
 
 	return recipientNotifications

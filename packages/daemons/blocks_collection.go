@@ -218,6 +218,10 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 
 func banNodePause(host string, blockID, blockTime int64, err error) {
 	if err == nil || !utils.IsBanError(err) {
+		return
+	}
+
+	reason := err.Error()
 	//log.WithFields(log.Fields{"host": host, "block_id": blockID, "block_time": blockTime, "err": err}).Error("ban node")
 
 	n, err := syspar.GetNodeByHost(host)
@@ -319,18 +323,6 @@ func getBlocks(ctx context.Context, host string, blockID, minCount int64) ([]*bl
 		if blockID < 2 {
 			break
 		}
-
-		// if the limit of blocks received from the node was exaggerated
-		if len(blocks) >= int(rollback) {
-			break
-		}
-
-		bl, err := block.ProcessBlockWherePrevFromBlockchainTable(binaryBlock, true)
-		if err != nil {
-			return nil, err
-		}
-
-		if bl.Header.BlockID != nextBlockID {
 			log.WithFields(log.Fields{"header_block_id": bl.Header.BlockID, "block_id": blockID, "type": consts.InvalidObject}).Error("block ids does not match")
 			return nil, utils.WithBan(errors.New("bad block_data['block_id']"))
 		}

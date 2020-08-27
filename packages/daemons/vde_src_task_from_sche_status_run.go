@@ -118,16 +118,6 @@ func VDESrcTaskFromScheStatusRun(ctx context.Context, d *daemon) error {
 
 		Auth = gAuth_src
 		TaskUUID = item.TaskUUID
-		Parms = item.ContractRunParms
-
-		form := url.Values{
-			"Auth":     {Auth},
-			"TaskUUID": {TaskUUID},
-			"Parms":    {Parms},
-		}
-
-		ContractName := `@1` + item.ContractSrcName
-		_, txHash, _, err := vde_api.VDEPostTxResult(vde_sche_apiAddress, vde_sche_apiEcosystemID, gAuth_sche, gPrivate_sche, ContractName, &form)
 		if err != nil {
 			fmt.Println("Run VDEScheTaskContract err: ", err)
 			log.WithFields(log.Fields{"error": err}).Error("Run VDEScheTaskContract!")
@@ -165,6 +155,18 @@ func VDESrcTaskFromScheStatusRunState(ctx context.Context, d *daemon) error {
 		blockchain_ecosystem string
 		err                  error
 	)
+
+	m := &model.VDESrcTaskFromScheStatus{}
+	SrcTask, err := m.GetAllByChainState(1) //1
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
+	if len(SrcTask) == 0 {
+		//log.Info("Src task not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
 	}
 
 	// deal with task data

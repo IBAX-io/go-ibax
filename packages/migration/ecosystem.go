@@ -1,14 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package migration
-
-import (
-	"bytes"
-	"fmt"
-	"io"
 	"strings"
 	"text/template"
 
@@ -101,6 +91,16 @@ func sqlConvert(in []string) (ret string, err error) {
 	var item string
 	funcs := template.FuncMap{
 		"head":    sqlHead,
+		"footer":  sqlEnd,
+		"headseq": sqlHeadSequence,
+	}
+	sqlTmpl := template.New("sql").Funcs(funcs)
+	for _, sql := range in {
+		var (
+			tmpl *template.Template
+			out  bytes.Buffer
+		)
+
 		if tmpl, err = sqlTmpl.Parse(sql); err != nil {
 			return
 		}

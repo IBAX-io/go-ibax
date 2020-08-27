@@ -26,17 +26,6 @@ const (
 	fromToDayLimitMsgTemplate     = "from %d to %d sended volume = %s"
 	perBlockTokenMovementTemplate = "from wallet %d token movement count = %d in block: %d"
 
-	networkPerDayEvent         = 1
-	fromToDayLimitEvent        = 2
-	perBlockTokenMovementEvent = 3
-)
-
-var lastLimitEvents map[uint8]time.Time
-
-func init() {
-	lastLimitEvents = make(map[uint8]time.Time, 0)
-}
-
 func sendEmail(conf conf.TokenMovementConfig, message string) error {
 	auth := smtp.PlainAuth("", conf.Username, conf.Password, conf.Host)
 	to := []string{conf.To}
@@ -98,3 +87,11 @@ func CheckTokenMovementLimits(tx *model.DbTransaction, conf conf.TokenMovementCo
 }
 
 // checks needed only if we have'nt prevent events or if event older then 1 day
+func needCheck(event uint8) bool {
+	t, ok := lastLimitEvents[event]
+	if !ok {
+		return true
+	}
+
+	return time.Now().Sub(t) >= 24*time.Hour
+}
