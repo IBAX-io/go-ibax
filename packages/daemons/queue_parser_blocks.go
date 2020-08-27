@@ -1,6 +1,16 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"context"
+	"fmt"
+	"sync/atomic"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -29,17 +39,6 @@ func QueueParserBlocks(ctx context.Context, d *daemon) error {
 	DBLock()
 	defer DBUnlock()
 
-	infoBlock := &model.InfoBlock{}
-	_, err := infoBlock.Get()
-	if err != nil {
-		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")
-		return err
-	}
-	queueBlock := &model.QueueBlock{}
-	_, err = queueBlock.Get()
-	if err != nil {
-		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting queue block")
-		return err
 	}
 	if len(queueBlock.Hash) == 0 {
 		d.logger.WithFields(log.Fields{"type": consts.NotFound}).Debug("queue block not found")

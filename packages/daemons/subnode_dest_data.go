@@ -4,6 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daemons
+
+import (
+	"context"
+	"fmt"
+	"time"
+
 	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
@@ -47,23 +53,6 @@ func SubNodeDestData(ctx context.Context, d *daemon) error {
 				AuthState:          1,
 				SignState:          1,
 				HashState:          1,
-				CreateTime:         item.CreateTime}
-			//CreateTime: time.Now().Unix()}
-
-			if err = DestDataHash.Create(); err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Insert subnode_dest_data_hash table failed")
-				continue
-			}
-			fmt.Println("Insert subnode_dest_data_hash table ok, DataUUID:", item.DataUUID)
-		} else if item.TranMode == 3 { // data under chain
-			DestDataStatus := model.SubNodeDestDataStatus{
-				DataUUID:           item.DataUUID,
-				TaskUUID:           item.TaskUUID,
-				Hash:               item.Hash,
-				Data:               item.Data,
-				DataInfo:           item.DataInfo,
-				SubNodeSrcPubkey:   item.SubNodeSrcPubkey,
-				SubNodeDestPubkey:  item.SubNodeDestPubkey,
 				SubNodeDestIP:      item.SubNodeDestIP,
 				SubNodeAgentPubkey: item.SubNodeAgentPubkey,
 				SubNodeAgentIP:     item.SubNodeAgentIP,

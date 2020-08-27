@@ -40,18 +40,21 @@ const (
 	eKeyNotFound         = `sender %s has not been found`
 	eEcoKeyNotFound      = `sender %s has not been found in ecosystem %d`
 	eEcoKeyDisable       = `%s disable in ecosystem %d`
+	eEcoFuelRate         = `fuel rate must be greater than 0 or empty in ecosystem %d`
+	eEcoCurrentBalance   = `current balance is not enough in ecosystem %d, at least [%s] difference`
+)
+
+var (
+	errDelayedContract    = errors.New(`incorrect delayed contract`)
+	errAccessDenied       = errors.New(`access denied`)
+	errConditionEmpty     = errors.New(`conditions is empty`)
+	errContractNotFound   = errors.New(`contract has not been found`)
 	errTaxes              = errors.New("not enough money to pay the taxes fee")
 	errEmptyColumn        = errors.New(`column name is empty`)
 	errWrongColumn        = errors.New(`column name cannot begin with digit`)
 	errNotFound           = errors.New(`record has not been found`)
 	errContractChange     = errors.New(`contract cannot be removed or inserted`)
 	errCurrentBalance     = errors.New(`current balance is not enough`)
-	errDeletedKey         = errors.New(`the key is deleted`)
-	errDiffKeys           = errors.New(`contract and user public keys are different`)
-	errEmpty              = errors.New(`empty value and condition`)
-	errEmptyCond          = errors.New(`the condition is empty`)
-	errEmptyContract      = errors.New(`empty contract name in ContractConditions`)
-	errEmptyPublicKey     = errors.New(`empty public key`)
 	errFounderAccount     = errors.New(`unknown founder account`)
 	errKeyIDAccount       = errors.New(`unknown address account`)
 	errFuelRate           = errors.New(`fuel rate must be greater than 0`)

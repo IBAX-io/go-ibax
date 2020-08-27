@@ -1,14 +1,4 @@
 // +prop AppID = '1'
-// +prop Conditions = 'ContractConditions("MainCondition")'
-contract NewApplication {
-    data {
-        Name string
-        Conditions string
-    }
-
-    conditions {
-        ValidateCondition($Conditions, $ecosystem_id)
-
         if Size($Name) == 0 {
             warning "Application name missing"
         }
@@ -20,3 +10,5 @@ contract NewApplication {
 
     action {
         $result = DBInsert("applications", {name: $Name,conditions: $Conditions})
+    }
+}

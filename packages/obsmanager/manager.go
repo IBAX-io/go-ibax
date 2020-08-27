@@ -4,6 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 package obsmanager
 
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
+	"time"
+	"unicode"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+
+	"github.com/ochinchina/go-ini"
+	pConf "github.com/ochinchina/supervisord/config"
+	"github.com/ochinchina/supervisord/process"
+	log "github.com/sirupsen/logrus"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
 )
@@ -182,13 +198,6 @@ func (mgr *OBSManager) DeleteOBS(name string) error {
 
 	if mgr.processes == nil {
 		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("deleting OBS")
-		return errWrongMode
-	}
-
-	mgr.StopOBS(name)
-	mgr.processes.Remove(name)
-	obsDir := path.Join(mgr.childConfigsPath, name)
-	obsConfigPath := filepath.Join(obsDir, consts.DefaultConfigFile)
 	obsConfig, err := conf.GetConfigFromPath(obsConfigPath)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Errorf("Getting config from path %s", obsConfigPath)
