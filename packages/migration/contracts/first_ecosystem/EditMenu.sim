@@ -30,5 +30,3 @@ contract EditMenu {
             pars["conditions"] = $Conditions
         }
         if pars {
-    }
-}

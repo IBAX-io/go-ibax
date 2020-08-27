@@ -12,9 +12,9 @@ type BanError struct {
 	err error
 }
 
-func IsBanError(err error) bool {
-	err = errors.Cause(err)
-	if _, ok := err.(*BanError); ok {
+func (b *BanError) Error() string {
+	return b.err.Error()
+}
 		return true
 	}
 	return false

@@ -25,6 +25,15 @@ func unmarshalColumnVDEDestMember(form *VDEDestMemberForm) (*model.VDEDestMember
 	m := &model.VDEDestMember{
 		VDEPubKey:            form.VDEPubKey,
 		VDEComment:           form.VDEComment,
+		VDEName:              form.VDEName,
+		VDEIp:                form.VDEIp,
+		VDEType:              int64(form.VDEType),
+		ContractRunHttp:      form.ContractRunHttp,
+		ContractRunEcosystem: form.ContractRunEcosystem,
+	}
+
+	return m, err
+}
 
 func VDEDestMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -83,17 +92,6 @@ func VDEDestMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := m.GetOneByID()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
-		return
-	}
-
-	jsonResponse(w, result)
-}
-
-func VDEDestMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
 	logger := getLogger(r)
 	id := converter.StrToInt64(params["id"])
 

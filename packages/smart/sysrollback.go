@@ -61,6 +61,18 @@ func SysRollbackTable(DbTransaction *model.DbTransaction, sysData SysRollData) e
 
 // SysRollbackView is rolling back table
 func SysRollbackView(DbTransaction *model.DbTransaction, sysData SysRollData) error {
+	err := model.DropView(DbTransaction, sysData.TableName)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("dropping view")
+		return err
+	}
+	return nil
+}
+
+// SysRollbackColumn is rolling back column
+func SysRollbackColumn(DbTransaction *model.DbTransaction, sysData SysRollData) error {
+	return model.AlterTableDropColumn(DbTransaction, sysData.TableName, sysData.Data)
+}
 
 // SysRollbackContract performs rollback for the contract
 func SysRollbackContract(name string, EcosystemID int64) error {
@@ -238,18 +250,6 @@ func SysRollbackDeleteColumn(DbTransaction *model.DbTransaction, sysData SysRoll
 }
 
 // SysRollbackDeleteTable is rolling back delete table
-func SysRollbackDeleteTable(DbTransaction *model.DbTransaction, sysData SysRollData) error {
-	var (
-		data    TableInfo
-		colsSQL string
-	)
-	err := unmarshalJSON([]byte(sysData.Data), &data, `rollback delete table to json`)
-	if err != nil {
-		return err
-	}
-	for key, item := range data.Columns {
-		colsSQL += `"` + key + `" ` + typeToPSQL[item] + " ,\n"
-	}
 	err = model.CreateTable(DbTransaction, sysData.TableName, strings.TrimRight(colsSQL, ",\n"))
 	if err != nil {
 		return logErrorDB(err, "creating tables")

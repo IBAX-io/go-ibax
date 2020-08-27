@@ -137,13 +137,11 @@ func VDESrcLogUpToChainState(ctx context.Context, d *daemon) error {
 		return err
 	}
 	if len(SrcTaskDataLog) == 0 {
-	//if err != nil {
-	//	log.WithFields(log.Fields{"error": err}).Error("VDE Src uptochain getting chain info")
-	//	time.Sleep(time.Second * 30)
-	//	return err
-	//}
-	//if SrcChainInfo == nil {
-	//	//log.Info("Src chain info not found")
+		//log.Info("Src task data log not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
+	//chaininfo := &model.VDESrcChainInfo{}
 	//	fmt.Println("Src chain info not found")
 	//	time.Sleep(time.Second * 5)
 	//	return nil

@@ -36,6 +36,15 @@ func SendPrivateData(ctx context.Context, d *daemon) error {
 		mimetype      string
 		node_pubkey   string
 	)
+
+	// TcpSendState 0.unsent 1.success 2.fail to send
+	m := &model.ShareDataStatus{}
+	found, _ = m.GetOneByTcpStatus(0)
+	if found {
+		time.Sleep(time.Millisecond * 100)
+		return nil
+	}
+
 	if m.TaskType == "1" { //1 create table，not need to send
 		m.TcpSendState = 1
 		err = m.Updates()
@@ -105,17 +114,6 @@ func SendPrivateData(ctx context.Context, d *daemon) error {
 			err = m.Updates()
 			if err != nil {
 				log.WithError(err)
-				continue
-			}
-		} //0
-		if tran_mode == "1" { //HASH up chain transport mode
-			//DataBytes := m.Data
-			DataBytes, err := ecies.EccCryptoKey(m.Data, node_pubkeyslice[key])
-			if err != nil {
-				log.WithError(err)
-				continue
-			}
-
 			hash := tcpclient.SentPrivateData(tcp, DataBytes)
 			if string(hash) == string(m.Hash) {
 				m.TcpSendState = 1

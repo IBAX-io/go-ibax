@@ -3,10 +3,3 @@
 contract UploadFile {
     data {
         ApplicationId int
-        Data file
-        Name string "optional"
-    }
-    conditions {
-        if $Name == "" {
-            $Name = $Data["Name"]
-        }

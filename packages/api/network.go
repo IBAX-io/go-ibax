@@ -10,8 +10,6 @@ import (
 	"strconv"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 )
 
@@ -34,6 +32,9 @@ type NetworkResult struct {
 func GetNodesJSON() []HonorNodeJSON {
 	nodes := make([]HonorNodeJSON, 0)
 	for _, node := range syspar.GetNodes() {
+		nodes = append(nodes, HonorNodeJSON{
+			TCPAddress: node.TCPAddress,
+			APIAddress: node.APIAddress,
 			PublicKey:  crypto.PubToHex(node.PublicKey),
 			UnbanTime:  strconv.FormatInt(node.UnbanTime.Unix(), 10),
 		})

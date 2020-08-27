@@ -334,6 +334,12 @@ var (
 		t.Column("hash", "text", {"default": ""})
 		t.Column("data", "bytea", {"default": ""})
 		t.Column("data_info", "jsonb", {"null": true})
+		t.Column("tran_mode", "int", {"default": "0"})
+		t.Column("subnode_src_pubkey", "text", {"default": ""})
+		t.Column("subnode_dest_pubkey", "text", {"default": ""})
+		t.Column("subnode_dest_ip", "text", {"default": ""})
+		t.Column("subnode_agent_pubkey", "text", {"default": ""})
+		t.Column("subnode_agent_ip", "text", {"default": ""})
 		t.Column("agent_mode", "int", {"default": "0"})
 		t.Column("data_send_state", "int", {"default": "0"})
 		t.Column("data_send_err", "text", {"default": ""})
@@ -935,14 +941,4 @@ var (
 
 `
 
-	migrationInitialSchema = `
-		CREATE OR REPLACE FUNCTION next_id(table_name TEXT, OUT result INT) AS
-		$$
-		BEGIN
-			EXECUTE FORMAT('SELECT COUNT(*) + 1 FROM "%s"', table_name)
-			INTO result;
-			RETURN;
-		END
-		$$
-		LANGUAGE plpgsql;`
 )

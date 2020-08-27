@@ -112,9 +112,16 @@ func (s *SM3) doubleSM3(data []byte) []byte {
 }
 
 func (s *SM3) usingSM3(data []byte) []byte {
-	return s.usingSha256(s.usingSha256(data))
+	return sm3.Sm3Sum(data)
 }
-func (s *SHA256) usingSha256(data []byte) []byte {
-	out := sha256.Sum256(data)
-	return out[:]
+
+func (s *SHA256) getHMAC(secret string, message string) ([]byte, error) {
+	return getHMAC(secret, message)
+}
+func (s *SHA256) hash(msg []byte) []byte {
+	return s._Hash(msg)
+}
+
+func (s *SHA256) doubleHash(msg []byte) []byte {
+	return s.doubleSha256(msg)
 }

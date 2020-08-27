@@ -24,19 +24,13 @@ func getConfigOptionHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	if len(params["option"]) == 0 {
-	switch params["option"] {
-	case "centrifugo":
-		centrifugoAddressHandler(w, r)
+		logger.WithFields(log.Fields{"type": consts.EmptyObject, "error": "option not specified"}).Error("on getting option in config handler")
+		errorResponse(w, errNotFound)
 		return
 	}
 
-	errorResponse(w, errNotFound)
-}
-
-func replaceHttpSchemeToWs(centrifugoURL string) string {
-	if strings.HasPrefix(centrifugoURL, "http:") {
-		return strings.Replace(centrifugoURL, "http:", "ws:", -1)
-	} else if strings.HasPrefix(centrifugoURL, "https:") {
+	switch params["option"] {
+	case "centrifugo":
 		return strings.Replace(centrifugoURL, "https:", "wss:", -1)
 	}
 	return centrifugoURL

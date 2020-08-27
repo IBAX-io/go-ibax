@@ -171,11 +171,6 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 				log.WithError(err)
 			}
 			continue
-		}
-		//fmt.Println("agent_mode,hash_mode,log_mode:",agent_mode,hash_mode,log_mode)
-
-		if blockchain_http, ok = TaskParms["blockchain_http"].(string); !ok {
-			log.WithFields(log.Fields{"error": err}).Error("blockchain_http parse error")
 			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {
@@ -443,6 +438,8 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 		//		log.WithError(err)
 		//	}
 		//	time.Sleep(time.Millisecond * 100)
+		//	continue
+		//}
 
 		//fmt.Println("TaskParms:",TaskParms)
 		// fmt.Println("TaskParms:")

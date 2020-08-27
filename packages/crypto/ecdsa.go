@@ -54,18 +54,6 @@ func (e *ECDSA) privateToPublic(key []byte) ([]byte, error) {
 	bi := new(big.Int).SetBytes(key)
 	priv := new(ecdsa.PrivateKey)
 	priv.PublicKey.Curve = pubkeyCurve
-	priv.D = bi
-	priv.PublicKey.X, priv.PublicKey.Y = pubkeyCurve.ScalarBaseMult(key)
-	return append(converter.FillLeft(priv.PublicKey.X.Bytes()), converter.FillLeft(priv.PublicKey.Y.Bytes())...), nil
-}
-
-// checkSign is checking sign
-		return e.checkECDSA(public, data, signature)
-	default:
-		return false, ErrUnknownProvider
-	}
-}
-
 func (e *ECDSA) signECDSA(privateKey, data []byte) (ret []byte, err error) {
 	pubkeyCurve := elliptic.P256()
 	bi := new(big.Int).SetBytes(privateKey)

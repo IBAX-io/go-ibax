@@ -113,17 +113,5 @@ func ExecOBSSchema(id int, wallet int64) error {
 			return err
 		}
 	}
-	return nil
+	return migration.UpdateMigrate(&MigrationHistory{})
 }
-
-// ExecSchema is executing schema
-func ExecSchema() error {
-	return migration.InitMigrate(&MigrationHistory{})
-}
-
-// UpdateSchema run update migrations
-func UpdateSchema() error {
-	if !conf.Config.IsOBSMaster() {
-		b := &Block{}
-		if found, err := b.GetMaxBlock(); !found {
-			return err

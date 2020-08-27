@@ -12,19 +12,6 @@ import (
 // RolesParticipants represents record of {prefix}roles_participants table
 type RolesParticipants struct {
 	ecosystem   int64
-	Id          int64
-	Role        string `gorm:"type":jsonb`
-	Member      string `gorm:"type":jsonb`
-	Appointed   string `gorm:"type":jsonb`
-	DateCreated int64
-	DateDeleted int64
-	Deleted     bool
-}
-
-// SetTablePrefix is setting table prefix
-func (r *RolesParticipants) SetTablePrefix(prefix int64) *RolesParticipants {
-	r.ecosystem = prefix
-	return r
 }
 
 // TableName returns name of table
@@ -46,6 +33,14 @@ func (r *RolesParticipants) GetActiveMemberRoles(account string) ([]RolesPartici
 // MemberHasRole returns true if member has role
 func MemberHasRole(tx *DbTransaction, role, ecosys int64, account string) (bool, error) {
 	db := GetDB(tx)
+	var count int64
+	if err := db.Table("1_roles_participants").Where(`ecosystem=? and role->>'id' = ? and member->>'account' = ?`,
+		ecosys, converter.Int64ToStr(role), account).Count(&count).Error; err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
 
 // MemberHasRole returns true if member has role
 func MemberHasRolebyName(tx *DbTransaction, ecosys int64, role, account string) (bool, error) {

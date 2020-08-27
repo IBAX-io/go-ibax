@@ -48,15 +48,6 @@ func parsing(input string, itype int) (*[]token, error) {
 	var err error
 
 	tokens := make([]token, 0)
-	newToken := func(itype int, value interface{}) {
-		tokens = append(tokens, token{itype, value})
-	}
-	prevNumber := func() bool {
-		return len(tokens) > 0 && tokens[len(tokens)-1].Type == tkNumber
-	}
-	prevOper := func() bool {
-		return len(tokens) > 0 && (tokens[len(tokens)-1].Type >= tkAdd &&
-			tokens[len(tokens)-1].Type <= tkDiv)
 	}
 	var (
 		numlen int
@@ -210,6 +201,17 @@ func calcExp(tokens []token, resType int, prec string) string {
 		if resType == expFloat {
 			return decimal.NewFromFloat(stack[0].(float64)).Round(int32(precInt)).String()
 		}
+		if resType == expMoney {
+			money := stack[0].(decimal.Decimal)
+			return money.Round(int32(precInt)).String()
+		}
+	}
+	if resType == expFloat {
+		decStr, _ := decimal.NewFromString(fmt.Sprintf("%f", stack[0].(float64)))
+		return decStr.String()
+	}
+	if resType == expMoney {
+		return stack[0].(decimal.Decimal).String()
 	}
 	return fmt.Sprint(stack[0])
 }
