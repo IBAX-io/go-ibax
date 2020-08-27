@@ -2,6 +2,13 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+package chain_sdk
+
+type getUIDResult struct {
+	UID         string `json:"uid,omitempty"`
+	Token       string `json:"token,omitempty"`
+	Expire      string `json:"expire,omitempty"`
 	EcosystemID string `json:"ecosystem_id,omitempty"`
 	KeyID       string `json:"key_id,omitempty"`
 	Address     string `json:"address,omitempty"`
@@ -32,15 +39,6 @@ type multiTxStatusResult struct {
 
 type txstatusRequest struct {
 	Hashes []string `json:"hashes"`
-}
-
-type txstatusError struct {
-	Type  string `json:"type,omitempty"`
-	Error string `json:"error,omitempty"`
-	Id    string `json:"id,omitempty"`
-}
-
-type txstatusResult struct {
 	BlockID string         `json:"blockid"`
 	Message *txstatusError `json:"errmsg,omitempty"`
 	Result  string         `json:"result"`

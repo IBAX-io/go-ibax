@@ -1,13 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
-
-type SubNodeDestDataHash struct {
-	ID       int64  `gorm:"primary_key; not null" json:"id"`
-	DataUUID string `gorm:"not null" json:"data_uuid"`
 	TaskUUID string `gorm:"not null" json:"task_uuid"`
 	Hash     string `gorm:"not null" json:"hash"`
 	Data     []byte `gorm:"not null" json:"data"`
@@ -91,3 +82,19 @@ func (m *SubNodeDestDataHash) GetAllBySignState(SignState int64) ([]SubNodeDestD
 }
 
 func (m *SubNodeDestDataHash) GetAllByTaskUUIDAndDataStatus(TaskUUID string, AuthState int64, SignState int64, HashState int64) ([]SubNodeDestDataHash, error) {
+	result := make([]SubNodeDestDataHash, 0)
+	err := DBConn.Table("subnode_dest_data_hash").Where("task_uuid = ? AND auth_state = ? AND sign_state = ? AND hash_state = ?", TaskUUID, AuthState, SignState, HashState).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeDestDataHash) GetAllByTaskUUIDAndDataStatusAndTime(TaskUUID string, AuthState int64, SignState int64, HashState int64, BTime int64, ETime int64) ([]SubNodeDestDataHash, error) {
+	result := make([]SubNodeDestDataHash, 0)
+	err := DBConn.Table("subnode_dest_data_hash").Where("task_uuid = ? AND auth_state = ? AND sign_state = ? AND hash_state = ? AND create_time > ? AND create_time <= ?", TaskUUID, AuthState, SignState, HashState, BTime, ETime).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeDestDataHash) Get(Hash string) (SubNodeDestDataHash, error) {
+	var sndd SubNodeDestDataHash
+	err := DBConn.Where("hash=?", Hash).First(&sndd).Error
+	return sndd, err
+}

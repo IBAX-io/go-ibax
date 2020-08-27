@@ -20,13 +20,6 @@ import (
 
 // Monitoring starts monitoring
 func Monitoring(w http.ResponseWriter, r *http.Request) {
-	var buf bytes.Buffer
-
-	infoBlock := &model.InfoBlock{}
-	_, err := infoBlock.Get()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")
-		logError(w, fmt.Errorf("can't get info block: %s", err))
 		return
 	}
 	addKey(&buf, "info_block_id", infoBlock.BlockID)
@@ -43,6 +36,25 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting max block")
 		logError(w, fmt.Errorf("can't get max block: %s", err))
 		return
+	}
+	addKey(&buf, "last_block_id", block.ID)
+	addKey(&buf, "last_block_hash", converter.BinToHex(block.Hash))
+	addKey(&buf, "last_block_time", block.Time)
+	addKey(&buf, "last_block_wallet", block.KeyID)
+	addKey(&buf, "last_block_state", block)
+	addKey(&buf, "last_block_transactions", block.Tx)
+
+	trCount, err := model.GetTransactionCountAll()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction count all")
+		logError(w, fmt.Errorf("can't get transactions count: %s", err))
+		return
+	}
+	addKey(&buf, "transactions_count", trCount)
+
+	w.Write(buf.Bytes())
+}
+
 func addKey(buf *bytes.Buffer, key string, value interface{}) error {
 	val, err := converter.InterfaceToStr(value)
 	if err != nil {

@@ -160,6 +160,17 @@ func ErrInfoFmt(err string, a ...interface{}) error {
 // ErrInfo formats the error message
 func ErrInfo(verr interface{}, additionally ...string) error {
 	var err error
+	switch verr.(type) {
+	case error:
+		err = verr.(error)
+	case string:
+		err = errors.New(verr.(string))
+	}
+	if err != nil {
+		if len(additionally) > 0 {
+			return fmt.Errorf("%s # %s (%s)", err, additionally, Caller(1))
+		}
+		return fmt.Errorf("%s (%s)", err, Caller(1))
 	}
 	return err
 }
@@ -289,10 +300,6 @@ func CheckSign(publicKeys [][]byte, forSign []byte, signs []byte, nodeKeyOrLogin
 }
 
 // MerkleTreeRoot rertun Merkle value
-func MerkleTreeRoot(dataArray [][]byte) ([]byte, error) {
-	result := make(map[int32][][]byte)
-	for _, v := range dataArray {
-		hash := converter.BinToHex(crypto.DoubleHash(v))
 		result[0] = append(result[0], hash)
 	}
 	var j int32

@@ -16,21 +16,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-
-	"github.com/IBAX-io/go-ibax/packages/language"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/script"
-	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-	"github.com/IBAX-io/go-ibax/packages/utils/metric"
-
-	"math"
-	"strconv"
-	"time"
-
-	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 )
@@ -362,6 +347,16 @@ func GetContractByName(sc *SmartContract, name string) int64 {
 	if info == nil {
 		return 0
 	}
+
+	return info.Owner.TableID
+}
+
+// GetContractById returns the name of the contract with this id
+func GetContractById(sc *SmartContract, id int64) string {
+	_, ret, err := DBSelect(sc, "contracts", "value", id, `id`, 0, 1, nil, false)
+	if err != nil || len(ret) != 1 {
+		logErrorDB(err, "getting contract name")
+		return ``
 	}
 
 	re := regexp.MustCompile(`(?is)^\s*contract\s+([\d\w_]+)\s*{`)

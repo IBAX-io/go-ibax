@@ -121,17 +121,6 @@ func (btc *BlockTimeCounter) RangeByTime(t time.Time) (start, end time.Time, err
 }
 
 // TimeToGenerate returns true if the generation queue at time belongs to the specified node
-func (btc *BlockTimeCounter) TimeToGenerate(at time.Time, nodePosition int) (bool, error) {
-	if nodePosition >= btc.numberNodes {
-		return false, WrongNodePositionError
-}
-
-// NewBlockTimeCounter return initialized BlockTimeCounter
-func NewBlockTimeCounter() *BlockTimeCounter {
-	firstBlock, _ := syspar.GetFirstBlockData()
-	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
-	blocksGapDuration := time.Second * time.Duration(syspar.GetGapsBetweenBlocks())
-	btc := BlockTimeCounter{
 		start:       time.Unix(int64(firstBlock.Time), 0),
 		duration:    blockGenerationDuration + blocksGapDuration,
 		numberNodes: int(syspar.GetCountOfActiveNodes()),

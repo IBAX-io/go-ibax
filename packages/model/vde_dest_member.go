@@ -26,13 +26,16 @@ func (m *VDEDestMember) Create() error {
 	return DBConn.Create(&m).Error
 }
 
-func (m *VDEDestMember) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *VDEDestMember) GetOneByID() (*VDEDestMember, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
 }
 
-func (m *VDEDestMember) Delete() error {
-	return DBConn.Delete(m).Error
-}
+func (m *VDEDestMember) GetOneByPubKey(VDEPubKey string) (*VDEDestMember, error) {
+	err := DBConn.Where("vde_pub_key=?", VDEPubKey).First(&m).Error
 	return m, err
 }
 

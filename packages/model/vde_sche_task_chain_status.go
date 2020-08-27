@@ -1,4 +1,17 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+type VDEScheTaskChainStatus struct {
+	ID           int64  `gorm:"primary_key; not null" json:"id"`
+	TaskUUID     string `gorm:"not null" json:"task_uuid"`
+	TaskName     string `gorm:"not null" json:"task_name"`
+	TaskSender   string `gorm:"not null" json:"task_sender"`
+	TaskReceiver string `gorm:"not null" json:"task_receiver"`
+	Comment      string `gorm:"not null" json:"comment"`
+	Parms        string `gorm:"type:jsonb" json:"parms"`
 	TaskType     int64  `gorm:"not null" json:"task_type"`
 	TaskState    int64  `gorm:"not null" json:"task_state"`
 
@@ -66,20 +79,6 @@ func (m *VDEScheTaskChainStatus) GetAllByTaskUUID(TaskUUID string) ([]VDEScheTas
 
 // func (m *VDEScheTaskChainStatus) GetOneByTaskUUID(TaskUUID string) (*VDEScheTaskChainStatus, bool) {
 // 	var (
-// 		result VDEScheTaskChainStatus
-// 		b	bool
-// 	)
-// 	b = DBConn.Where("task_uuid = ?", TaskUUID).First(m).RecordNotFound()
-// 	return &result, b
-// }
-
-func (m *VDEScheTaskChainStatus) GetOneByTaskUUID(TaskUUID string, TaskState int64) (*VDEScheTaskChainStatus, error) {
-	err := DBConn.Where("task_uuid=? AND task_state=?", TaskUUID, TaskState).First(&m).Error
-	return m, err
-}
-func (m *VDEScheTaskChainStatus) GetOneByTaskUUIDAndReceiverAndChainState(TaskUUID string, TaskReceiver string, ChainState int64) (*VDEScheTaskChainStatus, error) {
-	err := DBConn.Where("task_uuid=? AND task_receiver=? AND chain_state = ?", TaskUUID, TaskReceiver, ChainState).First(&m).Error
-	return m, err
 }
 
 func (m *VDEScheTaskChainStatus) GetAllByTaskState(TaskState int64) ([]VDEScheTaskChainStatus, error) {

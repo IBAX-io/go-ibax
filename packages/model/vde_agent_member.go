@@ -12,6 +12,8 @@ type VDEAgentMember struct {
 	VDEIp                string `gorm:"not null" json:"vde_ip"`
 	VDEType              int64  `gorm:"not null" json:"vde_type"`
 	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
+	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
+
 	UpdateTime int64 `gorm:"not null" json:"update_time"`
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
@@ -21,20 +23,6 @@ func (VDEAgentMember) TableName() string {
 }
 
 func (m *VDEAgentMember) Create() error {
-	return DBConn.Create(&m).Error
-}
-
-func (m *VDEAgentMember) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
-
-func (m *VDEAgentMember) Delete() error {
-	return DBConn.Delete(m).Error
-}
-
-func (m *VDEAgentMember) GetAll() ([]VDEAgentMember, error) {
-	var result []VDEAgentMember
-	err := DBConn.Find(&result).Error
 	return result, err
 }
 func (m *VDEAgentMember) GetOneByID() (*VDEAgentMember, error) {

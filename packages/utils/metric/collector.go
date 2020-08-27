@@ -25,21 +25,17 @@ func (v *Value) ToMap() *types.Map {
 		"time":   v.Time,
 		"metric": v.Metric,
 		"key":    v.Key,
-func (c *Collector) Values(timeBlock int64) []interface{} {
-	values := make([]interface{}, 0)
-	for _, fn := range c.funcs {
-		result, err := fn(timeBlock)
-		if err != nil {
-			continue
-		}
-
-		for _, v := range result {
-			values = append(values, v.ToMap())
-		}
-	}
-	return values
+		"value":  v.Value,
+	})
 }
 
+// Collector represents struct that works with the collection of metrics
+type Collector struct {
+	funcs []CollectorFunc
+}
+
+// Values returns values of all metrics
+func (c *Collector) Values(timeBlock int64) []interface{} {
 // NewCollector creates new collector
 func NewCollector(funcs ...CollectorFunc) *Collector {
 	c := &Collector{}

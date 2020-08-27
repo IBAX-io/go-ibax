@@ -54,6 +54,18 @@ func AfterPlayTxs(dbTx *DbTransaction, blockID int64, playTx AfterTxs, logger *l
 	})
 }
 
+type Batcher interface {
+	BatchFindByHash(*DbTransaction, ArrHashes) error
+}
+type ArrHashes [][]byte
+type logTxser []LogTransaction
+type txser []Transaction
+type queueser []QueueTx
+
+func (l logTxser) BatchFindByHash(tr *DbTransaction, hs ArrHashes) error {
+	if result := GetDB(tr).Model(&LogTransaction{}).Select("hash").Where("hash IN ?", hs).FindInBatches(&l, len(hs), func(tx *gorm.DB, batch int) error {
+		if tx.RowsAffected > 0 {
+			return errors.New("duplicated transaction at log_transactions")
 		}
 		return nil
 	}); result.Error != nil {
@@ -95,10 +107,3 @@ func CheckDupTx(transaction *DbTransaction, hs ArrHashes) error {
 	)
 	batch = append(batch, logTxs, txs, queues)
 	for _, d := range batch {
-		err := d.BatchFindByHash(transaction, hs)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}

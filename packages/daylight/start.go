@@ -143,20 +143,6 @@ func initRoutes(listenHost string) {
 	handler := modes.RegisterRoutes()
 	handler = api.WithCors(handler)
 	handler = httpserver.NewMaxBodyReader(handler, conf.Config.HTTPServerMaxBodySize)
-
-	if conf.Config.TLS {
-		if len(conf.Config.TLSCert) == 0 || len(conf.Config.TLSKey) == 0 {
-			log.Fatal("-tls-cert/TLSCert and -tls-key/TLSKey must be specified with -tls/TLS")
-		}
-		if _, err := os.Stat(conf.Config.TLSCert); os.IsNotExist(err) {
-			log.WithError(err).Fatalf(`Filepath -tls-cert/TLSCert = %s is invalid`, conf.Config.TLSCert)
-		}
-		if _, err := os.Stat(conf.Config.TLSKey); os.IsNotExist(err) {
-			log.WithError(err).Fatalf(`Filepath -tls-key/TLSKey = %s is invalid`, conf.Config.TLSKey)
-		}
-		go func() {
-			s := &http.Server{
-				Addr:    listenHost,
 				Handler: handler,
 				TLSConfig: &tls.Config{
 					MinVersion:             tls.VersionTLS12,
@@ -249,6 +235,18 @@ func Start() {
 	initStatsd()
 
 	err = initLogs()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "logs init failed: %v\n", utils.ErrInfo(err))
+		Exit(1)
+	}
+
+	rand.Seed(time.Now().UTC().UnixNano())
+
+	// save the current pid and version
+	if err := savePid(); err != nil {
+		log.Errorf("can't create pid: %s", err)
+		Exit(1)
+	}
 	defer delPidFile()
 
 	smart.InitVM()

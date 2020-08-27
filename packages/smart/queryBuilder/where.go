@@ -114,6 +114,15 @@ func GetWhere(inWhere *types.Map) (string, error) {
 				ret = fmt.Sprintf(`(%s)`, strings.Join(list, ` `+action+` `))
 			}
 		}
+		return
+	}
+	for _, key := range inWhere.Keys() {
+		v, _ := inWhere.Get(key)
+		key = PrepareWhere(converter.Sanitize(strings.ToLower(key), `->$`))
+		switch key {
+		case `$like`:
+			return like(`like '%%%s%%'`, v)
+		case `$end`:
 			return like(`like '%%%s'`, v)
 		case `$begin`:
 			return like(`like '%s%%'`, v)
@@ -146,12 +155,6 @@ func GetWhere(inWhere *types.Map) (string, error) {
 		case `$gt`:
 			return oper(`>`, v)
 		case `$gte`:
-			return oper(`>=`, v)
-		case `$lt`:
-			return oper(`<`, v)
-		case `$lte`:
-			return oper(`<=`, v)
-		default:
 			if !strings.Contains(key, `>`) && len(key) > 0 {
 				key = `"` + key + `"`
 			}

@@ -40,7 +40,11 @@ func getRowHandler(w http.ResponseWriter, r *http.Request) {
 
 	params := mux.Vars(r)
 	client := getClient(r)
-	}
+	logger := getLogger(r)
+
+	q := model.GetDB(nil).Limit(1)
+
+	var (
 	if converter.FirstEcosystemTables[params["name"]] {
 		q = q.Table(table).Where(col+" = ? and ecosystem = ?", params["id"], client.EcosystemID)
 	} else {
