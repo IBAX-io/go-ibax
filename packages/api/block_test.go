@@ -18,6 +18,3 @@ func TestGetMaxBlockID(t *testing.T) {
 }
 
 func TestGetBlockInfo(t *testing.T) {
-	var ret blockInfoResult
-	err := sendGet(`block/1`, nil, &ret)
-	assert.NoError(t, err)

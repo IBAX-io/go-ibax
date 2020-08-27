@@ -114,19 +114,6 @@ func HandleTCPRequest(rw net.Conn) {
 	if err != nil || response == nil {
 		return
 	}
-
-	log.WithFields(log.Fields{"response": response, "request_type": dType.Type}).Debug("tcpserver responded")
-	if err = response.(network.SelfReaderWriter).Write(rw); err != nil {
-		// err = SendRequest(response, rw)
-		log.Errorf("tcpserver handle error: %s", err)
-	}
-}
-
-// TcpListener is listening tcp address
-func TcpListener(laddr string) error {
-
-	if strings.HasPrefix(laddr, "127.") {
-		log.Warn("Listening at local address: ", laddr)
 	}
 
 	l, err := net.Listen("tcp", laddr)
@@ -145,3 +132,11 @@ func TcpListener(laddr string) error {
 			} else {
 				go func(conn net.Conn) {
 					HandleTCPRequest(conn)
+					conn.Close()
+				}(conn)
+			}
+		}
+	}()
+
+	return nil
+}

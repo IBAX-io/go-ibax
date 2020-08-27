@@ -1,18 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package script
-
-import (
-	log "github.com/sirupsen/logrus"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-)
-
-type evalCode struct {
 	Source string
 	Code   *Block
 }
@@ -64,3 +51,4 @@ func (vm *VM) EvalIf(input string, state uint32, vars *map[string]interface{}) (
 		return valueToBool(ret[0]), nil
 	}
 	return false, err
+}

@@ -199,7 +199,6 @@ func addDir(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-
 	resp, err := s.Request("files/cp", fmt.Sprintf("/ipfs/%s", hash),
 		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Dest).
 		Send(context.Background())
@@ -431,6 +430,18 @@ func getFileData(r *http.Request, prefix, key string) error {
 		count2, err := fileByte.Read(dataBytes)
 		if err == io.EOF {
 			file3.Close()
+			//os.Remove(tempName)
+			break
+		}
+		file2.Write(dataBytes[:count2])
+		total += count2
+		toltemp += count2
+		file3.Seek(0, 0)
+		totalStr = strconv.Itoa(total)
+		file3.WriteString(totalStr)
+		//if total > 30000{
+		// panic("")
+		//}
 	}
 
 	return nil

@@ -69,18 +69,6 @@ func errorResponse(w http.ResponseWriter, err error, code ...int) {
 	}
 
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	if len(code) == 0 {
-		w.WriteHeader(et.Status)
-	} else {
-		w.WriteHeader(code[0])
-	}
-
-	jsonResponse(w, et)
-}
-
-func JsonCodeResponse(w http.ResponseWriter, ct *model.Response) {
-	jsonResponse(w, ct)
-}
 
 type formValidator interface {
 	Validate(r *http.Request) error
@@ -116,4 +104,13 @@ func isMultipartForm(r *http.Request) bool {
 
 type hexValue struct {
 	value []byte
+}
+
+func (hv hexValue) Bytes() []byte {
+	return hv.value
+}
+
+func (hv *hexValue) UnmarshalText(v []byte) (err error) {
+	hv.value, err = hex.DecodeString(string(v))
+	return
 }

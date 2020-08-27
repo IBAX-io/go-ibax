@@ -12,13 +12,6 @@ import (
 
 	"time"
 
-	"context"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
-)
-
-func createTables(t *testing.T, db *sql.DB) {
-	sql := `
 	CREATE TABLE "main_lock" (
 		"lock_time" integer NOT NULL DEFAULT '0',
 		"script_name" string NOT NULL DEFAULT '',
@@ -54,3 +47,18 @@ func TestWait(t *testing.T) {
 	install := &model.Install{}
 	install.Progress = "complete"
 	err = install.Create()
+	if err != nil {
+		t.Fatalf("save failed: %s", err)
+	}
+
+	ctx, scf := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer func() {
+		ctx.Done()
+		scf()
+	}()
+
+	err = WaitDB(ctx)
+	if err != nil {
+		t.Errorf("wait failed: %s", err)
+	}
+}

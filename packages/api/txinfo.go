@@ -55,13 +55,17 @@ func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, err
 	}
 	if found {
 		status.Confirm = int(confirm.Good)
+	return &status, nil
+}
+
+func getTxInfoHandler(w http.ResponseWriter, r *http.Request) {
+	form := &txInfoForm{}
+	if err := parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
 	}
-	if cntInfo {
-		status.Data, err = smart.TransactionData(ltx.Block, hash)
-		if err != nil {
-			return nil, err
-		}
-	}
+
+	params := mux.Vars(r)
 	status, err := getTxInfo(r, params["hash"], form.ContractInfo)
 	if err != nil {
 		errorResponse(w, err)

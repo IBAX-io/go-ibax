@@ -4,7 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package tx
 
-// Header is contain header data
-type Header struct {
-	ID          int
-	Time        int64
+	//Add sub node processing
+	PrivateFor []string
+}
