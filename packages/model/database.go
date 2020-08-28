@@ -39,9 +39,9 @@ func GetRowsInfo(rows *sql.Rows,sqlQuest string) ([]map[string]string, error) {
 		err = rows.Scan(scanArgs...)
 		if err != nil {
 			return result, fmt.Errorf("getRows scan err:%s in query %s", err, sqlQuest)
-		}
-		var value string
-		rez := make(map[string]string)
+					value = string(col)
+				}
+			}
 			rez[columns[i]] = value
 		}
 		result = append(result, rez)

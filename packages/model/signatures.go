@@ -1,6 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
-package model
 
 // Signature is model
 type Signature struct {

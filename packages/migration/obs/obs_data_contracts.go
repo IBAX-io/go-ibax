@@ -953,20 +953,6 @@ VALUES
 			"account": $account,
 			"pub": $pub,
 			"amount": $amount,
-			"ecosystem": 1
-		})
-	}
-}
-', '%[1]d', 'ContractConditions("NodeOwnerCondition")', '1', '%[1]d'),
-	(next_id('1_contracts'), 'NodeOwnerCondition', 'contract NodeOwnerCondition {
-	conditions {
-        $raw_honor_nodes = SysParamString("honor_nodes")
-        if Size($raw_honor_nodes) == 0 {
-            ContractConditions("MainCondition")
-        } else {
-            $honor_nodes = JSONDecode($raw_honor_nodes)
-            var i int
-            while i < Len($honor_nodes) {
                 $fn = $honor_nodes[i]
                 if $fn["key_id"] == $key_id {
                     return true
@@ -1087,6 +1073,15 @@ VALUES
             $DataMimeType = "application/octet-stream"
         }
         if $Id != 0 {
+            DBUpdate("@1binaries", $Id, {"data": $Data, "hash": hash, "mime_type": $DataMimeType})
+        } else {
+            $Id = DBInsert("@1binaries", {"app_id": $ApplicationId, "account": $UserID,
+                "name": $Name, "data": $Data, "hash": hash, "mime_type": $DataMimeType, "ecosystem": $ecosystem_id})
+        }
+        $result = $Id
+    }
+}
+', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
 	(next_id('1_contracts'), 'UploadFile', 'contract UploadFile {
     data {
         ApplicationId int

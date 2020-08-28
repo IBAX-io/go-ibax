@@ -119,16 +119,6 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 
 	txs, err := dtx.RunForDelayBlockID(prevBlock.BlockID + 1)
 	if err != nil {
-		return err
-	}
-
-	trs, err := processTransactions(d.logger, txs, done, st.Unix())
-	if err != nil {
-		return err
-	}
-
-	// Block generation will be started only if we have transactions
-	if len(trs) == 0 {
 		return nil
 	}
 
@@ -176,6 +166,9 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 	p := new(transaction.Transaction)
 
 	//verify transactions
+	//err := transaction.ProcessTransactionsQueue(p.DbTransaction)
+	//if err != nil {
+	//	return nil, err
 	//}
 
 	trs, err := model.GetAllUnusedTransactions(p.DbTransaction, syspar.GetMaxTxCount())
