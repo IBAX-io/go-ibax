@@ -115,23 +115,6 @@ func TestVMCompile(t *testing.T) {
 				return Sprintf("result=%s+%d+%s+%s+%d", ret["par1"], my["par2"] + 32, my["par1"], proc($glob["test"] ), $glob["number"] )
 			}`, `formap`, `result=Parameter 1+2874+my value space proc+String valueproc+1001`},
 		{`func runtime string {
-						var i int
-						i = 50
-						return Sprintf("val=%d", i 0)
-					}`, `runtime`, `runtime panic error`},
-		{`func nop {
-							return
-						}
-
-						func loop string {
-							var i int
-							while true {//i < 10 {
-								i=i+1
-								if i==5 {
-									continue
-								}
-								if i == 121 {
-									i = i+ 4
 									break
 								}
 							}
@@ -528,6 +511,19 @@ func TestVMCompile(t *testing.T) {
 			   var a map
 			   a["тест"] = "тест"
 			   $result = a["тест"]
+			}
+		}
+		func result() string {
+			var par map
+			return CallContract("TestCyr", par) 
+		}`, `result`, `тест`},
+		{`contract MainCond {
+			conditions {
+				error $test
+			}
+			action {
+				$result = "OK"
+			}
 		}
 		func result() bool {
 			return MainCond

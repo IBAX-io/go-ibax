@@ -38,6 +38,17 @@ contract Import {
         var i int
         while i < Len(dataImport) {
             var item cdata map type name string
+            cdata = dataImport[i]
+            if cdata {
+                cdata["ApplicationId"] = $ApplicationId
+                type = cdata["Type"]
+                name = cdata["Name"]
+                // Println(Sprintf("import %v: %v", type, cdata["Name"]))
+                var tbl string
+                tbl = "@1" + Str(type)
+                if type == "app_params" {
+                    item = DBFind(tbl).Where({"name": name, "ecosystem": $ecosystem_id, "app_id": $ApplicationId}).Row()
+                } else {
                     item = DBFind(tbl).Where({"name": name, "ecosystem": $ecosystem_id}).Row()
                 }
                 var contractName string
@@ -57,19 +68,6 @@ contract Import {
                         menuItem = Replace(cdata["Value"], " ", "")
                         menuItem = Replace(menuItem, "\n", "")
                         menuItem = Replace(menuItem, "\r", "")
-                        if Contains(menu, menuItem) {
-                            // ignore repeated
-                            contractName = ""
-                        } else {
-                            cdata["Value"] = item["value"] + "\n" + cdata["Value"]
-                        }
-                    }
-                } else {
-                    contractName = creators[type]
-                }
-                if contractName != "" {
-                    CallContract(contractName, cdata)
-                }
             }
             i = i + 1
         }

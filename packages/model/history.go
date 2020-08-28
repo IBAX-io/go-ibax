@@ -77,6 +77,14 @@ func GetExcessCommonTokenMovementPerDay(tx *DbTransaction) (amount decimal.Decim
 func GetExcessFromToTokenMovementPerDay(tx *DbTransaction) (excess []MoneyTransfer, err error) {
 	db := GetDB(tx)
 	err = db.Table("1_history").
+		Select("sender_id, recipient_id, SUM(amount) amount").
+		Where("to_timestamp(created_at) > NOW() - interval '24 hours' AND amount > 0").
+		Group("sender_id, recipient_id").
+		Having("SUM(amount) > ?", consts.FromToPerDayLimit).
+		Scan(&excess).Error
+
+	return excess, err
+}
 
 // GetExcessTokenMovementQtyPerBlock returns from to pairs where money transactions count greather than tokenMovementQtyPerBlockLimit per 24 hours
 func GetExcessTokenMovementQtyPerBlock(tx *DbTransaction, blockID int64) (excess []SenderTxCount, err error) {
@@ -105,14 +113,6 @@ func GetWalletRecordHistory(tx *DbTransaction, keyId string, searchType string, 
 			Where("sender_id = ?", keyId).
 			Order("id desc").
 			Limit(limit).
-			Offset(offset).
-			Scan(&histories).Error
-	} else {
-		err = db.Table("1_history").
-			Where("recipient_id = ? OR sender_id = ?", keyId, keyId).
-			Order("id desc").
-			Limit(limit).
-			Offset(offset).
 			Scan(&histories).Error
 	}
 	return histories, err

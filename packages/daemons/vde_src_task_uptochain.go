@@ -89,20 +89,9 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 			"TaskUUID":     {item.TaskUUID},
 			"TaskName":     {item.TaskName},
 			"TaskSender":   {item.TaskSender},
+			"TaskReceiver": {item.TaskReceiver},
 			"Comment":      {item.Comment},
 			"Parms":        {item.Parms},
-			"TaskType":     {converter.Int64ToStr(item.TaskType)},
-			"TaskState":    {converter.Int64ToStr(item.TaskState)},
-
-			"ContractSrcName":     {item.ContractSrcName},
-			"ContractSrcGet":      {item.ContractSrcGet},
-			"ContractSrcGetHash":  {item.ContractSrcGetHash},
-			"ContractDestName":    {item.ContractDestName},
-			"ContractDestGet":     {item.ContractDestGet},
-			"ContractDestGetHash": {item.ContractDestGetHash},
-
-			"ContractRunHttp":      {item.ContractRunHttp},
-			"ContractRunEcosystem": {item.ContractRunEcosystem},
 			"ContractRunParms":     {item.ContractRunParms},
 
 			"ContractMode": {converter.Int64ToStr(item.ContractMode)},

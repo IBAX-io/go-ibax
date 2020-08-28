@@ -8,6 +8,13 @@ package migration
 import (
 	"fmt"
 	"strconv"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/migration/updates"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -78,14 +85,6 @@ func migrate(db database, appVer string, migrations []*migration) error {
 		log.WithFields(log.Fields{"type": consts.DBError, "err": err}).Errorf("parse version")
 		return err
 	}
-
-	if cmp, err := compareVer(dbVerString, appVer); err != nil {
-		log.WithFields(log.Fields{"type": consts.MigrationError, "err": err}).Errorf("parse version")
-		return err
-	} else if cmp >= 0 {
-		return nil
-	}
-
 	for _, m := range migrations {
 		if cmp, err := compareVer(dbVerString, m.version); err != nil {
 			log.WithFields(log.Fields{"type": consts.MigrationError, "err": err}).Errorf("parse version")

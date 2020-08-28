@@ -1,13 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package utils
-
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestRand(t *testing.T) {
@@ -21,3 +11,6 @@ func TestRand(t *testing.T) {
 		r := rand.BytesSeed([]byte("reset"))
 		for _, v := range values {
 			assert.Equal(t, v, r.Int63())
+		}
+	}
+}

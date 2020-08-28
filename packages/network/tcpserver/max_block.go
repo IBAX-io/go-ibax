@@ -26,3 +26,5 @@ func Type10() (*network.MaxBlockResponse, error) {
 		log.WithFields(log.Fields{"type": consts.NotFound}).Debug("Can't found info block")
 	}
 
+	return &network.MaxBlockResponse{
+		BlockID: infoBlock.BlockID,

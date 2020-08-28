@@ -1,16 +1,5 @@
 package api
 
-import (
-	"encoding/json"
-	"fmt"
-	"github.com/IBAX-io/go-ibax/packages/miner"
-	"math/rand"
-	"testing"
-)
-
-//go test webbench_test.go -test.bench=".*"
-
-func Benchmark_GetMiner(b *testing.B) {
 	st, _ := miner.MakeMiningPoolData(100000000)
 	//assert.NoError(t, err)
 	for i := 0; i < b.N; i++ { //use b.N for looping
@@ -262,6 +251,19 @@ func TestMapJsonTsFirst(t *testing.T) {
 	//ae :=AssignRules{
 	//	StartBlockID:21600*6*30,
 	//	EndBlockID:INT64_MAX,
+	//	IntervalBlockID:21600*30,
+	//	TotalAmount:"105000000000000000000",
+	//}
+	//team
+	af := AssignRules{
+		StartBlockID:    INT64_MAX,
+		EndBlockID:      INT64_MAX, //start + 21600 * 4 * 365
+		IntervalBlockID: 21600 * 30,
+		Count:           48,
+		TotalAmount:     "315000000000000000000",
+	}
+
+	//mine
 	ag := AssignRules{
 		StartBlockID:    21600 * 365,
 		EndBlockID:      INT64_MAX,

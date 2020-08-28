@@ -50,10 +50,6 @@ func unmarshalColumnVDESrcData(form *VDESrcDataForm) (*model.VDESrcData, error) 
 		DataUUID:  taskdata.DataUUID,
 		Hash:      taskdata.Hash,
 		Data:      taskdata.Data,
-		DataInfo:  converter.MarshalJson(datainfo),
-		DataState: int64(form.DataState),
-		DataErr:   form.DataErr,
-	}
 
 	return m, err
 }
@@ -106,6 +102,15 @@ func VDESrcDataCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+
+	m.CreateTime = time.Now().Unix()
+	if err = m.Create(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
+		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, &VDETaskdataResult{
 		TaskUUID: form.TaskUUID,
 		DataUUID: m.DataUUID,
 		Hash:     m.Hash,

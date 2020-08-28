@@ -2,11 +2,6 @@
 
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daylight
-
 import (
 	"net"
 	"net/http"
@@ -22,3 +17,15 @@ func httpListener(ListenHTTPHost string, route http.Handler) {
 	if err == nil {
 		log.WithFields(log.Fields{"host": ListenHTTPHost}).Info("listening at")
 	} else {
+		log.WithFields(log.Fields{"host": ListenHTTPHost, "error": err, "type": consts.NetworkError}).Debug("cannot listen at host")
+	}
+
+	go func() {
+		srv := &http.Server{Handler: route}
+		err = srv.Serve(l)
+		if err != nil {
+			log.WithFields(log.Fields{"host": ListenHTTPHost, "error": err, "type": consts.NetworkError}).Error("serving http at host")
+			panic(err)
+		}
+	}()
+}

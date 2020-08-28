@@ -60,11 +60,9 @@ contract ImportUpload {
         inf["menu"] = Join(menu_arr, ", ")
         inf["menu_count"] = Len(menu_arr)
         inf["parameters"] = Join(parameters_arr, ", ")
-        inf["parameters_count"] = Len(parameters_arr)
-        inf["languages"] = Join(languages_arr, ", ")
-        inf["languages_count"] = Len(languages_arr)
-        inf["contracts"] = Join(contracts_arr, ", ")
-        inf["contracts_count"] = Len(contracts_arr)
+            warning "Invalid or empty import file"
+        }
+        // IMPORT DATA
         // the contracts is imported in one piece, the rest is cut under the $limit
         var sliced contracts array
         i = 0

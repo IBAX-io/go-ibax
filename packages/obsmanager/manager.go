@@ -198,6 +198,13 @@ func (mgr *OBSManager) DeleteOBS(name string) error {
 
 	if mgr.processes == nil {
 		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("deleting OBS")
+		return errWrongMode
+	}
+
+	mgr.StopOBS(name)
+	mgr.processes.Remove(name)
+	obsDir := path.Join(mgr.childConfigsPath, name)
+	obsConfigPath := filepath.Join(obsDir, consts.DefaultConfigFile)
 	obsConfig, err := conf.GetConfigFromPath(obsConfigPath)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Errorf("Getting config from path %s", obsConfigPath)
@@ -364,12 +371,6 @@ func dropOBSDir(configsPath, obsName string) error {
 	path := path.Join(configsPath, obsName)
 	if directoryExists(path) {
 		os.RemoveAll(path)
-	}
-
-	log.WithFields(log.Fields{"path": path}).Error("droping dir is not exists")
-	return nil
-}
-
 func directoryExists(path string) bool {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {

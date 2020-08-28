@@ -581,20 +581,6 @@ VALUES
 
         if DBFind("app_params").Columns("id").Where({"name":$Name}).One("id") {
             warning Sprintf( "Application parameter %s already exists", $Name)
-        }
-    }
-
-    action {
-        DBInsert("app_params", {app_id: $ApplicationId, name: $Name, value: $Value,
-              conditions: $Conditions})
-    }
-}
-', '1', 'ContractConditions("MainCondition")', '1', '1'),
-	(next_id('1_contracts'), 'NewApplication', 'contract NewApplication {
-    data {
-        Name string
-        Conditions string
-    }
 
     conditions {
         ValidateCondition($Conditions, $ecosystem_id)
@@ -955,6 +941,17 @@ VALUES
     data {
         ApplicationId int
         Data file
+        Name string "optional"
+    }
+    conditions {
+        if $Name == "" {
+            $Name = $Data["Name"]
+        }
+        $Body = $Data["Body"]
+        $DataMimeType = $Data["MimeType"]
+    }
+    action {
+        $Id = @1UploadBinary("ApplicationId,Name,Data,DataMimeType", $ApplicationId, $Name, $Body, $DataMimeType)
         $result = $Id
     }
 }

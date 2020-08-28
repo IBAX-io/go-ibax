@@ -1,11 +1,16 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
-	Source string
-	Code   *Block
-}
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package script
 
-var (
-	evals = make(map[uint64]*evalCode)
+import (
+	log "github.com/sirupsen/logrus"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+)
 )
 
 // CompileEval compiles conditional exppression
