@@ -1,18 +1,22 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
-	Cycle        int64           `gorm:"not null" `           //
-	Amount       decimal.Decimal `gorm:"not null default 0" ` //
-	Expired      int64           `gorm:"null" `
-	Status       int64           `gorm:"null"`            //
-	Review       int64           `gorm:"null default 0" ` //
-	Count        int64           `gorm:"null default 0" ` //
-	Stakes       int64           `gorm:"null default 0" ` //
-	Transfers    int64           `gorm:"null"  `          //
-	Stime        int64           `gorm:"not null" `       //
-	Etime        int64           `gorm:"not null" `       //
-	DateUpdated  int64           `gorm:"not null" `
-	DateCreated  int64           `gorm:"not null" `
-}
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+import (
+	"github.com/shopspring/decimal"
+)
+
+type MineStake struct {
+	ID           int64           `gorm:"primary_key not null"`
+	Number       int64           `gorm:"null" `      //number
+	Devid        int64           `gorm:";not null" ` //devid
+	Keyid        int64           `gorm:"not null" `  //keyid
+	Poolid       int64           `gorm:"not null" `  //
+	MineType     int64           `gorm:"not null"`
+	MineNumber   string          `gorm:"not null"`
+	MineCapacity int64           `gorm:"not null"`
 
 // TableName returns name of table
 func (MineStake) TableName() string {
