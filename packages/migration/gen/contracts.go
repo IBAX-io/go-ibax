@@ -104,18 +104,6 @@ func loadSource(srcPath string) (*contract, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-
-	props := make([]byte, 0)
-	data := make([]byte, 0)
-
-	scan := bufio.NewScanner(file)
-	for scan.Scan() {
-		line := scan.Bytes()
-		if bytes.HasPrefix(line, propPrefix) {
-			props = append(append(props, line[len(propPrefix):]...), '\n')
-		} else {
-			data = append(append(data, line...), '\n')
 		}
 	}
 
@@ -137,6 +125,12 @@ func loadSource(srcPath string) (*contract, error) {
 
 func loadSources(srcPaths []string) ([]*contract, error) {
 	sources := make([]*contract, 0)
+
+	for _, srcPath := range srcPaths {
+		err := filepath.Walk(srcPath, func(path string, info os.FileInfo, err error) error {
+			if filepath.Ext(path) != ext {
+				return nil
+			}
 
 			source, err := loadSource(path)
 			if err != nil {

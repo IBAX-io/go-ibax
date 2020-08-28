@@ -64,14 +64,6 @@ func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 			b_syslog.Err(line)
 			return nil
 		}
-	case logrus.WarnLevel:
-		{
-			b_syslog.Warning(line)
-			return nil
-		}
-	case logrus.InfoLevel:
-		{
-			b_syslog.Info(line)
 			return nil
 		}
 	case logrus.DebugLevel:
@@ -100,5 +92,20 @@ func init() {
 		"mail":     b_syslog.LOG_MAIL,
 		"daemon":   b_syslog.LOG_DAEMON,
 		"auth":     b_syslog.LOG_AUTH,
+		"syslog":   b_syslog.LOG_SYSLOG,
+		"lpr":      b_syslog.LOG_LPR,
+		"news":     b_syslog.LOG_NEWS,
+		"uucp":     b_syslog.LOG_UUCP,
+		"cron":     b_syslog.LOG_CRON,
+		"authpriv": b_syslog.LOG_AUTHPRIV,
+		"ftp":      b_syslog.LOG_FTP,
+		"local0":   b_syslog.LOG_LOCAL0,
+		"local1":   b_syslog.LOG_LOCAL1,
+		"local2":   b_syslog.LOG_LOCAL2,
+		"local3":   b_syslog.LOG_LOCAL3,
+		"local4":   b_syslog.LOG_LOCAL4,
+		"local5":   b_syslog.LOG_LOCAL5,
+		"local6":   b_syslog.LOG_LOCAL6,
+		"local7":   b_syslog.LOG_LOCAL7,
 	}
 }
