@@ -3,12 +3,8 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-	"testing"
+package api
 
-	"github.com/stretchr/testify/assert"
-)
-
-func TestGetMaxBlockID(t *testing.T) {
 	var ret maxBlockResult
 	err := sendGet(`maxblockid`, nil, &ret)
 	assert.NoError(t, err)

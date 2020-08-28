@@ -779,20 +779,6 @@ main:
 					if err != nil {
 						rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "error": err, "cmd": cmd.Value.(string)}).Error("executing extended function")
 						err = fmt.Errorf(`extend function %s %s`, cmd.Value.(string), err.Error())
-						break main
-					}
-				} else {
-					switch varVal := val.(type) {
-					case int:
-						val = int64(varVal)
-					}
-					rt.stack = append(rt.stack, val)
-				}
-			} else {
-				rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "cmd": cmd.Value.(string)}).Error("unknown extend identifier")
-				err = fmt.Errorf(`unknown extend identifier %s`, cmd.Value.(string))
-			}
-		case cmdIndex:
 			rv := reflect.ValueOf(rt.stack[size-2])
 			itype := reflect.TypeOf(rt.stack[size-2]).String()
 
@@ -1110,6 +1096,20 @@ main:
 		case cmdAnd:
 			bin = valueToBool(top[1]) && valueToBool(top[0])
 		case cmdOr:
+			bin = valueToBool(top[1]) || valueToBool(top[0])
+		case cmdEqual, cmdNotEq:
+			if top[1] == nil || top[0] == nil {
+				bin = top[0] == top[1]
+			} else {
+				switch top[1].(type) {
+				case string:
+					switch top[0].(type) {
+					case int64:
+						if tmpInt, err = converter.ValueToInt(top[1]); err == nil {
+							bin = tmpInt == top[0].(int64)
+						}
+					case float64:
+						bin = ValueToFloat(top[1]) == top[0].(float64)
 					default:
 						if reflect.TypeOf(top[0]).String() == Decimal {
 							if tmpDec, err = ValueToDecimal(top[1]); err != nil {
