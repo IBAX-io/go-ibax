@@ -42,5 +42,3 @@ func TestBytesPoolCicle(t *testing.T) {
 
 	newBuf := BytesPool.Get(5)
 	require.Equal(t, power, int64(len(newBuf)))
-
-	require.Equal(t, newBuf[:5], short)

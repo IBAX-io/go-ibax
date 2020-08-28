@@ -14,8 +14,6 @@ type BanError struct {
 
 func (b *BanError) Error() string {
 	return b.err.Error()
-}
-		return true
 	}
 	return false
 }

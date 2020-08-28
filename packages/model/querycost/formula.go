@@ -21,9 +21,6 @@ const (
 	Update = "update"
 	Delete = "delete"
 
-	Set  = "set"
-	From = "from"
-	Into = "into"
 
 	Quote  = `"`
 	Lparen = "("
@@ -102,6 +99,25 @@ func (s UpdateQueryType) GetTableName() (string, error) {
 	queryFields := strings.Fields(string(s))
 	setFieldIndex := strSliceIndex(queryFields, Set)
 	if setFieldIndex == 0 {
+		return "", SetStatementMissingError
+	}
+	return strings.Trim(queryFields[setFieldIndex-1], Quote), nil
+}
+
+func (s UpdateQueryType) CalculateCost(rowCount int64) int64 {
+	return UpdateCost + int64(UpdateRowCoeff*float64(rowCount))
+}
+
+type InsertQueryType string
+
+func (s InsertQueryType) GetTableName() (string, error) {
+	queryFields := strings.Fields(string(s))
+	intoFieldIndex := strSliceIndex(queryFields, Into)
+	if intoFieldIndex == 0 {
+		return "", IntoStatementMissingError
+	}
+	tableNameValuesField := queryFields[intoFieldIndex+1]
+	tableName := ""
 	lparenIndex := strings.Index(tableNameValuesField, Lparen)
 	if lparenIndex > 0 {
 		tableName = tableNameValuesField[:lparenIndex]
