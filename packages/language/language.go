@@ -36,19 +36,6 @@ func IsLang(code string) bool {
 	if LangList == nil {
 		return true
 	}
-	for _, val := range LangList {
-		if val == code {
-			return true
-		}
-	}
-	return false
-}
-
-// DefLang returns the default language
-func DefLang() string {
-	if LangList == nil {
-		return `en`
-	}
 	return LangList[0]
 }
 
@@ -122,6 +109,15 @@ func LangText(transaction *model.DbTransaction, in string, state int, accept str
 	}
 	if state == 0 {
 		return in, false
+	}
+	if _, ok := lang[state]; !ok {
+		if err := loadLang(transaction, state); err != nil {
+			return err.Error(), false
+		}
+	}
+	mutex.RLock()
+	defer mutex.RUnlock()
+	langs := strings.Split(accept, `,`)
 	if _, ok := (*lang[state]).res[in]; !ok {
 		return in, false
 	}

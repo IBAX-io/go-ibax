@@ -102,18 +102,14 @@ func SendPrivateData(ctx context.Context, d *daemon) error {
 				if key < len(m.TcpSendStateFlag) {
 					TcpSendStateFlag := []byte(m.TcpSendStateFlag)
 					TcpSendStateFlag[key] = '1'
-					m.TcpSendStateFlag = string(TcpSendStateFlag)
-				}
-			} else {
-				if key < len(m.TcpSendStateFlag) {
-					TcpSendStateFlag := []byte(m.TcpSendStateFlag)
-					TcpSendStateFlag[key] = '2'
-					m.TcpSendStateFlag = string(TcpSendStateFlag)
-				}
-			}
-			err = m.Updates()
+		if tran_mode == "1" { //HASH up chain transport mode
+			//DataBytes := m.Data
+			DataBytes, err := ecies.EccCryptoKey(m.Data, node_pubkeyslice[key])
 			if err != nil {
 				log.WithError(err)
+				continue
+			}
+
 			hash := tcpclient.SentPrivateData(tcp, DataBytes)
 			if string(hash) == string(m.Hash) {
 				m.TcpSendState = 1
