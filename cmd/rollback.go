@@ -18,15 +18,13 @@ import (
 )
 
 var blockID int64
-		if err := model.GormInit(
-			conf.Config.DB.Host,
-			conf.Config.DB.Port,
-			conf.Config.DB.User,
-			conf.Config.DB.Password,
-			conf.Config.DB.Name,
-		); err != nil {
-			log.WithError(err).Fatal("init db")
-			return
+
+// rollbackCmd represents the rollback command
+var rollbackCmd = &cobra.Command{
+	Use:    "rollback",
+	Short:  "Rollback blockchain to blockID",
+	PreRun: loadConfigWKey,
+	Run: func(cmd *cobra.Command, args []string) {
 		}
 		if err := syspar.SysUpdate(nil); err != nil {
 			log.WithError(err).Error("can't read system parameters")
