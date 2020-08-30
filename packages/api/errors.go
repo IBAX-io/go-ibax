@@ -66,3 +66,4 @@ type errType struct {
 
 func (et errType) Error() string {
 	return et.Err
+}

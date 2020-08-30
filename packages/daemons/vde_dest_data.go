@@ -55,19 +55,6 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 
 	// deal with task data
 	var TaskParms_Str string
-	for _, item := range ShareData {
-		//fmt.Println("TaskUUID,DataUUID:", item.TaskUUID, item.DataUUID)
-		m := &model.VDEDestTaskFromSrc{}
-		ShareTask, err := m.GetAllByTaskUUIDAndTaskState(item.TaskUUID, 1) //1valid，0stop task
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("VDEDestTaskFromSrc getting one task by TaskUUID")
-			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-		if len(ShareTask) > 0 {
-			TaskParms_Str = ShareTask[0].Parms
-		} else {
-			m2 := &model.VDEDestTaskFromSche{}
 			ShareTask2, err := m2.GetAllByTaskUUIDAndTaskState(item.TaskUUID, 1) //1 valid task，2stop task
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("VDEDestTaskFromSche getting one task by TaskUUID")
@@ -171,6 +158,11 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 				log.WithError(err)
 			}
 			continue
+		}
+		//fmt.Println("agent_mode,hash_mode,log_mode:",agent_mode,hash_mode,log_mode)
+
+		if blockchain_http, ok = TaskParms["blockchain_http"].(string); !ok {
+			log.WithFields(log.Fields{"error": err}).Error("blockchain_http parse error")
 			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {

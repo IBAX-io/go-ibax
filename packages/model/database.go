@@ -15,12 +15,6 @@ func GetNodeRows(tableName string) (int64, error) {
 	}
 	if err != nil {
 		return 0, err
-	}
-	return count, nil
-}
-
-func GetRowsInfo(rows *sql.Rows,sqlQuest string) ([]map[string]string, error) {
-	var result []map[string]string
 	defer rows.Close()
 	columns, err := rows.Columns()
 	if err != nil {
@@ -39,6 +33,17 @@ func GetRowsInfo(rows *sql.Rows,sqlQuest string) ([]map[string]string, error) {
 		err = rows.Scan(scanArgs...)
 		if err != nil {
 			return result, fmt.Errorf("getRows scan err:%s in query %s", err, sqlQuest)
+		}
+		var value string
+		rez := make(map[string]string)
+		for i, col := range values {
+			// Here we can check if the value is nil (NULL value)
+			if col == nil {
+				value = "NULL"
+			} else {
+				if columntypes[i].DatabaseTypeName() == "BYTEA" {
+					value = hex.EncodeToString(col)
+				} else {
 					value = string(col)
 				}
 			}

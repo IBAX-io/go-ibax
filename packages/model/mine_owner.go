@@ -43,6 +43,11 @@ func (m *MineOwner) GetPool(keyid int64) (bool, error) {
 
 // Get is retrieving model from database
 func (m *MineOwner) GetPoolManage(keyid int64) (bool, error) {
+
+	var k Key
+	d := k.SetTablePrefix(1)
+	f1, err1 := d.Get(nil, keyid)
+	if err1 != nil {
 		return false, err1
 	}
 
@@ -103,4 +108,3 @@ func (m *MineOwner) GetAllPoolManage(dbt *DbTransaction, ts int64) (map[int64]in
 	}
 
 	return ret, err
-}

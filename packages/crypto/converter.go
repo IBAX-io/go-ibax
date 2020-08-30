@@ -27,13 +27,6 @@ func KeyToAddress(pubKey []byte) string {
 func GetWalletIDByPublicKey(publicKey []byte) (int64, error) {
 	key, _ := HexToPub(string(publicKey))
 	return int64(Address(key)), nil
-}
-
-// HexToPub encodes hex string to []byte of pub key
-func HexToPub(pub string) ([]byte, error) {
-	key, err := hex.DecodeString(pub)
-func PubToHex(pub []byte) string {
-	if len(pub) == 64 {
 		pub = append([]byte{4}, pub...)
 	}
 	return hex.EncodeToString(pub)
