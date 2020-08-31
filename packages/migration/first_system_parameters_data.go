@@ -1,6 +1,13 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package migration
+
+var firstSystemParametersDataSQL = `
+INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES 
+	(next_id('1_system_parameters'),'default_ecosystem_page', 'If(#ecosystem_id# > 1){Include(@1welcome)}', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'default_ecosystem_menu', '', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'default_ecosystem_contract', '', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'gap_between_blocks', '2', 'ContractAccess("@1UpdateSysParam")'),
@@ -77,5 +84,3 @@
 	(next_id('1_system_parameters'),'external_blockchain', '', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'pay_free_contract', '@1CallDelayedContract', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'pool_block_rate', '5', 'ContractAccess("@1UpdateSysParam")'),
-    (next_id('1_system_parameters'),'local_node_ban_time', '60', 'ContractAccess("@1UpdateSysParam")');
-`

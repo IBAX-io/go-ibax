@@ -12,11 +12,13 @@ import (
 
 	"time"
 
-	CREATE TABLE "main_lock" (
-		"lock_time" integer NOT NULL DEFAULT '0',
-		"script_name" string NOT NULL DEFAULT '',
-		"info" text NOT NULL DEFAULT '',
-		"uniq" integer NOT NULL DEFAULT '0'
+	"context"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+)
+
+func createTables(t *testing.T, db *sql.DB) {
+	sql := `
 	);
 	CREATE TABLE "install" (
 		"progress" text NOT NULL DEFAULT ''

@@ -13,6 +13,11 @@ import (
 // BlockTimeCalculator calculating block generation time
 type BlockTimeCalculator struct {
 	clock         Clock
+	blocksCounter intervalBlocksCounter
+
+	firstBlockTime      time.Time
+	blockGenerationTime time.Duration
+	blocksGap           time.Duration
 
 	nodesCount int64
 }
@@ -99,14 +104,6 @@ func (btc *BlockTimeCalculator) countBlockTime(blockTime time.Time) (blockGenera
 		curBlockEnd := curBlockStart.Add(btc.blocksGap + btc.blockGenerationTime)
 		nextBlockStart = curBlockEnd.Add(time.Second)
 
-		if blockTime.Equal(curBlockStart) || blockTime.After(curBlockStart) && blockTime.Before(nextBlockStart) {
-			bgs.start = curBlockStart
-			bgs.duration = btc.blocksGap + btc.blockGenerationTime
-			bgs.nodePosition = curNodeIndex
-			return bgs, nil
-		}
-
-		if btc.nodesCount > 0 {
 			curNodeIndex = (curNodeIndex + 1) % btc.nodesCount
 		}
 	}
