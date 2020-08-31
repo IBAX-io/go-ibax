@@ -1,9 +1,15 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
-	BanTime  time.Duration
-	Reason   string
-}
+ *--------------------------------------------------------------------------------------------*/
+
+package model
+
+import "time"
+
+type NodeBanLogs struct {
+	ID       int64
+	BannedAt time.Time
 
 // TableName returns name of table
 func (r NodeBanLogs) TableName() string {

@@ -100,11 +100,6 @@ func (m *Map) Get(key string) (value interface{}, found bool) {
 	link, found = m.m[key]
 	if found {
 		value = link.value
-	} else {
-		value = nil
-	}
-	return
-}
 
 // Remove removes the element from the map by key.
 func (m *Map) Remove(key string) {
@@ -165,6 +160,19 @@ func (m *Map) Clear() {
 	m.head = nil
 	m.tail = nil
 }
+
+// String returns a string representation of container
+func (m *Map) String() string {
+	str := "map["
+	for current := m.head; current != nil; current = current.next {
+		str += fmt.Sprintf("%v:%v ", current.key, current.value)
+	}
+	return strings.TrimRight(str, " ") + "]"
+}
+
+func (m *Map) MarshalJSON() ([]byte, error) {
+	s := "{"
+	for current := m.head; current != nil; current = current.next {
 		k := current.key
 		escaped := strings.Replace(k, `"`, `\"`, -1)
 		s = s + `"` + escaped + `":`

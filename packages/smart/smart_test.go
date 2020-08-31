@@ -11,6 +11,14 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/script"
 )
+
+type TestSmart struct {
+	Input  string
+	Output string
+}
+
+func TestNewContract(t *testing.T) {
+	test := []TestSmart{
 		{`contract NewCitizen {
 			data {
 				Public bytes
@@ -54,17 +62,6 @@ func TestCheckAppend(t *testing.T) {
 			var list array
 			list = Append(list, "naw_value")
 			Println(list)
-		}
-	}`
-
-	owner := script.OwnerInfo{
-		StateID:  1,
-		Active:   false,
-		TableID:  1,
-		WalletID: 0,
-		TokenID:  0,
-	}
-
 	require.NoError(t, Compile(appendTestContract, &owner))
 
 	cnt := GetContract("AppendTest", 1)
