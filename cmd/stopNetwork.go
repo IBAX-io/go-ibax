@@ -54,5 +54,10 @@ var stopNetworkCmd = &cobra.Command{
 			"successful": len(addrsForStopping) - errCount,
 			"failed":     errCount,
 		}).Info("Complete")
-	stopNetworkCmd.MarkFlagRequired("addr")
+	},
 }
+
+func init() {
+	stopNetworkCmd.Flags().StringVar(&stopNetworkCertFilepath, "stopNetworkCert", "", "Filepath to certificate for network stopping")
+	stopNetworkCmd.Flags().StringArrayVar(&addrsForStopping, "addr", []string{}, "Node address")
+	stopNetworkCmd.MarkFlagRequired("stopNetworkCert")

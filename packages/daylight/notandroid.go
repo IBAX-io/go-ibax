@@ -2,14 +2,10 @@
 
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
-import (
-	"net"
-	"net/http"
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-
-	log "github.com/sirupsen/logrus"
-)
+package daylight
 
 func httpListener(ListenHTTPHost string, route http.Handler) {
 	l, err := net.Listen("tcp", ListenHTTPHost)

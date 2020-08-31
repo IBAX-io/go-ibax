@@ -1,3 +1,7 @@
+package model
+	"github.com/IBAX-io/go-ibax/packages/consts"
+)
+
 type RawTransaction interface {
 	Bytes() []byte
 	Hash() []byte

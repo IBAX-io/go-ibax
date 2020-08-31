@@ -6,15 +6,6 @@ package tcpclient
 
 import (
 	"sync"
-)
-
-// return nearest power of 2 that bigest than v
-func powerOfTwo(v int) int64 {
-	v--
-	v |= v >> 1
-	v |= v >> 2
-	v |= v >> 4
-	v |= v >> 8
 	v |= v >> 16
 	v++
 	return int64(v)
@@ -47,4 +38,11 @@ func (p *bytePool) Get(size int64) []byte {
 }
 
 func (p *bytePool) Put(buf []byte) {
+	if len(buf) == 0 {
+		return
+	}
+
+	if pool, ok := p.pools[int64(len(buf))]; ok {
+		pool.Put(buf)
+	}
 }

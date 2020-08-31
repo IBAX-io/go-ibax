@@ -58,20 +58,6 @@ func processStopNetwork(b []byte) ([]byte, error) {
 	}
 
 	if err = cert.Validate(fbdata.StopNetworkCertBundle); err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.InvalidObject}).Error("validating cert")
-		return nil, err
-	}
-
-	var data []byte
-	tnow := time.Now().Unix()
-	_, err = converter.BinMarshal(&data,
-		&consts.StopNetwork{
-			TxHeader: consts.TxHeader{
-				Type:  consts.TxTypeStopNetwork,
-				Time:  uint32(tnow),
-				KeyID: conf.Config.KeyID,
-			},
-			StopNetworkCert: b,
 		},
 	)
 	if err != nil {
@@ -83,6 +69,15 @@ func processStopNetwork(b []byte) ([]byte, error) {
 	tx := &model.Transaction{
 		Hash:     hash,
 		Data:     data,
+		Type:     consts.TxTypeStopNetwork,
+		KeyID:    conf.Config.KeyID,
+		HighRate: model.TransactionRateStopNetwork,
+		Time:     tnow,
+	}
+	if err = tx.Create(nil); err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("inserting tx to database")
+		return nil, err
+	}
 
 	return hash, nil
 }

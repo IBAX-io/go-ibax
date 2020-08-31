@@ -3,9 +3,8 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package custom
-	Init() error
-	Validate() error
-	Action() error
-	Rollback() error
-	Header() *tx.Header
-}
+
+import (
+	"github.com/IBAX-io/go-ibax/packages/utils/tx"
+)
+
