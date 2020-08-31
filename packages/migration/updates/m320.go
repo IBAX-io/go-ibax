@@ -5,5 +5,3 @@
 
 package updates
 
-var M320 = `
-

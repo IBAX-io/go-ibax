@@ -4,14 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 package transaction
 
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-)
-
-const (
-	errUnknownContract = `Cannot find %s contract`
-)
-
-func CreateContract(contractName string, keyID int64, params map[string]interface{},
+import (
+	"bytes"
+	"fmt"
 	privateKey []byte) error {
 	ecosysID, _ := converter.ParseName(contractName)
 	if ecosysID == 0 {

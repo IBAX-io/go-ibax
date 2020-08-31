@@ -75,6 +75,10 @@ func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, 
 	buf := new(bytes.Buffer)
 	enc := json.NewEncoder(buf)
 
+	for _, rtx := range list {
+		if err = enc.Encode(&rtx); err != nil {
+			return nil, err
+		}
 	}
 
 	return crypto.Hash(buf.Bytes()), nil
@@ -114,14 +118,6 @@ func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error 
 		exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Time, 0), int(b.NodePosition))
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("block validation")
-			return err
-		}
-
-		validBlockTime = !exists
-	}
-	if validBlockTime {
-		if err = b.Create(transaction); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating block")
 			return err
 		}
 		if err = model.UpdRollbackHash(transaction, rollbacksHash); err != nil {

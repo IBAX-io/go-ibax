@@ -51,6 +51,15 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 	//	time.Sleep(time.Millisecond * 100)
 	//	return err
 	//}
+	//if AgentChainInfo == nil {
+	//	log.Info("Agent chain info not found")
+	//	//fmt.Println("Agent chain info not found")
+	//	LogMode = 0 //0
+	//	blockchain_http = ""
+	//	blockchain_ecosystem = ""
+	//} else {
+	//	LogMode = AgentChainInfo.LogMode
+	//	blockchain_http = AgentChainInfo.BlockchainHttp
 	//	blockchain_ecosystem = AgentChainInfo.BlockchainEcosystem
 	//}
 
@@ -91,17 +100,6 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 		fmt.Println("Send agent data, TaskUUID, DataUUID:", item.TaskUUID, item.DataUUID)
 		hash := tcpclient.SendSubNodeAgentData(item.SubNodeDestIP, item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), converter.Int64ToStr(item.TranMode), item.DataInfo, item.SubNodeSrcPubkey, item.SubNodeAgentPubkey, item.SubNodeAgentIP, item.SubNodeDestPubkey, item.SubNodeDestIP, ItemDataBytes)
 		if string(hash) == "0" {
-			//item.DataSendState = 3 //
-			item.DataSendState = 0 //
-			item.DataSendErr = "Network error"
-			log.Info("Network error")
-		} else if string(hash) == string(item.Hash) {
-			item.DataSendState = 1 //
-			item.DataSendErr = "Send successfully"
-			log.Info("Send successfully")
-		} else {
-			item.DataSendState = 2
-			item.DataSendErr = "Hash mismatch"
 			log.Info("Hash mismatch")
 		}
 		err = item.Updates()

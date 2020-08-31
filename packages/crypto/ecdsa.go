@@ -54,31 +54,30 @@ func (e *ECDSA) privateToPublic(key []byte) ([]byte, error) {
 	bi := new(big.Int).SetBytes(key)
 	priv := new(ecdsa.PrivateKey)
 	priv.PublicKey.Curve = pubkeyCurve
+	priv.D = bi
+	priv.PublicKey.X, priv.PublicKey.Y = pubkeyCurve.ScalarBaseMult(key)
+	return append(converter.FillLeft(priv.PublicKey.X.Bytes()), converter.FillLeft(priv.PublicKey.Y.Bytes())...), nil
+}
+
+// checkSign is checking sign
+func (e *ECDSA) verify(public, data, signature []byte) (bool, error) {
+	if len(public) == 0 {
+		return false, ErrCheckingSignEmpty
+	}
+	switch signProv {
+	case _ECDSA:
+		return e.checkECDSA(public, data, signature)
+	default:
+		return false, ErrUnknownProvider
+	}
+}
+
 func (e *ECDSA) signECDSA(privateKey, data []byte) (ret []byte, err error) {
 	pubkeyCurve := elliptic.P256()
 	bi := new(big.Int).SetBytes(privateKey)
 	priv := new(ecdsa.PrivateKey)
 	priv.PublicKey.Curve = pubkeyCurve
 	priv.D = bi
-	r, s, err := ecdsa.Sign(crand.Reader, priv, getHasher().hash(data))
-	if err != nil {
-		return
-	}
-	ret = append(converter.FillLeft(r.Bytes()), converter.FillLeft(s.Bytes())...)
-	return
-}
-
-// CheckECDSA checks if forSign has been signed with corresponding to public the private key
-func (e *ECDSA) checkECDSA(public, data, signature []byte) (bool, error) {
-	if len(data) == 0 {
-		return false, fmt.Errorf("invalid parameters len(data) == 0")
-	}
-	if len(public) != consts.PubkeySizeLength {
-		return false, fmt.Errorf("invalid parameters len(public) = %d", len(public))
-	}
-	if len(signature) == 0 {
-		return false, fmt.Errorf("invalid parameters len(signature) == 0")
-	}
 
 	var pubkeyCurve elliptic.Curve
 	switch ellipticSize {

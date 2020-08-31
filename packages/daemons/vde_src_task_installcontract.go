@@ -31,10 +31,6 @@ func VDESrcTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 	)
 
 	m := &model.VDESrcTask{}
-	SrcTask, err := m.GetAllByContractStateSrc(0) //0 not install，1 installed，2 fail
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
-		time.Sleep(time.Millisecond * 2)
 		return err
 	}
 	if len(SrcTask) == 0 {
@@ -86,6 +82,19 @@ func VDESrcTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 			item.ContractStateSrcErr = err.Error()
 		} else {
 			item.ContractStateSrc = 1
+			item.ContractStateSrcErr = ""
+		}
+		//fmt.Println("Call api.PostTxResult Src OK")
+
+		item.UpdateTime = time.Now().Unix()
+		err = item.Updates()
+		if err != nil {
+			fmt.Println("Update VDEScheTask table err: ", err)
+			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+
 	} //for
 
 	return nil

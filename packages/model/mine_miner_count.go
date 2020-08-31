@@ -1,4 +1,9 @@
 package model
+
+type MineCount struct {
+	Devid        int64 `gorm:";not null" ` //
+	Keyid        int64 `gorm:"not null" `  //
+
 // TableName returns name of table
 func (MineCount) TableName() string {
 	return `1_v_miner_count`
