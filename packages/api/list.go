@@ -261,19 +261,6 @@ func getnodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		case map[string]interface{}:
 			where, err = qb.GetWhere(types.LoadMap(v))
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		case *types.Map:
-			where, err = qb.GetWhere(v)
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		default:
-			errorResponse(w, errors.New(`Where has wrong format`))
-			return
 		}
 		q = q.Where(where)
 	}
@@ -554,6 +541,15 @@ func getVDEListWhereHandler(w http.ResponseWriter, r *http.Request) {
 		rows, err := q.Order(form.Order).Offset(form.Offset).Limit(form.Limit).Rows()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
+			errorResponse(w, err)
+			return
+		}
+		result.List, err = model.GetResult(rows)
+		if err != nil {
+			errorResponse(w, err)
+			return
+		}
+	} else {
 		rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")

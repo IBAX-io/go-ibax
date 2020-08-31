@@ -32,6 +32,9 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 		tx := &Transaction{}
 		tx, err = UnmarshallTransaction(bytes.NewBuffer(binaryTx), true)
 		if err != nil {
+			return err
+		}
+		err = tx.CheckTime(checkTime)
 		if err != nil {
 			return err
 		}
@@ -40,12 +43,6 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 			expedite, err = decimal.NewFromString(tx.TxSmart.Expedite)
 			if err != nil {
 				return err
-			}
-		}
-		newTx := &model.Transaction{
-			Hash:     hs,
-			Data:     binaryTx,
-			Type:     int8(tx.TxType),
 			KeyID:    tx.TxKeyID,
 			Expedite: expedite,
 			Time:     tx.TxTime,

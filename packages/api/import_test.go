@@ -28,17 +28,6 @@ func ImportApps(path, appname string) error {
 	val["Body"] = apps
 	val["MimeType"] = "application/json"
 	val["Name"] = appname + ".json"
-
-	params := contractParams{
-		"Data": val,
-	}
-	_, _, err = postTxResult("ImportUpload", &params)
-	if err != nil {
-		return err
-	}
-	fmt.Println("successful upload ", val["Name"], "---------------")
-	damap, err := smart.JSONDecode(string(apps))
-	if err != nil {
 		return err
 	}
 	if _, o := damap.(*types.Map).Get("data"); o {
@@ -75,6 +64,15 @@ func TestImportApps(t *testing.T) {
 	//nodePub := `0498b18e551493a269b6f419d7784d26c8e3555638e80897c69997ef9f211e21d5d0b8adeeaab0e0e750e720ddf3048ec55d613ba5dee3fdfd4e7c17d346731e9b`
 	//tcpHost := `127.0.0.1:7078`
 	//firstNode := fmt.Sprintf(`{"api_address":"%v","public_key":"%v","tcp_address":"%v"}`, apiAddress, nodePub, tcpHost)
+	//firstNodeID := `18`
+	//form = url.Values{"Conditions": {`ContractConditions("@1DeveloperCondition")`},
+	//	"Id":    {firstNodeID},
+	//	"Value": {firstNode},
+	//}
+	//assert.NoError(t, postTx(`@1EditAppParam`, &form))
+	//fmt.Println("successful EditAppParam to first_node ")
+	//users := []string{
+	//	`04794cbbfa0ff0d1a3dc3e08e5332ff44131be265d9d67ad60996fd5e3f04d50610b8de6b99bb068991a29806e16832290c0bc890373ae592037317fa213227e39`,
 	//	`045b9c7555a9218f67a94c54c740e33bac6658d6f19be3d527932ccf067cecea17d9d104c315f603458c4ff022af6234e6ee2c8772d334c6a4f478c25fd5ac9a81`,
 	//	`0432ed8601fbe0e452f647147e26bfbfc93532e019f9dad80d183c3dafe7d432f9d84cff6595d9c023fc40119f0b31fa3b2e05d6511bb83f1ba38eb487df8cafe1`,
 	//	`046ea9

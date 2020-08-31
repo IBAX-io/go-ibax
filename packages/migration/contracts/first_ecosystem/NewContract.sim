@@ -18,11 +18,8 @@ contract NewContract {
         $contract_name = ContractName($Value)
 
         if !$contract_name {
-            error "must be the name"
-        }
-
-        if !$TokenEcosystem {
-            $TokenEcosystem = 1
-        } else {
-            if !SysFuel($TokenEcosystem) {
-                warning Sprintf("Ecosystem %d is not system", $TokenEcosystem)
+    }
+    func price() int {
+        return SysParamInt("contract_price")
+    }
+}
