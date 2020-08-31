@@ -32,15 +32,6 @@ type txInfoForm struct {
 type multiTxInfoResult struct {
 	Results map[string]*txinfoResult `json:"results"`
 }
-
-func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, error) {
-	var status txinfoResult
-	hash, err := hex.DecodeString(txHash)
-	if err != nil {
-		return nil, errHashWrong
-	}
-	ltx := &model.LogTransaction{Hash: hash}
-	found, err := ltx.GetByHash(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -55,6 +46,13 @@ func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, err
 	}
 	if found {
 		status.Confirm = int(confirm.Good)
+	}
+	if cntInfo {
+		status.Data, err = smart.TransactionData(ltx.Block, hash)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &status, nil
 }
 

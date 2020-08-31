@@ -35,17 +35,6 @@ type dest_VDEShareTaskResult struct {
 		TaskUUID             string `json:"task_uuid"`
 		TaskName             string `json:"task_name"`
 		TaskSender           string `json:"task_sender"`
-		TaskReceiver         string `json:"task_receiver"`
-		Comment              string `json:"comment"`
-		Parms                string `json:"parms"`
-		TaskType             string `json:"task_type"`
-		TaskState            string `json:"task_state"`
-		ContractSrcName      string `json:"contract_src_name"`
-		ContractSrcGet       string `json:"contract_src_get"`
-		ContractSrcGetHash   string `json:"contract_src_get_hash"`
-		ContractDestName     string `json:"contract_dest_name"`
-		ContractDestGet      string `json:"contract_dest_get"`
-		ContractDestGetHash  string `json:"contract_dest_get_hash"`
 		ContractRunHttp      string `json:"contract_run_http"`
 		ContractRunEcosystem string `json:"contract_run_ecosystem"`
 		ContractRunParms     string `json:"contract_run_parms"`
@@ -300,6 +289,19 @@ func VDEDestTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 
 	return nil
 }
+
+//Getting task information from the chain
+func VDEDestTaskScheGetFromChain(ctx context.Context, d *daemon) error {
+	var (
+		blockchain_http      string
+		blockchain_ecosystem string
+		ScheUpdateTime       string
+		err                  error
+
+		myContractSrcGet      string
+		myContractSrcGetHash  string
+		myContractDestGet     string
+		myContractDestGetHash string
 
 		ContractSrcGetHashHex  string
 		ContractDestGetHashHex string

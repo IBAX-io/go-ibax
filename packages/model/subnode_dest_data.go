@@ -3,15 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package model
-
-type SubNodeDestData struct {
-	ID       int64  `gorm:"primary_key; not null" json:"id"`
-	DataUUID string `gorm:"not null" json:"data_uuid"`
-	TaskUUID string `gorm:"not null" json:"task_uuid"`
-	Hash     string `gorm:"not null" json:"hash"`
-	Data     []byte `gorm:"not null" json:"data"`
-	DataInfo string `gorm:"type:jsonb" json:"data_info"`
 	//SubNodeSrcPubkey     string `gorm:"not null" json:"subnode_src_pubkey"`
 	SubNodeSrcPubkey string `gorm:"column:subnode_src_pubkey;not null" json:"subnode_src_pubkey"`
 	//SubNodeDestPubkey    string `gorm:"not null" json:"subnode_dest_pubkey"`
@@ -38,6 +29,16 @@ func (m *SubNodeDestData) Create() error {
 }
 
 func (m *SubNodeDestData) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *SubNodeDestData) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *SubNodeDestData) GetAll() ([]SubNodeDestData, error) {
+	var result []SubNodeDestData
+	err := DBConn.Find(&result).Error
 	return result, err
 }
 func (m *SubNodeDestData) GetOneByID() (*SubNodeDestData, error) {

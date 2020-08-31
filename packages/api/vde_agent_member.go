@@ -38,11 +38,16 @@ func unmarshalColumnVDEAgentMember(form *VDEAgentMemberForm) (*model.VDEAgentMem
 func VDEAgentMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
-	if err = m.Create(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
+	)
+	logger := getLogger(r)
+	form := &VDEAgentMemberForm{}
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
 	}
-
-	model.DBConn.Last(&m)
+	m := &model.VDEAgentMember{}
+	if m, err = unmarshalColumnVDEAgentMember(form); err != nil {
+		fmt.Println(err)
 
 	jsonResponse(w, *m)
 }

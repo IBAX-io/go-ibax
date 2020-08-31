@@ -22,8 +22,14 @@ type contractField struct {
 	Optional bool   `json:"optional"`
 }
 
-type getContractResult struct {
-	ID       uint32          `json:"id"`
+	logger := getLogger(r)
+
+	contract := getContract(r, params["name"])
+	if contract == nil {
+		logger.WithFields(log.Fields{"type": consts.ContractError, "contract_name": params["contract"]}).Debug("contract name")
+		errorResponse(w, errContract.Errorf(params["name"]))
+		return
+	}
 
 	var result getContractResult
 	info := getContractInfo(contract)

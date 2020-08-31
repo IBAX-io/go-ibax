@@ -54,6 +54,20 @@ type RedisConfig struct {
 
 // StatsDConfig statd connection parameters
 type StatsDConfig struct {
+	Host string // ipaddr, hostname, or "0.0.0.0"
+	Port int    // must be in range 1..65535
+	Name string
+}
+
+// CentrifugoConfig connection params
+type CentrifugoConfig struct {
+	Secret string
+	URL    string
+	Key    string
+}
+
+// Syslog represents parameters of syslog
+type Syslog struct {
 	Facility string
 	Tag      string
 }
@@ -291,18 +305,6 @@ func GetGFilesHost() string {
 }
 
 // GetNodesAddr returns addreses of nodes
-func GetNodesAddr() []string {
-	return Config.NodesAddr[:]
-}
-
-// IsOBS check running mode
-func (c GlobalConfig) IsOBS() bool {
-	return RunMode(c.OBSMode).IsOBS()
-}
-
-// IsOBSMaster check running mode
-func (c GlobalConfig) IsOBSMaster() bool {
-	return RunMode(c.OBSMode).IsOBSMaster()
 }
 
 // IsSupportingOBS check running mode

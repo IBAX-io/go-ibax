@@ -11,10 +11,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
 type tableInfo struct {
 	Name  string `json:"name"`
 	Count string `json:"count"`
@@ -72,6 +68,8 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		result.List[i].Name = item["name"]
+		result.List[i].Count = converter.Int64ToStr(count)
 	}
 
 	jsonResponse(w, result)

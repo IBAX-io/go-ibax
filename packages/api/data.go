@@ -3,6 +3,16 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package api
+
+import (
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -37,15 +47,6 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := model.GetColumnByID(table, column, params["id"])
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting data from table")
-		errorResponse(w, errNotFound)
-		return
-	}
-
-	if !compareHash([]byte(data), params["hash"]) {
-		errorResponse(w, errHashWrong)
-		return
-	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment")

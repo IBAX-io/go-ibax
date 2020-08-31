@@ -8,6 +8,13 @@ package model
 import (
 	"time"
 )
+
+type BadBlocks struct {
+	ID             int64
+	ProducerNodeId int64
+	BlockId        int64
+	ConsumerNodeId int64
+	BlockTime      time.Time
 	Deleted        bool
 }
 
@@ -66,10 +73,4 @@ func (r *BadBlocks) GetNodeBlocks(nodeId int64, now time.Time) ([]BadBlocks, err
 			"producer_node_id = ? AND block_time > ?::date - interval '24 hours' AND deleted = ?",
 			nodeId,
 			now,
-			false,
-		).
-		Scan(&res).
-		Error
-
-	return res, err
 }

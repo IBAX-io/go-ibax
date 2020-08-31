@@ -4,17 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 package model
+// SetTablePrefix is setting table prefix
+func (c *Cron) SetTablePrefix(prefix string) {
+	c.tableName = prefix + "_cron"
+}
 
-import (
-	"fmt"
-)
+// TableName returns name of table
+func (c *Cron) TableName() string {
+	return c.tableName
+}
 
-// Cron represents record of {prefix}_cron table
-type Cron struct {
-	tableName string
-	ID        int64
-	Cron      string
-	Contract  string
+// Get is retrieving model from database
+func (c *Cron) Get(id int64) (bool, error) {
+	return isFound(DBConn.Where("id = ?", id).First(c))
 }
 
 // GetAllCronTasks is returning all cron tasks
