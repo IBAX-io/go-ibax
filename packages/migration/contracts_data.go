@@ -13,6 +13,14 @@ VALUES
 contract AdminCondition {
     conditions {
         if EcosysParam("founder_account") == $key_id {
+            return
+        }
+
+        var role_id_param string
+        role_id_param = EcosysParam("role_admin")
+        if Size(role_id_param) == 0 {
+            warning "Sorry, you do not have access to this action."
+        }
 
         var role_id int
         role_id = Int(role_id_param)
@@ -37,14 +45,6 @@ contract DeveloperCondition {
 
         // check for Developer role
         var app_id int role_id string
-        app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id"))
-        role_id = AppParam(app_id, "role_developer", $ecosystem_id)
-
-        if Size(role_id) == 0 {
-            warning Sprintf(LangRes("@1x_not_access_action"),"DeveloperCondition")
-        }
-        if !RoleAccess(Int(role_id)) {
-            warning Sprintf(LangRes("@1x_not_access_action"),"DeveloperCondition")
         }
     }
 }

@@ -85,6 +85,13 @@ func VDESrcTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	form := &VDESrcTaskForm{}
 	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.VDESrcTask{}
+	if m, err = unmarshalColumnVDESrcTask(form); err != nil {
+		fmt.Println(err)
+		errorResponse(w, err)
 		return
 	}
 	//
@@ -161,15 +168,6 @@ func VDESrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		m.ContractDestGetHash = ContractDestGetHashHex
 	}
 	if m.ContractMode == 0 {
-		m.ContractMode = 3 //
-	}
-
-	m.ID = id
-	m.UpdateTime = time.Now().Unix()
-	if err = m.Updates(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
-		return
-	}
 
 	result, err := m.GetOneByID()
 	if err != nil {

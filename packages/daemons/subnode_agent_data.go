@@ -13,6 +13,15 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
+)
+
+func SubNodeAgentData(ctx context.Context, d *daemon) error {
 	var (
 	//LogMode              int64
 	//log_type             int64
@@ -42,15 +51,6 @@ import (
 	//	time.Sleep(time.Millisecond * 100)
 	//	return err
 	//}
-	//if AgentChainInfo == nil {
-	//	log.Info("Agent chain info not found")
-	//	//fmt.Println("Agent chain info not found")
-	//	LogMode = 0 //0
-	//	blockchain_http = ""
-	//	blockchain_ecosystem = ""
-	//} else {
-	//	LogMode = AgentChainInfo.LogMode
-	//	blockchain_http = AgentChainInfo.BlockchainHttp
 	//	blockchain_ecosystem = AgentChainInfo.BlockchainEcosystem
 	//}
 
