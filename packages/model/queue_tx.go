@@ -8,9 +8,9 @@ package model
 import (
 	"github.com/shopspring/decimal"
 )
-	Time     int64           `gorm:"not null"`
-}
 
+// QueueTx is model
+type QueueTx struct {
 // TableName returns name of table
 func (qt *QueueTx) TableName() string {
 	return "queue_tx"

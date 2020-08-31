@@ -160,6 +160,16 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 				}
 			}
 		}
+		if err := addRollback(sc, sqlBuilder.Table, tid, rollbackInfoStr); err != nil {
+			return 0, sqlBuilder.TableID(), err
+		}
+	}
+	return cost, sqlBuilder.TableID(), nil
+}
+
+func (sc *SmartContract) insert(fields []string, ivalues []interface{},
+	table string) (int64, string, error) {
+	return sc.selectiveLoggingAndUpd(fields, ivalues, table, nil, !sc.OBS && sc.Rollback, false)
 }
 
 func (sc *SmartContract) updateWhere(fields []string, values []interface{},
@@ -174,9 +184,3 @@ func (sc *SmartContract) update(fields []string, values []interface{},
 }
 
 func shortString(raw string, length int) string {
-	if len(raw) > length {
-		return raw[:length]
-	}
-
-	return raw
-}

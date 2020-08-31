@@ -377,6 +377,13 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
 		errorResponse(w, err)
 		return
+	}
+
+	result := new(sumResult)
+	if count > 0 {
+		sum, err := model.GetSumColumn(table, form.Column, where)
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
 			errorResponse(w, errTableNotFound.Errorf(table))
 			return
 		}
@@ -547,15 +554,6 @@ func getVDEListWhereHandler(w http.ResponseWriter, r *http.Request) {
 		rows, err := q.Order(form.Order).Offset(form.Offset).Limit(form.Limit).Rows()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			errorResponse(w, err)
-			return
-		}
-		result.List, err = model.GetResult(rows)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-	} else {
 		rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")

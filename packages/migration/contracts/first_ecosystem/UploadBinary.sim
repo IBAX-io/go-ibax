@@ -1,10 +1,16 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
-contract UploadBinary {
-    data {
-        ApplicationId int
-        Name string
-        Data bytes
+            $UserID = $MemberAccount
+        } else {
+            $UserID = $account_id
+        }
+        $Id = Int(DBFind("@1binaries").Columns("id").Where({"app_id": $ApplicationId, 
+                "account": $UserID, "name": $Name, "ecosystem": $ecosystem_id}).One("id"))
+        if $Id == 0 {
+            if $ApplicationId == 0 {
+                warning LangRes("@1aid_cannot_zero")
+            }
+        }
     }
     action {
         var hash string

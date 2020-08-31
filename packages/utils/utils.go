@@ -300,6 +300,10 @@ func CheckSign(publicKeys [][]byte, forSign []byte, signs []byte, nodeKeyOrLogin
 }
 
 // MerkleTreeRoot rertun Merkle value
+func MerkleTreeRoot(dataArray [][]byte) ([]byte, error) {
+	result := make(map[int32][][]byte)
+	for _, v := range dataArray {
+		hash := converter.BinToHex(crypto.DoubleHash(v))
 		result[0] = append(result[0], hash)
 	}
 	var j int32
@@ -391,12 +395,6 @@ func GetNodeKeys() (string, string) {
 func VDEGetNodeKeys() (string, string, error) {
 	nprivkey, err := os.ReadFile(filepath.Join(conf.Config.KeysDir, consts.NodePrivateKeyFilename))
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading node private key from file")
-		return "", "", err
-	}
-	key, err := hex.DecodeString(string(nprivkey))
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("decoding private key from hex")
 		return "", "", err
 	}
 	npubkey, err := crypto.PrivateToPublic(key)

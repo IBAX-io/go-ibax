@@ -79,12 +79,12 @@ func (m *VDEScheTaskChainStatus) GetAllByTaskUUID(TaskUUID string) ([]VDEScheTas
 
 // func (m *VDEScheTaskChainStatus) GetOneByTaskUUID(TaskUUID string) (*VDEScheTaskChainStatus, bool) {
 // 	var (
-}
-
-func (m *VDEScheTaskChainStatus) GetAllByTaskState(TaskState int64) ([]VDEScheTaskChainStatus, error) {
-	result := make([]VDEScheTaskChainStatus, 0)
-	err := DBConn.Table("vde_sche_task_chain_status").Where("task_state = ?", TaskState).Find(&result).Error
-	return result, err
+// 		result VDEScheTaskChainStatus
+// 		b	bool
+// 	)
+// 	b = DBConn.Where("task_uuid = ?", TaskUUID).First(m).RecordNotFound()
+// 	return &result, b
+// }
 }
 
 func (m *VDEScheTaskChainStatus) GetOneByTaskState(TaskState int64) (bool, error) {
