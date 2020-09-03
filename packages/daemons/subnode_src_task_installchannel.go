@@ -111,6 +111,20 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 		//}
 		if subnode_dest_pubkey, ok = TaskParms["subnode_dest_pubkey"].(string); !ok {
 			log.WithFields(log.Fields{"error": err}).Error("subnode_dest_pubkey parse error")
+			item.ChannelState = 3 //Indicates an error in parsing task parameters
+			err = item.Updates()
+			if err != nil {
+				log.WithError(err)
+			}
+			continue
+		}
+		node_pubkey_slice := strings.Split(subnode_dest_pubkey, ";")
+
+		//if subnode_dest_ip, ok = TaskParms["subnode_dest_ip"].(string); !ok {
+		//	log.WithFields(log.Fields{"error": err}).Error("subnode_dest_ip parse error")
+		//	item.ChannelState = 3 //Indicates an error in parsing task parameters
+		//	err = item.Updates()
+		//	if err != nil {
 		//		log.WithError(err)
 		//	}
 		//	continue
@@ -208,15 +222,6 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 			continue
 		}
 		fmt.Println("Login chain OK!")
-
-		form := url.Values{}
-		if tran_mode == "1" { //1 hash up to chain
-			form = url.Values{
-				"Name":          {blockchain_table},
-				"ColumnsArr":    {`["task_uuid","data_uuid","data_info","hash","spphdata","deleted","date_created","date_updated","date_deleted"]`},
-				"TypesArr":      {`["text","text","json","text","text","number","number","number","number"]`},
-				"InsertPerm":    {`true`},
-				"NewColumnPerm": {`true`},
 				"ReadPerm":      {`1`},
 				"UpdatePerm":    {`true`},
 				"ApplicationId": {`1`},

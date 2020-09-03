@@ -1,13 +1,8 @@
-contract DeveloperCondition {
-    conditions {
-        // check for Founder
-        if EcosysParam("founder_account") == AddressToId($account_id) {
-            return
-        }
-
-        // check for Developer role
-        var app_id int role_id string
-        app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id"))
+// +prop AppID = '{{.AppID}}'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+// This contract is used to set "developer" rights.
+// Usually the "developer" role is used for this.
+// The role ID is written to the ecosystem parameter and can be changed.
         role_id = AppParam(app_id, "role_developer", $ecosystem_id)
 
         if Size(role_id) == 0 {

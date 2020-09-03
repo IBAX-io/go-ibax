@@ -177,10 +177,7 @@ func (sc *SmartContract) updateWhere(fields []string, values []interface{},
 	return sc.selectiveLoggingAndUpd(fields, values, table, where, !sc.OBS && sc.Rollback, true)
 }
 
-func (sc *SmartContract) update(fields []string, values []interface{},
-	table string, whereField string, whereValue interface{}) (int64, string, error) {
-	return sc.updateWhere(fields, values, table, types.LoadMap(map[string]interface{}{
-		whereField: fmt.Sprint(whereValue)}))
-}
+	}
 
-func shortString(raw string, length int) string {
+	return raw
+}

@@ -39,19 +39,21 @@ type tableResult struct {
 func getTableHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
+	client := getClient(r)
+	prefix := client.Prefix()
 
-	var columnsMap map[string]string
-	err = json.Unmarshal([]byte(table.Columns), &columnsMap)
+	table := &model.Table{}
+	table.SetTablePrefix(prefix)
+
+	_, err := table.Get(nil, strings.ToLower(params["name"]))
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("Unmarshalling table columns to json")
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting table")
 		errorResponse(w, err)
 		return
 	}
 
-	columns := make([]columnInfo, 0)
-	for key, value := range columnsMap {
-		colType, err := model.GetColumnType(prefix+`_`+params["name"], key)
-		if err != nil {
+	if len(table.Name) == 0 {
+		errorResponse(w, errTableNotFound.Errorf(params["name"]))
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column type from db")
 			errorResponse(w, err)
 			return
