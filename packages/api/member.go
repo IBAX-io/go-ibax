@@ -1,3 +1,14 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"net/http"
+	"strconv"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -68,12 +79,6 @@ func getAvatarHandler(w http.ResponseWriter, r *http.Request) {
 func getMemberHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
-
-	account := params["account"]
-	ecosystemID := converter.StrToInt64(params["ecosystem"])
-
-	member := &model.Member{}
-	member.SetTablePrefix(converter.Int64ToStr(ecosystemID))
 
 	_, err := member.Get(account)
 	if err != nil {

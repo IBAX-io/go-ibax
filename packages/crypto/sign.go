@@ -12,18 +12,20 @@ import (
 	"math/big"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+)
+
+func SignString(privateKeyHex, data string) ([]byte, error) {
+	privateKey, err := hex.DecodeString(privateKeyHex)
+	if err != nil {
+		return nil, fmt.Errorf("decoding private key from hex: %w", err)
+	}
+	return getCryptoer().sign(privateKey, []byte(data))
+}
+
 // GetPrivateKeys return
 func GetPrivateKeys(privateKey []byte) (ret *ecdsa.PrivateKey, err error) {
 	var pubkeyCurve elliptic.Curve
 
-	switch ellipticSize {
-	case elliptic256:
-		pubkeyCurve = elliptic.P256()
-	default:
-		return nil, ErrUnsupportedCurveSize
-	}
-
-	bi := new(big.Int).SetBytes(privateKey)
 	priv := new(ecdsa.PrivateKey)
 	priv.PublicKey.Curve = pubkeyCurve
 	priv.D = bi

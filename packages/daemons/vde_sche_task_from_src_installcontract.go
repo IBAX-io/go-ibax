@@ -120,11 +120,7 @@ func VDEScheTaskFromSrcInstallContractDest(ctx context.Context, d *daemon) error
 	if len(ScheTask) == 0 {
 		//log.Info("Sche task not found")
 		time.Sleep(time.Millisecond * 2)
-		//fmt.Println("ScheTask:", item.TaskUUID)
-		blockchain_http = item.ContractRunHttp
-		blockchain_ecosystem = item.ContractRunEcosystem
-		//fmt.Println("ContractRunHttp and ContractRunEcosystem:", blockchain_http, blockchain_ecosystem)
-		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
+		return nil
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
 			time.Sleep(time.Millisecond * 2)

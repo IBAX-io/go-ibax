@@ -55,6 +55,19 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 
 	// deal with task data
 	var TaskParms_Str string
+	for _, item := range ShareData {
+		//fmt.Println("TaskUUID,DataUUID:", item.TaskUUID, item.DataUUID)
+		m := &model.VDEDestTaskFromSrc{}
+		ShareTask, err := m.GetAllByTaskUUIDAndTaskState(item.TaskUUID, 1) //1valid，0stop task
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("VDEDestTaskFromSrc getting one task by TaskUUID")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		if len(ShareTask) > 0 {
+			TaskParms_Str = ShareTask[0].Parms
+		} else {
+			m2 := &model.VDEDestTaskFromSche{}
 			ShareTask2, err := m2.GetAllByTaskUUIDAndTaskState(item.TaskUUID, 1) //1 valid task，2stop task
 			if err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("VDEDestTaskFromSche getting one task by TaskUUID")
@@ -184,16 +197,6 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 		//	//fmt.Println("get task info from src")
 		//	m := &model.VDEDestTaskFromSrc{}
 		//	ShareTask, err := m.GetOneByTaskUUID(item.TaskUUID, 1)  //1
-		//	if err != nil {
-		//		log.WithFields(log.Fields{"error": err}).Error("VDEDestTaskFromSrc getting one task by TaskUUID")
-		//		time.Sleep(time.Millisecond * 100)
-		//		continue
-		//	}
-		//	if ShareTask == nil {
-		//		log.Info("task by TaskUUID not found")
-		//		item.DataState = 2 //
-		//		err = item.Updates()
-		//		if err != nil {
 		//			log.WithError(err)
 		//		}
 		//		continue

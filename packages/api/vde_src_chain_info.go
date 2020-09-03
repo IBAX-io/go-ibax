@@ -39,11 +39,6 @@ func VDESrcChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	form := &VDESrcChainInfoForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-	m := &model.VDESrcChainInfo{}
-	if m, err = unmarshalColumnVDESrcChainInfo(form); err != nil {
-		fmt.Println(err)
 		errorResponse(w, err)
 		return
 	}
@@ -95,6 +90,13 @@ func VDESrcChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, result)
+}
+
+func VDESrcChainInfoDeleteHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+	id := converter.StrToInt64(params["id"])
+
 	m := &model.VDESrcChainInfo{}
 	m.ID = id
 	if err := m.Delete(); err != nil {

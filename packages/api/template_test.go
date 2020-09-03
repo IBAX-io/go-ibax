@@ -216,21 +216,6 @@ func TestMoney(t *testing.T) {
 		return
 	}
 	if RawToString(ret.Tree) != `[{"tag":"text","text":"invalid money value"}]` {
-		t.Errorf(`wrong value %s`, RawToString(ret.Tree))
-	}
-}
-
-func TestMobile(t *testing.T) {
-	var ret contentResult
-	gMobile = true
-	if err := keyLogin(1); err != nil {
-		t.Error(err)
-		return
-	}
-	err := sendPost(`content`, &url.Values{`template`: {`If(#isMobile#){Span(Mobile)}.Else{Span(Desktop)}`}}, &ret)
-	if err != nil {
-		t.Error(err)
-		return
 	}
 	if RawToString(ret.Tree) != `[{"tag":"span","children":[{"tag":"text","text":"Mobile"}]}]` {
 		t.Error(fmt.Errorf(`wrong mobile tree %s`, RawToString(ret.Tree)))
@@ -321,6 +306,16 @@ var imageData = `iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAIAAACRXR/mAAAACXBIWXMAAAsTAAA
 
 func TestBinary(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
+
+	data, err := base64.StdEncoding.DecodeString(imageData)
+	assert.NoError(t, err)
+
+	file := types.NewFile()
+	file.Set("Body", data)
+
+	params := contractParams{
+		"ApplicationId": "1",
+		"Name":          "file",
 		"Data":          file,
 	}
 

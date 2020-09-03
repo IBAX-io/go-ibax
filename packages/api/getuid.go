@@ -14,6 +14,13 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
+	"github.com/dgrijalva/jwt-go"
+	log "github.com/sirupsen/logrus"
+)
+
+const jwtUIDExpire = time.Second * 5
+
+type getUIDResult struct {
 	UID         string `json:"uid,omitempty"`
 	Token       string `json:"token,omitempty"`
 	Expire      string `json:"expire,omitempty"`
@@ -35,24 +42,5 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 			jsonResponse(w, result)
 			return
 		}
-	}
-
-	result.UID = converter.Int64ToStr(rand.New(rand.NewSource(time.Now().Unix())).Int63())
-	claims := JWTClaims{
-		UID:         result.UID,
-		EcosystemID: "1",
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(jwtUIDExpire).Unix(),
-		},
-	}
-
-	var err error
-	if result.Token, err = generateJWTToken(claims); err != nil {
-		logger := getLogger(r)
-		logger.WithFields(log.Fields{"type": consts.JWTError, "error": err}).Error("generating jwt token")
-		errorResponse(w, err)
-		return
-	}
-
 	jsonResponse(w, result)
 }

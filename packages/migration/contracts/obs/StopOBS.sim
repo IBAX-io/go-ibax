@@ -1,1 +1,13 @@
 // +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract StopOBS {
+		data {
+			OBSName string
+		}
+	
+		conditions {
+		}
+	
+		action {
+			$OBSName = ToLower($OBSName)
+			StopOBSProcess($OBSName)
