@@ -22,6 +22,17 @@ type AppParam struct {
 }
 
 // TableName returns name of table
+func (sp *AppParam) TableName() string {
+	if sp.ecosystem == 0 {
+		sp.ecosystem = 1
+	}
+	return `1_app_params`
+}
+
+// SetTablePrefix is setting table prefix
+func (sp *AppParam) SetTablePrefix(tablePrefix string) {
+	sp.ecosystem = converter.StrToInt64(tablePrefix)
+}
 
 // Get is retrieving model from database
 func (sp *AppParam) Get(transaction *DbTransaction, app int64, name string) (bool, error) {
@@ -67,17 +78,6 @@ func (sp *AppParam) GetHvlvebalance(transaction *DbTransaction, blockid int64) (
 		hm := math.Pow(2, float64(he))
 		ret1 := mdv / hm
 		ret2 := ret1 / 1000000000000
-		ret3 := math.Floor(ret2) * 1000000000000
-		ret = decimal.NewFromFloat(ret3)
-		return ret, nil
-	} else {
-		return ret, errors.New("param mine_reward or halve_interval_blockid not ok")
-	}
-}
-
-// Get is retrieving model from database
-func (sp *AppParam) GetFoundationbalance(transaction *DbTransaction) (decimal.Decimal, error) {
-
 	//var halve,balance string
 	ret := decimal.NewFromFloat(0)
 	var bal AppParam

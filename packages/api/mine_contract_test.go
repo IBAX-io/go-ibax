@@ -858,12 +858,6 @@ func TestEditMineStatus(t *testing.T) {
 func TestActiveMineInfo(t *testing.T) {
 	assert.NoError(t, keyLoginex(1, "2"))
 	var (
-		signstr, pub, data string
-		sign               []byte
-	)
-	data = "ACTIVATE"
-	sign, err := crypto.SignString("77bb3d290c845a905a271ac50f44e18999394a8c9e5588c387bfe40ee39aa70d", data)
-	assert.NoError(t, err)
 	signstr = hex.EncodeToString(sign)
 	pub, err = PrivateToPublicHex("77bb3d290c845a905a271ac50f44e18999394a8c9e5588c387bfe40ee39aa70d")
 	assert.NoError(t, err)
@@ -1214,6 +1208,12 @@ func TestMoneySignTokenSend(t *testing.T) {
 	//}
 	//size := 1000000
 	//big := make([]byte, size)
+	//rand.Seed(time.Now().UnixNano())
+	//for i := 0; i < size; i++ {
+	//	big[i] = '0' + byte(rand.Intn(10))
+	//}
+	//form = url.Values{`Amount`: {string(big)}, `Recipient`: {`0005-2070-2000-0006-0200`}}
+	//if err := postTx(`TokensSend`, &form); err.Error() != `400 {"error": "E_LIMITFORSIGN", "msg": "Length of forsign is too big (1000106)" , "params": ["1000106"]}` {
 	//	t.Error(err)
 	//	return
 	//}

@@ -1,9 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package tcpserver
-
 import (
 	"encoding/base64"
 	"errors"
@@ -23,6 +19,7 @@ import (
 
 func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse, error) {
 	nodePrivateKey, err := utils.GetNodePrivateKey()
+	if err != nil || len(nodePrivateKey) < 1 {
 		if err == nil {
 			log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
 			return nil, errors.New("Incorrect private key length")

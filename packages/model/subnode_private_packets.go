@@ -94,16 +94,6 @@ type PrivateFilePacketsHash struct {
 
 // TableName returns name of table
 func (PrivateFilePacketsHash) TableName() string {
-	return "2_subnode_share_hash_100"
-}
-
-func (pp *PrivateFilePacketsHash) Get(Hash string) (PrivateFilePacketsHash, error) {
-	var m PrivateFilePacketsHash
-	err := DBConn.Where("hash=?", Hash).First(&m).Error
-	return m, err
-}
-
-// GetDataByHash is returns privatefile packet
 func (pp *PrivateFilePacketsHash) GetDataByHash(dbTransaction *DbTransaction, Hash string) ([]map[string]string, error) {
 	return GetAllTx(dbTransaction, "SELECT * from 2_subnode_share_hash_100 WHERE hash = ? ORDER BY ID DESC", -1, Hash)
 }
@@ -121,6 +111,15 @@ func (pp *PrivateFilePacketsHash) Create() error {
 type PrivateFilePacketsAll struct {
 	TaskUUID   string `gorm:"column:task_uuid;not null" json:"task_uuid"`
 	TaskName   string `gorm:"column:task_name;not null" json:"task_name"`
+	TaskSender string `gorm:"column:task_sender;not null" json:"task_sender"`
+	TaskType   string `gorm:"column:task_type;not null" json:"task_type"`
+	Name       string `gorm:"column:name;not null" json:"name"`
+	MimeType   string `gorm:"column:mimetype;not null" json:"mimetype"`
+	Hash       string `gorm:"not null" json:"hash"`
+	Data       []byte `gorm:"column:sppadata;not null" json:"sppadata"`
+}
+
+// TableName returns name of table
 func (PrivateFilePacketsAll) TableName() string {
 	return "2_subnode_share_data_502"
 }

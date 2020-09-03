@@ -32,6 +32,7 @@ type ChildOBSConfig struct {
 func (c ChildOBSConfig) configCommand() *exec.Cmd {
 
 	args := []string{
+		"config",
 		fmt.Sprintf("--path=%s", c.configPath()),
 		fmt.Sprintf("--dbUser=%s", c.DBUser),
 		fmt.Sprintf("--dbPassword=%s", c.DBPassword),
@@ -53,10 +54,6 @@ func (c ChildOBSConfig) initDBCommand() *exec.Cmd {
 
 func (c ChildOBSConfig) generateKeysCommand() *exec.Cmd {
 	return c.getCommand(genKeysCommand)
-}
-
-func (c ChildOBSConfig) startCommand() *exec.Cmd {
-	return c.getCommand(startCommand)
 }
 
 func (c ChildOBSConfig) configPath() string {

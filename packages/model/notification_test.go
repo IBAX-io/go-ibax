@@ -16,9 +16,11 @@ type testItem struct {
 	Filter       string
 	ParamsLength int
 }
-
-func TestGetNotificationCountFilter(t *testing.T) {
-	testTable := []testItem{
+		testItem{
+			Input:        nil,
+			Filter:       ` WHERE closed = false `,
+			ParamsLength: 0,
+		},
 	}
 
 	for i, item := range testTable {

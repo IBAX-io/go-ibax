@@ -12,11 +12,10 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/model"
-type daemon struct {
-	goRoutineName string
-	sleepTime     time.Duration
-	logger        *log.Entry
-	atomic        uint32
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
 }
 
 var daemonsList = map[string]func(context.Context, *daemon) error{

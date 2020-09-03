@@ -56,6 +56,17 @@ func (m *ShareDataStatus) GetAllByTaskUUID(TaskUUID string) ([]ShareDataStatus, 
 	result := make([]ShareDataStatus, 0)
 	err := DBConn.Table("subnode_share_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
+}
+
+func (m *ShareDataStatus) GetOneByTcpStatus(tcp_send_state int64) (bool, error) {
+	return isFound(DBConn.Where("tcp_send_state = ?", tcp_send_state).First(m))
+}
+
+func (m *ShareDataStatus) GetShareTaskStatusAndTcpStatus(chain_state, tcp_send_state int) (bool, error) {
+	return isFound(DBConn.Where("chain_state = ? AND tcp_send_state = ?", chain_state, tcp_send_state).First(m))
+}
+
+func (m *ShareDataStatus) GetChainShareTaskStatus() (bool, error) {
 	return isFound(DBConn.Where("chain_state = 1").First(m))
 }
 
@@ -82,12 +93,6 @@ func (m *ShareDataStatus) GetAllByTaskUUID(TaskUUID string) ([]ShareDataStatus, 
 //}
 //
 //func (SDStatus) TableName() string {
-//	return "subnode_share_data_status"
-//}
-//
-//
-//func (s *SDStatus)GetShareTaskCount() (int64, error) {
-//	var taskCount int64
 //	row := DBConn.Raw("SELECT COUNT(*) task_count FROM subnode_share_data_status").Select("task_count").Row()
 //	err := row.Scan(&taskCount)
 //

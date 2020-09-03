@@ -73,6 +73,19 @@ func (fn *HonorNode) UnmarshalJSON(b []byte) (err error) {
 
 func (fn *HonorNode) MarshalJSON() ([]byte, error) {
 	jfn := honorNodeJSON{
+		TCPAddress: fn.TCPAddress,
+		APIAddress: fn.APIAddress,
+		PublicKey:  crypto.PubToHex(fn.PublicKey),
+		UnbanTime:  json.Number(strconv.FormatInt(fn.UnbanTime.Unix(), 10)),
+	}
+
+	data, err := json.Marshal(jfn)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("Marshalling honor nodes to json")
+		return nil, err
+	}
+
+	return data, nil
 }
 
 // ValidateURL returns error if the URL is invalid
@@ -86,21 +99,6 @@ func validateURL(rawurl string) error {
 		return fmt.Errorf("invalid scheme: %s", rawurl)
 	}
 
-	if len(u.Host) == 0 {
-		return fmt.Errorf("invalid host: %s", rawurl)
-	}
-
-	return nil
-}
-
-// Validate checks values
-func (fn *HonorNode) Validate() error {
-	if len(fn.PublicKey) !=
-		publicKeyLength || len(fn.TCPAddress) == 0 {
-		return errHonorNodeInvalidValues
-	}
-
-	if err := validateURL(fn.APIAddress); err != nil {
 		return err
 	}
 

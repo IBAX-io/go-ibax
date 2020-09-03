@@ -81,6 +81,8 @@ func GetEcosystemIDValidator() types.EcosystemIDValidator {
 }
 
 type BCEcosystemNameGetter struct{}
+
+func (ng BCEcosystemNameGetter) GetEcosystemName(id int64) (string, error) {
 	ecosystem := &model.Ecosystem{}
 	found, err := ecosystem.Get(nil, id)
 	if err != nil {
@@ -219,18 +221,6 @@ func (l SNDaemonLoader) Load(ctx context.Context) error {
 	return nil
 }
 
-// OBSDaemonLoader allows load obs daemons
-type OBSDaemonLoader struct {
-	logger            *log.Entry
-	DaemonListFactory types.DaemonListFactory
-}
-
-// Load loads obs daemons
-func (l OBSDaemonLoader) Load(ctx context.Context) error {
-
-	if err := syspar.SysUpdate(nil); err != nil {
-		l.logger.Errorf("can't read system parameters: %s", utils.ErrInfo(err))
-		return err
 	}
 	if err := syspar.SysTableColType(nil); err != nil {
 		log.Errorf("can't table col type: %s", utils.ErrInfo(err))

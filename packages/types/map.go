@@ -68,18 +68,6 @@ func LoadMap(init map[string]interface{}) (ret *Map) {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
-	for _, v := range keys {
-		ret.Set(v, ConvertMap(init[v]))
-	}
-	return
-}
-
-// Put inserts an element into the map.
-func (m *Map) Set(key string, value interface{}) {
-	link, found := m.m[key]
-	if !found {
-		link = newLink(key, value)
-		if m.tail == nil {
 			m.head = link
 			m.tail = link
 		} else {
@@ -100,6 +88,11 @@ func (m *Map) Get(key string) (value interface{}, found bool) {
 	link, found = m.m[key]
 	if found {
 		value = link.value
+	} else {
+		value = nil
+	}
+	return
+}
 
 // Remove removes the element from the map by key.
 func (m *Map) Remove(key string) {

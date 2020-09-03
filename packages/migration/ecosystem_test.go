@@ -5,5 +5,6 @@
 
 package migration
 
-	os.WriteFile("/home/losaped/ecosystem_test.sql", []byte(str), 0777)
-}
+import (
+	"fmt"
+	"os"

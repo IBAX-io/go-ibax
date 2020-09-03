@@ -2,17 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"net/http"
-	"strconv"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-)
-
 type HonorNodeJSON struct {
 	TCPAddress string `json:"tcp_address"`
 	APIAddress string `json:"api_address"`
