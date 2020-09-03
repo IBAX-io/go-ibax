@@ -17,16 +17,10 @@ contract NewPage {
 
         if count < min {
             count = min
-
-    conditions {
-        ValidateCondition($Conditions,$ecosystem_id)
-
-        if $ApplicationId == 0 {
-            warning "Application id cannot equal 0"
-        }
-
-        if DBFind("pages").Columns("id").Where({name: $Name}).One("id") {
-            warning Sprintf( "Page %s already exists", $Name)
+        } else {
+            if count > max {
+                count = max
+            }
         }
 
         $ValidateCount = preparePageValidateCount($ValidateCount)

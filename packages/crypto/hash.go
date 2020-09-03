@@ -16,6 +16,8 @@ const (
 	_SHA256 hashProvider = iota
 )
 
+// getHMAC returns HMAC hash
+func getHMAC(secret string, message string) ([]byte, error) {
 	switch hmacProv {
 	case _SHA256:
 		mac := hmac.New(sha256.New, []byte(secret))
@@ -56,4 +58,3 @@ func hashSHA256(msg []byte) []byte {
 
 func HashHex(input []byte) (string, error) {
 	return hex.EncodeToString(getHasher().hash(input)), nil
-}

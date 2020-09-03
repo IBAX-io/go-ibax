@@ -3,11 +3,6 @@ package model
 import (
 	"database/sql"
 	"encoding/hex"
-	"fmt"
-	"gorm.io/gorm"
-)
-
-func GetNodeRows(tableName string) (int64, error) {
 	var count int64
 	err := DBConn.Table(tableName).Count(&count).Error
 	if err == gorm.ErrRecordNotFound {
@@ -15,6 +10,12 @@ func GetNodeRows(tableName string) (int64, error) {
 	}
 	if err != nil {
 		return 0, err
+	}
+	return count, nil
+}
+
+func GetRowsInfo(rows *sql.Rows,sqlQuest string) ([]map[string]string, error) {
+	var result []map[string]string
 	defer rows.Close()
 	columns, err := rows.Columns()
 	if err != nil {

@@ -1,6 +1,10 @@
 package model
 
-	//	case dat := <-MintCountCh:
+var (
+	MintCountCh = make(chan *MinterCount, 10)
+)
+
+func Put_MintCount() error {
 	//		err := dat.Insert_redisdb()
 	//		if err != nil {
 	//			log.Info("Deal_MintCount Insert_redisdb: ", err.Error())
