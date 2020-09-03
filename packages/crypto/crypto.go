@@ -79,15 +79,6 @@ func Encrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
 	default:
 		return nil, ErrUnknownProvider
 	}
-}
-
-// Decrypt is decrypting
-func Decrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
-	if len(msg) == 0 {
-		return nil, ErrDecryptingEmpty
-	}
-	switch cryptoProv {
-	case _AESCBC:
 		return decryptCBC(msg, key, iv)
 	default:
 		return nil, ErrUnknownProvider
@@ -97,6 +88,21 @@ func Decrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
 // SharedEncrypt creates a shared key and encrypts text. The first 32 characters are the created public key.
 // The cipher text can be only decrypted with the original private key.
 //func SharedEncrypt(public, text []byte) ([]byte, error) {
+//	priv, pub, err := genBytesKeys()
+//	if err != nil {
+//		return nil, err
+//	}
+//	shared, err := getSharedKey(priv, public)
+//	if err != nil {
+//		return nil, err
+//	}
+//	val, err := Encrypt(shared, text, pub)
+//	return val, err
+//}
+
+// CBCEncrypt encrypts the text by using the key parameter. It uses CBC mode of AES.
+func encryptCBC(text, key, iv []byte) ([]byte, error) {
+	if iv == nil {
 		iv = make([]byte, consts.BlockSize)
 		if _, err := crand.Read(iv); err != nil {
 			return nil, err

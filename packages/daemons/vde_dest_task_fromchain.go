@@ -35,6 +35,17 @@ type dest_VDEShareTaskResult struct {
 		TaskUUID             string `json:"task_uuid"`
 		TaskName             string `json:"task_name"`
 		TaskSender           string `json:"task_sender"`
+		TaskReceiver         string `json:"task_receiver"`
+		Comment              string `json:"comment"`
+		Parms                string `json:"parms"`
+		TaskType             string `json:"task_type"`
+		TaskState            string `json:"task_state"`
+		ContractSrcName      string `json:"contract_src_name"`
+		ContractSrcGet       string `json:"contract_src_get"`
+		ContractSrcGetHash   string `json:"contract_src_get_hash"`
+		ContractDestName     string `json:"contract_dest_name"`
+		ContractDestGet      string `json:"contract_dest_get"`
+		ContractDestGetHash  string `json:"contract_dest_get_hash"`
 		ContractRunHttp      string `json:"contract_run_http"`
 		ContractRunEcosystem string `json:"contract_run_ecosystem"`
 		ContractRunParms     string `json:"contract_run_parms"`
@@ -66,17 +77,6 @@ func VDEDestTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 
 	tasktime := &model.VDEDestTaskTime{}
 	DestTaskTime, err := tasktime.Get()
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting DestTaskTime")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-	if DestTaskTime == nil {
-		//log.Info("DestTaskTime not found")
-		fmt.Println("Dest DestTaskTime not found")
-		time.Sleep(time.Millisecond * 2)
-		return nil
-	}
 
 	chaininfo := &model.VDEDestChainInfo{}
 	DestChainInfo, err := chaininfo.Get()

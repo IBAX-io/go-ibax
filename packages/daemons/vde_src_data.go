@@ -351,3 +351,7 @@ func VDESrcData(ctx context.Context, d *daemon) error {
 		err = item.Updates()
 		if err != nil {
 			log.WithError(err)
+			continue
+		}
+	} //for
+	return nil

@@ -1,11 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package tcpserver
-
-import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -42,6 +36,16 @@ func Type100(r *network.VDESrcDataRequest) (*network.VDESrcDataResponse, error) 
 	if err != nil {
 		log.WithError(err)
 		return nil, err
+	}
+	resp := &network.VDESrcDataResponse{}
+	resp.Hash = hash
+	AgentMode := converter.StrToInt64(r.AgentMode)
+	VDEDestData := model.VDEDestData{
+		TaskUUID:       r.TaskUUID,
+		DataUUID:       r.DataUUID,
+		AgentMode:      AgentMode,
+		Hash:           hash,
+		DataInfo:       r.DataInfo,
 		VDESrcPubkey:   r.VDESrcPubkey,
 		VDEAgentPubkey: r.VDEAgentPubkey,
 		VDEAgentIp:     r.VDEAgentIp,

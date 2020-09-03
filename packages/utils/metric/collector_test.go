@@ -16,18 +16,6 @@ func MockValue(v int64) *Value {
 }
 
 func MockCollectorFunc(v int64, err error) CollectorFunc {
-	return func() ([]*Value, error) {
-		if err != nil {
-			return nil, err
-		}
-
-		return []*Value{MockValue(v)}, nil
-	}
-}
-
-func TestValue(t *testing.T) {
-	value := MockValue(100)
-	result := map[string]interface{}{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(100)}
 	assert.Equal(t, result, value.ToMap())
 }
 
@@ -42,3 +30,5 @@ func TestCollector(t *testing.T) {
 		map[string]interface{}{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(100)},
 		map[string]interface{}{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(200)},
 	}
+	assert.Equal(t, result, c.Values())
+}

@@ -1,8 +1,12 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package tcpserver
+	"github.com/IBAX-io/go-ibax/packages/network"
+
+	log "github.com/sirupsen/logrus"
+)
+
+// Type7 writes the body of the specified block
+// blocksCollection and queue_parser_blocks daemons send the request through p.GetBlocks()
 func Type7(request *network.GetBodiesRequest, w net.Conn) error {
 	block := &model.Block{}
 

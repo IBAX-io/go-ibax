@@ -296,6 +296,23 @@ func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
 		playTxs.Rts = append(playTxs.Rts, t.RollBackTx...)
 		proccessedTx = append(proccessedTx, t)
 	}
+
+	return nil
+}
+
+// Check is checking block
+func (b *Block) Check() error {
+	if b.IsGenesis() {
+		return nil
+	}
+	logger := b.GetLogger()
+	if b.PrevHeader == nil || b.PrevHeader.BlockID != b.Header.BlockID-1 {
+		if err := b.readPreviousBlockFromBlockchainTable(); err != nil {
+			logger.WithFields(log.Fields{"type": consts.InvalidObject}).Error("block id is larger then previous more than on 1")
+			return err
+		}
+	}
+	if b.Header.Time > time.Now().Unix() {
 		logger.WithFields(log.Fields{"type": consts.ParameterExceeded}).Error("block time is larger than now")
 		return ErrIncorrectBlockTime
 	}
@@ -369,19 +386,6 @@ func (b *Block) CheckHash() (bool, error) {
 
 		signSource := b.Header.ForSign(b.PrevHeader, b.MrklRoot)
 
-		resultCheckSign, err := utils.CheckSign(
-			[][]byte{nodePublicKey},
-			[]byte(signSource),
-			b.Header.Sign,
-			true)
-
-		if err != nil {
-			if err == crypto.ErrIncorrectSign {
-				if !bytes.Equal(b.PrevRollbacksHash, b.PrevHeader.RollbacksHash) {
-					return false, ErrIncorrectRollbackHash
-				}
-			}
-			logger.WithFields(log.Fields{"error": err, "type": consts.CryptoError}).Error("checking block header sign")
 			return false, utils.ErrInfo(fmt.Errorf("err: %v / block.PrevHeader.BlockID: %d /  block.PrevHeader.Hash: %x / ", err, b.PrevHeader.BlockID, b.PrevHeader.Hash))
 		}
 
