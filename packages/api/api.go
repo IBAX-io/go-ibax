@@ -45,9 +45,6 @@ type Client struct {
 	RoleID        int64
 	IsMobile      bool
 }
-
-func (c *Client) Prefix() string {
-	return converter.Int64ToStr(c.EcosystemID)
 }
 
 func jsonResponse(w http.ResponseWriter, v interface{}) {
@@ -69,6 +66,18 @@ func errorResponse(w http.ResponseWriter, err error, code ...int) {
 	}
 
 	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if len(code) == 0 {
+		w.WriteHeader(et.Status)
+	} else {
+		w.WriteHeader(code[0])
+	}
+
+	jsonResponse(w, et)
+}
+
+func JsonCodeResponse(w http.ResponseWriter, ct *model.Response) {
+	jsonResponse(w, ct)
+}
 
 type formValidator interface {
 	Validate(r *http.Request) error

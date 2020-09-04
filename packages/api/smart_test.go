@@ -136,18 +136,6 @@ func TestRoleAccess(t *testing.T) {
 
 	form := url.Values{"Name": {name}, "Value": {value}, "Menu": {menu}, "ApplicationId": {`1`},
 		"Conditions": {`RoleAccess(10,1)`}}
-	assert.NoError(t, postTx(`NewPage`, &form))
-
-	var ret listResult
-	assert.NoError(t, sendGet(`list/pages`, nil, &ret))
-	id := strconv.FormatInt(ret.Count, 10)
-	form = url.Values{"Id": {id}, "Value": {"Div(){Ooops}"}, "Conditions": {`RoleAccess(65)`}}
-	assert.NoError(t, postTx(`EditPage`, &form))
-	form = url.Values{"Id": {id}, "Value": {"Div(){Update}"}}
-	assert.EqualError(t, postTx(`EditPage`, &form), `{"type":"panic","error":"Access denied"}`)
-}
-
-func TestDBFind(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
 	name := randName(`tbl`)
 	form := url.Values{"Name": {name}, "ApplicationId": {"1"}, "Columns": {`[{"name":"txt","type":"varchar", 
@@ -329,6 +317,8 @@ func TestNewTableOnly(t *testing.T) {
 
 	var ret tableResult
 	require.NoError(t, sendGet(`table/`+name, nil, &ret))
+	fmt.Printf("%+v\n", ret)
+}
 
 func TestUpperTable(t *testing.T) {
 	assert.NoError(t, keyLogin(1))

@@ -35,6 +35,13 @@ func SendSubNodeSrcData(host string, TaskUUID string, DataUUID string, AgentMode
 		DataInfo:           DataInfo,
 		SubNodeSrcPubkey:   SubNodeSrcPubkey,
 		SubNodeAgentPubkey: SubNodeAgentPubkey,
+		SubNodeAgentIp:     SubNodeAgentIp,
+		SubNodeDestPubkey:  SubNodeDestPubkey,
+		SubNodeDestIp:      SubNodeDestIp,
+		Data:               dt,
+	}
+
+	if err = req.Write(conn); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending VDESrcData request")
 		return "0"
 	}
@@ -65,21 +72,6 @@ func SendSubNodeSrcDataAgent(host string, TaskUUID string, DataUUID string, Agen
 
 	req := &network.SubNodeSrcDataAgentRequest{
 		TaskUUID:           TaskUUID,
-		DataUUID:           DataUUID,
-		AgentMode:          AgentMode,
-		TranMode:           TranMode,
-		DataInfo:           DataInfo,
-		SubNodeSrcPubkey:   SubNodeSrcPubkey,
-		SubNodeAgentPubkey: SubNodeAgentPubkey,
-		SubNodeAgentIp:     SubNodeAgentIp,
-		SubNodeDestPubkey:  SubNodeDestPubkey,
-		SubNodeDestIp:      SubNodeDestIp,
-		Data:               dt,
-	}
-
-	if err = req.Write(conn); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending VDESrcDataAgent request")
-		return "0"
 	}
 
 	resp := &network.SubNodeSrcDataResponse{}
