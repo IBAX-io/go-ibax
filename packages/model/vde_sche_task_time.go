@@ -23,10 +23,11 @@ func (m *VDEScheTaskTime) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
 }
 
-func (m *VDEScheTaskTime) Delete() error {
-	return DBConn.Delete(m).Error
 }
 
+func (m *VDEScheTaskTime) Get() (*VDEScheTaskTime, error) {
+	err := DBConn.First(&m).Error
+	return m, err
 }
 
 func (m *VDEScheTaskTime) GetAll() ([]VDEScheTaskTime, error) {

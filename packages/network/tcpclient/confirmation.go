@@ -1,3 +1,16 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package tcpclient
+
+import (
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/network"
+
+	log "github.com/sirupsen/logrus"
+)
 
 func CheckConfirmation(host string, blockID int64, logger *log.Entry) (hash string) {
 	conn, err := newConnection(host)
@@ -7,9 +20,6 @@ func CheckConfirmation(host string, blockID int64, logger *log.Entry) (hash stri
 	}
 	defer conn.Close()
 
-	rt := &network.RequestType{Type: network.RequestTypeConfirmation}
-	if err = rt.Write(conn); err != nil {
-		logger.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host, "block_id": blockID}).Error("sending request type")
 		return "0"
 	}
 

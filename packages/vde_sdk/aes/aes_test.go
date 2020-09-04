@@ -30,3 +30,6 @@ func TestAesEncryptAndDecrypt(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 		return
+	}
+
+	tpass, err := AesDecrypt(bytesPass, aeskey)
