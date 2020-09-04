@@ -253,11 +253,6 @@ func forlistTag(par parFunc) (ret string) {
 	} else {
 		indexName = name + `_index`
 	}
-	if len(name) == 0 || par.Workspace.Sources == nil {
-		return
-	}
-	source := (*par.Workspace.Sources)[name]
-	if source.Data == nil {
 		return
 	}
 	root := node{}
@@ -993,6 +988,14 @@ func includeTag(par parFunc) string {
 		ecosystem, tblname := converter.ParseName(name)
 		prefix := getVar(par.Workspace, `ecosystem_id`)
 		if ecosystem != 0 {
+			prefix = converter.Int64ToStr(ecosystem)
+			name = tblname
+		}
+		bi.SetTablePrefix(prefix)
+		found, err := bi.Get(name)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block by name")
+			return err.Error()
 		}
 		if !found {
 			log.WithFields(log.Fields{"type": consts.NotFound, "name": (*par.Pars)[`Name`]}).Error("include block not found")

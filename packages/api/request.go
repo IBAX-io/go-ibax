@@ -84,6 +84,19 @@ func (connect *Connect) SendGet(url string, form *url.Values, v interface{}) err
 }
 
 func (connect *Connect) SendPost(url string, form *url.Values, v interface{}) error {
+	return SendRequest("POST", connect.Root+url, connect.Auth, form, v)
+}
+
+func (connect *Connect) SendMultipart(url string, files map[string][]byte, v interface{}) error {
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+
+	for key, data := range files {
+		part, err := writer.CreateFormFile(key, key)
+		if err != nil {
+			return err
+		}
+		if _, err := part.Write(data); err != nil {
 			return err
 		}
 	}
@@ -244,15 +257,6 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 		txTime = converter.StrToInt64(newTime)
 	}
 
-	data, txhash, err := tx.NewTransaction(tx.SmartContract{
-		Header: tx.Header{
-			ID:          int(contract.ID),
-			Time:        txTime,
-			EcosystemID: 1,
-			KeyID:       crypto.Address(publicKey),
-			NetworkID:   conf.Config.NetworkID,
-		},
-		Params: params,
 	}, connect.PrivateKey)
 	if err != nil {
 		return 0, "", err

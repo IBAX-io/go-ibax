@@ -93,11 +93,12 @@ func (m *ShareDataStatus) GetChainShareTaskStatus() (bool, error) {
 //}
 //
 //func (SDStatus) TableName() string {
-//	row := DBConn.Raw("SELECT COUNT(*) task_count FROM subnode_share_data_status").Select("task_count").Row()
-//	err := row.Scan(&taskCount)
-//
-//	return taskCount, err
+//	return "subnode_share_data_status"
 //}
+//
+//
+//func (s *SDStatus)GetShareTaskCount() (int64, error) {
+//	var taskCount int64
 //
 //func (s *SDStatus) GetAllSDS() ([]SDStatus, error) {
 //	var result []SDStatus

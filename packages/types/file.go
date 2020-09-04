@@ -3,15 +3,11 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package types
-	var v interface{}
-	f = NewFile()
 
-	if v, ok = m["Name"].(string); !ok {
-		return
-	}
-	f.Set("Name", v)
-	if v, ok = m["MimeType"].(string); !ok {
-		return
+//type File *Map
+
+func NewFile() *Map {
+	return LoadMap(map[string]interface{}{
 	}
 	f.Set("MimeType", v)
 	if v, ok = m["Body"].([]byte); !ok {

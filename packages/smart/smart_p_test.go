@@ -24,3 +24,8 @@ func TestRegexpMatch(t *testing.T) {
 		//{"url", args{"http://www.google.com", `(https?)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]`}, true},
 	}
 	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := RegexpMatch(tt.args.str, tt.args.reg); got != tt.want {
+				t.Errorf("RegexpMatch() = %v, want %v", got, tt.want)
+			}
+		})

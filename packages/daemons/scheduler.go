@@ -20,6 +20,14 @@ import (
 )
 
 func loadContractTasks() error {
+	stateIDs, _, err := model.GetAllSystemStatesIDs()
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get all system states ids")
+		return err
+	}
+
+	for _, stateID := range stateIDs {
+		if !model.IsTable(fmt.Sprintf("%d_cron", stateID)) {
 			return nil
 		}
 
@@ -38,12 +46,6 @@ func loadContractTasks() error {
 				Handler: &contract.ContractHandler{
 					Contract: cronTask.Contract,
 				},
-			})
-			if err != nil {
-				return err
-			}
-		}
-	}
 
 	return nil
 }

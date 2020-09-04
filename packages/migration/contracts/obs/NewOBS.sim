@@ -8,8 +8,6 @@ contract NewOBS {
 			OBSAPIPort int
 		}
 	
-		conditions {
-            if Size($OBSName) == 0 {
             }
             
 		}
