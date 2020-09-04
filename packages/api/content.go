@@ -14,17 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/template"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
 type contentResult struct {
 	Menu       string          `json:"menu,omitempty"`
 	MenuTree   json.RawMessage `json:"menutree,omitempty"`
@@ -205,6 +194,17 @@ func getPage(r *http.Request) (result *contentResult, err error) {
 
 	return result, nil
 }
+
+func getPageHandler(w http.ResponseWriter, r *http.Request) {
+	result, err := getPage(r)
+	if err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, result)
+}
+
 func getPageHashHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	params := mux.Vars(r)
