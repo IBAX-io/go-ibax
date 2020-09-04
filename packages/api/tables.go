@@ -11,6 +11,10 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
 type tableInfo struct {
 	Name  string `json:"name"`
 	Count string `json:"count"`
@@ -58,15 +62,6 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 
 	result := &tablesResult{
 		Count: count,
-		List:  make([]tableInfo, len(list)),
-	}
-	for i, item := range list {
-		err = model.GetTableQuery(item["name"], client.EcosystemID).Count(&count).Error
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting count from table")
-			errorResponse(w, err)
-			return
-		}
 
 		result.List[i].Name = item["name"]
 		result.List[i].Count = converter.Int64ToStr(count)

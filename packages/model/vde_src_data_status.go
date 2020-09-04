@@ -53,19 +53,9 @@ func (m *VDESrcDataStatus) GetAllByTaskUUID(TaskUUID string) ([]VDESrcDataStatus
 	result := make([]VDESrcDataStatus, 0)
 	err := DBConn.Table("vde_src_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
-}
-
-func (m *VDESrcDataStatus) GetAllByDataSendStatus(DataSendStatus int64) ([]VDESrcDataStatus, error) {
-	result := make([]VDESrcDataStatus, 0)
-	err := DBConn.Table("vde_src_data_status").Where("data_send_state = ?", DataSendStatus).Find(&result).Error
-	return result, err
-}
-
-func (m *VDESrcDataStatus) GetAllByDataSendStatusAndAgentMode(DataSendStatus int64, AgentMode int64) ([]VDESrcDataStatus, error) {
-	result := make([]VDESrcDataStatus, 0)
-	err := DBConn.Table("vde_src_data_status").Where("data_send_state = ? AND agent_mode = ?", DataSendStatus, AgentMode).Find(&result).Error
 	return result, err
 }
 
 func (m *VDESrcDataStatus) GetOneByDataSendStatus(DataSendStatus int64) (bool, error) {
 	return isFound(DBConn.Where("data_send_state = ?", DataSendStatus).First(m))
+}

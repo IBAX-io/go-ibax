@@ -25,19 +25,6 @@ func WaitDB(ctx context.Context) error {
 	// Database could be created but tables are not inserted yet
 
 	if model.DBConn != nil && CheckDB() {
-		return nil
-	}
-
-	// poll a base with period
-	tick := time.NewTicker(1 * time.Second)
-	for {
-		select {
-		case <-tick.C:
-			if model.DBConn != nil && CheckDB() {
-				return nil
-			}
-		case <-ctx.Done():
-			return ctx.Err()
 		}
 	}
 }
@@ -63,6 +50,8 @@ func DBLock() {
 	mutex.Lock()
 }
 
+// DBUnlock unlocks database
+func DBUnlock() {
 	transaction.CleanCache()
 	mutex.Unlock()
 }

@@ -30,11 +30,14 @@ func (sp *SystemParameter) Get(name string) (bool, error) {
 
 // GetTransaction is retrieving model from database using transaction
 func (sp *SystemParameter) GetTransaction(transaction *DbTransaction, name string) (bool, error) {
-func (sp *SystemParameter) GetValueParameterByName(name, value string) (*string, error) {
-	var result *string
-	err := DBConn.Raw(`SELECT value->'`+value+`' FROM "1_system_parameters" WHERE name = ?`, name).Row().Scan(&result)
-	if err != nil {
-		return nil, err
+	return isFound(GetDB(transaction).Where("name = ?", name).First(sp))
+}
+
+// GetJSONField returns fields as json
+func (sp *SystemParameter) GetJSONField(jsonField string, name string) (string, error) {
+	var result string
+	err := DBConn.Table("1_system_parameters").Where("name = ?", name).Select(jsonField).Row().Scan(&result)
+	return result, err
 	}
 	return result, nil
 }

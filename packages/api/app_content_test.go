@@ -11,11 +11,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-	if len(ret.Contracts) == 0 {
-		t.Error("incorrect contracts count")
+func TestAppContent(t *testing.T) {
+	assert.NoError(t, keyLogin(1))
+
+	var ret appContentResult
+	err := sendGet(`appcontent/1`, nil, &ret)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 
-	if len(ret.Pages) == 0 {
-		t.Error("incorrent pages count")
 	}
 }

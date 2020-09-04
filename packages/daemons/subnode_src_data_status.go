@@ -26,14 +26,6 @@ func SubNodeSrcDataStatus(ctx context.Context, d *daemon) error {
 		log.WithFields(log.Fields{"error": err}).Error("getting all unsent task data")
 		time.Sleep(time.Millisecond * 200)
 		return err
-	}
-	if len(ShareData) == 0 {
-		//log.Info("task data from src to dest not found")
-		time.Sleep(time.Millisecond * 2)
-		return nil
-	}
-	// send task data
-	for _, item := range ShareData {
 		//ItemDataBytes := item.Data
 		ItemDataBytes, err := ecies.EccCryptoKey(item.Data, item.SubNodeDestPubkey)
 		if err != nil {
@@ -93,6 +85,14 @@ func SubNodeSrcDataStatusAgent(ctx context.Context, d *daemon) error {
 			item.DataSendState = 0 //
 			item.DataSendErr = "Network error"
 		} else if string(hash) == string(item.Hash) {
+			item.DataSendState = 1 //
+		} else {
+			item.DataSendState = 2 //
+			item.DataSendErr = "Hash mismatch"
+		}
+		err = item.Updates()
+		if err != nil {
+			log.WithError(err)
 		}
 
 	} //for

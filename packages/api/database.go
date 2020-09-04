@@ -132,6 +132,20 @@ func getOpenColumnsInfoHandler(w http.ResponseWriter, r *http.Request) {
 	result.Count = int64(len(result.List))
 	jsonResponse(w, result)
 }
+
+func getOpenRowsInfoHandler(w http.ResponseWriter, r *http.Request) {
+	form := &rowsInfo{}
+	if err := parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	logger := getLogger(r)
+	if form.Limit < 1 || form.Offset < 0 {
+		err := fmt.Errorf("limit less than 1 recv:%d or offset is negative recv:%d", form.Limit, form.Offset)
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+
 	result, err := GetRowsInfo(form.Name, form.Order, form.Offset, form.Limit, form.InWhere)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get rows info failed")
@@ -176,11 +190,3 @@ func GetRowsInfo(tableName, order string, offset, limit int, where string) (*lis
 	rows, err := model.GetDB(nil).Raw(sqlQuest).Rows()
 	if err != nil {
 		return result, fmt.Errorf("getRows raw err:%s in query %s", err, sqlQuest)
-	}
-
-	result.List, err = model.GetRowsInfo(rows, sqlQuest)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
