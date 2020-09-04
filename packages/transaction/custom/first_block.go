@@ -72,6 +72,15 @@ func (t *FirstBlockTransaction) Action() error {
 		return utils.ErrInfo(err)
 	}
 
+	err = model.GetDB(t.DbTransaction).Exec(`Update "1_system_parameters" SET value = ? where name = 'private_blockchain'`, strconv.FormatUint(data.PrivateBlockchain, 10)).Error
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating private_blockchain")
+		return utils.ErrInfo(err)
+	}
+
+	if err = syspar.SysUpdate(t.DbTransaction); err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
+		return utils.ErrInfo(err)
 	}
 
 	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_keys" (id,account,pub,amount) values(?,?,?,?),(?,?,?,?)`,
@@ -81,7 +90,6 @@ func (t *FirstBlockTransaction) Action() error {
 		return utils.ErrInfo(err)
 	}
 	id, err := model.GetNextID(t.DbTransaction, "1_pages")
-	if err != nil {
 		return utils.ErrInfo(err)
 	}
 	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_pages" (id,name,menu,value,conditions) values(?, 'default_page',

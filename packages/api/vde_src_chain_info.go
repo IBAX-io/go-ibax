@@ -39,6 +39,11 @@ func VDESrcChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	form := &VDESrcChainInfoForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.VDESrcChainInfo{}
+	if m, err = unmarshalColumnVDESrcChainInfo(form); err != nil {
+		fmt.Println(err)
 		errorResponse(w, err)
 		return
 	}
@@ -130,8 +135,3 @@ func VDESrcChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query chain info data by ID failed")
 		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
-}

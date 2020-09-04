@@ -4,6 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daemons
+
+import (
+	"context"
+
+	log "github.com/sirupsen/logrus"
+
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
 )
 
 func VDEDestDataStatus(ctx context.Context, d *daemon) error {
@@ -42,12 +51,3 @@ func VDEDestDataStatus(ctx context.Context, d *daemon) error {
 			item.HashState = 2 //
 			log.WithFields(log.Fields{"error": err}).Error("Hash does not match！")
 		}
-		err = item.Updates()
-		if err != nil {
-			log.WithError(err)
-			continue
-		}
-
-	} //for
-	return nil
-}

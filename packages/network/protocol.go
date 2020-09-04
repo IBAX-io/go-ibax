@@ -63,6 +63,9 @@ func (rt *RequestType) Read(r io.Reader) error {
 }
 
 func (rt *RequestType) Write(w io.Writer) error {
+	return binary.Write(w, binary.LittleEndian, rt.Type)
+}
+
 // MaxBlockResponse is max block response
 type MaxBlockResponse struct {
 	BlockID int64
@@ -794,19 +797,6 @@ func (req *SubNodeSrcDataAgentRequest) Read(r io.Reader) error {
 	req.DataUUID = string(DataUUID_slice)
 
 	AgentMode_slice, err := ReadSlice(r)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on reading AgentMode request")
-		return err
-	}
-	req.AgentMode = string(AgentMode_slice)
-
-	TranMode_slice, err := ReadSlice(r)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on reading TranMode request")
-		return err
-	}
-	req.TranMode = string(TranMode_slice)
-
 	DataInfo_slice, err := ReadSlice(r)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on reading DataInfo request")

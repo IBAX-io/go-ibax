@@ -36,15 +36,6 @@ func TestBlockTimeCounter(t *testing.T) {
 
 	start, end, err := btc.RangeByTime(at)
 	assert.NoError(t, err)
-	assert.Equal(t, time.Unix(10, 0).Add(1*time.Millisecond), start)
-	assert.Equal(t, time.Unix(15, 0), end)
-	fmt.Println("ranges:", start.Unix(), end.Unix())
-}
-
-func TestRangeByTime(t *testing.T) {
-	btc := BlockTimeCounter{
-		start:       time.Unix(1532977623, 0),
-		duration:    4 * time.Second,
 		numberNodes: 1,
 	}
 
@@ -80,3 +71,5 @@ func TestBlockOnlineTime(t *testing.T) {
 	}
 	if exists {
 		fmt.Println("exist")
+	}
+}

@@ -1,10 +1,15 @@
 // +prop AppID = '1'
-// +prop Conditions = 'ContractConditions("NodeOwnerCondition")'
-contract NewUser {
-	data {
-		NewPubkey string
+		if DBFind("keys").Columns("id").WhereId($id).One("id") != nil {
+			error "User already exists"
+		}
 	}
-	conditions {
+	action {
+		$pub = HexToPub($NewPubkey)
+		$account = IdToAddress($id)
+		$amount = Money(0)
+
+		DBInsert("keys", {
+			"id": $id,
 			"account": $account,
 			"pub": $pub,
 			"amount": $amount,

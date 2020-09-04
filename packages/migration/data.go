@@ -756,14 +756,6 @@ var (
 		t.Column("parms", "jsonb", {"null": true})
 		t.Column("task_type", "int", {"default": "0"})
 		t.Column("task_state", "int", {"default": "0"})
-		t.Column("contract_src_name", "text", {"default": ""})
-		t.Column("contract_src_get", "text", {"default": ""})
-		t.Column("contract_src_get_hash", "text", {"default": ""})
-		t.Column("contract_dest_name", "text", {"default": ""})
-		t.Column("contract_dest_get", "text", {"default": ""})
-		t.Column("contract_dest_get_hash", "text", {"default": ""})
-		t.Column("contract_run_http", "text", {"default": ""})
-		t.Column("contract_run_ecosystem", "text", {"default": ""})
 		t.Column("contract_run_parms", "jsonb", {"null": true})
 		t.Column("contract_mode", "int", {"default": "0"})
 		t.Column("contract_state_src", "int", {"default": "0"})
@@ -941,4 +933,14 @@ var (
 
 `
 
+	migrationInitialSchema = `
+		CREATE OR REPLACE FUNCTION next_id(table_name TEXT, OUT result INT) AS
+		$$
+		BEGIN
+			EXECUTE FORMAT('SELECT COUNT(*) + 1 FROM "%s"', table_name)
+			INTO result;
+			RETURN;
+		END
+		$$
+		LANGUAGE plpgsql;`
 )

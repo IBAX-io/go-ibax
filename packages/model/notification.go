@@ -41,17 +41,6 @@ func (n *Notification) SetTablePrefix(tablePrefix string) {
 
 // TableName returns table name
 func (n *Notification) TableName() string {
-	if n.ecosystem == 0 {
-		n.ecosystem = 1
-	}
-	return `1_notifications`
-}
-
-type NotificationsCount struct {
-	RecipientID int64  `gorm:"recipient_id"`
-	Account     string `gorm:"account"`
-	RoleID      int64  `gorm:"role_id"`
-	Count       int64  `gorm:"count"`
 }
 
 // GetNotificationsCount returns all unclosed notifications by users and ecosystem through role_id
@@ -78,6 +67,13 @@ func GetNotificationsCount(ecosystemID int64, accounts []string) ([]Notification
 		if err != nil {
 			return nil, err
 		}
+		result = append(result, list...)
+	}
+	return result, nil
+}
+
+func getNotificationCountFilter(users []int64, ecosystemID int64) (filter string, params []interface{}) {
+	filter = fmt.Sprintf(` WHERE closed = 0 and ecosystem = '%d' `, ecosystemID)
 
 	if len(users) > 0 {
 		filter += `AND recipient->>'member_id' IN (?) `

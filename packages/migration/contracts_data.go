@@ -45,6 +45,14 @@ contract DeveloperCondition {
 
         // check for Developer role
         var app_id int role_id string
+        app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id"))
+        role_id = AppParam(app_id, "role_developer", $ecosystem_id)
+
+        if Size(role_id) == 0 {
+            warning Sprintf(LangRes("@1x_not_access_action"),"DeveloperCondition")
+        }
+        if !RoleAccess(Int(role_id)) {
+            warning Sprintf(LangRes("@1x_not_access_action"),"DeveloperCondition")
         }
     }
 }
@@ -57,5 +65,3 @@ contract DeveloperCondition {
 		}
 	}
 }
-', '{{.Ecosystem}}', 'ContractConditions("MainCondition")', '{{.AppID}}', '{{.Ecosystem}}');
-`

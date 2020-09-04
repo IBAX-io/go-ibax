@@ -8,6 +8,12 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -127,18 +133,6 @@ func VDEScheMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
-	srcData := model.VDEScheMember{}
-	srcData.ID = id
-	result, err := srcData.GetOneByID()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
-		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
-}
-
 func VDEScheMemberByPubKeyHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)

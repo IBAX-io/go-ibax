@@ -156,6 +156,21 @@ func (sc *SmartContract) needPayment() bool {
 func (sc *SmartContract) prepareMultiPay() (err error) {
 	var pay struct {
 		toID                                  int64
+		fromID                                int64
+		fuelRate, storageFuel, newElementFuel decimal.Decimal
+		payWallet                             model.Key
+		tokenEco                              int64
+	}
+	cntrctOwnerInfo := sc.TxContract.Block.Info.(*script.ContractInfo).Owner
+	err = sc.appendTokens(cntrctOwnerInfo.TokenID, sc.TxSmart.EcosystemID)
+	if err != nil {
+		return
+	}
+	var isEcosysWallet = make(map[int64]bool)
+	for _, eco := range sc.getTokenEcos() {
+		zero := decimal.New(0, 0)
+		pay.tokenEco = eco
+		if !sc.OBS {
 			pay.toID = sc.BlockData.KeyID
 			pay.fromID = sc.TxSmart.KeyID
 		}
@@ -235,16 +250,6 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 			_, err = UpdateSysParam(sc, syspar.TaxesWallet, string(tax), "")
 			if err != nil {
 				return err
-			}
-		}
-		key := &model.Key{}
-		var found bool
-		if found, err = key.SetTablePrefix(eco).Get(sc.DbTransaction, pay.toID); err != nil || !found {
-			if err != nil {
-				return err
-			}
-			if !found {
-				_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]interface{}{
 					"id":      pay.toID,
 					"account": IDToAddress(pay.toID),
 					"amount":  0, "ecosystem": eco}))
