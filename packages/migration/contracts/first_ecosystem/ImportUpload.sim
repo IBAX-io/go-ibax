@@ -1,11 +1,4 @@
 // +prop AppID = '1'
-// +prop Conditions = 'ContractConditions("MainCondition")'
-contract ImportUpload {
-    data {
-        Data file
-    }
-    conditions {
-        $Data = BytesToString($Data["Body"])
         $limit = 10 // data piece size of import
     }
     action {
@@ -60,6 +53,14 @@ contract ImportUpload {
         inf["menu"] = Join(menu_arr, ", ")
         inf["menu_count"] = Len(menu_arr)
         inf["parameters"] = Join(parameters_arr, ", ")
+        inf["parameters_count"] = Len(parameters_arr)
+        inf["languages"] = Join(languages_arr, ", ")
+        inf["languages_count"] = Len(languages_arr)
+        inf["contracts"] = Join(contracts_arr, ", ")
+        inf["contracts_count"] = Len(contracts_arr)
+        inf["tables"] = Join(tables_arr, ", ")
+        inf["tables_count"] = Len(tables_arr)
+        if 0 == inf["pages_count"] + inf["blocks_count"] + inf["menu_count"] + inf["parameters_count"] + inf["languages_count"] + inf["contracts_count"] + inf["tables_count"] {
             warning "Invalid or empty import file"
         }
         // IMPORT DATA

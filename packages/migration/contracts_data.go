@@ -31,17 +31,6 @@ contract AdminCondition {
     }
 }
 ', '{{.Ecosystem}}', 'ContractConditions("MainCondition")', '{{.AppID}}', '{{.Ecosystem}}'),
-	(next_id('1_contracts'), 'DeveloperCondition', '// This contract is used to set "developer" rights.
-// Usually the "developer" role is used for this.
-// The role ID is written to the ecosystem parameter and can be changed.
-// The contract requests the role ID from the ecosystem parameter and the contract checks the rights.
-
-contract DeveloperCondition {
-    conditions {
-        // check for Founder
-        if EcosysParam("founder_account") == AddressToId($account_id) {
-            return
-        }
 
         // check for Developer role
         var app_id int role_id string
@@ -65,3 +54,5 @@ contract DeveloperCondition {
 		}
 	}
 }
+', '{{.Ecosystem}}', 'ContractConditions("MainCondition")', '{{.AppID}}', '{{.Ecosystem}}');
+`

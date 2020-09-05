@@ -1,5 +1,11 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package tcpserver
+
+import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -50,15 +56,6 @@ func Type100(r *network.VDESrcDataRequest) (*network.VDESrcDataResponse, error) 
 		VDEAgentPubkey: r.VDEAgentPubkey,
 		VDEAgentIp:     r.VDEAgentIp,
 		VDEDestPubkey:  r.VDEDestPubkey,
-		VDEDestIp:      r.VDEDestIp,
-		//Data:         r.Data,
-		Data:       data,
-		CreateTime: time.Now().Unix(),
-	}
-
-	err = VDEDestData.Create()
-	if err != nil {
-		log.WithError(err)
 		return nil, err
 	}
 

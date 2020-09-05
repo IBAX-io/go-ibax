@@ -79,6 +79,15 @@ func Encrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
 	default:
 		return nil, ErrUnknownProvider
 	}
+}
+
+// Decrypt is decrypting
+func Decrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
+	if len(msg) == 0 {
+		return nil, ErrDecryptingEmpty
+	}
+	switch cryptoProv {
+	case _AESCBC:
 		return decryptCBC(msg, key, iv)
 	default:
 		return nil, ErrUnknownProvider
@@ -148,20 +157,6 @@ func decryptCBC(ciphertext, key, iv []byte) ([]byte, error) {
 	return ret, nil
 
 }
-
-// PKCS7Padding realizes PKCS#7 encoding which is described in RFC 5652.
-func _PKCS7Padding(src []byte, blockSize int) []byte {
-	padding := blockSize - len(src)%blockSize
-	return append(src, bytes.Repeat([]byte{byte(padding)}, padding)...)
-}
-
-// PKCS7UnPadding realizes PKCS#7 decoding.
-func _PKCS7UnPadding(src []byte) ([]byte, error) {
-	length := len(src)
-	padLength := int(src[length-1])
-	for i := length - padLength; i < length; i++ {
-		if int(src[i]) != padLength {
-			return nil, fmt.Errorf(`incorrect input of PKCS7UnPadding`)
 		}
 	}
 	return src[:length-int(src[length-1])], nil

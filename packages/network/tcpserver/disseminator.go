@@ -223,21 +223,18 @@ func readHashes(buf *bytes.Buffer) ([][]byte, error) {
 	}
 
 	return hashes, nil
-}
-
-func saveNewTransactions(binaryTxs []byte) error {
-	var queueTxs []*model.QueueTx
-	log.WithFields(log.Fields{"binaryTxs": binaryTxs}).Debug("trying to save binary txs")
-
-	for len(binaryTxs) > 0 {
-		txSize, err := converter.DecodeLength(&binaryTxs)
-		if err != nil {
 			log.WithFields(log.Fields{"type": consts.ProtocolError, "err": err}).Error("decoding binary txs length")
 			return err
 		}
 		if int64(len(binaryTxs)) < txSize {
 			log.WithFields(log.Fields{"type": consts.ProtocolError, "size": txSize, "len": len(binaryTxs)}).Error("incorrect binary txs len")
 			return utils.ErrInfo(errors.New("bad transactions packet"))
+		}
+
+		txBinData := converter.BytesShift(&binaryTxs, txSize)
+		if len(txBinData) == 0 {
+			log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("binaryTxs is empty")
+			return utils.ErrInfo(errors.New("len(txBinData) == 0"))
 		}
 
 		if int64(len(txBinData)) > syspar.GetMaxTxSize() {

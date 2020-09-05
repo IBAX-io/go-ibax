@@ -156,13 +156,6 @@ type Lexem struct {
 	Line   uint16      // Line of the lexem
 	Column uint32      // Position inside the line
 }
-
-// GetLogger returns logger
-func (l Lexem) GetLogger() *log.Entry {
-	return log.WithFields(log.Fields{"lex_type": l.Type, "lex_line": l.Line, "lex_column": l.Column})
-}
-
-type ifBuf struct {
 	count int
 	pair  int
 	stop  bool
@@ -209,6 +202,10 @@ func lexParser(input []rune) (Lexems, error) {
 			todo(rune(' '))
 		} else {
 			todo(input[off])
+		}
+		if curState == lexError {
+			return nil, fmt.Errorf(`unknown lexem %s [Ln:%d Col:%d]`,
+				string(input[off:off+1]), line, off-offline+1)
 		}
 		if (flags & lexfSkip) != 0 {
 			off++

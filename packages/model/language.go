@@ -23,9 +23,9 @@ func (l *Language) SetTablePrefix(prefix string) {
 	l.ecosystem = converter.StrToInt64(prefix)
 }
 
-	}
-	return `1_languages`
-}
+// TableName returns name of table
+func (l *Language) TableName() string {
+	if l.ecosystem == 0 {
 
 // GetAll is retrieving all records from database
 func (l *Language) GetAll(transaction *DbTransaction, prefix string) ([]Language, error) {

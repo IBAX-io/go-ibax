@@ -481,6 +481,15 @@ func fFtail(buf *[]*Block, state int, lexem *Lexem) error {
 		}
 	}
 	return nil
+}
+
+func fFNameParam(buf *[]*Block, state int, lexem *Lexem) error {
+	block := (*buf)[len(*buf)-1]
+
+	fblock := block.Info.(*FuncInfo)
+	if fblock.Names == nil {
+		names := make(map[string]FuncName)
+		fblock.Names = &names
 	}
 	for key := range *fblock.Names {
 		if key[0] == '_' {
@@ -1046,24 +1055,6 @@ main:
 			}
 			state = mustComma
 		}
-	}
-	if len(ret) > 0 && state == mustValue {
-		return nil, errUnexpValue
-	}
-	if i == len(*lexems) {
-		return nil, errUnclosedArray
-	}
-	*ind = i
-	return ret, nil
-}
-
-func setWritable(block *[]*Block) {
-	for i := len(*block) - 1; i >= 0; i-- {
-		blockItem := (*block)[i]
-		if blockItem.Type == ObjFunc {
-			blockItem.Info.(*FuncInfo).CanWrite = true
-		}
-		if blockItem.Type == ObjContract {
 			blockItem.Info.(*ContractInfo).CanWrite = true
 		}
 	}

@@ -10,9 +10,14 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/types"
 
-	log "github.com/sirupsen/logrus"
-)
+// fields="[+amount]"
+// values="[2912910000000]"
 
+// whereF="[id]"
+// whereV="[-6752330173818123413]"
+
+type TestKeyTableChecker struct {
+	Val bool
 }
 
 func (tc TestKeyTableChecker) IsKeyTable(tableName string) bool {

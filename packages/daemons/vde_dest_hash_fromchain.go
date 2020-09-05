@@ -115,19 +115,6 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 	t_struct := dest_VDEDestDataHashResult{}
 	url := `listWhere` + `/vde_share_hash`
 	//err = api.SendPost(url, &form, &t_struct)
-	//if err != nil {
-	//	fmt.Println("error", err)
-	//	return err
-	//}
-	err = chain_api.SendPost(chain_apiAddress, gAuth_chain, url, &form, &t_struct)
-	if err != nil {
-		fmt.Println("error", err)
-		return err
-	}
-	if len(t_struct.List) == 0 {
-		//log.Info("DEDestDataHashResult not found, sleep...")
-		//fmt.Println("DEDestDataHashResult not found, sleep...")
-		time.Sleep(time.Second * 2)
 		return nil
 	}
 
@@ -142,6 +129,17 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 		m.BlockchainEcosystem = blockchain_ecosystem
 		m.CreateTime = converter.StrToInt64(DataHashItem.CreateTime)
 
+		if err = m.Create(); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Failed to insert vde_dest_data_hash table")
+			break
+		}
+		fmt.Println("insert vde_dest_data_hash table ok, DataUUID:", DataHashItem.DataUUID)
+		UpdateTime = DataHashItem.CreateTime
+	}
+
+	DestHashTime.UpdateTime = converter.StrToInt64(UpdateTime)
+	err = DestHashTime.Updates()
+	if err != nil {
 		fmt.Println("Update UpdateTime table err: ", err)
 		log.WithFields(log.Fields{"error": err}).Error("Update UpdateTime table!")
 		time.Sleep(time.Millisecond * 2)

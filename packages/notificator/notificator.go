@@ -58,15 +58,22 @@ func parseRecipientNotification(rows []model.NotificationsCount, systemID int64)
 		}
 
 		roleNotifications := notificationRecord{
-	}
+			EcosystemID:  converter.Int64ToStr(systemID),
+			RoleID:       converter.Int64ToStr(r.RoleID),
+			RecordsCount: r.Count,
+		}
 
-	return recipientNotifications
-}
+		nr, ok := recipientNotifications[r.Account]
+		if ok {
+			*nr = append(*nr, roleNotifications)
+			continue
+		}
 
-func sendUserStats(account string, stats []notificationRecord) {
-	rawStats, err := json.Marshal(stats)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("notification statistic")
+		records := []notificationRecord{
+			roleNotifications,
+		}
+
+		recipientNotifications[r.Account] = &records
 	}
 
 	err = publisher.Write(account, string(rawStats))
