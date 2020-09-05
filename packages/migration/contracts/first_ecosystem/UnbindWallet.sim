@@ -1,6 +1,7 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract UnbindWallet {
+		Id         int
 	}
 	conditions {
 		$cur = DBRow("contracts").Columns("id,conditions,wallet_id").WhereId($Id)

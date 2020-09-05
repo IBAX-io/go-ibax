@@ -33,8 +33,6 @@ func loadContractTasks() error {
 
 		c := model.Cron{}
 		c.SetTablePrefix(fmt.Sprintf("%d", stateID))
-		tasks, err := c.GetAllCronTasks()
-		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get all cron tasks")
 			return err
 		}
@@ -46,6 +44,12 @@ func loadContractTasks() error {
 				Handler: &contract.ContractHandler{
 					Contract: cronTask.Contract,
 				},
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	return nil
 }

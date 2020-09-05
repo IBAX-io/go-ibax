@@ -54,11 +54,6 @@ func getWalletHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if form.Limit == 0 {
-		form.Limit = 20
-	}
-	if form.Page == 0 {
-		form.Page = 1
 	}
 	form.Page = (form.Page - 1) * form.Limit
 
@@ -78,6 +73,16 @@ func getWalletHistory(w http.ResponseWriter, r *http.Request) {
 						walletHistory.Money = converter.ChainMoney(history.Amount.String())
 						walletHistory.BlockID = history.BlockID
 						walletHistory.SenderID = history.SenderID
+						walletHistory.RecipientID = history.RecipientID
+						walletHistory.TxHash = hex.EncodeToString(history.TxHash)
+						walletHistory.Comment = history.Comment
+						walletHistory.CreatedAt = history.CreatedAt
+						walletHistory.ID = history.ID
+						walletHistory.SenderAdd = smart.IDToAddress(history.SenderID)
+						walletHistory.RecipientAdd = smart.IDToAddress(history.RecipientID)
+						walletHistories = append(walletHistories, walletHistory)
+					}
+					jsonResponse(w, walletHistories)
 				} else {
 					jsonResponse(w, make([]string, 0, 0))
 				}

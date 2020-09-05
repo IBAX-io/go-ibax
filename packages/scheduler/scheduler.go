@@ -48,6 +48,17 @@ func (s *Scheduler) UpdateTask(t *Task) error {
 
 	entries := s.cron.Entries()
 	for _, entry := range entries {
+		task := entry.Schedule.(*Task)
+		if task.ID == t.ID {
+			*task = *t
+			log.WithFields(log.Fields{"task": t.String()}).Info("task updated")
+			return nil
+		}
+
+		continue
+	}
+
+	s.cron.Schedule(t, t)
 	log.WithFields(log.Fields{"task": t.String()}).Info("task added")
 
 	return nil
@@ -76,6 +87,3 @@ func Parse(cronSpec string) (cron.Schedule, error) {
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("parse cron format")
 		return nil, err
-	}
-	return sch, nil
-}

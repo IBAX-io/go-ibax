@@ -20,14 +20,6 @@ const defaultSectionsLimit = 100
 
 type sectionsForm struct {
 	paginatorForm
-	Lang string `schema:"lang"`
-}
-
-func (f *sectionsForm) Validate(r *http.Request) error {
-	if err := f.paginatorForm.Validate(r); err != nil {
-		return err
-	}
-
 	if len(f.Lang) == 0 {
 		f.Lang = r.Header.Get("Accept-Language")
 	}
@@ -99,6 +91,8 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Debug("Getting role by id")
 				errorResponse(w, err)
 				return
+			}
+			if role == true && roles.DefaultPage != "" {
 				item["default_page"] = roles.DefaultPage
 			}
 		}

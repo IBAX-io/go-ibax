@@ -90,6 +90,7 @@ func (t *FirstBlockTransaction) Action() error {
 		return utils.ErrInfo(err)
 	}
 	id, err := model.GetNextID(t.DbTransaction, "1_pages")
+	if err != nil {
 		return utils.ErrInfo(err)
 	}
 	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_pages" (id,name,menu,value,conditions) values(?, 'default_page',
@@ -123,9 +124,3 @@ func (t *FirstBlockTransaction) Action() error {
 // Rollback first block
 func (t *FirstBlockTransaction) Rollback() error {
 	return nil
-}
-
-// Header is returns first block header
-func (t FirstBlockTransaction) Header() *tx.Header {
-	return nil
-}

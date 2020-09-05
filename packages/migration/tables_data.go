@@ -81,19 +81,6 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     ),
     (next_id('1_tables'), 'menu',
         '{
-            "insert": "ContractConditions(\"DeveloperCondition\")",
-            "update": "ContractConditions(\"DeveloperCondition\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
-        }',
-        '{
-            "name": "false",
-            "value": "ContractAccess(\"@1EditMenu\",\"@1AppendMenu\")",
-            "title": "ContractAccess(\"@1EditMenu\")",
-            "conditions": "ContractAccess(\"@1EditMenu\")",
-            "permissions": "ContractConditions(\"@1AdminCondition\")",
-            "ecosystem": "false"
-        }',
-        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
     ),
     (next_id('1_tables'), 'pages',
         '{
@@ -175,6 +162,24 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
         '{
             "deleted": "ContractAccess(\"@1RolesUnassign\")",
             "date_deleted": "ContractAccess(\"@1RolesUnassign\")",
+            "member": "false",
+            "role": "false",
+            "date_created": "false",
+            "appointed": "false",
+            "ecosystem": "false"
+        }',
+        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
+    ),
+    (next_id('1_tables'), 'notifications',
+        '{
+            "insert": "ContractAccess(\"@1NotificationsSend\", \"@1CheckNodesBan\", \"@1NotificationsBroadcast\")",
+            "update": "ContractAccess(\"@1NotificationsSend\", \"@1NotificationsClose\", \"@1NotificationsProcess\", \"@1NotificationsUpdateParams\")",
+            "new_column": "ContractConditions(\"@1AdminCondition\")"
+        }',
+        '{
+            "date_closed": "ContractAccess(\"@1NotificationsClose\")",
+            "sender": "false",
+            "processing_info": "ContractAccess(\"@1NotificationsClose\",\"@1NotificationsProcess\")",
             "date_start_processing": "ContractAccess(\"@1NotificationsClose\",\"@1NotificationsProcess\")",
             "notification": "false",
             "page_name": "false",

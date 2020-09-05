@@ -7,6 +7,14 @@ services:
     restart: always
     image: ibax/go-ibax:latest
     container_name: ibax
+    volumes:
+      - ./data/ibax:/mnt/ibax/data
+      - ./data/cert:/mnt/cert
+    depends_on:
+      - postgresql
+      - redis
+      - centrifugo
+    links:
       - postgresql:postgresql
       - redis:redis
       - centrifugo:centrifugo
@@ -15,12 +23,6 @@ services:
       - "7079:7079"
   postgresql:
     hostname: postgresql
-    restart: always
-    image: postgres:13
-    container_name: postgresql
-    ports:
-      - "5433:5432"
-    environment:
       TZ: UTC
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}

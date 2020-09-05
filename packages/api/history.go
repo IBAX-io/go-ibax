@@ -22,6 +22,12 @@ type historyResult struct {
 	List []map[string]string `json:"list"`
 }
 
+func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+	client := getClient(r)
+
+	table := client.Prefix() + "_" + params["name"]
 	rollbackTx := &model.RollbackTx{}
 	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(params["id"], table, rollbackHistoryLimit)
 	if err != nil {
@@ -42,6 +48,3 @@ type historyResult struct {
 		}
 		rollbackList = append(rollbackList, rollback)
 	}
-
-	jsonResponse(w, &historyResult{rollbackList})
-}

@@ -253,6 +253,11 @@ func forlistTag(par parFunc) (ret string) {
 	} else {
 		indexName = name + `_index`
 	}
+	if len(name) == 0 || par.Workspace.Sources == nil {
+		return
+	}
+	source := (*par.Workspace.Sources)[name]
+	if source.Data == nil {
 		return
 	}
 	root := node{}
@@ -484,22 +489,6 @@ func txinfoTag(par parFunc) (out string) {
 	if par.Node.Attr[`hash`] != nil {
 		var err error
 		out, err = smart.TransactionInfo(par.Node.Attr[`hash`].(string))
-		if err != nil {
-			out = err.Error()
-		}
-	}
-	return
-}
-
-func dataTag(par parFunc) string {
-	setAllAttr(par)
-	defaultTail(par, `data`)
-
-	data := make([][]string, 0)
-	cols := strings.Split((*par.Pars)[`Columns`], `,`)
-	types := make([]string, len(cols))
-	for i := 0; i < len(types); i++ {
-		types[i] = `text`
 	}
 
 	list, err := csv.NewReader(strings.NewReader((*par.Pars)[`Data`])).ReadAll()

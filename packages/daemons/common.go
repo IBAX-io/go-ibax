@@ -16,6 +16,23 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/statsd"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	// MonitorDaemonCh is monitor daemon channel
+	MonitorDaemonCh = make(chan []string, 100)
+	NtpDriftFlag    = false
+)
+
+type daemon struct {
+	goRoutineName string
+	sleepTime     time.Duration
+	logger        *log.Entry
+	atomic        uint32
 }
 
 var daemonsList = map[string]func(context.Context, *daemon) error{
@@ -165,18 +182,6 @@ func getHostPort(h string) string {
 	if strings.Contains(h, ":") {
 		return h
 	}
-	return fmt.Sprintf("%s:%d", h, consts.DEFAULT_TCP_PORT)
-}
-
-//ntp
-func Ntp_Work(ctx context.Context) {
-	var count = 0
-	for {
-		select {
-		case <-ctx.Done():
-			log.Error("Ntp_Work done his work")
-			return
-		case <-time.After(time.Second * 4):
 			b, err := utils.CheckClockDrift()
 			if err != nil {
 				log.WithFields(log.Fields{"daemon_name Ntp_Work err": err.Error()}).Error("Ntp_Work")

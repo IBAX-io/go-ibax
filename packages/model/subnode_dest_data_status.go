@@ -78,6 +78,24 @@ func (m *SubNodeDestDataStatus) GetAllByDataStatus(AuthState int64, SignState in
 	return result, err
 }
 
+func (m *SubNodeDestDataStatus) GetAllByHashState(HashState int64) ([]SubNodeDestDataStatus, error) {
+	result := make([]SubNodeDestDataStatus, 0)
+	err := DBConn.Table("subnode_dest_data_status").Where("hash_state = ?", HashState).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeDestDataStatus) GetAllBySignState(SignState int64) ([]SubNodeDestDataStatus, error) {
+	result := make([]SubNodeDestDataStatus, 0)
+	err := DBConn.Table("subnode_dest_data_status").Where("sign_state = ?", SignState).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeDestDataStatus) GetAllByTaskUUIDAndDataStatus(TaskUUID string, AuthState int64, SignState int64, HashState int64) ([]SubNodeDestDataStatus, error) {
+	result := make([]SubNodeDestDataStatus, 0)
+	err := DBConn.Table("subnode_dest_data_status").Where("task_uuid = ? AND auth_state = ? AND sign_state = ? AND hash_state = ?", TaskUUID, AuthState, SignState, HashState).Find(&result).Error
+	return result, err
+}
+
 func (m *SubNodeDestDataStatus) GetAllByTaskUUIDAndDataStatusAndTime(TaskUUID string, AuthState int64, SignState int64, HashState int64, BTime int64, ETime int64) ([]SubNodeDestDataStatus, error) {
 	result := make([]SubNodeDestDataStatus, 0)
 	err := DBConn.Table("subnode_dest_data_status").Where("task_uuid = ? AND auth_state = ? AND sign_state = ? AND hash_state = ? AND create_time > ? AND create_time <= ?", TaskUUID, AuthState, SignState, HashState, BTime, ETime).Find(&result).Error
@@ -85,7 +103,3 @@ func (m *SubNodeDestDataStatus) GetAllByTaskUUIDAndDataStatusAndTime(TaskUUID st
 }
 
 func (m *SubNodeDestDataStatus) Get(Hash string) (SubNodeDestDataStatus, error) {
-	var sndd SubNodeDestDataStatus
-	err := DBConn.Where("hash=?", Hash).First(&sndd).Error
-	return sndd, err
-}

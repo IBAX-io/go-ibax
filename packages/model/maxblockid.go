@@ -15,6 +15,16 @@ type BlockID struct {
 	Time int64
 	Name string
 }
+
+var MihPrefix = "blockid-"
+
+//marshal
+func (b *BlockID) Marshal() ([]byte, error) {
+	if res, err := msgpack.Marshal(b); err != nil {
+		return nil, err
+	} else {
+		return res, err
+	}
 }
 
 //unmarshal
@@ -44,22 +54,6 @@ func (b *BlockID) GetRangeByName(n1, n2 string, count int64) (bool, error) {
 	var nb1, nb2 BlockID
 	rp1 := &RedisParams{
 		Key: MihPrefix + n1,
-	}
-	if err := rp1.Getdb1(); err != nil {
-		if err.Error() == "redis: nil" {
-			rp := &RedisParams{}
-			num, err := rp.Getdbsize()
-			if err != nil {
-				return false, err
-			}
-			if num > count {
-				return true, err
-			} else {
-				return false, err
-			}
-			//return false, err
-		}
-		return false, err
 	}
 	if err := nb1.Unmarshal([]byte(rp1.Value)); err != nil {
 		return false, err
