@@ -54,8 +54,13 @@ func getTableHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(table.Name) == 0 {
 		errorResponse(w, errTableNotFound.Errorf(params["name"]))
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column type from db")
-			errorResponse(w, err)
+		return
+	}
+
+	var columnsMap map[string]string
+	err = json.Unmarshal([]byte(table.Columns), &columnsMap)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("Unmarshalling table columns to json")
 			return
 		}
 		columns = append(columns, columnInfo{

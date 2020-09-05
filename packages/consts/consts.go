@@ -135,17 +135,23 @@ const (
 
 	// FirstBlockFilename name of first block binary file
 	FirstBlockFilename = "1block"
-
-	// PrivateKeyFilename name of wallet private key file
-	PrivateKeyFilename = "PrivateKey"
-
-	// PublicKeyFilename name of wallet public key file
-	PublicKeyFilename = "PublicKey"
-
 	// NodePrivateKeyFilename name of node private key file
 	NodePrivateKeyFilename = "NodePrivateKey"
 
 	// NodePublicKeyFilename name of node public key file
+	NodePublicKeyFilename = "NodePublicKey"
+
+	// KeyIDFilename generated KeyID
+	KeyIDFilename = "KeyID"
+
+	// RollbackResultFilename rollback result file
+	RollbackResultFilename = "rollback_result"
+
+	// FromToPerDayLimit day limit token transfer between accounts
+	FromToPerDayLimit = 10000
+
+	// TokenMovementQtyPerBlockLimit block limit token transfer
+	TokenMovementQtyPerBlockLimit = 100
 
 	// TCPConnTimeout timeout of tcp connection
 	TCPConnTimeout = 5 * time.Second

@@ -22,16 +22,6 @@ type AssignGetInfo struct {
 	Keyid         int64           `gorm:"not null"`
 	TotalAmount   decimal.Decimal `gorm:"not null"`
 	BalanceAmount decimal.Decimal `gorm:"not null"`
-	Amount        decimal.Decimal `gorm:"not null"`
-	Latestid      int64           `gorm:"not null"`
-	Deleted       int64           `gorm:"not null"`
-	DateUpdated   int64           `gorm:"not null" `
-	DateCreated   int64           `gorm:"not null" `
-}
-
-// TableName returns name of table
-func (m AssignGetInfo) TableName() string {
-	return `1_assign_get_info`
 }
 
 // Get is retrieving model from database
@@ -127,3 +117,5 @@ func (m *AssignGetInfo) GetBalance(db *DbTransaction, wallet int64) (bool, decim
 			total_balance = total_balance.Add(tm)
 		}
 	}
+	return true, balance, total_balance, err
+}

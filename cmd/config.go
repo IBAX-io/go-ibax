@@ -97,6 +97,19 @@ func init() {
 
 	viper.BindPFlag("Redis.Enable", configCmd.Flags().Lookup("redisenable"))
 	viper.BindPFlag("Redis.Host", configCmd.Flags().Lookup("redishost"))
+	viper.BindPFlag("Redis.Port", configCmd.Flags().Lookup("redisport"))
+	viper.BindPFlag("Redis.Dbname", configCmd.Flags().Lookup("redisdb"))
+	viper.BindPFlag("Redis.Password", configCmd.Flags().Lookup("redispassword"))
+	// StatsD
+	configCmd.Flags().StringVar(&conf.Config.StatsD.Host, "statsdHost", "127.0.0.1", "StatsD host")
+	configCmd.Flags().IntVar(&conf.Config.StatsD.Port, "statsdPort", 8125, "StatsD port")
+	configCmd.Flags().StringVar(&conf.Config.StatsD.Name, "statsdName", "chain", "StatsD name")
+	viper.BindPFlag("StatsD.Host", configCmd.Flags().Lookup("statsdHost"))
+	viper.BindPFlag("StatsD.Port", configCmd.Flags().Lookup("statsdPort"))
+	viper.BindPFlag("StatsD.Name", configCmd.Flags().Lookup("statsdName"))
+
+	// Centrifugo
+	configCmd.Flags().StringVar(&conf.Config.Centrifugo.Secret, "centSecret", "127.0.0.1", "Centrifugo secret")
 	configCmd.Flags().StringVar(&conf.Config.Centrifugo.URL, "centUrl", "127.0.0.1", "Centrifugo URL")
 	configCmd.Flags().StringVar(&conf.Config.Centrifugo.Key, "centKey", "127.0.0.1", "Centrifugo API key")
 	viper.BindPFlag("Centrifugo.Secret", configCmd.Flags().Lookup("centSecret"))
@@ -108,13 +121,6 @@ func init() {
 	configCmd.Flags().StringVar(&conf.Config.Log.LogLevel, "logLevel", "ERROR", "Log verbosity (DEBUG | INFO | WARN | ERROR)")
 	configCmd.Flags().StringVar(&conf.Config.Log.LogFormat, "logFormat", "text", "log format, could be text|json")
 	configCmd.Flags().StringVar(&conf.Config.Log.Syslog.Facility, "syslogFacility", "kern", "syslog facility")
-	configCmd.Flags().StringVar(&conf.Config.Log.Syslog.Tag, "syslogTag", "go-ibax", "syslog program tag")
-	viper.BindPFlag("Log.LogTo", configCmd.Flags().Lookup("logTo"))
-	viper.BindPFlag("Log.LogLevel", configCmd.Flags().Lookup("logLevel"))
-	viper.BindPFlag("Log.LogFormat", configCmd.Flags().Lookup("logFormat"))
-	viper.BindPFlag("Log.Syslog.Facility", configCmd.Flags().Lookup("syslogFacility"))
-	viper.BindPFlag("Log.Syslog.Tag", configCmd.Flags().Lookup("syslogTag"))
-
 	// TokenMovement
 	configCmd.Flags().StringVar(&conf.Config.TokenMovement.Host, "tmovHost", "", "Token movement host")
 	configCmd.Flags().IntVar(&conf.Config.TokenMovement.Port, "tmovPort", 0, "Token movement port")

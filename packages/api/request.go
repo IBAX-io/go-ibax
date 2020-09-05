@@ -152,17 +152,6 @@ func (connect *Connect) WaitTx(hash string) (int64, error) {
 			return 0, err
 		}
 
-		ret := multiRet.Results[hash]
-
-		if len(ret.BlockID) > 0 {
-			return converter.StrToInt64(ret.BlockID), fmt.Errorf(ret.Result)
-		}
-		if ret.Message != nil {
-			errtext, err := json.Marshal(ret.Message)
-			if err != nil {
-				return 0, err
-			}
-			return 0, errors.New(string(errtext))
 		}
 		time.Sleep(time.Second)
 	}
@@ -257,6 +246,15 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 		txTime = converter.StrToInt64(newTime)
 	}
 
+	data, txhash, err := tx.NewTransaction(tx.SmartContract{
+		Header: tx.Header{
+			ID:          int(contract.ID),
+			Time:        txTime,
+			EcosystemID: 1,
+			KeyID:       crypto.Address(publicKey),
+			NetworkID:   conf.Config.NetworkID,
+		},
+		Params: params,
 	}, connect.PrivateKey)
 	if err != nil {
 		return 0, "", err

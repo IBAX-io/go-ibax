@@ -42,6 +42,10 @@ func (m *MineIncomehistory) Get(id int64) (bool, error) {
 // Get is retrieving model from database
 func (m *MineIncomehistory) GetDelay(id int64) (bool, error) {
 	for i := 0; i < 10; i++ {
+		f, err := isFound(DBConn.Where("block_id = ?", id).First(m))
+		if f && err == nil {
+			return f, err
+		} else {
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -56,4 +60,3 @@ func (m *MineIncomehistory) GetActiveMiner(time, devid int64) (incomes []MineInc
 		Order("date_created asc").
 		Scan(&incomes).Error
 	return incomes, err
-}

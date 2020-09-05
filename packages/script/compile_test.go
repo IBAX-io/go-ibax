@@ -115,6 +115,23 @@ func TestVMCompile(t *testing.T) {
 				return Sprintf("result=%s+%d+%s+%s+%d", ret["par1"], my["par2"] + 32, my["par1"], proc($glob["test"] ), $glob["number"] )
 			}`, `formap`, `result=Parameter 1+2874+my value space proc+String valueproc+1001`},
 		{`func runtime string {
+						var i int
+						i = 50
+						return Sprintf("val=%d", i 0)
+					}`, `runtime`, `runtime panic error`},
+		{`func nop {
+							return
+						}
+
+						func loop string {
+							var i int
+							while true {//i < 10 {
+								i=i+1
+								if i==5 {
+									continue
+								}
+								if i == 121 {
+									i = i+ 4
 									break
 								}
 							}
@@ -176,22 +193,6 @@ func TestVMCompile(t *testing.T) {
 						FirstName  string
 						MiddleName string "optional"
 						LastName   string
-					}
-					func init string {
-						return "OK"
-					}
-				}`, `my.init`, `OK`},
-
-		{`func temp3 string {
-						var i1 i2 int, s1 string, s2 string
-						i2, i1 = 348, 7
-						if i1 > 5 {
-							var i5 int, s3 string
-							i5 = 26788
-							s1 = "s1 string"
-							i2 = (i1+2)*i5+i2
-							s2 = Sprintf("temp 3 function %s %d", Sprintf("%s + %d", s1, i2), -1 )
-						}
 						return s2
 					}`, `temp3`, `temp 3 function s1 string + 241440 -1`},
 		{`func params2(myval int, mystr string ) string {
