@@ -84,18 +84,16 @@ func (m *VDESrcTask) GetAllByTaskUUID(TaskUUID string) ([]VDESrcTask, error) {
 }
 
 // func (m *VDESrcTask) GetOneByTaskUUID(TaskUUID string) (*VDESrcTask, bool) {
-func (m *VDESrcTask) GetAllByTaskState(TaskState int64) ([]VDESrcTask, error) {
-	result := make([]VDESrcTask, 0)
-	err := DBConn.Table("vde_src_task").Where("task_state = ?", TaskState).Find(&result).Error
-	return result, err
-}
-
-func (m *VDESrcTask) GetOneByTaskState(TaskState int64) (bool, error) {
-	return isFound(DBConn.Where("task_state = ?", TaskState).First(m))
-}
-
-func (m *VDESrcTask) GetOneByChainState(ChainState int64) (bool, error) {
-	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
+// 	var (
+// 		result VDESrcTask
+// 		b	bool
+// 	)
+// 	b = DBConn.Where("task_uuid = ?", TaskUUID).First(m).RecordNotFound()
+// 	return &result, b
+// }
+func (m *VDESrcTask) GetOneByTaskUUID(TaskUUID string) (*VDESrcTask, error) {
+	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+	return m, err
 }
 
 func (m *VDESrcTask) GetAllByContractStateAndChainState(ContractStateSrc int64, ContractStateDest int64, ChainState int64) ([]VDESrcTask, error) {

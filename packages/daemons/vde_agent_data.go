@@ -18,6 +18,20 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func VDEAgentData(ctx context.Context, d *daemon) error {
+	var (
+		LogMode              int64
+		log_type             int64
+		log_err              string
+		chain_state          int64
+		blockchain_http      string
+		blockchain_ecosystem string
+	)
+	m := &model.VDEAgentData{}
+	ShareData, err := m.GetAllByDataSendStatus(0) //0 not send，1 success，2 fail
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all unsent task data")
+		time.Sleep(time.Millisecond * 2)
 		return err
 	}
 	if len(ShareData) == 0 {
@@ -100,13 +114,6 @@ import (
 
 			if err = SrcDataLog.Create(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Insert vde_agent_data_log table failed")
-				continue
-			}
-			//fmt.Println("Insert vde_agent_data_log table ok")
-		} else {
-			fmt.Println("Log mode err!")
-		}
-
 	} //for
 
 	return nil

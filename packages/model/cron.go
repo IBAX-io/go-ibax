@@ -4,6 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 
 package model
+
+import (
+	"fmt"
+)
+
+// Cron represents record of {prefix}_cron table
+type Cron struct {
+	tableName string
+
 // SetTablePrefix is setting table prefix
 func (c *Cron) SetTablePrefix(prefix string) {
 	c.tableName = prefix + "_cron"
