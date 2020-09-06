@@ -49,22 +49,6 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, errInvalidWallet.Errorf(params["wallet"]))
 		return
 	}
-
-	ids, names, err := m.EcosysLookupGetter.GetEcosystemLookup()
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-
-	var (
-		account string
-		found   bool
-	)
-
-	for i, ecosystemID := range ids {
-		key := &model.Key{}
-		key.SetTablePrefix(ecosystemID)
-		found, err = key.Get(nil, keyID)
 		if err != nil {
 			errorResponse(w, err)
 			return
@@ -123,6 +107,22 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 		Account:    account,
 		Ecosystems: keysList,
 	})
+}
+
+func (m Mode) getNotifications(ecosystemID int64, key *model.Key) ([]notifyInfo, error) {
+	notif, err := model.GetNotificationsCount(ecosystemID, []string{key.AccountID})
+	if err != nil {
+		return nil, err
+	}
+
+	list := make([]notifyInfo, 0)
+	for _, n := range notif {
+		if n.RecipientID != key.ID {
+			continue
+		}
+
+		list = append(list, notifyInfo{
+			RoleID: converter.Int64ToStr(n.RoleID),
 			Count:  n.Count,
 		})
 	}

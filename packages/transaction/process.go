@@ -8,12 +8,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/model"
 )
-
-func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*model.QueueTx) error {
-	var (
-		checkTime = time.Now().Unix()
-		hashes    model.ArrHashes
-		trxs      []*model.Transaction
 		hs        []byte
 		err       error
 	)
@@ -43,6 +37,12 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 			expedite, err = decimal.NewFromString(tx.TxSmart.Expedite)
 			if err != nil {
 				return err
+			}
+		}
+		newTx := &model.Transaction{
+			Hash:     hs,
+			Data:     binaryTx,
+			Type:     int8(tx.TxType),
 			KeyID:    tx.TxKeyID,
 			Expedite: expedite,
 			Time:     tx.TxTime,

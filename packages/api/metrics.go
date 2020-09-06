@@ -64,12 +64,6 @@ func blocksCountHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("on getting max block")
 		errorResponse(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	if !found {
-		errorResponse(w, errNotFound)
-		return
 	}
 
 	bm := blockMetric{Count: b.ID}
@@ -87,6 +81,12 @@ func blocksCountByNodeHandler(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("on getting max block")
 		errorResponse(w, err, http.StatusInternalServerError)
 		return
+	}
+
+	if !found {
+		errorResponse(w, errNotFound)
+		return
+	}
 
 	c, err := model.GetBlockCountByNode(Node)
 	if err != nil {

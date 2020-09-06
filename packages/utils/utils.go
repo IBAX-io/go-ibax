@@ -170,11 +170,6 @@ func ErrInfo(verr interface{}, additionally ...string) error {
 		if len(additionally) > 0 {
 			return fmt.Errorf("%s # %s (%s)", err, additionally, Caller(1))
 		}
-		return fmt.Errorf("%s (%s)", err, Caller(1))
-	}
-	return err
-}
-
 // CallMethod calls the function by its name
 func CallMethod(i interface{}, methodName string) interface{} {
 	var ptr reflect.Value
@@ -395,6 +390,12 @@ func GetNodeKeys() (string, string) {
 func VDEGetNodeKeys() (string, string, error) {
 	nprivkey, err := os.ReadFile(filepath.Join(conf.Config.KeysDir, consts.NodePrivateKeyFilename))
 	if err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading node private key from file")
+		return "", "", err
+	}
+	key, err := hex.DecodeString(string(nprivkey))
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("decoding private key from hex")
 		return "", "", err
 	}
 	npubkey, err := crypto.PrivateToPublic(key)

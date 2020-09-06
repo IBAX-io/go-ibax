@@ -12,9 +12,6 @@ const availableDelayedContracts = 0
 type DelayedContract struct {
 	ID         int64  `gorm:"primary_key;not null"`
 	Contract   string `gorm:"not null"`
-	Counter    int64  `gorm:"not null"`
-	HighRate   int64  `gorm:"not null"`
-	Limit      int64  `gorm:"not null"`
 	Delete     bool   `gorm:"not null"`
 	Conditions string `gorm:"not null"`
 }
