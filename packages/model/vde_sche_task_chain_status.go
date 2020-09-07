@@ -19,15 +19,6 @@ type VDEScheTaskChainStatus struct {
 	ContractSrcGet      string `gorm:"not null" json:"contract_src_get"`
 	ContractSrcGetHash  string `gorm:"not null" json:"contract_src_get_hash"`
 	ContractDestName    string `gorm:"not null" json:"contract_dest_name"`
-	ContractDestGet     string `gorm:"not null" json:"contract_dest_get"`
-	ContractDestGetHash string `gorm:"not null" json:"contract_dest_get_hash"`
-	ContractMode        int64  `gorm:"not null" json:"contract_mode"`
-
-	ContractStateSrc     int64  `gorm:"not null" json:"contract_state_src"`
-	ContractStateDest    int64  `gorm:"not null" json:"contract_state_dest"`
-	ContractStateSrcErr  string `gorm:"not null" json:"contract_state_src_err"`
-	ContractStateDestErr string `gorm:"not null" json:"contract_state_dest_err"`
-
 	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
 	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
 	ContractRunParms     string `gorm:"type:jsonb" json:"contract_run_parms"`
@@ -85,6 +76,20 @@ func (m *VDEScheTaskChainStatus) GetAllByTaskUUID(TaskUUID string) ([]VDEScheTas
 // 	b = DBConn.Where("task_uuid = ?", TaskUUID).First(m).RecordNotFound()
 // 	return &result, b
 // }
+
+func (m *VDEScheTaskChainStatus) GetOneByTaskUUID(TaskUUID string, TaskState int64) (*VDEScheTaskChainStatus, error) {
+	err := DBConn.Where("task_uuid=? AND task_state=?", TaskUUID, TaskState).First(&m).Error
+	return m, err
+}
+func (m *VDEScheTaskChainStatus) GetOneByTaskUUIDAndReceiverAndChainState(TaskUUID string, TaskReceiver string, ChainState int64) (*VDEScheTaskChainStatus, error) {
+	err := DBConn.Where("task_uuid=? AND task_receiver=? AND chain_state = ?", TaskUUID, TaskReceiver, ChainState).First(&m).Error
+	return m, err
+}
+
+func (m *VDEScheTaskChainStatus) GetAllByTaskState(TaskState int64) ([]VDEScheTaskChainStatus, error) {
+	result := make([]VDEScheTaskChainStatus, 0)
+	err := DBConn.Table("vde_sche_task_chain_status").Where("task_state = ?", TaskState).Find(&result).Error
+	return result, err
 }
 
 func (m *VDEScheTaskChainStatus) GetOneByTaskState(TaskState int64) (bool, error) {

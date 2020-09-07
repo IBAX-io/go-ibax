@@ -42,17 +42,6 @@ func (p Permissions) Value() (driver.Value, error) {
 	data, err := json.Marshal(p)
 	if err != nil {
 		return nil, err
-	}
-	return string(data), err
-}
-func (p *Permissions) Scan(v interface{}) error {
-	data, ok := v.([]byte)
-	if !ok {
-		return errors.New("Bad permissions")
-	}
-	return json.Unmarshal(data, p)
-}
-
 // SetTablePrefix is setting table prefix
 func (t *Table) SetTablePrefix(prefix string) {
 	t.Ecosystem = converter.StrToInt64(prefix)
@@ -73,6 +62,12 @@ func (t *Table) Get(transaction *DbTransaction, name string) (bool, error) {
 
 // Create is creating record of model
 func (t *Table) Create(transaction *DbTransaction) error {
+	return GetDB(transaction).Create(t).Error
+}
+
+// Delete is deleting model from database
+func (t *Table) Delete(transaction *DbTransaction) error {
+	return GetDB(transaction).Delete(t).Error
 }
 
 // IsExistsByPermissionsAndTableName returns columns existence by permission and table name

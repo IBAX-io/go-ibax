@@ -77,6 +77,17 @@ func VDEDestTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 
 	tasktime := &model.VDEDestTaskTime{}
 	DestTaskTime, err := tasktime.Get()
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting DestTaskTime")
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
+	if DestTaskTime == nil {
+		//log.Info("DestTaskTime not found")
+		fmt.Println("Dest DestTaskTime not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
 
 	chaininfo := &model.VDEDestChainInfo{}
 	DestChainInfo, err := chaininfo.Get()
@@ -198,15 +209,6 @@ func VDEDestTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 			ContractDestGetPlusHash, err := ecies.EccDeCrypto(contractDestDataBase64, nodePrivateKey)
 			if err != nil {
 				fmt.Println("Decryption error:", err)
-				log.WithFields(log.Fields{"type": consts.CryptoError}).Error("Decryption error")
-				continue
-			}
-			//fmt.Println(":", ContractDestGetPlusHash)
-			myContractDestGetHash = string(ContractDestGetPlusHash)[:64]
-			myContractDestGet = string(ContractDestGetPlusHash)[64:]
-			//fmt.Println("myContractDestGetHash:", myContractDestGetHash)
-			//fmt.Println("myContractDestGet:", myContractDestGet)
-
 			ShareTaskItem.ContractDestGet = myContractDestGet
 			ShareTaskItem.ContractDestGetHash = myContractDestGetHash
 

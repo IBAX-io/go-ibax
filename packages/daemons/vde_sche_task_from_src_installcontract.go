@@ -76,9 +76,6 @@ func VDEScheTaskFromSrcInstallContractSrc(ctx context.Context, d *daemon) error 
 			`Value`:         {ContractSrc},
 			"ApplicationId": {"1"},
 			`Conditions`:    {`true`}}
-
-		ContractName := `@1NewContract`
-		//_, _, _, err = api.PostTxResult(ContractName, &form)
 		_, _, _, err = vde_api.PostTxResult(vde_sche_apiAddress, vde_sche_apiEcosystemID, gAuth_sche, gPrivate_sche, ContractName, &form)
 		if err != nil {
 			item.ContractStateSrc = 2
@@ -121,6 +118,15 @@ func VDEScheTaskFromSrcInstallContractDest(ctx context.Context, d *daemon) error
 		//log.Info("Sche task not found")
 		time.Sleep(time.Millisecond * 2)
 		return nil
+	}
+
+	// deal with task data
+	for _, item := range ScheTask {
+		//fmt.Println("ScheTask:", item.TaskUUID)
+		blockchain_http = item.ContractRunHttp
+		blockchain_ecosystem = item.ContractRunEcosystem
+		//fmt.Println("ContractRunHttp and ContractRunEcosystem:", blockchain_http, blockchain_ecosystem)
+		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
 			time.Sleep(time.Millisecond * 2)

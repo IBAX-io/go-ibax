@@ -4,14 +4,27 @@
  *--------------------------------------------------------------------------------------------*/
 
 package api
+
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
+type appContentResult struct {
+	Blocks    []model.BlockInterface `json:"blocks"`
+	Pages     []model.Page           `json:"pages"`
+	Contracts []model.Contract       `json:"contracts"`
 }
 
 func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
 	form := &appParamsForm{
-		ecosystemForm: ecosystemForm{
-			Validator: m.EcosysIDValidator,
-		},
-	}
 
 	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)

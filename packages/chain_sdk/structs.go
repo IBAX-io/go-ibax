@@ -9,11 +9,11 @@ type getUIDResult struct {
 	UID         string `json:"uid,omitempty"`
 	Token       string `json:"token,omitempty"`
 	Expire      string `json:"expire,omitempty"`
-	KeyID       string        `json:"key_id,omitempty"`
-	Address     string        `json:"address,omitempty"`
-	NotifyKey   string        `json:"notify_key,omitempty"`
-	IsNode      bool          `json:"isnode,omitempty"`
-	IsOwner     bool          `json:"isowner,omitempty"`
+	EcosystemID string `json:"ecosystem_id,omitempty"`
+	KeyID       string `json:"key_id,omitempty"`
+	Address     string `json:"address,omitempty"`
+	NetworkID   string `json:"network_id,omitempty"`
+}
 	IsVDE       bool          `json:"vde,omitempty"`
 	Timestamp   string        `json:"timestamp,omitempty"`
 	Roles       []rolesResult `json:"roles,omitempty"`
