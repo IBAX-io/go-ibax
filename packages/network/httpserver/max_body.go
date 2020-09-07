@@ -5,6 +5,3 @@
 package httpserver
 
 import "net/http"
-
-type MaxBodyReader struct {
-	h http.Handler

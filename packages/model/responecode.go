@@ -33,6 +33,23 @@ var (
 	//errUnknownSign       = errType{"E_UNKNOWNSIGN", "Unknown signature", defaultStatus}
 	//errStateLogin        = errType{"E_STATELOGIN", "%s is not a membership of ecosystem %s", http.StatusForbidden}
 	//errTableNotFound     = errType{"E_TABLENOTFOUND", "Table %s has not been found", http.StatusNotFound}
+	//errToken             = errType{"E_TOKEN", "Token is not valid", defaultStatus}
+	//errTokenExpired      = errType{"E_TOKENEXPIRED", "Token is expired by %s", http.StatusUnauthorized}
+	//errUnauthorized      = errType{"E_UNAUTHORIZED", "Unauthorized", http.StatusUnauthorized}
+	//errUndefineval       = errType{"E_UNDEFINEVAL", "Value %s is undefined", defaultStatus}
+	//errUnknownUID        = errType{"E_UNKNOWNUID", "Unknown uid", defaultStatus}
+	//errOBS               = errType{"E_OBS", "Virtual Dedicated Ecosystem %d doesn't exist", defaultStatus}
+	//errOBSCreated        = errType{"E_OBSCREATED", "Virtual Dedicated Ecosystem is already created", http.StatusBadRequest}
+	//errRequestNotFound   = errType{"E_REQUESTNOTFOUND", "Request %s doesn't exist", defaultStatus}
+	//errUpdating          = errType{"E_UPDATING", "Node is updating blockchain", http.StatusServiceUnavailable}
+	//errStopping          = errType{"E_STOPPING", "Network is stopping", http.StatusServiceUnavailable}
+	//errNotImplemented    = errType{"E_NOTIMPLEMENTED", "Not implemented", http.StatusNotImplemented}
+	//errParamMoneyDigit   = errType{"E_PARAMMONEYDIGIT", "The number of decimal places cannot be exceeded ( %s )", http.StatusBadRequest}
+	//errDiffKey           = CodeType{"E_DIFKEY", "Sender's key is different from tx key", defaultStatus}
+	//errBannded           = errType{"E_BANNED", "The key is banned till %s", http.StatusForbidden}
+	//errCheckRole         = errType{"E_CHECKROLE", "Access denied", http.StatusForbidden}
+	//errNewUser           = errType{"E_NEWUSER", "Can't create a new user", http.StatusUnauthorized}
+	CodeSystembusy = CodeType{-1, "System is busy", http.StatusOK, ""}
 	CodeSuccess    = CodeType{0, "Success", http.StatusOK, "OK"}
 	//CodeFileNotExists         = CodeType{40001, "File %s not exists", http.StatusOK, ""}
 	//CodeFileFormatNotSupports = CodeType{40002, "File %s format is not supported", http.StatusOK, ""}
@@ -58,17 +75,6 @@ var (
 	CodeParamKeyConflict    = CodeType{400022, "Param Keyword conflict error ", http.StatusOK, ""}
 	CodeRecordExists        = CodeType{400023, "Record already exists  ", http.StatusOK, ""}
 	CodeRecordNotExists     = CodeType{400024, "Record not exists error  ", http.StatusOK, ""}
-	CodeNewRecordNotRelease = CodeType{400025, "New Record not Release error ", http.StatusOK, ""}
-	CodeReleaseRule         = CodeType{400026, "Release rule error  ", http.StatusOK, ""}
-	CodeDeleteRule          = CodeType{400027, "Delete Record  delete rule error  ", http.StatusOK, ""}
-	CodeHelpDirNotExists    = CodeType{400028, "Help parentdir  not exists error  ", http.StatusOK, ""}
-
-	CodeDBfinderr     = CodeType{400029, "DB find error   ", http.StatusOK, ""}
-	CodeDBcreateerr   = CodeType{400030, "DB create error  ", http.StatusOK, ""}
-	CodeDBupdateerr   = CodeType{400031, "DB update error  ", http.StatusOK, ""}
-	CodeDBdeleteerr   = CodeType{400032, "DB delete error  ", http.StatusOK, ""}
-	CodeDBopertionerr = CodeType{400033, "DB opertion error  ", http.StatusOK, ""}
-	CodeJsonformaterr = CodeType{400034, "Json format error  ", http.StatusOK, ""}
 	CodeBodyformaterr = CodeType{400035, "Body format error  ", http.StatusOK, ""}
 
 	CodeFileNotExists = CodeType{400036, "File not exists", http.StatusOK, ""}

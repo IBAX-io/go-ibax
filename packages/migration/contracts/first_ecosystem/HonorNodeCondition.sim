@@ -7,3 +7,4 @@ contract HonorNodeCondition {
 		if IsHonorNodeKey(account_key) {
 			return
 		}
+		warning "HonorNodeCondition: Sorry, you do not have access to this action"

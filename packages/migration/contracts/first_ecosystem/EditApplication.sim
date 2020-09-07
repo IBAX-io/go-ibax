@@ -8,4 +8,8 @@ contract EditApplication {
     func onlyConditions() bool {
         return $Conditions && false
     }
-}
+
+    conditions {
+        RowConditions("applications", $ApplicationId, onlyConditions())
+        if $Conditions {
+            ValidateCondition($Conditions, $ecosystem_id)

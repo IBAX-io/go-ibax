@@ -3,19 +3,15 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-	Name           string
-	IsValued       bool
-	EmissionAmount string `gorm:"type:jsonb"`
-	TokenTitle     string
-	TokenName      string
-	TypeEmission   int64
-	TypeWithdraw   int64
-	Info           string `gorm:"type:jsonb"`
-}
+package model
 
-// TableName returns name of table
-// only first ecosystem has this entity
-func (sys *Ecosystem) TableName() string {
+import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+)
+
+const ecosysTable = "1_ecosystems"
 	return ecosysTable
 }
 

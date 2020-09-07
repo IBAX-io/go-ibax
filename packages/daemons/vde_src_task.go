@@ -10,11 +10,25 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
 
-	log "github.com/sirupsen/logrus"
-)
+//Scheduling task to run
+func VDESrcTaskStatus(ctx context.Context, d *daemon) error {
+	var (
+		err error
+	)
 
+	m := &model.VDESrcTask{}
+	SrcTask, err := m.GetOneTimeTasks() //Query one-time scheduled tasks and generate scheduling requests。
+	if err != nil {
+		time.Sleep(time.Millisecond * 2)
+		log.WithFields(log.Fields{"error": err}).Error("getting GetScheTimeTasks data")
+		return err
+	}
+	if len(SrcTask) > 0 {
+		log.Info("Src task found")
+		// deal with task data
+		for _, item := range SrcTask {
+			//fmt.Println("SrcTask:", item.TaskUUID)
 			TaskStatus := &model.VDESrcTaskStatus{}
 			TaskStatus.TaskUUID = item.TaskUUID
 			TaskStatus.ContractRunHttp = item.ContractRunHttp

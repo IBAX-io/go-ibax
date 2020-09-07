@@ -19,6 +19,11 @@ import (
 
 func createTables(t *testing.T, db *sql.DB) {
 	sql := `
+	CREATE TABLE "main_lock" (
+		"lock_time" integer NOT NULL DEFAULT '0',
+		"script_name" string NOT NULL DEFAULT '',
+		"info" text NOT NULL DEFAULT '',
+		"uniq" integer NOT NULL DEFAULT '0'
 	);
 	CREATE TABLE "install" (
 		"progress" text NOT NULL DEFAULT ''
@@ -31,22 +36,6 @@ func createTables(t *testing.T, db *sql.DB) {
 	}
 }
 
-func TestWait(t *testing.T) {
-	db := initGorm(t)
-	createTables(t, db.DB())
-
-	ctx, cf := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer func() {
-		ctx.Done()
-		cf()
-	}()
-
-	err := WaitDB(ctx)
-	if err == nil {
-		t.Errorf("should be error")
-	}
-
-	install := &model.Install{}
 	install.Progress = "complete"
 	err = install.Create()
 	if err != nil {
