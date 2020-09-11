@@ -1,22 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"errors"
-	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
 type balanceResult struct {
 	Amount string `json:"amount"`
 	Money  string `json:"money"`
@@ -88,3 +71,16 @@ func (m Mode) getMyAssignBalanceHandler(w http.ResponseWriter, r *http.Request) 
 	key := &model.AssignGetInfo{}
 	fg, balance, total_balance, err := key.GetBalance(nil, keyID)
 	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting Key for wallet")
+		ret.Return(nil, model.CodeDBfinderr.Errorf(err))
+		JsonCodeResponse(w, &ret)
+		return
+	}
+
+	ret.Return(myAssignBalanceResult{
+		Show:    fg,
+		Amount:  balance.String(),
+		Balance: total_balance.String(),
+	}, model.CodeSuccess)
+	JsonCodeResponse(w, &ret)
+}

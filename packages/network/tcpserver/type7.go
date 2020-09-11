@@ -1,5 +1,14 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package tcpserver
+
+import (
+	"net"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network"
 
 	log "github.com/sirupsen/logrus"
@@ -42,12 +51,6 @@ func Type7(request *network.GetBodiesRequest, w net.Conn) error {
 			return err
 		}
 	}
-
-	return nil
-}
-
-func lenOfBlockData(blocks []model.Block) int64 {
-	var length int64
 	for i := 0; i < len(blocks); i++ {
 		length += int64(len(blocks[i].Data))
 	}

@@ -18,17 +18,6 @@ import (
 func VDEDestDataStatus(ctx context.Context, d *daemon) error {
 	var (
 		err error
-	)
-
-	m := &model.VDEDestDataStatus{}
-	ShareData, err := m.GetAllByHashState(0) //0not to deal，1deal ok，2fail,3
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated dest data status")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-	if len(ShareData) == 0 {
-		//log.Info("dest task data status not found")
 		//fmt.Println("dest task data status not found")
 		time.Sleep(time.Millisecond * 2)
 		return nil
@@ -51,3 +40,12 @@ func VDEDestDataStatus(ctx context.Context, d *daemon) error {
 			item.HashState = 2 //
 			log.WithFields(log.Fields{"error": err}).Error("Hash does not match！")
 		}
+		err = item.Updates()
+		if err != nil {
+			log.WithError(err)
+			continue
+		}
+
+	} //for
+	return nil
+}

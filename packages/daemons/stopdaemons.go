@@ -22,6 +22,13 @@ func WaitStopTime() {
 	var first bool
 	for {
 		if model.DBConn == nil {
+			time.Sleep(time.Second * 3)
+			continue
+		}
+		if !first {
+			err := model.Delete(nil, "stop_daemons", "")
+			if err != nil {
+				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting from stop daemons")
 			}
 			first = true
 		}
@@ -42,7 +49,6 @@ func WaitStopTime() {
 			}
 			err = system.RemovePidFile()
 			if err != nil {
-				log.WithFields(log.Fields{
 					"type": consts.IOError, "error": err,
 				}).Error("removing pid file")
 				panic(err)

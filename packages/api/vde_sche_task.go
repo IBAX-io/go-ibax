@@ -166,9 +166,8 @@ func VDEScheTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 	if m.ContractMode == 0 {
 		m.ContractMode = 4 //encryption up to chain
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
-		return
+	}
+
 	}
 
 	jsonResponse(w, result)

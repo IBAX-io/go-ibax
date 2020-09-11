@@ -27,9 +27,16 @@ func (rm RunMode) IsOBSMaster() bool {
 
 // IsOBS returns true if mode equal obs
 func (rm RunMode) IsOBS() bool {
-	return rm == obs
+	return rm == node
 }
 
-// IsNode returns true if mode not equal to any OBS
-func (rm RunMode) IsNode() bool {
-	return rm == node
+// IsSupportingOBS returns true if mode support obs
+func (rm RunMode) IsSupportingOBS() bool {
+	return rm.IsOBS() || rm.IsOBSMaster()
+}
+
+//
+//Add sub node processing
+func (rm RunMode) IsSubNode() bool {
+	return rm == subNode
+}

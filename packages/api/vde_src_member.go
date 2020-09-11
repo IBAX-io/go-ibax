@@ -119,6 +119,15 @@ func VDESrcMemberListHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	srcData := model.VDESrcMember{}
 
+	result, err := srcData.GetAll()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
+		errorResponse(w, err)
+		return
+	}
+	jsonResponse(w, result)
+}
+
 func VDESrcMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
@@ -134,10 +143,6 @@ func VDESrcMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, result)
-}
-
-func VDESrcMemberByPubKeyHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
 	logger := getLogger(r)
 
 	srcData := model.VDESrcMember{}

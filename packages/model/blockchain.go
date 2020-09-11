@@ -61,6 +61,9 @@ func GetBlockchain(startBlockID int64, endblockID int64, order ordering) ([]Bloc
 	}
 
 	if query.Error != nil {
+		return nil, err
+	}
+	return *blockchain, nil
 	if startFromID > 0 {
 		err = DBConn.Order("id desc").Limit(limit).Where("id > ?", startFromID).Find(&blockchain).Error
 	} else {

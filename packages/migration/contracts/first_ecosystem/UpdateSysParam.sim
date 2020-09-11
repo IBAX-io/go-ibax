@@ -1,8 +1,8 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract UpdateSysParam {
-     }
-     action {
+     data {
+        Name string
         var params map
         params["Value"] = $Value
         CallContract($Name, params)

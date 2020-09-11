@@ -14,6 +14,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/template"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
 type contentResult struct {
 	Menu       string          `json:"menu,omitempty"`
 	MenuTree   json.RawMessage `json:"menutree,omitempty"`
@@ -126,20 +137,6 @@ func pageValue(r *http.Request) (*model.Page, string, error) {
 	}
 	if !found {
 		logger.WithFields(log.Fields{"type": consts.NotFound}).Debug("page not found")
-		return nil, ``, errNotFound
-	}
-	return page, ecosystem, nil
-}
-
-func getPage(r *http.Request) (result *contentResult, err error) {
-	page, _, err := pageValue(r)
-	if err != nil {
-		return nil, err
-	}
-
-	logger := getLogger(r)
-
-	client := getClient(r)
 	menu := &model.Menu{}
 	menu.SetTablePrefix(client.Prefix())
 	_, err = menu.Get(page.Menu)
