@@ -21,6 +21,7 @@ import (
 const jwtUIDExpire = time.Second * 5
 
 type getUIDResult struct {
+	UID         string `json:"uid,omitempty"`
 	Token       string `json:"token,omitempty"`
 	Expire      string `json:"expire,omitempty"`
 	EcosystemID string `json:"ecosystem_id,omitempty"`
@@ -50,14 +51,6 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(jwtUIDExpire).Unix(),
 		},
-	}
-
-	var err error
-	if result.Token, err = generateJWTToken(claims); err != nil {
-		logger := getLogger(r)
-		logger.WithFields(log.Fields{"type": consts.JWTError, "error": err}).Error("generating jwt token")
-		errorResponse(w, err)
-		return
 	}
 
 	jsonResponse(w, result)

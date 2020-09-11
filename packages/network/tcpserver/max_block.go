@@ -17,6 +17,4 @@ import (
 // blocksCollection daemon sends this request
 func Type10() (*network.MaxBlockResponse, error) {
 	infoBlock := &model.InfoBlock{}
-		BlockID: infoBlock.BlockID,
-	}, nil
-}
+	found, err := infoBlock.Get()

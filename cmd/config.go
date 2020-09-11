@@ -39,20 +39,6 @@ var configCmd = &cobra.Command{
 			log.WithError(err).Fatal("Marshalling config to global struct variable")
 		}
 
-		err = conf.SaveConfig(configPath)
-		if err != nil {
-			log.WithError(err).Fatal("Saving config")
-		}
-
-		log.Infof("Config is saved to %s", configPath)
-	},
-}
-
-func init() {
-	viper.SetEnvPrefix("CHAIN")
-	viper.AutomaticEnv()
-	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-
 	// Command flags
 	configCmd.Flags().String("path", "", "Generate config to (default dataDir/config.toml)")
 
@@ -121,6 +107,13 @@ func init() {
 	configCmd.Flags().StringVar(&conf.Config.Log.LogLevel, "logLevel", "ERROR", "Log verbosity (DEBUG | INFO | WARN | ERROR)")
 	configCmd.Flags().StringVar(&conf.Config.Log.LogFormat, "logFormat", "text", "log format, could be text|json")
 	configCmd.Flags().StringVar(&conf.Config.Log.Syslog.Facility, "syslogFacility", "kern", "syslog facility")
+	configCmd.Flags().StringVar(&conf.Config.Log.Syslog.Tag, "syslogTag", "go-ibax", "syslog program tag")
+	viper.BindPFlag("Log.LogTo", configCmd.Flags().Lookup("logTo"))
+	viper.BindPFlag("Log.LogLevel", configCmd.Flags().Lookup("logLevel"))
+	viper.BindPFlag("Log.LogFormat", configCmd.Flags().Lookup("logFormat"))
+	viper.BindPFlag("Log.Syslog.Facility", configCmd.Flags().Lookup("syslogFacility"))
+	viper.BindPFlag("Log.Syslog.Tag", configCmd.Flags().Lookup("syslogTag"))
+
 	// TokenMovement
 	configCmd.Flags().StringVar(&conf.Config.TokenMovement.Host, "tmovHost", "", "Token movement host")
 	configCmd.Flags().IntVar(&conf.Config.TokenMovement.Port, "tmovPort", 0, "Token movement port")
