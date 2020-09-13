@@ -45,6 +45,18 @@ func (m Mode) getAppParamsHandler(w http.ResponseWriter, r *http.Request) {
 
 	params := mux.Vars(r)
 	logger := getLogger(r)
+
+	ap := &model.AppParam{}
+	ap.SetTablePrefix(form.EcosystemPrefix)
+
+	list, err := ap.GetAllAppParameters(converter.StrToInt64(params["appID"]))
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all app parameters")
+	}
+
+	result := &appParamsResult{
+		App:  params["appID"],
+		List: make([]paramResult, 0),
 	}
 
 	acceptNames := form.AcceptNames()
@@ -57,8 +69,3 @@ func (m Mode) getAppParamsHandler(w http.ResponseWriter, r *http.Request) {
 			Name:       item.Name,
 			Value:      item.Value,
 			Conditions: item.Conditions,
-		})
-	}
-
-	jsonResponse(w, result)
-}

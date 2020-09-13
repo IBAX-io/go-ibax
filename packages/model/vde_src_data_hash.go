@@ -11,7 +11,9 @@ type VDESrcDataHash struct {
 	Hash                string `gorm:"not null" json:"hash"`
 	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
 	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
+
+	TxHash     string `gorm:"not null" json:"tx_hash"`
+	ChainState int64  `gorm:"not null" json:"chain_state"`
 }
 
 func (VDESrcDataHash) TableName() string {

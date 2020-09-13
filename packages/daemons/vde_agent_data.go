@@ -82,11 +82,6 @@ func VDEAgentData(ctx context.Context, d *daemon) error {
 		} else {
 			item.DataSendState = 2 //
 			item.DataSendErr = "Hash mismatch"
-			log.Info("Hash mismatch")
-		}
-		err = item.Updates()
-		if err != nil {
-			log.WithError(err)
 		}
 		log_err = item.DataSendErr
 		//Generate a chain request on the log
@@ -114,6 +109,13 @@ func VDEAgentData(ctx context.Context, d *daemon) error {
 
 			if err = SrcDataLog.Create(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Insert vde_agent_data_log table failed")
+				continue
+			}
+			//fmt.Println("Insert vde_agent_data_log table ok")
+		} else {
+			fmt.Println("Log mode err!")
+		}
+
 	} //for
 
 	return nil

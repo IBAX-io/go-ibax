@@ -47,6 +47,11 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := model.GetColumnByID(table, column, params["id"])
 	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting data from table")
+		errorResponse(w, errNotFound)
+		return
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", "attachment")

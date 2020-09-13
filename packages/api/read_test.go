@@ -55,21 +55,6 @@ func TestRead(t *testing.T) {
 		`contract GetData%s {
 		action {
 			var row array
-			row = DBFind("%[1]s").Columns("active").Where({id:[{$gte: 2},{"$lte":5}]})
-		}
-	}`,
-		`func ReadFilter%s bool {
-				var i int
-				var row map
-				while i < Len($data) {
-					row = $data[i]
-					if i == 1 || i == 3 {
-						row["my"] = "No name"
-						$data[i] = row
-					}
-					i = i+ 1
-				}
-				return true
 			}`,
 	}
 	for _, contract := range contList {
@@ -93,6 +78,10 @@ func TestRead(t *testing.T) {
 	assert.NoError(t, postTx(`EditColumn`, &url.Values{`TableName`: {name}, `Name`: {`active`},
 		"UpdatePerm": {"true"}, "ReadPerm": {"true" /*"ContractConditions(\"MainCondition\")"*/},
 	}))
+	var ret listResult
+	assert.NoError(t, sendGet(`list/`+name, nil, &ret))
+
+	assert.NoError(t, postTx(`Get`+name, &url.Values{}))
 
 	assert.NoError(t, sendPost(`content`, &url.Values{`template`: {
 		`DBFind(` + name + `, src).Limit(2)`}}, &retCont))
