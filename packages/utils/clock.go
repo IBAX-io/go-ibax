@@ -6,10 +6,8 @@ package utils
 
 import "time"
 
-	Now() time.Time
-}
-
-// ClockWrapper represents wrapper of clock
+// Clock represents interface of clock
+type Clock interface {
 type ClockWrapper struct {
 }
 

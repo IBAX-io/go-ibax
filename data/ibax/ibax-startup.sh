@@ -16,6 +16,17 @@ if [ ! -f "/mnt/ibax/data/config.toml" ]; then
     --httpHost="$HTTP_HOST" \
     --httpPort="$HTTP_PORT" \
     --dbHost="$DB_HOST" \
+    --dbName="$DB_NAME" \
+    --dbPassword="$DB_PASSWORD" \
+    --dbPort="$DB_PORT" \
+    --dbUser="$DB_USER" \
+    --redisenable="$REDIS_ENABLE" \
+    --redisdb="$REDIS_DBNAME" \
+    --redishost="$REDIS_HOST" \
+    --redispassword="$REDIS_PASSWORD" \
+    --redisport="$REDIS_PORT" \
+    --centKey="$CENTRIFUGO_KEY" \
+    --centSecret="$CENTRIFUGO_SECRET" \
     --centUrl="$CENTRIFUGO_URL" \
     --cryptoer="$CRYPTOSETTINGS_CRYPTOER" \
     --hasher="$CRYPTOSETTINGS_HASHER"
@@ -29,17 +40,6 @@ if [ 0"$NODES_ADDR" = "0" ]; then
   if [ ! -f "/mnt/ibax/data/1block" ]; then
     /mnt/ibax/go-ibax generateFirstBlock --test true
   fi
-fi
-
-if [ ! -f "/mnt/ibax/data/initDatabase.txt" ]; then
-  sleep 3
-  /mnt/ibax/go-ibax initDatabase
-  touch /mnt/ibax/data/initDatabase.txt
-  echo initDatabase >> /mnt/ibax/data/initDatabase.txt
-  sleep 1
-fi
-
-/mnt/ibax/go-ibax start
 
 
 

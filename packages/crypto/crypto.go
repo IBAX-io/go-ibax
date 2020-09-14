@@ -19,14 +19,6 @@ import (
 // crypto func getSharedKey() pub.X = new(big.Int).SetBytes(public[0:32])
 // egcons func checkKey() gSettings.Key = hex.EncodeToString(privKey[aes.BlockSize:])
 
-type cryptoProvider int
-type ellipticSizeProvider int
-
-const (
-	_AESCBC cryptoProvider = iota
-)
-
-const (
 	elliptic256 ellipticSizeProvider = iota
 )
 
@@ -157,6 +149,20 @@ func decryptCBC(ciphertext, key, iv []byte) ([]byte, error) {
 	return ret, nil
 
 }
+
+// PKCS7Padding realizes PKCS#7 encoding which is described in RFC 5652.
+func _PKCS7Padding(src []byte, blockSize int) []byte {
+	padding := blockSize - len(src)%blockSize
+	return append(src, bytes.Repeat([]byte{byte(padding)}, padding)...)
+}
+
+// PKCS7UnPadding realizes PKCS#7 decoding.
+func _PKCS7UnPadding(src []byte) ([]byte, error) {
+	length := len(src)
+	padLength := int(src[length-1])
+	for i := length - padLength; i < length; i++ {
+		if int(src[i]) != padLength {
+			return nil, fmt.Errorf(`incorrect input of PKCS7UnPadding`)
 		}
 	}
 	return src[:length-int(src[length-1])], nil
