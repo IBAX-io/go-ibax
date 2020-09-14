@@ -11,15 +11,6 @@ type VDEAgentDataLog struct {
 	Log                 string `gorm:"not null" json:"log"`
 	LogType             int64  `gorm:"not null" json:"log_type"`
 	LogSender           string `gorm:"not null" json:"log_sender"`
-	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
-	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
-
-	TxHash     string `gorm:"not null" json:"tx_hash"`
-	ChainState int64  `gorm:"not null" json:"chain_state"`
-	BlockId    int64  `gorm:"not null" json:"block_id"`
-	ChainId    int64  `gorm:"not null" json:"chain_id"`
-	ChainErr   string `gorm:"not null" json:"chain_err"`
-
 	UpdateTime int64 `gorm:"not null" json:"update_time"`
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
@@ -38,6 +29,11 @@ func (m *VDEAgentDataLog) Updates() error {
 
 func (m *VDEAgentDataLog) Delete() error {
 	return DBConn.Delete(m).Error
+}
+
+func (m *VDEAgentDataLog) GetAll() ([]VDEAgentDataLog, error) {
+	var result []VDEAgentDataLog
+	err := DBConn.Find(&result).Error
 	return result, err
 }
 func (m *VDEAgentDataLog) GetOneByID() (*VDEAgentDataLog, error) {

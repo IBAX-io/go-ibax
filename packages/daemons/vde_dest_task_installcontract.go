@@ -45,6 +45,20 @@ func VDEDestTaskInstallContractDest(ctx context.Context, d *daemon) error {
 
 	// deal with task data
 	for _, item := range DestTask {
+		//fmt.Println("DestTask:", item.TaskUUID)
+		blockchain_http = item.ContractRunHttp
+		blockchain_ecosystem = item.ContractRunEcosystem
+		//fmt.Println("ContractRunHttp and ContractRunEcosystem:", blockchain_http, blockchain_ecosystem)
+		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("VDEDestTaskInstallContractDest encode error")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		//api.ApiAddress = blockchain_http
+		//api.ApiEcosystemID = int64(ecosystemID)
+		vde_dest_apiAddress := blockchain_http
+		vde_dest_apiEcosystemID := int64(ecosystemID)
 
 		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
 		// Login
@@ -88,4 +102,3 @@ func VDEDestTaskInstallContractDest(ctx context.Context, d *daemon) error {
 	} //for
 
 	return nil
-}

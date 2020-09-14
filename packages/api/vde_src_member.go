@@ -1,14 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"fmt"
-	"net/http"
-	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -143,6 +133,10 @@ func VDESrcMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, result)
+}
+
+func VDESrcMemberByPubKeyHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
 	logger := getLogger(r)
 
 	srcData := model.VDESrcMember{}

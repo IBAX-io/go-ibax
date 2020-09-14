@@ -48,6 +48,17 @@ func VDEAgentMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	m := &model.VDEAgentMember{}
 	if m, err = unmarshalColumnVDEAgentMember(form); err != nil {
 		fmt.Println(err)
+		errorResponse(w, err)
+		return
+	}
+
+	m.CreateTime = time.Now().Unix()
+
+	if err = m.Create(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
+	}
+
+	model.DBConn.Last(&m)
 
 	jsonResponse(w, *m)
 }
@@ -110,16 +121,6 @@ func VDEAgentMemberListHandlre(w http.ResponseWriter, r *http.Request) {
 
 	result, err := srcData.GetAll()
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
-		errorResponse(w, err)
-		return
-	}
-	jsonResponse(w, result)
-}
-
-func VDEAgentMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
 	srcData := model.VDEAgentMember{}

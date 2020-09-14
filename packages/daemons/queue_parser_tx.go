@@ -11,6 +11,18 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 
+	log "github.com/sirupsen/logrus"
+)
+
+// QueueParserTx parses transaction from the queue
+func QueueParserTx(ctx context.Context, d *daemon) error {
+	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
+		defer atomic.StoreUint32(&d.atomic, 0)
+	} else {
+		return nil
+	}
+	DBLock()
+	defer DBUnlock()
 	//
 	//infoBlock := &model.InfoBlock{}
 	//_, err := infoBlock.Get()
@@ -24,22 +36,6 @@ import (
 	//}
 
 	p := new(transaction.Transaction)
-	err := transaction.ProcessTransactionsQueue(p.DbTransaction)
-	if err != nil {
-		d.logger.WithFields(log.Fields{"error": err}).Error("parsing transactions")
-		return err
-	}
-	//for {
-	//	select {
-	//	case attempt := <-transaction.ChanTxAttempt:
-	//		if attempt {
-	//			err = transaction.ProcessTransactionsAttempt(p.DbTransaction)
-	//			if err != nil {
-	//				d.logger.WithFields(log.Fields{"error": err}).Error("parsing transactions attempt")
-	//				return err
-	//			}
-	//		}
-	//	default:
 	//		return nil
 	//	}
 	//}
