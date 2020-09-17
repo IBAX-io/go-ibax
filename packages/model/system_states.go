@@ -12,6 +12,23 @@ import (
 )
 
 const ecosysTable = "1_ecosystems"
+
+// Ecosystem is model
+type Ecosystem struct {
+	ID             int64 `gorm:"primary_key;not null"`
+	Name           string
+	IsValued       bool
+	EmissionAmount string `gorm:"type:jsonb"`
+	TokenTitle     string
+	TokenName      string
+	TypeEmission   int64
+	TypeWithdraw   int64
+	Info           string `gorm:"type:jsonb"`
+}
+
+// TableName returns name of table
+// only first ecosystem has this entity
+func (sys *Ecosystem) TableName() string {
 	return ecosysTable
 }
 
@@ -34,11 +51,6 @@ func GetAllSystemStatesIDs() ([]int64, []string, error) {
 	}
 
 	return ids, names, nil
-}
-
-// Get is fill receiver from db
-func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
-	return isFound(GetDB(dbTx).First(sys, "id = ?", id))
 }
 
 // Delete is deleting record

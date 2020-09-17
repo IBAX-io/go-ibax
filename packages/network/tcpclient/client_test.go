@@ -83,15 +83,6 @@ func BenchmarkGetBlockBodiesChanByBlockWithSyncPool(t *testing.B) {
 				Data: inputs[i],
 			}
 
-			// fmt.Println("lenData", len(inputs[i]))
-			resp.Write(r)
-		}
-
-		ctxDone, cancel := context.WithCancel(context.Background())
-
-		t.StartTimer()
-		blocksC, errC := GetBlockBodiesChanByBlock(ctxDone, r, 100)
-
 		go func() {
 			err := <-errC
 			if err != nil {
@@ -203,6 +194,14 @@ func BenchmarkGetBlockBodiesAsSlice(t *testing.B) {
 
 		ctxDone, cancel := context.WithCancel(context.Background())
 
+		t.StartTimer()
+		blocks, err := GetBlockBodiesReadAll(ctxDone, r, 100)
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		for i := 0; i < len(blocks); i++ {
+			blocks[i] = blocks[i][:0]
 		}
 		cancel()
 	}

@@ -216,18 +216,6 @@ func VDEScheTaskInstallContractDest(ctx context.Context, d *daemon) error {
 //			time.Sleep(2 * time.Second)
 //			continue
 //		}
-//		//api.ApiAddress = blockchain_http
-//		//api.ApiEcosystemID = int64(ecosystemID)
-//		vde_sche_apiAddress := blockchain_http
-//		vde_sche_apiEcosystemID := int64(ecosystemID)
-//
-//		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
-//		// Login
-//		//err := api.KeyLogin(src, api.ApiEcosystemID)
-//		gAuth_sche, _, gPrivate_sche, _, _, err := vde_api.KeyLogin(vde_sche_apiAddress, src, vde_sche_apiEcosystemID)
-//		if err != nil {
-//			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
-//			time.Sleep(2 * time.Second)
 //			continue
 //		}
 //		//fmt.Println("Login OK!")
@@ -329,6 +317,11 @@ func VDEScheTaskInstallContractDest(ctx context.Context, d *daemon) error {
 //			item.ContractStateDest = 1
 //			item.ContractStateDestErr = ""
 //		}
+//		//fmt.Println("Call api.PostTxResult Dest OK")
+//
+//		item.UpdateTime = time.Now().Unix()
+//		err = item.Updates()
+//		if err != nil {
 //			fmt.Println("Update VDEScheTask table err: ", err)
 //			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
 //			time.Sleep(time.Millisecond * 2)

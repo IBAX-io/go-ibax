@@ -22,6 +22,22 @@ import (
 func SendPrivateData(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
 		defer atomic.StoreUint32(&d.atomic, 0)
+	} else {
+		return nil
+	}
+	var (
+		tcpstr    string
+		dist      map[string]interface{}
+		found, ok bool
+		err       error
+
+		tran_mode     string
+		node_filename string
+		mimetype      string
+		node_pubkey   string
+	)
+
+	// TcpSendState 0.unsent 1.success 2.fail to send
 	m := &model.ShareDataStatus{}
 	found, _ = m.GetOneByTcpStatus(0)
 	if found {
@@ -55,10 +71,6 @@ func SendPrivateData(ctx context.Context, d *daemon) error {
 	}
 
 	if node_filename, ok = dist["node_filename"].(string); !ok {
-		log.WithFields(log.Fields{"error": err}).Error("node_filename parse error")
-		return nil
-	}
-	if mimetype, ok = dist["mimetype"].(string); !ok {
 		//log.WithFields(log.Fields{"error": err}).Error("mimetype parse error, set mimetype = \"application/octet-stream\"")
 		mimetype = "application/octet-stream"
 		//return nil

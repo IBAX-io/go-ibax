@@ -946,19 +946,6 @@ func (vm *VM) getInitValue(lexems *Lexems, ind *int, block *[]*Block) (value map
 }
 
 func (vm *VM) getInitMap(lexems *Lexems, ind *int, block *[]*Block, oneItem bool) (*types.Map, error) {
-	var next int
-	if !oneItem {
-		next = 1
-	}
-	i := *ind + next
-	key := ``
-	ret := types.NewMap()
-	state := mustKey
-main:
-	for ; i < len(*lexems); i++ {
-		lexem := (*lexems)[i]
-		switch lexem.Type {
-		case lexNewLine:
 			continue
 		case isRCurly:
 			break main
@@ -1055,6 +1042,24 @@ main:
 			}
 			state = mustComma
 		}
+	}
+	if len(ret) > 0 && state == mustValue {
+		return nil, errUnexpValue
+	}
+	if i == len(*lexems) {
+		return nil, errUnclosedArray
+	}
+	*ind = i
+	return ret, nil
+}
+
+func setWritable(block *[]*Block) {
+	for i := len(*block) - 1; i >= 0; i-- {
+		blockItem := (*block)[i]
+		if blockItem.Type == ObjFunc {
+			blockItem.Info.(*FuncInfo).CanWrite = true
+		}
+		if blockItem.Type == ObjContract {
 			blockItem.Info.(*ContractInfo).CanWrite = true
 		}
 	}

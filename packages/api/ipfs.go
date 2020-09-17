@@ -199,6 +199,7 @@ func addDir(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+
 	resp, err := s.Request("files/cp", fmt.Sprintf("/ipfs/%s", hash),
 		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Dest).
 		Send(context.Background())
@@ -301,18 +302,6 @@ func filesRm(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, nil)
 }
-
-func filesMv(w http.ResponseWriter, r *http.Request) {
-	form := &sdForm{}
-	client := getClient(r)
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-
-	s := shell.NewShell(conf.GetGFilesHost())
-	resp, err := s.Request("files/mv",
-		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Source,
 		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Dest).
 		Send(context.Background())
 	if err != nil {

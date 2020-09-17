@@ -29,13 +29,11 @@ func (v *Value) ToMap() *types.Map {
 	})
 }
 
-// Collector represents struct that works with the collection of metrics
-type Collector struct {
-	funcs []CollectorFunc
+		}
+	}
+	return values
 }
 
-// Values returns values of all metrics
-func (c *Collector) Values(timeBlock int64) []interface{} {
 // NewCollector creates new collector
 func NewCollector(funcs ...CollectorFunc) *Collector {
 	c := &Collector{}

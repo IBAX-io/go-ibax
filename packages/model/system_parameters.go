@@ -34,6 +34,20 @@ func (sp *SystemParameter) GetTransaction(transaction *DbTransaction, name strin
 }
 
 // GetJSONField returns fields as json
+func (sp *SystemParameter) GetJSONField(jsonField string, name string) (string, error) {
+	var result string
+	err := DBConn.Table("1_system_parameters").Where("name = ?", name).Select(jsonField).Row().Scan(&result)
+	return result, err
+}
+
+// GetValueParameterByName returns value parameter by name
+func (sp *SystemParameter) GetValueParameterByName(name, value string) (*string, error) {
+	var result *string
+	err := DBConn.Raw(`SELECT value->'`+value+`' FROM "1_system_parameters" WHERE name = ?`, name).Row().Scan(&result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // GetAllSystemParameters returns all system parameters
@@ -97,7 +111,3 @@ func (sp *SystemParameter) GetPoolBlockRate(dbt *DbTransaction) (int64, error) {
 		if len(sp.Value) > 0 {
 			return strconv.ParseInt(sp.Value, 10, 64)
 		}
-	}
-
-	return 0, errors.New("pool_block_rate not found")
-}

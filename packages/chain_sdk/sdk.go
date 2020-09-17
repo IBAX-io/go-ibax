@@ -56,6 +56,16 @@ func PrivateToPublicHex(hexkey string) (string, error) {
 	pubKey, err := crypto.PrivateToPublic(key)
 	if err != nil {
 		return ``, err
+	}
+	return hex.EncodeToString(pubKey), nil
+}
+
+func sendRawRequest(apiAddress string, gAuth string, rtype, url string, form *url.Values) ([]byte, error) {
+	client := &http.Client{}
+	var ioform io.Reader
+	if form != nil {
+		ioform = strings.NewReader(form.Encode())
+	}
 	req, err := http.NewRequest(rtype, apiAddress+consts.ApiPath+url, ioform)
 	if err != nil {
 		return nil, err
@@ -422,12 +432,6 @@ func sendMultipart(ApiAddress string, gAuth string, url string, files map[string
 func KeyLogin(apiAddress string, from string, state int64) (gAuth string, gAddress string, gPrivate string, gPublic string, gMobile bool, err error) {
 	var (
 		key, sign []byte
-	)
-
-	key, err = os.ReadFile(from)
-	if err != nil {
-		return "", "", "", "", false, err
-	}
 	if len(key) > 64 {
 		key = key[:64]
 	}
