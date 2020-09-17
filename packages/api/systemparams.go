@@ -10,13 +10,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
-		return
-	}
-
-	logger := getLogger(r)
-
-	list, err := model.GetAllSystemParameters(nil)
-	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all system parameters")
 	}
 
