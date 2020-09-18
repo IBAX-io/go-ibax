@@ -14,6 +14,12 @@ type Queue struct {
 }
 
 type Accounts struct {
+	Ecosystem int64
+	List      []string
+}
+
+type Roles struct {
+	Ecosystem int64
 	List      []int64
 }
 
@@ -48,6 +54,3 @@ func (q *Queue) Send() {
 func NewQueue() types.Notifications {
 	return &Queue{
 		Accounts: make([]*Accounts, 0),
-		Roles:    make([]*Roles, 0),
-	}
-}

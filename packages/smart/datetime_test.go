@@ -33,11 +33,6 @@ func TestDateTimeLocation(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("DateTimeLocation() = %v, want %v", got, tt.want)
 			}
-		})
-	}
-}
-
-func TestUnixDateTimeLocation(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args

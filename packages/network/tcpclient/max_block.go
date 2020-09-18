@@ -82,11 +82,12 @@ func hostWithMaxBlock(ctx context.Context, hosts []string) (bestHost string, max
 		}
 
 		wg.Add(1)
-				err:     err,
-			}
-		}(h)
-	}
-	wg.Wait()
+
+		go func(host string) {
+			blockID, err := getMaxBlock(host)
+			defer wg.Done()
+
+			resultChan <- blockAndHost{
 
 	var errCount int
 	for i := 0; i < len(hosts); i++ {

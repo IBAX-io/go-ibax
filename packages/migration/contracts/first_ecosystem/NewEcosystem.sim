@@ -5,5 +5,3 @@ contract NewEcosystem {
 		Name  string
 	}
 	action {
-		$result = CreateEcosystem($key_id, $Name)
-	}

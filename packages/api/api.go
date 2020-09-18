@@ -45,6 +45,9 @@ type Client struct {
 	RoleID        int64
 	IsMobile      bool
 }
+
+func (c *Client) Prefix() string {
+	return converter.Int64ToStr(c.EcosystemID)
 }
 
 func jsonResponse(w http.ResponseWriter, v interface{}) {
@@ -97,10 +100,6 @@ func parseForm(r *http.Request, f formValidator) (err error) {
 	}
 	if err != nil {
 		return
-	}
-
-	decoder := schema.NewDecoder()
-	decoder.IgnoreUnknownKeys(true)
 	if err := decoder.Decode(f, r.Form); err != nil {
 		return err
 	}

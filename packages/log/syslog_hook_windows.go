@@ -24,3 +24,4 @@ func NewSyslogHook(appName, facility string) (*SyslogHook, error) {
 func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 	return nil
 }
+

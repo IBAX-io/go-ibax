@@ -53,12 +53,15 @@ func VDESrcLogUpToChain(ctx context.Context, d *daemon) error {
 	//if SrcChainInfo == nil {
 	//	//log.Info("Src chain info not found")
 	//	fmt.Println("Src chain info not found")
+	//	time.Sleep(time.Second * 5)
+	//	return nil
+	//}
+
+	// deal with task data
+	for _, item := range SrcTaskDataLog {
 		//fmt.Println("TaskUUID:", item.TaskUUID)
 		blockchain_http = item.BlockchainHttp
 		blockchain_ecosystem = item.BlockchainEcosystem
-		//fmt.Println("blockchain_http:", blockchain_http, blockchain_ecosystem)
-
-		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
 			time.Sleep(time.Millisecond * 2)

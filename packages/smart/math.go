@@ -4,18 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package smart
 
-import (
-	"math"
-	"strconv"
-)
-
-func parseFloat(x interface{}) (float64, error) {
-	var (
-		fx  float64
-		err error
-	)
-	switch v := x.(type) {
-	case float64:
 		fx = v
 	case int64:
 		fx = float64(v)
@@ -82,6 +70,20 @@ func Pow(x, y interface{}) (float64, error) {
 	if fx = math.Pow(fx, fy); isValidFloat(fx) {
 		return fx, nil
 	}
+	return 0, errFloatResult
+}
+
+// Round returns the nearest integer, rounding half away from zero
+func Round(x interface{}) (int64, error) {
+	fx, err := parseFloat(x)
+	if err != nil {
+		return 0, err
+	}
+	if fx = math.Round(fx); isValidFloat(fx) {
+		return int64(fx), nil
+	}
+	return 0, errFloatResult
+}
 
 // Sqrt returns the square root of x
 func Sqrt(x interface{}) (float64, error) {

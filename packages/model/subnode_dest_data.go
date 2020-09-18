@@ -3,6 +3,15 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package model
+
+type SubNodeDestData struct {
+	ID       int64  `gorm:"primary_key; not null" json:"id"`
+	DataUUID string `gorm:"not null" json:"data_uuid"`
+	TaskUUID string `gorm:"not null" json:"task_uuid"`
+	Hash     string `gorm:"not null" json:"hash"`
+	Data     []byte `gorm:"not null" json:"data"`
+	DataInfo string `gorm:"type:jsonb" json:"data_info"`
 	//SubNodeSrcPubkey     string `gorm:"not null" json:"subnode_src_pubkey"`
 	SubNodeSrcPubkey string `gorm:"column:subnode_src_pubkey;not null" json:"subnode_src_pubkey"`
 	//SubNodeDestPubkey    string `gorm:"not null" json:"subnode_dest_pubkey"`
@@ -15,10 +24,6 @@
 	SubNodeAgentIP string `gorm:"column:subnode_agent_ip;not null" json:"subnode_agent_ip"`
 	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
 	TranMode       int64  `gorm:"not null" json:"tran_mode"`
-	DataState      int64  `gorm:"not null" json:"data_state"`
-	UpdateTime     int64  `gorm:"not null" json:"update_time"`
-	CreateTime     int64  `gorm:"not null" json:"create_time"`
-}
 
 func (SubNodeDestData) TableName() string {
 	return "subnode_dest_data"

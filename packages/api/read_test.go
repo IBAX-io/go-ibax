@@ -55,6 +55,21 @@ func TestRead(t *testing.T) {
 		`contract GetData%s {
 		action {
 			var row array
+			row = DBFind("%[1]s").Columns("active").Where({id:[{$gte: 2},{"$lte":5}]})
+		}
+	}`,
+		`func ReadFilter%s bool {
+				var i int
+				var row map
+				while i < Len($data) {
+					row = $data[i]
+					if i == 1 || i == 3 {
+						row["my"] = "No name"
+						$data[i] = row
+					}
+					i = i+ 1
+				}
+				return true
 			}`,
 	}
 	for _, contract := range contList {
@@ -104,12 +119,3 @@ func TestRead(t *testing.T) {
 
 	var tableInfo tableResult
 	assert.NoError(t, sendGet(`table/`+name, nil, &tableInfo))
-	assert.Equal(t, `ReadFilter`+name+`()`, tableInfo.Filter)
-
-	assert.NoError(t, sendPost(`content`, &url.Values{`template`: {
-		`DBFind(` + name + `, src).Limit(2)`}}, &retCont))
-	if !strings.Contains(RawToString(retCont.Tree), `No name`) {
-		t.Errorf(`wrong tree %s`, RawToString(retCont.Tree))
-		return
-	}
-}
