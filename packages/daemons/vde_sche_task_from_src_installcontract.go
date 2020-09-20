@@ -1,12 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"context"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -76,6 +70,9 @@ func VDEScheTaskFromSrcInstallContractSrc(ctx context.Context, d *daemon) error 
 			`Value`:         {ContractSrc},
 			"ApplicationId": {"1"},
 			`Conditions`:    {`true`}}
+
+		ContractName := `@1NewContract`
+		//_, _, _, err = api.PostTxResult(ContractName, &form)
 		_, _, _, err = vde_api.PostTxResult(vde_sche_apiAddress, vde_sche_apiEcosystemID, gAuth_sche, gPrivate_sche, ContractName, &form)
 		if err != nil {
 			item.ContractStateSrc = 2

@@ -220,11 +220,6 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
 			time.Sleep(time.Millisecond * 2)
 			continue
-		}
-		fmt.Println("Login chain OK!")
-				"ReadPerm":      {`1`},
-				"UpdatePerm":    {`true`},
-				"ApplicationId": {`1`},
 			}
 		} else if tran_mode == "2" { //2 all data up to chain
 			form = url.Values{

@@ -27,12 +27,6 @@ type MineStakeCount struct {
 //MintCount example
 type MinterCount struct {
 	Keyid      int64
-	Mineid     int64
-	Devid      int64
-	Capacity   int64
-	Nonce      int64
-	BlockId    int64
-	Hash       []byte
 	MintMap    map[int64]int64
 	MineCounts []MineCount
 	Time       int64
@@ -187,6 +181,18 @@ func (m *MintCount) Get(id int64) (bool, error) {
 		if err == nil {
 			err = m.Unmarshal([]byte(rp.Value))
 			return true, err
+		}
+		if err.Error() == "redis: nil" {
+			break
+		} else {
+			time.Sleep(200 * time.Millisecond)
+		}
+
+	}
+
+	return false, nil
+}
+
 func (m *MinterCount) Insert_redisdb(dbt *DbTransaction) error {
 	mc, err := m.Changes(dbt)
 	if err != nil {

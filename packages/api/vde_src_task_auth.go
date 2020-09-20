@@ -83,6 +83,15 @@ func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
+		return
+	}
+
+	result, err := m.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
 		return
@@ -148,19 +157,3 @@ func VDESrcTaskAuthByPubKeyHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, result)
-}
-
-func VDESrcTaskAuthByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	srcData := model.VDESrcTaskAuth{}
-	result, err := srcData.GetOneByTaskUUID(params["taskuuid"])
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query task auth data by TaskUUID failed")
-		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
-}

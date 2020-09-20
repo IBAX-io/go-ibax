@@ -8,12 +8,6 @@ package model
 type SubNodeDestDataStatus struct {
 	ID       int64  `gorm:"primary_key; not null" json:"id"`
 	DataUUID string `gorm:"not null" json:"data_uuid"`
-	TaskUUID string `gorm:"not null" json:"task_uuid"`
-	Hash     string `gorm:"not null" json:"hash"`
-	Data     []byte `gorm:"not null" json:"data"`
-	DataInfo string `gorm:"type:jsonb" json:"data_info"`
-	//SubNodeSrcPubkey     string `gorm:"not null" json:"subnode_src_pubkey"`
-	SubNodeSrcPubkey string `gorm:"column:subnode_src_pubkey;not null" json:"subnode_src_pubkey"`
 	//SubNodeDestPubkey    string `gorm:"not null" json:"subnode_dest_pubkey"`
 	SubNodeDestPubkey string `gorm:"column:subnode_dest_pubkey;not null" json:"subnode_dest_pubkey"`
 	//SubNodeDestIP        string `gorm:"not null" json:"subnode_dest_ip"`
@@ -103,3 +97,7 @@ func (m *SubNodeDestDataStatus) GetAllByTaskUUIDAndDataStatusAndTime(TaskUUID st
 }
 
 func (m *SubNodeDestDataStatus) Get(Hash string) (SubNodeDestDataStatus, error) {
+	var sndd SubNodeDestDataStatus
+	err := DBConn.Where("hash=?", Hash).First(&sndd).Error
+	return sndd, err
+}

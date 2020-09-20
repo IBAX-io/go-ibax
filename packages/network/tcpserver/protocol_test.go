@@ -1,3 +1,11 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package tcpserver
+
+import (
+	"bytes"
 	"fmt"
 
 	"testing"
@@ -59,15 +67,6 @@ func TestReadRequestTag(t *testing.T) {
 func TestSendRequest(t *testing.T) {
 	type testStruct2 struct {
 		Id   uint32
-		Id2  int64
-		Test []byte
-		Text []byte `size:"4"`
-	}
-
-	test := testStruct2{
-		Id:   15,
-		Id2:  0x1BCDEF0010203040,
-		Test: []byte("test"),
 		Text: []byte("text"),
 	}
 

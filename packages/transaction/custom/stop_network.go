@@ -6,6 +6,10 @@ package custom
 
 import (
 	"errors"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/service"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/IBAX-io/go-ibax/packages/utils/tx"
 
@@ -58,13 +62,6 @@ func (t *StopNetworkTransaction) validate() error {
 }
 
 func (t *StopNetworkTransaction) Action() error {
-	// Allow execute transaction, if the certificate was used
-	if t.Cert.EqualBytes(consts.UsedStopNetworkCerts...) {
-		return nil
-	}
-
-	// Set the node in a pause state
-	service.PauseNodeActivity(service.PauseTypeStopingNetwork)
 
 	t.Logger.Warn(messageNetworkStopping)
 	return ErrNetworkStopping
