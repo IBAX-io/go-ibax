@@ -77,6 +77,17 @@ func GetTransactionCountAll() (int64, error) {
 }
 
 // GetTransactionsCount count all transactions by hash
+func GetTransactionsCount(hash []byte) (int64, error) {
+	var rowsCount int64
+	if err := DBConn.Table("transactions").Where("hash = ?", hash).Count(&rowsCount).Error; err != nil {
+		return -1, err
+	}
+	return rowsCount, nil
+}
+
+// DeleteTransactionByHash deleting transaction by hash
+func DeleteTransactionByHash(dbTransaction *DbTransaction, hash []byte) error {
+	return GetDB(dbTransaction).Where("hash = ?", hash).Delete(&Transaction{}).Error
 }
 
 // DeleteUsedTransactions deleting used transaction
@@ -145,18 +156,6 @@ func (t *Transaction) BeforeCreate(db *gorm.DB) error {
 // Create is creating record of model
 func (t *Transaction) Create(db *DbTransaction) error {
 	return GetDB(db).Create(&t).Error
-}
-
-// CreateTransactionBatches is creating record of model
-func CreateTransactionBatches(db *DbTransaction, trs []*Transaction) error {
-	return GetDB(db).Clauses(clause.OnConflict{DoNothing: true}).Create(&trs).Error
-}
-
-func (t *Transaction) BeforeUpdate(db *gorm.DB) error {
-	return db.Where("hash = ?", t.Hash).FirstOrCreate(&t).Error
-}
-
-func (t *Transaction) Update(db *DbTransaction) error {
 	return GetDB(db).Where("hash = ?", t.Hash).Updates(&t).Error
 }
 

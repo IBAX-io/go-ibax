@@ -8,14 +8,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
-type componentModel interface {
 	SetTablePrefix(prefix string)
 	Get(name string) (bool, error)
 }
@@ -44,6 +36,8 @@ func getInterfaceRow(w http.ResponseWriter, r *http.Request, c componentModel) {
 		return
 	} else if !ok {
 		errorResponse(w, errNotFound)
+		return
+	}
 
 	jsonResponse(w, c)
 }

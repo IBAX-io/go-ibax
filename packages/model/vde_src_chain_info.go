@@ -1,4 +1,17 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+type VDESrcChainInfo struct {
+	ID                  int64  `gorm:"primary_key; not null" json:"id"`
+	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
+	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
+	Comment             string `gorm:"not null" json:"comment"`
+
+	UpdateTime int64 `gorm:"not null" json:"update_time"`
+	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
 func (VDESrcChainInfo) TableName() string {
@@ -26,8 +39,4 @@ func (m *VDESrcChainInfo) GetAll() ([]VDESrcChainInfo, error) {
 	var result []VDESrcChainInfo
 	err := DBConn.Find(&result).Error
 	return result, err
-}
-func (m *VDESrcChainInfo) GetOneByID() (*VDESrcChainInfo, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
 }

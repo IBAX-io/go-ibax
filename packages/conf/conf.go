@@ -147,17 +147,6 @@ type GlobalConfig struct {
 	PoolPub        PoolPubConfig
 	NodesAddr      []string
 	CryptoSettings CryptoSettings
-}
-
-type CryptoSettings struct {
-	Cryptoer string
-	Hasher   string
-}
-
-// Config global parameters
-var Config GlobalConfig
-
-// GetPidPath returns path to pid file
 func (c *GlobalConfig) GetPidPath() string {
 	return c.PidFilePath
 }
@@ -305,6 +294,18 @@ func GetGFilesHost() string {
 }
 
 // GetNodesAddr returns addreses of nodes
+func GetNodesAddr() []string {
+	return Config.NodesAddr[:]
+}
+
+// IsOBS check running mode
+func (c GlobalConfig) IsOBS() bool {
+	return RunMode(c.OBSMode).IsOBS()
+}
+
+// IsOBSMaster check running mode
+func (c GlobalConfig) IsOBSMaster() bool {
+	return RunMode(c.OBSMode).IsOBSMaster()
 }
 
 // IsSupportingOBS check running mode
