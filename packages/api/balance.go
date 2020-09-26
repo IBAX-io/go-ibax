@@ -1,5 +1,22 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
 type balanceResult struct {
 	Amount string `json:"amount"`
 	Money  string `json:"money"`
@@ -14,16 +31,6 @@ type myAssignBalanceResult struct {
 func (m Mode) getBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	form := &ecosystemForm{
-		Validator: m.EcosysIDValidator,
-	}
-
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-
-	params := mux.Vars(r)
-
 	keyID := converter.StringToAddress(params["wallet"])
 	if keyID == 0 {
 		logger.WithFields(log.Fields{"type": consts.ConversionError, "value": params["wallet"]}).Error("converting wallet to address")

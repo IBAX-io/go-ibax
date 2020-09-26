@@ -13,6 +13,16 @@ import (
 	"time"
 
 	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
+
+	"path/filepath"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
 //Scheduling task data log information up the chain
 func VDEDestLogUpToChain(ctx context.Context, d *daemon) error {
 	var (
@@ -99,17 +109,6 @@ func VDEDestLogUpToChain(ctx context.Context, d *daemon) error {
 		item.ChainErr = ""
 		item.UpdateTime = time.Now().Unix()
 		err = item.Updates()
-		if err != nil {
-			fmt.Println("Update VDEDestLog table err: ", err)
-			log.WithFields(log.Fields{"error": err}).Error("Update VDEDestLog table!")
-			time.Sleep(2 * time.Second)
-			continue
-		}
-
-	}
-	return nil
-}
-
 //Query the status of the chain on the scheduling task data log information
 func VDEDestLogUpToChainState(ctx context.Context, d *daemon) error {
 	var (

@@ -4,15 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 package tcpclient
 
+import (
+	"context"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"io"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/network"
+
+	log "github.com/sirupsen/logrus"
 )
 
 var ErrorEmptyBlockBody = errors.New("block is empty")
 var ErrorWrongSizeBytes = errors.New("wrong size bytes")
 
-const hasVal = "has value"
-const hasntVal = "has not value"
-
-const sizeBytesLength = 4
 
 // GetBlocksBodies send GetBodiesRequest returns channel of binary blocks data
 func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrder bool) (<-chan []byte, error) {
