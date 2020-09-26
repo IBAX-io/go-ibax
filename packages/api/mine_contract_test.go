@@ -858,6 +858,12 @@ func TestEditMineStatus(t *testing.T) {
 func TestActiveMineInfo(t *testing.T) {
 	assert.NoError(t, keyLoginex(1, "2"))
 	var (
+		signstr, pub, data string
+		sign               []byte
+	)
+	data = "ACTIVATE"
+	sign, err := crypto.SignString("77bb3d290c845a905a271ac50f44e18999394a8c9e5588c387bfe40ee39aa70d", data)
+	assert.NoError(t, err)
 	signstr = hex.EncodeToString(sign)
 	pub, err = PrivateToPublicHex("77bb3d290c845a905a271ac50f44e18999394a8c9e5588c387bfe40ee39aa70d")
 	assert.NoError(t, err)
@@ -959,13 +965,6 @@ func TestNewMineStakeRule(t *testing.T) {
 
 //release mine stake rule
 func TestReleaseMineStakeRule(t *testing.T) {
-	assert.NoError(t, keyLoginex(1, "1"))
-	rnd := `ReleaseMineStakeRule`
-	form := url.Values{
-		`RuleID`:  {`1`},
-		`Release`: {`1`},
-	}
-	_, _, err := postTxResult(rnd, &form)
 	assert.NoError(t, err)
 }
 

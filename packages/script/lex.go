@@ -156,6 +156,13 @@ type Lexem struct {
 	Line   uint16      // Line of the lexem
 	Column uint32      // Position inside the line
 }
+
+// GetLogger returns logger
+func (l Lexem) GetLogger() *log.Entry {
+	return log.WithFields(log.Fields{"lex_type": l.Type, "lex_line": l.Line, "lex_column": l.Column})
+}
+
+type ifBuf struct {
 	count int
 	pair  int
 	stop  bool
@@ -211,18 +218,6 @@ func lexParser(input []rune) (Lexems, error) {
 			off++
 			skip = true
 			continue
-		}
-		// If machine determined the completed lexeme, we record it in the list of lexemes.
-		if lexID > 0 {
-			// We do not start a stack for symbols but memorize the displacement when the parse of lexeme began.
-			// To get a string of a lexeme we take a substring from the initial displacement to the current one.
-			// We immediately write a string as values, a number or a binary representation of operations.
-			var ext uint32
-			lexOff := off
-			if (flags & lexfPop) != 0 {
-				lexOff = start
-			}
-			right := off
 			if (flags & lexfNext) != 0 {
 				right++
 			}

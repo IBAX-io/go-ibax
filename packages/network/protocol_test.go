@@ -45,16 +45,6 @@ func TestRequestType(t *testing.T) {
 
 	result := RequestType{}
 	require.NoError(t, rt.Write(b))
-	require.NoError(t, result.Read(b))
-	require.Equal(t, rt, result)
-	fmt.Println(rt, result)
-
-}
-
-func TestGetBodyResponse(t *testing.T) {
-	rt := GetBodyResponse{Data: make([]byte, 4, 4)}
-	buf := []byte{}
-	b := bytes.NewBuffer(buf)
 
 	result := GetBodyResponse{}
 	require.NoError(t, rt.Write(b))
@@ -62,6 +52,11 @@ func TestGetBodyResponse(t *testing.T) {
 	require.Equal(t, rt, result)
 	fmt.Println(rt, result)
 
+}
+
+func TestBodyResponse(t *testing.T) {
+	rt := GetBodyResponse{Data: []byte(strings.Repeat("A", 32))}
+	buf := []byte{}
 	b := bytes.NewBuffer(buf)
 
 	result := &GetBodyResponse{}

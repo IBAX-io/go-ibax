@@ -25,14 +25,6 @@ func TestNewContract(t *testing.T) {
 				MyVal  string
 			}
 			func conditions {
-				Println( "Front", Random(10, 5000))
-				//$tmp = "Test string"
-//				Println("NewCitizen Front", $tmp, $key_id, $ecosystem_id, $PublicKey )
-			}
-			func action {
-//				Println("NewCitizen Main", $tmp, $type, $key_id )
-//				DBInsert(Sprintf( "%d_citizens", $ecosystem_id), "public_key,block_id", $PublicKey, $block)
-			}
 }			
 		`, ``},
 	}
@@ -79,3 +71,5 @@ func TestCheckAppend(t *testing.T) {
 	cfunc := cnt.GetFunc("action")
 
 	_, err := Run(cfunc, nil, &map[string]interface{}{})
+	require.NoError(t, err)
+}

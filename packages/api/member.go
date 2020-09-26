@@ -80,8 +80,9 @@ func getMemberHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
-	_, err := member.Get(account)
-	if err != nil {
+	account := params["account"]
+	ecosystemID := converter.StrToInt64(params["ecosystem"])
+
 		logger.WithFields(log.Fields{
 			"type":      consts.DBError,
 			"error":     err,

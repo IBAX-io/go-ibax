@@ -29,6 +29,14 @@ func RedisInit(host string, port string, password string, db int) error {
 		Password: password, // no password set
 		DB:       db,       // use default DB
 	})
+	_, err = Gclient0.Ping().Result()
+	if err != nil {
+		return err
+	}
+
+	Gclient1 = redis.NewClient(&redis.Options{
+		Addr:     host + ":" + port,
+		Password: password, // no password set
 		DB:       1,        // use default DB
 	})
 	_, err = Gclient1.Ping().Result()
@@ -85,18 +93,6 @@ func (rp *RedisParams) Cleardb() error {
 				return err
 			}
 			n += len(keys)
-			keys = append(keys, key...)
-			if cursor == 0 {
-				break
-			}
-		}
-
-		for _, k := range keys {
-			err = Gclient0.Del(k).Err()
-			if err != nil {
-				return err
-			}
-		}
 
 	}
 	return err

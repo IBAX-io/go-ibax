@@ -62,10 +62,13 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 
 	result := &tablesResult{
 		Count: count,
-
-		result.List[i].Name = item["name"]
-		result.List[i].Count = converter.Int64ToStr(count)
+		List:  make([]tableInfo, len(list)),
 	}
+	for i, item := range list {
+		err = model.GetTableQuery(item["name"], client.EcosystemID).Count(&count).Error
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting count from table")
+			errorResponse(w, err)
+			return
+		}
 
-	jsonResponse(w, result)
-}

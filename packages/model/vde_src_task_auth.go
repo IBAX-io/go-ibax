@@ -33,20 +33,6 @@ func (m *VDESrcTaskAuth) Delete() error {
 	return DBConn.Delete(m).Error
 }
 
-func (m *VDESrcTaskAuth) GetAll() ([]VDESrcTaskAuth, error) {
-	var result []VDESrcTaskAuth
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *VDESrcTaskAuth) GetOneByID() (*VDESrcTaskAuth, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
-
-func (m *VDESrcTaskAuth) GetOneByPubKey(VDEPubKey string) (*VDESrcTaskAuth, error) {
-	err := DBConn.Where("vde_pub_key=?", VDEPubKey).First(&m).Error
-	return m, err
-}
 
 func (m *VDESrcTaskAuth) GetAllByChainState(ChainState int64) ([]VDESrcTaskAuth, error) {
 	result := make([]VDESrcTaskAuth, 0)
@@ -56,3 +42,5 @@ func (m *VDESrcTaskAuth) GetAllByChainState(ChainState int64) ([]VDESrcTaskAuth,
 
 func (m *VDESrcTaskAuth) GetOneByTaskUUID(TaskUUID string) (*VDESrcTaskAuth, error) {
 	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+	return m, err
+}

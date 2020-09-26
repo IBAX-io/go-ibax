@@ -99,6 +99,11 @@ func (m *ShareDataStatus) GetChainShareTaskStatus() (bool, error) {
 //
 //func (s *SDStatus)GetShareTaskCount() (int64, error) {
 //	var taskCount int64
+//	row := DBConn.Raw("SELECT COUNT(*) task_count FROM subnode_share_data_status").Select("task_count").Row()
+//	err := row.Scan(&taskCount)
+//
+//	return taskCount, err
+//}
 //
 //func (s *SDStatus) GetAllSDS() ([]SDStatus, error) {
 //	var result []SDStatus
@@ -134,6 +139,3 @@ func (m *DataUpToChainStatus) Delete() error {
 
 func (m *DataUpToChainStatus) GetAllByTaskUUID(TaskUUID string) ([]DataUpToChainStatus, error) {
 	result := make([]DataUpToChainStatus, 0)
-	err := DBConn.Table("subnode_data_uptochain_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
-}

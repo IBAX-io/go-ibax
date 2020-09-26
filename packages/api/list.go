@@ -438,10 +438,6 @@ func getSubNodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 		case *types.Map:
 			where, err = qb.GetWhere(v)
 			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		default:
 			errorResponse(w, errors.New(`Where has wrong format`))
 			return
 		}
@@ -458,6 +454,10 @@ func getSubNodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(form.Order) > 0 {
+		rows, err := q.Order(form.Order).Offset(form.Offset).Limit(form.Limit).Rows()
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
+			errorResponse(w, err)
 			return
 		}
 		result.List, err = model.GetResult(rows)
