@@ -77,22 +77,10 @@ var (
 	"string": {
 			"q": ["main", "string", "pop next"],
 			"d": ["string", "", "next"]
-		},
-	"dstring": {
-			"Q": ["main", "string", "pop next"],
-			"\\": ["dslash", "", "skip"],			
-			"d": ["dstring", "", "next"]
-		},
-	"dslash": {
-		"d": ["dstring", "", "next"]
-	},		
-	"dot": {
-		".": ["ddot", "", "next"],
-		"01": ["number", "", "next"],
-		"d": ["main", "sys", "pop"]
-	},
-	"ddot": {
 		".": ["main", "ident", "pop next"],
+		"d": ["error", "", ""]
+	},
+	"and": {
 			"&": ["main", "oper", "pop next"],
 			"d": ["error", "", ""]
 		},

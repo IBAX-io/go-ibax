@@ -5,6 +5,9 @@
 
 package api
 
+import (
+	"net/http"
+}
 
 func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 	form := &paginatorForm{}

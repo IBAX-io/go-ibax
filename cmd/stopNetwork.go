@@ -16,12 +16,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-)
-
-var (
-	addrsForStopping        []string
-	stopNetworkCertFilepath string
-)
 
 // stopNetworkCmd represents the stopNetworkCmd command
 var stopNetworkCmd = &cobra.Command{
@@ -61,3 +55,5 @@ func init() {
 	stopNetworkCmd.Flags().StringVar(&stopNetworkCertFilepath, "stopNetworkCert", "", "Filepath to certificate for network stopping")
 	stopNetworkCmd.Flags().StringArrayVar(&addrsForStopping, "addr", []string{}, "Node address")
 	stopNetworkCmd.MarkFlagRequired("stopNetworkCert")
+	stopNetworkCmd.MarkFlagRequired("addr")
+}

@@ -26,15 +26,14 @@ type Task struct {
 	Handler Handler
 
 	schedule cron.Schedule
+
+	var err error
+	t.schedule, err = Parse(t.CronSpec)
+	return err
 }
 
-// String returns description of task
-func (t *Task) String() string {
-	return fmt.Sprintf("%s %s", t.ID, t.CronSpec)
-}
-
-// ParseCron parsed cron format
-func (t *Task) ParseCron() error {
+// Next returns time for next task
+func (t *Task) Next(tm time.Time) time.Time {
 	if len(t.CronSpec) == 0 {
 		return zeroTime
 	}
