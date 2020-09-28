@@ -102,17 +102,6 @@ func Type1(rw io.ReadWriter) error {
 		return err
 	}
 
-	// and save them
-	return saveNewTransactions(txBodies)
-}
-
-func resieveTxBodies(con io.Reader) ([]byte, error) {
-	sizeBuf := make([]byte, 4)
-	if _, err := io.ReadFull(con, sizeBuf); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on getting size of tx bodies")
-		return nil, err
-	}
-
 	size := converter.BinToDec(sizeBuf)
 	txBodies := make([]byte, size)
 	if _, err := io.ReadFull(con, txBodies); err != nil {
@@ -223,6 +212,15 @@ func readHashes(buf *bytes.Buffer) ([][]byte, error) {
 	}
 
 	return hashes, nil
+}
+
+func saveNewTransactions(binaryTxs []byte) error {
+	var queueTxs []*model.QueueTx
+	log.WithFields(log.Fields{"binaryTxs": binaryTxs}).Debug("trying to save binary txs")
+
+	for len(binaryTxs) > 0 {
+		txSize, err := converter.DecodeLength(&binaryTxs)
+		if err != nil {
 			log.WithFields(log.Fields{"type": consts.ProtocolError, "err": err}).Error("decoding binary txs length")
 			return err
 		}

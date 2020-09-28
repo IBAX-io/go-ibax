@@ -40,16 +40,6 @@ const (
 	// MaxTxSize is the maximum size of the transaction
 	MaxTxSize = `max_tx_size`
 	// MaxForsignSize is the maximum size of the forsign of transaction
-	MaxForsignSize = `max_forsign_size`
-	// MaxBlockFuel is the maximum fuel of the block
-	MaxBlockFuel = `max_fuel_block`
-	// MaxTxFuel is the maximum fuel of the transaction
-	MaxTxFuel = `max_fuel_tx`
-	// MaxTxCount is the maximum count of the transactions
-	MaxTxCount = `max_tx_block`
-	// MaxBlockGenerationTime is the time limit for block generation (in ms)
-	MaxBlockGenerationTime = `max_block_generation_time`
-	// MaxColumns is the maximum columns in tables
 	MaxColumns = `max_columns`
 	// MaxIndexes is the maximum indexes in tables
 	MaxIndexes = `max_indexes`
@@ -289,6 +279,14 @@ func GetNodeByPosition(position int64) (*HonorNode, error) {
 	defer mutex.RUnlock()
 	if int64(len(nodesByPosition)) <= position {
 		return nil, fmt.Errorf("incorrect position")
+	}
+	return nodesByPosition[position], nil
+}
+
+func GetNodeByHost(host string) (HonorNode, error) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	for _, n := range nodes {
 		if n.TCPAddress == host {
 			return *n, nil
 		}

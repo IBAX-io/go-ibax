@@ -16,6 +16,21 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+
+	"github.com/IBAX-io/go-ibax/packages/language"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+	"github.com/IBAX-io/go-ibax/packages/utils/metric"
+
+	"math"
+	"strconv"
+	"time"
+
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 )
@@ -550,16 +565,6 @@ func UnbndWallet(sc *SmartContract, tblid int64, state int64) error {
 }
 
 // CheckSignature checks the additional signatures for the contract
-func CheckSignature(i *map[string]interface{}, name string) error {
-	state, name := converter.ParseName(name)
-	sc := (*i)[`sc`].(*SmartContract)
-	sn := model.Signature{}
-	sn.SetTablePrefix(converter.Int64ToStr(int64(state)))
-	_, err := sn.Get(name)
-	if err != nil {
-		return logErrorDB(err, "executing single query")
-	}
-	if len(sn.Value) == 0 {
 		return nil
 	}
 	hexsign, err := hex.DecodeString((*i)[`Signature`].(string))

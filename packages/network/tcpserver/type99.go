@@ -12,13 +12,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/network"
 
 	log "github.com/sirupsen/logrus"
-)
-
-func Type99(r *network.PrivateFileRequest) (*network.PrivateFileResponse, error) {
-	node_pri := syspar.GetNodePrivKey()
-
-	data, err := ecies.EccDeCrypto(r.Data, node_pri)
-	if err != nil {
 		log.WithError(err)
 		return nil, err
 	}
@@ -46,3 +39,10 @@ func Type99(r *network.PrivateFileRequest) (*network.PrivateFileResponse, error)
 	}
 
 	err = PrivateFilePackets.Create()
+	if err != nil {
+		log.WithError(err)
+		return nil, err
+	}
+
+	return resp, nil
+}

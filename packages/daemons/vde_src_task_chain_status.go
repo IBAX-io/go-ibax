@@ -22,18 +22,6 @@ import (
 )
 
 //Generate a chain request
-func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
-	var (
-		err             error
-		TaskParms       map[string]interface{}
-		vde_src_pubkey  string
-		vde_dest_pubkey string
-		ok              bool
-
-		myContractSrcGet      string
-		myContractSrcGetHash  string
-		myContractDestGet     string
-		myContractDestGetHash string
 	)
 
 	m := &model.VDESrcTask{}
@@ -60,6 +48,18 @@ func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
 		}
 
 		if vde_src_pubkey, ok = TaskParms["vde_src_pubkey"].(string); !ok {
+			log.WithFields(log.Fields{"error": err}).Error("src_vde_pubkey parse error")
+			continue
+		}
+		if vde_dest_pubkey, ok = TaskParms["vde_dest_pubkey"].(string); !ok {
+			log.WithFields(log.Fields{"error": err}).Error("vde_dest_pubkey parse error")
+			continue
+		}
+
+		src_chainstatus_flag := 1
+		dest_chainstatus_flag := 1
+		//vde_src_pubkey_slice := strings.Split(vde_src_pubkey, ";")
+
 		ContractSrcGetPlusHash := item.ContractSrcGetHash + item.ContractSrcGet
 		ContractDestGetPlusHash := item.ContractDestGetHash + item.ContractDestGet
 

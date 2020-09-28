@@ -187,10 +187,6 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]interface{}) (
 			return nil, fmt.Errorf("invalid param '%s': %w", index, err)
 		}
 
-		if _, ok = txData[fitem.Name]; !ok {
-			txData[fitem.Name] = v
-		}
-	}
 
 	if len(txData) != len(fieldInfos) {
 		return nil, fmt.Errorf("invalid number of parameters")
@@ -200,6 +196,14 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]interface{}) (
 }
 
 func getFieldDefaultValue(fieldType uint32) interface{} {
+	switch fieldType {
+	case script.DtBool:
+		return false
+	case script.DtFloat:
+		return float64(0)
+	case script.DtInt, script.DtAddress:
+		return int64(0)
+	case script.DtMoney:
 		return decimal.New(0, consts.MoneyDigits)
 	case script.DtString:
 		return ""

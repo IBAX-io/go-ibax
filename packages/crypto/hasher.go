@@ -90,19 +90,6 @@ type SM3 struct {
 }
 
 type SHA256 struct {
-	Hasher
-}
-
-func (s *SM3) getHMAC(secret string, message string) ([]byte, error) {
-	mac := hmac.New(sm3.New, []byte(secret))
-	mac.Write([]byte(message))
-	return mac.Sum(nil), nil
-}
-
-func (s *SM3) hash(msg []byte) []byte {
-	return sm3.Sm3Sum(msg)
-}
-
 func (s *SM3) doubleHash(msg []byte) []byte {
 	return s.doubleSM3(msg)
 }
@@ -124,4 +111,12 @@ func (s *SHA256) hash(msg []byte) []byte {
 
 func (s *SHA256) doubleHash(msg []byte) []byte {
 	return s.doubleSha256(msg)
+}
+
+func (s *SHA256) doubleSha256(data []byte) []byte {
+	return s.usingSha256(s.usingSha256(data))
+}
+func (s *SHA256) usingSha256(data []byte) []byte {
+	out := sha256.Sum256(data)
+	return out[:]
 }
