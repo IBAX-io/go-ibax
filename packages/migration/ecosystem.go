@@ -1,4 +1,14 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package migration
+
+import (
+	"bytes"
+	"fmt"
+	"io"
 	"strings"
 	"text/template"
 
@@ -74,12 +84,6 @@ func sqlEnd(options ...string) (ret string) {
 			}
 			if len(pars) == 1 {
 				ret += fmt.Sprintf(`
-		add_index("%s", "%s", {})`, tblName, pars[0])
-			} else {
-				ret += fmt.Sprintf(`
-		add_index("%s", ["%s"], {})`, tblName, strings.Join(pars, `", "`))
-			}
-			continue
 		}
 		ret += fmt.Sprintf(`
 	sql("ALTER TABLE ONLY \"%[1]s\" ADD CONSTRAINT \"%[1]s_%[3]s\" %[2]s;")`, tblName, opt, cname)

@@ -43,22 +43,6 @@ func getEcosystemNotificationStats(ecosystemID int64, users []string) (map[strin
 	result, err := model.GetNotificationsCount(ecosystemID, users)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting notification count")
-		return nil, err
-	}
-
-	return parseRecipientNotification(result, ecosystemID), nil
-}
-
-func parseRecipientNotification(rows []model.NotificationsCount, systemID int64) map[string]*[]notificationRecord {
-	recipientNotifications := make(map[string]*[]notificationRecord)
-
-	for _, r := range rows {
-		if r.RecipientID == 0 {
-			continue
-		}
-
-		roleNotifications := notificationRecord{
-			EcosystemID:  converter.Int64ToStr(systemID),
 			RoleID:       converter.Int64ToStr(r.RoleID),
 			RecordsCount: r.Count,
 		}
@@ -74,6 +58,15 @@ func parseRecipientNotification(rows []model.NotificationsCount, systemID int64)
 		}
 
 		recipientNotifications[r.Account] = &records
+	}
+
+	return recipientNotifications
+}
+
+func sendUserStats(account string, stats []notificationRecord) {
+	rawStats, err := json.Marshal(stats)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("notification statistic")
 	}
 
 	err = publisher.Write(account, string(rawStats))

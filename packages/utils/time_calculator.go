@@ -14,6 +14,7 @@ import (
 
 type BlockTimeCounter struct {
 	start       time.Time
+	duration    time.Duration
 	numberNodes int
 }
 
@@ -70,14 +71,3 @@ func (btc *BlockTimeCounter) RangesByTime(t time.Time) (start, end time.Time) {
 }
 
 // NewBlockTimeCounter return initialized BlockTimeCounter
-func NewBlockTimeCounter() *BlockTimeCounter {
-	firstBlock, _ := syspar.GetFirstBlockData()
-	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
-	blocksGapDuration := time.Second * time.Duration(syspar.GetGapsBetweenBlocks())
-
-	return &BlockTimeCounter{
-		start:       time.Unix(int64(firstBlock.Time), 0),
-		duration:    blockGenerationDuration + blocksGapDuration,
-		numberNodes: int(syspar.GetCountOfActiveNodes()),
-	}
-}

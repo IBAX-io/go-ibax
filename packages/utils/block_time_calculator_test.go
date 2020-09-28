@@ -192,8 +192,6 @@ func TestBlockTImeCalculator_countBlockTime(t *testing.T) {
 		blockGenTime   time.Duration
 		blocksGap      time.Duration
 		nodesCount     int64
-		clock          time.Time
-
 		result blockGenerationState
 		err    error
 	}{
@@ -216,6 +214,9 @@ func TestBlockTImeCalculator_countBlockTime(t *testing.T) {
 			result: blockGenerationState{
 				start:    time.Unix(0, 0),
 				duration: time.Second * 0,
+
+				nodePosition: 0,
+			},
 		},
 
 		// Duration testing case

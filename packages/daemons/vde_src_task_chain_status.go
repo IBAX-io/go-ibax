@@ -22,6 +22,18 @@ import (
 )
 
 //Generate a chain request
+func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
+	var (
+		err             error
+		TaskParms       map[string]interface{}
+		vde_src_pubkey  string
+		vde_dest_pubkey string
+		ok              bool
+
+		myContractSrcGet      string
+		myContractSrcGetHash  string
+		myContractDestGet     string
+		myContractDestGetHash string
 	)
 
 	m := &model.VDESrcTask{}
@@ -161,24 +173,6 @@ import (
 					log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
 					continue
 				}
-				contractDataBase64 := base64.StdEncoding.EncodeToString(contractData)
-				myContractSrcGet = contractDataBase64
-
-				if myContractSrcGetHash, err = crypto.HashHex([]byte(myContractSrcGet)); err != nil {
-					log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
-					fmt.Println("HashHex Raw data hash failed ")
-					continue
-				}
-
-			} else {
-				myContractSrcGet = item.ContractSrcGet
-				myContractSrcGetHash = item.ContractSrcGetHash
-			}
-			//if item.ContractMode == 2 || item.ContractMode == 3 {
-			if item.ContractMode == 3 || item.ContractMode == 4 {
-				contractData, err := ecies.EccCryptoKey([]byte(ContractDestGetPlusHash), vde_dest_pubkey_item)
-				if err != nil {
-					fmt.Println("error", err)
 					log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
 					continue
 				}

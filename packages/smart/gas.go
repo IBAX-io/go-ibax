@@ -210,14 +210,6 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 		if pay.fuelRate.Cmp(zero) <= 0 {
 			sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco}).Error("fuel rate must be greater than 0")
 			err = fmt.Errorf(eEcoFuelRate, eco)
-			return
-		}
-		if _, ok := syspar.IsTaxesWallet(eco); !ok {
-			var taxesPub []byte
-			err = model.GetDB(sc.DbTransaction).Select("pub").Model(&model.Key{}).Where("id = ? AND ecosystem = 1", syspar.GetTaxesWallet(1)).Row().Scan(&taxesPub)
-			if err != nil {
-				return err
-			}
 			id := PubToID(fmt.Sprintf("%x", taxesPub))
 			key := &model.Key{}
 			found, err := key.SetTablePrefix(eco).Get(sc.DbTransaction, id)
@@ -250,6 +242,16 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 			_, err = UpdateSysParam(sc, syspar.TaxesWallet, string(tax), "")
 			if err != nil {
 				return err
+			}
+		}
+		key := &model.Key{}
+		var found bool
+		if found, err = key.SetTablePrefix(eco).Get(sc.DbTransaction, pay.toID); err != nil || !found {
+			if err != nil {
+				return err
+			}
+			if !found {
+				_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]interface{}{
 					"id":      pay.toID,
 					"account": IDToAddress(pay.toID),
 					"amount":  0, "ecosystem": eco}))

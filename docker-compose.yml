@@ -23,22 +23,12 @@ services:
       - "7079:7079"
   postgresql:
     hostname: postgresql
-      TZ: UTC
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-#    volumes:
-#      - postgresql-data:/var/lib/postgresql/data
-  redis:
-    hostname: redis
     restart: always
-    image: redis:5
-    container_name: redis
+    image: postgres:13
+    container_name: postgresql
     ports:
-      - "6379:6379"
-    command: redis-server --requirepass ${REDIS_PASSWORD}
-  centrifugo:
-    container_name: centrifugo
+      - "5433:5432"
+    environment:
     image: centrifugo/centrifugo:v3
     volumes:
       - "./data/centrifugo:/centrifugo"
