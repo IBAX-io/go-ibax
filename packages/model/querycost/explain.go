@@ -57,8 +57,6 @@ func explainQueryCost(transaction *model.DbTransaction, withAnalyze bool, query 
 	if !ok {
 		log.Error("Plan is not map[string]interface{}")
 		return 0, errors.New("Plan is not map[string]interface{}")
-	}
-
 	totalCostNum, ok := totalCost.(json.Number)
 	if !ok {
 		log.Error("PlanMap has no TotalCost")

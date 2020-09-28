@@ -1,4 +1,14 @@
 package model
+
+import (
+	"errors"
+
+	"gorm.io/gorm"
+
+	"gorm.io/gorm/clause"
+
+	"github.com/shopspring/decimal"
+	log "github.com/sirupsen/logrus"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 )
 
@@ -46,13 +56,6 @@ func SendTx(rtx RawTransaction, adminWallet int64) error {
 	}
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction from queue tx")
-		return err
-	}
-	return qtx.Create()
-}
-
-type RawTx struct {
-	TxType, Time int64
 	Hash         []byte
 	Data         []byte
 	Expedite     string

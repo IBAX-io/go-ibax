@@ -17,19 +17,10 @@ type MinePoolInfo struct {
 	Status           int64           `gorm:"not null" ` //
 	HomeUrl          string          `gorm:"null" `     //
 	Date_created     int64           `gorm:"not null" ` //
-}
-
-// TableName returns name of table
-func (m MinePoolInfo) TableName() string {
-	return `1_mine_pool_info`
-}
-
-// Get is retrieving model from database
-func (m *MinePoolInfo) Get(id int64) (bool, error) {
-	return isFound(DBConn.Where("id = ?", id).First(m))
-}
-
-// GetAllMinePool is returning all pools
-func (m *MinePoolInfo) GetAllMinePoolInfos(dbt *DbTransaction) ([]MinePoolInfo, error) {
 	var pools []MinePoolInfo
 	err := GetDB(dbt).Table(m.TableName()).Find(&pools).Error
+	if err != nil {
+		return pools, err
+	}
+	return pools, err
+}
