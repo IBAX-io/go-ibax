@@ -16,9 +16,6 @@ import (
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-)
-
-	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("unmarshal Parms error")
 		return nil, err
 	}

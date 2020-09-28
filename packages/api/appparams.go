@@ -11,14 +11,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-
-	log "github.com/sirupsen/logrus"
-)
-
-type appParamsResult struct {
-	App  string        `json:"app_id"`
 	List []paramResult `json:"list"`
 }
 
@@ -69,3 +61,8 @@ func (m Mode) getAppParamsHandler(w http.ResponseWriter, r *http.Request) {
 			Name:       item.Name,
 			Value:      item.Value,
 			Conditions: item.Conditions,
+		})
+	}
+
+	jsonResponse(w, result)
+}

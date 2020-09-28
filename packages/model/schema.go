@@ -19,19 +19,6 @@ import (
 // ExecSchemaEcosystem is executing ecosystem schema
 func ExecSchemaEcosystem(db *DbTransaction, id int, wallet int64, name string, founder, appID int64) error {
 	if id == 1 {
-		q, err := migration.GetCommonEcosystemScript()
-		if err != nil {
-			return err
-		}
-		if err := GetDB(db).Exec(q).Error; err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing comma ecosystem schema")
-			return err
-		}
-	}
-	q, err := migration.GetEcosystemScript(id, wallet, name, founder, appID)
-	if err != nil {
-		return err
-	}
 	if err := GetDB(db).Exec(q).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing ecosystem schema")
 		return err
@@ -110,6 +97,22 @@ func ExecOBSSchema(id int, wallet int64) error {
 		amount := decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()
 		if err = GetDB(nil).Exec(`insert into "1_keys" (account,pub,amount) values (?,?,?,?),(?,?,?,?)`,
 			keyID, converter.AddressToString(keyID), PubKey, amount, nodeKeyID, converter.AddressToString(nodeKeyID), nodePubKey, 0).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ExecSchema is executing schema
+func ExecSchema() error {
+	return migration.InitMigrate(&MigrationHistory{})
+}
+
+// UpdateSchema run update migrations
+func UpdateSchema() error {
+	if !conf.Config.IsOBSMaster() {
+		b := &Block{}
+		if found, err := b.GetMaxBlock(); !found {
 			return err
 		}
 	}

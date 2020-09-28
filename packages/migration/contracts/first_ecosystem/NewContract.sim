@@ -12,12 +12,12 @@ contract NewContract {
         ValidateCondition($Conditions,$ecosystem_id)
 
         if $ApplicationId == 0 {
-            warning "Application id cannot equal 0"
+            }
         }
+    }
 
-        $contract_name = ContractName($Value)
-
-        if !$contract_name {
+    action {
+        $result = CreateContract($contract_name, $Value, $Conditions, $TokenEcosystem, $ApplicationId)
     }
     func price() int {
         return SysParamInt("contract_price")

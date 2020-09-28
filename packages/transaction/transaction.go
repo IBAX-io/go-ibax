@@ -143,13 +143,6 @@ func (rtx *RawTransaction) SetRawTx() *model.RawTx {
 	}
 }
 
-// Transaction is a structure for parsing transactions
-type Transaction struct {
-	BlockData  *utils.BlockData
-	PrevBlock  *utils.BlockData
-	PublicKeys [][]byte
-
-	TxBinaryData  []byte // transaction binary data
 	TxFullData    []byte // full transaction, with type and data
 	TxHash        []byte
 	TxSignature   []byte
@@ -260,6 +253,12 @@ func (t *Transaction) fillTxData(fieldInfos []*script.FieldInfo, params map[stri
 	var err error
 	t.TxData, err = smart.FillTxData(fieldInfos, params)
 	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (t *Transaction) parseFromContract(fillData bool) error {
 	smartTx := tx.SmartContract{}
 	if err := msgpack.Unmarshal(t.TxBinaryData, &smartTx); err != nil {
 		log.WithFields(log.Fields{"tx_hash": t.TxHash, "error": err, "type": consts.UnmarshallingError}).Error("unmarshalling smart tx msgpack")

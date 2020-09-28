@@ -75,3 +75,9 @@ func GetMetricValues(metric, timeInterval, aggregateFunc, timeBlock string) ([]i
 	for rows.Next() {
 		if err := rows.Scan(&key, &value); err != nil {
 			return nil, err
+		}
+
+		result = append(result, types.LoadMap(map[string]interface{}{
+			"key":   key,
+			"value": value,
+		}))

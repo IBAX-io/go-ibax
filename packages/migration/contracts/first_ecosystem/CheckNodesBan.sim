@@ -1,2 +1,5 @@
-	}
-}
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract CheckNodesBan {
+	action {
+		UpdateNodesBan($block_time)
