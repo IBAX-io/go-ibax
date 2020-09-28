@@ -53,6 +53,11 @@ func GetAllSystemStatesIDs() ([]int64, []string, error) {
 	return ids, names, nil
 }
 
+// Get is fill receiver from db
+func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
+	return isFound(GetDB(dbTx).First(sys, "id = ?", id))
+}
+
 // Delete is deleting record
 func (sys *Ecosystem) Delete(transaction *DbTransaction) error {
 	return GetDB(transaction).Delete(sys).Error
@@ -60,14 +65,5 @@ func (sys *Ecosystem) Delete(transaction *DbTransaction) error {
 
 func (sys *Ecosystem) IsOpenMultiFee() bool {
 	if len(sys.Info) > 0 {
-		var info map[string]interface{}
-		json.Unmarshal([]byte(sys.Info), &info)
-		if v, ok := info["multi_fee"]; ok {
-			multi, _ := strconv.Atoi(fmt.Sprint(v))
-			if multi == 1 {
-				return true
-			}
-		}
-	}
 	return false
 }

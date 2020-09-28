@@ -92,6 +92,10 @@ func VDEDestMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	result, err := m.GetOneByID()
+
+func VDEDestMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
 	logger := getLogger(r)
 	id := converter.StrToInt64(params["id"])
 

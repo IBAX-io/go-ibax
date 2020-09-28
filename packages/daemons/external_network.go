@@ -1,4 +1,15 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"context"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
 	"net/url"
 	"sync/atomic"
 	"time"
@@ -180,8 +191,3 @@ func ExternalNetwork(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
 		defer atomic.StoreUint32(&d.atomic, 0)
 	} else {
-		return nil
-	}
-	d.sleepTime = externalDeamonTimeout * time.Second
-	return SendExternalTransaction()
-}

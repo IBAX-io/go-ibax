@@ -23,12 +23,6 @@ type roleInfo struct {
 }
 
 type notifyInfo struct {
-	RoleID string `json:"role_id"`
-	Count  int64  `json:"count"`
-}
-
-type keyInfoResult struct {
-	Account    string              `json:"account"`
 	Ecosystems []*keyEcosystemInfo `json:"ecosystems"`
 }
 
@@ -49,6 +43,22 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, errInvalidWallet.Errorf(params["wallet"]))
 		return
 	}
+
+	ids, names, err := m.EcosysLookupGetter.GetEcosystemLookup()
+	if err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	var (
+		account string
+		found   bool
+	)
+
+	for i, ecosystemID := range ids {
+		key := &model.Key{}
+		key.SetTablePrefix(ecosystemID)
+		found, err = key.Get(nil, keyID)
 		if err != nil {
 			errorResponse(w, err)
 			return

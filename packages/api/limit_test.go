@@ -64,14 +64,6 @@ func TestLimit(t *testing.T) {
 	checkList := func(count, wantBlocks int) (err error) {
 		var list listResult
 		err = sendGet(`list/tbl`+rnd, nil, &list)
-		if err != nil {
-			return
-		}
-		if converter.StrToInt(strconv.FormatInt(list.Count, 10)) != count {
-			return fmt.Errorf(`wrong list items %d != %d`, list.Count, count)
-		}
-		blocks := make(map[string]int)
-		for _, item := range list.List {
 			if v, ok := blocks[item["block"]]; ok {
 				blocks[item["block"]] = v + 1
 			} else {
@@ -127,3 +119,4 @@ func TestLimit(t *testing.T) {
 
 	sendList()
 	assert.NoError(t, checkList(40, 0))
+}

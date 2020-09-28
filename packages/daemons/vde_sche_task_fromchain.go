@@ -173,8 +173,6 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 	}
 
 	//utils.Print_json(t_struct)
-	for _, ShareTaskItem := range t_struct.List {
-		fmt.Println("NodeKey:", NodePublicKey)
 		fmt.Println("ShareTaskItem ID,TaskUUID,TaskReceiver:", ShareTaskItem.ID, ShareTaskItem.TaskUUID, ShareTaskItem.TaskReceiver)
 		//
 		//fmt.Println(":", ShareTaskItem.ContractSrcGet)
@@ -297,3 +295,11 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 	ScheTaskTime.SrcUpdateTime = converter.StrToInt64(SrcUpdateTime)
 	err = ScheTaskTime.Updates()
 	if err != nil {
+		fmt.Println("Update SrcUpdateTime table err: ", err)
+		log.WithFields(log.Fields{"error": err}).Error("Update SrcUpdateTime table!")
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
+
+	return nil
+}

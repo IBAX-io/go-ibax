@@ -260,10 +260,6 @@ func (t *Transaction) fillTxData(fieldInfos []*script.FieldInfo, params map[stri
 	var err error
 	t.TxData, err = smart.FillTxData(fieldInfos, params)
 	if err != nil {
-		return err
-}
-
-func (t *Transaction) parseFromContract(fillData bool) error {
 	smartTx := tx.SmartContract{}
 	if err := msgpack.Unmarshal(t.TxBinaryData, &smartTx); err != nil {
 		log.WithFields(log.Fields{"tx_hash": t.TxHash, "error": err, "type": consts.UnmarshallingError}).Error("unmarshalling smart tx msgpack")

@@ -190,8 +190,6 @@ func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
-		errorResponse(w, errTableNotFound.Errorf(table))
-		return
 	}
 
 	if len(form.Order) > 0 {
@@ -438,6 +436,10 @@ func getSubNodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 		case *types.Map:
 			where, err = qb.GetWhere(v)
 			if err != nil {
+				errorResponse(w, err)
+				return
+			}
+		default:
 			errorResponse(w, errors.New(`Where has wrong format`))
 			return
 		}

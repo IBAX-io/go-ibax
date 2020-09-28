@@ -80,10 +80,6 @@ func BenchmarkGetBlockBodiesChanByBlockWithSyncPool(t *testing.B) {
 		t.StopTimer()
 		for i := 0; i < 100; i++ {
 			resp := network.GetBodyResponse{
-				Data: inputs[i],
-			}
-
-		go func() {
 			err := <-errC
 			if err != nil {
 				fmt.Println(err)

@@ -3,15 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package api
-
-import (
-	"crypto/md5"
-	"encoding/hex"
-	"fmt"
-	"net/http"
-	"strings"
-
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
@@ -50,6 +41,10 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting data from table")
 		errorResponse(w, errNotFound)
 		return
+	}
+
+	if !compareHash([]byte(data), params["hash"]) {
+		errorResponse(w, errHashWrong)
 		return
 	}
 
