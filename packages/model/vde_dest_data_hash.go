@@ -1,14 +1,23 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+type VDEDestDataHash struct {
+	ID                  int64  `gorm:"primary_key; not null" json:"id"`
+	DataUUID            string `gorm:"not null" json:"data_uuid"`
+	TaskUUID            string `gorm:"not null" json:"task_uuid"`
+	Hash                string `gorm:"not null" json:"hash"`
+	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
+	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
+
+	//TxHash                 string `gorm:"not null" json:"tx_hash"`
 	//ChainState             int64  `gorm:"not null" json:"chain_state"`
 	//BlockId                int64  `gorm:"not null" json:"block_id"`
 	//ChainId                int64  `gorm:"not null" json:"chain_id"`
 	//ChainErr               string `gorm:"not null" json:"chain_err"`
 
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
 
 func (VDEDestDataHash) TableName() string {
 	return "vde_dest_data_hash"

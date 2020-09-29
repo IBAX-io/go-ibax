@@ -28,6 +28,9 @@ func (sp *StateParameter) TableName() string {
 func (sp *StateParameter) SetTablePrefix(prefix string) *StateParameter {
 	sp.ecosystem = converter.StrToInt64(prefix)
 	return sp
+}
+// GetAllStateParameters is returning all state parameters
+func (sp *StateParameter) GetAllStateParameters() ([]StateParameter, error) {
 	parameters := make([]StateParameter, 0)
 	err := DBConn.Table(sp.TableName()).Where(`ecosystem = ?`, sp.ecosystem).Find(&parameters).Error
 	if err != nil {

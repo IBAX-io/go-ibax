@@ -13,12 +13,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-)
-
-var blockID int64
-
 // rollbackCmd represents the rollback command
 var rollbackCmd = &cobra.Command{
 	Use:    "rollback",
@@ -55,6 +49,16 @@ var rollbackCmd = &cobra.Command{
 			log.WithError(err).Fatal("rollback to block id")
 			return
 		}
+
+		// block id = 1, is a special case for full rollback
+		if blockID != 1 {
+			log.Info("Not full rollback, finishing work without checking")
+			return
+		}
+	},
+}
+
+func init() {
 	rollbackCmd.Flags().Int64Var(&blockID, "blockId", 1, "blockID to rollback")
 	rollbackCmd.MarkFlagRequired("blockId")
 }

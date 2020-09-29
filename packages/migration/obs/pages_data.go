@@ -20,18 +20,6 @@ var pagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, conditions, ap
         Blocks,"#info_value_blocks_count#","#info_value_blocks#"
         Menu,"#info_value_menu_count#","#info_value_menu#"
         Parameters,"#info_value_parameters_count#","#info_value_parameters#"
-        Language resources,"#info_value_languages_count#","#info_value_languages#"
-        Contracts,"#info_value_contracts_count#","#info_value_contracts#"
-        Tables,"#info_value_tables_count#","#info_value_tables#"
-    }
-    Div(breadcrumb){
-        Span(Class: text-muted, Body: "Your data that you can import")
-    }
-
-    Div(panel panel-primary){
-        ForList(data_info){
-            Div(list-group-item){
-                Div(row){
                     Div(col-md-10 mc-sm text-left){
                         Span(Class: text-bold, Body: "#DataName#")
                     }
@@ -100,6 +88,12 @@ var pagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, conditions, ap
     Div(breadcrumb){
         Span(Class: text-muted, Body: "Your data that you can import")
     }
+
+    Div(panel panel-primary){
+        ForList(data_info){
+            Div(list-group-item){
+                Div(row){
+                    Div(col-md-10 mc-sm text-left){
                         Span(Class: text-bold, Body: "#DataName#")
                     }
                     Div(col-md-2 mc-sm text-right){

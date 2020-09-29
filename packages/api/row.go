@@ -26,14 +26,6 @@ type rowForm struct {
 
 func (f *rowForm) Validate(r *http.Request) error {
 	if len(f.Columns) > 0 {
-		f.Columns = converter.EscapeName(f.Columns)
-	}
-	return nil
-}
-
-func getRowHandler(w http.ResponseWriter, r *http.Request) {
-	form := &rowForm{}
-	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
@@ -45,6 +37,18 @@ func getRowHandler(w http.ResponseWriter, r *http.Request) {
 	q := model.GetDB(nil).Limit(1)
 
 	var (
+		err   error
+		table string
+	)
+	table, form.Columns, err = checkAccess(params["name"], form.Columns, client)
+	if err != nil {
+		errorResponse(w, err)
+		return
+	}
+	col := `id`
+	if len(params["column"]) > 0 {
+		col = converter.Sanitize(params["column"], `-`)
+	}
 	if converter.FirstEcosystemTables[params["name"]] {
 		q = q.Table(table).Where(col+" = ? and ecosystem = ?", params["id"], client.EcosystemID)
 	} else {
