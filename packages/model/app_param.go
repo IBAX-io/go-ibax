@@ -68,9 +68,6 @@ func (sp *AppParam) GetHvlvebalance(transaction *DbTransaction, blockid int64) (
 
 	if !hf || !md {
 		return ret, errors.New("param mine_reward or halve_interval_blockid not found")
-	}
-
-	hal := converter.StrToInt64(halve.Value)
 	if hal > 0 {
 		he := blockid / hal
 		mdv := converter.StrToFloat64(mine_reward.Value)
@@ -78,6 +75,17 @@ func (sp *AppParam) GetHvlvebalance(transaction *DbTransaction, blockid int64) (
 		hm := math.Pow(2, float64(he))
 		ret1 := mdv / hm
 		ret2 := ret1 / 1000000000000
+		ret3 := math.Floor(ret2) * 1000000000000
+		ret = decimal.NewFromFloat(ret3)
+		return ret, nil
+	} else {
+		return ret, errors.New("param mine_reward or halve_interval_blockid not ok")
+	}
+}
+
+// Get is retrieving model from database
+func (sp *AppParam) GetFoundationbalance(transaction *DbTransaction) (decimal.Decimal, error) {
+
 	//var halve,balance string
 	ret := decimal.NewFromFloat(0)
 	var bal AppParam

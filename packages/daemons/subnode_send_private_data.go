@@ -71,6 +71,10 @@ func SendPrivateData(ctx context.Context, d *daemon) error {
 	}
 
 	if node_filename, ok = dist["node_filename"].(string); !ok {
+		log.WithFields(log.Fields{"error": err}).Error("node_filename parse error")
+		return nil
+	}
+	if mimetype, ok = dist["mimetype"].(string); !ok {
 		//log.WithFields(log.Fields{"error": err}).Error("mimetype parse error, set mimetype = \"application/octet-stream\"")
 		mimetype = "application/octet-stream"
 		//return nil
@@ -126,14 +130,6 @@ func SendPrivateData(ctx context.Context, d *daemon) error {
 				m.TcpSendState = 1
 				if key < len(m.TcpSendStateFlag) {
 					TcpSendStateFlag := []byte(m.TcpSendStateFlag)
-					TcpSendStateFlag[key] = '1'
-					m.TcpSendStateFlag = string(TcpSendStateFlag)
-				}
-				err = m.Updates()
-				if err != nil {
-					log.WithError(err)
-				}
-			}
 		} //1
 		if tran_mode == "2" { //ALL DATA up chain transport mode, not need to send
 			m.TcpSendState = 1

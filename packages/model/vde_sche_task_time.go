@@ -18,6 +18,12 @@ func (VDEScheTaskTime) TableName() string {
 func (m *VDEScheTaskTime) Create() error {
 	return DBConn.Create(&m).Error
 }
+
+func (m *VDEScheTaskTime) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEScheTaskTime) GetAll() ([]VDEScheTaskTime, error) {
 	var result []VDEScheTaskTime
 	err := DBConn.Find(&result).Error
 	return result, err

@@ -1,3 +1,7 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract NewBadBlock {
+	data {
+            block_id: $BlockID, "timestamp block_time": $Timestamp, reason: $Reason})
+	}
+}
