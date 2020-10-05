@@ -29,19 +29,6 @@ func dbfindExpressionBlob(column string) string {
 	return fmt.Sprintf(`md5(%s) "%[1]s"`, column)
 }
 
-func dbfindExpressionLongText(column string) string {
-	return fmt.Sprintf(`json_build_array(
-		substr(%s, 1, %d),
-		CASE WHEN length(%[1]s)>%[2]d THEN md5(%[1]s) END) "%[1]s"`, column, substringLength)
-}
-
-type valueLink struct {
-	title string
-
-	id     string
-	table  string
-	column string
-	hash   string
 }
 
 func (vl *valueLink) link() string {
@@ -125,6 +112,23 @@ main:
 						}
 					}
 				} else {
+					ret.(*types.Map).Set(key, par)
+					key = ``
+				}
+			} else {
+				if len(key) > 0 {
+					par = types.LoadMap(map[string]interface{}{key: par})
+					key = ``
+				}
+				ret = append(ret.([]interface{}), par)
+			}
+			i += off
+			start = i + 1
+		case '"':
+			quote = !quote
+		case ':':
+			if len(key) == 0 {
+				key = trimString(in[start:i])
 				start = i + 1
 			}
 		case ',':

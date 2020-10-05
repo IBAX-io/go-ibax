@@ -92,6 +92,18 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 			"TaskReceiver": {item.TaskReceiver},
 			"Comment":      {item.Comment},
 			"Parms":        {item.Parms},
+			"TaskType":     {converter.Int64ToStr(item.TaskType)},
+			"TaskState":    {converter.Int64ToStr(item.TaskState)},
+
+			"ContractSrcName":     {item.ContractSrcName},
+			"ContractSrcGet":      {item.ContractSrcGet},
+			"ContractSrcGetHash":  {item.ContractSrcGetHash},
+			"ContractDestName":    {item.ContractDestName},
+			"ContractDestGet":     {item.ContractDestGet},
+			"ContractDestGetHash": {item.ContractDestGetHash},
+
+			"ContractRunHttp":      {item.ContractRunHttp},
+			"ContractRunEcosystem": {item.ContractRunEcosystem},
 			"ContractRunParms":     {item.ContractRunParms},
 
 			"ContractMode": {converter.Int64ToStr(item.ContractMode)},
@@ -168,13 +180,6 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 	//fmt.Println("SrcChainInfo:", blockchain_http, blockchain_ecosystem)
 
 	// deal with task data
-	for _, item := range SrcTask {
-		//fmt.Println("SrcTask:", item.TaskUUID)
-
-		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("encode error")
-			time.Sleep(time.Millisecond * 2)
 			continue
 		}
 		chain_apiAddress := blockchain_http

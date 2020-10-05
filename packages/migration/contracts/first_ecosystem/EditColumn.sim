@@ -3,8 +3,11 @@
 contract EditColumn {
     data {
         TableName string
-
-    action {
-        PermColumn($TableName, $Name, $Permissions)
+        Name string
+        Permissions string
     }
-}
+
+    conditions {
+        ColumnCondition($TableName, $Name, "", $Permissions)
+    }
+

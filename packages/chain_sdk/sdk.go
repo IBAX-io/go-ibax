@@ -432,6 +432,12 @@ func sendMultipart(ApiAddress string, gAuth string, url string, files map[string
 func KeyLogin(apiAddress string, from string, state int64) (gAuth string, gAddress string, gPrivate string, gPublic string, gMobile bool, err error) {
 	var (
 		key, sign []byte
+	)
+
+	key, err = os.ReadFile(from)
+	if err != nil {
+		return "", "", "", "", false, err
+	}
 	if len(key) > 64 {
 		key = key[:64]
 	}
@@ -581,13 +587,6 @@ func PostTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPrivat
 			Time: time.Now().Unix(),
 			//EcosystemID: 1,
 			EcosystemID: apiEcosystemID,
-			KeyID:       crypto.Address(publicKey),
-			NetworkID:   conf.Config.NetworkID,
-			PrivateFor:  ApiPrivateFor,
-		},
-		Params: params,
-	}, privateKey)
-	if err != nil {
 
 		//
 		//return 0, "", err

@@ -78,7 +78,6 @@ type multiTxStatusResult struct {
 }
 
 type txstatusRequest struct {
-	Hashes []string `json:"hashes"`
 }
 
 func getTxStatusHandler(w http.ResponseWriter, r *http.Request) {
@@ -98,3 +97,6 @@ func getTxStatusHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		result.Results[hash] = status
 	}
+
+	jsonResponse(w, result)
+}

@@ -9,7 +9,6 @@ func Put_MintCount() error {
 	return nil
 }
 
-func Deal_MintCount() error {
-	//for {
+	//}
 	return nil
 }

@@ -20,6 +20,14 @@ const defaultSectionsLimit = 100
 
 type sectionsForm struct {
 	paginatorForm
+	Lang string `schema:"lang"`
+}
+
+func (f *sectionsForm) Validate(r *http.Request) error {
+	if err := f.paginatorForm.Validate(r); err != nil {
+		return err
+	}
+
 	if len(f.Lang) == 0 {
 		f.Lang = r.Header.Get("Accept-Language")
 	}
@@ -69,17 +77,6 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, err)
 			return
 		}
-		if len(roles) > 0 {
-			var added bool
-			for _, v := range roles {
-				if v == client.RoleID {
-					added = true
-					break
-				}
-			}
-			if !added {
-				continue
-			}
 		}
 
 		if item["status"] == consts.StatusMainPage {

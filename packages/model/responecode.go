@@ -75,6 +75,17 @@ var (
 	CodeParamKeyConflict    = CodeType{400022, "Param Keyword conflict error ", http.StatusOK, ""}
 	CodeRecordExists        = CodeType{400023, "Record already exists  ", http.StatusOK, ""}
 	CodeRecordNotExists     = CodeType{400024, "Record not exists error  ", http.StatusOK, ""}
+	CodeNewRecordNotRelease = CodeType{400025, "New Record not Release error ", http.StatusOK, ""}
+	CodeReleaseRule         = CodeType{400026, "Release rule error  ", http.StatusOK, ""}
+	CodeDeleteRule          = CodeType{400027, "Delete Record  delete rule error  ", http.StatusOK, ""}
+	CodeHelpDirNotExists    = CodeType{400028, "Help parentdir  not exists error  ", http.StatusOK, ""}
+
+	CodeDBfinderr     = CodeType{400029, "DB find error   ", http.StatusOK, ""}
+	CodeDBcreateerr   = CodeType{400030, "DB create error  ", http.StatusOK, ""}
+	CodeDBupdateerr   = CodeType{400031, "DB update error  ", http.StatusOK, ""}
+	CodeDBdeleteerr   = CodeType{400032, "DB delete error  ", http.StatusOK, ""}
+	CodeDBopertionerr = CodeType{400033, "DB opertion error  ", http.StatusOK, ""}
+	CodeJsonformaterr = CodeType{400034, "Json format error  ", http.StatusOK, ""}
 	CodeBodyformaterr = CodeType{400035, "Body format error  ", http.StatusOK, ""}
 
 	CodeFileNotExists = CodeType{400036, "File not exists", http.StatusOK, ""}
@@ -114,18 +125,6 @@ type errType struct {
 
 func (et errType) Error() string {
 	return et.Err
-}
-
-func (et errType) Errorf(v ...interface{}) errType {
-	et.Message = fmt.Sprintf(et.Message, v...)
-	return et
-}
-
-func (ct CodeType) Errorf(err error) CodeType {
-	et, ok := err.(errType)
-	if !ok {
-		et.Message = err.Error()
-	}
 	ct.Message = fmt.Sprintln(ct.Message, et.Message)
 	ct.Msg = http.StatusText(ct.Status)
 	return ct

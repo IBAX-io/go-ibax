@@ -137,6 +137,20 @@ func pageValue(r *http.Request) (*model.Page, string, error) {
 	}
 	if !found {
 		logger.WithFields(log.Fields{"type": consts.NotFound}).Debug("page not found")
+		return nil, ``, errNotFound
+	}
+	return page, ecosystem, nil
+}
+
+func getPage(r *http.Request) (result *contentResult, err error) {
+	page, _, err := pageValue(r)
+	if err != nil {
+		return nil, err
+	}
+
+	logger := getLogger(r)
+
+	client := getClient(r)
 	menu := &model.Menu{}
 	menu.SetTablePrefix(client.Prefix())
 	_, err = menu.Get(page.Menu)
@@ -224,19 +238,6 @@ func getPageHashHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, &hashResult{Hash: hex.EncodeToString(crypto.Hash(out))})
-}
-
-func getMenuHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	client := getClient(r)
-	logger := getLogger(r)
-
-	var ecosystem string
-	menu := &model.Menu{}
-	name := params["name"]
-	if strings.HasPrefix(name, `@`) {
-		ecosystem, name = parseEcosystem(name)
-		if len(name) == 0 {
 			logger.WithFields(log.Fields{
 				"type":  consts.NotFound,
 				"value": params["name"],

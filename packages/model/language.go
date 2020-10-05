@@ -17,20 +17,6 @@ type Language struct {
 	Res        string `gorm:"type:jsonb"`
 	Conditions string `gorm:"not null"`
 }
-
-// SetTablePrefix is setting table prefix
-func (l *Language) SetTablePrefix(prefix string) {
-	l.ecosystem = converter.StrToInt64(prefix)
-}
-
-// TableName returns name of table
-func (l *Language) TableName() string {
-	if l.ecosystem == 0 {
-
-// GetAll is retrieving all records from database
-func (l *Language) GetAll(transaction *DbTransaction, prefix string) ([]Language, error) {
-	result := new([]Language)
-	err := GetDB(transaction).Table("1_languages").Where("ecosystem = ?", prefix).Order("name asc").Find(&result).Error
 	return *result, err
 }
 

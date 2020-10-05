@@ -42,19 +42,6 @@ func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 		if bString, err := json.Marshal(jsonMap); err == nil {
 			line = string(bString)
 		}
-	}
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to read entry, %v", err)
-		return err
-	}
-
-	switch entry.Level {
-	case logrus.PanicLevel:
-		{
-			b_syslog.Crit(line)
-			return nil
-		}
-	case logrus.FatalLevel:
 		{
 			b_syslog.Crit(line)
 			return nil
@@ -64,6 +51,14 @@ func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 			b_syslog.Err(line)
 			return nil
 		}
+	case logrus.WarnLevel:
+		{
+			b_syslog.Warning(line)
+			return nil
+		}
+	case logrus.InfoLevel:
+		{
+			b_syslog.Info(line)
 			return nil
 		}
 	case logrus.DebugLevel:

@@ -1,4 +1,12 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package log
+
+import (
+
 type HexHook struct{}
 
 // Levels returns all log levels

@@ -122,6 +122,19 @@ func VDEScheTaskUpToChain(ctx context.Context, d *daemon) error {
 		item.TxHash = txHash
 		item.BlockId = 0
 		item.ChainErr = ""
+		item.UpdateTime = time.Now().Unix()
+		err = item.Updates()
+		if err != nil {
+			fmt.Println("Update VDEScheTask table err: ", err)
+			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
+			time.Sleep(time.Millisecond * 100)
+			continue
+		}
+	} //for
+	time.Sleep(time.Millisecond * 100)
+	return nil
+}
+
 //Query the status of the chain on the scheduling task information
 func VDEScheTaskUpToChainState(ctx context.Context, d *daemon) error {
 	var (
@@ -205,8 +218,3 @@ func VDEScheTaskUpToChainState(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
 			time.Sleep(time.Millisecond * 2)
 			continue
-		}
-		fmt.Println("VDE Sche Run chain Contract ok, TxHash:", string(item.TxHash))
-	} //for
-	return nil
-}

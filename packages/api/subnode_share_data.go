@@ -8,15 +8,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
-	"strings"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 )
 
 type taskdataResult struct {
@@ -85,6 +76,22 @@ func shareDataUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	m.ID = id
 	m.Time = time.Now().Unix()
 	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("The update task database failed")
+		return
+	}
+
+	result, err := m.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to get one-on-one hit data")
+		return
+	}
+
+	jsonResponse(w, result)
+}
+
+func shareDataDeleteHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
 	id := converter.StrToInt64(params["id"])
 
 	m := &model.ShareDataStatus{}
