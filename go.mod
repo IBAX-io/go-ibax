@@ -46,7 +46,8 @@ require (
 	github.com/spf13/cobra v1.0.0
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/spf13/viper v1.7.1
+	github.com/tjfoc/gmsm v1.4.1
+	github.com/vmihailenco/msgpack/v5 v5.3.4
 	golang.org/x/sys v0.0.0-20210908233432-aa78b53d3365 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/ini.v1 v1.61.0 // indirect

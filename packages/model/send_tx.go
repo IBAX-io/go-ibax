@@ -56,6 +56,13 @@ func SendTx(rtx RawTransaction, adminWallet int64) error {
 	}
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction from queue tx")
+		return err
+	}
+	return qtx.Create()
+}
+
+type RawTx struct {
+	TxType, Time int64
 	Hash         []byte
 	Data         []byte
 	Expedite     string
@@ -73,21 +80,6 @@ func SendTxBatches(rtxs []*RawTx) error {
 	for _, rtx := range rtxs {
 		ts := &TransactionStatus{
 			Hash:     rtx.Hash,
-			Time:     rtx.Time,
-			Type:     rtx.TxType,
-			WalletID: rtx.WalletID,
-		}
-		rawTxs = append(rawTxs, ts)
-		qtx := &QueueTx{
-			Hash:     rtx.Hash,
-			Data:     rtx.Data,
-			Expedite: rtx.GetExpedite(),
-			Time:     rtx.Time,
-		}
-		qtxs = append(qtxs, qtx)
-	}
-	return DBConn.Clauses(clause.OnConflict{DoNothing: true}).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&rawTxs).Error; err != nil {
 			return err
 		}
 		if err := tx.Create(&qtxs).Error; err != nil {

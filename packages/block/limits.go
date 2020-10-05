@@ -139,15 +139,6 @@ func (bl *timeBlockLimit) check(t *transaction.Transaction, mode int) error {
 	}
 
 	return limitError("txBlockTimeLimit", "Block generation time exceeded")
-}
-
-// Checking the max tx from one user in the block
-type txUserLimit struct {
-	TxUsers map[int64]int // the counter of tx from one user
-	Limit   int           // the value of max tx from one user
-}
-
-func (bl *txUserLimit) init(b *Block) {
 	bl.TxUsers = make(map[int64]int)
 	bl.Limit = syspar.GetMaxBlockUserTx()
 }
@@ -191,6 +182,21 @@ func (bl *txUserEcosysLimit) check(t *transaction.Transaction, mode int) error {
 		if user, ok := val.TxUsers[keyID]; ok {
 			if user+1 > val.Limit && mode == letPreprocess {
 				return ErrLimitSkip
+			}
+			if user > val.Limit {
+				return limitError(`txUserEcosysLimit`, `Max tx from one user %d in ecosystem %d`,
+					keyID, ecosystemID)
+			}
+			val.TxUsers[keyID] = user + 1
+		} else {
+			val.TxUsers[keyID] = 1
+		}
+	} else {
+		limit := syspar.GetMaxBlockUserTx()
+		sp := &model.StateParameter{}
+		sp.SetTablePrefix(converter.Int64ToStr(ecosystemID))
+		found, err := sp.Get(t.DbTransaction, `max_tx_block_per_user`)
+		if err != nil {
 			return limitError(`txUserEcosysLimit`, err.Error())
 		}
 		if found {
