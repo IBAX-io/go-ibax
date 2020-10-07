@@ -1,6 +1,16 @@
 package api
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"net/http"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
 func (m Mode) getMintCountHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	params := mux.Vars(r)
@@ -29,11 +39,3 @@ func (m Mode) getMintCountHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			ret.ReturnFailureString("not find")
 			JsonCodeResponse(w, &ret)
-			return
-		}
-	} else {
-		ret.ReturnFailureString("PoolPub.Enable false")
-		JsonCodeResponse(w, &ret)
-		return
-	}
-}

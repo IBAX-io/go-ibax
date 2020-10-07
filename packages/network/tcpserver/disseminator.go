@@ -57,11 +57,6 @@ func Type1(rw io.ReadWriter) error {
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on getting node by position")
 		return err
-	}
-
-	// get data type (0 - block and transactions, 1 - only transactions)
-	newDataType := converter.BinToDec(buf.Next(1))
-
 	log.Debug("newDataType", newDataType)
 	if newDataType == 0 {
 		banned := n != nil && service.GetNodesBanService().IsBanned(*n)
@@ -100,6 +95,17 @@ func Type1(rw io.ReadWriter) error {
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on reading needed txes from disseminator")
 		return err
+	}
+
+	// and save them
+	return saveNewTransactions(txBodies)
+}
+
+func resieveTxBodies(con io.Reader) ([]byte, error) {
+	sizeBuf := make([]byte, 4)
+	if _, err := io.ReadFull(con, sizeBuf); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on getting size of tx bodies")
+		return nil, err
 	}
 
 	size := converter.BinToDec(sizeBuf)

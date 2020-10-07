@@ -18,13 +18,15 @@ func (m TransactionsAttempts) TableName() string {
 
 // GetByHash returns TransactionsAttempts existence by hash
 func (ta *TransactionsAttempts) GetByHash(dbTransaction *DbTransaction, hash []byte) (bool, error) {
-	return isFound(GetDB(dbTransaction).Where("hash = ?", hash).First(&ta))
-}
-
-// IncrementTxAttemptCount increases attempt column
-func IncrementTxAttemptCount(dbTransaction *DbTransaction, transactionHash []byte) (int64, error) {
-	ta := &TransactionsAttempts{}
-	found, err := ta.GetByHash(dbTransaction, transactionHash)
+		return 0, err
+	}
+	if found {
+		if ta.Attempt > 125 {
+			return int64(ta.Attempt), nil
+		}
+		err = GetDB(dbTransaction).Exec("update transactions_attempts set attempt=attempt+1 where hash = ?",
+			transactionHash).Error
+		if err != nil {
 			return 0, err
 		}
 		ta.Attempt++

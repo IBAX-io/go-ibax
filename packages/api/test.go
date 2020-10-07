@@ -3,10 +3,7 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package api
-
-import (
-	"net/http"
+}
 
 func getTestHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)

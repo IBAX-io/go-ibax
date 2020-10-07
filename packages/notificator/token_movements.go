@@ -26,6 +26,17 @@ const (
 	fromToDayLimitMsgTemplate     = "from %d to %d sended volume = %s"
 	perBlockTokenMovementTemplate = "from wallet %d token movement count = %d in block: %d"
 
+	networkPerDayEvent         = 1
+	fromToDayLimitEvent        = 2
+	perBlockTokenMovementEvent = 3
+)
+
+var lastLimitEvents map[uint8]time.Time
+
+func init() {
+	lastLimitEvents = make(map[uint8]time.Time, 0)
+}
+
 func sendEmail(conf conf.TokenMovementConfig, message string) error {
 	auth := smtp.PlainAuth("", conf.Username, conf.Password, conf.Host)
 	to := []string{conf.To}
@@ -44,12 +55,6 @@ func sendEmail(conf conf.TokenMovementConfig, message string) error {
 // CheckTokenMovementLimits check all limits
 func CheckTokenMovementLimits(tx *model.DbTransaction, conf conf.TokenMovementConfig, blockID int64) {
 	var messages []string
-	if needCheck(networkPerDayEvent) {
-		amount, err := model.GetExcessCommonTokenMovementPerDay(tx)
-
-		if err != nil {
-
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("check common token movement")
 		} else if amount.GreaterThanOrEqual(decimal.NewFromFloat(networkPerDayLimit)) {
 
 			messages = append(messages, fmt.Sprintf(networkPerDayMsgTemplate, amount.String()))

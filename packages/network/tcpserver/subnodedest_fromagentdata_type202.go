@@ -12,12 +12,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -56,6 +50,17 @@ func Type202(r *network.SubNodeAgentDataRequest) (*network.SubNodeAgentDataRespo
 	}
 	eccData, err := ecies.EccCryptoKey(data, NodePublicKey)
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
+		return nil, err
+	}
+	encodeDataString := base64.StdEncoding.EncodeToString(eccData)
+	////
+
+	AgentMode := converter.StrToInt64(r.AgentMode)
+	TranMode := converter.StrToInt64(r.TranMode)
+	SubNodeDestData := model.SubNodeDestData{
+		TaskUUID:           r.TaskUUID,
+		DataUUID:           r.DataUUID,
 		AgentMode:          AgentMode,
 		TranMode:           TranMode,
 		Hash:               hash,

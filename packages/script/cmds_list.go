@@ -22,17 +22,14 @@ const (
 	cmdLabel                 // label for continue
 	cmdContinue              // continue from label
 	cmdWhile                 // while
-	cmdBreak                 // break
-	cmdIndex                 // get index []
-	cmdSetIndex              // set index []
-	cmdFuncName              // set func name Func(...).Name(...)
-	cmdUnwrapArr             // unwrap array to stack
-	cmdMapInit               // map initialization
-	cmdArrayInit             // array initialization
-	cmdError                 // error command
 )
 
-// the commands for operations in expressions are listed below
+const (
+	cmdAdd = iota | 0x0200
+	cmdSub
+	cmdMul
+	cmdDiv
+	cmdAnd
 	cmdOr
 	cmdEqual
 	cmdNotEq

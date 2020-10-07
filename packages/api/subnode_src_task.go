@@ -102,12 +102,6 @@ func SubNodeSrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	m := &model.SubNodeSrcTask{}
 
-	if m, err = unmarshalColumnSubNodeSrcTask(form); err != nil {
-		errorResponse(w, err)
-		return
-	}
-	//fmt.Println("====m.TaskState,m.TaskType:", m.TaskState, m.TaskType)
-
 	m.ID = id
 	m.UpdateTime = time.Now().Unix()
 	if err = m.Updates(); err != nil {
@@ -131,6 +125,15 @@ func SubNodeSrcTaskDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 
 	m := &model.SubNodeSrcTask{}
 	m.ID = id
+	if err := m.Delete(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
+	}
+
+	jsonResponse(w, "ok")
+}
+
+func SubNodeSrcTaskListHandlre(w http.ResponseWriter, r *http.Request) {
+	logger := getLogger(r)
 	srcData := model.SubNodeSrcTask{}
 
 	result, err := srcData.GetAll()

@@ -124,19 +124,6 @@ func (l BCDaemonLoader) Load(ctx context.Context) error {
 		return err
 	}
 
-	if err := syspar.SysUpdate(nil); err != nil {
-		log.Errorf("can't read system parameters: %s", utils.ErrInfo(err))
-		return err
-	}
-	if err := syspar.SysTableColType(nil); err != nil {
-		log.Errorf("can't table col type: %s", utils.ErrInfo(err))
-		return err
-	}
-
-	if data, ok := block.GetDataFromFirstBlock(); ok {
-		syspar.SetFirstBlockData(data)
-	}
-
 	mode := "Public blockchain"
 	if syspar.IsPrivateBlockchain() {
 		mode = "Private Blockchain"
@@ -265,6 +252,20 @@ func GetDaemonLoader() types.DaemonLoader {
 		}
 	}
 
+	if conf.Config.IsSubNode() {
+		return SNDaemonLoader{
+			logger:            log.WithFields(log.Fields{"loader": "subnode_daemon_loader"}),
+			DaemonListFactory: SubNodeDaemonsListFactory{},
+		}
+	}
+
+	return BCDaemonLoader{
+		logger:            log.WithFields(log.Fields{"loader": "blockchain_daemon_loader"}),
+		DaemonListFactory: BlockchainDaemonsListsFactory{},
+	}
+}
+
+func logMode(logger *log.Entry, mode string) {
 	logLevel := log.GetLevel()
 	log.SetLevel(log.InfoLevel)
 	logger.WithFields(log.Fields{"mode": mode}).Info("Node running mode")

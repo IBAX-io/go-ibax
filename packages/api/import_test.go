@@ -3,17 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package api
-
-import (
-	"errors"
-	"fmt"
-	"net/url"
-	"os"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -99,6 +88,11 @@ func TestImportApps(t *testing.T) {
 	//	"TcpAddress":  {`127.0.0.1:8078`},
 	//	"ApiAddress":  {`http://127.0.0.1:8079`},
 	//	"PubKey":      {`04794cbbfa0ff0d1a3dc3e08e5332ff44131be265d9d67ad60996fd5e3f04d50610b8de6b99bb068991a29806e16832290c0bc890373ae592037317fa213227e39`},
+	//	"Description": {`node2`}}
+	//assert.NoError(t, postTx(`@1CNConnectionRequest`, &form))
+	//fmt.Println("successful node2 CNConnectionRequest ")
+	//form = url.Values{
+	//	"TcpAddress":  {`127.0.0.1:9078`},
 	//	"ApiAddress":  {`http://127.0.0.1:9079`},
 	//	"PubKey":      {`0432ed8601fbe0e452f647147e26bfbfc93532e019f9dad80d183c3dafe7d432f9d84cff6595d9c023fc40119f0b31fa3b2e05d6511bb83f1ba38eb487df8cafe1`},
 	//	"Description": {`node3`}}

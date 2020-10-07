@@ -11,22 +11,6 @@ The build process for go-ibax requires Go 1.12 or higher. If you don't have it: 
 
 You'll need to add Go's bin directories to your `$PATH` environment variable e.g., by adding these lines to your `/etc/profile` (for a system-wide installation) or `$HOME/.profile`:
 
-```
-export PATH=$PATH:/usr/local/go/bin
-export PATH=$PATH:$GOPATH/bin
-```
-
-(If you run into trouble, see the [Go install instructions](https://golang.org/doc/install)).
-
-#### Compile
-
-```
-$ export GOPROXY=https://athens.azurefd.net
-$ GO111MODULE=on go mod tidy -v
-
-$ go build
-```
-
 ### Run
 
 1. Create the node configuration file:
@@ -58,6 +42,21 @@ $    go-ibax initDatabase
 
 ```bash
 $    go-ibax start
+```
+
+
+# docker run
+
+```bash
+
+docker volume prune -f
+docker-compose down
+
+docker-compose build
+docker-compose up
+
+docker-compose up -d
+docker-compose logs
 
 https://127.0.0.1:7079/api/v2/getuid
 http://127.0.0.1:7079/api/v2/getuid

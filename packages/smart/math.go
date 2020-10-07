@@ -4,6 +4,18 @@
  *--------------------------------------------------------------------------------------------*/
 package smart
 
+import (
+	"math"
+	"strconv"
+)
+
+func parseFloat(x interface{}) (float64, error) {
+	var (
+		fx  float64
+		err error
+	)
+	switch v := x.(type) {
+	case float64:
 		fx = v
 	case int64:
 		fx = float64(v)
@@ -29,20 +41,6 @@ func Floor(x interface{}) (int64, error) {
 	}
 	if fx = math.Floor(fx); isValidFloat(fx) {
 		return int64(fx), nil
-	}
-	return 0, errFloatResult
-}
-
-// Log returns the natural logarithm of x
-func Log(x interface{}) (float64, error) {
-	fx, err := parseFloat(x)
-	if err != nil {
-		return 0, err
-	}
-	if fx = math.Log(fx); isValidFloat(fx) {
-		return fx, nil
-	}
-	return 0, errFloatResult
 }
 
 // Log10 returns the decimal logarithm of x

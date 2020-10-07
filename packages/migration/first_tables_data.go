@@ -75,9 +75,6 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     ),
     (next_id('1_tables'), 'node_ban_logs',
         '{
-            "insert": "ContractAccess(\"@1CheckNodesBan\")",
-            "update": "ContractAccess(\"@1CheckNodesBan\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',
         '{
             "node_id": "ContractAccess(\"@1CheckNodesBan\")",
@@ -96,3 +93,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
         '{
             "name": "false",
             "offset": "false"
+        }',
+        'ContractConditions("@1AdminCondition")'
+    );
+`
