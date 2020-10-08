@@ -748,16 +748,6 @@ func parseViewColumnSql(sc *SmartContract, columns string) (colsSQL string, colo
 			return
 		}
 		c.Col = colname
-		alias := converter.EscapeSQL(strings.ToLower(icol.Alias))
-		if len(alias) > 0 {
-			if err = checkColumnName(alias); err != nil {
-				return
-			}
-			colname = colname + ` AS ` + alias
-		}
-		colList[colname] = true
-		w := `"` + tableName + `".` + colname
-		if len(cols)-1 != i {
 			colsSQL += w + ",\n"
 		} else {
 			colsSQL += w
@@ -1972,6 +1962,14 @@ func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
 		data, err := marshalJSON(honorNodes, `honor nodes`)
 		if err != nil {
 			return err
+		}
+
+		_, err = UpdateSysParam(smartContract, syspar.HonorNodes, string(data), "")
+		if err != nil {
+			return logErrorDB(err, "updating honor nodes")
+		}
+	}
+
 	return nil
 }
 

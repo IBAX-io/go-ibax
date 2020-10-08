@@ -94,14 +94,6 @@ func SendExternalTransaction() error {
 				"Block":  block,
 				"UID":    item.Uid,
 			}, nodePrivateKey); err != nil {
-			log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("CreateContract")
-		}
-	}
-	list, err := model.GetExternalList()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("GetExternalList")
-		return err
-	}
 	timeOut := time.Now().Unix() - 10*(syspar.GetGapsBetweenBlocks()+
 		syspar.GetMaxBlockGenerationTime()/1000)
 	for _, item := range list {
@@ -191,3 +183,8 @@ func ExternalNetwork(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
 		defer atomic.StoreUint32(&d.atomic, 0)
 	} else {
+		return nil
+	}
+	d.sleepTime = externalDeamonTimeout * time.Second
+	return SendExternalTransaction()
+}

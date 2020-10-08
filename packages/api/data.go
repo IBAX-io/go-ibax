@@ -3,6 +3,15 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package api
+
+import (
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
@@ -28,8 +37,6 @@ func compareHash(data []byte, urlHash string) bool {
 	}
 
 	return hex.EncodeToString(hash) == urlHash
-}
-
 func getDataHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)

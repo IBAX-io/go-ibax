@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 package log
-
-import (
+	"github.com/sirupsen/logrus"
+)
 
 type HexHook struct{}
 
