@@ -1,4 +1,14 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -127,7 +137,6 @@ func VDESrcMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	srcData.ID = id
 	result, err := srcData.GetOneByID()
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
 		errorResponse(w, err)
 		return
 	}
