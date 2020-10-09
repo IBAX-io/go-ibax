@@ -42,6 +42,17 @@ func (p Permissions) Value() (driver.Value, error) {
 	data, err := json.Marshal(p)
 	if err != nil {
 		return nil, err
+	}
+	return string(data), err
+}
+func (p *Permissions) Scan(v interface{}) error {
+	data, ok := v.([]byte)
+	if !ok {
+		return errors.New("Bad permissions")
+	}
+	return json.Unmarshal(data, p)
+}
+
 // SetTablePrefix is setting table prefix
 func (t *Table) SetTablePrefix(prefix string) {
 	t.Ecosystem = converter.StrToInt64(prefix)
@@ -87,23 +98,6 @@ func (t *Table) GetColumns(transaction *DbTransaction, name, jsonKey string) (ma
 		return nil, err
 	}
 	defer rows.Close()
-	var key, value string
-	result := map[string]string{}
-	for rows.Next() {
-		rows.Scan(&key, &value)
-		result[key] = value
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-// GetPermissions returns table permissions by name
-func (t *Table) GetPermissions(transaction *DbTransaction, name, jsonKey string) (map[string]string, error) {
-	keyStr := ""
-	if jsonKey != "" {
 		keyStr = `->'` + jsonKey + `'`
 	}
 	rows, err := GetDB(transaction).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(permissions`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()

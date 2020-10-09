@@ -10,11 +10,11 @@ type VDEDestHashTime struct {
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
-func (VDEDestHashTime) TableName() string {
-	return "vde_dest_hash_time"
+	return DBConn.Model(m).Updates(m).Error
 }
 
-func (m *VDEDestHashTime) Create() error {
+func (m *VDEDestHashTime) Delete() error {
+	return DBConn.Delete(m).Error
 }
 
 func (m *VDEDestHashTime) Get() (*VDEDestHashTime, error) {

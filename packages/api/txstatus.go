@@ -12,19 +12,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
-type txstatusError struct {
-	Type  string `json:"type,omitempty"`
-	Error string `json:"error,omitempty"`
-	Id    string `json:"id,omitempty"`
-}
-
-type txstatusResult struct {
-	BlockID string         `json:"blockid"`
 	Message *txstatusError `json:"errmsg,omitempty"`
 	Result  string         `json:"result"`
 	Penalty int64          `json:"penalty"`
@@ -78,6 +65,7 @@ type multiTxStatusResult struct {
 }
 
 type txstatusRequest struct {
+	Hashes []string `json:"hashes"`
 }
 
 func getTxStatusHandler(w http.ResponseWriter, r *http.Request) {

@@ -10,13 +10,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
 func unmarshalColumnVDEAgentChainInfo(form *VDEAgentChainInfoForm) (*model.VDEAgentChainInfo, error) {
 	var (
 		err error
@@ -128,6 +121,14 @@ func VDEAgentChainInfoListHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse(w, result)
 }
+
+func VDEAgentChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	id := converter.StrToInt64(params["id"])
+	srcData := model.VDEAgentChainInfo{}
+	srcData.ID = id
 	result, err := srcData.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query chain info data by ID failed")

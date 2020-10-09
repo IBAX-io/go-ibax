@@ -10,6 +10,22 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
+	log "github.com/sirupsen/logrus"
+)
+
+/*
+#include <stdio.h>
+#include <signal.h>
+
+extern void go_callback_int();
+static inline void SigBreak_Handler(int n_signal){
+    printf("closed\n");
+	go_callback_int();
 }
 static inline void waitSig() {
     #if (WIN32 || WIN64)
@@ -50,13 +66,6 @@ func WaitForSignals() {
 						log.WithFields(log.Fields{"daemon_name": name}).Debug("daemon stopped")
 					}
 
-					log.Debug("Daemons killed")
-				}
-
-				if model.DBConn != nil {
-					err := model.GormClose()
-					if err != nil {
-						log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("closing gorm")
 					}
 				}
 
