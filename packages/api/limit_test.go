@@ -64,20 +64,13 @@ func TestLimit(t *testing.T) {
 	checkList := func(count, wantBlocks int) (err error) {
 		var list listResult
 		err = sendGet(`list/tbl`+rnd, nil, &list)
-			if v, ok := blocks[item["block"]]; ok {
-				blocks[item["block"]] = v + 1
-			} else {
-				blocks[item["block"]] = 1
-			}
+		if err != nil {
+			return
 		}
-		if wantBlocks > 0 && len(blocks) != wantBlocks {
-			return fmt.Errorf(`wrong number of blocks %d != %d`, len(blocks), wantBlocks)
+		if converter.StrToInt(strconv.FormatInt(list.Count, 10)) != count {
+			return fmt.Errorf(`wrong list items %d != %d`, list.Count, count)
 		}
-		return nil
-	}
-	sendList()
-	assert.NoError(t, checkList(10, 1))
-
+		blocks := make(map[string]int)
 	var syspar ecosystemParamsResult
 	assert.NoError(t, sendGet(`systemparams?names=max_tx_block,max_tx_block_per_user`, nil, &syspar))
 

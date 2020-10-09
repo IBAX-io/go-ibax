@@ -48,6 +48,12 @@ type src_VDEShareTaskResult struct {
 		ContractDestGetHash  string `json:"contract_dest_get_hash"`
 		ContractRunHttp      string `json:"contract_run_http"`
 		ContractRunEcosystem string `json:"contract_run_ecosystem"`
+		ContractRunParms     string `json:"contract_run_parms"`
+		ContractMode         string `json:"contract_mode"`
+		ContractState        string `json:"contract_state"`
+		UpdateTime           string `json:"update_time"`
+		CreateTime           string `json:"create_time"`
+		Deleted              string `json:"deleted"`
 		DateDeleted          string `json:"date_deleted"`
 	} `json:"list"`
 }
@@ -211,13 +217,6 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 		}
 
 		//
-		if ContractSrcGetHashHex, err = crypto.HashHex([]byte(ShareTaskItem.ContractSrcGet)); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
-			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
-			continue
-		}
-		if ContractSrcGetHashHex != ShareTaskItem.ContractSrcGetHash {
-			log.WithFields(log.Fields{"error": err}).Error("Contract Src Hash validity fails")
 			fmt.Println("Contract Src Hash validity fails")
 			continue
 		}

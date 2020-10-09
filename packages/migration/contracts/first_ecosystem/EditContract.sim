@@ -9,17 +9,13 @@ contract EditContract {
     func onlyConditions() bool {
         return $Conditions && !$Value
     }
-        if !$cur {
-            error Sprintf("Contract %d does not exist", $Id)
-        }
-        if $Value {
-            ValidateEditContractNewValue($Value, $cur["value"])
-        }
-   
-        $recipient = Int($cur["wallet_id"])
-    }
 
-    action {
+    conditions {
+        RowConditions("contracts", $Id, onlyConditions())
+        if $Conditions {
+            ValidateCondition($Conditions, $ecosystem_id)
+        }
+        $cur = DBFind("contracts").Columns("id,value,conditions,wallet_id,token_id").WhereId($Id).Row()
         UpdateContract($Id, $Value, $Conditions, $recipient, $cur["token_id"])
     }
 }

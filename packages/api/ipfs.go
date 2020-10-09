@@ -170,18 +170,6 @@ func add(w http.ResponseWriter, r *http.Request) {
 			Send(context.Background())
 		if err != nil {
 			errorResponse(w, err)
-			return
-		}
-		defer respCp.Close()
-		if respCp.Error != nil {
-			errorResponse(w, respCp.Error)
-			return
-		}
-		tempName := tempFile + ".temp"
-		os.Remove(tempFile)
-		os.Remove(tempName)
-		result.Hash[key] = hash
-	}
 	jsonResponse(w, result)
 }
 
@@ -398,6 +386,16 @@ func ls(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse(w, list)
 }
+
+func getFileData(r *http.Request, prefix, key string) error {
+	logger := getLogger(r)
+
+	fileByte, _, err := r.FormFile(key)
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("request.FormFile")
+		return err
+	}
+	defer fileByte.Close()
 
 	destName := TempDir + prefix + key
 	//

@@ -748,6 +748,16 @@ func parseViewColumnSql(sc *SmartContract, columns string) (colsSQL string, colo
 			return
 		}
 		c.Col = colname
+		alias := converter.EscapeSQL(strings.ToLower(icol.Alias))
+		if len(alias) > 0 {
+			if err = checkColumnName(alias); err != nil {
+				return
+			}
+			colname = colname + ` AS ` + alias
+		}
+		colList[colname] = true
+		w := `"` + tableName + `".` + colname
+		if len(cols)-1 != i {
 			colsSQL += w + ",\n"
 		} else {
 			colsSQL += w
@@ -1144,20 +1154,6 @@ func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64
 
 	if err != nil {
 		logErrorDB(err, fmt.Sprintf("Contract %s %v %v", sc.TxContract.Name, sc.TxContract.StackCont, sc.TxData))
-		return 0, nil, logErrorDB(err, fmt.Sprintf("selecting rows from table %s %s where %s order %s",
-			tblname, PrepareColumns(columns), where, order))
-	}
-	defer rows.Close()
-	cols, err := rows.Columns()
-	if err != nil {
-		return 0, nil, logErrorDB(err, "getting rows columns")
-	}
-	values := make([][]byte, len(cols))
-	scanArgs := make([]interface{}, len(values))
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
-
 	result := make([]interface{}, 0, 50)
 	for rows.Next() {
 		err = rows.Scan(scanArgs...)

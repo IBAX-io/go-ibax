@@ -37,21 +37,21 @@ func (c *Contract) GetList(offset, limit int) ([]Contract, error) {
 func (c *Contract) GetFromEcosystem(db *DbTransaction, ecosystem int64) ([]Contract, error) {
 	result := new([]Contract)
 	err := GetDB(db).Table(c.TableName()).Where("ecosystem = ?", ecosystem).Order("id asc").Find(&result).Error
+	return *result, err
+}
+
+// Count returns count of records in table
+func (c *Contract) Count() (count int64, err error) {
+	err = DBConn.Table(c.TableName()).Count(&count).Error
+	return
+}
+
+func (c *Contract) GetListByEcosystem(offset, limit int) ([]Contract, error) {
 	var list []Contract
 	err := DBConn.Table(c.TableName()).Offset(offset).Limit(limit).
 		Order("id asc").Where("ecosystem = ?", c.EcosystemID).
 		Find(&list).Error
 	return list, err
-}
-
-func (c *Contract) CountByEcosystem() (n int64, err error) {
-	err = DBConn.Table(c.TableName()).Where("ecosystem = ?", c.EcosystemID).Count(&n).Error
-	return
-}
-
-func (c *Contract) ToMap() (v map[string]string) {
-	v = make(map[string]string)
-	v["id"] = converter.Int64ToStr(c.ID)
 	v["name"] = c.Name
 	v["value"] = c.Value
 	v["wallet_id"] = converter.Int64ToStr(c.WalletID)

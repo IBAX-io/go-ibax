@@ -27,6 +27,15 @@ func outMap(v *types.Map) string {
 	for _, key := range keys {
 		val, ok := v.Get(key)
 		if !ok {
+			continue
+		}
+
+		switch v := val.(type) {
+		case *types.Map:
+			values = append(values, fmt.Sprintf(`%q:%q`, key, outMap(v)))
+		default:
+			values = append(values, fmt.Sprintf(`%q:%q`, key, v))
+		}
 	}
 	return `{` + strings.Join(values, ` `) + `}`
 }
@@ -323,13 +332,6 @@ var forTest = tplList{
 		.class {
 			text-style: italic;
 		}
-	}
-				Div()`,
-		`[{"tag":"div","attr":{"class":"myclass"}},{"tag":"div","attr":{"style":".class {\n\t\t\ttext-style: italic;\n\t\t}"}},{"tag":"div"}]`},
-	{`Div(myclass){Div()
-		P(){
-			Div(id){
-				Label(My #text#,myl,forname)
 			}
 		}
 	}`,

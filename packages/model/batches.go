@@ -89,8 +89,6 @@ func (l txser) BatchFindByHash(tr *DbTransaction, hs ArrHashes) error {
 func (l queueser) BatchFindByHash(tr *DbTransaction, hs ArrHashes) error {
 	if result := GetDB(tr).Model(&QueueTx{}).Select("hash").Where("hash IN ?", hs).FindInBatches(&l, len(hs), func(tx *gorm.DB, batch int) error {
 		if tx.RowsAffected > 0 {
-			return errors.New("duplicated transaction at queue_tx")
-		}
 		return nil
 	}); result.Error != nil {
 		return result.Error
@@ -107,3 +105,10 @@ func CheckDupTx(transaction *DbTransaction, hs ArrHashes) error {
 	)
 	batch = append(batch, logTxs, txs, queues)
 	for _, d := range batch {
+		err := d.BatchFindByHash(transaction, hs)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
