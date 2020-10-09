@@ -18,6 +18,9 @@ type VDEDestDataHash struct {
 	//ChainId                int64  `gorm:"not null" json:"chain_id"`
 	//ChainErr               string `gorm:"not null" json:"chain_err"`
 
+	UpdateTime int64 `gorm:"not null" json:"update_time"`
+	CreateTime int64 `gorm:"not null" json:"create_time"`
+}
 
 func (VDEDestDataHash) TableName() string {
 	return "vde_dest_data_hash"
@@ -37,18 +40,6 @@ func (m *VDEDestDataHash) Delete() error {
 
 func (m *VDEDestDataHash) GetAll() ([]VDEDestDataHash, error) {
 	var result []VDEDestDataHash
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *VDEDestDataHash) GetOneByID() (*VDEDestDataHash, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
-
-func (m *VDEDestDataHash) GetAllByTaskUUID(TaskUUID string) ([]VDEDestDataHash, error) {
-	result := make([]VDEDestDataHash, 0)
-	err := DBConn.Table("vde_dest_data_hash").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
 }
 
 func (m *VDEDestDataHash) GetOneByTaskUUID(TaskUUID string) (*VDEDestDataHash, error) {

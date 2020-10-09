@@ -1,4 +1,11 @@
 // +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract ImportUpload {
+    data {
+        Data file
+    }
+    conditions {
+        $Data = BytesToString($Data["Body"])
         $limit = 10 // data piece size of import
     }
     action {
@@ -85,18 +92,6 @@
         }
         if Len(contracts) > 0 {
             var batch map
-            batch["Data"] = JSONEncode(contracts)
-            sliced = Append(sliced, batch)
-        }
-        input["data"] = sliced
-        // storing
-        DBUpdate("@1buffer_data", $import_id, {"value": input})
-        DBUpdate("@1buffer_data", $info_id, {"value": inf})
-        var name string
-        name = Str(input["name"])
-        var cndns string
-        cndns = Str(input["conditions"])
-        if !DBFind("@1applications").Columns("id").Where({"name": name, "ecosystem": $ecosystem_id}).One("id") {
             DBInsert("@1applications", {"name": name, "conditions": cndns, "ecosystem": $ecosystem_id})
         }
     }

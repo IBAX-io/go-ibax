@@ -11,6 +11,14 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 )
+
+type evalCode struct {
+	Source string
+	Code   *Block
+}
+
+var (
+	evals = make(map[uint64]*evalCode)
 )
 
 // CompileEval compiles conditional exppression
@@ -37,12 +45,6 @@ func (vm *VM) EvalIf(input string, state uint32, vars *map[string]interface{}) (
 		return true, nil
 	}
 	crc, err := crypto.CalcChecksum([]byte(input))
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("calculating compile eval checksum")
-		return false, err
-	}
-	if eval, ok := evals[crc]; !ok || eval.Source != input {
-		if err := vm.CompileEval(input, state); err != nil {
 			log.WithFields(log.Fields{"type": consts.EvalError, "error": err}).Error("compiling eval")
 			return false, err
 		}

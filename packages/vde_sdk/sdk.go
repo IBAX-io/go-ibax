@@ -69,6 +69,20 @@ func sendRawRequest(apiAddress string, gAuth string, rtype, url string, form *ur
 	if err != nil {
 		return nil, err
 	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	if len(gAuth) > 0 {
+		req.Header.Set("Authorization", jwtPrefix+gAuth)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf(`%d %s`, resp.StatusCode, strings.TrimSpace(string(data)))
