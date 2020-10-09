@@ -8,18 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	log "github.com/sirupsen/logrus"
-)
-
 func Type101(r *network.VDESrcDataAgentRequest) (*network.VDESrcDataAgentResponse, error) {
 	nodePrivateKey, err := utils.GetNodePrivateKey()
 	if err != nil || len(nodePrivateKey) < 1 {
@@ -51,6 +39,16 @@ func Type101(r *network.VDESrcDataAgentRequest) (*network.VDESrcDataAgentRespons
 		DataUUID:       r.DataUUID,
 		AgentMode:      AgentMode,
 		Hash:           hash,
+		DataInfo:       r.DataInfo,
+		VDESrcPubkey:   r.VDESrcPubkey,
+		VDEAgentPubkey: r.VDEAgentPubkey,
+		VDEAgentIp:     r.VDEAgentIp,
+		VDEDestPubkey:  r.VDEDestPubkey,
+		VDEDestIp:      r.VDEDestIp,
+		//Data:         r.Data,
+		Data:       data,
+		CreateTime: time.Now().Unix(),
+	}
 
 	err = VDEAgentData.Create()
 	if err != nil {

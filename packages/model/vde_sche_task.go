@@ -168,6 +168,21 @@ type VDEScheTaskFromSrc struct {
 }
 
 func (VDEScheTaskFromSrc) TableName() string {
+	return "vde_sche_task_from_src"
+}
+
+func (m *VDEScheTaskFromSrc) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *VDEScheTaskFromSrc) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEScheTaskFromSrc) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
 func (m *VDEScheTaskFromSrc) GetAll() ([]VDEScheTaskFromSrc, error) {
 	var result []VDEScheTaskFromSrc
 	err := DBConn.Find(&result).Error
@@ -212,13 +227,6 @@ func (m *VDEScheTaskFromSrc) GetOneByTaskState(TaskState int64) (bool, error) {
 func (m *VDEScheTaskFromSrc) GetOneByChainState(ChainState int64) (bool, error) {
 	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
 }
-
-func (m *VDEScheTaskFromSrc) GetAllByContractStateAndChainState(ContractStateSrc int64, ContractStateDest int64, ChainState int64) ([]VDEScheTaskFromSrc, error) {
-	result := make([]VDEScheTaskFromSrc, 0)
-	err := DBConn.Table("vde_sche_task_from_src").Where("contract_state_src = ? AND contract_state_dest = ? AND chain_state = ?", ContractStateSrc, ContractStateDest, ChainState).Find(&result).Error
-	return result, err
-}
-
 func (m *VDEScheTaskFromSrc) GetAllByContractStateSrc(ContractStateSrc int64) ([]VDEScheTaskFromSrc, error) {
 	result := make([]VDEScheTaskFromSrc, 0)
 	err := DBConn.Table("vde_sche_task_from_src").Where("contract_state_src = ?", ContractStateSrc).Find(&result).Error

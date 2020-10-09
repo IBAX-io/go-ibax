@@ -15,6 +15,22 @@ import (
 type banKey struct {
 	Time time.Time   // banned till
 	Bad  []time.Time // time of bad tx
+}
+
+var (
+	banList = make(map[int64]banKey)
+	mutex   = &sync.RWMutex{}
+)
+
+// IsBanned returns true if the key has been banned
+func IsKeyBanned(keyID int64) bool {
+	mutex.RLock()
+	if ban, ok := banList[keyID]; ok {
+		mutex.RUnlock()
+		now := time.Now()
+		if now.Before(ban.Time) {
+			return true
+		}
 		for i := 0; i < conf.Config.BanKey.BadTx; i++ {
 			if ban.Bad[i].Add(time.Duration(conf.Config.BanKey.BadTime) * time.Minute).After(now) {
 				return false
@@ -40,10 +56,6 @@ func BannedTill(keyID int64) string {
 	return ``
 }
 
-// BadTxForBan adds info about bad tx of the key
-func BadTxForBan(keyID int64) {
-	var (
-		ban banKey
 		ok  bool
 	)
 	mutex.Lock()

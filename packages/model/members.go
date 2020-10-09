@@ -20,10 +20,9 @@ type Member struct {
 func (m *Member) SetTablePrefix(prefix string) {
 	m.ecosystem = converter.StrToInt64(prefix)
 }
-	return
-}
 
-// Get init m as member with ID
-func (m *Member) Get(account string) (bool, error) {
-	return isFound(DBConn.Where("ecosystem=? and account = ?", m.ecosystem, account).First(m))
+// TableName returns name of table
+func (m *Member) TableName() string {
+	if m.ecosystem == 0 {
+		m.ecosystem = 1
 }

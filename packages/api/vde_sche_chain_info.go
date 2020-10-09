@@ -104,15 +104,6 @@ func VDEScheChainInfoDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 
 	m := &model.VDEScheChainInfo{}
 	m.ID = id
-	if err := m.Delete(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
-	}
-
-	jsonResponse(w, "ok")
-}
-
-func VDEScheChainInfoListHandlre(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
 	srcData := model.VDEScheChainInfo{}
 
 	result, err := srcData.GetAll()
@@ -129,3 +120,14 @@ func VDEScheChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
+	srcData := model.VDEScheChainInfo{}
+	srcData.ID = id
+	result, err := srcData.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("The query chain info data by ID failed")
+		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, result)
+}

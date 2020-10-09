@@ -302,6 +302,18 @@ func filesRm(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, nil)
 }
+
+func filesMv(w http.ResponseWriter, r *http.Request) {
+	form := &sdForm{}
+	client := getClient(r)
+	if err := parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+
+	s := shell.NewShell(conf.GetGFilesHost())
+	resp, err := s.Request("files/mv",
+		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Source,
 		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Dest).
 		Send(context.Background())
 	if err != nil {
@@ -386,16 +398,6 @@ func ls(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse(w, list)
 }
-
-func getFileData(r *http.Request, prefix, key string) error {
-	logger := getLogger(r)
-
-	fileByte, _, err := r.FormFile(key)
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("request.FormFile")
-		return err
-	}
-	defer fileByte.Close()
 
 	destName := TempDir + prefix + key
 	//

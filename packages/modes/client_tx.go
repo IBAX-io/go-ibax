@@ -52,6 +52,24 @@ func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key i
 	PublicKeys = append(PublicKeys, crypto.CutPub(rtx.SmartTx().PublicKey))
 	f, err := utils.CheckSign(PublicKeys, rtx.Hash(), rtx.Signature(), false)
 	if err != nil {
+		return "", err
+	}
+	if !f {
+		return "", errors.New("sign err")
+	}
+
+	//check keyid is exist user
+	if key == 0 {
+		//ok, err := model.MemberHasRole(nil, 7, 1, converter.AddressToString(rtx.SmartTx().KeyID))
+		ok, err := model.MemberHasRolebyName(nil, 1, "Miner", converter.AddressToString(rtx.SmartTx().KeyID))
+		if err != nil {
+			return "", err
+		}
+
+		if ok {
+
+		} else {
+			var mo model.MineOwner
 			fo, erro := mo.GetPoolManage(rtx.SmartTx().KeyID)
 			if erro != nil {
 				return "", erro
@@ -102,18 +120,6 @@ func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 		return "", err
 	}
 
-	ts := &model.TransactionStatus{
-		BlockID:  1,
-		Hash:     tx.TxHash,
-		Time:     time.Now().Unix(),
-		WalletID: key,
-		Type:     tx.TxType,
-	}
-
-	if err := ts.Create(); err != nil {
-		le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on creating tx status")
-		return "", err
-	}
 
 	res, _, err := tx.CallOBSContract()
 	if err != nil {

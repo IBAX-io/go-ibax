@@ -373,6 +373,18 @@ var contracts = []smartContract{
 			var a1 array
 			var a2 map
 			$a1 = []
+			$a2 = {}
+			Test("result", "ok")
+		}
+	}`, []smartParams{
+		{nil, map[string]string{`result`: `ok`}},
+	}},
+
+	{`FmtMoney`, `contract FmtMoney {
+		action {
+			Test("result", FormatMoney("123456789", 0))
+			$num2 = "5500000"
+			$num1 = "12345672372"
 			Test("t1", FormatMoney($num1, -1))  //123456723720
 			Test("t2", FormatMoney($num1, 0))   //12345672372
 			Test("t3", FormatMoney($num1, 1))   //1234567237,2
@@ -1702,16 +1714,6 @@ func TestErrors(t *testing.T) {
 		`{"type":"panic","error":"divided by zero [@1`+name+`2:5]"}`)
 
 	form = url.Values{`Value`: {`contract ` + name + `5 {
-			action {
-				// comment
-				Throw("Problem", "throw message")
-			}}`}, `Conditions`: {`true`}, `ApplicationId`: {`1`}}
-	assert.NoError(t, postTx(`NewContract`, &form))
-	assert.EqualError(t, postTx(name+`5`, &url.Values{}),
-		`{"type":"panic","error":"throw message [Throw @1`+name+`5:4]"}`)
-
-	form = url.Values{`Value`: {`contract ` + name + `4 {
-			action {
 				// comment
 				error("error message")
 			}}`}, `Conditions`: {`true`}, `ApplicationId`: {`1`}}

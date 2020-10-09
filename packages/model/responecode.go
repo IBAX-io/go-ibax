@@ -118,13 +118,10 @@ type CodeType struct {
 
 //
 type errType struct {
-	Err     string `json:"error"`
-	Message string `json:"msg"`
-	Status  int    `json:"-"`
-}
-
-func (et errType) Error() string {
-	return et.Err
+	et, ok := err.(errType)
+	if !ok {
+		et.Message = err.Error()
+	}
 	ct.Message = fmt.Sprintln(ct.Message, et.Message)
 	ct.Msg = http.StatusText(ct.Status)
 	return ct

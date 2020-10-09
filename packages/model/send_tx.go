@@ -53,6 +53,14 @@ func SendTx(rtx RawTransaction, adminWallet int64) error {
 	if foundqx {
 		log.WithFields(log.Fields{"tx_hash": rtx.Hash(), "wallet_id": adminWallet, "tx_time": ts.Time, "type": consts.DuplicateObject}).Error("double tx in queue tx")
 		return errors.New("duplicated transaction from queue tx ")
+	}
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction from queue tx")
+		return err
+	}
+	return qtx.Create()
+}
+
 type RawTx struct {
 	TxType, Time int64
 	Hash         []byte
@@ -64,10 +72,6 @@ type RawTx struct {
 func (rtx *RawTx) GetExpedite() decimal.Decimal {
 	expedite, _ := decimal.NewFromString(rtx.Expedite)
 	return expedite
-}
-
-func SendTxBatches(rtxs []*RawTx) error {
-	var rawTxs []*TransactionStatus
 	var qtxs []*QueueTx
 	for _, rtx := range rtxs {
 		ts := &TransactionStatus{

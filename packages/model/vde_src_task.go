@@ -1,6 +1,12 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+type VDESrcTask struct {
+	ID         int64  `gorm:"primary_key; not null" json:"id"`
+	TaskUUID   string `gorm:"not null" json:"task_uuid"`
 	TaskName   string `gorm:"not null" json:"task_name"`
 	TaskSender string `gorm:"not null" json:"task_sender"`
 	Comment    string `gorm:"not null" json:"comment"`
@@ -106,18 +112,6 @@ func (m *VDESrcTask) GetOneByTaskState(TaskState int64) (bool, error) {
 
 func (m *VDESrcTask) GetOneByChainState(ChainState int64) (bool, error) {
 	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
-}
-
-func (m *VDESrcTask) GetAllByContractStateAndChainState(ContractStateSrc int64, ContractStateDest int64, ChainState int64) ([]VDESrcTask, error) {
-	result := make([]VDESrcTask, 0)
-	err := DBConn.Table("vde_src_task").Where("contract_state_src = ? AND contract_state_dest = ? AND chain_state = ?", ContractStateSrc, ContractStateDest, ChainState).Find(&result).Error
-	return result, err
-}
-
-func (m *VDESrcTask) GetAllByContractStateSrc(ContractStateSrc int64) ([]VDESrcTask, error) {
-	result := make([]VDESrcTask, 0)
-	err := DBConn.Table("vde_src_task").Where("contract_state_src = ?", ContractStateSrc).Find(&result).Error
-	return result, err
 }
 
 func (m *VDESrcTask) GetAllByContractStateDest(ContractStateDest int64) ([]VDESrcTask, error) {

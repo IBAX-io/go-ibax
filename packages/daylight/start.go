@@ -143,6 +143,20 @@ func initRoutes(listenHost string) {
 	handler := modes.RegisterRoutes()
 	handler = api.WithCors(handler)
 	handler = httpserver.NewMaxBodyReader(handler, conf.Config.HTTPServerMaxBodySize)
+
+	if conf.Config.TLS {
+		if len(conf.Config.TLSCert) == 0 || len(conf.Config.TLSKey) == 0 {
+			log.Fatal("-tls-cert/TLSCert and -tls-key/TLSKey must be specified with -tls/TLS")
+		}
+		if _, err := os.Stat(conf.Config.TLSCert); os.IsNotExist(err) {
+			log.WithError(err).Fatalf(`Filepath -tls-cert/TLSCert = %s is invalid`, conf.Config.TLSCert)
+		}
+		if _, err := os.Stat(conf.Config.TLSKey); os.IsNotExist(err) {
+			log.WithError(err).Fatalf(`Filepath -tls-key/TLSKey = %s is invalid`, conf.Config.TLSKey)
+		}
+		go func() {
+			s := &http.Server{
+				Addr:    listenHost,
 				Handler: handler,
 				TLSConfig: &tls.Config{
 					MinVersion:             tls.VersionTLS12,
@@ -199,15 +213,6 @@ func Start() {
 		log.Warning("Warning! Access checking is disabled in some built-in functions")
 	}
 
-	f := utils.LockOrDie(conf.Config.LockFilePath)
-	defer f.Unlock()
-	if err := utils.MakeDirectory(conf.Config.TempDir); err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.TempDir}).Error("can't create temporary directory")
-		Exit(1)
-	}
-
-	if conf.Config.PoolPub.Enable {
-		if conf.Config.Redis.Enable {
 			err = model.RedisInit(conf.Config.Redis.Host, conf.Config.Redis.Port, conf.Config.Redis.Password, conf.Config.Redis.DbName)
 			if err != nil {
 				log.WithFields(log.Fields{

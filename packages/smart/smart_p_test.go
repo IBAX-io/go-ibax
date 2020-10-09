@@ -7,14 +7,6 @@ package smart
 import (
 	"testing"
 )
-
-func TestRegexpMatch(t *testing.T) {
-	type args struct {
-		str string
-		reg string
-	}
-	tests := []struct {
-		name string
 		args args
 		want bool
 	}{
@@ -29,3 +21,5 @@ func TestRegexpMatch(t *testing.T) {
 				t.Errorf("RegexpMatch() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
