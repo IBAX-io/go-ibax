@@ -1,9 +1,12 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package model
+	Comment      string `gorm:"not null" json:"comment"`
+	Parms        string `gorm:"type:jsonb" json:"parms"`
+	TaskType     int64  `gorm:"not null" json:"task_type"`
+	TaskState    int64  `gorm:"not null" json:"task_state"`
 
+	ContractSrcName     string `gorm:"not null" json:"contract_src_name"`
 	ContractSrcGet      string `gorm:"not null" json:"contract_src_get"`
 	ContractSrcGetHash  string `gorm:"not null" json:"contract_src_get_hash"`
 	ContractDestName    string `gorm:"not null" json:"contract_dest_name"`

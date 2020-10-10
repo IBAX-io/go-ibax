@@ -19,6 +19,14 @@ import (
 // crypto func getSharedKey() pub.X = new(big.Int).SetBytes(public[0:32])
 // egcons func checkKey() gSettings.Key = hex.EncodeToString(privKey[aes.BlockSize:])
 
+type cryptoProvider int
+type ellipticSizeProvider int
+
+const (
+	_AESCBC cryptoProvider = iota
+)
+
+const (
 	elliptic256 ellipticSizeProvider = iota
 )
 
@@ -28,24 +36,6 @@ var (
 	// ErrEncrypting is Encoding error
 	ErrEncrypting = errors.New("Encoding error")
 	// ErrDecrypting is Decrypting error
-	ErrDecrypting = errors.New("Decrypting error")
-	// ErrUnknownProvider is Unknown provider error
-	ErrUnknownProvider = errors.New("Unknown provider")
-	// ErrHashingEmpty is Hashing empty value error
-	ErrHashingEmpty = errors.New("Hashing empty value")
-	// ErrEncryptingEmpty is Encrypting empty value error
-	ErrEncryptingEmpty = errors.New("Encrypting empty value")
-	// ErrDecryptingEmpty is Decrypting empty value error
-	ErrDecryptingEmpty = errors.New("Decrypting empty value")
-	// ErrSigningEmpty is Signing empty value error
-	ErrSigningEmpty = errors.New("Signing empty value")
-	// ErrCheckingSignEmpty is Checking sign of empty error
-	ErrCheckingSignEmpty = errors.New("Cheking sign of empty")
-	// ErrIncorrectSign is Incorrect sign
-	ErrIncorrectSign = errors.New("Incorrect sign")
-	// ErrUnsupportedCurveSize is Unsupported curve size error
-	ErrUnsupportedCurveSize = errors.New("Unsupported curve size")
-	// ErrIncorrectPrivKeyLength is Incorrect private key length error
 	ErrIncorrectPrivKeyLength = errors.New("Incorrect private key length")
 	// ErrIncorrectPubKeyLength is Incorrect public key length
 	ErrIncorrectPubKeyLength = errors.New("Incorrect public key length")

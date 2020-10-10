@@ -1,7 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
 
 package model
 
@@ -11,6 +7,13 @@ import (
 
 // QueueTx is model
 type QueueTx struct {
+	Hash     []byte          `gorm:"primary_key;not null"`
+	Data     []byte          `gorm:"not null"`
+	FromGate int             `gorm:"not null"`
+	Expedite decimal.Decimal `gorm:"not null"`
+	Time     int64           `gorm:"not null"`
+}
+
 // TableName returns name of table
 func (qt *QueueTx) TableName() string {
 	return "queue_tx"

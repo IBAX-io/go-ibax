@@ -77,6 +77,21 @@ var (
 	"string": {
 			"q": ["main", "string", "pop next"],
 			"d": ["string", "", "next"]
+		},
+	"dstring": {
+			"Q": ["main", "string", "pop next"],
+			"\\": ["dslash", "", "skip"],			
+			"d": ["dstring", "", "next"]
+		},
+	"dslash": {
+		"d": ["dstring", "", "next"]
+	},		
+	"dot": {
+		".": ["ddot", "", "next"],
+		"01": ["number", "", "next"],
+		"d": ["main", "sys", "pop"]
+	},
+	"ddot": {
 		".": ["main", "ident", "pop next"],
 		"d": ["error", "", ""]
 	},
@@ -212,21 +227,6 @@ var (
 						ind = 3
 					case 'Q':
 						ind = 4
-					case 'r':
-						ind = AlphaSize - 1
-					default:
-						for k, ach := range alphabet {
-							if ach == ch {
-								ind = k
-								break
-							}
-						}
-					}
-					table[curstate][ind] = val
-					if ind == 0 { // default value
-						for i := range table[curstate] {
-							if table[curstate][i] == 0xFE0000 {
-								table[curstate][i] = val
 							}
 						}
 					}

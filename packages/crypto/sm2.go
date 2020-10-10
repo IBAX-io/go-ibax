@@ -9,6 +9,16 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
+
+type SM2 struct{}
+	priv, err := sm2.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	return priv.D.Bytes(), append(converter.FillLeft(priv.PublicKey.X.Bytes()), converter.FillLeft(priv.PublicKey.Y.Bytes())...), nil
+}
+
+func (s *SM2) sign(privateKey, data []byte) ([]byte, error) {
 	pubkeyCurve := sm2.P256Sm2()
 	bi := new(big.Int).SetBytes(privateKey)
 	priv := new(sm2.PrivateKey)

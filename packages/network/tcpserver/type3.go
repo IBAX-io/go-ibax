@@ -45,19 +45,24 @@ func processStopNetwork(b []byte) ([]byte, error) {
 		log.WithFields(log.Fields{"error": err, "type": consts.ParseError}).Error("parsing cert")
 		return nil, err
 	}
-
-	if cert.EqualBytes(consts.UsedStopNetworkCerts...) {
-		log.WithFields(log.Fields{"error": errStopCertAlreadyUsed, "type": consts.InvalidObject}).Error("checking cert")
-		return nil, errStopCertAlreadyUsed
-	}
-
-	fbdata, err := syspar.GetFirstBlockData()
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.ConfigError}).Error("getting data of first block")
 		return nil, err
 	}
 
 	if err = cert.Validate(fbdata.StopNetworkCertBundle); err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.InvalidObject}).Error("validating cert")
+		return nil, err
+	}
+
+	var data []byte
+	tnow := time.Now().Unix()
+	_, err = converter.BinMarshal(&data,
+		&consts.StopNetwork{
+			TxHeader: consts.TxHeader{
+				Type:  consts.TxTypeStopNetwork,
+				Time:  uint32(tnow),
+				KeyID: conf.Config.KeyID,
+			},
+			StopNetworkCert: b,
 		},
 	)
 	if err != nil {
