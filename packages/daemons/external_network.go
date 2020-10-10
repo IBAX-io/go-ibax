@@ -89,11 +89,6 @@ func SendExternalTransaction() error {
 		}
 		if err := transaction.CreateContract(item.ResultContract, nodeKeyID,
 			map[string]interface{}{
-				"Status": errCode,
-				"Msg":    resText,
-				"Block":  block,
-				"UID":    item.Uid,
-			}, nodePrivateKey); err != nil {
 	timeOut := time.Now().Unix() - 10*(syspar.GetGapsBetweenBlocks()+
 		syspar.GetMaxBlockGenerationTime()/1000)
 	for _, item := range list {
