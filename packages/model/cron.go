@@ -1,11 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
-
-import (
 	"fmt"
 )
 
@@ -20,6 +15,15 @@ type Cron struct {
 // SetTablePrefix is setting table prefix
 func (c *Cron) SetTablePrefix(prefix string) {
 	c.tableName = prefix + "_cron"
+}
+
+// TableName returns name of table
+func (c *Cron) TableName() string {
+	return c.tableName
+}
+
+// Get is retrieving model from database
+func (c *Cron) Get(id int64) (bool, error) {
 	return isFound(DBConn.Where("id = ?", id).First(c))
 }
 

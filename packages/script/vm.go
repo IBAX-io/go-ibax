@@ -779,6 +779,20 @@ main:
 					if err != nil {
 						rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "error": err, "cmd": cmd.Value.(string)}).Error("executing extended function")
 						err = fmt.Errorf(`extend function %s %s`, cmd.Value.(string), err.Error())
+						break main
+					}
+				} else {
+					switch varVal := val.(type) {
+					case int:
+						val = int64(varVal)
+					}
+					rt.stack = append(rt.stack, val)
+				}
+			} else {
+				rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "cmd": cmd.Value.(string)}).Error("unknown extend identifier")
+				err = fmt.Errorf(`unknown extend identifier %s`, cmd.Value.(string))
+			}
+		case cmdIndex:
 			rv := reflect.ValueOf(rt.stack[size-2])
 			itype := reflect.TypeOf(rt.stack[size-2]).String()
 
@@ -855,15 +869,6 @@ main:
 							err = errMaxArrayIndex
 							break
 						}
-						slice = append(slice, make([]interface{}, int(ind)-len(slice)+1)...)
-						indexInfo := cmd.Value.(*IndexInfo)
-						if indexInfo.Owner == nil { // Extend variable $varname
-							(*rt.extend)[indexInfo.Extend] = slice
-						} else {
-							rt.vars[indexKey] = slice
-						}
-						rt.stack[size-3] = slice
-					}
 					slice[ind] = rt.stack[size-1]
 				} else {
 					slice := rt.stack[size-3].([]map[string]string)

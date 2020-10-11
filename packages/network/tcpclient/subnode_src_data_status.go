@@ -19,16 +19,6 @@ func SendSubNodeSrcData(host string, TaskUUID string, DataUUID string, AgentMode
 		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": host}).Error("on creating tcp connection")
 		return "0"
 	}
-	defer conn.Close()
-
-	rt := &network.RequestType{Type: network.RequestTypeSendSubNodeSrcData}
-	if err = rt.Write(conn); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending request type")
-		return "0"
-	}
-
-	req := &network.SubNodeSrcDataRequest{
-		TaskUUID:           TaskUUID,
 		DataUUID:           DataUUID,
 		AgentMode:          AgentMode,
 		TranMode:           TranMode,
@@ -72,6 +62,21 @@ func SendSubNodeSrcDataAgent(host string, TaskUUID string, DataUUID string, Agen
 
 	req := &network.SubNodeSrcDataAgentRequest{
 		TaskUUID:           TaskUUID,
+		DataUUID:           DataUUID,
+		AgentMode:          AgentMode,
+		TranMode:           TranMode,
+		DataInfo:           DataInfo,
+		SubNodeSrcPubkey:   SubNodeSrcPubkey,
+		SubNodeAgentPubkey: SubNodeAgentPubkey,
+		SubNodeAgentIp:     SubNodeAgentIp,
+		SubNodeDestPubkey:  SubNodeDestPubkey,
+		SubNodeDestIp:      SubNodeDestIp,
+		Data:               dt,
+	}
+
+	if err = req.Write(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending VDESrcDataAgent request")
+		return "0"
 	}
 
 	resp := &network.SubNodeSrcDataResponse{}
