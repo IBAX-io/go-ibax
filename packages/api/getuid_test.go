@@ -34,8 +34,12 @@ func TestGetUID(t *testing.T) {
 	sign, err := crypto.SignString(priv, `LOGIN`+ret.NetworkID+ret.UID)
 	if err != nil {
 		t.Error(err)
-	assert.NoError(t, sendGet(`network`, nil, &ret))
-	if len(ret.NetworkID) == 0 || len(ret.CentrifugoURL) == 0 || len(ret.HonorNodes) == 0 {
-		t.Error(`Wrong value`, ret)
+		return
 	}
-}
+	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)}}
+	var lret loginResult
+	err = sendPost(`login`, &form, &lret)
+	if err != nil {
+		t.Error(err)
+		return
+	}

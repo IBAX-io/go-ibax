@@ -139,6 +139,15 @@ func (bl *timeBlockLimit) check(t *transaction.Transaction, mode int) error {
 	}
 
 	return limitError("txBlockTimeLimit", "Block generation time exceeded")
+}
+
+// Checking the max tx from one user in the block
+type txUserLimit struct {
+	TxUsers map[int64]int // the counter of tx from one user
+	Limit   int           // the value of max tx from one user
+}
+
+func (bl *txUserLimit) init(b *Block) {
 	bl.TxUsers = make(map[int64]int)
 	bl.Limit = syspar.GetMaxBlockUserTx()
 }
@@ -230,21 +239,6 @@ func (bl *txMaxSize) check(t *transaction.Transaction, mode int) error {
 		if mode == letPreprocess {
 			return ErrLimitStop
 		}
-		return limitError(`txMaxSize`, `Max size of the block`)
-	}
-	return nil
-}
-
-// Checking the max tx & block size
-type txMaxFuel struct {
-	Fuel       int64 // the current fuel of the block
-	LimitBlock int64 // max fuel of the block
-	LimitTx    int64 // max fuel of tx
-}
-
-func (bl *txMaxFuel) init(b *Block) {
-	bl.LimitBlock = syspar.GetMaxBlockFuel()
-	bl.LimitTx = syspar.GetMaxTxFuel()
 }
 
 func (bl *txMaxFuel) check(t *transaction.Transaction, mode int) error {

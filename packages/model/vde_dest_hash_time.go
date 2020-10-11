@@ -5,14 +5,6 @@
 package model
 
 type VDEDestHashTime struct {
-	ID         int64 `gorm:"primary_key; not null" json:"id"`
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
-	return DBConn.Model(m).Updates(m).Error
-}
-
 func (m *VDEDestHashTime) Delete() error {
 	return DBConn.Delete(m).Error
 }

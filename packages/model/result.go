@@ -44,20 +44,6 @@ func (r *SingleResult) Int64() (int64, error) {
 func (r *SingleResult) Int() (int, error) {
 	if r.err != nil {
 		return 0, r.err
-	}
-	return converter.BytesToInt(r.result), nil
-}
-
-// Float64 converts string to float64
-func (r *SingleResult) Float64() (float64, error) {
-	if r.err != nil {
-		return 0, r.err
-	}
-	return converter.StrToFloat64(string(r.result)), nil
-}
-
-// String returns string
-func (r *SingleResult) String() (string, error) {
 	if r.err != nil {
 		return "", r.err
 	}
@@ -271,6 +257,19 @@ func getnodeResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
 // GetAll returns all transaction
 func GetAll(query string, countRows int, args ...interface{}) ([]map[string]string, error) {
 	return GetAllTransaction(nil, query, countRows, args)
+}
+
+// GetAllTx returns all tx's
+func GetAllTx(transaction *DbTransaction, query string, countRows int, args ...interface{}) ([]map[string]string, error) {
+	return GetAllTransaction(transaction, query, countRows, args)
+}
+
+// GetOneRowTransaction returns one row from transactions
+func GetOneRowTransaction(transaction *DbTransaction, query string, args ...interface{}) *OneRow {
+	result := make(map[string]string)
+	all, err := GetAllTransaction(transaction, query, 1, args...)
+	if err != nil {
+		return &OneRow{result, fmt.Errorf("%s in query %s %s", err, query, args)}
 	}
 	if len(all) == 0 {
 		return &OneRow{result, nil}

@@ -48,19 +48,20 @@ func TestTask(t *testing.T) {
 	sch := NewScheduler()
 
 	task := &Task{ID: taskID}
-
-	nextTime := task.Next(time.Now())
-	if nextTime != zeroTime {
-		t.Error("error")
-	}
-
-	task = &Task{CronSpec: "60 * * * *"}
-	err := sch.AddTask(task)
-	if errStr := err.Error(); errStr != "End of range (60) above maximum (59): 60" {
 		t.Error(err)
 	}
-	err = sch.UpdateTask(task)
-	if errStr := err.Error(); errStr != "End of range (60) above maximum (59): 60" {
+
+	err = sch.UpdateTask(&Task{ID: "task2"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	handler := &mockHandler{}
+	task = &Task{ID: taskID, CronSpec: "* * * * *", Handler: handler}
+	sch.UpdateTask(task)
+
+	now := time.Now()
+	time.Sleep(task.Next(now).Sub(now) + time.Second)
 
 	if handler.count == 0 {
 		t.Error("task not running")

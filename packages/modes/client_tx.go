@@ -77,19 +77,6 @@ func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key i
 
 			if !fo {
 				return "", errors.New("mineowner keyid not found")
-			}
-		}
-
-		if err := model.SendTx(rtx, rtx.SmartTx().KeyID); err != nil {
-			le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("sending tx")
-			return "", err
-		}
-
-		return string(converter.BinToHex(rtx.Hash())), nil
-	}
-
-	if err := model.SendTx(rtx, key); err != nil {
-		le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("sending tx")
 		return "", err
 	}
 
@@ -120,6 +107,18 @@ func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 		return "", err
 	}
 
+	ts := &model.TransactionStatus{
+		BlockID:  1,
+		Hash:     tx.TxHash,
+		Time:     time.Now().Unix(),
+		WalletID: key,
+		Type:     tx.TxType,
+	}
+
+	if err := ts.Create(); err != nil {
+		le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on creating tx status")
+		return "", err
+	}
 
 	res, _, err := tx.CallOBSContract()
 	if err != nil {
