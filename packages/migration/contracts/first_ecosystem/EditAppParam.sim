@@ -21,7 +21,3 @@ contract EditAppParam {
         var pars map
         if $Value {
             pars["value"] = $Value
-        }
-        if $Conditions {
-    }
-}

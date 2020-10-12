@@ -84,6 +84,12 @@ func sqlEnd(options ...string) (ret string) {
 			}
 			if len(pars) == 1 {
 				ret += fmt.Sprintf(`
+		add_index("%s", "%s", {})`, tblName, pars[0])
+			} else {
+				ret += fmt.Sprintf(`
+		add_index("%s", ["%s"], {})`, tblName, strings.Join(pars, `", "`))
+			}
+			continue
 		}
 		ret += fmt.Sprintf(`
 	sql("ALTER TABLE ONLY \"%[1]s\" ADD CONSTRAINT \"%[1]s_%[3]s\" %[2]s;")`, tblName, opt, cname)
@@ -200,13 +206,4 @@ func GetFirstTableScript(ecosystem int) (string, error) {
 }
 
 // GetCommonEcosystemScript returns script with common tables
-func GetCommonEcosystemScript() (string, error) {
-	sql, err := sqlConvert([]string{
-		sqlFirstEcosystemCommon,
-		sqlTimeZonesSQL,
-	})
-	if err != nil {
-		return ``, err
-	}
-	return sql + "\r\n" + timeZonesSQL, nil
 }

@@ -134,4 +134,5 @@ func VDESrcChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	result, err := srcData.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query chain info data by ID failed")
-		errorResponse(w, err)
+	jsonResponse(w, result)
+}

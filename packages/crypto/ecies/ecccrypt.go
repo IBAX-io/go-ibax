@@ -24,16 +24,17 @@ func init() {
 
 	ct, err := ecies.Encrypt(rand.Reader, &prv2.PublicKey, plainText, nil, nil)
 	return ct, err
-}
-//
-func EccDeCrypt(cryptText []byte,prv2 *ecies.PrivateKey) ([]byte, error) {
-	pt, err := prv2.Decrypt(cryptText, nil, nil)
-	return pt, err
-}*/
+			switch err.(type) {
+			case runtime.Error:
+				log.Println("runtime err:", err, "check key ")
+			default:
+				log.Println("error:", err)
+			}
+		}
+	}()
 
-//
-func EccPubEncrypt(plainText []byte, pub *ecdsa.PublicKey) (cryptText []byte, err error) { //
-
+	publicKey := ImportECDSAPublic(pub)
+	//
 	crypttext, err := Encrypt(rand.Reader, publicKey, plainText, nil, nil)
 
 	return crypttext, err

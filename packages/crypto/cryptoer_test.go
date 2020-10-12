@@ -12,11 +12,6 @@ func TestGetCryptoer(t *testing.T) {
 	src := []byte("Hello")
 	encodedStr := hex.EncodeToString(src)
 	fmt.Println(src)
-	fmt.Printf("%s\n", encodedStr)
-	prv, pub, err := c.genKeyPair()
-	if err != nil {
-		return
-	}
 	prvStr := hex.EncodeToString(prv)
 	pubStr := hex.EncodeToString(pub)
 	fmt.Println("privateKey is:", prv, "publicKey", pub)
@@ -49,3 +44,4 @@ func TestGetCryptoer(t *testing.T) {
 		log.Fatal(err)
 	}
 	fmt.Println(ok)
+}

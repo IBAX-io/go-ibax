@@ -105,6 +105,13 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 	if form.EcosystemID > 0 {
 		client.EcosystemID = form.EcosystemID
 	} else if client.EcosystemID == 0 {
+		logger.WithFields(log.Fields{"type": consts.EmptyObject}).Warning("state is empty, using 1 as a state")
+		client.EcosystemID = 1
+	}
+
+	if len(form.KeyID) > 0 {
+		wallet = converter.StringToAddress(form.KeyID)
+	} else if len(form.PublicKey.Bytes()) > 0 {
 		wallet = crypto.Address(form.PublicKey.Bytes())
 	}
 
@@ -233,15 +240,6 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if form.RoleID != 0 && client.RoleID == 0 {
-		checkedRole, err := checkRoleFromParam(form.RoleID, client.EcosystemID, account.AccountID)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-
-		if checkedRole != form.RoleID {
-			errorResponse(w, errCheckRole)
 			return
 		}
 

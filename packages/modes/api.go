@@ -18,15 +18,9 @@ func RegisterRoutes() http.Handler {
 		EcosysLookupGetter: BuildEcosystemLookupGetter(),
 		ContractRunner:     GetSmartContractRunner(),
 		ClientTxProcessor:  GetClientTxPreprocessor(),
-	}
 
-	r := api.NewRouter(m)
-	if !conf.Config.IsSupportingOBS() {
-		m.SetBlockchainRoutes(r)
-	}
-	if conf.GetGFiles() {
-		m.SetGafsRoutes(r)
-	}
+	//0303
+	if conf.Config.IsSupportingOBS() {
 		m.SetVDESrcRoutes(r)
 	}
 
