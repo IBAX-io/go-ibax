@@ -7,6 +7,17 @@ package api
 
 import (
 	"net/http"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
+type contractsResult struct {
+	Count string              `json:"count"`
+	List  []map[string]string `json:"list"`
 }
 
 func getContractsHandler(w http.ResponseWriter, r *http.Request) {
@@ -15,12 +26,6 @@ func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
-
-	client := getClient(r)
-	logger := getLogger(r)
-
-	contract := &model.Contract{}
-	contract.EcosystemID = client.EcosystemID
 
 	count, err := contract.CountByEcosystem()
 	if err != nil {

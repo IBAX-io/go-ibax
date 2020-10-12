@@ -12,10 +12,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 )
 
 type columnInfo struct {
@@ -61,6 +57,16 @@ func getTableHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal([]byte(table.Columns), &columnsMap)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("Unmarshalling table columns to json")
+		errorResponse(w, err)
+		return
+	}
+
+	columns := make([]columnInfo, 0)
+	for key, value := range columnsMap {
+		colType, err := model.GetColumnType(prefix+`_`+params["name"], key)
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column type from db")
+			errorResponse(w, err)
 			return
 		}
 		columns = append(columns, columnInfo{
