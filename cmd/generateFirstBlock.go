@@ -42,21 +42,6 @@ var generateFirstBlockCmd = &cobra.Command{
 	},
 }
 
-func init() {
-	generateFirstBlockCmd.Flags().StringVar(&stopNetworkBundleFilepath, "stopNetworkCert", "", "Filepath to the fullchain of certificates for network stopping")
-	generateFirstBlockCmd.Flags().BoolVar(&testBlockchain, "test", false, "if true - test blockchain")
-	generateFirstBlockCmd.Flags().BoolVar(&privateBlockchain, "private", false, "if true - all transactions will be free")
-}
-
-func genesisBlock() ([]byte, error) {
-	now := time.Now().Unix()
-	header := &utils.BlockData{
-		BlockID:      1,
-		Time:         now,
-		EcosystemID:  0,
-		KeyID:        conf.Config.KeyID,
-		NodePosition: 0,
-		Version:      consts.BlockVersion,
 	}
 
 	decodeKeyFile := func(kName string) []byte {
@@ -101,5 +86,22 @@ func genesisBlock() ([]byte, error) {
 			TxHeader: consts.TxHeader{
 				Type:  consts.TxTypeFirstBlock,
 				Time:  uint32(now),
+				KeyID: conf.Config.KeyID,
+			},
+			PublicKey:             decodeKeyFile(consts.PublicKeyFilename),
+			NodePublicKey:         decodeKeyFile(consts.NodePublicKeyFilename),
+			StopNetworkCertBundle: stopNetworkCert,
+			Test:                  test,
+			PrivateBlockchain:     pb,
+		},
+	)
+
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block body bin marshalling")
+	}
+
+	return block.MarshallBlock(header, [][]byte{tx}, &utils.BlockData{
+		Hash:          []byte(`0`),
+		RollbacksHash: []byte(`0`),
 	}, "")
 }

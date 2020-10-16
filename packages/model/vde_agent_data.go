@@ -1,5 +1,14 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+type VDEAgentData struct {
+	ID             int64  `gorm:"primary_key; not null" json:"id"`
+	DataUUID       string `gorm:"not null" json:"data_uuid"`
+	TaskUUID       string `gorm:"not null" json:"task_uuid"`
+	Hash           string `gorm:"not null" json:"hash"`
 	Data           []byte `gorm:"not null" json:"data"`
 	DataInfo       string `gorm:"type:jsonb" json:"data_info"`
 	VDESrcPubkey   string `gorm:"not null" json:"vde_src_pubkey"`
@@ -20,9 +29,6 @@ func (VDEAgentData) TableName() string {
 
 func (m *VDEAgentData) Create() error {
 	return DBConn.Create(&m).Error
-}
-
-func (m *VDEAgentData) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
 }
 

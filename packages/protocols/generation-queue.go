@@ -7,10 +7,6 @@ package protocols
 import (
 	"errors"
 	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 )
 
 // BlockTimeChecker allow check queue to generate current block
@@ -120,6 +116,10 @@ func (btc *BlockTimeCounter) RangeByTime(t time.Time) (start, end time.Time, err
 	return
 }
 
+// TimeToGenerate returns true if the generation queue at time belongs to the specified node
+func (btc *BlockTimeCounter) TimeToGenerate(at time.Time, nodePosition int) (bool, error) {
+	if nodePosition >= btc.numberNodes {
+		return false, WrongNodePositionError
 	}
 
 	position, err := btc.nodePosition(at)

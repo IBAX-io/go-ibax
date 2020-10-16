@@ -29,20 +29,6 @@ func GetMaxBlockID(host string) (blockID int64, err error) {
 }
 
 func getMaxBlock(host string) (blockID int64, err error) {
-	con, err := newConnection(host)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.ConnectionError, "host": host}).Debug("error connecting to host")
-		return -1, err
-	}
-	defer con.Close()
-
-	// send max block request
-	rt := &network.RequestType{
-		Type: network.RequestTypeMaxBlock,
-	}
-
-	if err := rt.Write(con); err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.ConnectionError, "host": host}).Error("on sending Max block request type")
 		return -1, err
 	}
 
@@ -88,6 +74,13 @@ func hostWithMaxBlock(ctx context.Context, hosts []string) (bestHost string, max
 			defer wg.Done()
 
 			resultChan <- blockAndHost{
+				host:    host,
+				blockID: blockID,
+				err:     err,
+			}
+		}(h)
+	}
+	wg.Wait()
 
 	var errCount int
 	for i := 0; i < len(hosts); i++ {

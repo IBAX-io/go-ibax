@@ -10,6 +10,9 @@ import (
 
 func TestDateTimeLocation(t *testing.T) {
 	type args struct {
+		unix         int64
+		locationName string
+	}
 	tests := []struct {
 		name    string
 		args    args
@@ -31,24 +34,6 @@ func TestDateTimeLocation(t *testing.T) {
 				t.Errorf("DateTimeLocation() = %v, want %v", got, tt.want)
 			}
 		})
-	}
-}
-
-func TestUnixDateTimeLocation(t *testing.T) {
-	type args struct {
-		value        string
-		locationName string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    int64
-		wantErr bool
-	}{
-		{"BadLocation", args{"", "Location/Bad"}, 0, true},
-		{"BadFormat", args{"2019-07-02", "Asia/Chongqing"}, 0, true},
-		{"Chongqing", args{"2019-07-02 10:00:00", "Asia/Chongqing"}, 1562032800, false},
-		{"Tokyo", args{"2019-07-02 11:00:00", "Asia/Tokyo"}, 1562032800, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

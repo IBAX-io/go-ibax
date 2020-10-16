@@ -11,3 +11,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 
 	"github.com/spf13/cobra"
+)
+	Short: "Show version",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(consts.Version())
+	},
+}

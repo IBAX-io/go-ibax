@@ -206,16 +206,17 @@ func VDEScheTaskInstallContractDest(ctx context.Context, d *daemon) error {
 //
 //	// deal with task data
 //	for _, item := range ScheTask {
-//		//fmt.Println("ScheTask:", item.TaskUUID)
-//		blockchain_http = item.ContractRunHttp
-//		blockchain_ecosystem = item.ContractRunEcosystem
-//		//fmt.Println("ContractRunHttp and ContractRunEcosystem:", blockchain_http, blockchain_ecosystem)
-//		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
+//		//api.ApiEcosystemID = int64(ecosystemID)
+//		vde_sche_apiAddress := blockchain_http
+//		vde_sche_apiEcosystemID := int64(ecosystemID)
+//
+//		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
+//		// Login
+//		//err := api.KeyLogin(src, api.ApiEcosystemID)
+//		gAuth_sche, _, gPrivate_sche, _, _, err := vde_api.KeyLogin(vde_sche_apiAddress, src, vde_sche_apiEcosystemID)
 //		if err != nil {
-//			log.WithFields(log.Fields{"error": err}).Error("encode error")
+//			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
 //			time.Sleep(2 * time.Second)
-//			continue
-//		}
 //			continue
 //		}
 //		//fmt.Println("Login OK!")

@@ -135,8 +135,9 @@ const (
 
 	// FirstBlockFilename name of first block binary file
 	FirstBlockFilename = "1block"
-	// NodePrivateKeyFilename name of node private key file
-	NodePrivateKeyFilename = "NodePrivateKey"
+
+	// PrivateKeyFilename name of wallet private key file
+	PrivateKeyFilename = "PrivateKey"
 
 	// NodePublicKeyFilename name of node public key file
 	NodePublicKeyFilename = "NodePublicKey"

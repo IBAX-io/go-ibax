@@ -323,6 +323,18 @@ func getBlocks(ctx context.Context, host string, blockID, minCount int64) ([]*bl
 		if blockID < 2 {
 			break
 		}
+
+		// if the limit of blocks received from the node was exaggerated
+		if len(blocks) >= int(rollback) {
+			break
+		}
+
+		bl, err := block.ProcessBlockWherePrevFromBlockchainTable(binaryBlock, true)
+		if err != nil {
+			return nil, err
+		}
+
+		if bl.Header.BlockID != nextBlockID {
 			log.WithFields(log.Fields{"header_block_id": bl.Header.BlockID, "block_id": blockID, "type": consts.InvalidObject}).Error("block ids does not match")
 			return nil, utils.WithBan(errors.New("bad block_data['block_id']"))
 		}
@@ -366,24 +378,6 @@ func processBlocks(blocks []*block.Block) error {
 
 		if prevBlocks[b.Header.BlockID-1] != nil {
 			b.PrevHeader.Hash = prevBlocks[b.Header.BlockID-1].Header.Hash
-			b.PrevHeader.RollbacksHash = prevBlocks[b.Header.BlockID-1].Header.RollbacksHash
-			b.PrevHeader.Time = prevBlocks[b.Header.BlockID-1].Header.Time
-			b.PrevHeader.BlockID = prevBlocks[b.Header.BlockID-1].Header.BlockID
-			b.PrevHeader.EcosystemID = prevBlocks[b.Header.BlockID-1].Header.EcosystemID
-			b.PrevHeader.KeyID = prevBlocks[b.Header.BlockID-1].Header.KeyID
-			b.PrevHeader.NodePosition = prevBlocks[b.Header.BlockID-1].Header.NodePosition
-		}
-
-		b.Header.Hash = crypto.DoubleHash([]byte(b.Header.ForSha(b.PrevHeader, b.MrklRoot)))
-
-		if err := b.Check(); err != nil {
-			dbTransaction.Rollback()
-			return err
-		}
-
-		if err := b.Play(dbTransaction); err != nil {
-			dbTransaction.Rollback()
-			return utils.ErrInfo(err)
 		}
 		prevBlocks[b.Header.BlockID] = b
 

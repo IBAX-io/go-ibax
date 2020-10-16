@@ -6,11 +6,6 @@
 package daemons
 
 import (
-	"context"
-	"encoding/json"
-	"strings"
-	"sync/atomic"
-	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -130,6 +125,14 @@ func SendPrivateData(ctx context.Context, d *daemon) error {
 				m.TcpSendState = 1
 				if key < len(m.TcpSendStateFlag) {
 					TcpSendStateFlag := []byte(m.TcpSendStateFlag)
+					TcpSendStateFlag[key] = '1'
+					m.TcpSendStateFlag = string(TcpSendStateFlag)
+				}
+				err = m.Updates()
+				if err != nil {
+					log.WithError(err)
+				}
+			}
 		} //1
 		if tran_mode == "2" { //ALL DATA up chain transport mode, not need to send
 			m.TcpSendState = 1

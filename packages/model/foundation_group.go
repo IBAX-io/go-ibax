@@ -34,16 +34,8 @@ func (m *FoundationGroup) GetByDevid(transaction *DbTransaction, devid int64) (d
 	if f {
 		fb, err := m.GetByKeyid(transaction, mo.Keyid)
 		if err != nil {
-			return ret, err
-		}
-		if !fb {
-			return ret, nil
-		}
-
-		var sp StateParameter
-		sp.ecosystem = 1
-		fs, err := sp.Get(transaction, "foundation_balance")
-		if err != nil {
+		if !fs {
+			return ret, errors.New("foundation_balance not found")
 		}
 		var ap AppParam
 		fa, err := ap.GetFoundationbalance(transaction)

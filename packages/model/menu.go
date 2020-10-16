@@ -20,3 +20,9 @@ type Menu struct {
 // SetTablePrefix is setting table prefix
 func (m *Menu) SetTablePrefix(prefix string) {
 	m.ecosystem = converter.StrToInt64(prefix)
+}
+
+// TableName returns name of table
+func (m Menu) TableName() string {
+	if m.ecosystem == 0 {
+		m.ecosystem = 1
