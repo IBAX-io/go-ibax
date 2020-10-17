@@ -109,20 +109,6 @@ func keyLogin(state int64) (err error) {
 		key, sign []byte
 	)
 
-	key, err = os.ReadFile(`key`)
-	if err != nil {
-		return
-	}
-	if len(key) > 64 {
-		key = key[:64]
-	}
-	var ret getUIDResult
-	err = sendGet(`getuid`, nil, &ret)
-	if err != nil {
-		return
-	}
-	gAuth = ret.Token
-	if len(ret.UID) == 0 {
 		return fmt.Errorf(`getuid has returned empty uid`)
 	}
 
@@ -549,6 +535,25 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 
 		switch field.Type {
 		case "bool":
+			params[name], err = strconv.ParseBool(value)
+		case "int", "address":
+			params[name], err = strconv.ParseInt(value, 10, 64)
+		case "float":
+			params[name], err = strconv.ParseFloat(value, 64)
+		case "array":
+			var v interface{}
+			err = json.Unmarshal([]byte(value), &v)
+			params[name] = v
+		case "map":
+			var v map[string]interface{}
+			err = json.Unmarshal([]byte(value), &v)
+			params[name] = v
+		case "string", "money":
+			params[name] = value
+		case "file", "bytes":
+			if cp, ok := form.(*contractParams); !ok {
+				err = fmt.Errorf("Form is not *contractParams type")
+			} else {
 				params[name] = cp.GetRaw(name)
 			}
 		}

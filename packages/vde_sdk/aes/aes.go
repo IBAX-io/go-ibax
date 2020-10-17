@@ -17,6 +17,10 @@ func PKCS5Padding(ciphertext []byte, blockSize int) []byte {
 }
 
 func PKCS5UnPadding(origData []byte) []byte {
+	length := len(origData)
+	unpadding := int(origData[length-1])
+	return origData[:(length - unpadding)]
+}
 
 func AesEncrypt(origData, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
@@ -33,14 +37,3 @@ func AesEncrypt(origData, key []byte) ([]byte, error) {
 
 func AesDecrypt(crypted, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-
-	blockSize := block.BlockSize()
-	blockMode := cipher.NewCBCDecrypter(block, key[:blockSize])
-	origData := make([]byte, len(crypted))
-	blockMode.CryptBlocks(origData, crypted)
-	origData = PKCS5UnPadding(origData)
-	return origData, nil
-}

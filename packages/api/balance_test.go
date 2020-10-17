@@ -1,6 +1,9 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
 
 import (
 	"encoding/json"
@@ -79,14 +82,3 @@ func TestMoneyMoreSend(t *testing.T) {
 	//	if err := postTx(`TokensSend`, &form); err != nil {
 	//		t.Error(err)
 	//		return
-	//	}
-	//	time.Sleep(2 * time.Second)
-	//}
-
-	form := url.Values{`Amount`: {`-1`}, `Account`: {`0323-3625-0280-2110-5478`}, `Type`: {`1`}}
-	if err := postTx(`AddAssignMember`, &form); err != nil {
-		t.Error(err)
-		return
-	}
-
-}

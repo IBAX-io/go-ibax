@@ -69,14 +69,6 @@ func unmarshalColumnVDESrcData(form *VDESrcDataForm) (*model.VDESrcData, error) 
 //	if err != nil {
 //		log.WithFields(log.Fields{"error": err}).Error("unmarshal DataInfo error")
 //	}
-//
-//	m := &model.VDESrcData{
-//		TaskUUID:     form.TaskUUID,
-//		DataUUID:     form.DataUUID,
-//		Hash:         form.Hash,
-//		Data:         []byte(form.Data),
-//		DataInfo:     converter.MarshalJson(datainfo),
-//		DataState:    int64(form.DataState),
 //		DataErr:      form.DataErr,
 //	}
 //
@@ -213,3 +205,8 @@ func VDESrcDataByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query task data by TaskUUID failed")
 		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, result)
+}

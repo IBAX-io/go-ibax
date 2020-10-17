@@ -1,3 +1,7 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
 package model
 
@@ -53,22 +57,3 @@ func GetQueuedTransactionsCount(hash []byte) (int64, error) {
 }
 
 // GetAllUnverifiedAndUnusedTransactions is returns all unverified and unused transaction
-func GetAllUnverifiedAndUnusedTransactions(dbTransaction *DbTransaction, limit int) ([]*QueueTx, error) {
-	query := `SELECT *
-		  FROM (
-	              SELECT data,
-	                     hash,expedite,time
-	              FROM queue_tx
-		      UNION
-		      SELECT data,
-			     hash,expedite,time
-		      FROM transactions
-		      WHERE verified = 0 AND used = 0
-			)  AS x ORDER BY expedite DESC,time ASC limit ?`
-	var result []*QueueTx
-	err := GetDB(dbTransaction).Raw(query, limit).Scan(&result).Error
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}

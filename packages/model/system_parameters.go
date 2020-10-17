@@ -19,20 +19,6 @@ type SystemParameter struct {
 }
 
 // TableName returns name of table
-func (sp SystemParameter) TableName() string {
-	return "1_system_parameters"
-}
-
-// Get is retrieving model from database
-func (sp *SystemParameter) Get(name string) (bool, error) {
-	return isFound(DBConn.Where("name = ?", name).First(sp))
-}
-
-// GetTransaction is retrieving model from database using transaction
-func (sp *SystemParameter) GetTransaction(transaction *DbTransaction, name string) (bool, error) {
-	return isFound(GetDB(transaction).Where("name = ?", name).First(sp))
-}
-
 // GetJSONField returns fields as json
 func (sp *SystemParameter) GetJSONField(jsonField string, name string) (string, error) {
 	var result string
@@ -111,3 +97,7 @@ func (sp *SystemParameter) GetPoolBlockRate(dbt *DbTransaction) (int64, error) {
 		if len(sp.Value) > 0 {
 			return strconv.ParseInt(sp.Value, 10, 64)
 		}
+	}
+
+	return 0, errors.New("pool_block_rate not found")
+}

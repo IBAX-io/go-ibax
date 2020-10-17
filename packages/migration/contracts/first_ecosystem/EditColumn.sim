@@ -13,4 +13,3 @@ contract EditColumn {
 
     action {
         PermColumn($TableName, $Name, $Permissions)
-    }

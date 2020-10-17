@@ -48,10 +48,12 @@ func TestTask(t *testing.T) {
 	sch := NewScheduler()
 
 	task := &Task{ID: taskID}
-		t.Error(err)
+
+	nextTime := task.Next(time.Now())
+	if nextTime != zeroTime {
+		t.Error("error")
 	}
 
-	err = sch.UpdateTask(&Task{ID: "task2"})
 	if err != nil {
 		t.Error(err)
 	}

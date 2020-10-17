@@ -184,17 +184,6 @@ func (mgr *OBSManager) ListProcessWithPorts() (map[string]string, error) {
 		c := &conf.GlobalConfig{}
 		if err := conf.LoadConfigToVar(path, c); err != nil {
 			log.WithFields(log.Fields{"type": "dbError", "error": err, "path": path}).Warn("on loading child OBS config")
-			continue
-		}
-
-		list[name] = fmt.Sprintf("%s %d", status, c.HTTP.Port)
-	}
-
-	return list, err
-}
-
-// DeleteOBS stop OBS process and remove OBS folder
-func (mgr *OBSManager) DeleteOBS(name string) error {
 
 	if mgr.processes == nil {
 		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("deleting OBS")
@@ -371,6 +360,12 @@ func dropOBSDir(configsPath, obsName string) error {
 	path := path.Join(configsPath, obsName)
 	if directoryExists(path) {
 		os.RemoveAll(path)
+	}
+
+	log.WithFields(log.Fields{"path": path}).Error("droping dir is not exists")
+	return nil
+}
+
 func directoryExists(path string) bool {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {

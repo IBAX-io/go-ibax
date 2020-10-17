@@ -88,14 +88,6 @@ func compareNotificationRecordResult(have, want map[int64]*[]notificationRecord)
 			return fmt.Errorf("Have does'nt contains %d recipient", wRecipient)
 		}
 
-		for _, rec := range *wRecords {
-			if !containsNotificationRecord(*hRecords, rec) {
-				return fmt.Errorf("recipient %d does'nt contains %+v", wRecipient, rec)
-			}
-		}
-	}
-
-	return nil
 }
 
 func containsNotificationRecord(slice []notificationRecord, rec notificationRecord) bool {
@@ -196,6 +188,19 @@ func TestStatsChanged(t *testing.T) {
 		tsc{
 			old: nil,
 			new: []notificationRecord{
+				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
+				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
+				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
+			},
+			result: true,
+		},
+		// old has value - now nil
+		tsc{
+			old: []notificationRecord{
+				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
+				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
+				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
+			},
 
 			new:    nil,
 			result: true,
