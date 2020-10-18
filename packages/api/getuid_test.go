@@ -43,3 +43,8 @@ func TestGetUID(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	assert.NoError(t, sendGet(`network`, nil, &ret))
+	if len(ret.NetworkID) == 0 || len(ret.CentrifugoURL) == 0 || len(ret.HonorNodes) == 0 {
+		t.Error(`Wrong value`, ret)
+	}
+}

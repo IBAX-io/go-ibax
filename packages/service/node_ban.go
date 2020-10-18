@@ -13,6 +13,20 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/utils/tx"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+)
+
+type localBannedNode struct {
+	HonorNode      *syspar.HonorNode
+	LocalUnBanTime time.Time
+}
+
+type NodesBanService struct {
+	localBannedNodes map[int64]localBannedNode
 	honorNodes       []syspar.HonorNode
 
 	m *sync.Mutex
@@ -31,15 +45,6 @@ func InitNodesBanService() error {
 		localBannedNodes: make(map[int64]localBannedNode),
 		m:                &sync.Mutex{},
 	}
-
-	nbs.refreshNodes()
-	return nil
-}
-
-// RegisterBadBlock is set node to local ban and saving bad block to global registry
-func (nbs *NodesBanService) RegisterBadBlock(node syspar.HonorNode, badBlockId, blockTime int64, reason string, register bool) error {
-	if nbs.IsBanned(node) {
-		return nil
 	}
 
 	nbs.localBan(node)

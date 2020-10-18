@@ -32,14 +32,6 @@ func GetDataFromXLSX(sc *SmartContract, binaryID, startLine, linesCount, sheetNu
 	for ; startLine < endLine; startLine++ {
 		var row []interface{}
 		for _, item := range rows[startLine] {
-			row = append(row, item)
-		}
-		processedRows = append(processedRows, row)
-
-// GetRowsCountXLSX returns count of rows from excel file
-func GetRowsCountXLSX(sc *SmartContract, binaryID, sheetNum int64) (int64, error) {
-	book, err := excelBookFromStoredBinary(sc, binaryID)
-	if err != nil {
 		return -1, err
 	}
 
