@@ -193,6 +193,22 @@ func TestVMCompile(t *testing.T) {
 						FirstName  string
 						MiddleName string "optional"
 						LastName   string
+					}
+					func init string {
+						return "OK"
+					}
+				}`, `my.init`, `OK`},
+
+		{`func temp3 string {
+						var i1 i2 int, s1 string, s2 string
+						i2, i1 = 348, 7
+						if i1 > 5 {
+							var i5 int, s3 string
+							i5 = 26788
+							s1 = "s1 string"
+							i2 = (i1+2)*i5+i2
+							s2 = Sprintf("temp 3 function %s %d", Sprintf("%s + %d", s1, i2), -1 )
+						}
 						return s2
 					}`, `temp3`, `temp 3 function s1 string + 241440 -1`},
 		{`func params2(myval int, mystr string ) string {
@@ -364,12 +380,6 @@ func TestVMCompile(t *testing.T) {
 			}
 			return m["id"] + "=" + GetData().WhereId(100).One("name")
 		}`, `result`, `123=Test value 100`},
-		{`func mapbug() string {
-			$data[10] = "extend ok"
-			return $data[10]
-			}`, `mapbug`, `extend ok`},
-		{`func result() string {
-				var myarr array
 				myarr[0] = "string"
 				myarr[1] = 7
 				myarr[2] = "9th item"

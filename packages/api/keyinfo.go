@@ -23,6 +23,12 @@ type roleInfo struct {
 }
 
 type notifyInfo struct {
+	RoleID string `json:"role_id"`
+	Count  int64  `json:"count"`
+}
+
+type keyInfoResult struct {
+	Account    string              `json:"account"`
 	Ecosystems []*keyEcosystemInfo `json:"ecosystems"`
 }
 
@@ -126,15 +132,6 @@ func (m Mode) getNotifications(ecosystemID int64, key *model.Key) ([]notifyInfo,
 	}
 
 	list := make([]notifyInfo, 0)
-	for _, n := range notif {
-		if n.RecipientID != key.ID {
-			continue
-		}
-
-		list = append(list, notifyInfo{
-			RoleID: converter.Int64ToStr(n.RoleID),
-			Count:  n.Count,
-		})
 	}
 	return list, nil
 }

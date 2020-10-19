@@ -9,21 +9,21 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"log"
-	"runtime"
-
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-)
-
-func init() {
-	log.SetFlags(log.Ldate | log.Lshortfile)
-}
-
-//
-//Ecc
-/*func EccEnCrypt(plainText []byte,prv2 *ecies.PrivateKey)(crypText []byte,err error){
 
 	ct, err := ecies.Encrypt(rand.Reader, &prv2.PublicKey, plainText, nil, nil)
 	return ct, err
+}
+//
+func EccDeCrypt(cryptText []byte,prv2 *ecies.PrivateKey) ([]byte, error) {
+	pt, err := prv2.Decrypt(cryptText, nil, nil)
+	return pt, err
+}*/
+
+//
+func EccPubEncrypt(plainText []byte, pub *ecdsa.PublicKey) (cryptText []byte, err error) { //
+
+	defer func() {
+		if err := recover(); err != nil {
 			switch err.(type) {
 			case runtime.Error:
 				log.Println("runtime err:", err, "check key ")

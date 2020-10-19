@@ -1,6 +1,3 @@
 // +prop AppID = '{{.AppID}}'
-// +prop Conditions = 'ContractConditions("MainCondition")'
-contract MainCondition {
-	conditions {
-		if EcosysParam("founder_account")!=$key_id
-		{
+	}
+}

@@ -26,14 +26,6 @@ const (
 	eParamNotFound       = `Parameter %s has not been found`
 	eRecordNotFound      = `Record %s has not been found`
 	eTableExists         = `table %s exists`
-	eTableNotFound       = `table %s has not been found`
-	eTypeJSON            = `Type %T doesn't support json marshalling`
-	eUnknownContract     = `Unknown contract %s`
-	eUnsupportedType     = "Unsupported type %T"
-	eWrongRandom         = `Wrong random parameters %d %d`
-	eConditionNotAllowed = `condition %s is not allowed`
-	eGreaterThan         = `%s must be greater than 0`
-	eTableNotEmpty       = `Table %s is not empty`
 	eColumnNotDeleted    = `Column %s cannot be deleted`
 	eRollbackContract    = `Wrong rollback of the latest contract %d != %d`
 	eExternalNet         = `External network %s is not defined`
@@ -82,3 +74,8 @@ var (
 	errParseTransaction   = errors.New(`parse transaction`)
 	errWhereUpdate        = errors.New(`there is not Where in Update request`)
 	errNotValidUTF        = errors.New(`result is not valid utf-8 string`)
+	errFloat              = errors.New(`incorrect float value`)
+	errFloatResult        = errors.New(`incorrect float result`)
+
+	errMaxPrice = fmt.Errorf(`price value is more than %d`, MaxPrice)
+)

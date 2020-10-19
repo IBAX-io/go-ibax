@@ -965,6 +965,13 @@ func TestNewMineStakeRule(t *testing.T) {
 
 //release mine stake rule
 func TestReleaseMineStakeRule(t *testing.T) {
+	assert.NoError(t, keyLoginex(1, "1"))
+	rnd := `ReleaseMineStakeRule`
+	form := url.Values{
+		`RuleID`:  {`1`},
+		`Release`: {`1`},
+	}
+	_, _, err := postTxResult(rnd, &form)
 	assert.NoError(t, err)
 }
 
@@ -1046,25 +1053,6 @@ func TestReviewMineStakeRule(t *testing.T) {
 	_, _, err := postTxResult(rnd, &form)
 	assert.NoError(t, err)
 }
-
-//mier switch
-func TestSwitchMineOwnerForKeyID(t *testing.T) {
-	assert.NoError(t, keyLoginex(1, "2"))
-	rnd := `SwitchMineOwnerForKeyID`
-	form := url.Values{
-		`DevAddr`:    {`0874-3258-8928-9828-0009`},
-		`NewKeyAddr`: {`1448-9912-4891-3624-0588`},
-	}
-	_, _, err := postTxResult(rnd, &form)
-	assert.NoError(t, err)
-}
-
-//withdrawmine stake
-func TestWithdrawMineStake(t *testing.T) {
-	assert.NoError(t, keyLoginex(1, "2"))
-	rnd := `WithdrawMineStake`
-	form := url.Values{
-		`StakeID`: {`1`},
 	}
 	_, _, err := postTxResult(rnd, &form)
 	assert.NoError(t, err)
