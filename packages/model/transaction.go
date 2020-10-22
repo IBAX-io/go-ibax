@@ -49,23 +49,6 @@ func GetAllUnusedTransactions(dbTransaction *DbTransaction, limit int) ([]*Trans
 	}
 
 	if err := query.Find(&transactions).Error; err != nil {
-		return nil, err
-	}
-	return transactions, nil
-}
-
-// GetAllUnsentTransactions is retrieving all unset transactions
-func GetAllUnsentTransactions(limit int) (*[]Transaction, error) {
-	transactions := new([]Transaction)
-	query := DBConn.Where("sent = ?", "0").Order(expediteOrder)
-	if limit > 0 {
-		query = query.Limit(limit)
-	}
-	if err := query.Find(&transactions).Error; err != nil {
-		return nil, err
-	}
-	return transactions, nil
-}
 
 // GetTransactionCountAll count all transactions
 func GetTransactionCountAll() (int64, error) {
@@ -156,6 +139,18 @@ func (t *Transaction) BeforeCreate(db *gorm.DB) error {
 // Create is creating record of model
 func (t *Transaction) Create(db *DbTransaction) error {
 	return GetDB(db).Create(&t).Error
+}
+
+// CreateTransactionBatches is creating record of model
+func CreateTransactionBatches(db *DbTransaction, trs []*Transaction) error {
+	return GetDB(db).Clauses(clause.OnConflict{DoNothing: true}).Create(&trs).Error
+}
+
+func (t *Transaction) BeforeUpdate(db *gorm.DB) error {
+	return db.Where("hash = ?", t.Hash).FirstOrCreate(&t).Error
+}
+
+func (t *Transaction) Update(db *DbTransaction) error {
 	return GetDB(db).Where("hash = ?", t.Hash).Updates(&t).Error
 }
 

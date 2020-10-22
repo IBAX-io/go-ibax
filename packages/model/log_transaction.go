@@ -22,9 +22,6 @@ func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
 func (lt *LogTransaction) Create(transaction *DbTransaction) error {
 	return GetDB(transaction).Create(lt).Error
 }
-
-func CreateLogTransactionBatches(dbTx *gorm.DB, lts []*LogTransaction) error {
-	return query.RowsAffected, query.Error
 }
 
 // GetLogTransactionsCount count records by transaction hash

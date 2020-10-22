@@ -1,17 +1,16 @@
 /*---------------------------------------------------------------------------------------------
-	StopTime int64 `gorm:"not null"`
-}
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
-// TableName returns name of table
-func (sd *StopDaemon) TableName() string {
-	return "stop_daemons"
-}
+package model
 
-// Create is creating record of model
-func (sd *StopDaemon) Create() error {
-	return DBConn.Create(sd).Error
-}
+import (
+	"time"
+)
 
+// StopDaemon is model
+type StopDaemon struct {
 // Delete is deleting record
 func (sd *StopDaemon) Delete() error {
 	return DBConn.Delete(&StopDaemon{}).Error

@@ -38,14 +38,15 @@ func VDEDestDataStatus(ctx context.Context, d *daemon) error {
 	for _, item := range ShareData {
 		//fmt.Println("TaskUUID,DataUUID:", item.TaskUUID, item.DataUUID)
 		m := &model.VDEDestDataHash{}
-			log.WithFields(log.Fields{"error": err}).Error("Hash does not match！")
-		}
-		err = item.Updates()
+		dataHash, err := m.GetOneByTaskUUIDAndDataUUID(item.TaskUUID, item.DataUUID)
 		if err != nil {
-			log.WithError(err)
+			//log.WithFields(log.Fields{"error": err}).Error("getting one hash data by TaskUUID ans DataUUID")
+			//time.Sleep(time.Second * 1)
 			continue
 		}
-
-	} //for
-	return nil
-}
+		if item.Hash == dataHash.Hash {
+			item.HashState = 1 //
+			//fmt.Println("Hash match!")
+		} else {
+			item.HashState = 2 //
+			log.WithFields(log.Fields{"error": err}).Error("Hash does not match！")

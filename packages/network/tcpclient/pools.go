@@ -15,18 +15,27 @@ func powerOfTwo(v int) int64 {
 	v |= v >> 2
 	v |= v >> 4
 	v |= v >> 8
+	v |= v >> 16
+	v++
+	return int64(v)
+}
+
+var BytesPool *bytePool
+
+func init() {
+	BytesPool = &bytePool{
+		pools: make(map[int64]*sync.Pool),
+	}
+}
+
+type bytePool struct {
+	pools map[int64]*sync.Pool
 }
 
 func (p *bytePool) Get(size int64) []byte {
 	power := powerOfTwo(int(size))
 	if pool, ok := p.pools[power]; ok {
 		return pool.Get().([]byte)
-	}
-
-	pool := &sync.Pool{
-		New: func() interface{} { return make([]byte, power) },
-	}
-
 	p.pools[power] = pool
 	return pool.Get().([]byte)
 }

@@ -1,14 +1,4 @@
 /*---------------------------------------------------------------------------------------------
-
-import (
-	"fmt"
-	"strings"
-
-	"github.com/cactus/go-statsd-client/v5/statsd"
-)
-
-const (
-	Count = ".count"
 	Time  = ".time"
 )
 

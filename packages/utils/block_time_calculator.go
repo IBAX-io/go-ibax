@@ -53,21 +53,6 @@ func (btc *BlockTimeCalculator) TimeToGenerate(nodePosition int64) (bool, error)
 	blocks, err := btc.blocksCounter.count(bgs)
 	if err != nil {
 		return false, err
-	}
-
-	if blocks != 0 {
-		return false, DuplicateBlockError
-	}
-
-	return bgs.nodePosition == nodePosition, nil
-}
-
-func (btc *BlockTimeCalculator) ValidateBlock(nodePosition int64, at time.Time) (bool, error) {
-	bgs, err := btc.countBlockTime(at)
-	if err != nil {
-		return false, err
-	}
-
 	blocks, err := btc.blocksCounter.count(bgs)
 	if err != nil {
 		return false, err
@@ -104,6 +89,14 @@ func (btc *BlockTimeCalculator) countBlockTime(blockTime time.Time) (blockGenera
 		curBlockEnd := curBlockStart.Add(btc.blocksGap + btc.blockGenerationTime)
 		nextBlockStart = curBlockEnd.Add(time.Second)
 
+		if blockTime.Equal(curBlockStart) || blockTime.After(curBlockStart) && blockTime.Before(nextBlockStart) {
+			bgs.start = curBlockStart
+			bgs.duration = btc.blocksGap + btc.blockGenerationTime
+			bgs.nodePosition = curNodeIndex
+			return bgs, nil
+		}
+
+		if btc.nodesCount > 0 {
 			curNodeIndex = (curNodeIndex + 1) % btc.nodesCount
 		}
 	}

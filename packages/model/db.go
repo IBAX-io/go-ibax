@@ -53,6 +53,18 @@ type NextIDGetter struct {
 func (g NextIDGetter) GetNextID(tableName string) (int64, error) {
 	return GetNextID(g.Tx, tableName)
 }
+func isFound(db *gorm.DB) (bool, error) {
+	if errors.Is(db.Error, ErrRecordNotFound) {
+		return false, nil
+	}
+	return true, db.Error
+}
+
+// GormInit is initializes Gorm connection
+func GormInit(host string, port int, user string, pass string, dbName string) error {
+	var err error
+	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable password=%s TimeZone=UTC", host, port, user, dbName, pass)
+open:
 	DBConn, err = gorm.Open(postgres.New(postgres.Config{
 		DSN:                  dsn,
 		PreferSimpleProtocol: true, // disables implicit prepared statement usage
@@ -232,14 +244,6 @@ func GetRecordsCountTx(db *DbTransaction, tableName, where string) (count int64,
 		count = notAutoIncrementCost
 	}
 	return count, err
-}
-
-// Update is updating table rows
-func Update(transaction *DbTransaction, tblname, set, where string) error {
-	return GetDB(transaction).Exec(`UPDATE "` + strings.Trim(tblname, `"`) + `" SET ` + set + " " + where).Error
-}
-
-// Delete is deleting table rows
 func Delete(transaction *DbTransaction, tblname, where string) error {
 	return GetDB(transaction).Exec(`DELETE FROM "` + tblname + `" ` + where).Error
 }

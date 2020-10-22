@@ -13,6 +13,7 @@ contract NewTable {
         }
         TableConditions($Name, $Columns, $Permissions)
     }
-    
+    func price() int {
+        return SysParamInt("table_price")
     }
 }

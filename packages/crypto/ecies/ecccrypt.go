@@ -9,6 +9,18 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"log"
+	"runtime"
+
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+)
+
+func init() {
+	log.SetFlags(log.Ldate | log.Lshortfile)
+}
+
+//
+//Ecc
+/*func EccEnCrypt(plainText []byte,prv2 *ecies.PrivateKey)(crypText []byte,err error){
 
 	ct, err := ecies.Encrypt(rand.Reader, &prv2.PublicKey, plainText, nil, nil)
 	return ct, err
@@ -57,13 +69,6 @@ func EccCryptoKey(plainText []byte, publickey string) (cryptoText []byte, err er
 		return nil, err
 	}
 	pub, err := crypto.GetPublicKeys(pubbuff)
-	if err != nil {
-		return nil, err
-	}
-	return EccPubEncrypt(plainText, pub)
-}
-
-func EccDeCrypto(cryptoText []byte, prikey []byte) ([]byte, error) {
 	pri, err := crypto.GetPrivateKeys(prikey)
 	if err != nil {
 		return nil, err
