@@ -218,22 +218,6 @@ func VDESrcData(ctx context.Context, d *daemon) error {
 		//Handle the case of multiple target VDE nodes
 		vde_dest_pubkey_slice := strings.Split(vde_dest_pubkey, ";")
 		vde_dest_ip_slice := strings.Split(vde_dest_ip, ";")
-		vde_agent_pubkey_slice := strings.Split(vde_agent_pubkey, ";")
-		vde_agent_ip_slice := strings.Split(vde_agent_ip, ";")
-		agent_mode_slice := strings.Split(agent_mode, ";")
-
-		vde_dest_num := len(vde_dest_pubkey_slice)
-		if len(vde_dest_ip_slice) != vde_dest_num {
-			log.WithFields(log.Fields{"error": err}).Error("vde_dest_ip parse error")
-			item.DataState = 3 //Indicates an error in parsing task parameters
-			err = item.Updates()
-			if err != nil {
-				log.WithError(err)
-			}
-			continue
-		}
-		if len(vde_agent_pubkey_slice) != vde_dest_num {
-			log.WithFields(log.Fields{"error": err}).Error("vde_agent_pubkey parse error")
 			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {
@@ -355,3 +339,4 @@ func VDESrcData(ctx context.Context, d *daemon) error {
 		}
 	} //for
 	return nil
+}

@@ -20,16 +20,6 @@ import (
 
 const jwtUIDExpire = time.Second * 5
 
-type getUIDResult struct {
-	UID         string `json:"uid,omitempty"`
-	Token       string `json:"token,omitempty"`
-	Expire      string `json:"expire,omitempty"`
-	EcosystemID string `json:"ecosystem_id,omitempty"`
-	KeyID       string `json:"key_id,omitempty"`
-	Address     string `json:"address,omitempty"`
-	NetworkID   string `json:"network_id,omitempty"`
-}
-
 func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 	result := new(getUIDResult)
 	result.NetworkID = converter.Int64ToStr(conf.Config.NetworkID)
@@ -61,3 +51,5 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	jsonResponse(w, result)
+}

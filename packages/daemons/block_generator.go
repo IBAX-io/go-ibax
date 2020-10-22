@@ -13,16 +13,6 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/block"
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/protocols"
-	"github.com/IBAX-io/go-ibax/packages/service"
-	"github.com/IBAX-io/go-ibax/packages/transaction"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // BlockGenerator is daemon that generates blocks
@@ -119,6 +109,16 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 
 	txs, err := dtx.RunForDelayBlockID(prevBlock.BlockID + 1)
 	if err != nil {
+		return err
+	}
+
+	trs, err := processTransactions(d.logger, txs, done, st.Unix())
+	if err != nil {
+		return err
+	}
+
+	// Block generation will be started only if we have transactions
+	if len(trs) == 0 {
 		return nil
 	}
 

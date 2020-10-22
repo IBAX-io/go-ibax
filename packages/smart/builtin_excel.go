@@ -30,8 +30,8 @@ func GetDataFromXLSX(sc *SmartContract, binaryID, startLine, linesCount, sheetNu
 	}
 	processedRows := []interface{}{}
 	for ; startLine < endLine; startLine++ {
-		var row []interface{}
-		for _, item := range rows[startLine] {
+	book, err := excelBookFromStoredBinary(sc, binaryID)
+	if err != nil {
 		return -1, err
 	}
 
