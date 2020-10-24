@@ -20,6 +20,13 @@ import (
 
 // Monitoring starts monitoring
 func Monitoring(w http.ResponseWriter, r *http.Request) {
+	var buf bytes.Buffer
+
+	infoBlock := &model.InfoBlock{}
+	_, err := infoBlock.Get()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")
+		logError(w, fmt.Errorf("can't get info block: %s", err))
 		return
 	}
 	addKey(&buf, "info_block_id", infoBlock.BlockID)
@@ -58,14 +65,4 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 func addKey(buf *bytes.Buffer, key string, value interface{}) error {
 	val, err := converter.InterfaceToStr(value)
 	if err != nil {
-		return err
-	}
-	line := fmt.Sprintf("%s\t%s\n", key, val)
-	buf.Write([]byte(line))
-	return nil
-}
-
-func logError(w http.ResponseWriter, err error) {
-	w.Write([]byte(err.Error()))
-	return
 }

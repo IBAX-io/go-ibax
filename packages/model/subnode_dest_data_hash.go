@@ -25,10 +25,6 @@ type SubNodeDestDataHash struct {
 	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
 	TranMode       int64  `gorm:"not null" json:"tran_mode"`
 
-	AuthState int64 `gorm:"not null" json:"auth_state"`
-	SignState int64 `gorm:"not null" json:"sign_state"`
-	HashState int64 `gorm:"not null" json:"hash_state"`
-
 	UpdateTime int64 `gorm:"not null" json:"update_time"`
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
@@ -65,6 +61,19 @@ func (m *SubNodeDestDataHash) GetOneByDataUUID(DataUUID string) (*SubNodeDestDat
 func (m *SubNodeDestDataHash) GetOneByTaskUUID(TaskUUID string) (*SubNodeDestDataHash, error) {
 	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
 	return m, err
+}
+func (m *SubNodeDestDataHash) GetAllByTaskUUID(TaskUUID string) ([]SubNodeDestDataHash, error) {
+	result := make([]SubNodeDestDataHash, 0)
+	err := DBConn.Table("subnode_dest_data_hash").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeDestDataHash) GetAllByDataStatus(AuthState int64, SignState int64, HashState int64) ([]SubNodeDestDataHash, error) {
+	result := make([]SubNodeDestDataHash, 0)
+	err := DBConn.Table("subnode_dest_data_hash").Where("auth_state = ? AND sign_state = ? AND hash_state = ?", AuthState, SignState, HashState).Find(&result).Error
+	return result, err
+}
+
 func (m *SubNodeDestDataHash) GetAllByHashState(HashState int64) ([]SubNodeDestDataHash, error) {
 	result := make([]SubNodeDestDataHash, 0)
 	err := DBConn.Table("subnode_dest_data_hash").Where("hash_state = ?", HashState).Find(&result).Error

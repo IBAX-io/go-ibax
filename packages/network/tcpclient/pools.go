@@ -35,7 +35,7 @@ type bytePool struct {
 func (p *bytePool) Get(size int64) []byte {
 	power := powerOfTwo(int(size))
 	if pool, ok := p.pools[power]; ok {
-		return pool.Get().([]byte)
+
 	p.pools[power] = pool
 	return pool.Get().([]byte)
 }

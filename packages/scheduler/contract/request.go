@@ -29,18 +29,8 @@ const (
 
 type authResult struct {
 	UID   string `json:"uid,omitempty"`
+	Token string `json:"token,omitempty"`
 }
-
-type contractResult struct {
-	Hash string `json:"hash"`
-	// These fields are used for OBS
-	Message struct {
-		Type  string `json:"type,omitempty"`
-		Error string `json:"error,omitempty"`
-	} `json:"errmsg,omitempty"`
-	Result string `json:"result,omitempty"`
-}
-
 // NodeContract creates a transaction to execute the contract.
 // The transaction is signed with a node key.
 func NodeContract(Name string) (result contractResult, err error) {

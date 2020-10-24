@@ -13,8 +13,11 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 )
-
-// rootCmd represents the base command when called without any subcommands
+	rootCmd.AddCommand(
+		generateFirstBlockCmd,
+		generateKeysCmd,
+		initDatabaseCmd,
+		rollbackCmd,
 		startCmd,
 		configCmd,
 		stopNetworkCmd,

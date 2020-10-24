@@ -11,17 +11,19 @@ The build process for go-ibax requires Go 1.12 or higher. If you don't have it: 
 
 You'll need to add Go's bin directories to your `$PATH` environment variable e.g., by adding these lines to your `/etc/profile` (for a system-wide installation) or `$HOME/.profile`:
 
-### Run
-
-1. Create the node configuration file:
-
-```bash
-$    go-ibax config
+```
+export PATH=$PATH:/usr/local/go/bin
+export PATH=$PATH:$GOPATH/bin
 ```
 
-2. Generate node keys:
+(If you run into trouble, see the [Go install instructions](https://golang.org/doc/install)).
 
-```bash
+#### Compile
+
+```
+$ export GOPROXY=https://athens.azurefd.net
+$ GO111MODULE=on go mod tidy -v
+
 $    go-ibax generateKeys
 ```
 

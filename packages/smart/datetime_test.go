@@ -35,6 +35,13 @@ func TestDateTimeLocation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUnixDateTimeLocation(t *testing.T) {
+	type args struct {
+		value        string
+		locationName string
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := UnixDateTimeLocation(tt.args.value, tt.args.locationName)

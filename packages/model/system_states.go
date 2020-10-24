@@ -61,9 +61,9 @@ func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
 // Delete is deleting record
 func (sys *Ecosystem) Delete(transaction *DbTransaction) error {
 	return GetDB(transaction).Delete(sys).Error
-}
-
-func (sys *Ecosystem) IsOpenMultiFee() bool {
-	if len(sys.Info) > 0 {
+				return true
+			}
+		}
+	}
 	return false
 }
