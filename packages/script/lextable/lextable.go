@@ -168,11 +168,6 @@ func main() {
 			alpha[128] = i
 		default:
 			alpha[ch] = i
-		}
-	}
-	out := `package script
-	// This file was generated with lextable.go
-	
 var (
 		alphabet = []byte{`
 	for i, ch := range alpha {
@@ -227,6 +222,21 @@ var (
 						ind = 3
 					case 'Q':
 						ind = 4
+					case 'r':
+						ind = AlphaSize - 1
+					default:
+						for k, ach := range alphabet {
+							if ach == ch {
+								ind = k
+								break
+							}
+						}
+					}
+					table[curstate][ind] = val
+					if ind == 0 { // default value
+						for i := range table[curstate] {
+							if table[curstate][i] == 0xFE0000 {
+								table[curstate][i] = val
 							}
 						}
 					}

@@ -8,17 +8,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func Type202(r *network.SubNodeAgentDataRequest) (*network.SubNodeAgentDataResponse, error) {
@@ -62,6 +51,20 @@ func Type202(r *network.SubNodeAgentDataRequest) (*network.SubNodeAgentDataRespo
 	encodeDataString := base64.StdEncoding.EncodeToString(eccData)
 	////
 
+	AgentMode := converter.StrToInt64(r.AgentMode)
+	TranMode := converter.StrToInt64(r.TranMode)
+	SubNodeDestData := model.SubNodeDestData{
+		TaskUUID:           r.TaskUUID,
+		DataUUID:           r.DataUUID,
+		AgentMode:          AgentMode,
+		TranMode:           TranMode,
+		Hash:               hash,
+		DataInfo:           r.DataInfo,
+		SubNodeSrcPubkey:   r.SubNodeSrcPubkey,
+		SubNodeAgentPubkey: r.SubNodeAgentPubkey,
+		SubNodeAgentIP:     r.SubNodeAgentIp,
+		SubNodeDestPubkey:  r.SubNodeDestPubkey,
+		SubNodeDestIP:      r.SubNodeDestIp,
 		//Data:         r.Data,
 		//Data:         data,
 		Data:       []byte(encodeDataString),

@@ -98,6 +98,23 @@ func (t *Table) GetColumns(transaction *DbTransaction, name, jsonKey string) (ma
 		return nil, err
 	}
 	defer rows.Close()
+	var key, value string
+	result := map[string]string{}
+	for rows.Next() {
+		rows.Scan(&key, &value)
+		result[key] = value
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetPermissions returns table permissions by name
+func (t *Table) GetPermissions(transaction *DbTransaction, name, jsonKey string) (map[string]string, error) {
+	keyStr := ""
+	if jsonKey != "" {
 		keyStr = `->'` + jsonKey + `'`
 	}
 	rows, err := GetDB(transaction).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(permissions`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
@@ -162,24 +179,6 @@ func GetRowConditionsByTableNameAndID(transaction *DbTransaction, tblname string
 	return Single(transaction, sql, id).String()
 }
 
-func GetTableQuery(table string, ecosystemID int64) *gorm.DB {
-	if converter.FirstEcosystemTables[table] {
-		return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)
-	}
-
-	return DBConn.Table(converter.ParseTable(table, ecosystemID))
-}
-
-func GetTableListQuery(table string, ecosystemID int64) *gorm.DB {
-	if converter.FirstEcosystemTables[table] {
-		return DBConn.Table("1_" + table)
-	}
-
-	return DBConn.Table(converter.ParseTable(table, ecosystemID))
-}
-
-//
-func SubNodeGetTableQuery(table string, ecosystemID int64) *gorm.DB {
 	//if converter.FirstEcosystemTables[table] {
 	//	return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)
 	//}
