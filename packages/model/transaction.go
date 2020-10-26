@@ -23,10 +23,6 @@ const (
 )
 const expediteOrder = `high_rate,expedite DESC,time ASC`
 
-type transactionRate int8
-
-// Transaction is model
-type Transaction struct {
 	Hash     []byte          `gorm:"private_key;not null"`
 	Data     []byte          `gorm:"not null"`
 	Used     int8            `gorm:"not null"`
@@ -49,6 +45,23 @@ func GetAllUnusedTransactions(dbTransaction *DbTransaction, limit int) ([]*Trans
 	}
 
 	if err := query.Find(&transactions).Error; err != nil {
+		return nil, err
+	}
+	return transactions, nil
+}
+
+// GetAllUnsentTransactions is retrieving all unset transactions
+func GetAllUnsentTransactions(limit int) (*[]Transaction, error) {
+	transactions := new([]Transaction)
+	query := DBConn.Where("sent = ?", "0").Order(expediteOrder)
+	if limit > 0 {
+		query = query.Limit(limit)
+	}
+	if err := query.Find(&transactions).Error; err != nil {
+		return nil, err
+	}
+	return transactions, nil
+}
 
 // GetTransactionCountAll count all transactions
 func GetTransactionCountAll() (int64, error) {

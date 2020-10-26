@@ -53,6 +53,10 @@ func (rt *RollbackTx) DeleteByHash(dbTransaction *DbTransaction) error {
 func (rt *RollbackTx) DeleteByHashAndTableName(transaction *DbTransaction) error {
 	return GetDB(transaction).Where("tx_hash = ? and table_name = ?", rt.TxHash, rt.NameTable).Delete(rt).Error
 }
+
+func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
+	if len(rts) == 0 {
+		return nil
 	}
 	rollbackSys := &RollbackTx{}
 	var err error
@@ -62,12 +66,6 @@ func (rt *RollbackTx) DeleteByHashAndTableName(transaction *DbTransaction) error
 	for i := 1; i < len(rts)+1; i++ {
 		rts[i-1].ID = rollbackSys.ID + int64(i) - 1
 	}
-	return dbTx.Model(&RollbackTx{}).Create(&rts).Error
-}
-
-// Create is creating record of model
-func (rt *RollbackTx) Create(transaction *DbTransaction) error {
-	return nil
 }
 
 // Get is retrieving model from database

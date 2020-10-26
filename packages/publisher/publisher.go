@@ -4,6 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 package publisher
 
+import (
+	"context"
+	"fmt"
+	"strconv"
+	"sync"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 
 	"github.com/centrifugal/gocent"
 	jwt "github.com/dgrijalva/jwt-go"
@@ -30,24 +39,6 @@ func (cn *ClientsChannels) Get(id int64) string {
 var (
 	clientsChannels   = ClientsChannels{storage: make(map[int64]string)}
 	centrifugoTimeout = time.Second * 5
-	publisher         *gocent.Client
-	config            conf.CentrifugoConfig
-)
-
-type CentJWT struct {
-	Sub string
-	jwt.StandardClaims
-}
-
-// InitCentrifugo client
-func InitCentrifugo(cfg conf.CentrifugoConfig) {
-	config = cfg
-	publisher = gocent.New(gocent.Config{
-		Addr: cfg.URL,
-		Key:  cfg.Key,
-	})
-}
-
 func GetJWTCent(userID, expire int64) (string, string, error) {
 	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
 

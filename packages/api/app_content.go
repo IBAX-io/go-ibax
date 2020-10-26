@@ -1,11 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -25,6 +18,10 @@ type appContentResult struct {
 
 func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
 	form := &appParamsForm{
+		ecosystemForm: ecosystemForm{
+			Validator: m.EcosysIDValidator,
+		},
+	}
 
 	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)

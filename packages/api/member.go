@@ -83,6 +83,8 @@ func getMemberHandler(w http.ResponseWriter, r *http.Request) {
 	account := params["account"]
 	ecosystemID := converter.StrToInt64(params["ecosystem"])
 
+	_, err := member.Get(account)
+	if err != nil {
 		logger.WithFields(log.Fields{
 			"type":      consts.DBError,
 			"error":     err,

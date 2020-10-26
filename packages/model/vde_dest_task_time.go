@@ -12,13 +12,8 @@ type VDEDestTaskTime struct {
 }
 
 func (VDEDestTaskTime) TableName() string {
-	return "vde_dest_task_time"
-}
-
-func (m *VDEDestTaskTime) Create() error {
-	return DBConn.Create(&m).Error
-}
-
+func (m *VDEDestTaskTime) Get() (*VDEDestTaskTime, error) {
+	err := DBConn.First(&m).Error
 	return m, err
 }
 

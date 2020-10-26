@@ -9,6 +9,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/protocols"
+	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -98,12 +107,6 @@ func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error 
 		Hash:          block.Header.Hash,
 		Data:          block.BinData,
 		EcosystemID:   block.Header.EcosystemID,
-		KeyID:         block.Header.KeyID,
-		NodePosition:  block.Header.NodePosition,
-		Time:          block.Header.Time,
-		RollbacksHash: rollbacksHash,
-		Tx:            int32(len(block.Transactions)),
-	}
 	validBlockTime := true
 	if blockID > 1 {
 		exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Time, 0), int(b.NodePosition))

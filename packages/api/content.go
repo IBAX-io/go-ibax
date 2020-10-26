@@ -232,12 +232,8 @@ func getPageHashHandler(w http.ResponseWriter, r *http.Request) {
 
 	out, err := json.Marshal(result)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("getting string for hash")
-		errorResponse(w, errServer)
-		return
-	}
-
-	jsonResponse(w, &hashResult{Hash: hex.EncodeToString(crypto.Hash(out))})
+		ecosystem, name = parseEcosystem(name)
+		if len(name) == 0 {
 			logger.WithFields(log.Fields{
 				"type":  consts.NotFound,
 				"value": params["name"],
