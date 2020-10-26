@@ -48,12 +48,18 @@ func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []model.Tr
 	if len(hosts) == 0 || len(txes) == 0 {
 		return nil
 	}
+	for _, h := range hosts {
+		if err := ctx.Err(); err != nil {
+			log.Debug("exit by context error")
+			return err
+		}
 
-	packet, err := MarshalTxPacket(txes)
-	if err != nil {
-		return err
-	}
+		wg.Add(1)
+		go func(host string, pak []byte) {
+			defer wg.Done()
 
+			if err := sendRawTransacitionsToHost(host, pak); err != nil {
+				atomic.AddInt32(&errCount, 1)
 			}
 		}(h, packet)
 	}

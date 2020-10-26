@@ -19,6 +19,18 @@ import (
 
 type sendTxResult struct {
 	Hashes map[string]string `json:"hashes"`
+}
+
+func getTxData(r *http.Request, key string) ([]byte, error) {
+	logger := getLogger(r)
+
+	file, _, err := r.FormFile(key)
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("request.FormFile")
+		return nil, err
+	}
+	defer file.Close()
+
 	var txData []byte
 	if txData, err = io.ReadAll(file); err != nil {
 		logger.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading multipart file")
@@ -54,15 +66,6 @@ func (m Mode) sendTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	for key := range r.Form {
 		txData, err := hex.DecodeString(r.FormValue(key))
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-		mtx[key] = txData
-	}
-
-	hash, err := txHandlerBatches(r, m, mtx)
-	if err != nil {
 		errorResponse(w, err)
 		return
 	}

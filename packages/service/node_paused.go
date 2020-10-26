@@ -1,15 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package service
-
-import "sync"
-
-const (
-	NoPause PauseType = 0
-
-	PauseTypeUpdatingBlockchain PauseType = 1 + iota
 	PauseTypeStopingNetwork
 )
 
@@ -62,3 +50,4 @@ func PauseNodeActivity(pt PauseType) {
 
 func NodePauseType() PauseType {
 	return np.Get()
+}

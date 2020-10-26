@@ -7,14 +7,6 @@ contract EditBlock {
         Conditions string "optional"
     }
     func onlyConditions() bool {
-        return $Conditions && !$Value
-    }
-
-    conditions {
-        RowConditions("blocks", $Id, onlyConditions())
-        if $Conditions {
-        }
-        if $Conditions {
             pars["conditions"] = $Conditions
         }
         if pars {

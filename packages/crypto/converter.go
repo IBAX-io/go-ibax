@@ -1,13 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package crypto
-
-import (
-	"encoding/hex"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
 // CutPub removes the first 04 byte
@@ -31,6 +21,8 @@ func GetWalletIDByPublicKey(publicKey []byte) (int64, error) {
 
 // HexToPub encodes hex string to []byte of pub key
 func HexToPub(pub string) ([]byte, error) {
+	key, err := hex.DecodeString(pub)
+	if err != nil {
 		return nil, err
 	}
 	return CutPub(key), nil

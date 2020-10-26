@@ -1,7 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
 
 package daemons
 
@@ -220,6 +217,20 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
 			time.Sleep(time.Millisecond * 2)
 			continue
+		}
+		fmt.Println("Login chain OK!")
+
+		form := url.Values{}
+		if tran_mode == "1" { //1 hash up to chain
+			form = url.Values{
+				"Name":          {blockchain_table},
+				"ColumnsArr":    {`["task_uuid","data_uuid","data_info","hash","spphdata","deleted","date_created","date_updated","date_deleted"]`},
+				"TypesArr":      {`["text","text","json","text","text","number","number","number","number"]`},
+				"InsertPerm":    {`true`},
+				"NewColumnPerm": {`true`},
+				"ReadPerm":      {`1`},
+				"UpdatePerm":    {`true`},
+				"ApplicationId": {`1`},
 			}
 		} else if tran_mode == "2" { //2 all data up to chain
 			form = url.Values{

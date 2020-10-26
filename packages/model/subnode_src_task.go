@@ -32,22 +32,14 @@ type SubNodeSrcTask struct {
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
-	return DBConn.Model(m).Updates(m).Error
+func (SubNodeSrcTask) TableName() string {
+	return "subnode_src_task"
 }
 
-func (m *SubNodeSrcTask) Delete() error {
-	return DBConn.Delete(m).Error
+func (m *SubNodeSrcTask) Create() error {
+	return DBConn.Create(&m).Error
 }
 
-func (m *SubNodeSrcTask) GetAll() ([]SubNodeSrcTask, error) {
-	var result []SubNodeSrcTask
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *SubNodeSrcTask) GetOneByID() (*SubNodeSrcTask, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
 
 func (m *SubNodeSrcTask) GetAllByTaskUUIDAndTaskState(TaskUUID string, TaskState int64) ([]SubNodeSrcTask, error) {
 	result := make([]SubNodeSrcTask, 0)

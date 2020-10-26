@@ -8,6 +8,15 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 )
 
 type taskdataResult struct {
@@ -46,19 +55,6 @@ func shareDataCreate(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, &taskdataResult{
 		TaskUUID: form.TaskUUID,
 		//DataUUID: m.DataUUID,
-		Hash: m.Hash,
-	})
-	return
-}
-
-func shareDataUpdateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
-	)
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	id := converter.StrToInt64(params["id"])
 	form := &shareDataForm{}
 
 	if err = parseForm(r, form); err != nil {

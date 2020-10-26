@@ -34,14 +34,6 @@ func Type102(r *network.VDEAgentDataRequest) (*network.VDEAgentDataResponse, err
 	if err != nil {
 		fmt.Println("EccDeCrypto err!")
 		log.WithError(err)
-		return nil, err
-	}
-
-	//hash, err := crypto.HashHex(r.Data)
-	hash, err := crypto.HashHex(data)
-	if err != nil {
-		log.WithError(err)
-		return nil, err
 	}
 	resp := &network.VDEAgentDataResponse{}
 	resp.Hash = hash
@@ -56,6 +48,15 @@ func Type102(r *network.VDEAgentDataRequest) (*network.VDEAgentDataResponse, err
 		VDEAgentPubkey: r.VDEAgentPubkey,
 		VDEAgentIp:     r.VDEAgentIp,
 		VDEDestPubkey:  r.VDEDestPubkey,
+		VDEDestIp:      r.VDEDestIp,
+		//Data:         r.Data,
+		Data:       data,
+		CreateTime: time.Now().Unix(),
+	}
+
+	err = VDEDestData.Create()
+	if err != nil {
+		log.WithError(err)
 		return nil, err
 	}
 

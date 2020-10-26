@@ -12,6 +12,13 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/network"
 
 	log "github.com/sirupsen/logrus"
+)
+
+func Type99(r *network.PrivateFileRequest) (*network.PrivateFileResponse, error) {
+	node_pri := syspar.GetNodePrivKey()
+
+	data, err := ecies.EccDeCrypto(r.Data, node_pri)
+	if err != nil {
 		log.WithError(err)
 		return nil, err
 	}
@@ -26,16 +33,6 @@ import (
 	resp.Hash = hash
 
 	PrivateFilePackets := model.PrivateFilePackets{
-
-		TaskUUID:   r.TaskUUID,
-		TaskName:   r.TaskName,
-		TaskSender: r.TaskSender,
-		TaskType:   r.TaskType,
-		MimeType:   r.MimeType,
-		Name:       r.FileName,
-		Hash:       hash,
-		//Data: r.Data,
-		Data: data,
 	}
 
 	err = PrivateFilePackets.Create()

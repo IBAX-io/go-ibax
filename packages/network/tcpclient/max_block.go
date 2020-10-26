@@ -15,20 +15,19 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.ConnectionError, "host": host}).Debug("error connecting to host")
+		return -1, err
+	}
+	defer con.Close()
 
-func HostWithMaxBlock(ctx context.Context, hosts []string) (bestHost string, maxBlockID int64, err error) {
-	if len(hosts) == 0 {
-		return "", -1, nil
+	// send max block request
+	rt := &network.RequestType{
+		Type: network.RequestTypeMaxBlock,
 	}
 
-	return hostWithMaxBlock(ctx, hosts)
-}
-
-func GetMaxBlockID(host string) (blockID int64, err error) {
-	return getMaxBlock(host)
-}
-
-func getMaxBlock(host string) (blockID int64, err error) {
+	if err := rt.Write(con); err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.ConnectionError, "host": host}).Error("on sending Max block request type")
 		return -1, err
 	}
 

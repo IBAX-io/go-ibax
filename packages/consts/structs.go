@@ -36,6 +36,9 @@ type FirstBlock struct {
 	PrivateBlockchain     uint64
 }
 
+type StopNetwork struct {
+	TxHeader
+	StopNetworkCert []byte
 }
 
 // Don't forget to insert the structure in init() - list
@@ -55,8 +58,6 @@ func init() {
 }
 
 // MakeStruct is only used for FirstBlock now
-func MakeStruct(name string) interface{} {
-	v := reflect.New(blockStructs[name]) //.Elem()
 	return v.Interface()
 }
 
