@@ -21,6 +21,9 @@ const (
 	Update = "update"
 	Delete = "delete"
 
+	Set  = "set"
+	From = "from"
+	Into = "into"
 
 	Quote  = `"`
 	Lparen = "("
@@ -28,14 +31,6 @@ const (
 
 const (
 	SelectCost = 1
-	UpdateCost = 1
-	InsertCost = 1
-	DeleteCost = 1
-
-	SelectRowCoeff = 0.0001
-	InsertRowCoeff = 0.0001
-	DeleteRowCoeff = 0.0001
-	UpdateRowCoeff = 0.0001
 )
 
 var FromStatementMissingError = errors.New("FROM statement missing")

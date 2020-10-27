@@ -139,6 +139,12 @@ const (
 	// PrivateKeyFilename name of wallet private key file
 	PrivateKeyFilename = "PrivateKey"
 
+	// PublicKeyFilename name of wallet public key file
+	PublicKeyFilename = "PublicKey"
+
+	// NodePrivateKeyFilename name of node private key file
+	NodePrivateKeyFilename = "NodePrivateKey"
+
 	// NodePublicKeyFilename name of node public key file
 	NodePublicKeyFilename = "NodePublicKey"
 
@@ -165,15 +171,6 @@ const (
 
 	// DefaultOBS allways is 1
 	DefaultOBS = 1
-
-	// MoneyLength is the maximum number of digits in money value
-	MoneyLength = 30
-
-	DefaultTokenEcosystem = 1
-
-	HTTPServerMaxBodySize = 1 << 20
-
-	// ShiftContractID is the offset of tx identifiers
 	ShiftContractID = 5000
 
 	// ContractList is the number of contracts per page on loading

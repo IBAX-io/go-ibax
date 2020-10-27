@@ -43,14 +43,24 @@ func getEcosystemNotificationStats(ecosystemID int64, users []string) (map[strin
 	result, err := model.GetNotificationsCount(ecosystemID, users)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting notification count")
-			RoleID:       converter.Int64ToStr(r.RoleID),
-			RecordsCount: r.Count,
+		return nil, err
+	}
+
+	return parseRecipientNotification(result, ecosystemID), nil
+}
+
+func parseRecipientNotification(rows []model.NotificationsCount, systemID int64) map[string]*[]notificationRecord {
+	recipientNotifications := make(map[string]*[]notificationRecord)
+
+	for _, r := range rows {
+		if r.RecipientID == 0 {
+			continue
 		}
 
-		nr, ok := recipientNotifications[r.Account]
-		if ok {
-			*nr = append(*nr, roleNotifications)
-			continue
+		roleNotifications := notificationRecord{
+			EcosystemID:  converter.Int64ToStr(systemID),
+			RoleID:       converter.Int64ToStr(r.RoleID),
+			RecordsCount: r.Count,
 		}
 
 		records := []notificationRecord{

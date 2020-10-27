@@ -232,21 +232,6 @@ func Str(v interface{}) (ret string) {
 	return
 }
 
-// Money converts the value into a numeric type for money
-func Money(v interface{}) (decimal.Decimal, error) {
-	return script.ValueToDecimal(v)
-}
-
-func MoneyDiv(d1, d2 interface{}) string {
-	val1, _ := script.ValueToDecimal(d1)
-	val2, _ := script.ValueToDecimal(d2)
-	return val1.Div(val2).Mul(decimal.New(1, 2)).StringFixed(0)
-}
-
-// Float converts the value to float64
-func Float(v interface{}) (ret float64) {
-	return script.ValueToFloat(v)
-}
 
 // Join is joining input with separator
 func Join(input []interface{}, sep string) string {
@@ -565,6 +550,16 @@ func UnbndWallet(sc *SmartContract, tblid int64, state int64) error {
 }
 
 // CheckSignature checks the additional signatures for the contract
+func CheckSignature(i *map[string]interface{}, name string) error {
+	state, name := converter.ParseName(name)
+	sc := (*i)[`sc`].(*SmartContract)
+	sn := model.Signature{}
+	sn.SetTablePrefix(converter.Int64ToStr(int64(state)))
+	_, err := sn.Get(name)
+	if err != nil {
+		return logErrorDB(err, "executing single query")
+	}
+	if len(sn.Value) == 0 {
 		return nil
 	}
 	hexsign, err := hex.DecodeString((*i)[`Signature`].(string))

@@ -75,6 +75,10 @@ func Confirmations(ctx context.Context, d *daemon) error {
 
 func confirmationsBlocks(ctx context.Context, d *daemon, lastBlockID, startBlockID int64) error {
 	for blockID := lastBlockID; blockID >= startBlockID; blockID-- {
+		if err := ctx.Err(); err != nil {
+			d.logger.WithFields(log.Fields{"type": consts.ContextError, "error": err}).Error("error in context")
+			return err
+		}
 
 		block := model.Block{}
 		_, err := block.Get(blockID)
@@ -149,4 +153,3 @@ func IsReachable(host string, blockID int64, ch0 chan string, logger *log.Entry)
 	case <-time.After(consts.WAIT_CONFIRMED_NODES * time.Second):
 		ch0 <- "0"
 	}
-}

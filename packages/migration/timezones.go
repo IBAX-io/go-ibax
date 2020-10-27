@@ -1,12 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package migration
-
-var sqlTimeZonesSQL = `
-	{{head "1_time_zones"}}
 		t.Column("id", "bigint", {"default": "0"})
 		t.Column("name", "string", {"default": "", "size":255})
 		t.Column("offset", "string", {"default": "", "size":6})
@@ -17,6 +9,20 @@ var timeZonesSQL = `
 INSERT INTO "1_time_zones" VALUES 
 (next_id('1_time_zones'), 'Africa/Abidjan', 'UTC'),
 (next_id('1_time_zones'), 'Africa/Accra', 'UTC'),
+(next_id('1_time_zones'), 'Africa/Addis_Ababa', '+03:00'),
+(next_id('1_time_zones'), 'Africa/Algiers', '+01:00'),
+(next_id('1_time_zones'), 'Africa/Asmara', '+03:00'),
+(next_id('1_time_zones'), 'Africa/Bamako', 'UTC'),
+(next_id('1_time_zones'), 'Africa/Bangui', '+01:00'),
+(next_id('1_time_zones'), 'Africa/Banjul', 'UTC'),
+(next_id('1_time_zones'), 'Africa/Bissau', 'UTC'),
+(next_id('1_time_zones'), 'Africa/Blantyre', '+02:00'),
+(next_id('1_time_zones'), 'Africa/Brazzaville', '+01:00'),
+(next_id('1_time_zones'), 'Africa/Bujumbura', '+02:00'),
+(next_id('1_time_zones'), 'Africa/Cairo', '+02:00'),
+(next_id('1_time_zones'), 'Africa/Casablanca', '+01:00'),
+(next_id('1_time_zones'), 'Africa/Ceuta', '+02:00'),
+(next_id('1_time_zones'), 'Africa/Conakry', 'UTC'),
 (next_id('1_time_zones'), 'Africa/Dakar', 'UTC'),
 (next_id('1_time_zones'), 'Africa/Dar_es_Salaam', '+03:00'),
 (next_id('1_time_zones'), 'Africa/Djibouti', '+03:00'),

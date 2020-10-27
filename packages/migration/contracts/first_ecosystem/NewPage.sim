@@ -42,3 +42,9 @@ contract NewPage {
             if $ValidateMode != "1" {
                 $ValidateMode = "0"
             }
+        }
+    }
+
+    action {
+        DBInsert("pages", {name: $Name,value: $Value, menu: $Menu,
+             validate_count:$ValidateCount,validate_mode: $ValidateMode,
