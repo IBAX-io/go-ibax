@@ -42,6 +42,8 @@ func TestUnixDateTimeLocation(t *testing.T) {
 		value        string
 		locationName string
 	}
+		{"Tokyo", args{"2019-07-02 11:00:00", "Asia/Tokyo"}, 1562032800, false},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := UnixDateTimeLocation(tt.args.value, tt.args.locationName)

@@ -47,18 +47,14 @@ func (m *SubNodeSrcDataChainStatus) Delete() error {
 
 func (m *SubNodeSrcDataChainStatus) GetAll() ([]SubNodeSrcDataChainStatus, error) {
 	var result []SubNodeSrcDataChainStatus
-	return m, err
-}
-
-func (m *SubNodeSrcDataChainStatus) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcDataChainStatus, error) {
-	result := make([]SubNodeSrcDataChainStatus, 0)
-	err := DBConn.Table("subnode_src_data_chain_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	err := DBConn.Find(&result).Error
 	return result, err
 }
-
-func (m *SubNodeSrcDataChainStatus) GetOneByTaskUUID(TaskUUID string) (*SubNodeSrcDataChainStatus, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+func (m *SubNodeSrcDataChainStatus) GetOneByID() (*SubNodeSrcDataChainStatus, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
+}
+
 }
 
 func (m *SubNodeSrcDataChainStatus) GetAllByChainState(ChainState int64) ([]SubNodeSrcDataChainStatus, error) {

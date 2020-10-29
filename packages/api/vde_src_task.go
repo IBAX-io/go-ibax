@@ -153,9 +153,6 @@ func VDESrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	//
 	if len(m.ContractSrcGetHash) == 0 {
 		if ContractSrcGetHashHex, err = crypto.HashHex([]byte(m.ContractSrcGet)); err != nil {
-			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
-			errorResponse(w, err)
-			return
 		}
 		m.ContractSrcGetHash = ContractSrcGetHashHex
 	}
@@ -168,6 +165,15 @@ func VDESrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		m.ContractDestGetHash = ContractDestGetHashHex
 	}
 	if m.ContractMode == 0 {
+		m.ContractMode = 3 //
+	}
+
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
+		return
+	}
 
 	result, err := m.GetOneByID()
 	if err != nil {

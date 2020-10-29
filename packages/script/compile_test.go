@@ -2,14 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package script
-
-import (
-	"fmt"
-	"strings"
-	"testing"
-
-	"github.com/IBAX-io/go-ibax/packages/types"
 
 	"github.com/shopspring/decimal"
 )
@@ -380,6 +372,12 @@ func TestVMCompile(t *testing.T) {
 			}
 			return m["id"] + "=" + GetData().WhereId(100).One("name")
 		}`, `result`, `123=Test value 100`},
+		{`func mapbug() string {
+			$data[10] = "extend ok"
+			return $data[10]
+			}`, `mapbug`, `extend ok`},
+		{`func result() string {
+				var myarr array
 				myarr[0] = "string"
 				myarr[1] = 7
 				myarr[2] = "9th item"
