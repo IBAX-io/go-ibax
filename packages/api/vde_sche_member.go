@@ -61,6 +61,15 @@ func VDEScheMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	model.DBConn.Last(&m)
 
 	jsonResponse(w, *m)
+}
+
+func VDEScheMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
 	id := converter.StrToInt64(params["id"])
 	form := &VDEScheMemberForm{}
 
@@ -87,18 +96,6 @@ func VDEScheMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
 		return
-	}
-
-	jsonResponse(w, result)
-}
-
-func VDEScheMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-	id := converter.StrToInt64(params["id"])
-
-	m := &model.VDEScheMember{}
-	m.ID = id
 	if err := m.Delete(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
 	}

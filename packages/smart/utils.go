@@ -156,10 +156,6 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]interface{}) (
 					imap := make(map[string]interface{})
 					for ikey, ival := range val {
 						imap[fmt.Sprint(ikey)] = ival
-					}
-					v.([]interface{})[i] = types.LoadMap(imap)
-				}
-			}
 		case script.DtMap:
 			var val map[interface{}]interface{}
 			if val, ok = params[index].(map[interface{}]interface{}); !ok {
@@ -187,6 +183,10 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]interface{}) (
 			return nil, fmt.Errorf("invalid param '%s': %w", index, err)
 		}
 
+		if _, ok = txData[fitem.Name]; !ok {
+			txData[fitem.Name] = v
+		}
+	}
 
 	if len(txData) != len(fieldInfos) {
 		return nil, fmt.Errorf("invalid number of parameters")

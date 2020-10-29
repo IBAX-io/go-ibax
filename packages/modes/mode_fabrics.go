@@ -31,15 +31,6 @@ func (g BCEcosysLookupGetter) GetEcosystemLookup() ([]int64, []string, error) {
 
 type OBSEcosystemLookupGetter struct{}
 
-func (g OBSEcosystemLookupGetter) GetEcosystemLookup() ([]int64, []string, error) {
-	return []int64{1}, []string{"Platform ecosystem"}, nil
-}
-
-func BuildEcosystemLookupGetter() types.EcosystemLookupGetter {
-	if conf.Config.IsSupportingOBS() {
-		return OBSEcosystemLookupGetter{}
-	}
-
 	return BCEcosysLookupGetter{}
 }
 
@@ -122,6 +113,19 @@ type BCDaemonLoader struct {
 func (l BCDaemonLoader) Load(ctx context.Context) error {
 	if err := daemons.InitialLoad(l.logger); err != nil {
 		return err
+	}
+
+	if err := syspar.SysUpdate(nil); err != nil {
+		log.Errorf("can't read system parameters: %s", utils.ErrInfo(err))
+		return err
+	}
+	if err := syspar.SysTableColType(nil); err != nil {
+		log.Errorf("can't table col type: %s", utils.ErrInfo(err))
+		return err
+	}
+
+	if data, ok := block.GetDataFromFirstBlock(); ok {
+		syspar.SetFirstBlockData(data)
 	}
 
 	mode := "Public blockchain"

@@ -126,19 +126,6 @@ func SubNodeSrcDataUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := m.GetOneByID()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
-		return
-	}
-
-	jsonResponse(w, result)
-}
-
-func SubNodeSrcDataDeleteHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-	id := converter.StrToInt64(params["id"])
 
 	m := &model.SubNodeSrcData{}
 	m.ID = id
@@ -173,6 +160,20 @@ func SubNodeSrcDataByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query task data by ID failed")
 		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, result)
+}
+
+func SubNodeSrcDataByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	srcData := model.SubNodeSrcData{}
+	result, err := srcData.GetAllByTaskUUID(params["taskuuid"])
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("The query task data by TaskUUID failed")
 		errorResponse(w, err)
 		return
 	}

@@ -1,6 +1,10 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package utils
+
+import (
 	"net"
 	"sort"
 
@@ -9,12 +13,6 @@
 )
 
 //ntp1.aliyun.com ~7
-//time1.cloud.tencent.com ~5
-//pool.ntp.org
-const (
-	ntpPool        = "ntp1.aliyun.com" // ntpPool is the NTP server to query for the current time
-	ntpChecks      = 3                 // Number of measurements to do against the NTP server
-	driftThreshold = 1 * time.Second   // Allowed clock drift before warning user
 )
 
 // durationSlice attaches the methods of sort.Interface to []time.Duration,

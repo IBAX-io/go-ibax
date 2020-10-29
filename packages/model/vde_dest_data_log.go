@@ -26,6 +26,19 @@ type VDEDestDataLog struct {
 
 func (VDEDestDataLog) TableName() string {
 	return "vde_dest_data_log"
+}
+
+func (m *VDEDestDataLog) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *VDEDestDataLog) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEDestDataLog) Delete() error {
+	return DBConn.Delete(m).Error
+}
 
 func (m *VDEDestDataLog) GetAll() ([]VDEDestDataLog, error) {
 	var result []VDEDestDataLog
@@ -54,6 +67,3 @@ func (m *VDEDestDataLog) GetAllByChainState(ChainState int64) ([]VDEDestDataLog,
 	return result, err
 }
 
-func (m *VDEDestDataLog) GetOneByChainState(ChainState int64) (bool, error) {
-	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
-}
