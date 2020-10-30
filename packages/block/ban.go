@@ -5,18 +5,6 @@
 
 package block
 
-import (
-	"sync"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-)
-
-type banKey struct {
-	Time time.Time   // banned till
-	Bad  []time.Time // time of bad tx
-}
-
 var (
 	banList = make(map[int64]banKey)
 	mutex   = &sync.RWMutex{}
@@ -56,6 +44,10 @@ func BannedTill(keyID int64) string {
 	return ``
 }
 
+// BadTxForBan adds info about bad tx of the key
+func BadTxForBan(keyID int64) {
+	var (
+		ban banKey
 		ok  bool
 	)
 	mutex.Lock()

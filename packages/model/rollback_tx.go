@@ -63,9 +63,9 @@ func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
 	if rollbackSys.ID, err = GetNextID(&DbTransaction{conn: dbTx}, rollbackSys.TableName()); err != nil {
 		return err
 	}
-	for i := 1; i < len(rts)+1; i++ {
-		rts[i-1].ID = rollbackSys.ID + int64(i) - 1
-	}
+// Create is creating record of model
+func (rt *RollbackTx) Create(transaction *DbTransaction) error {
+	return nil
 }
 
 // Get is retrieving model from database

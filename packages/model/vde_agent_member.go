@@ -3,11 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package model
-
-type VDEAgentMember struct {
-	ID                   int64  `gorm:"primary_key; not null" json:"id"`
-	VDEPubKey            string `gorm:"not null" json:"vde_pub_key"`
-	VDEComment           string `gorm:"not null" json:"vde_comment"`
 	VDEName              string `gorm:"not null" json:"vde_name"`
 	VDEIp                string `gorm:"not null" json:"vde_ip"`
 	VDEType              int64  `gorm:"not null" json:"vde_type"`
@@ -23,6 +18,20 @@ func (VDEAgentMember) TableName() string {
 }
 
 func (m *VDEAgentMember) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *VDEAgentMember) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEAgentMember) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *VDEAgentMember) GetAll() ([]VDEAgentMember, error) {
+	var result []VDEAgentMember
+	err := DBConn.Find(&result).Error
 	return result, err
 }
 func (m *VDEAgentMember) GetOneByID() (*VDEAgentMember, error) {

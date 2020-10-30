@@ -49,14 +49,6 @@ func (m *VDESrcDataLog) GetOneByID() (*VDESrcDataLog, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
 }
-
-func (m *VDESrcDataLog) GetAllByTaskUUID(TaskUUID string) ([]VDESrcDataLog, error) {
-	result := make([]VDESrcDataLog, 0)
-	err := DBConn.Table("vde_src_data_log").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
-}
-
-func (m *VDESrcDataLog) GetOneByTaskUUID(TaskUUID string) (*VDESrcDataLog, error) {
 	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
 	return m, err
 }
@@ -64,3 +56,9 @@ func (m *VDESrcDataLog) GetOneByTaskUUID(TaskUUID string) (*VDESrcDataLog, error
 func (m *VDESrcDataLog) GetAllByChainState(ChainState int64) ([]VDESrcDataLog, error) {
 	result := make([]VDESrcDataLog, 0)
 	err := DBConn.Table("vde_src_data_log").Where("chain_state = ?", ChainState).Find(&result).Error
+	return result, err
+}
+
+func (m *VDESrcDataLog) GetOneByChainState(ChainState int64) (bool, error) {
+	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
+}

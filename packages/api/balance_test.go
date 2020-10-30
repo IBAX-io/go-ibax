@@ -2,6 +2,20 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/url"
+	"testing"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+)
+
+func TestBalance(t *testing.T) {
+	if err := keyLogin(1); err != nil {
 		t.Error(err)
 		return
 	}
@@ -44,13 +58,6 @@ func TestAssignBalance(t *testing.T) {
 	//	t.Error(err)
 	//	return
 	//}
-	//if len(ret.Amount) > 0 {
-	//	t.Error(fmt.Errorf(`wrong balance %s`, ret.Amount))
-	//	return
-	//}
-}
-
-func TestMoneyMoreSend(t *testing.T) {
 	if err := keyLogin(1); err != nil {
 		t.Error(err)
 		return

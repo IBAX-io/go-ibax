@@ -24,6 +24,20 @@ export PATH=$PATH:$GOPATH/bin
 $ export GOPROXY=https://athens.azurefd.net
 $ GO111MODULE=on go mod tidy -v
 
+$ go build
+```
+
+### Run
+
+1. Create the node configuration file:
+
+```bash
+$    go-ibax config
+```
+
+2. Generate node keys:
+
+```bash
 $    go-ibax generateKeys
 ```
 
@@ -62,16 +76,6 @@ docker-compose logs
 
 https://127.0.0.1:7079/api/v2/getuid
 http://127.0.0.1:7079/api/v2/getuid
-
-https://127.0.0.1:8000
-http://127.0.0.1:8000
-
-
-docker build -t ibax/go-ibax -f Dockerfile .
-
-docker build -t ibax/go-ibax-src -f Dockerfile_src .
-
-```
 
 
 

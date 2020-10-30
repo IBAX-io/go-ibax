@@ -13,11 +13,14 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 
+	log "github.com/sirupsen/logrus"
+)
+
+// CreatePidFile creats pid file
 func CreatePidFile() error {
 	pid := os.Getpid()
 	data := []byte(strconv.Itoa(pid))
 	return os.WriteFile(conf.Config.GetPidPath(), data, 0644)
-}
 
 // RemovePidFile removes pid file
 func RemovePidFile() error {
