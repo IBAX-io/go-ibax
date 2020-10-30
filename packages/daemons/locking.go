@@ -18,13 +18,16 @@ import (
 )
 
 var mutex = sync.Mutex{}
-
-// WaitDB waits for the end of the installation
-func WaitDB(ctx context.Context) error {
-	// There is could be the situation when installation is not over yet.
-	// Database could be created but tables are not inserted yet
-
-	if model.DBConn != nil && CheckDB() {
+	// poll a base with period
+	tick := time.NewTicker(1 * time.Second)
+	for {
+		select {
+		case <-tick.C:
+			if model.DBConn != nil && CheckDB() {
+				return nil
+			}
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }

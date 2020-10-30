@@ -165,6 +165,22 @@ func SysUpdate(dbTransaction *model.DbTransaction) error {
 					continue
 				}
 				res[converter.StrToInt64(item[0])] = item[1]
+			}
+		}
+		return res, nil
+	}
+	fuels, err = getParams(FuelRate)
+	wallets, err = getParams(TaxesWallet)
+
+	return err
+}
+
+func updateNodes() (err error) {
+	items := make([]*HonorNode, 0)
+	if len(cache[HonorNodes]) > 0 {
+		err = json.Unmarshal([]byte(cache[HonorNodes]), &items)
+
+		if err != nil {
 			log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err, "v": cache[HonorNodes]}).Error("unmarshalling honor nodes from json")
 			return err
 		}
@@ -380,20 +396,6 @@ func GetMaxBlockFuel() int64 {
 }
 
 // GetMaxTxFuel is returns max tx fuel
-func GetMaxTxFuel() int64 {
-	return converter.StrToInt64(SysString(MaxTxFuel))
-}
-
-// GetMaxBlockGenerationTime is returns max block generation time (in ms)
-func GetMaxBlockGenerationTime() int64 {
-	return converter.StrToInt64(SysString(MaxBlockGenerationTime))
-}
-
-// GetMaxTxSize is returns max tx size
-func GetMaxTxSize() int64 {
-	return converter.StrToInt64(SysString(MaxTxSize))
-}
-
 // GetMaxTxTextSize is returns max tx text size
 func GetMaxForsignSize() int64 {
 	return converter.StrToInt64(SysString(MaxForsignSize))

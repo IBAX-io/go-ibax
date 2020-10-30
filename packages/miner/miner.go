@@ -67,13 +67,6 @@ func (m *mint) MinerTime() (capacities, nonce, devid int64, err error) {
 }
 
 func (m *mint) makeMiningPoolTime() (int64, int64, error) {
-	mineCount, miners, capacity, err := m.getMiners()
-	if err != nil {
-		return 0, capacity, err
-	}
-	var st int64
-	for i := 0; i < len(mineCount); i++ {
-		k := miners[i].Devid
 		v, ok := mineCount[k]
 		if ok {
 			da := minersCount{devid: k, start: st, end: st + v}
@@ -102,6 +95,20 @@ func (m *mint) getMiners() (map[int64]int64, []model.MineCount, int64, error) {
 		capacity += mine.MineCapacity
 	}
 
+	minerpow := model.MineInvitepowadd{}
+	minerpows, err := minerpow.GetALL(m.db, m.time)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+
+	for _, mine := range minerpows {
+		v, ok := mineCount[mine.Devid]
+		if ok {
+			mineCount[mine.Devid] = v + mine.Count
+		}
+	}
+	return mineCount, miners, capacity, err
+}
 
 func (m *mint) getMintRandom(remainder int64) int64 {
 	num := len(m.minerPool)

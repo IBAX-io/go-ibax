@@ -1,6 +1,15 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+type VDESrcTaskChainStatus struct {
+	ID           int64  `gorm:"primary_key; not null" json:"id"`
+	TaskUUID     string `gorm:"not null" json:"task_uuid"`
+	TaskName     string `gorm:"not null" json:"task_name"`
+	TaskSender   string `gorm:"not null" json:"task_sender"`
+	TaskReceiver string `gorm:"not null" json:"task_receiver"`
 	Comment      string `gorm:"not null" json:"comment"`
 	Parms        string `gorm:"type:jsonb" json:"parms"`
 	TaskType     int64  `gorm:"not null" json:"task_type"`
@@ -104,11 +113,6 @@ func (m *VDESrcTaskChainStatus) GetOneByChainState(ChainState int64) (bool, erro
 	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
 }
 
-func (m *VDESrcTaskChainStatus) GetAllByContractStateAndChainState(ContractStateSrc int64, ContractStateDest int64, ChainState int64) ([]VDESrcTaskChainStatus, error) {
-	result := make([]VDESrcTaskChainStatus, 0)
-	err := DBConn.Table("vde_src_task_chain_status").Where("contract_state_src = ? AND contract_state_dest = ? AND chain_state = ?", ContractStateSrc, ContractStateDest, ChainState).Find(&result).Error
-	return result, err
-}
 
 func (m *VDESrcTaskChainStatus) GetAllByContractStateSrc(ContractStateSrc int64) ([]VDESrcTaskChainStatus, error) {
 	result := make([]VDESrcTaskChainStatus, 0)

@@ -91,10 +91,6 @@ open:
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("cant get sql DB")
 		DBConn = nil
 		return err
-	}
-
-	sqlDB.SetConnMaxLifetime(time.Minute * 10)
-	sqlDB.SetMaxIdleConns(conf.Config.DB.MaxIdleConns)
 	sqlDB.SetMaxOpenConns(conf.Config.DB.MaxOpenConns)
 
 	if err = setupConnOptions(DBConn); err != nil {
@@ -244,6 +240,14 @@ func GetRecordsCountTx(db *DbTransaction, tableName, where string) (count int64,
 		count = notAutoIncrementCost
 	}
 	return count, err
+}
+
+// Update is updating table rows
+func Update(transaction *DbTransaction, tblname, set, where string) error {
+	return GetDB(transaction).Exec(`UPDATE "` + strings.Trim(tblname, `"`) + `" SET ` + set + " " + where).Error
+}
+
+// Delete is deleting table rows
 func Delete(transaction *DbTransaction, tblname, where string) error {
 	return GetDB(transaction).Exec(`DELETE FROM "` + tblname + `" ` + where).Error
 }

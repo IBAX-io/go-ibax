@@ -85,18 +85,6 @@ func Type2(rw io.ReadWriter) error {
 //		return nil, utils.ErrInfo("len(binaryData) < 5")
 //	}
 //
-//	tx := transaction.RawTransaction{}
-//	if err = tx.Unmarshall(bytes.NewBuffer(decryptedBinData)); err != nil {
-//		log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("unmarshalling transaction")
-//		return nil, err
-//	}
-//
-//	_, err = model.DeleteQueueTxByHash(nil, tx.Hash())
-//	if err != nil {
-//		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "hash": tx.Hash()}).Error("Deleting queue_tx with hash")
-//		return nil, utils.ErrInfo(err)
-//	}
-//
 //	queueTx := &model.QueueTx{Hash: tx.Hash(), Data: decryptedBinData, FromGate: 0}
 //	err = queueTx.Create()
 //	if err != nil {
@@ -135,6 +123,18 @@ func DecryptData(binaryTx *[]byte) ([]byte, []byte, []byte, error) {
 	if len(*binaryTx) == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("binary tx is empty")
 		return nil, nil, nil, utils.ErrInfo("len(*binaryTx) == 0")
+	}
+
+	nodeKeyPrivate, _ := utils.GetNodeKeys()
+	if len(nodeKeyPrivate) == 0 {
+		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
+		return nil, nil, nil, utils.ErrInfo("len(nodePrivateKey) == 0")
+	}
+
+	block, _ := pem.Decode([]byte(nodeKeyPrivate))
+	if block == nil || block.Type != "RSA PRIVATE KEY" {
+		log.WithFields(log.Fields{"type": consts.CryptoError}).Error("No valid PEM data found")
+		return nil, nil, nil, utils.ErrInfo("No valid PEM data found")
 	}
 
 	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)

@@ -66,21 +66,13 @@ func SentPrivateFile(host string, TaskUUID string, TaskName string, TaskSender s
 		return "0"
 	}
 
-	req := &network.PrivateFileRequest{
-		TaskUUID:   TaskUUID,
-		TaskName:   TaskName,
-		TaskSender: TaskSender,
-		TaskType:   TaskType,
-		FileName:   FileName,
-		MimeType:   MimeType,
-		Data:       dt,
-	}
+	resp := &network.PrivateFileResponse{}
 
-	if err = req.Write(conn); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending privatefile request")
+	if err = resp.Read(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("receiving privatefile response")
 		time.Sleep(time.Millisecond * 100)
 		return "0"
 	}
 
-	resp := &network.PrivateFileResponse{}
-
+	return string(resp.Hash)
+}

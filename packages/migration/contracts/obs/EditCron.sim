@@ -7,9 +7,8 @@ contract EditCron {
 			Cron       string "optional"
 			Limit      int "optional"
 			Till       string "optional date"
-			Conditions string
-		}
-		conditions {
+			}
+			DBUpdate("cron", $Id, {"cron": $Cron,"contract": $Contract,
 			    "counter":$Limit, "till": $Till, "conditions":$Conditions})
 			UpdateCron($Id)
 		}

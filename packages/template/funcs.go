@@ -489,6 +489,22 @@ func txinfoTag(par parFunc) (out string) {
 	if par.Node.Attr[`hash`] != nil {
 		var err error
 		out, err = smart.TransactionInfo(par.Node.Attr[`hash`].(string))
+		if err != nil {
+			out = err.Error()
+		}
+	}
+	return
+}
+
+func dataTag(par parFunc) string {
+	setAllAttr(par)
+	defaultTail(par, `data`)
+
+	data := make([][]string, 0)
+	cols := strings.Split((*par.Pars)[`Columns`], `,`)
+	types := make([]string, len(cols))
+	for i := 0; i < len(types); i++ {
+		types[i] = `text`
 	}
 
 	list, err := csv.NewReader(strings.NewReader((*par.Pars)[`Data`])).ReadAll()
@@ -1236,18 +1252,6 @@ func cmpTimeTag(par parFunc) string {
 		}
 		return val
 	}
-	left := prepare((*par.Pars)[`Time1`])
-	right := prepare((*par.Pars)[`Time2`])
-	if left == right {
-		return `0`
-	}
-	if left < right {
-		return `-1`
-	}
-	return `1`
-}
-
-type byFirst [][]string
 
 func (s byFirst) Len() int {
 	return len(s)
