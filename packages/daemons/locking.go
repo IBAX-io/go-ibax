@@ -18,6 +18,16 @@ import (
 )
 
 var mutex = sync.Mutex{}
+
+// WaitDB waits for the end of the installation
+func WaitDB(ctx context.Context) error {
+	// There is could be the situation when installation is not over yet.
+	// Database could be created but tables are not inserted yet
+
+	if model.DBConn != nil && CheckDB() {
+		return nil
+	}
+
 	// poll a base with period
 	tick := time.NewTicker(1 * time.Second)
 	for {
@@ -45,10 +55,6 @@ func CheckDB() bool {
 		return true
 	}
 
-	return false
-}
-
-// DBLock locks daemons
 func DBLock() {
 	mutex.Lock()
 }
