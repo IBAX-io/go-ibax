@@ -36,18 +36,6 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	prefix := client.Prefix()
 
-	table := &model.Table{}
-	table.SetTablePrefix(prefix)
-
-	count, err := table.Count()
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting records count from tables")
-		errorResponse(w, err)
-		return
-	}
-
-	rows, err := model.GetDB(nil).Table(table.TableName()).Where("ecosystem = ?", client.EcosystemID).Offset(form.Offset).Limit(form.Limit).Rows()
-	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
 		errorResponse(w, err)
 		return
@@ -72,3 +60,9 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		result.List[i].Name = item["name"]
+		result.List[i].Count = converter.Int64ToStr(count)
+	}
+
+	jsonResponse(w, result)
+}

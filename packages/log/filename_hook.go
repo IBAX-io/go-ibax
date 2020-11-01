@@ -31,6 +31,16 @@ func (hook ContextHook) Fire(entry *logrus.Entry) error {
 		delete(entry.Data, "nocontext")
 		return nil
 	}
+	if conf.Config.Log.LogLevel == "DEBUG" {
+		pc = make([]uintptr, 15, 15)
+	} else {
+		pc = make([]uintptr, 4, 4)
+	}
+	cnt := runtime.Callers(6, pc)
+
+	count := 0
+	for i := 0; i < cnt; i++ {
+		fu := runtime.FuncForPC(pc[i] - 1)
 		name := fu.Name()
 		if !strings.Contains(name, "github.com/sirupsen/logrus") {
 			file, line := fu.FileLine(pc[i] - 1)
@@ -53,4 +63,3 @@ func (hook ContextHook) Fire(entry *logrus.Entry) error {
 		}
 	}
 	return nil
-}

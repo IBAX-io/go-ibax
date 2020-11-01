@@ -48,6 +48,15 @@ func parsing(input string, itype int) (*[]token, error) {
 	var err error
 
 	tokens := make([]token, 0)
+	newToken := func(itype int, value interface{}) {
+		tokens = append(tokens, token{itype, value})
+	}
+	prevNumber := func() bool {
+		return len(tokens) > 0 && tokens[len(tokens)-1].Type == tkNumber
+	}
+	prevOper := func() bool {
+		return len(tokens) > 0 && (tokens[len(tokens)-1].Type >= tkAdd &&
+			tokens[len(tokens)-1].Type <= tkDiv)
 	}
 	var (
 		numlen int
@@ -134,13 +143,6 @@ func calcExp(tokens []token, resType int, prec string) string {
 	}
 	subMoney := func() {
 		stack[top-1] = stack[top-1].(decimal.Decimal).Sub(stack[top].(decimal.Decimal))
-	}
-	mulInt := func() {
-		stack[top-1] = stack[top-1].(int64) * stack[top].(int64)
-	}
-	mulFloat := func() {
-		stack[top-1] = stack[top-1].(float64) * stack[top].(float64)
-	}
 	mulMoney := func() {
 		stack[top-1] = stack[top-1].(decimal.Decimal).Mul(stack[top].(decimal.Decimal))
 	}
