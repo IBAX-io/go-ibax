@@ -54,11 +54,12 @@ func TestTask(t *testing.T) {
 		t.Error("error")
 	}
 
-	if err != nil {
+	task = &Task{CronSpec: "60 * * * *"}
+	err := sch.AddTask(task)
+	if errStr := err.Error(); errStr != "End of range (60) above maximum (59): 60" {
 		t.Error(err)
 	}
-
-	handler := &mockHandler{}
+	err = sch.UpdateTask(task)
 	task = &Task{ID: taskID, CronSpec: "* * * * *", Handler: handler}
 	sch.UpdateTask(task)
 

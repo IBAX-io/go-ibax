@@ -18,10 +18,10 @@ func RegisterRoutes() http.Handler {
 		EcosysLookupGetter: BuildEcosystemLookupGetter(),
 		ContractRunner:     GetSmartContractRunner(),
 		ClientTxProcessor:  GetClientTxPreprocessor(),
+	}
 
-	//0303
-	if conf.Config.IsSupportingOBS() {
-		m.SetVDESrcRoutes(r)
+	r := api.NewRouter(m)
+	if !conf.Config.IsSupportingOBS() {
 	}
 
 	return r.GetAPI()

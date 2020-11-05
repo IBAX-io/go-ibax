@@ -100,11 +100,3 @@ func (m *MineOwner) GetAllPoolManage(dbt *DbTransaction, ts int64) (map[int64]in
 		Order("devid asc").
 		Find(&mp).Error
 	if err != nil {
-		return ret, err
-	}
-
-	for _, v := range mp {
-		ret[v.Devid] = v.Minerid
-	}
-
-	return ret, err

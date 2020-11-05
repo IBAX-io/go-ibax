@@ -6,8 +6,8 @@
 package api
 
 import (
-	"net/http"
 
+type componentModel interface {
 	SetTablePrefix(prefix string)
 	Get(name string) (bool, error)
 }

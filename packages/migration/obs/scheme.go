@@ -1,19 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package obs
-
-import (
-	"strings"
-)
-
-// GetOBSScript returns script to create ecosystem
-func GetOBSScript() string {
-	scripts := []string{
-		schemaOBS,
-		blocksDataSQL,
 		contractsDataSQL,
 		menuDataSQL,
 		pagesDataSQL,
@@ -113,6 +100,21 @@ var schemaOBS = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
 			"validate_mode" character(1) NOT NULL DEFAULT '0',
 			"ecosystem" bigint NOT NULL DEFAULT '1'
 		);
+		ALTER TABLE ONLY "%[1]d_pages" ADD CONSTRAINT "%[1]d_pages_pkey" PRIMARY KEY (id);
+		CREATE INDEX "%[1]d_pages_index_name" ON "%[1]d_pages" (name);
+
+
+		DROP TABLE IF EXISTS "%[1]d_blocks"; CREATE TABLE "%[1]d_blocks" (
+			"id" bigint  NOT NULL DEFAULT '0',
+			"name" character varying(255) UNIQUE NOT NULL DEFAULT '',
+			"value" text NOT NULL DEFAULT '',
+			"conditions" text NOT NULL DEFAULT '',
+			"app_id" bigint NOT NULL DEFAULT '1',
+			"ecosystem" bigint NOT NULL DEFAULT '1'
+		);
+		ALTER TABLE ONLY "%[1]d_blocks" ADD CONSTRAINT "%[1]d_blocks_pkey" PRIMARY KEY (id);
+		CREATE INDEX "%[1]d_blocks_index_name" ON "%[1]d_blocks" (name);
+		
 		DROP TABLE IF EXISTS "%[1]d_signatures"; CREATE TABLE "%[1]d_signatures" (
 			"id" bigint  NOT NULL DEFAULT '0',
 			"name" character varying(100) NOT NULL DEFAULT '',

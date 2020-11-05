@@ -11,8 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-	for i := range entry.Data {
-		if b, ok := entry.Data[i].([]byte); ok {
+type HexHook struct{}
+
+// Levels returns all log levels
+func (hook HexHook) Levels() []logrus.Level {
 			entry.Data[i] = hex.EncodeToString(b)
 		}
 	}

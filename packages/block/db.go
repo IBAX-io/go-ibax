@@ -107,6 +107,12 @@ func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error 
 		Hash:          block.Header.Hash,
 		Data:          block.BinData,
 		EcosystemID:   block.Header.EcosystemID,
+		KeyID:         block.Header.KeyID,
+		NodePosition:  block.Header.NodePosition,
+		Time:          block.Header.Time,
+		RollbacksHash: rollbacksHash,
+		Tx:            int32(len(block.Transactions)),
+	}
 	validBlockTime := true
 	if blockID > 1 {
 		exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Time, 0), int(b.NodePosition))
@@ -155,16 +161,6 @@ func GetBlockDataFromBlockChain(blockID int64) (*utils.BlockData, error) {
 	BlockData.RollbacksHash = block.RollbacksHash
 	return BlockData, nil
 }
-
-// GetDataFromFirstBlock returns data of first block
-func GetDataFromFirstBlock() (data *consts.FirstBlock, ok bool) {
-	block := &model.Block{}
-	isFound, err := block.Get(1)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting record of first block")
-		return
-	}
-
 	if !isFound {
 		return
 	}

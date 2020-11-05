@@ -1,3 +1,15 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package service
+
+import "sync"
+
+const (
+	NoPause PauseType = 0
+
+	PauseTypeUpdatingBlockchain PauseType = 1 + iota
 	PauseTypeStopingNetwork
 )
 
@@ -16,11 +28,6 @@ func (np *NodePaused) Set(pt PauseType) {
 	np.mutex.Lock()
 	defer np.mutex.Unlock()
 
-	np.PauseType = pt
-}
-
-func (np *NodePaused) Unset() {
-	np.mutex.Lock()
 	defer np.mutex.Unlock()
 
 	np.PauseType = NoPause

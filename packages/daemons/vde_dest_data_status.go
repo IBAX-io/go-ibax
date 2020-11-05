@@ -48,5 +48,6 @@ func VDEDestDataStatus(ctx context.Context, d *daemon) error {
 			item.HashState = 1 //
 			//fmt.Println("Hash match!")
 		} else {
-			item.HashState = 2 //
-			log.WithFields(log.Fields{"error": err}).Error("Hash does not match！")
+	} //for
+	return nil
+}

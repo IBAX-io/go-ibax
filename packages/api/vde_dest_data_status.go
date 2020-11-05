@@ -82,22 +82,6 @@ func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
 	)
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	id := converter.StrToInt64(params["id"])
-	form := &VDEDestDataStatusForm{}
-
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err)
-		return
-	}
-
-	m := &model.VDEDestDataStatus{}
-
-	if m, err = unmarshalColumnVDEDestDataStatus(form); err != nil {
-		errorResponse(w, err)
-		return
 	}
 
 	m.ID = id
@@ -188,6 +172,17 @@ type VDEDestDataStatusList struct {
 //		TaskUUID         string `json:"task_uuid"`
 //		Hash             string `json:"hash"`
 //		Data             []byte `json:"data"`
+//		DataInfo         string `json:"data_info"`
+//		VDESrcPubkey     string `json:"vde_src_pubkey"`
+//		VDEDestPubkey    string `json:"vde_dest_pubkey"`
+//		VDEDestIp        string `json:"vde_dest_ip"`
+//		VDEAgentPubkey   string `json:"vde_agent_pubkey"`
+//		VDEAgentIp       string `json:"vde_agent_ip"`
+//		AgentMode        int64  `json:"agent_mode"`
+//		CreateTime       int64  `json:"create_time"`
+//	} `json:"list"`
+//}
+
 func VDEDestDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err            error

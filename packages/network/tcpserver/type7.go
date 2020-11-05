@@ -8,21 +8,6 @@ import (
 	"net"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network"
-
-	log "github.com/sirupsen/logrus"
-)
-
-// Type7 writes the body of the specified block
-// blocksCollection and queue_parser_blocks daemons send the request through p.GetBlocks()
-func Type7(request *network.GetBodiesRequest, w net.Conn) error {
-	block := &model.Block{}
-
-	var blocks []model.Block
-	var err error
-	if request.ReverseOrder {
-		blocks, err = block.GetReverseBlockchain(int64(request.BlockID), network.BlocksPerRequest)
 	} else {
 		blocks, err = block.GetBlocksFrom(int64(request.BlockID-1), "ASC", network.BlocksPerRequest)
 	}
@@ -60,3 +45,6 @@ func lenOfBlockData(blocks []model.Block) int64 {
 	for i := 0; i < len(blocks); i++ {
 		length += int64(len(blocks[i].Data))
 	}
+
+	return length
+}
