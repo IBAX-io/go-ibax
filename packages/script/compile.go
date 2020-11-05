@@ -946,6 +946,19 @@ func (vm *VM) getInitValue(lexems *Lexems, ind *int, block *[]*Block) (value map
 }
 
 func (vm *VM) getInitMap(lexems *Lexems, ind *int, block *[]*Block, oneItem bool) (*types.Map, error) {
+	var next int
+	if !oneItem {
+		next = 1
+	}
+	i := *ind + next
+	key := ``
+	ret := types.NewMap()
+	state := mustKey
+main:
+	for ; i < len(*lexems); i++ {
+		lexem := (*lexems)[i]
+		switch lexem.Type {
+		case lexNewLine:
 			continue
 		case isRCurly:
 			break main
@@ -1150,21 +1163,6 @@ main:
 				if prev.Value.(uint16) == 0xff {
 					break
 				} else {
-					bytecode = append(bytecode, prev)
-				}
-			}
-			if len(buffer) > 0 {
-				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdFuncName {
-					buffer = buffer[:len(buffer)-1]
-					(*prev).Value = FuncNameCmd{Name: prev.Value.(FuncNameCmd).Name,
-						Count: parcount[len(parcount)-1]}
-					parcount = parcount[:len(parcount)-1]
-					bytecode = append(bytecode, prev)
-				}
-				var tail *ByteCode
-				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdCall || prev.Cmd == cmdCallVari {
-					objInfo := prev.Value.(*ObjInfo)
-					if (objInfo.Type == ObjFunc && objInfo.Value.(*Block).Info.(*FuncInfo).CanWrite) ||
 						(objInfo.Type == ObjExtFunc && objInfo.Value.(ExtFuncInfo).CanWrite) {
 						setWritable(block)
 					}

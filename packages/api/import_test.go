@@ -3,6 +3,17 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package api
+
+import (
+	"errors"
+	"fmt"
+	"net/url"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -58,16 +69,6 @@ func TestImportApps(t *testing.T) {
 	assert.NoError(t, postTx(`@1RolesInstall`, &form))
 	fmt.Println("successful RolesInstall ")
 
-	//form = url.Values{"SetDefault": {"yes"}}
-	//assert.NoError(t, postTx(`@1VotingTemplatesInstall`, &form))
-	//fmt.Println("successful VotingTemplatesInstall ")
-	//nodePub := `0498b18e551493a269b6f419d7784d26c8e3555638e80897c69997ef9f211e21d5d0b8adeeaab0e0e750e720ddf3048ec55d613ba5dee3fdfd4e7c17d346731e9b`
-	//tcpHost := `127.0.0.1:7078`
-	//firstNode := fmt.Sprintf(`{"api_address":"%v","public_key":"%v","tcp_address":"%v"}`, apiAddress, nodePub, tcpHost)
-	//firstNodeID := `18`
-	//form = url.Values{"Conditions": {`ContractConditions("@1DeveloperCondition")`},
-	//	"Id":    {firstNodeID},
-	//	"Value": {firstNode},
 	//}
 	//assert.NoError(t, postTx(`@1EditAppParam`, &form))
 	//fmt.Println("successful EditAppParam to first_node ")

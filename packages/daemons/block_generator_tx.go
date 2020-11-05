@@ -25,16 +25,6 @@ const (
 // DelayedTx represents struct which works with delayed contracts
 type DelayedTx struct {
 	logger     *log.Entry
-	privateKey string
-	publicKey  string
-	time       int64
-}
-
-// RunForDelayBlockID creates the transactions that need to be run for blockID
-func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*model.Transaction, error) {
-
-	contracts, err := model.GetAllDelayedContractsForBlockID(blockID)
-	if err != nil {
 		dtx.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting delayed contracts for block")
 		return nil, err
 	}
@@ -76,3 +66,8 @@ func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]int
 	}
 
 	txData, txHash, err := tx.NewInternalTransaction(smartTx, privateKey)
+	if err != nil {
+		return nil, err
+	}
+	return tx.CreateDelayTransactionHighRate(txData, txHash, keyID, highRate), nil
+}

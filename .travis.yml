@@ -1,7 +1,4 @@
 language: go
 
 env: GO111MODULE=on
-
-go:
-  - 1.12.x
-  - master
+script: go build github.com/IBAX/go-ibax
