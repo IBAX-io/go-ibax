@@ -166,6 +166,21 @@ func concatKDF(hash hash.Hash, z, s1 []byte, kdLen int) (k []byte, err error) {
 		k = append(k, hash.Sum(nil)...)
 		hash.Reset()
 		incCounter(counter)
+	}
+
+	k = k[:kdLen]
+	return
+}
+
+// messageTag computes the MAC of a message (called the tag) as per
+// SEC 1, 3.5.
+func messageTag(hash func() hash.Hash, km, msg, shared []byte) []byte {
+	mac := hmac.New(hash, km)
+	mac.Write(msg)
+	mac.Write(shared)
+	tag := mac.Sum(nil)
+	return tag
+}
 
 // Generate an initialisation vector for CTR mode.
 func generateIV(params *ECIESParams, rand io.Reader) (iv []byte, err error) {
@@ -363,19 +378,6 @@ var (
 		Hash:      sha512.New384,
 		hashAlgo:  crypto.SHA384,
 		Cipher:    aes.NewCipher,
-		BlockSize: aes.BlockSize,
-		KeyLen:    32,
-	}
-
-	ECIES_AES256_SHA512 = &ECIESParams{
-		Hash:      sha512.New,
-		hashAlgo:  crypto.SHA512,
-		Cipher:    aes.NewCipher,
-		BlockSize: aes.BlockSize,
-		KeyLen:    32,
-	}
-)
-
 type ECIESParams struct {
 	Hash      func() hash.Hash // hash function
 	hashAlgo  crypto.Hash

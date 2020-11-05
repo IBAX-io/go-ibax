@@ -108,18 +108,6 @@ func TestEcosystemParams(t *testing.T) {
 
 	var ret ecosystemParamsResult
 	require.NoError(t, sendGet(`ecosystemparams`, nil, &ret))
-
-	if len(ret.List) < 5 {
-		t.Error(fmt.Errorf(`wrong count of parameters %d`, len(ret.List)))
-	}
-
-	require.NoError(t, sendGet(`ecosystemparams?names=ecosystem_name,new_table&ecosystem=1`, nil, &ret))
-
-	require.Equalf(t, 1, len(ret.List), `wrong count of parameters %d`, len(ret.List))
-}
-
-func TestSystemParams(t *testing.T) {
-
 	if err := keyLogin(1); err != nil {
 		t.Error(err)
 		return
@@ -213,6 +201,17 @@ func TestAppParams(t *testing.T) {
 	form = url.Values{"Value": {`contract ` + rnd + `Par { data {} conditions {} action
 	{ var row map
 		row=JSONDecode(AppParam(1, "` + rnd + `2", 1))
+	    $result = row["par1"] }
+	}`}, "Conditions": {"true"}, `ApplicationId`: {`1`}}
+	assert.NoError(t, postTx(`NewContract`, &form))
+
+	_, msg, err := postTxResult(rnd+`Par`, &form)
+	assert.NoError(t, err)
+	assert.Equal(t, "value 1", msg)
+
+	forTest := tplList{{`AppParam(` + rnd + `1, 1, Source: myname)`,
+		`[{"tag":"data","attr":{"columns":["id","name"],"data":[["1","simple string"],["2","index"]],"source":"myname","types":["text","text"]}}]`},
+		{`SetVar(myapp, 1)AppParam(` + rnd + `2, App: #myapp#)`,
 			`[{"tag":"text","text":"{"par1":"value 1", "par2":"value 2"}"}]`}}
 	for _, item := range forTest {
 		var ret contentResult

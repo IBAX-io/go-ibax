@@ -23,7 +23,11 @@ func (dbm *dbMock) ApplyMigration(version, query string) error {
 }
 
 func createDBMock(version string) *dbMock {
-	}
+	return &dbMock{versions: []string{version}}
+}
+
+func TestMockMigration(t *testing.T) {
+	err := migrate(createDBMock("error version"), ``, nil)
 
 	db := createDBMock("0.0.0")
 	err = migrate(

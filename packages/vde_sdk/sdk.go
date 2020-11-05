@@ -79,6 +79,7 @@ func sendRawRequest(apiAddress string, gAuth string, rtype, url string, form *ur
 		return nil, err
 	}
 
+	defer resp.Body.Close()
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
@@ -900,14 +901,6 @@ func VDEWaitTx(apiAddress string, gAuth string, hash string) (int64, error) {
 			if err != nil {
 				return 0, err
 			}
-			return 0, errors.New(string(errtext))
-		}
-		time.Sleep(time.Second)
-	}
-	//return 0, fmt.Errorf(`TxStatus timeout`)
-	return -1, fmt.Errorf(`TxStatus timeout`)
-}
-
 func RandName(prefix string) string {
 	return fmt.Sprintf(`%s%d`, prefix, time.Now().Unix())
 }

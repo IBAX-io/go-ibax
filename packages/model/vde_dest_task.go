@@ -28,6 +28,16 @@ type VDEDestTaskFromSrc struct {
 	ContractMode int64 `gorm:"not null" json:"contract_mode"`
 
 	ContractStateSrc     int64  `gorm:"not null" json:"contract_state_src"`
+	ContractStateDest    int64  `gorm:"not null" json:"contract_state_dest"`
+	ContractStateSrcErr  string `gorm:"not null" json:"contract_state_src_err"`
+	ContractStateDestErr string `gorm:"not null" json:"contract_state_dest_err"`
+
+	TaskRunState    int64  `gorm:"not null" json:"task_run_state"`
+	TaskRunStateErr string `gorm:"not null" json:"task_run_state_err"`
+
+	//TxHash                 string `gorm:"not null" json:"tx_hash"`
+	//ChainState             int64  `gorm:"not null" json:"chain_state"`
+	//BlockId                int64  `gorm:"not null" json:"block_id"`
 	//ChainId                int64  `gorm:"not null" json:"chain_id"`
 	//ChainErr               string `gorm:"not null" json:"chain_err"`
 
@@ -130,18 +140,6 @@ type VDEDestTaskFromSche struct {
 	ContractDestName    string `gorm:"not null" json:"contract_dest_name"`
 	ContractDestGet     string `gorm:"not null" json:"contract_dest_get"`
 	ContractDestGetHash string `gorm:"not null" json:"contract_dest_get_hash"`
-
-	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
-	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
-	ContractRunParms     string `gorm:"type:jsonb" json:"contract_run_parms"`
-
-	ContractMode int64 `gorm:"not null" json:"contract_mode"`
-
-	ContractStateSrc     int64  `gorm:"not null" json:"contract_state_src"`
-	ContractStateDest    int64  `gorm:"not null" json:"contract_state_dest"`
-	ContractStateSrcErr  string `gorm:"not null" json:"contract_state_src_err"`
-	ContractStateDestErr string `gorm:"not null" json:"contract_state_dest_err"`
-
 	TaskRunState    int64  `gorm:"not null" json:"task_run_state"`
 	TaskRunStateErr string `gorm:"not null" json:"task_run_state_err"`
 

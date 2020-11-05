@@ -27,15 +27,6 @@ type MineStakeCount struct {
 //MintCount example
 type MinterCount struct {
 	Keyid      int64
-	MintMap    map[int64]int64
-	MineCounts []MineCount
-	Time       int64
-}
-
-//MintCount example
-type MintCount struct {
-	Keyid      int64
-	Mineid     int64
 	Devid      int64
 	Capacity   int64
 	Nonce      int64

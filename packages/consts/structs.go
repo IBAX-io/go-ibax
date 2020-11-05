@@ -58,6 +58,8 @@ func init() {
 }
 
 // MakeStruct is only used for FirstBlock now
+func MakeStruct(name string) interface{} {
+	v := reflect.New(blockStructs[name]) //.Elem()
 	return v.Interface()
 }
 
@@ -69,13 +71,4 @@ func IsStruct(tx int64) bool {
 // Header returns TxHeader
 func Header(v interface{}) TxHeader {
 	return reflect.ValueOf(v).Elem().Field(0).Interface().(TxHeader)
-}
-
-// Sign returns the signature attached to the header
-func Sign(v interface{}) (sign []byte) {
-	field := reflect.ValueOf(v).Elem().FieldByName(`Sign`)
-	if field.IsValid() && field.Kind() == reflect.Slice {
-		sign = field.Bytes()
-	}
-	return
 }

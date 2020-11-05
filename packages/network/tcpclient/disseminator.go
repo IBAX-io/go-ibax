@@ -48,6 +48,14 @@ func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []model.Tr
 	if len(hosts) == 0 || len(txes) == 0 {
 		return nil
 	}
+
+	packet, err := MarshalTxPacket(txes)
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	var errCount int32
 	for _, h := range hosts {
 		if err := ctx.Err(); err != nil {
 			log.Debug("exit by context error")
@@ -151,9 +159,6 @@ func SendFullBlockToAll(ctx context.Context, hosts []string, block *model.InfoBl
 }
 
 func sendFullBlockRequest(con net.Conn, data []byte) (response []byte, err error) {
-
-	if err := sendDisseminatorRequest(con, network.RequestTypeHonorNode, data); err != nil {
-		log.WithFields(log.Fields{"type": consts.TCPClientError, "error": err}).Error("on sending disseminator request")
 		return nil, err
 	}
 

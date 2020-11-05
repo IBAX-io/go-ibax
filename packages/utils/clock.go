@@ -5,11 +5,3 @@
 package utils
 
 import "time"
-
-// Clock represents interface of clock
-type Clock interface {
-type ClockWrapper struct {
-}
-
-// Now returns current time
-func (cw *ClockWrapper) Now() time.Time { return time.Now() }

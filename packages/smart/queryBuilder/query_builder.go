@@ -275,14 +275,6 @@ func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, erro
 
 		insFields = append(insFields, colname)
 		insValues = append(insValues, fmt.Sprintf(`'%s'::jsonb`, string(out)))
-	}
-
-	if !isID {
-		id, err := idGetter.GetNextID(b.Table)
-		if err != nil {
-			return "", err
-		}
-
 		b.tableID = converter.Int64ToStr(id)
 		insFields = append(insFields, `id`)
 		insValues = append(insValues, wrapString(b.tableID, "'"))
@@ -344,6 +336,13 @@ func (b SQLQueryBuilder) toSQLValue(rawValue, rawField string) string {
 	return wrapString(escapeSingleQuotes(rawValue), "'")
 }
 
+func (b SQLQueryBuilder) normalizeValues() error {
+	for i, v := range b.FieldValues {
+		switch val := v.(type) {
+		case string:
+			if strings.HasPrefix(strings.TrimSpace(val), prefTimestamp) {
+				if err := CheckNow(val); err != nil {
+					return err
 				}
 			}
 

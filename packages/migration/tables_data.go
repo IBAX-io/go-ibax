@@ -37,19 +37,6 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "deposit": "ContractAccess(\"@1TokensDecDeposit\",\"@1TokensIncDeposit\")",
             "deleted": "ContractConditions(\"@1AdminCondition\")",
             "blocked": "ContractAccess(\"@1TokensLockoutMember\")",
-            "account": "false",
-            "ecosystem": "false",
-            "multi": "ContractConditions(\"@1AdminCondition\")"
-        }',
-        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
-    ),
-    (next_id('1_tables'), 'history',
-        '{
-            "insert": "ContractAccess(\"@1TokensTransfer\",\"@1NewUser\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1GetAssignAvailableAmount\")",
-            "update": "ContractConditions(\"@1AdminCondition\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
-        }',
-        '{
             "sender_id": "false",
             "recipient_id": "false",
             "sender_balance": "false",
@@ -81,6 +68,19 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     ),
     (next_id('1_tables'), 'menu',
         '{
+            "insert": "ContractConditions(\"DeveloperCondition\")",
+            "update": "ContractConditions(\"DeveloperCondition\")",
+            "new_column": "ContractConditions(\"@1AdminCondition\")"
+        }',
+        '{
+            "name": "false",
+            "value": "ContractAccess(\"@1EditMenu\",\"@1AppendMenu\")",
+            "title": "ContractAccess(\"@1EditMenu\")",
+            "conditions": "ContractAccess(\"@1EditMenu\")",
+            "permissions": "ContractConditions(\"@1AdminCondition\")",
+            "ecosystem": "false"
+        }',
+        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
     ),
     (next_id('1_tables'), 'pages',
         '{

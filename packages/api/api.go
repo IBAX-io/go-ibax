@@ -100,16 +100,7 @@ func parseForm(r *http.Request, f formValidator) (err error) {
 	}
 	if err != nil {
 		return
-	if err := decoder.Decode(f, r.Form); err != nil {
-		return err
 	}
-	return f.Validate(r)
-}
-
-func isMultipartForm(r *http.Request) bool {
-	return strings.HasPrefix(r.Header.Get(contentType), multipartFormData)
-}
-
 type hexValue struct {
 	value []byte
 }

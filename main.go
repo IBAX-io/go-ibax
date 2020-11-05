@@ -4,8 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 package main
 
-import (
-	"fmt"
+
+var (
+	buildBranch = ""
+	buildDate   = ""
+	commitHash  = ""
 )
 
 func main() {

@@ -89,11 +89,20 @@ func SendExternalTransaction() error {
 		}
 		if err := transaction.CreateContract(item.ResultContract, nodeKeyID,
 			map[string]interface{}{
+				"Status": errCode,
+				"Msg":    resText,
+				"Block":  block,
+				"UID":    item.Uid,
+			}, nodePrivateKey); err != nil {
+			log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("CreateContract")
+		}
+	}
+	list, err := model.GetExternalList()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("GetExternalList")
+		return err
+	}
 	timeOut := time.Now().Unix() - 10*(syspar.GetGapsBetweenBlocks()+
-		syspar.GetMaxBlockGenerationTime()/1000)
-	for _, item := range list {
-		root := item.Url + apiExt
-		if item.Sent == 0 {
 			if timeOut > item.TxTime {
 				delList = append(delList, item.Id)
 				continue

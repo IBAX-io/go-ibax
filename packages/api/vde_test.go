@@ -100,17 +100,6 @@ func TestOBSParams(t *testing.T) {
 	var ret ecosystemParamsResult
 	assert.NoError(t, sendGet(`ecosystemparams?obs=true`, nil, &ret))
 	if len(ret.List) < 5 {
-		t.Errorf(`wrong count of parameters %d`, len(ret.List))
-	}
-
-	assert.NoError(t, sendGet(`ecosystemparams?obs=true&names=stylesheet,`+rnd, nil, &ret))
-	assert.Len(t, ret.List, 2, fmt.Errorf(`wrong count of parameters %d`, len(ret.List)))
-
-	var parValue paramResult
-	assert.NoError(t, sendGet(`ecosystemparam/`+rnd+`?obs=true`, nil, &parValue))
-	assert.Equal(t, rnd, parValue.Name)
-
-	var tblResult tablesResult
 	assert.NoError(t, sendGet(`tables?obs=true`, nil, &tblResult))
 	if tblResult.Count < 5 {
 		t.Error(fmt.Errorf(`wrong tables result`))
@@ -220,6 +209,20 @@ var obsimp = `{
             "Conditions": "true"
         }
     ],
+    "languages": [
+        {
+            "Name": "est2",
+            "Trans": "{\"en\":\"yeye\",\"te\":\"knfek\"}"
+        }
+    ],
+    "contracts": [
+        {
+            "Name": "testCont2",
+            "Value": "contract testCont2 {\n    data {\n\n    }\n\n    conditions {\n\n    }\n\n    action {\n        $result=\"privet\"\n    }\n}",
+            "Conditions": "true"
+        }
+    ],
+    "tables": [
         {
             "Name": "tests2",
             "Columns": "[{\"name\":\"name\",\"type\":\"text\",\"conditions\":\"true\"}]",

@@ -14,12 +14,17 @@ import (
 
 func TestToSnakeCase(t *testing.T) {
 	cases := []struct {
-func TestNtp(t *testing.T) {
-	for i := 0; i < 1000; i++ {
-		st := time.Now()
-		b, err := CheckClockDrift()
-		et := time.Now()
-		dr := et.Sub(st)
+		arg, expected string
+	}{
+		{"Contains", "contains"},
+		{"AddressToId", "address_to_id"},
+		{"HMac", "h_mac"},
+		{"JSONEncode", "json_encode"},
+		{"Hash", "hash"},
+		{"PubToID", "pub_to_id"},
+	}
+	for _, tt := range cases {
+		assert.Equal(t, tt.expected, ToSnakeCase(tt.arg))
 		fmt.Println("dr:" + dr.String())
 		assert.Error(t, err, nil)
 		if b {
