@@ -27,5 +27,3 @@ func (r *Role) TableName() string {
 	}
 	return "1_roles"
 }
-
-// Get is retrieving model from database

@@ -56,6 +56,25 @@ func DefLang() string {
 func UpdateLang(state int, name, value string) error {
 	mutex.Lock()
 	defer mutex.Unlock()
+	if _, ok := lang[state]; !ok {
+		lang[state] = &cacheLang{make(map[string]*map[string]string)}
+	}
+	var ires map[string]string
+	err := json.Unmarshal([]byte(value), &ires)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "value": value, "error": err}).Error("Unmarshalling json")
+		return err
+	}
+	for key, val := range ires {
+		ires[strings.ToLower(key)] = val
+	}
+	if len(ires) > 0 {
+		(*lang[state]).res[name] = &ires
+	}
+	return nil
+}
+
+// loadLang download the language sources from database for the state
 func loadLang(transaction *model.DbTransaction, state int) error {
 	language := &model.Language{}
 	prefix := strconv.FormatInt(int64(state), 10)
@@ -203,9 +222,3 @@ func GetLang(state int, accept string) (lng string) {
 		}
 		if !IsLang(val[:2]) {
 			continue
-		}
-		lng = val[:2]
-		break
-	}
-	return
-}

@@ -40,6 +40,23 @@ func (m *SubNodeSrcTask) Create() error {
 	return DBConn.Create(&m).Error
 }
 
+func (m *SubNodeSrcTask) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *SubNodeSrcTask) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *SubNodeSrcTask) GetAll() ([]SubNodeSrcTask, error) {
+	var result []SubNodeSrcTask
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *SubNodeSrcTask) GetOneByID() (*SubNodeSrcTask, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
+}
 
 func (m *SubNodeSrcTask) GetAllByTaskUUIDAndTaskState(TaskUUID string, TaskState int64) ([]SubNodeSrcTask, error) {
 	result := make([]SubNodeSrcTask, 0)
@@ -62,17 +79,6 @@ func (m *SubNodeSrcTask) GetOneByTaskUUIDAndTaskState(TaskUUID string, TaskState
 	err := DBConn.Where("task_uuid=? AND task_state=?", TaskUUID, TaskState).First(&m).Error
 	return m, err
 }
-func (m *SubNodeSrcTask) GetAllByTaskState(TaskState int64) ([]SubNodeSrcTask, error) {
-	result := make([]SubNodeSrcTask, 0)
-	err := DBConn.Table("subnode_src_task").Where("task_state = ?", TaskState).Find(&result).Error
-	return result, err
-}
-
-func (m *SubNodeSrcTask) GetOneByTaskState(TaskState int64) (bool, error) {
-	return isFound(DBConn.Where("task_state = ?", TaskState).First(m))
-}
-
-func (m *SubNodeSrcTask) GetOneByChainState(ChainState int64) (bool, error) {
 	return isFound(DBConn.Where("chain_state = ?", ChainState).First(&m))
 }
 

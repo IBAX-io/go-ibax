@@ -38,18 +38,6 @@ func (h *History) TableName() string {
 	if h.ecosystem == 0 {
 		h.ecosystem = 1
 	}
-	return `1_history`
-}
-
-// MoneyTransfer from to amount
-type MoneyTransfer struct {
-	SenderID    int64
-	RecipientID int64
-	Amount      decimal.Decimal
-}
-
-//SenderTxCount struct to scan query result
-type SenderTxCount struct {
 	SenderID int64
 	TxCount  int64
 }
@@ -113,6 +101,14 @@ func GetWalletRecordHistory(tx *DbTransaction, keyId string, searchType string, 
 			Where("sender_id = ?", keyId).
 			Order("id desc").
 			Limit(limit).
+			Offset(offset).
+			Scan(&histories).Error
+	} else {
+		err = db.Table("1_history").
+			Where("recipient_id = ? OR sender_id = ?", keyId, keyId).
+			Order("id desc").
+			Limit(limit).
+			Offset(offset).
 			Scan(&histories).Error
 	}
 	return histories, err

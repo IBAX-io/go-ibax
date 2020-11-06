@@ -55,12 +55,13 @@ func CheckDB() bool {
 		return true
 	}
 
+	return false
+}
+
+// DBLock locks daemons
 func DBLock() {
 	mutex.Lock()
 }
 
 // DBUnlock unlocks database
 func DBUnlock() {
-	transaction.CleanCache()
-	mutex.Unlock()
-}
