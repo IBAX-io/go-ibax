@@ -69,15 +69,6 @@ func (n *NodeActualizer) checkBlockchainActuality(ctx context.Context) (bool, er
 		return false, errors.Wrapf(err, "retrieving info block")
 	}
 
-	remoteHosts, err := GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
-	if err != nil {
-		return false, err
-	}
-
-	_, maxBlockID, err := tcpclient.HostWithMaxBlock(ctx, remoteHosts)
-	if err != nil {
-		return false, errors.Wrapf(err, "choosing best host")
-	}
 
 	// Currently this node is downloading blockchain
 	if curBlock.BlockID == 0 || curBlock.BlockID+n.availableBlockchainGap < maxBlockID {
@@ -94,3 +85,15 @@ func (n *NodeActualizer) checkBlockchainActuality(ctx context.Context) (bool, er
 	t := time.Unix(foreignBlock.Time, 0)
 	if time.Since(t).Minutes() > 30 && len(remoteHosts) > 1 {
 		return false, nil
+	}
+
+	return true, nil
+}
+
+func (n *NodeActualizer) pauseNodeActivity() {
+	np.Set(PauseTypeUpdatingBlockchain)
+}
+
+func (n *NodeActualizer) resumeNodeActivity() {
+	np.Unset()
+}
