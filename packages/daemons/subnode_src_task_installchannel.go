@@ -1,4 +1,7 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
 package daemons
 
@@ -71,15 +74,6 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 		}
 		if tran_mode, ok = TaskParms["tran_mode"].(string); !ok {
 			log.WithFields(log.Fields{"error": err}).Error("hash_mode parse error")
-			item.ChannelState = 3 //fail
-			err = item.Updates()
-			if err != nil {
-				log.WithError(err)
-			}
-			continue
-		}
-
-		if tran_mode != "1" && tran_mode != "2" && tran_mode != "3" { //
 			item.ChannelState = 3 //fail
 			err = item.Updates()
 			if err != nil {

@@ -341,6 +341,10 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 	//
 	//if len(form.Columns) > 0 {
 	//	q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
+	//}
+
+	if len(form.Where) > 0 {
+		inWhere, _, err := template.ParseObject([]rune(form.Where))
 		switch v := inWhere.(type) {
 		case string:
 			if len(v) == 0 {
@@ -436,21 +440,6 @@ func getSubNodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				errorResponse(w, err)
 				return
-			}
-		default:
-			errorResponse(w, errors.New(`Where has wrong format`))
-			return
-		}
-		q = q.Where(where)
-	}
-
-	result := new(listResult)
-	err = q.Count(&result.Count).Error
-
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
-		errorResponse(w, errTableNotFound.Errorf(table))
-		return
 	}
 
 	if len(form.Order) > 0 {

@@ -215,6 +215,17 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 	}
 	params := make(map[string]interface{})
 	for _, field := range contract.Fields {
+		name := field.Name
+		value := form.Get(name)
+
+		if len(value) == 0 {
+			continue
+		}
+
+		switch field.Type {
+		case "bool":
+			params[name], err = strconv.ParseBool(value)
+		case "int", "address":
 			params[name], err = strconv.ParseInt(value, 10, 64)
 		case "float":
 			params[name], err = strconv.ParseFloat(value, 64)
@@ -253,16 +264,6 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 			EcosystemID: 1,
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.NetworkID,
-		},
-		Params: params,
-	}, connect.PrivateKey)
-	if err != nil {
-		return 0, "", err
-	}
-
-	ret := &sendTxResult{}
-	err = connect.SendMultipart("sendTx", map[string][]byte{
-		fmt.Sprintf("%x", txhash): data,
 	}, &ret)
 	if err != nil {
 		return

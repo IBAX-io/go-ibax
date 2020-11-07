@@ -45,6 +45,15 @@ func InitNodesBanService() error {
 		localBannedNodes: make(map[int64]localBannedNode),
 		m:                &sync.Mutex{},
 	}
+
+	nbs.refreshNodes()
+	return nil
+}
+
+// RegisterBadBlock is set node to local ban and saving bad block to global registry
+func (nbs *NodesBanService) RegisterBadBlock(node syspar.HonorNode, badBlockId, blockTime int64, reason string, register bool) error {
+	if nbs.IsBanned(node) {
+		return nil
 	}
 
 	nbs.localBan(node)
@@ -154,20 +163,6 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 			"Timestamp":      blockTime,
 			"Reason":         reason,
 		},
-	}
-
-	txData, txHash, err := tx.NewInternalTransaction(sc, nodePrivateKey)
-	if err != nil {
-		return err
-	}
-
-	return tx.CreateTransaction(txData, txHash, conf.Config.KeyID, sc.Time)
-}
-
-func (nbs *NodesBanService) FilterHosts(hosts []string) ([]string, []string, error) {
-	var goodHosts, banHosts []string
-	for _, h := range hosts {
-		n, err := syspar.GetNodeByHost(h)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "host": h}).Error("getting node by host")
 			return nil, nil, err

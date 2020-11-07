@@ -3,17 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package main
-
-import (
-	"bufio"
-	"bytes"
-	"html/template"
-	"os"
-	"path/filepath"
-	"sort"
-	"strings"
-
 	"github.com/BurntSushi/toml"
 )
 
@@ -104,6 +93,18 @@ func loadSource(srcPath string) (*contract, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
+
+	props := make([]byte, 0)
+	data := make([]byte, 0)
+
+	scan := bufio.NewScanner(file)
+	for scan.Scan() {
+		line := scan.Bytes()
+		if bytes.HasPrefix(line, propPrefix) {
+			props = append(append(props, line[len(propPrefix):]...), '\n')
+		} else {
+			data = append(append(data, line...), '\n')
 		}
 	}
 

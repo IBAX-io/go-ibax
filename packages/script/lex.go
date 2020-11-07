@@ -218,14 +218,20 @@ func lexParser(input []rune) (Lexems, error) {
 			off++
 			skip = true
 			continue
+		}
+		// If machine determined the completed lexeme, we record it in the list of lexemes.
+		if lexID > 0 {
+			// We do not start a stack for symbols but memorize the displacement when the parse of lexeme began.
+			// To get a string of a lexeme we take a substring from the initial displacement to the current one.
+			// We immediately write a string as values, a number or a binary representation of operations.
+			var ext uint32
+			lexOff := off
+			if (flags & lexfPop) != 0 {
+				lexOff = start
+			}
+			right := off
 			if (flags & lexfNext) != 0 {
 				right++
-			}
-			if len(ifbuf) > 0 && ifbuf[len(ifbuf)-1].stop && lexID != lexNewLine {
-				name := string(input[lexOff:right])
-				if name != `else` && name != `elif` {
-					for i := 0; i < ifbuf[len(ifbuf)-1].count; i++ {
-						lexems = append(lexems, &Lexem{lexSys | (uint32('}') << 8), 0,
 							uint32('}'), uint16(line), lexOff - offline + 1})
 					}
 					ifbuf = ifbuf[:len(ifbuf)-1]

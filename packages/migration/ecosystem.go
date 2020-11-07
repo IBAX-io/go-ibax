@@ -27,22 +27,6 @@ type SqlData struct {
 	Account   string
 }
 
-var _ fizz.Translator = (*translators.Postgres)(nil)
-var pgt = translators.NewPostgres()
-var tblName string
-
-const (
-	sqlPrimary = "primary"
-	sqlUnique  = "unique"
-	sqlIndex   = "index"
-	sqlSeq     = "seq"
-)
-
-func sqlHeadSequence(name string) string {
-	ret := fmt.Sprintf(`sql("DROP SEQUENCE IF EXISTS %[1]s_id_seq CASCADE;")
-sql("CREATE SEQUENCE %[1]s_id_seq START WITH 1;")`, name)
-
-	return ret + "\r\n" + sqlHead(name)
 }
 
 func sqlHead(name string) string {
@@ -206,4 +190,13 @@ func GetFirstTableScript(ecosystem int) (string, error) {
 }
 
 // GetCommonEcosystemScript returns script with common tables
+func GetCommonEcosystemScript() (string, error) {
+	sql, err := sqlConvert([]string{
+		sqlFirstEcosystemCommon,
+		sqlTimeZonesSQL,
+	})
+	if err != nil {
+		return ``, err
+	}
+	return sql + "\r\n" + timeZonesSQL, nil
 }
