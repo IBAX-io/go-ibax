@@ -40,6 +40,11 @@ func Type99(r *network.PrivateFileRequest) (*network.PrivateFileResponse, error)
 		TaskType:   r.TaskType,
 		MimeType:   r.MimeType,
 		Name:       r.FileName,
-		Hash:       hash,
+	err = PrivateFilePackets.Create()
+	if err != nil {
+		log.WithError(err)
+		return nil, err
+	}
+
 	return resp, nil
 }

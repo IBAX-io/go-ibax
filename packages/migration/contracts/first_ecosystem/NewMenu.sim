@@ -2,6 +2,15 @@
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract NewMenu {
     data {
+        Name string
+        Value string
+        Title string "optional"
+        Conditions string
+    }
+
+    conditions {
+        ValidateCondition($Conditions,$ecosystem_id)
+
         if DBFind("menu").Columns("id").Where({name: $Name}).One("id") {
             warning Sprintf( "Menu %s already exists", $Name)
         }
@@ -13,4 +22,3 @@ contract NewMenu {
     func price() int {
         return SysParamInt("menu_price")
     }
-}

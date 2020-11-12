@@ -275,6 +275,14 @@ func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, erro
 
 		insFields = append(insFields, colname)
 		insValues = append(insValues, fmt.Sprintf(`'%s'::jsonb`, string(out)))
+	}
+
+	if !isID {
+		id, err := idGetter.GetNextID(b.Table)
+		if err != nil {
+			return "", err
+		}
+
 		b.tableID = converter.Int64ToStr(id)
 		insFields = append(insFields, `id`)
 		insValues = append(insValues, wrapString(b.tableID, "'"))
@@ -354,14 +362,6 @@ func (b SQLQueryBuilder) normalizeValues() error {
 		}
 	}
 
-	return nil
-}
-
-func isParamsContainsEcosystem(fields []string, ivalues []interface{}) (bool, int) {
-	ecosysIndx := getFieldIndex(fields, `ecosystem`)
-	if ecosysIndx >= 0 && len(ivalues) > ecosysIndx && converter.StrToInt64(fmt.Sprint(ivalues[ecosysIndx])) > 0 {
-		return true, ecosysIndx
-	}
 
 	return false, -1
 }

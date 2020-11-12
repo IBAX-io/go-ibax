@@ -82,6 +82,22 @@ func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
 	)
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	id := converter.StrToInt64(params["id"])
+	form := &VDEDestDataStatusForm{}
+
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m := &model.VDEDestDataStatus{}
+
+	if m, err = unmarshalColumnVDEDestDataStatus(form); err != nil {
+		errorResponse(w, err)
+		return
 	}
 
 	m.ID = id
@@ -107,23 +123,6 @@ func VDEDestDataStatusDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 
 	m := &model.VDEDestDataStatus{}
 	m.ID = id
-	if err := m.Delete(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
-	}
-
-	jsonResponse(w, "ok")
-}
-
-func VDEDestDataStatusListHandlre(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
-	destData := model.VDEDestDataStatus{}
-
-	result, err := destData.GetAll()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
-		errorResponse(w, err)
-		return
-	}
 	jsonResponse(w, result)
 }
 

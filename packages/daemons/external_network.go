@@ -5,9 +5,6 @@
 
 package daemons
 
-import (
-	"context"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -103,6 +100,10 @@ func SendExternalTransaction() error {
 		return err
 	}
 	timeOut := time.Now().Unix() - 10*(syspar.GetGapsBetweenBlocks()+
+		syspar.GetMaxBlockGenerationTime()/1000)
+	for _, item := range list {
+		root := item.Url + apiExt
+		if item.Sent == 0 {
 			if timeOut > item.TxTime {
 				delList = append(delList, item.Id)
 				continue

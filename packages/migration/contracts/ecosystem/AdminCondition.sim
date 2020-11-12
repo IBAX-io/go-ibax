@@ -1,12 +1,7 @@
 // +prop AppID = '{{.AppID}}'
-contract AdminCondition {
-    conditions {
-        if EcosysParam("founder_account") == $key_id {
-            return
-        }
-
-        var role_id_param string
-        role_id_param = EcosysParam("role_admin")
+// +prop Conditions = 'ContractConditions("MainCondition")'
+// This contract is used to set "admin" rights.
+// Usually the "admin" role is used for this.
         if Size(role_id_param) == 0 {
             warning "Sorry, you do not have access to this action."
         }

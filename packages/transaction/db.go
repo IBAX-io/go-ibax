@@ -59,6 +59,16 @@ func CheckLogTx(txHash []byte, transactions, txQueue bool) error {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting verified transaction")
 			return utils.ErrInfo(err)
 		}
+		if isfound {
+			log.WithFields(log.Fields{"tx_hash": tx.Hash, "type": consts.DuplicateObject}).Error("double tx in transactions")
+			return ErrDuplicatedTx
+		}
+	}
+
+	return nil
+}
+
+// DeleteQueueTx deletes a transaction from the queue
 func DeleteQueueTx(dbTransaction *model.DbTransaction, hash []byte) error {
 	delQueueTx := &model.QueueTx{Hash: hash}
 	err := delQueueTx.DeleteTx(dbTransaction)
@@ -89,14 +99,6 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 	}
 	log.WithFields(log.Fields{"type": consts.BadTxError, "tx_hash": hash, "error": errText}).Debug("tx marked as bad")
 
-	return model.NewDbTransaction(model.DBConn).Connection().Transaction(func(tx *gorm.DB) error {
-		// looks like there is not hash in queue_tx in this moment
-		qtx := &model.QueueTx{}
-		_, err := qtx.GetByHash(model.NewDbTransaction(tx), hash)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("getting tx by hash from queue")
-			return err
-		}
 
 		if qtx.FromGate == 0 {
 			m := &model.TransactionStatus{}
