@@ -23,8 +23,7 @@ import (
 )
 
 //Install task contract
-func VDEDestTaskInstallContractDest(ctx context.Context, d *daemon) error {
-	var (
+	m := &model.VDEDestTaskFromSrc{}
 	DestTask, err := m.GetAllByContractStateDest(0) //0
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")

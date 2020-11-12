@@ -5,6 +5,7 @@
 package vde_sdk
 
 type getUIDResult struct {
+	UID         string `json:"uid,omitempty"`
 	Token       string `json:"token,omitempty"`
 	Expire      string `json:"expire,omitempty"`
 	EcosystemID string `json:"ecosystem_id,omitempty"`
@@ -37,13 +38,6 @@ type multiTxStatusResult struct {
 
 type txstatusRequest struct {
 	Hashes []string `json:"hashes"`
-}
-
-type txstatusError struct {
-	Type  string `json:"type,omitempty"`
-	Error string `json:"error,omitempty"`
-	Id    string `json:"id,omitempty"`
-}
 
 type txstatusResult struct {
 	BlockID string         `json:"blockid"`

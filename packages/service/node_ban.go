@@ -13,19 +13,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/script"
-	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-)
-
-type localBannedNode struct {
-	HonorNode      *syspar.HonorNode
-	LocalUnBanTime time.Time
-}
-
-type NodesBanService struct {
 	localBannedNodes map[int64]localBannedNode
 	honorNodes       []syspar.HonorNode
 
@@ -163,6 +150,20 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 			"Timestamp":      blockTime,
 			"Reason":         reason,
 		},
+	}
+
+	txData, txHash, err := tx.NewInternalTransaction(sc, nodePrivateKey)
+	if err != nil {
+		return err
+	}
+
+	return tx.CreateTransaction(txData, txHash, conf.Config.KeyID, sc.Time)
+}
+
+func (nbs *NodesBanService) FilterHosts(hosts []string) ([]string, []string, error) {
+	var goodHosts, banHosts []string
+	for _, h := range hosts {
+		n, err := syspar.GetNodeByHost(h)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "host": h}).Error("getting node by host")
 			return nil, nil, err

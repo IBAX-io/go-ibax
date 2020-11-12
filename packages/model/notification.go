@@ -26,21 +26,21 @@ type Notification struct {
 	Sender              string `gorm:"type:jsonb`
 	Notification        string `gorm:"type:jsonb`
 	PageParams          string `gorm:"type:jsonb`
-	ProcessingInfo      string `gorm:"type:jsonb`
-	PageName            string `gorm:"size:255"`
-	DateCreated         int64
-	DateStartProcessing int64
-	DateClosed          int64
-	Closed              bool
-}
-
-// SetTablePrefix set table Prefix
-func (n *Notification) SetTablePrefix(tablePrefix string) {
-	n.ecosystem = converter.StrToInt64(tablePrefix)
 }
 
 // TableName returns table name
 func (n *Notification) TableName() string {
+	if n.ecosystem == 0 {
+		n.ecosystem = 1
+	}
+	return `1_notifications`
+}
+
+type NotificationsCount struct {
+	RecipientID int64  `gorm:"recipient_id"`
+	Account     string `gorm:"account"`
+	RoleID      int64  `gorm:"role_id"`
+	Count       int64  `gorm:"count"`
 }
 
 // GetNotificationsCount returns all unclosed notifications by users and ecosystem through role_id

@@ -41,19 +41,12 @@ func (m *SubNodeSrcDataStatus) Create() error {
 func (m *SubNodeSrcDataStatus) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
 }
-func (m *SubNodeSrcDataStatus) GetOneByID() (*SubNodeSrcDataStatus, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
+
+func (m *SubNodeSrcDataStatus) Delete() error {
+	return DBConn.Delete(m).Error
 }
 
-func (m *SubNodeSrcDataStatus) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcDataStatus, error) {
-	result := make([]SubNodeSrcDataStatus, 0)
-	err := DBConn.Table("subnode_src_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
-}
-
-func (m *SubNodeSrcDataStatus) GetAllByDataSendStatus(DataSendStatus int64) ([]SubNodeSrcDataStatus, error) {
-	result := make([]SubNodeSrcDataStatus, 0)
+func (m *SubNodeSrcDataStatus) GetAll() ([]SubNodeSrcDataStatus, error) {
 	err := DBConn.Table("subnode_src_data_status").Where("data_send_state = ?", DataSendStatus).Find(&result).Error
 	return result, err
 }

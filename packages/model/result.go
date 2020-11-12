@@ -33,17 +33,14 @@ func Single(transaction *DbTransaction, query string, args ...interface{}) *Sing
 }
 
 // Int64 converts bytes to int64
-func (r *SingleResult) Int64() (int64, error) {
 	if r.err != nil {
 		return 0, r.err
 	}
-	return converter.BytesToInt64(r.result), nil
+	return converter.StrToFloat64(string(r.result)), nil
 }
 
-// Int converts bytes to int
-func (r *SingleResult) Int() (int, error) {
-	if r.err != nil {
-		return 0, r.err
+// String returns string
+func (r *SingleResult) String() (string, error) {
 	if r.err != nil {
 		return "", r.err
 	}

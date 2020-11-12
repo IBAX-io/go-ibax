@@ -65,6 +65,19 @@ func (e *ECDSA) verify(public, data, signature []byte) (bool, error) {
 		return false, ErrCheckingSignEmpty
 	}
 	switch signProv {
+	case _ECDSA:
+		return e.checkECDSA(public, data, signature)
+	default:
+		return false, ErrUnknownProvider
+	}
+}
+
+func (e *ECDSA) signECDSA(privateKey, data []byte) (ret []byte, err error) {
+	pubkeyCurve := elliptic.P256()
+	bi := new(big.Int).SetBytes(privateKey)
+	priv := new(ecdsa.PrivateKey)
+	priv.PublicKey.Curve = pubkeyCurve
+	priv.D = bi
 	r, s, err := ecdsa.Sign(crand.Reader, priv, getHasher().hash(data))
 	if err != nil {
 		return
@@ -148,5 +161,3 @@ func (e *ECDSA) parseSign(sign string) (*big.Int, *big.Int, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("wrong signature size: %w", err)
 	}
-	return new(big.Int).SetBytes(all[:32]), new(big.Int).SetBytes(all[len(all)-32:]), nil
-}

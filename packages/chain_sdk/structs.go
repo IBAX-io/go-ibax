@@ -29,6 +29,12 @@ type loginResult struct {
 }
 
 type rolesResult struct {
+	RoleId   int64  `json:"role_id"`
+	RoleName string `json:"role_name"`
+}
+
+type multiTxStatusResult struct {
+	Results map[string]*txstatusResult `json:"results"`
 }
 
 type txstatusRequest struct {
@@ -46,23 +52,6 @@ type txstatusResult struct {
 	Message *txstatusError `json:"errmsg,omitempty"`
 	Result  string         `json:"result"`
 }
-
-type contractField struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Optional bool   `json:"optional"`
-}
-
-type getContractResult struct {
-	ID       uint32          `json:"id"`
-	StateID  uint32          `json:"state"`
-	Active   bool            `json:"active"`
-	TableID  string          `json:"tableid"`
-	WalletID string          `json:"walletid"`
-	TokenID  string          `json:"tokenid"`
-	Address  string          `json:"address"`
-	Fields   []contractField `json:"fields"`
-	Name     string          `json:"name"`
 }
 
 type sendTxResult struct {

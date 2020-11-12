@@ -11,6 +11,15 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
+)
+
+// TransactionStatus is model
+type TransactionStatus struct {
+	Hash     []byte `gorm:"primary_key;not null"`
+	Time     int64  `gorm:"not null;"`
+	Type     int64  `gorm:"not null"`
+	WalletID int64  `gorm:"not null"`
+	BlockID  int64  `gorm:"not null"`
 	Error    string `gorm:"not null"`
 	Penalty  int64  `gorm:"not null"`
 }
@@ -45,18 +54,6 @@ var updBlockMsg []updateBlockMsg
 // SetTransactionStatusBlockMsg is updating block msg
 func SetTransactionStatusBlockMsg(transaction *DbTransaction, newBlockID int64, msg string, transactionHash []byte) error {
 	if len(msg) > 255 {
-		msg = msg[:255]
-	}
-	if !conf.Config.IsOBSMaster() {
-		updBlockMsg = append(updBlockMsg, updateBlockMsg{Msg: msg, Hash: transactionHash})
-		return nil
-	}
-
-	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Updates(
-		map[string]interface{}{"block_id": newBlockID, "error": msg}).Error
-}
-
-func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64) error {
 	defer func() {
 		updBlockMsg = []updateBlockMsg{}
 	}()
