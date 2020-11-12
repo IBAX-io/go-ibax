@@ -3,6 +3,13 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package api
+
+import (
+	"net/http"
+
+type getTestResult struct {
+	Value string `json:"value"`
 }
 
 func getTestHandler(w http.ResponseWriter, r *http.Request) {

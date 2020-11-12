@@ -16,24 +16,16 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	log "github.com/sirupsen/logrus"
-)
-
-func Type102(r *network.VDEAgentDataRequest) (*network.VDEAgentDataResponse, error) {
-	nodePrivateKey, err := utils.GetNodePrivateKey()
-	if err != nil || len(nodePrivateKey) < 1 {
-		if err == nil {
-			log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
-			return nil, errors.New("Incorrect private key length")
-		}
+		fmt.Println("EccDeCrypto err!")
+		log.WithError(err)
 		return nil, err
 	}
 
-	data, err := ecies.EccDeCrypto(r.Data, nodePrivateKey)
+	//hash, err := crypto.HashHex(r.Data)
+	hash, err := crypto.HashHex(data)
 	if err != nil {
-		fmt.Println("EccDeCrypto err!")
 		log.WithError(err)
+		return nil, err
 	}
 	resp := &network.VDEAgentDataResponse{}
 	resp.Hash = hash

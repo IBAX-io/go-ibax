@@ -17,6 +17,15 @@ import (
 func TestRead(t *testing.T) {
 	var (
 		retCont contentResult
+	)
+
+	assert.NoError(t, keyLogin(1))
+
+	name := randName(`tbl`)
+	form := url.Values{"Name": {name}, "ApplicationId": {`1`},
+		"Columns": {`[{"name":"my","type":"varchar", "index": "1", 
+	  "conditions":"true"},
+	{"name":"amount", "type":"number","index": "0", "conditions":"{\"update\":\"true\", \"read\":\"true\"}"},
 	{"name":"active", "type":"character","index": "0", "conditions":"{\"update\":\"true\", \"read\":\"false\"}"}]`},
 		"Permissions": {`{"insert": "true", "update" : "true", "read": "true", "new_column": "true"}`}}
 	assert.NoError(t, postTx(`NewTable`, &form))
@@ -114,8 +123,3 @@ func TestRead(t *testing.T) {
 
 	assert.NoError(t, sendPost(`content`, &url.Values{`template`: {
 		`DBFind(` + name + `, src).Limit(2)`}}, &retCont))
-	if !strings.Contains(RawToString(retCont.Tree), `No name`) {
-		t.Errorf(`wrong tree %s`, RawToString(retCont.Tree))
-		return
-	}
-}

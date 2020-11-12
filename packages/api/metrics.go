@@ -64,6 +64,12 @@ func blocksCountHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("on getting max block")
 		errorResponse(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	if !found {
+		errorResponse(w, errNotFound)
+		return
 	}
 
 	bm := blockMetric{Count: b.ID}
@@ -141,10 +147,6 @@ func honorNodesCountHandler(w http.ResponseWriter, _ *http.Request) {
 	fnMetric := honorNodeMetric{
 		Count: syspar.GetNumberOfNodesFromDB(nil),
 	}
-
-	jsonResponse(w, fnMetric)
-}
-
 func memStatHandler(w http.ResponseWriter, _ *http.Request) {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)

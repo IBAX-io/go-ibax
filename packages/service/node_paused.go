@@ -44,12 +44,17 @@ func (np *NodePaused) Get() PauseType {
 
 	return np.PauseType
 }
-
-func (np *NodePaused) IsSet() bool {
-	np.mutex.RLock()
-	defer np.mutex.RUnlock()
-
 	return np.PauseType != NoPause
 }
 
 func IsNodePaused() bool {
+	return np.IsSet()
+}
+
+func PauseNodeActivity(pt PauseType) {
+	np.Set(pt)
+}
+
+func NodePauseType() PauseType {
+	return np.Get()
+}

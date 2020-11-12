@@ -13,6 +13,10 @@ const obsMaster RunMode = "OBSMaster"
 // OBS const label for running mode
 const obs RunMode = "OBS"
 
+// OBS const label for running mode
+const node RunMode = "NONE"
+
+//
 //Add sub node processing
 const subNode RunMode = "SubNode"
 
@@ -20,8 +24,6 @@ const subNode RunMode = "SubNode"
 func (rm RunMode) IsOBSMaster() bool {
 	return rm == obsMaster
 }
-
-// IsOBS returns true if mode equal obs
 func (rm RunMode) IsOBS() bool {
 	return rm == obs
 }

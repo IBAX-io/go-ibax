@@ -1,6 +1,12 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"context"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -80,14 +86,6 @@ func VDEScheTaskFromSrcInstallContractSrc(ctx context.Context, d *daemon) error 
 		} else {
 			item.ContractStateSrc = 1
 			item.ContractStateSrcErr = ""
-		}
-		//fmt.Println("Call api.PostTxResult Src OK")
-
-		item.UpdateTime = time.Now().Unix()
-		err = item.Updates()
-		if err != nil {
-			fmt.Println("Update VDEScheTask table err: ", err)
-			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
 			time.Sleep(time.Millisecond * 100)
 			continue
 		}

@@ -126,9 +126,6 @@ func (e *ECDSA) parseSign(sign string) (*big.Int, *big.Int, error) {
 		binSign []byte
 		err     error
 	)
-	//	var off int
-	parse := func(bsign []byte) []byte {
-		blen := int(bsign[1])
 		if blen > len(bsign)-2 {
 			return nil
 		}
@@ -161,3 +158,5 @@ func (e *ECDSA) parseSign(sign string) (*big.Int, *big.Int, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("wrong signature size: %w", err)
 	}
+	return new(big.Int).SetBytes(all[:32]), new(big.Int).SetBytes(all[len(all)-32:]), nil
+}

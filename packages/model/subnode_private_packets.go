@@ -1,13 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
-
-// RollbackTx is model
-type PrivatePackets struct {
-	Hash string `gorm:"not null" json:"hash"`
 	Data []byte `gorm:"not null" json:"data"`
 	Time int64  `gorm:"not null" json:"time"`
 }
@@ -94,6 +86,16 @@ type PrivateFilePacketsHash struct {
 
 // TableName returns name of table
 func (PrivateFilePacketsHash) TableName() string {
+	return "2_subnode_share_hash_100"
+}
+
+func (pp *PrivateFilePacketsHash) Get(Hash string) (PrivateFilePacketsHash, error) {
+	var m PrivateFilePacketsHash
+	err := DBConn.Where("hash=?", Hash).First(&m).Error
+	return m, err
+}
+
+// GetDataByHash is returns privatefile packet
 func (pp *PrivateFilePacketsHash) GetDataByHash(dbTransaction *DbTransaction, Hash string) ([]map[string]string, error) {
 	return GetAllTx(dbTransaction, "SELECT * from 2_subnode_share_hash_100 WHERE hash = ? ORDER BY ID DESC", -1, Hash)
 }

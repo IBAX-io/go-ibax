@@ -25,11 +25,6 @@ type AppParam struct {
 func (sp *AppParam) TableName() string {
 	if sp.ecosystem == 0 {
 		sp.ecosystem = 1
-	}
-	return `1_app_params`
-}
-
-// SetTablePrefix is setting table prefix
 func (sp *AppParam) SetTablePrefix(tablePrefix string) {
 	sp.ecosystem = converter.StrToInt64(tablePrefix)
 }
@@ -68,6 +63,9 @@ func (sp *AppParam) GetHvlvebalance(transaction *DbTransaction, blockid int64) (
 
 	if !hf || !md {
 		return ret, errors.New("param mine_reward or halve_interval_blockid not found")
+	}
+
+	hal := converter.StrToInt64(halve.Value)
 	if hal > 0 {
 		he := blockid / hal
 		mdv := converter.StrToFloat64(mine_reward.Value)

@@ -40,22 +40,6 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 	var (
 		blockchain_http      string
 		blockchain_ecosystem string
-		UpdateTime           string
-		err                  error
-	)
-
-	hashtime := &model.VDEDestHashTime{}
-	DestHashTime, err := hashtime.Get()
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting DestHashTime")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-	if DestHashTime == nil {
-		//log.Info("DestHashTime not found")
-		fmt.Println("Dest DestHashTime not found")
-		time.Sleep(time.Millisecond * 2)
-		return nil
 	}
 
 	chaininfo := &model.VDEDestChainInfo{}
@@ -115,6 +99,19 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 	t_struct := dest_VDEDestDataHashResult{}
 	url := `listWhere` + `/vde_share_hash`
 	//err = api.SendPost(url, &form, &t_struct)
+	//if err != nil {
+	//	fmt.Println("error", err)
+	//	return err
+	//}
+	err = chain_api.SendPost(chain_apiAddress, gAuth_chain, url, &form, &t_struct)
+	if err != nil {
+		fmt.Println("error", err)
+		return err
+	}
+	if len(t_struct.List) == 0 {
+		//log.Info("DEDestDataHashResult not found, sleep...")
+		//fmt.Println("DEDestDataHashResult not found, sleep...")
+		time.Sleep(time.Second * 2)
 		return nil
 	}
 

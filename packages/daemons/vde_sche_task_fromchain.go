@@ -176,6 +176,16 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 	for _, ShareTaskItem := range t_struct.List {
 		fmt.Println("NodeKey:", NodePublicKey)
 		fmt.Println("ShareTaskItem ID,TaskUUID,TaskReceiver:", ShareTaskItem.ID, ShareTaskItem.TaskUUID, ShareTaskItem.TaskReceiver)
+		//
+		//fmt.Println(":", ShareTaskItem.ContractSrcGet)
+		//if ShareTaskItem.ContractMode == "2" || ShareTaskItem.ContractMode == "3" {
+		if ShareTaskItem.ContractMode == "3" || ShareTaskItem.ContractMode == "4" {
+			contractSrcDataBase64, err := base64.StdEncoding.DecodeString(ShareTaskItem.ContractSrcGet)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("base64 DecodeString err")
+				fmt.Println("base64 DecodeString err")
+				continue
+			}
 			//fmt.Println("base64:", contractSrcDataBase64)
 
 			ContractSrcGetPlusHash, err := ecies.EccDeCrypto(contractSrcDataBase64, nodePrivateKey)
@@ -251,11 +261,6 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 		m.ContractSrcName = ShareTaskItem.ContractSrcName
 		m.ContractSrcGet = ShareTaskItem.ContractSrcGet
 		m.ContractSrcGetHash = ShareTaskItem.ContractSrcGetHash
-		m.ContractDestName = ShareTaskItem.ContractDestName
-		m.ContractDestGet = ShareTaskItem.ContractDestGet
-		m.ContractDestGetHash = ShareTaskItem.ContractDestGetHash
-
-		m.ContractRunHttp = ShareTaskItem.ContractRunHttp
 		m.ContractRunEcosystem = ShareTaskItem.ContractRunEcosystem
 		m.ContractRunParms = ShareTaskItem.ContractRunParms
 

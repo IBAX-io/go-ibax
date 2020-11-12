@@ -5,7 +5,10 @@
 package smart
 
 import (
-	"time"
+)
+
+// Date formats timestamp to specified date format
+func Date(timeFormat string, timestamp int64) string {
 	t := time.Unix(timestamp, 0)
 	return t.Format(timeFormat)
 }
