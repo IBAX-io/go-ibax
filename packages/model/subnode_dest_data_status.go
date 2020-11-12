@@ -8,6 +8,12 @@ package model
 type SubNodeDestDataStatus struct {
 	ID       int64  `gorm:"primary_key; not null" json:"id"`
 	DataUUID string `gorm:"not null" json:"data_uuid"`
+	TaskUUID string `gorm:"not null" json:"task_uuid"`
+	Hash     string `gorm:"not null" json:"hash"`
+	Data     []byte `gorm:"not null" json:"data"`
+	DataInfo string `gorm:"type:jsonb" json:"data_info"`
+	//SubNodeSrcPubkey     string `gorm:"not null" json:"subnode_src_pubkey"`
+	SubNodeSrcPubkey string `gorm:"column:subnode_src_pubkey;not null" json:"subnode_src_pubkey"`
 	//SubNodeDestPubkey    string `gorm:"not null" json:"subnode_dest_pubkey"`
 	SubNodeDestPubkey string `gorm:"column:subnode_dest_pubkey;not null" json:"subnode_dest_pubkey"`
 	//SubNodeDestIP        string `gorm:"not null" json:"subnode_dest_ip"`
@@ -22,18 +28,6 @@ type SubNodeDestDataStatus struct {
 	AuthState int64 `gorm:"not null" json:"auth_state"`
 	SignState int64 `gorm:"not null" json:"sign_state"`
 	HashState int64 `gorm:"not null" json:"hash_state"`
-
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
-func (SubNodeDestDataStatus) TableName() string {
-	return "subnode_dest_data_status"
-}
-
-func (m *SubNodeDestDataStatus) Create() error {
-	return DBConn.Create(&m).Error
-}
 
 func (m *SubNodeDestDataStatus) Updates() error {
 	return DBConn.Model(m).Updates(m).Error

@@ -36,23 +36,6 @@ func HandleTCPRequest(rw net.Conn) {
 		err = Type1(rw)
 
 	case network.RequestTypeNotHonorNode:
-		if service.IsNodePaused() {
-			return
-		}
-		err = Type2(rw)
-
-	case network.RequestTypeStopNetwork:
-		req := &network.StopNetworkRequest{}
-		if err = req.Read(rw); err == nil {
-			err = Type3(req, rw)
-		}
-
-	case network.RequestTypeConfirmation:
-		//if service.IsNodePaused() {
-		//	return
-		//}
-
-		req := &network.ConfirmRequest{}
 		if err = req.Read(rw); err == nil {
 			response, err = Type4(req)
 		}
@@ -114,6 +97,19 @@ func HandleTCPRequest(rw net.Conn) {
 	if err != nil || response == nil {
 		return
 	}
+
+	log.WithFields(log.Fields{"response": response, "request_type": dType.Type}).Debug("tcpserver responded")
+	if err = response.(network.SelfReaderWriter).Write(rw); err != nil {
+		// err = SendRequest(response, rw)
+		log.Errorf("tcpserver handle error: %s", err)
+	}
+}
+
+// TcpListener is listening tcp address
+func TcpListener(laddr string) error {
+
+	if strings.HasPrefix(laddr, "127.") {
+		log.Warn("Listening at local address: ", laddr)
 	}
 
 	l, err := net.Listen("tcp", laddr)

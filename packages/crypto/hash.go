@@ -1,10 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package crypto
-
-import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -58,3 +51,4 @@ func hashSHA256(msg []byte) []byte {
 
 func HashHex(input []byte) (string, error) {
 	return hex.EncodeToString(getHasher().hash(input)), nil
+}

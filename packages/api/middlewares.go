@@ -44,18 +44,6 @@ func loggerFromRequest(r *http.Request) *log.Entry {
 func loggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := loggerFromRequest(r)
-		logger.Info("received http request")
-		r = setLogger(r, logger)
-		next.ServeHTTP(w, r)
-	})
-}
-
-func recoverMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				logger := getLogger(r)
-				logger.WithFields(log.Fields{
 					"type":  consts.PanicRecoveredError,
 					"error": err,
 					"stack": string(debug.Stack()),
@@ -135,3 +123,7 @@ func statsdMiddleware(next http.Handler) http.Handler {
 		defer func() {
 			statsd.Client.TimingDuration(counterName+statsd.Time, time.Since(startTime), v)
 		}()
+
+		next.ServeHTTP(w, r)
+	})
+}

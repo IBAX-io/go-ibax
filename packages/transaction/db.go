@@ -82,23 +82,19 @@ func DeleteQueueTx(dbTransaction *model.DbTransaction, hash []byte) error {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("deleting transaction if unused")
 		return err
 	}
-	//err = model.DeleteTransactionsAttemptsByHash(dbTransaction, hash)
-	//if err != nil {
-	//	log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("deleting DeleteTransactionsAttemptsByHash")
-	//	return err
-	//}
-	return nil
-}
-
-func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText string) error {
-	if hash == nil {
-		return nil
-	}
 	if len(errText) > 255 {
 		errText = errText[:255] + "..."
 	}
 	log.WithFields(log.Fields{"type": consts.BadTxError, "tx_hash": hash, "error": errText}).Debug("tx marked as bad")
 
+	return model.NewDbTransaction(model.DBConn).Connection().Transaction(func(tx *gorm.DB) error {
+		// looks like there is not hash in queue_tx in this moment
+		qtx := &model.QueueTx{}
+		_, err := qtx.GetByHash(model.NewDbTransaction(tx), hash)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("getting tx by hash from queue")
+			return err
+		}
 
 		if qtx.FromGate == 0 {
 			m := &model.TransactionStatus{}

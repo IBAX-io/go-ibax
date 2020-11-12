@@ -48,3 +48,5 @@ contract NewPage {
     action {
         DBInsert("pages", {name: $Name,value: $Value, menu: $Menu,
              validate_count:$ValidateCount,validate_mode: $ValidateMode,
+             conditions: $Conditions,app_id: $ApplicationId})
+    }

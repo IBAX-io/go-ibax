@@ -68,14 +68,6 @@ func UpdBlockInfo(dbTransaction *model.DbTransaction, block *Block) error {
 func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, error) {
 	r := &model.RollbackTx{}
 	list, err := r.GetBlockRollbackTransactions(transaction, blockID)
-	if err != nil {
-		return nil, err
-	}
-
-	buf := new(bytes.Buffer)
-	enc := json.NewEncoder(buf)
-
-	for _, rtx := range list {
 		if err = enc.Encode(&rtx); err != nil {
 			return nil, err
 		}
@@ -161,6 +153,16 @@ func GetBlockDataFromBlockChain(blockID int64) (*utils.BlockData, error) {
 	BlockData.RollbacksHash = block.RollbacksHash
 	return BlockData, nil
 }
+
+// GetDataFromFirstBlock returns data of first block
+func GetDataFromFirstBlock() (data *consts.FirstBlock, ok bool) {
+	block := &model.Block{}
+	isFound, err := block.Get(1)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting record of first block")
+		return
+	}
+
 	if !isFound {
 		return
 	}
