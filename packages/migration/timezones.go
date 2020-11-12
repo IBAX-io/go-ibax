@@ -1,4 +1,12 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package migration
+
+var sqlTimeZonesSQL = `
+	{{head "1_time_zones"}}
 		t.Column("id", "bigint", {"default": "0"})
 		t.Column("name", "string", {"default": "", "size":255})
 		t.Column("offset", "string", {"default": "", "size":6})
@@ -343,24 +351,6 @@ INSERT INTO "1_time_zones" VALUES
 (next_id('1_time_zones'), 'Europe/Helsinki', '+03:00'),
 (next_id('1_time_zones'), 'Europe/Isle_of_Man', '+01:00'),
 (next_id('1_time_zones'), 'Europe/Istanbul', '+03:00'),
-(next_id('1_time_zones'), 'Europe/Jersey', '+01:00'),
-(next_id('1_time_zones'), 'Europe/Kaliningrad', '+02:00'),
-(next_id('1_time_zones'), 'Europe/Kiev', '+03:00'),
-(next_id('1_time_zones'), 'Europe/Kirov', '+03:00'),
-(next_id('1_time_zones'), 'Europe/Lisbon', '+01:00'),
-(next_id('1_time_zones'), 'Europe/Ljubljana', '+02:00'),
-(next_id('1_time_zones'), 'Europe/London', '+01:00'),
-(next_id('1_time_zones'), 'Europe/Luxembourg', '+02:00'),
-(next_id('1_time_zones'), 'Europe/Madrid', '+02:00'),
-(next_id('1_time_zones'), 'Europe/Malta', '+02:00'),
-(next_id('1_time_zones'), 'Europe/Mariehamn', '+03:00'),
-(next_id('1_time_zones'), 'Europe/Minsk', '+03:00'),
-(next_id('1_time_zones'), 'Europe/Monaco', '+02:00'),
-(next_id('1_time_zones'), 'Europe/Moscow', '+03:00'),
-(next_id('1_time_zones'), 'Europe/Oslo', '+02:00'),
-(next_id('1_time_zones'), 'Europe/Paris', '+02:00'),
-(next_id('1_time_zones'), 'Europe/Podgorica', '+02:00'),
-(next_id('1_time_zones'), 'Europe/Prague', '+02:00'),
 (next_id('1_time_zones'), 'Europe/Riga', '+03:00'),
 (next_id('1_time_zones'), 'Europe/Rome', '+02:00'),
 (next_id('1_time_zones'), 'Europe/Samara', '+04:00'),

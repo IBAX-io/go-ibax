@@ -906,16 +906,6 @@ func TestNewMineInfo1(t *testing.T) {
 		`IP`:              {`127.0.0.1`},
 		`Gps`:             {`11.12.365`},
 		`Ver`:             {`1`},
-		`Version`:         {`1.0`},
-		`StartTime`:       {`1564627117`},
-		`EndTime`:         {`1596249517`},
-		`Location`:        {`Singapore`},
-	}
-	_, _, err := postTxResult(rnd, &form)
-	assert.NoError(t, err)
-}
-
-//edit new mine status
 func TestEditMineStatus1(t *testing.T) {
 	assert.NoError(t, keyLoginex(1, "1"))
 	rnd := `EditMineStatus`
@@ -1053,6 +1043,25 @@ func TestReviewMineStakeRule(t *testing.T) {
 	_, _, err := postTxResult(rnd, &form)
 	assert.NoError(t, err)
 }
+
+//mier switch
+func TestSwitchMineOwnerForKeyID(t *testing.T) {
+	assert.NoError(t, keyLoginex(1, "2"))
+	rnd := `SwitchMineOwnerForKeyID`
+	form := url.Values{
+		`DevAddr`:    {`0874-3258-8928-9828-0009`},
+		`NewKeyAddr`: {`1448-9912-4891-3624-0588`},
+	}
+	_, _, err := postTxResult(rnd, &form)
+	assert.NoError(t, err)
+}
+
+//withdrawmine stake
+func TestWithdrawMineStake(t *testing.T) {
+	assert.NoError(t, keyLoginex(1, "2"))
+	rnd := `WithdrawMineStake`
+	form := url.Values{
+		`StakeID`: {`1`},
 	}
 	_, _, err := postTxResult(rnd, &form)
 	assert.NoError(t, err)

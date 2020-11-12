@@ -74,15 +74,9 @@ func VDEAgentData(ctx context.Context, d *daemon) error {
 			//item.DataSendState = 3 //
 			item.DataSendState = 0 //
 			item.DataSendErr = "Network error"
-			item.DataSendState = 2 //
-			item.DataSendErr = "Hash mismatch"
-			log.Info("Hash mismatch")
-		}
-		err = item.Updates()
-		if err != nil {
-			log.WithError(err)
-		}
-		log_err = item.DataSendErr
+			log.Info("Network error")
+		} else if string(hash) == string(item.Hash) {
+			item.DataSendState = 1 //
 		//Generate a chain request on the log
 		log_type = 3      //
 		if LogMode == 3 { //0

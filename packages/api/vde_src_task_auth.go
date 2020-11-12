@@ -102,6 +102,12 @@ func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 func VDESrcTaskAuthDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
+	}
+
+	jsonResponse(w, "ok")
+}
+
 func VDESrcTaskAuthListHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	srcData := model.VDESrcTaskAuth{}

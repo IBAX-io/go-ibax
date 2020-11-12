@@ -1,6 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
 package migration
@@ -85,6 +82,14 @@ func migrate(db database, appVer string, migrations []*migration) error {
 		log.WithFields(log.Fields{"type": consts.DBError, "err": err}).Errorf("parse version")
 		return err
 	}
+
+	if cmp, err := compareVer(dbVerString, appVer); err != nil {
+		log.WithFields(log.Fields{"type": consts.MigrationError, "err": err}).Errorf("parse version")
+		return err
+	} else if cmp >= 0 {
+		return nil
+	}
+
 	for _, m := range migrations {
 		if cmp, err := compareVer(dbVerString, m.version); err != nil {
 			log.WithFields(log.Fields{"type": consts.MigrationError, "err": err}).Errorf("parse version")

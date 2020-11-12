@@ -71,15 +71,6 @@ func killOld() {
 	}
 }
 
-func initLogs() error {
-	switch conf.Config.Log.LogFormat {
-	case "json":
-		log.SetFormatter(&log.JSONFormatter{})
-	default:
-		log.SetFormatter(&log.TextFormatter{})
-	}
-	switch conf.Config.Log.LogTo {
-	case "stdout":
 		log.SetOutput(os.Stdout)
 	case "syslog":
 		facility := conf.Config.Log.Syslog.Facility
@@ -213,6 +204,15 @@ func Start() {
 		log.Warning("Warning! Access checking is disabled in some built-in functions")
 	}
 
+	f := utils.LockOrDie(conf.Config.LockFilePath)
+	defer f.Unlock()
+	if err := utils.MakeDirectory(conf.Config.TempDir); err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.TempDir}).Error("can't create temporary directory")
+		Exit(1)
+	}
+
+	if conf.Config.PoolPub.Enable {
+		if conf.Config.Redis.Enable {
 			err = model.RedisInit(conf.Config.Redis.Host, conf.Config.Redis.Port, conf.Config.Redis.Password, conf.Config.Redis.DbName)
 			if err != nil {
 				log.WithFields(log.Fields{

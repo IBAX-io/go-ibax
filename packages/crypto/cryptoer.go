@@ -3,23 +3,6 @@ package crypto
 import (
 	"encoding/hex"
 	"fmt"
-)
-
-type Cryptoer interface {
-	genKeyPair() ([]byte, []byte, error)
-	sign(privateKey, data []byte) ([]byte, error)
-	verify(public, data, signature []byte) (bool, error)
-	privateToPublic(key []byte) ([]byte, error)
-}
-
-type Oval struct {
-	name string
-}
-
-const (
-	cSM2   = "SM2"
-	cECDSA = "ECDSA"
-)
 
 var Curve = &curve
 
@@ -31,6 +14,16 @@ func InitCurve(s string) {
 		curve.name = cECDSA
 		return
 	case cSM2:
+		curve.name = cSM2
+		return
+	}
+	panic(fmt.Errorf("curve [%v] is not supported yet", s))
+}
+
+func (o Oval) String() string {
+	return o.name
+}
+
 func getCryptoer() Cryptoer {
 	switch curve.name {
 	case cSM2:

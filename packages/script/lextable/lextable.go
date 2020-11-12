@@ -168,6 +168,11 @@ func main() {
 			alpha[128] = i
 		default:
 			alpha[ch] = i
+		}
+	}
+	out := `package script
+	// This file was generated with lextable.go
+	
 var (
 		alphabet = []byte{`
 	for i, ch := range alpha {
@@ -232,19 +237,6 @@ var (
 							}
 						}
 					}
-					table[curstate][ind] = val
-					if ind == 0 { // default value
-						for i := range table[curstate] {
-							if table[curstate][i] == 0xFE0000 {
-								table[curstate][i] = val
-							}
-						}
-					}
-				}
-			}
-		}
-		out += "\t\tlexTable = [][" + fmt.Sprint(AlphaSize) + "]uint32{\r\n"
-		for _, line := range table {
 			out += "\t\t\t{"
 			for _, ival := range line {
 				out += fmt.Sprintf(" 0x%x,", ival)

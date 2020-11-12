@@ -20,4 +20,3 @@ var (
 )
 
 func main() {
-	runtime.LockOSThread()

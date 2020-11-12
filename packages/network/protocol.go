@@ -157,18 +157,6 @@ type ConfirmResponse struct {
 func (resp *ConfirmResponse) Read(r io.Reader) error {
 	h, err := readSliceWithSize(r, consts.HashSize)
 	if err == io.EOF {
-	} else if err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on reading ConfirmResponse reverse order")
-		return err
-	}
-	resp.Hash = h
-	return nil
-}
-
-func (resp *ConfirmResponse) Write(w io.Writer) error {
-	if err := writeSliceWithSize(w, resp.Hash, consts.HashSize); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on sending ConfiremResponse hash")
-		return err
 	}
 
 	return nil
@@ -797,6 +785,19 @@ func (req *SubNodeSrcDataAgentRequest) Read(r io.Reader) error {
 	req.DataUUID = string(DataUUID_slice)
 
 	AgentMode_slice, err := ReadSlice(r)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("on reading AgentMode request")
+		return err
+	}
+	req.AgentMode = string(AgentMode_slice)
+
+	TranMode_slice, err := ReadSlice(r)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("on reading TranMode request")
+		return err
+	}
+	req.TranMode = string(TranMode_slice)
+
 	DataInfo_slice, err := ReadSlice(r)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on reading DataInfo request")
