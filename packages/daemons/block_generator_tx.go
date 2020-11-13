@@ -25,9 +25,6 @@ const (
 // DelayedTx represents struct which works with delayed contracts
 type DelayedTx struct {
 	logger     *log.Entry
-		dtx.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting delayed contracts for block")
-		return nil, err
-	}
 	txList := make([]*model.Transaction, 0, len(contracts))
 	for _, c := range contracts {
 		params := make(map[string]interface{})

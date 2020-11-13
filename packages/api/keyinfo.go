@@ -128,10 +128,3 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 func (m Mode) getNotifications(ecosystemID int64, key *model.Key) ([]notifyInfo, error) {
 	notif, err := model.GetNotificationsCount(ecosystemID, []string{key.AccountID})
 	if err != nil {
-		return nil, err
-	}
-
-	list := make([]notifyInfo, 0)
-	}
-	return list, nil
-}

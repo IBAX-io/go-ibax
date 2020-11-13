@@ -101,23 +101,6 @@ const (
 
 	TxTypeParserApiContract    = "ApiContract"
 	TxTypeParserEcosystemMiner = "EcosystemMiner"
-	TxTypeParserSystemMiner    = "SystemMiner"
-)
-
-// TxTypes is the list of the embedded transactions
-var TxTypes = map[int64]string{
-	TxTypeFirstBlock:     TxTypeParserFirstBlock,
-	TxTypeApiContract:    TxTypeParserApiContract,
-	TxTypeSystemServer:   TxTypeSystemServerWork,
-	TxTypeEcosystemMiner: TxTypeParserEcosystemMiner,
-	TxTypeSystemMiner:    TxTypeParserSystemMiner,
-	TxTypeStopNetwork:    TxTypeParserStopNetwork,
-}
-
-// ApiPath is the beginning of the api url
-var ApiPath = `/api/v2/`
-
-// BuildInfo should be defined through -ldflags
 var BuildInfo string
 
 const (
@@ -171,6 +154,15 @@ const (
 
 	// DefaultOBS allways is 1
 	DefaultOBS = 1
+
+	// MoneyLength is the maximum number of digits in money value
+	MoneyLength = 30
+
+	DefaultTokenEcosystem = 1
+
+	HTTPServerMaxBodySize = 1 << 20
+
+	// ShiftContractID is the offset of tx identifiers
 	ShiftContractID = 5000
 
 	// ContractList is the number of contracts per page on loading

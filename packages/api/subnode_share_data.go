@@ -51,10 +51,10 @@ func shareDataCreate(w http.ResponseWriter, r *http.Request) {
 
 	//model.DBConn.Last(&m)
 
-	//jsonResponse(w, *m)
-	jsonResponse(w, &taskdataResult{
-		TaskUUID: form.TaskUUID,
-		//DataUUID: m.DataUUID,
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	id := converter.StrToInt64(params["id"])
 	form := &shareDataForm{}
 
 	if err = parseForm(r, form); err != nil {

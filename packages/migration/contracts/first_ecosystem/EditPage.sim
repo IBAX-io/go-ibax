@@ -1,10 +1,4 @@
 // +prop AppID = '1'
-// +prop Conditions = 'ContractConditions("MainCondition")'
-contract EditPage {
-    data {
-        Id int
-        Value string "optional"
-        Menu string "optional"
         Conditions string "optional"
         ValidateCount int "optional"
         ValidateMode string "optional"
@@ -23,6 +17,17 @@ contract EditPage {
                 count = max
             }
         }
+        return count
+    }
+
+    conditions {
+        RowConditions("pages", $Id, onlyConditions())
+        if $Conditions {
+            ValidateCondition($Conditions, $ecosystem_id)
+        }
+        $ValidateCount = preparePageValidateCount($ValidateCount)
+    }
+
     action {
         var pars map
         if $Value {

@@ -12,7 +12,6 @@ contract EditMenu {
     }
 
     conditions {
-        }
         if $Conditions {
             pars["conditions"] = $Conditions
         }

@@ -72,3 +72,8 @@ var (
 	errOneContract        = errors.New(`only one contract must be in the record`)
 	errPermEmpty          = errors.New(`permissions are empty`)
 	errRecursion          = errors.New("recursion detected")
+	errSameColumns        = errors.New(`there are the same columns`)
+	errTableName          = errors.New(`the name of the table cannot begin with @`)
+	errTableEmptyName     = errors.New(`the table name cannot be empty`)
+	errUndefColumns       = errors.New(`columns are undefined`)
+	errUpdNotExistRecord  = errors.New(`update for not existing record`)

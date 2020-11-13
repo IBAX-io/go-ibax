@@ -1,18 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package model
-
-type VDEDestDataLog struct {
-	ID                  int64  `gorm:"primary_key; not null" json:"id"`
-	DataUUID            string `gorm:"not null" json:"data_uuid"`
-	TaskUUID            string `gorm:"not null" json:"task_uuid"`
-	Log                 string `gorm:"not null" json:"log"`
-	LogType             int64  `gorm:"not null" json:"log_type"`
-	LogSender           string `gorm:"not null" json:"log_sender"`
-	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
-	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
 
 	TxHash     string `gorm:"not null" json:"tx_hash"`
 	ChainState int64  `gorm:"not null" json:"chain_state"`
@@ -67,3 +55,6 @@ func (m *VDEDestDataLog) GetAllByChainState(ChainState int64) ([]VDEDestDataLog,
 	return result, err
 }
 
+func (m *VDEDestDataLog) GetOneByChainState(ChainState int64) (bool, error) {
+	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
+}
