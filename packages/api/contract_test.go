@@ -718,15 +718,6 @@ var contracts = []smartContract{
 				Test("split",  Str(ar[1]))
 				$ret = DBFind("contracts").Columns("id,value").Where({"id":[{"$gte": 3}, {"$lte":5}]}).Order("id")
 				Test("edit",  "edit value 0")
-			}
-		}`,
-		[]smartParams{
-			{nil, map[string]string{`edit`: `edit value 0`, `split`: `point 2`}},
-		}},
-	{`testEmpty`, `contract testEmpty {
-					action { Test("empty",  "empty value")}}`,
-		[]smartParams{
-			{nil, map[string]string{`empty`: `empty value`}},
 		}},
 	{`testUpd`, `contract testUpd {
 						action { Test("date",  "-2006.01.02-")}}`,
@@ -1714,6 +1705,16 @@ func TestErrors(t *testing.T) {
 		`{"type":"panic","error":"divided by zero [@1`+name+`2:5]"}`)
 
 	form = url.Values{`Value`: {`contract ` + name + `5 {
+			action {
+				// comment
+				Throw("Problem", "throw message")
+			}}`}, `Conditions`: {`true`}, `ApplicationId`: {`1`}}
+	assert.NoError(t, postTx(`NewContract`, &form))
+	assert.EqualError(t, postTx(name+`5`, &url.Values{}),
+		`{"type":"panic","error":"throw message [Throw @1`+name+`5:4]"}`)
+
+	form = url.Values{`Value`: {`contract ` + name + `4 {
+			action {
 				// comment
 				error("error message")
 			}}`}, `Conditions`: {`true`}, `ApplicationId`: {`1`}}

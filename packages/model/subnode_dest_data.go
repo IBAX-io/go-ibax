@@ -49,19 +49,6 @@ func (m *SubNodeDestData) GetAll() ([]SubNodeDestData, error) {
 	var result []SubNodeDestData
 	err := DBConn.Find(&result).Error
 	return result, err
-}
-func (m *SubNodeDestData) GetOneByID() (*SubNodeDestData, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
-func (m *SubNodeDestData) GetOneByDataUUID(DataUUID string) (*SubNodeDestData, error) {
-	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
-	return m, err
-}
-func (m *SubNodeDestData) GetOneByTaskUUID(TaskUUID string) (*SubNodeDestData, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
-}
 func (m *SubNodeDestData) GetAllByTaskUUID(TaskUUID string) ([]SubNodeDestData, error) {
 	result := make([]SubNodeDestData, 0)
 	err := DBConn.Table("subnode_dest_data").Where("task_uuid = ?", TaskUUID).Find(&result).Error
@@ -75,3 +62,11 @@ func (m *SubNodeDestData) GetAllByDataStatus(DataStatus int64) ([]SubNodeDestDat
 }
 
 func (m *SubNodeDestData) GetOneByDataStatus(DataStatus int64) (bool, error) {
+	return isFound(DBConn.Where("data_state = ?", DataStatus).First(m))
+}
+
+func (m *SubNodeDestData) Get(Hash string) (SubNodeDestData, error) {
+	var sndd SubNodeDestData
+	err := DBConn.Where("hash=?", Hash).First(&sndd).Error
+	return sndd, err
+}

@@ -1,19 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
-
-type SubNodeAgentData struct {
-	ID       int64  `gorm:"primary_key; not null" json:"id"`
-	DataUUID string `gorm:"not null" json:"data_uuid"`
-	TaskUUID string `gorm:"not null" json:"task_uuid"`
-	Hash     string `gorm:"not null" json:"hash"`
-	Data     []byte `gorm:"not null" json:"data"`
-	DataInfo string `gorm:"type:jsonb" json:"data_info"`
-	//SubNodeSrcPubkey     string `gorm:"not null" json:"subnode_src_pubkey"`
-	SubNodeSrcPubkey string `gorm:"column:subnode_src_pubkey;not null" json:"subnode_src_pubkey"`
 	//SubNodeDestPubkey    string `gorm:"not null" json:"subnode_dest_pubkey"`
 	SubNodeDestPubkey string `gorm:"column:subnode_dest_pubkey;not null" json:"subnode_dest_pubkey"`
 	//SubNodeDestIP        string `gorm:"not null" json:"subnode_dest_ip"`
@@ -39,6 +23,23 @@ func (m *SubNodeAgentData) Create() error {
 }
 
 func (m *SubNodeAgentData) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *SubNodeAgentData) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *SubNodeAgentData) GetAll() ([]SubNodeAgentData, error) {
+	var result []SubNodeAgentData
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *SubNodeAgentData) GetOneByID() (*SubNodeAgentData, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
+}
+func (m *SubNodeAgentData) GetOneByDataUUID(DataUUID string) (*SubNodeAgentData, error) {
 	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
 	return m, err
 }

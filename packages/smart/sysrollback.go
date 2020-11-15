@@ -186,13 +186,6 @@ func SysRollbackEditContract(transaction *model.DbTransaction, sysData SysRollDa
 // SysRollbackEcosystem is rolling back ecosystem
 func SysRollbackEcosystem(DbTransaction *model.DbTransaction, sysData SysRollData) error {
 	tables := make([]string, 0)
-	for table := range converter.FirstEcosystemTables {
-		tables = append(tables, table)
-		err := model.Delete(DbTransaction, `1_`+table, fmt.Sprintf(`where ecosystem='%d'`, sysData.ID))
-		if err != nil {
-			return err
-		}
-	}
 	if sysData.ID == 1 {
 		tables = append(tables, `node_ban_logs`, `bad_blocks`, `system_parameters`, `ecosystems`)
 		for _, name := range tables {
@@ -250,6 +243,18 @@ func SysRollbackDeleteColumn(DbTransaction *model.DbTransaction, sysData SysRoll
 }
 
 // SysRollbackDeleteTable is rolling back delete table
+func SysRollbackDeleteTable(DbTransaction *model.DbTransaction, sysData SysRollData) error {
+	var (
+		data    TableInfo
+		colsSQL string
+	)
+	err := unmarshalJSON([]byte(sysData.Data), &data, `rollback delete table to json`)
+	if err != nil {
+		return err
+	}
+	for key, item := range data.Columns {
+		colsSQL += `"` + key + `" ` + typeToPSQL[item] + " ,\n"
+	}
 	err = model.CreateTable(DbTransaction, sysData.TableName, strings.TrimRight(colsSQL, ",\n"))
 	if err != nil {
 		return logErrorDB(err, "creating tables")

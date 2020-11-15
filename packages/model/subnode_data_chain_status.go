@@ -13,9 +13,6 @@ type SubNodeSrcDataChainStatus struct {
 	Data     []byte `gorm:"column:data;not null" json:"data"`
 	DataInfo string `gorm:"type:jsonb" json:"data_info"`
 	TranMode int64  `gorm:"not null" json:"tran_mode"`
-	//SubNodeDestPubkey      string `gorm:"not null" json:"subnode_dest_pubkey"`
-	SubNodeDestPubkey   string `gorm:"column:subnode_dest_pubkey;not null" json:"subnode_dest_pubkey"`
-	BlockchainTable     string `gorm:"not null" json:"blockchain_table"`
 	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
 	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
 
@@ -55,6 +52,15 @@ func (m *SubNodeSrcDataChainStatus) GetOneByID() (*SubNodeSrcDataChainStatus, er
 	return m, err
 }
 
+func (m *SubNodeSrcDataChainStatus) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcDataChainStatus, error) {
+	result := make([]SubNodeSrcDataChainStatus, 0)
+	err := DBConn.Table("subnode_src_data_chain_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeSrcDataChainStatus) GetOneByTaskUUID(TaskUUID string) (*SubNodeSrcDataChainStatus, error) {
+	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+	return m, err
 }
 
 func (m *SubNodeSrcDataChainStatus) GetAllByChainState(ChainState int64) ([]SubNodeSrcDataChainStatus, error) {

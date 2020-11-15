@@ -1,11 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
-	"fmt"
-)
-
-// Cron represents record of {prefix}_cron table
-type Cron struct {
 	tableName string
 	ID        int64
 	Cron      string

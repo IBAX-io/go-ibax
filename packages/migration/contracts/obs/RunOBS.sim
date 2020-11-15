@@ -1,7 +1,3 @@
-// +prop AppID = '1'
-// +prop Conditions = 'ContractConditions("MainCondition")'
-contract RunOBS {
-	}	
 	action {
 		$OBSName = ToLower($OBSName)
 		StartOBS($OBSName)
