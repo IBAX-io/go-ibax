@@ -12,11 +12,12 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/service"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-
-	log "github.com/sirupsen/logrus"
 )
 
-var (
+type StopNetworkTransaction struct {
+	Logger *log.Entry
+	Data   interface{}
+	Cert   *utils.Cert
 }
 
 func (t *StopNetworkTransaction) Init() error {

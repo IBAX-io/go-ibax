@@ -67,16 +67,15 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 	result.List, err = model.GetResult(rows)
 	if err != nil {
 		errorResponse(w, err)
-		return
-	}
-
-	var sections []map[string]string
-	for _, item := range result.List {
-		var roles []int64
-		if err := json.Unmarshal([]byte(item["roles_access"]), &roles); err != nil {
-			errorResponse(w, err)
-			return
-		}
+			for _, v := range roles {
+				if v == client.RoleID {
+					added = true
+					break
+				}
+			}
+			if !added {
+				continue
+			}
 		}
 
 		if item["status"] == consts.StatusMainPage {

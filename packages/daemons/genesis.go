@@ -6,9 +6,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+	"github.com/IBAX-io/go-ibax/packages/model"
+)
 
-	log "github.com/sirupsen/logrus"
+func InitialLoad(logger *log.Entry) error {
+
 	// check for initial load
 	toLoad, err := needLoad(logger)
 	if err != nil {

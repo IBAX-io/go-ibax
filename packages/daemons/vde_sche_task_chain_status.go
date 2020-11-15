@@ -27,6 +27,19 @@ func VDEScheTaskChainStatus(ctx context.Context, d *daemon) error {
 		err             error
 		TaskParms       map[string]interface{}
 		vde_src_pubkey  string
+		vde_dest_pubkey string
+		ok              bool
+
+		myContractSrcGet      string
+		myContractSrcGetHash  string
+		myContractDestGet     string
+		myContractDestGetHash string
+	)
+
+	m := &model.VDEScheTask{}
+	ScheTask, err := m.GetAllByContractStateAndChainState(1, 1, 0) //0Indicates that the contract has not been installed, 1 means that the contract is successfully installed, 2 means that the contract is not installed successfully; 0 means that the contract has not been uploaded yet, and 1 means that a request has been generated
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
 		return err
 	}
 	if len(ScheTask) == 0 {
@@ -142,15 +155,6 @@ func VDEScheTaskChainStatus(ctx context.Context, d *daemon) error {
 		for index, vde_dest_pubkey_item := range vde_dest_pubkey_slice {
 			//According to the contract mode flag, decide whether to perform contract encryption
 			//if item.ContractMode == 2 || item.ContractMode == 3 {
-			if item.ContractMode == 3 || item.ContractMode == 4 {
-				contractData, err := ecies.EccCryptoKey([]byte(ContractSrcGetPlusHash), vde_dest_pubkey_item)
-				if err != nil {
-					fmt.Println("error", err)
-					log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
-					continue
-				}
-				contractDataBase64 := base64.StdEncoding.EncodeToString(contractData)
-				myContractSrcGet = contractDataBase64
 
 				if myContractSrcGetHash, err = crypto.HashHex([]byte(myContractSrcGet)); err != nil {
 					log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")

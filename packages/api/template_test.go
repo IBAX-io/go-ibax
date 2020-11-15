@@ -70,20 +70,6 @@ func TestAPI(t *testing.T) {
 	gAuth = ``
 	assert.NoError(t, sendPost(`content/hash/`+name, &url.Values{`ecosystem`: {`1`}, `keyID`: {msg}, `roleID`: {`0`}},
 		&retHash2))
-	if retHash.Hash != retHash2.Hash {
-		t.Error(`Wrong hash`)
-		return
-	}
-	if err := keyLogin(1); err != nil {
-		t.Error(err)
-		return
-	}
-	err = sendPost(`content/page/default_page`, &url.Values{}, &ret)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
 	for _, item := range forTest {
 		err := sendPost(`content`, &url.Values{`template`: {item.input}}, &ret)
 		if err != nil {
@@ -245,6 +231,16 @@ func TestCutoff(t *testing.T) {
 	form := url.Values{
 		"Name": {name},
 		"Columns": {`[
+			{"name":"name","type":"varchar", "index": "1", "conditions":"true"},
+			{"name":"long_text", "type":"text", "index":"0", "conditions":"true"},
+			{"name":"short_text", "type":"varchar", "index":"0", "conditions":"true"}
+			]`},
+		"Permissions":   {`{"insert": "true", "update" : "true", "new_column": "true"}`},
+		"ApplicationId": {"1"},
+	}
+	assert.NoError(t, postTx(`NewTable`, &form))
+	form = url.Values{
+		"Name": {name},
 		"Value": {`
 			contract ` + name + ` {
 				data {
