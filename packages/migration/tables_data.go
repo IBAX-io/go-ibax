@@ -266,20 +266,9 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "ecosystem": "false"
         }',
         'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
-        }',
-        '{
-            "app_id": "ContractAccess(\"@1ItemChangeAppId\")",
-            "name": "false",
-            "value": "ContractAccess(\"@1EditAppParam\",\"@1VotingUpdateAssign\")",
-            "conditions": "ContractAccess(\"@1EditAppParam\")",
-            "permissions": "ContractConditions(\"@1AdminCondition\")",
-            "ecosystem": "false"
-        }',
-        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
     ),
-    (next_id('1_tables'), 'buffer_data',
+    (next_id('1_tables'), 'app_params',
         '{
-            "insert": "true",
             "update": "true",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',

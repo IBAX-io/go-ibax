@@ -4,11 +4,6 @@ contract EditApplication {
     data {
         ApplicationId int
         Conditions string "optional"
-    }
-    func onlyConditions() bool {
-    action {
-        var pars map
-        if $Conditions {
             pars["conditions"] = $Conditions
         }
         if pars {

@@ -12,14 +12,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
 
-	log "github.com/sirupsen/logrus"
-)
-
-const (
-	Select = "select"
-	Insert = "insert"
-	Update = "update"
-	Delete = "delete"
 
 	Set  = "set"
 	From = "from"
@@ -31,6 +23,14 @@ const (
 
 const (
 	SelectCost = 1
+	UpdateCost = 1
+	InsertCost = 1
+	DeleteCost = 1
+
+	SelectRowCoeff = 0.0001
+	InsertRowCoeff = 0.0001
+	DeleteRowCoeff = 0.0001
+	UpdateRowCoeff = 0.0001
 )
 
 var FromStatementMissingError = errors.New("FROM statement missing")

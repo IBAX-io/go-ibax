@@ -123,19 +123,17 @@ func SubNodeSrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, result)
 }
-
-func SubNodeSrcTaskDeleteHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-	id := converter.StrToInt64(params["id"])
-
-	m := &model.SubNodeSrcTask{}
 	m.ID = id
 	if err := m.Delete(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
 	}
 
 	jsonResponse(w, "ok")
+}
+
+func SubNodeSrcTaskListHandlre(w http.ResponseWriter, r *http.Request) {
+	logger := getLogger(r)
+	srcData := model.SubNodeSrcTask{}
 
 	result, err := srcData.GetAll()
 	if err != nil {

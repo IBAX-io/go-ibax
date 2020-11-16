@@ -66,6 +66,20 @@ func (btc *BlockTimeCounter) NodeTimeExists(t time.Time, nodePosition int) (bool
 	//if err != nil {
 	//	return false, err
 	//}
+
+	return false, nil
+}
+
+// BlockForTimeExists checks conformity between time and nodePosition
+// changes functionality of ValidateBlock prevent blockTimeCalculator
+func (btc *BlockTimeCounter) BlockForTimeExists(t time.Time, nodePosition int) (bool, error) {
+	startInterval, endInterval, err := btc.RangeByTime(t)
+	if err != nil {
+		return false, err
+	}
+
+	b := &model.Block{}
+	blocks, err := b.GetNodeBlocksAtTime(startInterval, endInterval, int64(nodePosition))
 	if err != nil {
 		return false, err
 	}
@@ -108,15 +122,6 @@ func (btc *BlockTimeCounter) RangeByTime(t time.Time) (start, end time.Time, err
 
 // TimeToGenerate returns true if the generation queue at time belongs to the specified node
 func (btc *BlockTimeCounter) TimeToGenerate(at time.Time, nodePosition int) (bool, error) {
-	if nodePosition >= btc.numberNodes {
-		return false, WrongNodePositionError
-	}
-
-	position, err := btc.nodePosition(at)
-	return position == nodePosition, err
-}
-
-// NewBlockTimeCounter return initialized BlockTimeCounter
 func NewBlockTimeCounter() *BlockTimeCounter {
 	firstBlock, _ := syspar.GetFirstBlockData()
 	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())

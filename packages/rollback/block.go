@@ -34,6 +34,17 @@ func RollbackBlock(data []byte) error {
 		return err
 	}
 
+	if b.ID != bl.Header.BlockID {
+		return ErrLastBlock
+	}
+
+	dbTransaction, err := model.StartTransaction()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting transaction")
+		return err
+	}
+
+	err = rollbackBlock(dbTransaction, bl)
 	if err != nil {
 		dbTransaction.Rollback()
 		return err
@@ -107,15 +118,6 @@ func rollbackBlock(dbTransaction *model.DbTransaction, block *block.Block) error
 		}
 
 		if t.TxContract != nil {
-			if err = rollbackTransaction(t.TxHash, t.DbTransaction, logger); err != nil {
-				return err
-			}
-		} else {
-			MethodName := consts.TxTypes[t.TxType]
-			txParser, err := transaction.GetTransaction(t, MethodName)
-			if err != nil {
-				return utils.ErrInfo(err)
-			}
 			result := txParser.Init()
 			if _, ok := result.(error); ok {
 				return utils.ErrInfo(result.(error))

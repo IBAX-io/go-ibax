@@ -35,6 +35,19 @@ func VDEScheTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
 		return err
+	}
+	if len(ScheTask) == 0 {
+		//log.Info("Sche task not found")
+		time.Sleep(time.Millisecond * 100)
+		return nil
+	}
+
+	// deal with task data
+	for _, item := range ScheTask {
+		//fmt.Println("ScheTask:", item.TaskUUID)
+		blockchain_http = item.ContractRunHttp
+		blockchain_ecosystem = item.ContractRunEcosystem
+		//fmt.Println("ContractRunHttp and ContractRunEcosystem:", blockchain_http, blockchain_ecosystem)
 		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
@@ -179,16 +192,6 @@ func VDEScheTaskInstallContractDest(ctx context.Context, d *daemon) error {
 //		err                  error
 //	)
 //
-//	m := &model.VDEScheTaskFromSrc{}
-//	ScheTask, err := m.GetAllByContractStateSrc(0) //0
-//	if err != nil {
-//		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
-//		return err
-//	}
-//	if len(ScheTask) == 0 {
-//		//log.Info("Sche task not found")
-//		time.Sleep(time.Millisecond * 100)
-//		return nil
 //	}
 //
 //	// deal with task data
