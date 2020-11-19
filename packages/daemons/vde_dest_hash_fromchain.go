@@ -37,9 +37,18 @@ type dest_VDEDestDataHashResult struct {
 
 //Getting task data hash from the chain
 func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
-	var (
-		blockchain_http      string
-		blockchain_ecosystem string
+	hashtime := &model.VDEDestHashTime{}
+	DestHashTime, err := hashtime.Get()
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting DestHashTime")
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
+	if DestHashTime == nil {
+		//log.Info("DestHashTime not found")
+		fmt.Println("Dest DestHashTime not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
 	}
 
 	chaininfo := &model.VDEDestChainInfo{}

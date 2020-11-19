@@ -41,6 +41,16 @@ func (c *Confirmation) GetGoodBlockLast() (bool, error) {
 // GetGoodBlock returns last good block
 func (c *Confirmation) CheckAllowGenBlock() (bool, error) {
 	prevBlock := &InfoBlock{}
+	_, err := prevBlock.Get()
+	if err != nil {
+		return false, err
+	}
+
+	var sp SystemParameter
+	count, err := sp.GetNumberOfHonorNodes()
+	if err != nil {
+		return false, err
+	}
 
 	if count == 0 {
 		return true, nil
@@ -55,6 +65,3 @@ func (c *Confirmation) CheckAllowGenBlock() (bool, error) {
 			return true, nil
 		}
 	}
-
-	return false, err
-}
