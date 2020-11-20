@@ -72,16 +72,6 @@ func (t *FirstBlockTransaction) Action() error {
 		return utils.ErrInfo(err)
 	}
 
-	err = model.GetDB(t.DbTransaction).Exec(`Update "1_system_parameters" SET value = ? where name = 'private_blockchain'`, strconv.FormatUint(data.PrivateBlockchain, 10)).Error
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating private_blockchain")
-		return utils.ErrInfo(err)
-	}
-
-	if err = syspar.SysUpdate(t.DbTransaction); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
-		return utils.ErrInfo(err)
-	}
 
 	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_keys" (id,account,pub,amount) values(?,?,?,?),(?,?,?,?)`,
 		keyID, converter.AddressToString(keyID), data.PublicKey, amount, nodeKeyID, converter.AddressToString(nodeKeyID), data.NodePublicKey, 0).Error
@@ -124,3 +114,9 @@ func (t *FirstBlockTransaction) Action() error {
 // Rollback first block
 func (t *FirstBlockTransaction) Rollback() error {
 	return nil
+}
+
+// Header is returns first block header
+func (t FirstBlockTransaction) Header() *tx.Header {
+	return nil
+}

@@ -3,22 +3,6 @@ package model
 import (
 	"strconv"
 	"time"
-
-	"github.com/shopspring/decimal"
-
-	"github.com/vmihailenco/msgpack/v5"
-)
-
-type MineStakeCount struct {
-	Devid         int64 `gorm:";not null" ` //ID
-	Keyid         int64 `gorm:"not null" `  //ID
-	Minerid       int64 `gorm:"not null"`
-	Pminerid      int64 `gorm:"not null"`
-	Poolid        int64 `gorm:"not null"`
-	Status        int64 `gorm:"null"`            //" 0 not  1 over  2 reviewing  3 reviewd"
-	Online        int64 `gorm:"null default 0" ` //review 0not review  1 review not over  2reviewd
-	Mine_capacity int64 `gorm:"null default 0" ` //
-	Count         int64 `gorm:"null default 0" ` //count
 	TotalCount    int64 `gorm:"not null" `       //total count
 	Stime         int64 `gorm:"not null" `       //stime
 	Etime         int64 `gorm:"not null" `       //etime
@@ -27,6 +11,21 @@ type MineStakeCount struct {
 //MintCount example
 type MinterCount struct {
 	Keyid      int64
+	Mineid     int64
+	Devid      int64
+	Capacity   int64
+	Nonce      int64
+	BlockId    int64
+	Hash       []byte
+	MintMap    map[int64]int64
+	MineCounts []MineCount
+	Time       int64
+}
+
+//MintCount example
+type MintCount struct {
+	Keyid      int64
+	Mineid     int64
 	Devid      int64
 	Capacity   int64
 	Nonce      int64

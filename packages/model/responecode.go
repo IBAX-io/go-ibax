@@ -118,13 +118,9 @@ type CodeType struct {
 
 //
 type errType struct {
-	et, ok := err.(errType)
-	if !ok {
-		et.Message = err.Error()
-	}
-	ct.Message = fmt.Sprintln(ct.Message, et.Message)
-	ct.Msg = http.StatusText(ct.Status)
-	return ct
+	Err     string `json:"error"`
+	Message string `json:"msg"`
+	Status  int    `json:"-"`
 }
 
 func (ct CodeType) String(dat string) CodeType {

@@ -56,19 +56,17 @@ func (n *NodeActualizer) Run(ctx context.Context) {
 				log.Info("Node Actualizer is resuming node activity")
 				n.resumeNodeActivity()
 			}
-
-			time.Sleep(time.Second * 5)
-		}
-	}()
-}
-
-func (n *NodeActualizer) checkBlockchainActuality(ctx context.Context) (bool, error) {
-	curBlock := &model.InfoBlock{}
-	_, err := curBlock.Get()
-	if err != nil {
-		return false, errors.Wrapf(err, "retrieving info block")
 	}
 
+	remoteHosts, err := GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
+	if err != nil {
+		return false, err
+	}
+
+	_, maxBlockID, err := tcpclient.HostWithMaxBlock(ctx, remoteHosts)
+	if err != nil {
+		return false, errors.Wrapf(err, "choosing best host")
+	}
 
 	// Currently this node is downloading blockchain
 	if curBlock.BlockID == 0 || curBlock.BlockID+n.availableBlockchainGap < maxBlockID {

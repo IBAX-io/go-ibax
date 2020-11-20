@@ -21,18 +21,6 @@ import (
 	"path/filepath"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	log "github.com/sirupsen/logrus"
-)
-
-type src_VDEShareTaskResult struct {
-	Count string `json:"count"`
-	List  []struct {
-		ID                   string `json:"id"`
-		TaskUUID             string `json:"task_uuid"`
 		TaskName             string `json:"task_name"`
 		TaskSender           string `json:"task_sender"`
 		TaskReceiver         string `json:"task_receiver"`
@@ -217,6 +205,13 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 		}
 
 		//
+		if ContractSrcGetHashHex, err = crypto.HashHex([]byte(ShareTaskItem.ContractSrcGet)); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
+			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
+			continue
+		}
+		if ContractSrcGetHashHex != ShareTaskItem.ContractSrcGetHash {
+			log.WithFields(log.Fields{"error": err}).Error("Contract Src Hash validity fails")
 			fmt.Println("Contract Src Hash validity fails")
 			continue
 		}

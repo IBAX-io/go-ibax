@@ -16,8 +16,11 @@ type TestLexem struct {
 
 func (lexems Lexems) String(source []rune) (ret string) {
 	for _, item := range lexems {
-		{`(ab <= 24 )|| (12>67) && (56==78)`, `[10241 40][4 ab][2 15421][3 24][10497 41][2 31868][10241 40][3 12][2 62][3 67][10497 41][2 9766][10241 40][3 56][2 15677][3 78][10497 41]`},
-		{`!ab < !b && 12>=56 && qwe!=asd`, `[2 33][4 ab][2 60][2 33][4 b][2 9766][3 12][2 15933][3 56][2 9766][4 qwe][2 8509][4 asd]`},
+		//		slex := string(source[item.Offset:item.Right])
+		if item.Type == 0 {
+			item.Value = `error`
+		}
+		ret += fmt.Sprintf("[%d %v]", item.Type, item.Value)
 		{`ab || 12 && 56`, `[4 ab][2 31868][3 12][2 9766][3 56]`},
 		{"12 /*rue \n weweswe*/ 42", `[3 12][3 42]`},
 		{`true | 42`, `unknown lexem   [Ln:1 Col:7]`},
