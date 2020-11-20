@@ -129,6 +129,21 @@ func TestMapJson(t *testing.T) {
 		StartBlockID:    1,
 		EndBlockID:      INT64_MAX,
 		IntervalBlockID: 1,
+		TotalAmount:     "5250000000000000000",
+	}
+
+	ret := make(map[int64]AssignRules, 10)
+	ret[1] = apri
+	ret[2] = apub
+	ret[3] = ac
+	ret[4] = ad
+	//ret[5] = ae
+	ret[5] = af
+	ret[6] = ag
+	ret[7] = ah
+	data, _ := json.Marshal(ret)
+	fmt.Println(string(data))
+
 }
 
 func TestMapJsonTs(t *testing.T) {
@@ -181,16 +196,6 @@ func TestMapJsonTs(t *testing.T) {
 	}
 
 	//mine
-	ag := AssignRules{
-		StartBlockID:    21600 * 365,
-		EndBlockID:      INT64_MAX,
-		IntervalBlockID: 1,
-		TotalAmount:     "1128750000000000000000",
-	}
-
-	//founder
-	ah := AssignRules{
-		StartBlockID:    0,
 		EndBlockID:      INT64_MAX,
 		IntervalBlockID: 1,
 		TotalAmount:     "5250000000000000000",

@@ -1,5 +1,13 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package model
+
+// RollbackTx is model
+type PrivatePackets struct {
+	Hash string `gorm:"not null" json:"hash"`
 	Data []byte `gorm:"not null" json:"data"`
 	Time int64  `gorm:"not null" json:"time"`
 }
@@ -142,7 +150,3 @@ func (pp *PrivateFilePacketsAll) DeleteByHash(dbTransaction *DbTransaction) erro
 	return GetDB(dbTransaction).Exec("DELETE FROM 2_subnode_share_data_502 WHERE hash = ?", pp.Hash).Error
 }
 
-// Create is creating record of model
-func (pp *PrivateFilePacketsAll) Create() error {
-	return DBConn.Create(&pp).Error
-}

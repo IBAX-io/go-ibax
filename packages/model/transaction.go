@@ -23,6 +23,10 @@ const (
 )
 const expediteOrder = `high_rate,expedite DESC,time ASC`
 
+type transactionRate int8
+
+// Transaction is model
+type Transaction struct {
 	Hash     []byte          `gorm:"private_key;not null"`
 	Data     []byte          `gorm:"not null"`
 	Used     int8            `gorm:"not null"`
@@ -185,11 +189,6 @@ func GetTxRateByTxType(txType int8) transactionRate {
 func GetManyTransactions(dbtx *DbTransaction, hashes [][]byte) ([]Transaction, error) {
 	txes := []Transaction{}
 	query := GetDB(dbtx).Where("hash in (?)", hashes).Find(&txes)
-	if err := query.Error; err != nil {
-		return nil, err
-	}
-
-	return txes, nil
 }
 
 func (t *Transaction) GetStopNetwork() (bool, error) {

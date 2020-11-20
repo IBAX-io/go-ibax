@@ -43,17 +43,20 @@ func (ts *TransactionStatus) Get(transactionHash []byte) (bool, error) {
 func (ts *TransactionStatus) UpdateBlockID(transaction *DbTransaction, newBlockID int64, transactionHash []byte) error {
 	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("block_id", newBlockID).Error
 }
-
-type updateBlockMsg struct {
-	Hash []byte
-	Msg  string
-}
-
-var updBlockMsg []updateBlockMsg
-
-// SetTransactionStatusBlockMsg is updating block msg
 func SetTransactionStatusBlockMsg(transaction *DbTransaction, newBlockID int64, msg string, transactionHash []byte) error {
 	if len(msg) > 255 {
+		msg = msg[:255]
+	}
+	if !conf.Config.IsOBSMaster() {
+		updBlockMsg = append(updBlockMsg, updateBlockMsg{Msg: msg, Hash: transactionHash})
+		return nil
+	}
+
+	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Updates(
+		map[string]interface{}{"block_id": newBlockID, "error": msg}).Error
+}
+
+func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64) error {
 	defer func() {
 		updBlockMsg = []updateBlockMsg{}
 	}()
