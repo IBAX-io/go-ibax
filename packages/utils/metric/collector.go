@@ -21,10 +21,6 @@ type Value struct {
 
 // ToMap returns values as map
 func (v *Value) ToMap() *types.Map {
-	return types.LoadMap(map[string]interface{}{
-		"time":   v.Time,
-		"metric": v.Metric,
-		"key":    v.Key,
 		"value":  v.Value,
 	})
 }
@@ -50,3 +46,10 @@ func (c *Collector) Values(timeBlock int64) []interface{} {
 	return values
 }
 
+// NewCollector creates new collector
+func NewCollector(funcs ...CollectorFunc) *Collector {
+	c := &Collector{}
+	c.funcs = make([]CollectorFunc, 0, len(funcs))
+	c.funcs = append(c.funcs, funcs...)
+	return c
+}

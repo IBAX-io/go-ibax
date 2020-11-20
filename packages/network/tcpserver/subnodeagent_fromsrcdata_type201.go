@@ -64,11 +64,10 @@ func Type201(r *network.SubNodeSrcDataAgentRequest) (*network.SubNodeSrcDataAgen
 
 	AgentMode := converter.StrToInt64(r.AgentMode)
 	TranMode := converter.StrToInt64(r.TranMode)
-		SubNodeDestIP:      r.SubNodeDestIp,
-		//Data:         r.Data,
-		//Data:         data,
-		Data:       []byte(encodeDataString),
-		CreateTime: time.Now().Unix(),
+	SubNodeAgentData := model.SubNodeAgentData{
+		TaskUUID:           r.TaskUUID,
+		DataUUID:           r.DataUUID,
+		AgentMode:          AgentMode,
 	}
 
 	err = SubNodeAgentData.Create()

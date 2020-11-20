@@ -60,7 +60,7 @@ func TestTask(t *testing.T) {
 		t.Error(err)
 	}
 	err = sch.UpdateTask(task)
-	task = &Task{ID: taskID, CronSpec: "* * * * *", Handler: handler}
+	if errStr := err.Error(); errStr != "End of range (60) above maximum (59): 60" {
 	sch.UpdateTask(task)
 
 	now := time.Now()

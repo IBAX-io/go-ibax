@@ -121,6 +121,16 @@ func VDEAgentMemberListHandlre(w http.ResponseWriter, r *http.Request) {
 
 	result, err := srcData.GetAll()
 	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
+		errorResponse(w, err)
+		return
+	}
+	jsonResponse(w, result)
+}
+
+func VDEAgentMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
 	srcData := model.VDEAgentMember{}
@@ -128,21 +138,6 @@ func VDEAgentMemberListHandlre(w http.ResponseWriter, r *http.Request) {
 	result, err := srcData.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
-		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
-}
-
-func VDEAgentMemberByPubKeyHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	srcData := model.VDEAgentMember{}
-	result, err := srcData.GetOneByPubKey(params["pubkey"])
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query member data by pubkey failed")
 		errorResponse(w, err)
 		return
 	}

@@ -70,17 +70,6 @@ func GetAllUnsentTransactions(limit int) (*[]Transaction, error) {
 // GetTransactionCountAll count all transactions
 func GetTransactionCountAll() (int64, error) {
 	var rowsCount int64
-	if err := DBConn.Table("transactions").Count(&rowsCount).Error; err != nil {
-		return -1, err
-	}
-	return rowsCount, nil
-}
-
-// GetTransactionsCount count all transactions by hash
-func GetTransactionsCount(hash []byte) (int64, error) {
-	var rowsCount int64
-	if err := DBConn.Table("transactions").Where("hash = ?", hash).Count(&rowsCount).Error; err != nil {
-		return -1, err
 	}
 	return rowsCount, nil
 }
@@ -189,6 +178,11 @@ func GetTxRateByTxType(txType int8) transactionRate {
 func GetManyTransactions(dbtx *DbTransaction, hashes [][]byte) ([]Transaction, error) {
 	txes := []Transaction{}
 	query := GetDB(dbtx).Where("hash in (?)", hashes).Find(&txes)
+	if err := query.Error; err != nil {
+		return nil, err
+	}
+
+	return txes, nil
 }
 
 func (t *Transaction) GetStopNetwork() (bool, error) {

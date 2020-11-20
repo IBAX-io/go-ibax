@@ -28,15 +28,6 @@ const (
 	lexOper               // Operator is +, -, *, /
 	lexNumber             // Number
 	lexIdent              // Identifier
-	lexNewLine            // Line translation
-	lexString             // String
-	lexComment            // Comment
-	lexKeyword            // Key word
-	lexType               // Name of the type
-	lexExtend             // Referring to an external variable or function - $myname
-
-	lexError = 0xff
-	// flags of lexical states
 	lexfNext = 1
 	lexfPush = 2
 	lexfPop  = 4
@@ -232,6 +223,12 @@ func lexParser(input []rune) (Lexems, error) {
 			right := off
 			if (flags & lexfNext) != 0 {
 				right++
+			}
+			if len(ifbuf) > 0 && ifbuf[len(ifbuf)-1].stop && lexID != lexNewLine {
+				name := string(input[lexOff:right])
+				if name != `else` && name != `elif` {
+					for i := 0; i < ifbuf[len(ifbuf)-1].count; i++ {
+						lexems = append(lexems, &Lexem{lexSys | (uint32('}') << 8), 0,
 							uint32('}'), uint16(line), lexOff - offline + 1})
 					}
 					ifbuf = ifbuf[:len(ifbuf)-1]

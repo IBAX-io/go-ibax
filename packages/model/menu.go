@@ -23,6 +23,3 @@ func (m *Menu) SetTablePrefix(prefix string) {
 }
 
 // TableName returns name of table
-func (m Menu) TableName() string {
-	if m.ecosystem == 0 {
-		m.ecosystem = 1

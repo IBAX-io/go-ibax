@@ -68,21 +68,6 @@ func VDESrcMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	id := converter.StrToInt64(params["id"])
-	form := &VDESrcMemberForm{}
-
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err)
-		return
-	}
-
-	m := &model.VDESrcMember{}
-
-	if m, err = unmarshalColumnVDESrcMember(form); err != nil {
-		errorResponse(w, err)
-		return
 	}
 
 	m.ID = id
@@ -137,6 +122,7 @@ func VDESrcMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	srcData.ID = id
 	result, err := srcData.GetOneByID()
 	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
 		errorResponse(w, err)
 		return
 	}

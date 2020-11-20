@@ -196,6 +196,16 @@ func TestMapJsonTs(t *testing.T) {
 	}
 
 	//mine
+	ag := AssignRules{
+		StartBlockID:    21600 * 365,
+		EndBlockID:      INT64_MAX,
+		IntervalBlockID: 1,
+		TotalAmount:     "1128750000000000000000",
+	}
+
+	//founder
+	ah := AssignRules{
+		StartBlockID:    0,
 		EndBlockID:      INT64_MAX,
 		IntervalBlockID: 1,
 		TotalAmount:     "5250000000000000000",
@@ -243,14 +253,6 @@ func TestMapJsonTsFirst(t *testing.T) {
 	ad := AssignRules{
 		StartBlockID:    INT64_MAX,
 		EndBlockID:      INT64_MAX, //start + 21600 * 2 * 365
-		IntervalBlockID: 21600 * 30,
-		Count:           24,
-		TotalAmount:     "168000000000000000000",
-	}
-
-	//
-	//ae :=AssignRules{
-	//	StartBlockID:21600*6*30,
 	//	EndBlockID:INT64_MAX,
 	//	IntervalBlockID:21600*30,
 	//	TotalAmount:"105000000000000000000",
