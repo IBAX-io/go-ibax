@@ -24,12 +24,11 @@ type VDEAgentDataLog struct {
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
-	return DBConn.Delete(m).Error
+func (VDEAgentDataLog) TableName() string {
+	return "vde_agent_data_log"
 }
 
-func (m *VDEAgentDataLog) GetAll() ([]VDEAgentDataLog, error) {
-	var result []VDEAgentDataLog
-	err := DBConn.Find(&result).Error
+func (m *VDEAgentDataLog) Create() error {
 	return result, err
 }
 func (m *VDEAgentDataLog) GetOneByID() (*VDEAgentDataLog, error) {

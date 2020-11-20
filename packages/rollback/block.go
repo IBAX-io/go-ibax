@@ -118,7 +118,6 @@ func rollbackBlock(dbTransaction *model.DbTransaction, block *block.Block) error
 		}
 
 		if t.TxContract != nil {
-			result := txParser.Init()
 			if _, ok := result.(error); ok {
 				return utils.ErrInfo(result.(error))
 			}

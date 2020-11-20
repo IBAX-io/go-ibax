@@ -9,3 +9,10 @@ contract BindWallet {
 		if !$cur {
 			error Sprintf("Contract %d does not exist", $Id)
 		}
+		Eval($cur["conditions"])
+		if $key_id != Int($cur["wallet_id"]) {
+			error Sprintf("Wallet %d cannot activate the contract", $key_id)
+		}
+	}
+	action {
+		BndWallet($Id, $ecosystem_id)

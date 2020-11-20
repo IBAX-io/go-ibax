@@ -12,12 +12,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strings"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -104,6 +98,8 @@ func sendAPIRequest(rtype, url string, form *url.Values, v interface{}, auth str
 		req.Header.Set("Authorization", headerAuthPrefix+auth)
 	}
 	resp, err := client.Do(req)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("api request")
 		return err
 	}
 

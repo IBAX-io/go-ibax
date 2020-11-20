@@ -449,15 +449,6 @@ func defineVMType() script.VMType {
 	}
 
 	if conf.Config.IsOBSMaster() {
-		return script.VMTypeOBSMaster
-	}
-
-	return script.VMTypeSmart
-}
-
-// LoadContracts reads and compiles contracts from smart_contracts tables
-func LoadContracts() error {
-	contract := &model.Contract{}
 	count, err := contract.Count()
 	if err != nil {
 		return logErrorDB(err, "getting count of contracts")
@@ -489,6 +480,15 @@ func One(list array, name string) string {
 	   var row map 
 	   row = list[0]
 	   if Contains(name, "->") {
+		   var colfield array
+		   var val string
+		   colfield = Split(ToLower(name), "->")
+		   val = row[Join(colfield, ".")]
+		   if !val && row[colfield[0]] {
+			   var fields map
+			   var i int
+			   fields = JSONToMap(row[colfield[0]])
+			   val = fields[colfield[1]]
 			   i = 2
 			   while i < Len(colfield) {
 					if GetType(val) == "map[string]interface {}" {

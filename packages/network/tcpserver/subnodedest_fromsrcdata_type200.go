@@ -8,6 +8,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
@@ -31,9 +34,6 @@ func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse,
 	data, err := ecies.EccDeCrypto(r.Data, nodePrivateKey)
 	if err != nil {
 		fmt.Println("EccDeCrypto err!")
-		log.WithError(err)
-		return nil, err
-	}
 
 	//hash, err := crypto.HashHex(r.Data)
 	hash, err := crypto.HashHex(data)

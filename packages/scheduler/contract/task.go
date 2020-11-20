@@ -6,9 +6,14 @@ package contract
 
 import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/scheduler"
 
-	log "github.com/sirupsen/logrus"
-)
+// Run executes task
+func (ch *ContractHandler) Run(t *scheduler.Task) {
+	_, err := NodeContract(ch.Contract)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.ContractError, "error": err, "task": t.String(), "contract": ch.Contract}).Error("run contract task")
+		return
+	}
 
-// ContractHandler represents contract handler
+	log.WithFields(log.Fields{"task": t.String(), "contract": ch.Contract}).Info("run contract task")
+}

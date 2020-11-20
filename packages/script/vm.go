@@ -753,12 +753,6 @@ main:
 					}
 				}
 			} else {
-				rt.cost -= CostCall
-			}
-			err = rt.callFunc(cmd.Cmd, cmd.Value.(*ObjInfo))
-
-		case cmdVar:
-			ivar := cmd.Value.(*VarInfo)
 			var i int
 			for i = len(rt.blocks) - 1; i >= 0; i-- {
 				if ivar.Owner == rt.blocks[i].Block {
@@ -869,6 +863,15 @@ main:
 							err = errMaxArrayIndex
 							break
 						}
+						slice = append(slice, make([]interface{}, int(ind)-len(slice)+1)...)
+						indexInfo := cmd.Value.(*IndexInfo)
+						if indexInfo.Owner == nil { // Extend variable $varname
+							(*rt.extend)[indexInfo.Extend] = slice
+						} else {
+							rt.vars[indexKey] = slice
+						}
+						rt.stack[size-3] = slice
+					}
 					slice[ind] = rt.stack[size-1]
 				} else {
 					slice := rt.stack[size-3].([]map[string]string)
