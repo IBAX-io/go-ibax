@@ -37,3 +37,6 @@ func (m *VDESrcChainInfo) Get() (*VDESrcChainInfo, error) {
 
 func (m *VDESrcChainInfo) GetAll() ([]VDESrcChainInfo, error) {
 	var result []VDESrcChainInfo
+	err := DBConn.Find(&result).Error
+	return result, err
+}
