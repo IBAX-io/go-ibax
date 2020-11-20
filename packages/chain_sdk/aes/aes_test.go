@@ -9,8 +9,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"testing"
-)
-
 func TestAesEncryptAndDecrypt(t *testing.T) {
 
 	var aeskey = []byte("123456789012345612345678") // AES-128(16bytes) AES-256(32bytes)
@@ -37,3 +35,6 @@ func TestAesEncryptAndDecrypt(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 		return
+	}
+	fmt.Printf("aesdecrypt:%s\n", tpass)
+}

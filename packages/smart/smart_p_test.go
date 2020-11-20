@@ -7,12 +7,12 @@ package smart
 import (
 	"testing"
 )
-		args args
-		want bool
-	}{
-		// TODO: Add test cases.
-		//{"email", args{"3@1.com", `^(?i)[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`}, true},
-		{"num alpha han", args{"one", `^[A-Za-z0-9\u4e00-\u9fa5]{2,4}$`}, true},
+
+func TestRegexpMatch(t *testing.T) {
+	type args struct {
+		str string
+		reg string
+	}
 		//{"url", args{"http://www.google.com", `(https?)://[-A-Za-z0-9+&@#/%?=~_|!:,.;]+[-A-Za-z0-9+&@#/%=~_|]`}, true},
 	}
 	for _, tt := range tests {
