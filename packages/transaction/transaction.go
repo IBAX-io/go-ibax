@@ -143,6 +143,13 @@ func (rtx *RawTransaction) SetRawTx() *model.RawTx {
 	}
 }
 
+// Transaction is a structure for parsing transactions
+type Transaction struct {
+	BlockData  *utils.BlockData
+	PrevBlock  *utils.BlockData
+	PublicKeys [][]byte
+
+	TxBinaryData  []byte // transaction binary data
 	TxFullData    []byte // full transaction, with type and data
 	TxHash        []byte
 	TxSignature   []byte
@@ -271,17 +278,6 @@ func (t *Transaction) parseFromContract(fillData bool) error {
 
 	contract := smart.GetContractByID(int32(smartTx.ID))
 	if contract == nil {
-		log.WithFields(log.Fields{"contract_id": smartTx.ID, "type": consts.NotFound}).Error("unknown contract")
-		return fmt.Errorf(`unknown contract %d`, smartTx.ID)
-	}
-
-	t.TxContract = contract
-	t.TxHeader = &smartTx.Header
-
-	t.TxData = make(map[string]interface{})
-	txInfo := contract.Block.Info.(*script.ContractInfo).Tx
-
-	if txInfo != nil {
 		if fillData {
 			if err := t.fillTxData(*txInfo, smartTx.Params); err != nil {
 				return errors.Wrap(err, fmt.Sprintf("contract '%s'", contract.Name))

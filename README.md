@@ -5,8 +5,6 @@ A  powerful blockchain system platform with a new system framework and a simplif
 
 ### Build from Source
 
-#### Install Go
-
 The build process for go-ibax requires Go 1.12 or higher. If you don't have it: [Download Go 1.12+](https://golang.org/dl/).
 
 You'll need to add Go's bin directories to your `$PATH` environment variable e.g., by adding these lines to your `/etc/profile` (for a system-wide installation) or `$HOME/.profile`:
@@ -76,6 +74,16 @@ docker-compose logs
 
 https://127.0.0.1:7079/api/v2/getuid
 http://127.0.0.1:7079/api/v2/getuid
+
+https://127.0.0.1:8000
+http://127.0.0.1:8000
+
+
+docker build -t ibax/go-ibax -f Dockerfile .
+
+docker build -t ibax/go-ibax-src -f Dockerfile_src .
+
+```
 
 
 

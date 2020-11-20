@@ -51,6 +51,19 @@ func shareDataCreate(w http.ResponseWriter, r *http.Request) {
 
 	//model.DBConn.Last(&m)
 
+	//jsonResponse(w, *m)
+	jsonResponse(w, &taskdataResult{
+		TaskUUID: form.TaskUUID,
+		//DataUUID: m.DataUUID,
+		Hash: m.Hash,
+	})
+	return
+}
+
+func shareDataUpdateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
@@ -129,20 +142,6 @@ func shareDataByIDHandlre(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, result)
 }
-
-func shareDataByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	shareData := model.ShareDataStatus{}
-	result, err := shareData.GetAllByTaskUUID(params["taskuuid"])
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query task data by TaskUUID failed")
-		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
 }
 
 func shareDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {

@@ -5,15 +5,19 @@
 package tcpclient
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/network"
+)
+
+func SendStopNetwork(addr string, req *network.StopNetworkRequest) error {
+	conn, err := newConnection(addr)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	rt := &network.RequestType{
 		Type: network.RequestTypeStopNetwork,
-	}
-
-	if err = rt.Write(conn); err != nil {
-		return err
-	}
-
-	if err = req.Write(conn); err != nil {
-		return err
 	}
 
 	res := &network.StopNetworkResponse{}

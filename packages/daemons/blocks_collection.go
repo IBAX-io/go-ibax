@@ -223,18 +223,6 @@ func banNodePause(host string, blockID, blockTime int64, err error) {
 
 	reason := err.Error()
 	//log.WithFields(log.Fields{"host": host, "block_id": blockID, "block_time": blockTime, "err": err}).Error("ban node")
-
-	n, err := syspar.GetNodeByHost(host)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting node by host")
-		return
-	}
-
-	err = service.GetNodesBanService().RegisterBadBlock(n, blockID, blockTime, reason, false)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "node": hex.EncodeToString(n.PublicKey),
-			"block": blockID}).Error("registering bad block from node")
-	}
 }
 
 // GetHostWithMaxID returns host with maxBlockID
@@ -378,6 +366,24 @@ func processBlocks(blocks []*block.Block) error {
 
 		if prevBlocks[b.Header.BlockID-1] != nil {
 			b.PrevHeader.Hash = prevBlocks[b.Header.BlockID-1].Header.Hash
+			b.PrevHeader.RollbacksHash = prevBlocks[b.Header.BlockID-1].Header.RollbacksHash
+			b.PrevHeader.Time = prevBlocks[b.Header.BlockID-1].Header.Time
+			b.PrevHeader.BlockID = prevBlocks[b.Header.BlockID-1].Header.BlockID
+			b.PrevHeader.EcosystemID = prevBlocks[b.Header.BlockID-1].Header.EcosystemID
+			b.PrevHeader.KeyID = prevBlocks[b.Header.BlockID-1].Header.KeyID
+			b.PrevHeader.NodePosition = prevBlocks[b.Header.BlockID-1].Header.NodePosition
+		}
+
+		b.Header.Hash = crypto.DoubleHash([]byte(b.Header.ForSha(b.PrevHeader, b.MrklRoot)))
+
+		if err := b.Check(); err != nil {
+			dbTransaction.Rollback()
+			return err
+		}
+
+		if err := b.Play(dbTransaction); err != nil {
+			dbTransaction.Rollback()
+			return utils.ErrInfo(err)
 		}
 		prevBlocks[b.Header.BlockID] = b
 

@@ -56,15 +56,6 @@ func (btc *BlockTimeCounter) nodePosition(t time.Time) (int, error) {
 func (btc *BlockTimeCounter) NodeTimeExists(t time.Time, nodePosition int) (bool, error) {
 	ps, err := btc.nodePosition(t)
 	if err != nil {
-		return false, err
-	}
-	if ps == nodePosition {
-		return true, nil
-	}
-
-	//startInterval, endInterval, err := btc.RangeByTime(t)
-	//if err != nil {
-	//	return false, err
 	//}
 
 	return false, nil
@@ -122,6 +113,15 @@ func (btc *BlockTimeCounter) RangeByTime(t time.Time) (start, end time.Time, err
 
 // TimeToGenerate returns true if the generation queue at time belongs to the specified node
 func (btc *BlockTimeCounter) TimeToGenerate(at time.Time, nodePosition int) (bool, error) {
+	if nodePosition >= btc.numberNodes {
+		return false, WrongNodePositionError
+	}
+
+	position, err := btc.nodePosition(at)
+	return position == nodePosition, err
+}
+
+// NewBlockTimeCounter return initialized BlockTimeCounter
 func NewBlockTimeCounter() *BlockTimeCounter {
 	firstBlock, _ := syspar.GetFirstBlockData()
 	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())

@@ -9,19 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
-func unmarshalColumnVDESrcTask(form *VDESrcTaskForm) (*model.VDESrcTask, error) {
-	var (
-		parms              map[string]interface{}
 		contract_run_parms map[string]interface{}
 		err                error
 	)
@@ -153,6 +140,9 @@ func VDESrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	//
 	if len(m.ContractSrcGetHash) == 0 {
 		if ContractSrcGetHashHex, err = crypto.HashHex([]byte(m.ContractSrcGet)); err != nil {
+			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
+			errorResponse(w, err)
+			return
 		}
 		m.ContractSrcGetHash = ContractSrcGetHashHex
 	}

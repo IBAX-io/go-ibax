@@ -147,6 +147,17 @@ type GlobalConfig struct {
 	PoolPub        PoolPubConfig
 	NodesAddr      []string
 	CryptoSettings CryptoSettings
+}
+
+type CryptoSettings struct {
+	Cryptoer string
+	Hasher   string
+}
+
+// Config global parameters
+var Config GlobalConfig
+
+// GetPidPath returns path to pid file
 func (c *GlobalConfig) GetPidPath() string {
 	return c.PidFilePath
 }
@@ -201,19 +212,6 @@ func GetConfigFromPath(path string) (*GlobalConfig, error) {
 	err = viper.Unmarshal(c)
 	if err != nil {
 		return c, errors.Wrapf(err, "marshalling config to global struct variable")
-	}
-
-	return c, nil
-}
-
-// SaveConfig save global parameters to configFile
-func SaveConfig(path string) error {
-	dir := filepath.Dir(path)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.Mkdir(dir, 0775)
-		if err != nil {
-			return errors.Wrapf(err, "creating dir %s", dir)
-		}
 	}
 
 	cf, err := os.Create(path)

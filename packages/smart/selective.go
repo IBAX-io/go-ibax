@@ -134,18 +134,6 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 			logger.WithFields(log.Fields{"error": err}).Error("on build insert query")
 			return 0, "", err
 		}
-
-		insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery)
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
-			return 0, "", err
-		}
-
-		cost += insertCost
-		err = model.GetDB(sc.DbTransaction).Exec(insertQuery).Error
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
-			return 0, "", err
 		}
 	}
 
@@ -177,6 +165,15 @@ func (sc *SmartContract) updateWhere(fields []string, values []interface{},
 	return sc.selectiveLoggingAndUpd(fields, values, table, where, !sc.OBS && sc.Rollback, true)
 }
 
+func (sc *SmartContract) update(fields []string, values []interface{},
+	table string, whereField string, whereValue interface{}) (int64, string, error) {
+	return sc.updateWhere(fields, values, table, types.LoadMap(map[string]interface{}{
+		whereField: fmt.Sprint(whereValue)}))
+}
+
+func shortString(raw string, length int) string {
+	if len(raw) > length {
+		return raw[:length]
 	}
 
 	return raw

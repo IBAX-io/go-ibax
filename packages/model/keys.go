@@ -13,14 +13,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
-// Key is model
-type Key struct {
-	ecosystem    int64
-	accountKeyID int64 `gorm:"-"`
-
-	ID          int64  `gorm:"primary_key;not null"`
-	AccountID   string `gorm:"column:account;not null"`
-	PublicKey   []byte `gorm:"column:pub;not null"`
 	Amount      string `gorm:"not null"`
 	Mintsurplus string `gorm:"not null"`
 	Maxpay      string `gorm:"not null"`
@@ -64,6 +56,21 @@ func (m *Key) Get(db *DbTransaction, wallet int64) (bool, error) {
 	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
 }
 
+// GetTr is retrieving model from database
+func (m *Key) GetTr(db *DbTransaction, wallet int64) (bool, error) {
+	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
+}
+
+func (m *Key) AccountKeyID() int64 {
+	if m.accountKeyID == 0 {
+		m.accountKeyID = converter.StringToAddress(m.AccountID)
+	}
+	return m.accountKeyID
+}
+
+// KeyTableName returns name of key table
+func KeyTableName(prefix int64) string {
+	return fmt.Sprintf("%d_keys", prefix)
 }
 
 // GetKeysCount returns common count of keys
