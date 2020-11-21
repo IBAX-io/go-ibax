@@ -3,6 +3,17 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package main
+
+import (
+	"bufio"
+	"bytes"
+	"html/template"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+
 	"github.com/BurntSushi/toml"
 )
 
@@ -14,13 +25,6 @@ const (
 
 var (
 	scenarios = []scenario{
-		{
-			[]string{"./contracts/ecosystem"},
-			"./contracts_data.go",
-			"contractsDataSQL", "{{.Ecosystem}}", "{{.Owner}}",
-		},
-		{
-			[]string{"./contracts/first_ecosystem"},
 			"./first_ecosys_contracts_data.go",
 			"firstEcosystemContractsSQL", "1", "{{.Owner}}",
 		},

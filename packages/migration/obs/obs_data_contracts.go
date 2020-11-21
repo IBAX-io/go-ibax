@@ -274,15 +274,6 @@ VALUES
         if $Value {
             pars["value"] = $Value
         }
-        if $Title {
-            pars["title"] = $Title
-        }
-        if $Conditions {
-            pars["conditions"] = $Conditions
-        }
-        if pars {
-            DBUpdate("menu", $Id, pars)
-        }            
     }
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
@@ -953,6 +944,20 @@ VALUES
 			"account": $account,
 			"pub": $pub,
 			"amount": $amount,
+			"ecosystem": 1
+		})
+	}
+}
+', '%[1]d', 'ContractConditions("NodeOwnerCondition")', '1', '%[1]d'),
+	(next_id('1_contracts'), 'NodeOwnerCondition', 'contract NodeOwnerCondition {
+	conditions {
+        $raw_honor_nodes = SysParamString("honor_nodes")
+        if Size($raw_honor_nodes) == 0 {
+            ContractConditions("MainCondition")
+        } else {
+            $honor_nodes = JSONDecode($raw_honor_nodes)
+            var i int
+            while i < Len($honor_nodes) {
                 $fn = $honor_nodes[i]
                 if $fn["key_id"] == $key_id {
                     return true

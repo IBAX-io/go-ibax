@@ -14,19 +14,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
-)
-
-var updatingEndWhilePaused = make(chan struct{})
-
-type NodeRelevanceService struct {
-	availableBlockchainGap int64
-	checkingInterval       time.Duration
-}
-
-func NewNodeRelevanceService() *NodeRelevanceService {
-	var availableBlockchainGap int64 = consts.AvailableBCGap
-	if syspar.GetRbBlocks1() > consts.AvailableBCGap {
 		availableBlockchainGap = syspar.GetRbBlocks1() - consts.AvailableBCGap
 	}
 
@@ -83,6 +70,25 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 		log.WithFields(log.Fields{"type": consts.DBError, "err": err}).Error("retrieving info block from db")
 		return false, errors.Wrapf(err, "retrieving info block from db")
 	}
+	var (
+		tx = &model.Transaction{}
+		r  bool
+	)
+	r, err = tx.GetStopNetwork()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "err": err}).Info("retrieving transaction from db")
+		return false, nil
+	}
+	if r {
+		return false, nil
+	}
+	remoteHosts, err := GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
+	if err != nil {
+		return false, err
+	}
+	// Node is single in blockchain network and it can't be irrelevant
+	if len(remoteHosts) == 0 {
+		return true, nil
 	}
 
 	_, maxBlockID, err := tcpclient.HostWithMaxBlock(ctx, remoteHosts)

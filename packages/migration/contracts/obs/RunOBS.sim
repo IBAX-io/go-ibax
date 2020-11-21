@@ -1,4 +1,5 @@
-	action {
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
 		$OBSName = ToLower($OBSName)
 		StartOBS($OBSName)
 		$result = "OBS " + $OBSName + " running"

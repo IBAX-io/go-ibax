@@ -142,6 +142,9 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 					time.Sleep(time.Second * 5)
 					continue
 				}
+				fmt.Println("Send chain Contract to run, ContractName:", ContractName)
+				item.ChainState = 1 //success
+				item.TxHash = txHash
 				item.BlockId = 0
 				item.ChainErr = ""
 			}
@@ -159,11 +162,6 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 		//item.ChainErr = ""
 		item.UpdateTime = time.Now().Unix()
 		err = item.Updates()
-		if err != nil {
-			fmt.Println("Update SubNodeSrcDataChainStatus table err: ", err)
-			log.WithFields(log.Fields{"error": err}).Error("Update SubNodeSrcDataChainStatus table!")
-			time.Sleep(time.Millisecond * 2)
-			continue
 		}
 	} //for
 	return nil

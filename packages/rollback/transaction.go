@@ -66,6 +66,15 @@ func rollbackTransaction(txHash []byte, dbTransaction *model.DbTransaction, logg
 				logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollback.Data from json")
 				return err
 			}
+			switch sysData.Type {
+			case "NewTable":
+				err = smart.SysRollbackTable(dbTransaction, sysData)
+			case "NewView":
+				err = smart.SysRollbackView(dbTransaction, sysData)
+			case "NewColumn":
+				err = smart.SysRollbackColumn(dbTransaction, sysData)
+			case "NewContract":
+				err = smart.SysRollbackNewContract(sysData, tx["table_id"])
 			case "EditContract":
 				err = smart.SysRollbackEditContract(dbTransaction, sysData, tx["table_id"])
 			case "NewEcosystem":
@@ -127,14 +136,6 @@ func rollbackTransaction(txHash []byte, dbTransaction *model.DbTransaction, logg
 			tx[`table_name`] = `1_` + keyName
 		} else {
 			where += tx["table_id"] + `'`
-		}
-		if len(tx["data"]) > 0 {
-			if err := rollbackUpdatedRow(tx, where, dbTransaction, logger); err != nil {
-				return err
-			}
-		} else {
-			if err := rollbackInsertedRow(tx, where, dbTransaction, logger); err != nil {
-				return err
 			}
 		}
 	}

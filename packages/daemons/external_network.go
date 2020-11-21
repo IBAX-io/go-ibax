@@ -5,6 +5,9 @@
 
 package daemons
 
+import (
+	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -127,20 +130,6 @@ func SendExternalTransaction() error {
 			values["txtime"] = []string{converter.Int64ToStr(item.TxTime)}
 			_, hash, err = connect.PostTxResult(item.ExternalContract, &values)
 			if err != nil {
-				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("PostContract")
-				if item.Attempts >= maxAttempts-1 {
-					sendResult(item, 0, errExternalAttempt, ``)
-				} else {
-					incAttempt(item.Id)
-				}
-			} else {
-				log.WithFields(log.Fields{"hash": hash, "txtime": values["txtime"][0],
-					"nodeKey": converter.Int64ToStr(nodeKeyID)}).Info("SendExternalTransaction")
-				bHash, err := hex.DecodeString(hash)
-				if err != nil {
-					log.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("DecodeHex")
-					incAttempt(item.Id)
-				} else if err = model.HashExternalTx(item.Id, bHash); err != nil {
 					log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("HashExternal")
 				}
 			}

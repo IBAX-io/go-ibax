@@ -5,4 +5,3 @@
 
 package migration
 
-var sectionsDataSQL = `

@@ -1,10 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package types
-
-import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
@@ -26,6 +21,10 @@ type DaemonListFactory interface {
 }
 
 type EcosystemLookupGetter interface {
+	GetEcosystemLookup() ([]int64, []string, error)
+}
+
+type EcosystemIDValidator interface {
 	Validate(id, clientID int64, le *log.Entry) (int64, error)
 }
 

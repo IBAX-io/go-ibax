@@ -56,8 +56,8 @@ func Type100(r *network.VDESrcDataRequest) (*network.VDESrcDataResponse, error) 
 		VDEAgentPubkey: r.VDEAgentPubkey,
 		VDEAgentIp:     r.VDEAgentIp,
 		VDEDestPubkey:  r.VDEDestPubkey,
-		return nil, err
+		VDEDestIp:      r.VDEDestIp,
+		//Data:         r.Data,
+		Data:       data,
+		CreateTime: time.Now().Unix(),
 	}
-
-	return resp, nil
-}
