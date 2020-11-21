@@ -49,13 +49,6 @@ func (VDEScheTaskChainStatus) TableName() string {
 	return "vde_sche_task_chain_status"
 }
 
-func (m *VDEScheTaskChainStatus) Create() error {
-	return DBConn.Create(&m).Error
-}
-
-func (m *VDEScheTaskChainStatus) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
 
 func (m *VDEScheTaskChainStatus) Delete() error {
 	return DBConn.Delete(m).Error
@@ -121,3 +114,12 @@ func (m *VDEScheTaskChainStatus) GetAllByContractStateAndChainState(ContractStat
 
 func (m *VDEScheTaskChainStatus) GetAllByContractStateSrc(ContractStateSrc int64) ([]VDEScheTaskChainStatus, error) {
 	result := make([]VDEScheTaskChainStatus, 0)
+	err := DBConn.Table("vde_sche_task_chain_status").Where("contract_state_src = ?", ContractStateSrc).Find(&result).Error
+	return result, err
+}
+
+func (m *VDEScheTaskChainStatus) GetAllByContractStateDest(ContractStateDest int64) ([]VDEScheTaskChainStatus, error) {
+	result := make([]VDEScheTaskChainStatus, 0)
+	err := DBConn.Table("vde_sche_task_chain_status").Where("contract_state_dest = ? AND contract_state_src = 1", ContractStateDest).Find(&result).Error
+	return result, err
+}
