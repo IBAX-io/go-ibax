@@ -82,21 +82,6 @@ func parseJWTToken(header string) (*jwt.Token, error) {
 	}
 
 	if strings.HasPrefix(header, jwtPrefix) {
-		header = header[len(jwtPrefix):]
-	} else {
-		return nil, errJWTAuthValue
-	}
-
-	return jwt.ParseWithClaims(header, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(jwtSecret), nil
-	})
-}
-
-func RefreshToken(header string) (*jwt.Token, error) {
-	if len(header) == 0 {
 		return nil, nil
 	}
 	if strings.HasPrefix(header, jwtPrefix) {
@@ -143,6 +128,22 @@ func RefreshToken(header string) (*jwt.Token, error) {
 		gd := GRefreshClaims{
 			Header: header,
 		}
+		gd.DeleteClaims()
+		return token, err
+	}
+
+	token, err := jwt.ParseWithClaims(header, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return []byte(jwtSecret), nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return token, err
 }
 
 func getClientFromToken(token *jwt.Token, ecosysNameService types.EcosystemNameGetter) (*Client, error) {

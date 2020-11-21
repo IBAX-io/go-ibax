@@ -36,17 +36,6 @@ func (SubNodeAgentData) TableName() string {
 
 func (m *SubNodeAgentData) Create() error {
 	return DBConn.Create(&m).Error
-}
-
-func (m *SubNodeAgentData) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
-
-func (m *SubNodeAgentData) Delete() error {
-	return DBConn.Delete(m).Error
-}
-
-func (m *SubNodeAgentData) GetAll() ([]SubNodeAgentData, error) {
 	var result []SubNodeAgentData
 	err := DBConn.Find(&result).Error
 	return result, err
@@ -66,5 +55,15 @@ func (m *SubNodeAgentData) GetOneByTaskUUID(TaskUUID string) (*SubNodeAgentData,
 func (m *SubNodeAgentData) GetAllByTaskUUID(TaskUUID string) ([]SubNodeAgentData, error) {
 	result := make([]SubNodeAgentData, 0)
 	err := DBConn.Table("subnode_agent_data").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeAgentData) GetAllByDataSendStatus(DataSendStatus int64) ([]SubNodeAgentData, error) {
+	result := make([]SubNodeAgentData, 0)
+	err := DBConn.Table("subnode_agent_data").Where("data_send_state = ?", DataSendStatus).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeAgentData) GetOneByDataStatus(DataStatus int64) (bool, error) {
 	return isFound(DBConn.Where("data_state = ?", DataStatus).First(m))
 }

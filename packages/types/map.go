@@ -68,6 +68,18 @@ func LoadMap(init map[string]interface{}) (ret *Map) {
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
+	for _, v := range keys {
+		ret.Set(v, ConvertMap(init[v]))
+	}
+	return
+}
+
+// Put inserts an element into the map.
+func (m *Map) Set(key string, value interface{}) {
+	link, found := m.m[key]
+	if !found {
+		link = newLink(key, value)
+		if m.tail == nil {
 			m.head = link
 			m.tail = link
 		} else {
@@ -150,17 +162,6 @@ func (m *Map) Values() []interface{} {
 // Clear removes all elements from the map.
 func (m *Map) Clear() {
 	m.m = make(map[string]*Link)
-	m.head = nil
-	m.tail = nil
-}
-
-// String returns a string representation of container
-func (m *Map) String() string {
-	str := "map["
-	for current := m.head; current != nil; current = current.next {
-		str += fmt.Sprintf("%v:%v ", current.key, current.value)
-	}
-	return strings.TrimRight(str, " ") + "]"
 }
 
 func (m *Map) MarshalJSON() ([]byte, error) {

@@ -53,6 +53,19 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 		return err
 	}
 	if SrcChainInfo == nil {
+		log.Info("Src chain info not found")
+		//fmt.Println("Src chain info not found")
+		time.Sleep(time.Millisecond * 100)
+		return nil
+	}
+
+	blockchain_http = SrcChainInfo.BlockchainHttp
+	blockchain_ecosystem = SrcChainInfo.BlockchainEcosystem
+	//fmt.Println("SrcChainInfo:", blockchain_http, blockchain_ecosystem)
+	// deal with task data
+	for _, item := range SrcTask {
+		//fmt.Println("SrcTask:", item.TaskUUID)
+
 		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
@@ -177,15 +190,6 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 			continue
 		}
 		chain_apiAddress := blockchain_http
-		chain_apiEcosystemID := int64(ecosystemID)
-
-		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
-		// Login
-		gAuth_chain, _, _, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
-			time.Sleep(time.Millisecond * 2)
-			continue
 		}
 		//fmt.Println("Login OK!")
 

@@ -1,3 +1,5 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package aes
@@ -26,13 +28,6 @@ func TestAesEncryptAndDecrypt(t *testing.T) {
 
 	bytesPass, err := base64.StdEncoding.DecodeString(pass64)
 	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	tpass, err := AesDecrypt(bytesPass, aeskey)
-	if err != nil {
-		fmt.Println(err)
 		return
 	}
 	fmt.Printf("aesdecrypto:%s\n", tpass)

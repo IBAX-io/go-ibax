@@ -50,6 +50,19 @@ func (VDESrcTaskChainStatus) TableName() string {
 }
 
 func (m *VDESrcTaskChainStatus) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *VDESrcTaskChainStatus) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDESrcTaskChainStatus) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *VDESrcTaskChainStatus) GetAll() ([]VDESrcTaskChainStatus, error) {
+	var result []VDESrcTaskChainStatus
 	err := DBConn.Find(&result).Error
 	return result, err
 }
@@ -91,15 +104,6 @@ func (m *VDESrcTaskChainStatus) GetAllByTaskState(TaskState int64) ([]VDESrcTask
 func (m *VDESrcTaskChainStatus) GetOneByTaskState(TaskState int64) (bool, error) {
 	return isFound(DBConn.Where("task_state = ?", TaskState).First(m))
 }
-
-func (m *VDESrcTaskChainStatus) GetOneByContractState(ContractState int64) (bool, error) {
-	return isFound(DBConn.Where("contract_state = ?", ContractState).First(m))
-}
-
-func (m *VDESrcTaskChainStatus) GetOneByChainState(ChainState int64) (bool, error) {
-	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
-}
-
 func (m *VDESrcTaskChainStatus) GetAllByContractStateAndChainState(ContractStateSrc int64, ContractStateDest int64, ChainState int64) ([]VDESrcTaskChainStatus, error) {
 	result := make([]VDESrcTaskChainStatus, 0)
 	err := DBConn.Table("vde_src_task_chain_status").Where("contract_state_src = ? AND contract_state_dest = ? AND chain_state = ?", ContractStateSrc, ContractStateDest, ChainState).Find(&result).Error
