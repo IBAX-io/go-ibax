@@ -18,3 +18,4 @@ func TestGetHasher(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	fmt.Println(hmacMsg)

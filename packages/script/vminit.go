@@ -210,23 +210,6 @@ type Stacker interface {
 func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interface{}, error) {
 
 	contract, ok := rt.vm.Objects[name]
-	if !ok {
-		log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError}).Error("unknown contract")
-		return nil, fmt.Errorf(eUnknownContract, name)
-	}
-	logger := log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError})
-	cblock := contract.Value.(*Block)
-	parnames := make(map[string]bool)
-	pars := strings.Split(txs, `,`)
-	if len(pars) != len(params) {
-		logger.WithFields(log.Fields{"contract_params_len": len(pars), "contract_params_len_needed": len(params), "type": consts.ContractError}).Error("wrong contract parameters pars")
-		return ``, errContractPars
-	}
-	for _, ipar := range pars {
-		parnames[ipar] = true
-	}
-	if _, ok := (*rt.extend)[`loop_`+name]; ok {
-		logger.WithFields(log.Fields{"type": consts.ContractError, "contract_name": name}).Error("there is loop in contract")
 		return nil, fmt.Errorf(eContractLoop, name)
 	}
 	(*rt.extend)[`loop_`+name] = true
@@ -527,6 +510,12 @@ func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (inte
 func GetSettings(rt *RunTime, cntname, name string) (interface{}, error) {
 	contract, ok := rt.vm.Objects[cntname]
 	if !ok {
+		log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError}).Error("unknown contract")
+		return nil, fmt.Errorf(`unknown contract %s`, cntname)
+	}
+	cblock := contract.Value.(*Block)
+	if cblock.Info.(*ContractInfo).Settings != nil {
+		if val, ok := cblock.Info.(*ContractInfo).Settings[name]; ok {
 			return val, nil
 		}
 	}

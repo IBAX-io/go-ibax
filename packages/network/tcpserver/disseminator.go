@@ -57,6 +57,11 @@ func Type1(rw io.ReadWriter) error {
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on getting node by position")
 		return err
+	}
+
+	// get data type (0 - block and transactions, 1 - only transactions)
+	newDataType := converter.BinToDec(buf.Next(1))
+
 	log.Debug("newDataType", newDataType)
 	if newDataType == 0 {
 		banned := n != nil && service.GetNodesBanService().IsBanned(*n)
@@ -114,22 +119,6 @@ func resieveTxBodies(con io.Reader) ([]byte, error) {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on getting tx bodies")
 		return nil, err
 	}
-
-	return txBodies, nil
-}
-
-func processBlock(buf *bytes.Buffer, honorNodeID int64) error {
-	infoBlock := &model.InfoBlock{}
-	found, err := infoBlock.Get()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting cur block ID")
-		return utils.ErrInfo(err)
-	}
-	if !found {
-		log.WithFields(log.Fields{"type": consts.NotFound}).Error("cant find info block")
-		return errors.New("can't find info block")
-	}
-
 	// get block ID
 	newBlockID := converter.BinToDec(buf.Next(3))
 	log.WithFields(log.Fields{"new_block_id": newBlockID}).Debug("Generated new block id")

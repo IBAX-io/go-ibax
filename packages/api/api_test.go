@@ -109,6 +109,20 @@ func keyLogin(state int64) (err error) {
 		key, sign []byte
 	)
 
+	key, err = os.ReadFile(`key`)
+	if err != nil {
+		return
+	}
+	if len(key) > 64 {
+		key = key[:64]
+	}
+	var ret getUIDResult
+	err = sendGet(`getuid`, nil, &ret)
+	if err != nil {
+		return
+	}
+	gAuth = ret.Token
+	if len(ret.UID) == 0 {
 		return fmt.Errorf(`getuid has returned empty uid`)
 	}
 
@@ -784,15 +798,5 @@ func sendMultipart(url string, files map[string][]byte, v interface{}) error {
 		return err
 	}
 	defer resp.Body.Close()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf(`%d %s`, resp.StatusCode, strings.TrimSpace(string(data)))
-	}
-
 	return json.Unmarshal(data, &v)
 }

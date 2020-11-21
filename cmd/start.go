@@ -21,4 +21,3 @@ var startCmd = &cobra.Command{
 	PreRun: loadConfigWKey,
 	Run: func(cmd *cobra.Command, args []string) {
 		daylight.Start()
-	},

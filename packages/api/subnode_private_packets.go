@@ -2,14 +2,15 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+	logger := getLogger(r)
+	privateData := model.PrivatePackets{}
 
-package api
+	result, err := privateData.GetAll()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Error reading private data list")
+		errorResponse(w, err)
+		return
+	}
 
-import (
-	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
+	jsonResponse(w, result)
+}

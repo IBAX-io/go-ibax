@@ -42,6 +42,19 @@ func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 		if bString, err := json.Marshal(jsonMap); err == nil {
 			line = string(bString)
 		}
+	}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to read entry, %v", err)
+		return err
+	}
+
+	switch entry.Level {
+	case logrus.PanicLevel:
+		{
+			b_syslog.Crit(line)
+			return nil
+		}
+	case logrus.FatalLevel:
 		{
 			b_syslog.Crit(line)
 			return nil
@@ -76,16 +89,6 @@ func (hook *SyslogHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }
 
-func syslogFacility(facility string) b_syslog.Priority {
-	return syslogFacilityPriority[facility]
-}
-
-func init() {
-	syslogFacilityPriority = map[string]b_syslog.Priority{
-		"kern":     b_syslog.LOG_KERN,
-		"user":     b_syslog.LOG_USER,
-		"mail":     b_syslog.LOG_MAIL,
-		"daemon":   b_syslog.LOG_DAEMON,
 		"auth":     b_syslog.LOG_AUTH,
 		"syslog":   b_syslog.LOG_SYSLOG,
 		"lpr":      b_syslog.LOG_LPR,

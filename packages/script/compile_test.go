@@ -2,6 +2,14 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+package script
+
+import (
+	"fmt"
+	"strings"
+	"testing"
+
+	"github.com/IBAX-io/go-ibax/packages/types"
 
 	"github.com/shopspring/decimal"
 )
@@ -498,10 +506,6 @@ func TestVMCompile(t *testing.T) {
 			i = 256
 			var s string
 			$ext = "Ooops"
-			s = "Spain"
-			my = {conditions: "$Conditions"}
-			list = [0, i, {"item": i}, [$ext]]
-			sub = {"name": "John", "lastname": "Smith", myarr: []}
 			my = {qqq: 10, "22": "MY STRING", /* comment*/ "float": 1.2, "ext": $ext,
 			"in": true, "var": i, sub: sub, "Company": {"Name": "Ltd", Country: s, 
 				Arr: [s, 20, "finish"]}}

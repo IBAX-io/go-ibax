@@ -68,6 +68,14 @@ func UpdBlockInfo(dbTransaction *model.DbTransaction, block *Block) error {
 func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, error) {
 	r := &model.RollbackTx{}
 	list, err := r.GetBlockRollbackTransactions(transaction, blockID)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := new(bytes.Buffer)
+	enc := json.NewEncoder(buf)
+
+	for _, rtx := range list {
 		if err = enc.Encode(&rtx); err != nil {
 			return nil, err
 		}
@@ -134,14 +142,6 @@ func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error 
 }
 
 // GetBlockDataFromBlockChain is retrieving block data from blockchain
-func GetBlockDataFromBlockChain(blockID int64) (*utils.BlockData, error) {
-	BlockData := new(utils.BlockData)
-	block := &model.Block{}
-	_, err := block.Get(blockID)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting block by ID")
-		return BlockData, err
-	}
 
 	header, _, err := utils.ParseBlockHeader(bytes.NewBuffer(block.Data))
 	if err != nil {

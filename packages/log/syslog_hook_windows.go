@@ -11,10 +11,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
-	return nil
+// SyslogHook to send logs via syslog.
+type SyslogHook struct {
+	SyslogNetwork string
+	SyslogRaddr   string
 }
 
-func (hook *SyslogHook) Levels() []logrus.Level {
-	return logrus.AllLevels
 }

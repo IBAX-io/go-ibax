@@ -18,7 +18,5 @@ contract NewBlock {
         if DBFind("blocks").Columns("id").Where({name:$Name}).One("id") {
             warning Sprintf( "Block %s already exists", $Name)
         }
-        DBInsert("blocks", {name: $Name, value: $Value, conditions: $Conditions,
-              app_id: $ApplicationId})
     }
-}
+
