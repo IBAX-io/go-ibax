@@ -5,9 +5,6 @@
 package utils
 
 import (
-	"crypto/x509"
-	"encoding/pem"
-	"errors"
 )
 
 var (
@@ -45,6 +42,20 @@ func (c *Cert) EqualBytes(bs ...[]byte) bool {
 	}
 
 	return false
+}
+
+func parseCert(b []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode(b)
+	if block == nil {
+		return nil, errParseCert
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return cert, nil
 }
 
 func ParseCert(b []byte) (c *Cert, err error) {

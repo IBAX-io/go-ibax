@@ -1232,26 +1232,20 @@ func dateTimeTag(par parFunc) string {
 	format = strings.Replace(format, `MI`, `04`, -1)
 	format = strings.Replace(format, `SS`, `05`, -1)
 
-	locationName := par.ParamWithMacros("Location")
-	if len(locationName) > 0 {
-		loc, err := time.LoadLocation(locationName)
-		if err != nil {
-			return err.Error()
-		}
-		itime = itime.In(loc)
-	}
-
-	return itime.Format(format)
-}
-
-func cmpTimeTag(par parFunc) string {
-	prepare := func(val string) string {
-		val = strings.Replace(macro(val, par.Workspace.Vars), `T`, ` `, -1)
-		if len(val) > 19 {
-			val = val[:19]
-		}
 		return val
 	}
+	left := prepare((*par.Pars)[`Time1`])
+	right := prepare((*par.Pars)[`Time2`])
+	if left == right {
+		return `0`
+	}
+	if left < right {
+		return `-1`
+	}
+	return `1`
+}
+
+type byFirst [][]string
 
 func (s byFirst) Len() int {
 	return len(s)

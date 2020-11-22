@@ -83,13 +83,6 @@ func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	id := converter.StrToInt64(params["id"])
-	form := &VDEDestDataStatusForm{}
-
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err)
 		return
 	}
 
@@ -115,6 +108,8 @@ func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, result)
 }
+
+func VDEDestDataStatusDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 	id := converter.StrToInt64(params["id"])

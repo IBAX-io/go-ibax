@@ -326,19 +326,6 @@ func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (
 
 func (b SQLQueryBuilder) toSQLValue(rawValue, rawField string) string {
 	if syspar.IsByteColumn(b.Table, rawField) && len(rawValue) != 0 {
-		return toSQLHexExpr(rawValue)
-	}
-
-	if rawValue == `NULL` {
-		return `NULL`
-	}
-
-	if strings.HasPrefix(rawField, prefTimestamp) {
-		return toWrapedTimestamp(rawValue)
-	}
-
-	if strings.HasPrefix(rawValue, prefTimestamp) {
-		return toTimestamp(rawValue)
 	}
 
 	return wrapString(escapeSingleQuotes(rawValue), "'")
@@ -362,6 +349,14 @@ func (b SQLQueryBuilder) normalizeValues() error {
 		}
 	}
 
+	return nil
+}
+
+func isParamsContainsEcosystem(fields []string, ivalues []interface{}) (bool, int) {
+	ecosysIndx := getFieldIndex(fields, `ecosystem`)
+	if ecosysIndx >= 0 && len(ivalues) > ecosysIndx && converter.StrToInt64(fmt.Sprint(ivalues[ecosysIndx])) > 0 {
+		return true, ecosysIndx
+	}
 
 	return false, -1
 }

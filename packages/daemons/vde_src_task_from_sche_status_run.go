@@ -32,6 +32,16 @@ func VDESrcTaskFromScheStatusRun(ctx context.Context, d *daemon) error {
 		Auth                 string
 		TaskUUID             string
 		Parms                string
+		err                  error
+
+		ContractRunParms  map[string]interface{}
+		vde_src_http      string
+		vde_src_ecosystem string
+		ok                bool
+	)
+
+	m := &model.VDESrcTaskFromScheStatus{}
+	SrcTask, err := m.GetAllByChainState(0) //0
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
 		time.Sleep(time.Millisecond * 2)
@@ -96,7 +106,6 @@ func VDESrcTaskFromScheStatusRun(ctx context.Context, d *daemon) error {
 			time.Sleep(time.Millisecond * 2)
 			continue
 		}
-		vde_src_apiAddress := vde_src_http
 		vde_src_apiEcosystemID := int64(vde_src_ecosystemID)
 		gAuth_src, _, _, _, _, err := vde_api.KeyLogin(vde_src_apiAddress, src, vde_src_apiEcosystemID)
 		if err != nil {

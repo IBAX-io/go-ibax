@@ -1,5 +1,10 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package types
+
+import (
 	"context"
 
 	log "github.com/sirupsen/logrus"
@@ -30,9 +35,3 @@ type EcosystemIDValidator interface {
 
 // DaemonLoader allow implement different ways for loading daemons
 type DaemonLoader interface {
-	Load(context.Context) error
-}
-
-type EcosystemNameGetter interface {
-	GetEcosystemName(id int64) (string, error)
-}

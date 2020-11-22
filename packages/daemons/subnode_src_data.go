@@ -136,6 +136,9 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 				log.WithError(err)
 			}
 			continue
+		}
+		if subnode_agent_pubkey, ok = TaskParms["subnode_agent_pubkey"].(string); !ok {
+			log.WithFields(log.Fields{"error": err}).Error("subnode_agent_pubkey parse error")
 			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {
@@ -232,9 +235,6 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 				log.WithError(err)
 			}
 			continue
-		}
-		if len(subnode_agent_ip_slice) != subnode_dest_num {
-			log.WithFields(log.Fields{"error": err}).Error("vde_agent_ip parse error")
 			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {

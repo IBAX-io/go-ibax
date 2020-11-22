@@ -20,17 +20,6 @@ type levelDBGetterPutterDeleter interface {
 	Delete([]byte, *opt.WriteOptions) error
 	NewIterator(slice *util.Range, ro *opt.ReadOptions) iterator.Iterator
 }
-
-func GetLevelDB(tx *leveldb.Transaction) levelDBGetterPutterDeleter {
-	if tx != nil {
-		return tx
-	}
-	return DBlevel
-}
-
-func prefixFunc(prefix string) func([]byte) []byte {
-	return func(hash []byte) []byte {
-		return []byte(prefix + string(hash))
 	}
 }
 
@@ -66,6 +55,15 @@ func DBGetAllKey(prefix string, bvalue bool) (*[]string, error) {
 		ret []string
 		//key []string
 	)
+	found := prefix != "nil"
+	iter := DBlevel.NewIterator(nil, nil)
+	for iter.Next() {
+		key := string(iter.Key())
+		if found {
+			if strings.HasPrefix(key, prefix) {
+				if bvalue {
+					value := string(iter.Value())
+					s := fmt.Sprintf("Key[%s]=[%s]\n", key, value)
 					ret = append(ret, s)
 				} else {
 					ret = append(ret, key)

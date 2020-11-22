@@ -6,7 +6,9 @@ type MineInvitepowadd struct {
 	Ydevid       int64 `gorm:"not null"`
 	Count        int64 `gorm:"not null"`
 	Type         int64 `gorm:"not null"`
-		Order("devid asc").
-		Find(&mp).Error
-	return mp, err
+	Stime        int64 `gorm:"not null"`
+	Etime        int64 `gorm:"not null"`
+	Date_created int64 `gorm:"not null"`
 }
+
+// TableName returns name of table

@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 package crypto
 
-import "hash/crc64"
 
-type checksumProvider int
+var (
+	table64 *crc64.Table
+)
 
-const (
-	_CRC64 checksumProvider = iota
+func init() {
 	table64 = crc64.MakeTable(crc64.ECMA)
 }
 

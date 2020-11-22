@@ -581,6 +581,20 @@ VALUES
 
         if DBFind("app_params").Columns("id").Where({"name":$Name}).One("id") {
             warning Sprintf( "Application parameter %s already exists", $Name)
+        }
+    }
+
+    action {
+        DBInsert("app_params", {app_id: $ApplicationId, name: $Name, value: $Value,
+              conditions: $Conditions})
+    }
+}
+', '1', 'ContractConditions("MainCondition")', '1', '1'),
+	(next_id('1_contracts'), 'NewApplication', 'contract NewApplication {
+    data {
+        Name string
+        Conditions string
+    }
 
     conditions {
         ValidateCondition($Conditions, $ecosystem_id)
@@ -633,16 +647,6 @@ VALUES
         }
     }
 
-    action {
-        DBInsert("blocks", {name: $Name, value: $Value, conditions: $Conditions,
-              app_id: $ApplicationId})
-    }
-}
-', '1', 'ContractConditions("MainCondition")', '1', '1'),
-	(next_id('1_contracts'), 'NewContract', 'contract NewContract {
-    data {
-        ApplicationId int
-        Value string
         Conditions string
         TokenEcosystem int "optional"
     }

@@ -105,6 +105,19 @@ func VDESrcTaskStatusRun(ctx context.Context, d *daemon) error {
 			fmt.Println("Error Atoi ContractRunParms vde_src_ecosystem parameter!")
 			log.WithFields(log.Fields{"error": err}).Error("vde_src_ecosystem Atoi error")
 			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		vde_src_apiAddress_2 := vde_src_http
+		vde_src_apiEcosystemID_2 := int64(vde_src_ecosystemID)
+		gAuth_src_2, _, _, _, _, err := vde_api.KeyLogin(vde_src_apiAddress_2, src, vde_src_apiEcosystemID_2)
+		if err != nil {
+			fmt.Println("error", err)
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		//fmt.Println("VDE src 2 Login OK!")
+
+		Auth = gAuth_src_2
 		TaskUUID = item.TaskUUID
 		Parms = item.ContractRunParms
 
@@ -188,18 +201,6 @@ func VDESrcTaskStatusRunState(ctx context.Context, d *daemon) error {
 		//fmt.Println("SrcChainInfo:", blockchain_http, blockchain_ecosystem)
 
 		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("blockchain_ecosystem encode error")
-			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-		vde_src_apiAddress := blockchain_http
-		vde_src_apiEcosystemID := int64(ecosystemID)
-
-		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
-		// Login
-		gAuth_src, _, _, _, _, err := vde_api.KeyLogin(vde_src_apiAddress, src, vde_src_apiEcosystemID)
-		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login VDE src chain failure")
 			time.Sleep(time.Millisecond * 2)
 			continue
