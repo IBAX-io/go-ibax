@@ -45,6 +45,12 @@ func TestOBSCreate(t *testing.T) {
 
 func TestOBSList(t *testing.T) {
 	require.NoError(t, keyLogin(1))
+
+	fmt.Println(postTx("ListOBS", &url.Values{}))
+}
+
+func TestStopOBS(t *testing.T) {
+	require.NoError(t, keyLogin(1))
 	form := url.Values{
 		"OBSName": {"myobs3"},
 	}
@@ -390,14 +396,6 @@ func TestNodeHTTPRequest(t *testing.T) {
 	if id != 0 && err != nil {
 		if penalty == 1 {
 			return
-		}
-		msg = err.Error()
-		err = nil
-	}
-	assert.Equal(t, `Test NodeContract node `+rnd, msg)
-
-	form = url.Values{`Value`: {`contract node` + rnd + ` {
-		data {
 		}
 		action { 
 			var ret string 

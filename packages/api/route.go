@@ -16,6 +16,17 @@ const corsMaxAge = 600
 
 type Router struct {
 	main        *mux.Router
+	apiVersions map[string]*mux.Router
+}
+
+func (r Router) GetAPI() *mux.Router {
+	return r.main
+}
+
+func (r Router) GetAPIVersion(preffix string) *mux.Router {
+	return r.apiVersions[preffix]
+}
+
 func (r Router) NewVersion(preffix string) *mux.Router {
 	api := r.main.PathPrefix(preffix).Subrouter()
 	r.apiVersions[preffix] = api
@@ -265,16 +276,6 @@ func (m Mode) SetVDESrcRoutes(r Router) {
 	api.HandleFunc("/VDEAgentMember/delete/{id}", authRequire(VDEAgentMemberDeleteHandlre)).Methods("POST")
 	api.HandleFunc("/VDEAgentMember/{id}", authRequire(VDEAgentMemberByIDHandlre)).Methods("GET")
 	api.HandleFunc("/VDEAgentMember/pubkey/{pubkey}", authRequire(VDEAgentMemberByPubKeyHandlre)).Methods("GET")
-
-	api.HandleFunc("/VDEDestMember/create", authRequire(VDEDestMemberCreateHandlre)).Methods("POST")
-	api.HandleFunc("/VDEDestMember/update/{id}", authRequire(VDEDestMemberUpdateHandlre)).Methods("POST")
-	api.HandleFunc("/VDEDestMember/delete/{id}", authRequire(VDEDestMemberDeleteHandlre)).Methods("POST")
-	api.HandleFunc("/VDEDestMember/{id}", authRequire(VDEDestMemberByIDHandlre)).Methods("GET")
-	api.HandleFunc("/VDEDestMember/pubkey/{pubkey}", authRequire(VDEDestMemberByPubKeyHandlre)).Methods("GET")
-
-	api.HandleFunc("/listWhere/{name}", authRequire(getListWhereHandler)).Methods("POST")
-	api.HandleFunc("/VDEListWhere/{name}", authRequire(getVDEListWhereHandler)).Methods("POST")
-}
 
 func NewRouter(m Mode) Router {
 	r := mux.NewRouter()

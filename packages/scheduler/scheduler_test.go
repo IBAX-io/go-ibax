@@ -61,7 +61,9 @@ func TestTask(t *testing.T) {
 	}
 	err = sch.UpdateTask(task)
 	if errStr := err.Error(); errStr != "End of range (60) above maximum (59): 60" {
-	sch.UpdateTask(task)
+		t.Error(err)
+	}
+
 
 	now := time.Now()
 	time.Sleep(task.Next(now).Sub(now) + time.Second)
