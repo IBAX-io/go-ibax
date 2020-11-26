@@ -1,9 +1,4 @@
 language: go
+install: true
 
-env: GO111MODULE=on
-
-go:
-  - 1.12.x
-  - master
-
-go_import_path: github.com/IBAX/go-ibax
+script: go build github.com/IBAX/go-ibax

@@ -235,6 +235,9 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 				log.WithError(err)
 			}
 			continue
+		}
+		if len(subnode_agent_ip_slice) != subnode_dest_num {
+			log.WithFields(log.Fields{"error": err}).Error("vde_agent_ip parse error")
 			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {
@@ -302,16 +305,6 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 			//Generate all data upto chain request
 			for _, subnode_dest_pubkey_item := range subnode_dest_pubkey_slice {
 				//Generate data send request
-				SrcDataChainStatus := model.SubNodeSrcDataChainStatus{
-					DataUUID:            item.DataUUID,
-					TaskUUID:            item.TaskUUID,
-					Hash:                item.Hash,
-					Data:                item.Data,
-					DataInfo:            item.DataInfo,
-					TranMode:            converter.StrToInt64(tran_mode),
-					SubNodeDestPubkey:   subnode_dest_pubkey_item,
-					BlockchainTable:     blockchain_table,
-					BlockchainHttp:      blockchain_http,
 					BlockchainEcosystem: blockchain_ecosystem,
 					CreateTime:          time.Now().Unix()}
 				if err = SrcDataChainStatus.Create(); err != nil {

@@ -608,12 +608,6 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 		return
 	}
 
-	if len(form.Get("nowait")) > 0 {
-		return
-	}
-	id, penalty, err := waitTx(ret.Hashes["data"])
-	if id != 0 && err != nil {
-		if penalty == 1 {
 			return
 		}
 		msg = err.Error()
@@ -798,5 +792,15 @@ func sendMultipart(url string, files map[string][]byte, v interface{}) error {
 		return err
 	}
 	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(`%d %s`, resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+
 	return json.Unmarshal(data, &v)
 }

@@ -3,3 +3,7 @@
 contract RemoveOBS {
 	data {
 			OBSName string
+	}
+	conditions {}
+	action{
+        $OBSName = ToLower($OBSName)

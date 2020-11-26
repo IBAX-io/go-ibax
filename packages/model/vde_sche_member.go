@@ -3,6 +3,10 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package model
+
+type VDEScheMember struct {
+	ID                   int64  `gorm:"primary_key; not null" json:"id"`
+	VDEPubKey            string `gorm:"not null" json:"vde_pub_key"`
 	VDEComment           string `gorm:"not null" json:"vde_comment"`
 	VDEName              string `gorm:"not null" json:"vde_name"`
 	VDEIp                string `gorm:"not null" json:"vde_ip"`
@@ -20,14 +24,6 @@ func (VDEScheMember) TableName() string {
 
 func (m *VDEScheMember) Create() error {
 	return DBConn.Create(&m).Error
-}
-
-func (m *VDEScheMember) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
-
-func (m *VDEScheMember) Delete() error {
-	return DBConn.Delete(m).Error
 }
 
 func (m *VDEScheMember) GetAll() ([]VDEScheMember, error) {

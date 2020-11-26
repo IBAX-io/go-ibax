@@ -21,12 +21,6 @@ func PKCS5UnPadding(origData []byte) []byte {
 	length := len(origData)
 	unpadding := int(origData[length-1])
 	return origData[:(length - unpadding)]
-}
-
-func AesEncrypt(origData, key []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
-	if err != nil {
-func AesDecrypt(crypted, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err

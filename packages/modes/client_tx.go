@@ -77,6 +77,19 @@ func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key i
 
 			if !fo {
 				return "", errors.New("mineowner keyid not found")
+			}
+		}
+
+		if err := model.SendTx(rtx, rtx.SmartTx().KeyID); err != nil {
+			le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("sending tx")
+			return "", err
+		}
+
+		return string(converter.BinToHex(rtx.Hash())), nil
+	}
+
+	if err := model.SendTx(rtx, key); err != nil {
+		le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("sending tx")
 		return "", err
 	}
 
@@ -126,15 +139,6 @@ func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 		return "", err
 	}
 
-	if err := model.SetTransactionStatusBlockMsg(nil, 1, res, tx.TxHash); err != nil {
-		le.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": tx.TxHash}).Error("updating transaction status block id")
-		return "", err
-	}
-
-	return string(converter.BinToHex(tx.TxHash)), nil
-}
-func (p ObsTxPreprocessor) ProcessClientTxBatches(txData [][]byte, key int64, le *log.Entry) ([]string, error) {
-	return nil, nil
 }
 func GetClientTxPreprocessor() types.ClientTxPreprocessor {
 	if conf.Config.IsSupportingOBS() {

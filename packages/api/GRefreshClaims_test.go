@@ -16,7 +16,6 @@ func TestMapRefresh(t *testing.T) {
 			gr := GRefreshClaims{
 				Header:           "abc",
 				Refresh:          "cd",
-				ExpiresAt:        dt,
 				RefreshExpiresAt: dt,
 			}
 			gr.RefreshClaims()
@@ -32,3 +31,10 @@ func TestMapRefresh(t *testing.T) {
 				Refresh:          "cd",
 				ExpiresAt:        dt,
 				RefreshExpiresAt: dt,
+			}
+			gr.RefreshClaims()
+		}
+	}()
+	// run
+	select {}
+}

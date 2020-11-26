@@ -4,7 +4,6 @@ contract EditContract {
     data {
         Id int
         Value string "optional"
-        $cur = DBFind("contracts").Columns("id,value,conditions,wallet_id,token_id").WhereId($Id).Row()
         if !$cur {
             error Sprintf("Contract %d does not exist", $Id)
         }

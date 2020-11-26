@@ -5,15 +5,6 @@
 
 package migration
 
-var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions", "ecosystem") VALUES
-    (next_id('1_tables'), 'contracts',
-        '{
-            "insert": "ContractConditions(\"DeveloperCondition\")",
-            "update": "ContractConditions(\"DeveloperCondition\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
-        }',
-        '{    
-            "name": "false",
             "value": "ContractAccess(\"@1EditContract\")",
             "wallet_id": "ContractAccess(\"@1BindWallet\", \"@1UnbindWallet\")",
             "token_id": "ContractAccess(\"@1EditContract\")",
@@ -67,6 +58,25 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     (next_id('1_tables'), 'languages',
         '{
             "insert": "ContractConditions(\"DeveloperCondition\")",
+            "update": "ContractConditions(\"DeveloperCondition\")",
+            "new_column": "ContractConditions(\"@1AdminCondition\")"
+        }',
+        '{
+            "name": "ContractAccess(\"@1EditLang\")",
+            "res": "ContractAccess(\"@1EditLang\")",
+            "conditions": "ContractAccess(\"@1EditLang\")",
+            "permissions": "ContractConditions(\"@1AdminCondition\")",
+            "ecosystem": "false"
+        }',
+        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
+    ),
+    (next_id('1_tables'), 'menu',
+        '{
+            "insert": "ContractConditions(\"DeveloperCondition\")",
+            "update": "ContractConditions(\"DeveloperCondition\")",
+            "new_column": "ContractConditions(\"@1AdminCondition\")"
+        }',
+        '{
             "name": "false",
             "value": "ContractAccess(\"@1EditMenu\",\"@1AppendMenu\")",
             "title": "ContractAccess(\"@1EditMenu\")",

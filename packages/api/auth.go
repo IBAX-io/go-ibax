@@ -82,6 +82,21 @@ func parseJWTToken(header string) (*jwt.Token, error) {
 	}
 
 	if strings.HasPrefix(header, jwtPrefix) {
+		header = header[len(jwtPrefix):]
+	} else {
+		return nil, errJWTAuthValue
+	}
+
+	return jwt.ParseWithClaims(header, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(jwtSecret), nil
+	})
+}
+
+func RefreshToken(header string) (*jwt.Token, error) {
+	if len(header) == 0 {
 		return nil, nil
 	}
 	if strings.HasPrefix(header, jwtPrefix) {
@@ -146,18 +161,6 @@ func parseJWTToken(header string) (*jwt.Token, error) {
 	return token, err
 }
 
-func getClientFromToken(token *jwt.Token, ecosysNameService types.EcosystemNameGetter) (*Client, error) {
-	claims, ok := token.Claims.(*JWTClaims)
-	if !ok {
-		return nil, nil
-	}
-	if len(claims.KeyID) == 0 {
-		return nil, nil
-	}
-
-	client := &Client{
-		EcosystemID: converter.StrToInt64(claims.EcosystemID),
-		KeyID:       converter.StrToInt64(claims.KeyID),
 		AccountID:   claims.AccountID,
 		IsMobile:    claims.IsMobile,
 		RoleID:      converter.StrToInt64(claims.RoleID),

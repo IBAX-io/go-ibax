@@ -20,9 +20,6 @@ INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_system_parameters'),'price_create_contract', '100', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_menu', '100', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_page', '100', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'),'price_create_block', '100', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'),'price_create_view', '100', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'),'price_create_application', '10000', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_token', '50000', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_asset', '10000', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'max_block_size', '67108864', 'ContractAccess("@1UpdateSysParam")'),
@@ -84,3 +81,5 @@ INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_system_parameters'),'external_blockchain', '', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'pay_free_contract', '@1CallDelayedContract', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'pool_block_rate', '5', 'ContractAccess("@1UpdateSysParam")'),
+    (next_id('1_system_parameters'),'local_node_ban_time', '60', 'ContractAccess("@1UpdateSysParam")');
+`
