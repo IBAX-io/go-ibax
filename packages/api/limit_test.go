@@ -71,6 +71,21 @@ func TestLimit(t *testing.T) {
 			return fmt.Errorf(`wrong list items %d != %d`, list.Count, count)
 		}
 		blocks := make(map[string]int)
+		for _, item := range list.List {
+			if v, ok := blocks[item["block"]]; ok {
+				blocks[item["block"]] = v + 1
+			} else {
+				blocks[item["block"]] = 1
+			}
+		}
+		if wantBlocks > 0 && len(blocks) != wantBlocks {
+			return fmt.Errorf(`wrong number of blocks %d != %d`, len(blocks), wantBlocks)
+		}
+		return nil
+	}
+	sendList()
+	assert.NoError(t, checkList(10, 1))
+
 	var syspar ecosystemParamsResult
 	assert.NoError(t, sendGet(`systemparams?names=max_tx_block,max_tx_block_per_user`, nil, &syspar))
 
@@ -93,23 +108,6 @@ func TestLimit(t *testing.T) {
 	sendList()
 	assert.NoError(t, checkList(20, 3))
 	assert.NoError(t, postTx(`Upd`+rnd, &url.Values{`Name`: {`max_tx_block_per_user`}, `Value`: {`3`}}))
-
-	sendList()
-	assert.NoError(t, checkList(30, 7))
-
-	restoreMax()
-	assert.NoError(t, sendGet(`systemparams?names=max_block_generation_time`, nil, &syspar))
-
-	var maxtime string
-	maxtime = syspar.List[0].Value
-	defer func() {
-		assert.NoError(t, postTx(`Upd`+rnd, &url.Values{
-			`Name`:  {`max_block_generation_time`},
-			`Value`: {maxtime},
-		}))
-	}()
-	assert.NoError(t, postTx(`Upd`+rnd, &url.Values{`Name`: {`max_block_generation_time`}, `Value`: {`100`}}))
-
 	sendList()
 	assert.NoError(t, checkList(40, 0))
 }

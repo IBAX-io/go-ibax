@@ -69,10 +69,6 @@ var (
 	CodeMultimediasizelimit = CodeType{400016, "multimedia file size exceeds limit ", http.StatusOK, ""}
 	CodeParamNotNull        = CodeType{400017, "Param  message content exceeds limit ", http.StatusOK, ""}
 	CodeParamOutRange       = CodeType{400018, "Param out of range ", http.StatusOK, ""}
-	CodeParam               = CodeType{400019, "Param error ", http.StatusOK, ""}
-	CodeParamNotExists      = CodeType{400020, "Param is exists  ", http.StatusOK, ""}
-	CodeParamType           = CodeType{400021, "Param type error ", http.StatusOK, ""}
-	CodeParamKeyConflict    = CodeType{400022, "Param Keyword conflict error ", http.StatusOK, ""}
 	CodeRecordExists        = CodeType{400023, "Record already exists  ", http.StatusOK, ""}
 	CodeRecordNotExists     = CodeType{400024, "Record not exists error  ", http.StatusOK, ""}
 	CodeNewRecordNotRelease = CodeType{400025, "New Record not Release error ", http.StatusOK, ""}
@@ -121,6 +117,25 @@ type errType struct {
 	Err     string `json:"error"`
 	Message string `json:"msg"`
 	Status  int    `json:"-"`
+}
+
+func (et errType) Error() string {
+	return et.Err
+}
+
+func (et errType) Errorf(v ...interface{}) errType {
+	et.Message = fmt.Sprintf(et.Message, v...)
+	return et
+}
+
+func (ct CodeType) Errorf(err error) CodeType {
+	et, ok := err.(errType)
+	if !ok {
+		et.Message = err.Error()
+	}
+	ct.Message = fmt.Sprintln(ct.Message, et.Message)
+	ct.Msg = http.StatusText(ct.Status)
+	return ct
 }
 
 func (ct CodeType) String(dat string) CodeType {

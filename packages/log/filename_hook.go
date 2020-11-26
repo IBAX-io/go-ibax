@@ -3,19 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package log
-
-import (
-	"path"
-	"runtime"
-	"strings"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-
-	"github.com/sirupsen/logrus"
-)
-
 // ContextHook storing nothing but behavior
 type ContextHook struct{}
 
@@ -50,3 +37,17 @@ func (hook ContextHook) Fire(entry *logrus.Entry) error {
 				entry.Data["line"] = line
 				entry.Data["time"] = time.Now().Format(time.RFC3339)
 				if conf.Config.Log.LogLevel != "DEBUG" {
+					break
+				}
+			}
+			if count >= 1 {
+				if count == 1 {
+					entry.Data["from"] = []string{}
+				}
+				entry.Data["from"] = append(entry.Data["from"].([]string), path.Base(name))
+			}
+			count += 1
+		}
+	}
+	return nil
+}

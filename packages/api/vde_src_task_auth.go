@@ -102,6 +102,12 @@ func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 func VDESrcTaskAuthDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
+	logger := getLogger(r)
+	id := converter.StrToInt64(params["id"])
+
+	m := &model.VDESrcTaskAuth{}
+	m.ID = id
+	if err := m.Delete(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
 	}
 
@@ -117,19 +123,6 @@ func VDESrcTaskAuthListHandlre(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
 		errorResponse(w, err)
 		return
-	}
-	jsonResponse(w, result)
-}
-
-func VDESrcTaskAuthByIDHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	id := converter.StrToInt64(params["id"])
-	srcData := model.VDESrcTaskAuth{}
-	srcData.ID = id
-	result, err := srcData.GetOneByID()
-	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
 		errorResponse(w, err)
 		return
