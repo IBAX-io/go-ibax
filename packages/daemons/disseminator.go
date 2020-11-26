@@ -44,16 +44,6 @@ func Disseminator(ctx context.Context, d *daemon) error {
 		return sendBlockWithTxHashes(ctx, myNodePosition, d.logger)
 	}
 
-	// we are not honor node for this StateID and WalletID, so just send transactions
-	d.logger.Debug("we are honor_node, sending transactions")
-	return sendTransactions(ctx, d.logger)
-}
-
-func sendTransactions(ctx context.Context, logger *log.Entry) error {
-	// get unsent transactions
-	trs, err := model.GetAllUnsentTransactions(syspar.GetMaxTxCount())
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unsent transactions")
 		return err
 	}
 
@@ -100,6 +90,15 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 	if (trs == nil || len(*trs) == 0) && block == nil {
 		// it's nothing to send
 		logger.Debug("nothing to send")
+		return nil
+	}
+
+	hosts, banHosts, err := service.GetNodesBanService().FilterHosts(syspar.GetRemoteHosts())
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("on getting remotes hosts")
+		return err
+	}
+	if len(banHosts) > 0 {
 		if err := tcpclient.SendFullBlockToAll(ctx, banHosts, nil, *trs, honorNodeID); err != nil {
 			log.WithFields(log.Fields{"type": consts.TCPClientError, "error": err}).Warn("on sending block with hashes to ban hosts")
 			return err

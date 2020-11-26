@@ -58,15 +58,6 @@ func VDEDestChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, *m)
 }
-
-func VDEDestChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
-	)
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	id := converter.StrToInt64(params["id"])
 	form := &VDEDestChainInfoForm{}
 
 	if err = parseForm(r, form); err != nil {
@@ -81,6 +72,25 @@ func VDEDestChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
+		return
+	}
+
+	result, err := m.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
+		return
+	}
+
+	jsonResponse(w, result)
+}
+
+func VDEDestChainInfoDeleteHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
 	id := converter.StrToInt64(params["id"])
 
 	m := &model.VDEDestChainInfo{}

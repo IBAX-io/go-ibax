@@ -14,8 +14,3 @@ func TestGetHasher(t *testing.T) {
 	secret := "world"
 
 	hmacMsg, err := h.getHMAC(secret, message)
-
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(hmacMsg)

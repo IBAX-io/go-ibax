@@ -27,22 +27,16 @@ func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	client := getClient(r)
+	logger := getLogger(r)
+
+	contract := &model.Contract{}
+	contract.EcosystemID = client.EcosystemID
+
 	count, err := contract.CountByEcosystem()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting table records count")
 		errorResponse(w, err)
-		return
-	}
-
-	contracts, err := contract.GetListByEcosystem(form.Offset, form.Limit)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all")
-		errorResponse(w, err)
-		return
-	}
-
-	list := make([]map[string]string, len(contracts))
-	for i, c := range contracts {
 		list[i] = c.ToMap()
 		list[i]["address"] = converter.AddressToString(c.WalletID)
 	}

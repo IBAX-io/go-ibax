@@ -10,13 +10,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network"
-	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -44,6 +37,11 @@ func Type202(r *network.SubNodeAgentDataRequest) (*network.SubNodeAgentDataRespo
 		log.WithError(err)
 		return nil, err
 	}
+	resp := &network.SubNodeAgentDataResponse{}
+	resp.Hash = hash
+
+	//
+	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
 	if len(NodePrivateKey) < 1 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
 		err = errors.New(`empty node private key`)

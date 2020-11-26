@@ -5,6 +5,8 @@ A  powerful blockchain system platform with a new system framework and a simplif
 
 ### Build from Source
 
+#### Install Go
+
 The build process for go-ibax requires Go 1.12 or higher. If you don't have it: [Download Go 1.12+](https://golang.org/dl/).
 
 You'll need to add Go's bin directories to your `$PATH` environment variable e.g., by adding these lines to your `/etc/profile` (for a system-wide installation) or `$HOME/.profile`:
@@ -44,20 +46,6 @@ $    go-ibax generateKeys
 ```bash
 $    go-ibax generateFirstBlock \
         --test=true
-```
-
-4. Initialize the database.
-
-```bash
-$    go-ibax initDatabase
-```
-
-5.Starting go-ibax.
-
-```bash
-$    go-ibax start
-```
-
 
 # docker run
 

@@ -16,17 +16,6 @@ const corsMaxAge = 600
 
 type Router struct {
 	main        *mux.Router
-	apiVersions map[string]*mux.Router
-}
-
-func (r Router) GetAPI() *mux.Router {
-	return r.main
-}
-
-func (r Router) GetAPIVersion(preffix string) *mux.Router {
-	return r.apiVersions[preffix]
-}
-
 func (r Router) NewVersion(preffix string) *mux.Router {
 	api := r.main.PathPrefix(preffix).Subrouter()
 	r.apiVersions[preffix] = api
@@ -303,3 +292,8 @@ func NewRouter(m Mode) Router {
 func WithCors(h http.Handler) http.Handler {
 	return handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedMethods([]string{"GET", "HEAD", "POST"}),
+		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "X-Requested-With"}),
+		handlers.MaxAge(corsMaxAge),
+	)(h)
+}

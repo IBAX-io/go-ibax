@@ -372,11 +372,6 @@ func (rt *RunTime) recalcMemVar(k int) {
 func valueToBool(v interface{}) bool {
 	switch val := v.(type) {
 	case int:
-		if val != 0 {
-			return true
-		}
-	case int64:
-		if val != 0 {
 			return true
 		}
 	case float64:
@@ -753,6 +748,12 @@ main:
 					}
 				}
 			} else {
+				rt.cost -= CostCall
+			}
+			err = rt.callFunc(cmd.Cmd, cmd.Value.(*ObjInfo))
+
+		case cmdVar:
+			ivar := cmd.Value.(*VarInfo)
 			var i int
 			for i = len(rt.blocks) - 1; i >= 0; i-- {
 				if ivar.Owner == rt.blocks[i].Block {
