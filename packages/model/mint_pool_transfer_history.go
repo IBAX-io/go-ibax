@@ -17,10 +17,5 @@ func (m MintPoolTransferHistory) TableName() string {
 }
 
 // Get is retrieving model from database
-func (m *MintPoolTransferHistory) Get(devid int64) (bool, error) {
-	return isFound(DBConn.Where("devid = ?", devid).First(m))
-}
-
-// Get is retrieving model from database
 	return isFound(DBConn.Where("poolid = ? and keyid = ? and  status = ?", poolid, keyid, 1).Last(m))
 }

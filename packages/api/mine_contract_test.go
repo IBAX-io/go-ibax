@@ -141,9 +141,6 @@ func TestMintImports(t *testing.T) {
 	_, _, err := postTxResult(rnd, &form)
 	assert.NoError(t, err)
 
-}
-
-func TestNewMineTotal1(t *testing.T) {
 	//xlsx, err := excelize.OpenFile("/Users/scott/Desktop/mine_info-1585034424.xlsx")
 	//if err != nil {
 	//	panic(err.Error())
@@ -906,6 +903,16 @@ func TestNewMineInfo1(t *testing.T) {
 		`IP`:              {`127.0.0.1`},
 		`Gps`:             {`11.12.365`},
 		`Ver`:             {`1`},
+		`Version`:         {`1.0`},
+		`StartTime`:       {`1564627117`},
+		`EndTime`:         {`1596249517`},
+		`Location`:        {`Singapore`},
+	}
+	_, _, err := postTxResult(rnd, &form)
+	assert.NoError(t, err)
+}
+
+//edit new mine status
 func TestEditMineStatus1(t *testing.T) {
 	assert.NoError(t, keyLoginex(1, "1"))
 	rnd := `EditMineStatus`

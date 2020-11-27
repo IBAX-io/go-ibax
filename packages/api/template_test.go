@@ -70,6 +70,20 @@ func TestAPI(t *testing.T) {
 	gAuth = ``
 	assert.NoError(t, sendPost(`content/hash/`+name, &url.Values{`ecosystem`: {`1`}, `keyID`: {msg}, `roleID`: {`0`}},
 		&retHash2))
+	if retHash.Hash != retHash2.Hash {
+		t.Error(`Wrong hash`)
+		return
+	}
+	if err := keyLogin(1); err != nil {
+		t.Error(err)
+		return
+	}
+	err = sendPost(`content/page/default_page`, &url.Values{}, &ret)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	for _, item := range forTest {
 		err := sendPost(`content`, &url.Values{`template`: {item.input}}, &ret)
 		if err != nil {
@@ -372,16 +386,6 @@ func TestBinary(t *testing.T) {
 }
 
 func TestStringToBinary(t *testing.T) {
-	assert.NoError(t, keyLogin(1))
-
-	contract := randName("binary")
-	content := randName("content")
-	filename := randName("file")
-	mimeType := "text/plain"
-
-	form := url.Values{
-		"Value": {`
-			contract ` + contract + ` {
 				data {
 					Content string
 				}
