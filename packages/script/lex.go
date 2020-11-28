@@ -28,6 +28,15 @@ const (
 	lexOper               // Operator is +, -, *, /
 	lexNumber             // Number
 	lexIdent              // Identifier
+	lexNewLine            // Line translation
+	lexString             // String
+	lexComment            // Comment
+	lexKeyword            // Key word
+	lexType               // Name of the type
+	lexExtend             // Referring to an external variable or function - $myname
+
+	lexError = 0xff
+	// flags of lexical states
 	lexfNext = 1
 	lexfPush = 2
 	lexfPop  = 4
@@ -134,25 +143,6 @@ var (
 		`map`:     {DtMap, reflect.TypeOf(&types.Map{})},
 		`money`:   {DtMoney, reflect.TypeOf(decimal.New(0, 0))},
 		`float`:   {DtFloat, reflect.TypeOf(float64(0.0))},
-		`string`:  {DtString, reflect.TypeOf(``)},
-		`file`:    {DtFile, reflect.TypeOf(&types.Map{})},
-	}
-)
-
-// Lexem contains information about language item
-type Lexem struct {
-	Type   uint32 // Type of the lexem
-	Ext    uint32
-	Value  interface{} // Value of lexem
-	Line   uint16      // Line of the lexem
-	Column uint32      // Position inside the line
-}
-
-// GetLogger returns logger
-func (l Lexem) GetLogger() *log.Entry {
-	return log.WithFields(log.Fields{"lex_type": l.Type, "lex_line": l.Line, "lex_column": l.Column})
-}
-
 type ifBuf struct {
 	count int
 	pair  int

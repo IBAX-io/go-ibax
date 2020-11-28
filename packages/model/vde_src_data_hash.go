@@ -14,6 +14,12 @@ type VDESrcDataHash struct {
 
 	TxHash     string `gorm:"not null" json:"tx_hash"`
 	ChainState int64  `gorm:"not null" json:"chain_state"`
+	BlockId    int64  `gorm:"not null" json:"block_id"`
+	ChainId    int64  `gorm:"not null" json:"chain_id"`
+	ChainErr   string `gorm:"not null" json:"chain_err"`
+
+	UpdateTime int64 `gorm:"not null" json:"update_time"`
+	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
 func (VDESrcDataHash) TableName() string {
@@ -49,16 +55,4 @@ func (m *VDESrcDataHash) GetAllByTaskUUID(TaskUUID string) ([]VDESrcDataHash, er
 }
 
 func (m *VDESrcDataHash) GetOneByTaskUUID(TaskUUID string) (*VDESrcDataHash, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
-}
-
-func (m *VDESrcDataHash) GetAllByChainState(ChainState int64) ([]VDESrcDataHash, error) {
-	result := make([]VDESrcDataHash, 0)
-	err := DBConn.Table("vde_src_data_hash").Where("chain_state = ?", ChainState).Find(&result).Error
-	return result, err
-}
-
-func (m *VDESrcDataHash) GetOneByChainState(ChainState int64) (bool, error) {
-	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
 }

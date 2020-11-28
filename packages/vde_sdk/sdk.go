@@ -466,20 +466,6 @@ func KeyLogin(apiAddress string, from string, state int64) (gAuth string, gAddre
 		return "", "", "", "", false, err
 	}
 
-	pub, err = PrivateToPublicHex(string(key))
-	if err != nil {
-		return "", "", "", "", false, err
-	}
-	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)},
-		`ecosystem`: {converter.Int64ToStr(state)}, "role_id": {"0"}}
-	if gMobile {
-		form[`mobile`] = []string{`true`}
-	}
-	var logret loginResult
-	err = sendPost(apiAddress, gAuth, `login`, &form, &logret)
-	if err != nil {
-		return "", "", "", "", false, err
-	}
 	gAddress = logret.Address
 	gPrivate = string(key)
 	gPublic, err = PrivateToPublicHex(gPrivate)
@@ -901,6 +887,14 @@ func VDEWaitTx(apiAddress string, gAuth string, hash string) (int64, error) {
 			if err != nil {
 				return 0, err
 			}
+			return 0, errors.New(string(errtext))
+		}
+		time.Sleep(time.Second)
+	}
+	//return 0, fmt.Errorf(`TxStatus timeout`)
+	return -1, fmt.Errorf(`TxStatus timeout`)
+}
+
 func RandName(prefix string) string {
 	return fmt.Sprintf(`%s%d`, prefix, time.Now().Unix())
 }

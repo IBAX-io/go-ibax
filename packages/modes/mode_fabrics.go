@@ -47,6 +47,17 @@ type BCEcosysIDValidator struct {
 	logger *log.Entry
 }
 
+func (v BCEcosysIDValidator) Validate(formEcosysID, clientEcosysID int64, le *log.Entry) (int64, error) {
+	if formEcosysID <= 0 {
+		return clientEcosysID, nil
+	}
+
+	count, err := model.GetNextID(nil, "1_ecosystems")
+	if err != nil {
+		le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting next id of ecosystems")
+		return 0, err
+	}
+
 	if formEcosysID >= count {
 		le.WithFields(log.Fields{"state_id": formEcosysID, "count": count, "type": consts.ParameterExceeded}).Error("ecosystem is larger then max count")
 		return 0, api.ErrEcosystemNotFound
@@ -193,22 +204,6 @@ func (l SNDaemonLoader) Load(ctx context.Context) error {
 		return err
 	}
 
-	l.logger.Info("start subnode daemons")
-	daemons.StartDaemons(ctx, l.DaemonListFactory.GetDaemonsList())
-
-	if err := tcpserver.TcpListener(conf.Config.TCPServer.Str()); err != nil {
-		log.Errorf("can't start tcp servers, stop")
-		return err
-	}
-	service.NewNodeRelevanceService().Run(ctx)
-
-	if err := service.InitNodesBanService(); err != nil {
-		l.logger.WithError(err).Error("Can't init ban service")
-		return err
-	}
-
-	return nil
-}
 
 // OBSDaemonLoader allows load obs daemons
 type OBSDaemonLoader struct {
