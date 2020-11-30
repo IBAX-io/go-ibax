@@ -2,6 +2,10 @@
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract NewLang {
     data {
+        ApplicationId int
+        Name string
+        Trans string
+    }
 
     conditions {
         if $ApplicationId == 0 {
@@ -15,7 +19,3 @@ contract NewLang {
         EvalCondition("parameters", "changing_language", "value")
     }
 
-    action {
-        CreateLanguage($Name, $Trans)
-    }
-}

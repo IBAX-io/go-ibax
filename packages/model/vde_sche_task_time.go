@@ -14,13 +14,17 @@ type VDEScheTaskTime struct {
 func (VDEScheTaskTime) TableName() string {
 	return "vde_sche_task_time"
 }
-
-func (m *VDEScheTaskTime) Create() error {
-	return DBConn.Create(&m).Error
-}
-
 func (m *VDEScheTaskTime) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEScheTaskTime) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *VDEScheTaskTime) Get() (*VDEScheTaskTime, error) {
+	err := DBConn.First(&m).Error
+	return m, err
 }
 
 func (m *VDEScheTaskTime) GetAll() ([]VDEScheTaskTime, error) {

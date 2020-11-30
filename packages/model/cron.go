@@ -1,4 +1,6 @@
-/*---------------------------------------------------------------------------------------------
+
+// Cron represents record of {prefix}_cron table
+type Cron struct {
 	tableName string
 	ID        int64
 	Cron      string

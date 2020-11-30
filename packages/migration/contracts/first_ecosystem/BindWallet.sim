@@ -1,3 +1,8 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract BindWallet {
+	data {
+		Id  int
+		BndWallet($Id, $ecosystem_id)
+	}
+}

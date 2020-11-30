@@ -5,10 +5,6 @@ var (
 )
 
 func Put_MintCount() error {
-
-	return nil
-}
-
 func Deal_MintCount() error {
 	//for {
 	//	select {
@@ -16,3 +12,12 @@ func Deal_MintCount() error {
 	//		err := dat.Insert_redisdb()
 	//		if err != nil {
 	//			log.Info("Deal_MintCount Insert_redisdb: ", err.Error())
+	//			//time.Sleep(4000)
+	//		}
+	//		//time.Sleep(5*time.Second)
+	//		//MintCountDealCh<-dat
+	//	}
+	//
+	//}
+	return nil
+}

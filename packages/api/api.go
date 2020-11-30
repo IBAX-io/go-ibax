@@ -80,15 +80,6 @@ func errorResponse(w http.ResponseWriter, err error, code ...int) {
 
 func JsonCodeResponse(w http.ResponseWriter, ct *model.Response) {
 	jsonResponse(w, ct)
-}
-
-type formValidator interface {
-	Validate(r *http.Request) error
-}
-
-type nopeValidator struct{}
-
-func (np nopeValidator) Validate(r *http.Request) error {
 	return nil
 }
 
@@ -101,6 +92,19 @@ func parseForm(r *http.Request, f formValidator) (err error) {
 	if err != nil {
 		return
 	}
+
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+	if err := decoder.Decode(f, r.Form); err != nil {
+		return err
+	}
+	return f.Validate(r)
+}
+
+func isMultipartForm(r *http.Request) bool {
+	return strings.HasPrefix(r.Header.Get(contentType), multipartFormData)
+}
+
 type hexValue struct {
 	value []byte
 }

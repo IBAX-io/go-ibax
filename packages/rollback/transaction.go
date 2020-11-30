@@ -18,18 +18,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-func rollbackUpdatedRow(tx map[string]string, where string, dbTransaction *model.DbTransaction, logger *log.Entry) error {
-	var rollbackInfo map[string]string
-	if err := json.Unmarshal([]byte(tx["data"]), &rollbackInfo); err != nil {
-		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollback.Data from json")
-		return err
-	}
-	addSQLUpdate := ""
-	for k, v := range rollbackInfo {
-		if v == "NULL" {
-			addSQLUpdate += k + `=NULL,`
-		} else if syspar.IsByteColumn(tx["table_name"], k) && len(v) != 0 {
 			addSQLUpdate += k + `=decode('` + v + `','HEX'),`
 		} else {
 			addSQLUpdate += k + `='` + strings.Replace(v, `'`, `''`, -1) + `',`
@@ -136,6 +124,14 @@ func rollbackTransaction(txHash []byte, dbTransaction *model.DbTransaction, logg
 			tx[`table_name`] = `1_` + keyName
 		} else {
 			where += tx["table_id"] + `'`
+		}
+		if len(tx["data"]) > 0 {
+			if err := rollbackUpdatedRow(tx, where, dbTransaction, logger); err != nil {
+				return err
+			}
+		} else {
+			if err := rollbackInsertedRow(tx, where, dbTransaction, logger); err != nil {
+				return err
 			}
 		}
 	}

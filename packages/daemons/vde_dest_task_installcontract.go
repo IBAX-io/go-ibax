@@ -23,6 +23,13 @@ import (
 )
 
 //Install task contract
+func VDEDestTaskInstallContractDest(ctx context.Context, d *daemon) error {
+	var (
+		blockchain_http      string
+		blockchain_ecosystem string
+		err                  error
+	)
+
 	m := &model.VDEDestTaskFromSrc{}
 	DestTask, err := m.GetAllByContractStateDest(0) //0
 	if err != nil {
@@ -54,16 +61,6 @@ import (
 		vde_dest_apiEcosystemID := int64(ecosystemID)
 
 		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
-		// Login
-		//err := api.KeyLogin(src, api.ApiEcosystemID)
-		gAuth_dest, _, gPrivate_dest, _, _, err := vde_api.KeyLogin(vde_dest_apiAddress, src, vde_dest_apiEcosystemID)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
-			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-		//fmt.Println("Login OK!")
-
 		ContractDest := item.ContractDestGet
 
 		form := url.Values{

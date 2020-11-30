@@ -33,20 +33,6 @@ type multiTxInfoResult struct {
 	Results map[string]*txinfoResult `json:"results"`
 }
 
-func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, error) {
-	var status txinfoResult
-	hash, err := hex.DecodeString(txHash)
-	if err != nil {
-		return nil, errHashWrong
-	}
-	ltx := &model.LogTransaction{Hash: hash}
-	found, err := ltx.GetByHash(hash)
-	if err != nil {
-		return nil, err
-	}
-	if !found {
-		return &status, nil
-	}
 	status.BlockID = converter.Int64ToStr(ltx.Block)
 	var confirm model.Confirmation
 	found, err = confirm.GetConfirmation(ltx.Block)
@@ -95,6 +81,11 @@ func getTxInfoMultiHandler(w http.ResponseWriter, r *http.Request) {
 		Hashes []string `json:"hashes"`
 	}
 	if err := json.Unmarshal([]byte(form.Data), &request); err != nil {
+		errorResponse(w, errHashWrong)
+		return
+	}
+	for _, hash := range request.Hashes {
+		status, err := getTxInfo(r, hash, form.ContractInfo)
 		if err != nil {
 			errorResponse(w, err)
 			return

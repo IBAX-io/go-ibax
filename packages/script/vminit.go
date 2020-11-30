@@ -210,6 +210,23 @@ type Stacker interface {
 func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interface{}, error) {
 
 	contract, ok := rt.vm.Objects[name]
+	if !ok {
+		log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError}).Error("unknown contract")
+		return nil, fmt.Errorf(eUnknownContract, name)
+	}
+	logger := log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError})
+	cblock := contract.Value.(*Block)
+	parnames := make(map[string]bool)
+	pars := strings.Split(txs, `,`)
+	if len(pars) != len(params) {
+		logger.WithFields(log.Fields{"contract_params_len": len(pars), "contract_params_len_needed": len(params), "type": consts.ContractError}).Error("wrong contract parameters pars")
+		return ``, errContractPars
+	}
+	for _, ipar := range pars {
+		parnames[ipar] = true
+	}
+	if _, ok := (*rt.extend)[`loop_`+name]; ok {
+		logger.WithFields(log.Fields{"type": consts.ContractError, "contract_name": name}).Error("there is loop in contract")
 		return nil, fmt.Errorf(eContractLoop, name)
 	}
 	(*rt.extend)[`loop_`+name] = true
@@ -348,16 +365,6 @@ func NewVM() *VM {
 	})
 	vm.logger = log.WithFields(log.Fields{"extern": vm.Extern, "vm_block_type": vm.Block.Type})
 	return &vm
-}
-
-// Extend sets the extended variables and functions
-func (vm *VM) Extend(ext *ExtendData) {
-	for key, item := range ext.Objects {
-		fobj := reflect.ValueOf(item).Type()
-		switch fobj.Kind() {
-		case reflect.Func:
-			_, canWrite := ext.WriteFuncs[key]
-			data := ExtFuncInfo{key, make([]reflect.Type, fobj.NumIn()),
 				make([]reflect.Type, fobj.NumOut()), make([]string, fobj.NumIn()),
 				fobj.IsVariadic(), item, canWrite}
 			for i := 0; i < fobj.NumIn(); i++ {
