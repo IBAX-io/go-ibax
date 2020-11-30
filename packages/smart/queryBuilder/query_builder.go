@@ -85,21 +85,6 @@ func (b *SQLQueryBuilder) Prepare() error {
 			} else {
 				b.Fields = append(b.Fields, "ecosystem")
 				b.FieldValues = append(b.FieldValues, b.keyEcosystem)
-			}
-		}
-	}
-
-	if err := b.normalizeValues(); err != nil {
-		b.WithFields(log.Fields{"error": err}).Error("on normalize field values")
-		return err
-	}
-
-	values, err := converter.InterfaceSliceToStr(b.FieldValues)
-	if err != nil {
-		b.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("on convert field values to string")
-		return err
-	}
-
 	b.stringValues = values
 	b.prepared = true
 	return nil
@@ -326,6 +311,19 @@ func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (
 
 func (b SQLQueryBuilder) toSQLValue(rawValue, rawField string) string {
 	if syspar.IsByteColumn(b.Table, rawField) && len(rawValue) != 0 {
+		return toSQLHexExpr(rawValue)
+	}
+
+	if rawValue == `NULL` {
+		return `NULL`
+	}
+
+	if strings.HasPrefix(rawField, prefTimestamp) {
+		return toWrapedTimestamp(rawValue)
+	}
+
+	if strings.HasPrefix(rawValue, prefTimestamp) {
+		return toTimestamp(rawValue)
 	}
 
 	return wrapString(escapeSingleQuotes(rawValue), "'")

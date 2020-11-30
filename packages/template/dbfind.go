@@ -29,6 +29,19 @@ func dbfindExpressionBlob(column string) string {
 	return fmt.Sprintf(`md5(%s) "%[1]s"`, column)
 }
 
+func dbfindExpressionLongText(column string) string {
+	return fmt.Sprintf(`json_build_array(
+		substr(%s, 1, %d),
+		CASE WHEN length(%[1]s)>%[2]d THEN md5(%[1]s) END) "%[1]s"`, column, substringLength)
+}
+
+type valueLink struct {
+	title string
+
+	id     string
+	table  string
+	column string
+	hash   string
 }
 
 func (vl *valueLink) link() string {
@@ -59,20 +72,6 @@ func trimString(in []rune) string {
 }
 
 func ParseObject(in []rune) (interface{}, int, error) {
-	var (
-		ret            interface{}
-		key            string
-		mapMode, quote bool
-	)
-
-	length := len(in)
-	if in[0] == '[' {
-		ret = make([]interface{}, 0)
-	} else if in[0] == '{' {
-		ret = types.NewMap()
-		mapMode = true
-	}
-	addEmptyKey := func() {
 		if mapMode {
 			ret.(*types.Map).Set(key, "")
 		} else if len(key) > 0 {

@@ -35,3 +35,7 @@ type EcosystemIDValidator interface {
 
 // DaemonLoader allow implement different ways for loading daemons
 type DaemonLoader interface {
+	Load(context.Context) error
+}
+
+type EcosystemNameGetter interface {

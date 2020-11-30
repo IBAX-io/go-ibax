@@ -5,6 +5,15 @@
 
 package migration
 
+var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions", "ecosystem") VALUES
+    (next_id('1_tables'), 'contracts',
+        '{
+            "insert": "ContractConditions(\"DeveloperCondition\")",
+            "update": "ContractConditions(\"DeveloperCondition\")",
+            "new_column": "ContractConditions(\"@1AdminCondition\")"
+        }',
+        '{    
+            "name": "false",
             "value": "ContractAccess(\"@1EditContract\")",
             "wallet_id": "ContractAccess(\"@1BindWallet\", \"@1UnbindWallet\")",
             "token_id": "ContractAccess(\"@1EditContract\")",
@@ -118,22 +127,6 @@ package migration
             "permissions": "ContractConditions(\"@1AdminCondition\")",
             "app_id": "ContractAccess(\"@1ItemChangeAppId\")",
             "ecosystem": "false"
-        }',
-        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
-    ),
-    (next_id('1_tables'), 'members',
-        '{
-            "insert": "ContractAccess(\"@1ProfileEdit\")",
-            "update": "ContractAccess(\"@1ProfileEdit\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
-        }',
-        '{
-            "image_id": "ContractAccess(\"@1ProfileEdit\")",
-            "member_info": "ContractAccess(\"@1ProfileEdit\")",
-            "member_name": "false",
-            "account":"false",
-            "ecosystem": "false"
-        }',
         'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
     ),
     (next_id('1_tables'), 'roles',

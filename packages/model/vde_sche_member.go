@@ -26,6 +26,14 @@ func (m *VDEScheMember) Create() error {
 	return DBConn.Create(&m).Error
 }
 
+func (m *VDEScheMember) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEScheMember) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
 func (m *VDEScheMember) GetAll() ([]VDEScheMember, error) {
 	var result []VDEScheMember
 	err := DBConn.Find(&result).Error
@@ -43,6 +51,3 @@ func (m *VDEScheMember) GetOneByPubKey(VDEPubKey string) (*VDEScheMember, error)
 
 func (m *VDEScheMember) GetAllByType(Type int64) ([]VDEScheMember, error) {
 	result := make([]VDEScheMember, 0)
-	err := DBConn.Table("vde_sche_member").Where("vde_type = ?", Type).Find(&result).Error
-	return result, err
-}

@@ -5,6 +5,10 @@ contract EditMenu {
         Id int
         Value string "optional"
         Title string "optional"
+        Conditions string "optional"
+    }
+    func onlyConditions() bool {
+        return $Conditions && !$Value && !$Title
     }
 
     conditions {
@@ -12,12 +16,6 @@ contract EditMenu {
         if $Conditions {
             ValidateCondition($Conditions, $ecosystem_id)
         }
-    }
-
-    action {
-        var pars map
-        if $Value {
-            pars["value"] = $Value
         }
         if $Title {
             pars["title"] = $Title

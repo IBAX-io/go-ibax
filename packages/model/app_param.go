@@ -53,17 +53,13 @@ func (sp *AppParam) GetAllAppParameters(app int64) ([]AppParam, error) {
 // Get is retrieving model from database
 func (sp *AppParam) GetHvlvebalance(transaction *DbTransaction, blockid int64) (decimal.Decimal, error) {
 
+	//var halve,balance string
+	ret := decimal.NewFromFloat(0)
 	var halve, mine_reward AppParam
 	hf, err := isFound(GetDB(transaction).Where("ecosystem=? and app_id=? and name = ?", 1, 1, "halve_interval_blockid").First(&halve))
 	if err != nil {
 		return ret, err
 	}
-
-	md, err := isFound(GetDB(transaction).Where("ecosystem=? and app_id=? and name = ?", 1, 1, "mine_reward").First(&mine_reward))
-	if err != nil {
-		return ret, err
-	}
-
 	if !hf || !md {
 		return ret, errors.New("param mine_reward or halve_interval_blockid not found")
 	}

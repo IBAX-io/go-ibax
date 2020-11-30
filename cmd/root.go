@@ -13,6 +13,14 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 )
+
+// rootCmd represents the base command when called without any subcommands
+var rootCmd = &cobra.Command{
+	Use:   "go-ibax",
+	Short: "ibax application",
+}
+
+func init() {
 	rootCmd.AddCommand(
 		generateFirstBlockCmd,
 		generateKeysCmd,
@@ -44,12 +52,6 @@ func defautConfigPath() string {
 	//
 	//return filepath.Join(p, "data", "config.toml")
 	return filepath.Join("data", "config.toml")
-}
-
-// Load the configuration from file
-func loadConfig(cmd *cobra.Command, args []string) {
-	err := conf.LoadConfig(conf.Config.ConfigPath)
-	if err != nil {
 		log.WithError(err).Fatal("Loading config")
 	}
 }

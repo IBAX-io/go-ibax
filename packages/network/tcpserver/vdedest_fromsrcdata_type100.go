@@ -48,11 +48,11 @@ func Type100(r *network.VDESrcDataRequest) (*network.VDESrcDataResponse, error) 
 	AgentMode := converter.StrToInt64(r.AgentMode)
 	VDEDestData := model.VDEDestData{
 		TaskUUID:       r.TaskUUID,
-		Data:       data,
-		CreateTime: time.Now().Unix(),
-	}
-
-	err = VDEDestData.Create()
+		DataUUID:       r.DataUUID,
+		AgentMode:      AgentMode,
+		Hash:           hash,
+		DataInfo:       r.DataInfo,
+		VDESrcPubkey:   r.VDESrcPubkey,
 	if err != nil {
 		log.WithError(err)
 		return nil, err

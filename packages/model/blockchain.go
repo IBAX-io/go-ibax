@@ -65,6 +65,8 @@ func GetBlockchain(startBlockID int64, endblockID int64, order ordering) ([]Bloc
 	}
 	return *blockchain, nil
 }
+}
+
 // GetBlocksFrom is retrieving ordered chain of blocks from database
 func (b *Block) GetBlocksFrom(startFromID int64, ordering string, limit int) ([]Block, error) {
 	var err error

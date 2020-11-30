@@ -20,20 +20,12 @@ func CheckConfirmation(host string, blockID int64, logger *log.Entry) (hash stri
 	}
 	defer conn.Close()
 
+	rt := &network.RequestType{Type: network.RequestTypeConfirmation}
+	if err = rt.Write(conn); err != nil {
+		logger.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host, "block_id": blockID}).Error("sending request type")
 		return "0"
 	}
 
-	req := &network.ConfirmRequest{
-		BlockID: uint32(blockID),
-	}
-	if err = req.Write(conn); err != nil {
-		logger.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host, "block_id": blockID}).Error("sending confirmation request")
-		return "0"
-	}
-
-	resp := &network.ConfirmResponse{}
-
-	if err := resp.Read(conn); err != nil {
 		logger.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host, "block_id": blockID}).Error("receiving confirmation response")
 		return "0"
 	}

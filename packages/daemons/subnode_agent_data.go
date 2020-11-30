@@ -33,8 +33,6 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 	m := &model.SubNodeAgentData{}
 	ShareData, err := m.GetAllByDataSendStatus(0) //0not send，1success，2fail
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all unsent task data")
-		time.Sleep(time.Millisecond * 2)
 		return err
 	}
 	if len(ShareData) == 0 {
@@ -100,6 +98,17 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 		fmt.Println("Send agent data, TaskUUID, DataUUID:", item.TaskUUID, item.DataUUID)
 		hash := tcpclient.SendSubNodeAgentData(item.SubNodeDestIP, item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), converter.Int64ToStr(item.TranMode), item.DataInfo, item.SubNodeSrcPubkey, item.SubNodeAgentPubkey, item.SubNodeAgentIP, item.SubNodeDestPubkey, item.SubNodeDestIP, ItemDataBytes)
 		if string(hash) == "0" {
+			//item.DataSendState = 3 //
+			item.DataSendState = 0 //
+			item.DataSendErr = "Network error"
+			log.Info("Network error")
+		} else if string(hash) == string(item.Hash) {
+			item.DataSendState = 1 //
+			item.DataSendErr = "Send successfully"
+			log.Info("Send successfully")
+		} else {
+			item.DataSendState = 2
+			item.DataSendErr = "Hash mismatch"
 			log.Info("Hash mismatch")
 		}
 		err = item.Updates()
