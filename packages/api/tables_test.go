@@ -76,6 +76,15 @@ func TestTableName(t *testing.T) {
 	err := postTx(`NewTable`, &form)
 	if err != nil {
 		t.Error(err)
+		return
+	}
+	form = url.Values{"Name": {name}, "Value": {`contract ` + name + ` {
+		action { 
+			DBInsert("tbl-` + name + `", {"MyName": "test"})
+			DBUpdate("tbl-` + name + `", 1, {"MyName": "New test"})
+		}}`}, "ApplicationId": {`100`}, "Conditions": {`ContractConditions("MainCondition")`}}
+	err = postTx("NewContract", &form)
+	if err != nil {
 		t.Error(err)
 		return
 	}
@@ -129,20 +138,6 @@ func TestJSONTable(t *testing.T) {
 	form := url.Values{"Name": {name}, "Columns": {`[{"name":"MyName","type":"varchar", "index": "0", 
 		"conditions":"true"}, {"name":"Doc", "type":"json","index": "0", "conditions":"true"}]`},
 		"ApplicationId": {`1`}, "Permissions": {`{"insert": "true", "update" : "true", "new_column": "true"}`}}
-	assert.NoError(t, postTx(`NewTable`, &form))
-
-	checkGet := func(want string) {
-		_, msg, err := postTxResult(name+`Get`, &url.Values{"Id": {`2`}})
-		assert.NoError(t, err)
-		assert.Equal(t, want, msg)
-	}
-
-	form = url.Values{"Name": {name}, "Value": {`contract ` + name + ` {
-		action { 
-			var ret1, ret2 int
-			ret1 = DBInsert("` + name + `", {MyName: "test",Doc: "{\"type\": \"0\"}"})
-			var mydoc map
-			mydoc["type"] = "document"
 			mydoc["ind"] = 2
 			mydoc["check"] = "99"
 			mydoc["doc"] = "Some text."

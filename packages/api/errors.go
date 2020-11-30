@@ -34,6 +34,11 @@ var (
 	errPermission        = errType{"E_PERMISSION", "Permission denied", http.StatusUnauthorized}
 	errQuery             = errType{"E_QUERY", "DB query is wrong", http.StatusInternalServerError}
 	errRecovered         = errType{"E_RECOVERED", "API recovered", http.StatusInternalServerError}
+	errServer            = errType{"E_SERVER", "Server error", defaultStatus}
+	errSignature         = errType{"E_SIGNATURE", "Signature is incorrect", http.StatusBadRequest}
+	errUnknownSign       = errType{"E_UNKNOWNSIGN", "Unknown signature", defaultStatus}
+	errStateLogin        = errType{"E_STATELOGIN", "%d is not a membership of ecosystem %d", http.StatusForbidden}
+	errTableNotFound     = errType{"E_TABLENOTFOUND", "Table %s has not been found", http.StatusNotFound}
 	errToken             = errType{"E_TOKEN", "Token is not valid", defaultStatus}
 	errTokenExpired      = errType{"E_TOKENEXPIRED", "Token is expired by %s", http.StatusUnauthorized}
 	errUnauthorized      = errType{"E_UNAUTHORIZED", "Unauthorized", http.StatusUnauthorized}
@@ -66,4 +71,3 @@ func (et errType) Error() string {
 func (et errType) Errorf(v ...interface{}) errType {
 	et.Message = fmt.Sprintf(et.Message, v...)
 	return et
-}

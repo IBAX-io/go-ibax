@@ -4,6 +4,8 @@ contract NodeOwnerCondition {
 	conditions {
         $raw_honor_nodes = SysParamString("honor_nodes")
         if Size($raw_honor_nodes) == 0 {
+                    return true
+                }
                 i = i + 1
             }
             warning "Sorry, you do not have access to this action."

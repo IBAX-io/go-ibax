@@ -36,6 +36,12 @@ func HandleTCPRequest(rw net.Conn) {
 		err = Type1(rw)
 
 	case network.RequestTypeNotHonorNode:
+		if service.IsNodePaused() {
+			return
+		}
+		//}
+
+		req := &network.ConfirmRequest{}
 		if err = req.Read(rw); err == nil {
 			response, err = Type4(req)
 		}

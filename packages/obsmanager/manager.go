@@ -150,12 +150,6 @@ func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) erro
 	log.Infoln(command)
 	section := ini.NewSection(procConfEntry.Name)
 	section.Add("command", command)
-	proc := process.NewProcess("obsMaster", procConfEntry)
-
-	mgr.processes.Add(name, proc)
-	mgr.processes.Find(name).Start(true)
-	return nil
-}
 
 // ListProcess returns list of process names with state of process
 func (mgr *OBSManager) ListProcess() (map[string]string, error) {
@@ -184,6 +178,17 @@ func (mgr *OBSManager) ListProcessWithPorts() (map[string]string, error) {
 		c := &conf.GlobalConfig{}
 		if err := conf.LoadConfigToVar(path, c); err != nil {
 			log.WithFields(log.Fields{"type": "dbError", "error": err, "path": path}).Warn("on loading child OBS config")
+			continue
+		}
+
+		list[name] = fmt.Sprintf("%s %d", status, c.HTTP.Port)
+	}
+
+	return list, err
+}
+
+// DeleteOBS stop OBS process and remove OBS folder
+func (mgr *OBSManager) DeleteOBS(name string) error {
 
 	if mgr.processes == nil {
 		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("deleting OBS")

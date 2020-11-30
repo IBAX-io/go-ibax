@@ -1,15 +1,17 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
-	"github.com/IBAX-io/go-ibax/packages/script"
-	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-)
+ *--------------------------------------------------------------------------------------------*/
+package transaction
 
-const (
-	errUnknownContract = `Cannot find %s contract`
-)
+import (
+	"bytes"
+	"fmt"
+	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
 func CreateContract(contractName string, keyID int64, params map[string]interface{},
 	privateKey []byte) error {
 	ecosysID, _ := converter.ParseName(contractName)

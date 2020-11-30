@@ -31,16 +31,6 @@ func getAvatarHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{
 			"type":      consts.DBError,
-			"error":     err,
-			"ecosystem": ecosystemID,
-			"account":   account,
-		}).Error("getting member")
-		errorResponse(w, err)
-		return
-	}
-
-	if !found {
-		errorResponse(w, errNotFoundRecord)
 		return
 	}
 
@@ -82,6 +72,9 @@ func getMemberHandler(w http.ResponseWriter, r *http.Request) {
 
 	account := params["account"]
 	ecosystemID := converter.StrToInt64(params["ecosystem"])
+
+	member := &model.Member{}
+	member.SetTablePrefix(converter.Int64ToStr(ecosystemID))
 
 	_, err := member.Get(account)
 	if err != nil {

@@ -74,16 +74,6 @@ func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []model.Tr
 
 	wg.Wait()
 
-	if int(errCount) == len(hosts) {
-		return ErrNodesUnavailable
-	}
-
-	return nil
-}
-
-func SendFullBlockToAll(ctx context.Context, hosts []string, block *model.InfoBlock, txes []model.Transaction, nodeID int64) error {
-	if len(hosts) == 0 {
-		return nil
 	}
 
 	req := prepareFullBlockRequest(block, txes, nodeID)
@@ -159,6 +149,9 @@ func SendFullBlockToAll(ctx context.Context, hosts []string, block *model.InfoBl
 }
 
 func sendFullBlockRequest(con net.Conn, data []byte) (response []byte, err error) {
+
+	if err := sendDisseminatorRequest(con, network.RequestTypeHonorNode, data); err != nil {
+		log.WithFields(log.Fields{"type": consts.TCPClientError, "error": err}).Error("on sending disseminator request")
 		return nil, err
 	}
 

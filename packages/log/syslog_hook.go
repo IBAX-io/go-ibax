@@ -64,10 +64,6 @@ func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 			b_syslog.Err(line)
 			return nil
 		}
-	case logrus.WarnLevel:
-		{
-			b_syslog.Warning(line)
-			return nil
 		}
 	case logrus.InfoLevel:
 		{
@@ -89,6 +85,16 @@ func (hook *SyslogHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }
 
+func syslogFacility(facility string) b_syslog.Priority {
+	return syslogFacilityPriority[facility]
+}
+
+func init() {
+	syslogFacilityPriority = map[string]b_syslog.Priority{
+		"kern":     b_syslog.LOG_KERN,
+		"user":     b_syslog.LOG_USER,
+		"mail":     b_syslog.LOG_MAIL,
+		"daemon":   b_syslog.LOG_DAEMON,
 		"auth":     b_syslog.LOG_AUTH,
 		"syslog":   b_syslog.LOG_SYSLOG,
 		"lpr":      b_syslog.LOG_LPR,
