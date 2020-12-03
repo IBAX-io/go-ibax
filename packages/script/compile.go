@@ -28,13 +28,6 @@ type compileState struct {
 	Func     int // a handle function
 }
 
-type stateLine map[int]compileState
-
-// The list of compile states
-type compileStates []stateLine
-
-type compileFunc func(*[]*Block, int, *Lexem) error
-
 const (
 	mapConst = iota
 	mapVar
@@ -1163,6 +1156,21 @@ main:
 				if prev.Value.(uint16) == 0xff {
 					break
 				} else {
+					bytecode = append(bytecode, prev)
+				}
+			}
+			if len(buffer) > 0 {
+				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdFuncName {
+					buffer = buffer[:len(buffer)-1]
+					(*prev).Value = FuncNameCmd{Name: prev.Value.(FuncNameCmd).Name,
+						Count: parcount[len(parcount)-1]}
+					parcount = parcount[:len(parcount)-1]
+					bytecode = append(bytecode, prev)
+				}
+				var tail *ByteCode
+				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdCall || prev.Cmd == cmdCallVari {
+					objInfo := prev.Value.(*ObjInfo)
+					if (objInfo.Type == ObjFunc && objInfo.Value.(*Block).Info.(*FuncInfo).CanWrite) ||
 						(objInfo.Type == ObjExtFunc && objInfo.Value.(ExtFuncInfo).CanWrite) {
 						setWritable(block)
 					}

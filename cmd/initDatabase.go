@@ -14,5 +14,8 @@ import (
 )
 
 // initDatabaseCmd represents the initDatabase command
-var initDatabaseCmd = &cobra.Command{
-	Use:    "initDatabase",
+			log.WithError(err).Fatal("init db")
+		}
+		log.Info("initDatabase completed")
+	},
+}

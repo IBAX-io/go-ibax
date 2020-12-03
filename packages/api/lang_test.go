@@ -53,6 +53,9 @@ func TestLang(t *testing.T) {
 				"Name":          {name},
 				"Value":         {fmt.Sprintf("Span($@1%s$)", name)},
 				"Menu":          {"default_menu"},
+				"Conditions":    {`ContractConditions("MainCondition")`},
+				"ApplicationId": {"1"},
+			},
 			"",
 		},
 		{
@@ -121,14 +124,6 @@ func TestLang(t *testing.T) {
 			url.Values{
 				"template": {fmt.Sprintf(`MenuGroup($%s$){MenuItem(Ooops, ooops)}MenuGroup(nolang){MenuItem(no, no)}`, name)},
 				"app_id":   {"1"},
-			},
-			fmt.Sprintf(`[{"tag":"menugroup","attr":{"name":"$%s$","title":"My test"},"children":[{"tag":"menuitem","attr":{"page":"ooops","title":"Ooops"}}]},{"tag":"menugroup","attr":{"name":"nolang","title":"nolang"},"children":[{"tag":"menuitem","attr":{"page":"no","title":"no"}}]}]`, name),
-		},
-	}
-
-	for _, v := range cases {
-		var ret contentResult
-
 		if len(v.expect) == 0 {
 			assert.NoError(t, postTx(v.url, &v.form))
 			continue

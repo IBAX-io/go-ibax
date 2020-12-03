@@ -47,23 +47,6 @@ func (p Permissions) Value() (driver.Value, error) {
 }
 func (p *Permissions) Scan(v interface{}) error {
 	data, ok := v.([]byte)
-	if !ok {
-		return errors.New("Bad permissions")
-	}
-	return json.Unmarshal(data, p)
-}
-
-// SetTablePrefix is setting table prefix
-func (t *Table) SetTablePrefix(prefix string) {
-	t.Ecosystem = converter.StrToInt64(prefix)
-}
-
-// TableName returns name of table
-func (t *Table) TableName() string {
-	if t.Ecosystem == 0 {
-		t.Ecosystem = 1
-	}
-	return `1_tables`
 }
 
 // Get is retrieving model from database
@@ -179,6 +162,24 @@ func GetRowConditionsByTableNameAndID(transaction *DbTransaction, tblname string
 	return Single(transaction, sql, id).String()
 }
 
+func GetTableQuery(table string, ecosystemID int64) *gorm.DB {
+	if converter.FirstEcosystemTables[table] {
+		return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)
+	}
+
+	return DBConn.Table(converter.ParseTable(table, ecosystemID))
+}
+
+func GetTableListQuery(table string, ecosystemID int64) *gorm.DB {
+	if converter.FirstEcosystemTables[table] {
+		return DBConn.Table("1_" + table)
+	}
+
+	return DBConn.Table(converter.ParseTable(table, ecosystemID))
+}
+
+//
+func SubNodeGetTableQuery(table string, ecosystemID int64) *gorm.DB {
 	//if converter.FirstEcosystemTables[table] {
 	//	return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)
 	//}

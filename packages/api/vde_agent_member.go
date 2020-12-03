@@ -138,6 +138,8 @@ func VDEAgentMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	result, err := srcData.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("The query member data by pubkey failed")
 		errorResponse(w, err)
 		return
 	}

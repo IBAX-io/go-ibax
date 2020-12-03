@@ -5,12 +5,6 @@
 package metric
 
 import (
-	Time   int64
-	Metric string
-	Key    string
-	Value  int64
-}
-
 // ToMap returns values as map
 func (v *Value) ToMap() *types.Map {
 	return types.LoadMap(map[string]interface{}{
