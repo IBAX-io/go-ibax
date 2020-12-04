@@ -67,26 +67,13 @@ func DBGetAllKey(prefix string, bvalue bool) (*[]string, error) {
 		//key []string
 	)
 	found := prefix != "nil"
-	iter := DBlevel.NewIterator(nil, nil)
-	for iter.Next() {
-		key := string(iter.Key())
-		if found {
-			if strings.HasPrefix(key, prefix) {
-				if bvalue {
-					value := string(iter.Value())
-					s := fmt.Sprintf("Key[%s]=[%s]\n", key, value)
-					ret = append(ret, s)
-				} else {
-					ret = append(ret, key)
-				}
-			}
-		} else {
-			if bvalue {
-				value := string(iter.Value())
-				s := fmt.Sprintf("Key[%s]=[%s]\n", key, value)
 				ret = append(ret, s)
 			} else {
 				ret = append(ret, key)
 			}
 		}
+
+	}
+	iter.Release()
+	return &ret, iter.Error()
 }

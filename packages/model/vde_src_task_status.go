@@ -26,23 +26,6 @@ func (VDESrcTaskStatus) TableName() string {
 }
 
 func (m *VDESrcTaskStatus) Create() error {
-	return DBConn.Create(&m).Error
-}
-
-func (m *VDESrcTaskStatus) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
-
-func (m *VDESrcTaskStatus) Delete() error {
-	return DBConn.Delete(m).Error
-}
-
-func (m *VDESrcTaskStatus) GetAll() ([]VDESrcTaskStatus, error) {
-	var result []VDESrcTaskStatus
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *VDESrcTaskStatus) GetOneByID() (*VDESrcTaskStatus, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
 }
@@ -103,6 +86,16 @@ func (m *VDESrcTaskFromScheStatus) Delete() error {
 
 func (m *VDESrcTaskFromScheStatus) GetAll() ([]VDESrcTaskFromScheStatus, error) {
 	var result []VDESrcTaskFromScheStatus
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *VDESrcTaskFromScheStatus) GetOneByID() (*VDESrcTaskFromScheStatus, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
+}
+
+func (m *VDESrcTaskFromScheStatus) GetAllByTaskUUID(TaskUUID string) ([]VDESrcTaskFromScheStatus, error) {
+	result := make([]VDESrcTaskFromScheStatus, 0)
 	err := DBConn.Table("vde_src_task_from_sche_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
 }

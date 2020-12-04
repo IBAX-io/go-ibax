@@ -52,13 +52,6 @@ func TestAPI(t *testing.T) {
 	assert.NoError(t, postTx(`NewPage`, &form))
 
 	assert.NoError(t, sendPost(`content/hash/`+name, &url.Values{}, &retHash))
-	if len(retHash.Hash) != 64 {
-		t.Error(`wrong hash ` + retHash.Hash)
-		return
-	}
-	form = url.Values{"Name": {name}, "Value": {`contract ` + name + ` {
-		action {
-			$result = $key_id
 		}}`}, "ApplicationId": {`1`}, "Conditions": {`ContractConditions("MainCondition")`}}
 	assert.NoError(t, postTx("NewContract", &form))
 	_, msg, err = postTxResult(name, &url.Values{})
@@ -386,6 +379,16 @@ func TestBinary(t *testing.T) {
 }
 
 func TestStringToBinary(t *testing.T) {
+	assert.NoError(t, keyLogin(1))
+
+	contract := randName("binary")
+	content := randName("content")
+	filename := randName("file")
+	mimeType := "text/plain"
+
+	form := url.Values{
+		"Value": {`
+			contract ` + contract + ` {
 				data {
 					Content string
 				}

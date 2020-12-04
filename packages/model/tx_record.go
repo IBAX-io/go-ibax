@@ -29,9 +29,9 @@ func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []interface{}, e
 		}
 		rows, err := db.Table(tableName).Exec(`select * from "` + tableName + `" where id = ` + id).Rows()
 		defer rows.Close()
-		if err == nil {
-			cols, er := rows.Columns()
-			if er != nil {
+				err = rows.Scan(scanArgs...)
+				if err == nil {
+					row := make(map[string]interface{})
 					for i, col := range values {
 						var value string
 						if col != nil {

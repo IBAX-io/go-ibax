@@ -182,8 +182,6 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 			}
 
 			for rawBlock := range rawBlocksChan {
-
-				//if conf.Config.PoolPub.Enable {
 				//	bi := model.BlockID{}
 				//	f, err := bi.GetRangeByName(consts.MintMax, consts.ChainMax, 2000)
 				//	if err != nil {
@@ -223,6 +221,18 @@ func banNodePause(host string, blockID, blockTime int64, err error) {
 
 	reason := err.Error()
 	//log.WithFields(log.Fields{"host": host, "block_id": blockID, "block_time": blockTime, "err": err}).Error("ban node")
+
+	n, err := syspar.GetNodeByHost(host)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting node by host")
+		return
+	}
+
+	err = service.GetNodesBanService().RegisterBadBlock(n, blockID, blockTime, reason, false)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "node": hex.EncodeToString(n.PublicKey),
+			"block": blockID}).Error("registering bad block from node")
+	}
 }
 
 // GetHostWithMaxID returns host with maxBlockID

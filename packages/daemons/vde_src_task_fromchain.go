@@ -21,6 +21,18 @@ import (
 	"path/filepath"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
+	log "github.com/sirupsen/logrus"
+)
+
+type src_VDEShareTaskResult struct {
+	Count string `json:"count"`
+	List  []struct {
+		ID                   string `json:"id"`
+		TaskUUID             string `json:"task_uuid"`
 		TaskName             string `json:"task_name"`
 		TaskSender           string `json:"task_sender"`
 		TaskReceiver         string `json:"task_receiver"`
@@ -135,11 +147,6 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 	//where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": "1"}`
 	//where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": {"$in": [1,3]}}`
 	where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": {"$in": [2,4]}}`
-	//fmt.Println("where_str:",where_str)
-	form := url.Values{
-		`where`: {where_str},
-	}
-	//var lret interface{}
 	t_struct := src_VDEShareTaskResult{}
 	url := `listWhere` + `/vde_share_task`
 	//err = api.SendPost(url, &form, &t_struct)

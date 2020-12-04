@@ -141,6 +141,9 @@ func TestMintImports(t *testing.T) {
 	_, _, err := postTxResult(rnd, &form)
 	assert.NoError(t, err)
 
+}
+
+func TestNewMineTotal1(t *testing.T) {
 	//xlsx, err := excelize.OpenFile("/Users/scott/Desktop/mine_info-1585034424.xlsx")
 	//if err != nil {
 	//	panic(err.Error())
@@ -593,11 +596,6 @@ func TestRegainPoolStake(t *testing.T) {
 }
 
 //user-join pool
-func TestNewMinePoolGroup(t *testing.T) {
-	assert.NoError(t, keyLoginex(1, "2"))
-
-	rnd := `@1NewMinePoolGroup`
-	form := url.Values{
 		`DevAddr`:  {`0874-3258-8928-9828-0009`},
 		`PoolAddr`: {`0454-4233-9004-4311-2470`},
 	}

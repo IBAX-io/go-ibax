@@ -22,8 +22,11 @@ var blockID int64
 // rollbackCmd represents the rollback command
 var rollbackCmd = &cobra.Command{
 	Use:    "rollback",
+	Short:  "Rollback blockchain to blockID",
+	PreRun: loadConfigWKey,
+	Run: func(cmd *cobra.Command, args []string) {
+		f := utils.LockOrDie(conf.Config.LockFilePath)
 		defer f.Unlock()
-
 		if err := model.GormInit(
 			conf.Config.DB.Host,
 			conf.Config.DB.Port,

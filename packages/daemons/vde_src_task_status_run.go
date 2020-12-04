@@ -201,18 +201,22 @@ func VDESrcTaskStatusRunState(ctx context.Context, d *daemon) error {
 		//fmt.Println("SrcChainInfo:", blockchain_http, blockchain_ecosystem)
 
 		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("blockchain_ecosystem encode error")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		vde_src_apiAddress := blockchain_http
+		vde_src_apiEcosystemID := int64(ecosystemID)
+
+		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
+		// Login
+		gAuth_src, _, _, _, _, err := vde_api.KeyLogin(vde_src_apiAddress, src, vde_src_apiEcosystemID)
+		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login VDE src chain failure")
 			time.Sleep(time.Millisecond * 2)
 			continue
 		}
-		//fmt.Println("Login VDE src OK!")
-
-		blockId, err := vde_api.VDEWaitTx(vde_src_apiAddress, gAuth_src, string(item.TxHash))
-		if blockId > 0 {
-			//fmt.Println("call src task VDEWaitTx! OK!")
-			item.BlockId = blockId
-			item.ChainId = converter.StrToInt64(err.Error())
-			item.ChainState = 2
 			item.ChainErr = ""
 			ThisScrTask.TaskRunState = 1
 		} else if blockId == 0 {

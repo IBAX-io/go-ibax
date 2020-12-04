@@ -5,17 +5,6 @@
 
 package daemons
 
-import (
-	"context"
-	"sync/atomic"
-
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/service"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -44,6 +33,16 @@ func Disseminator(ctx context.Context, d *daemon) error {
 		return sendBlockWithTxHashes(ctx, myNodePosition, d.logger)
 	}
 
+	// we are not honor node for this StateID and WalletID, so just send transactions
+	d.logger.Debug("we are honor_node, sending transactions")
+	return sendTransactions(ctx, d.logger)
+}
+
+func sendTransactions(ctx context.Context, logger *log.Entry) error {
+	// get unsent transactions
+	trs, err := model.GetAllUnsentTransactions(syspar.GetMaxTxCount())
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unsent transactions")
 		return err
 	}
 

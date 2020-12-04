@@ -18,6 +18,16 @@ type RedisParams struct {
 	Value string `json:"value"`
 }
 
+func RedisInit(host string, port string, password string, db int) error {
+	var (
+		err error
+	)
+	GRedisIsactive = false
+
+	Gclient0 = redis.NewClient(&redis.Options{
+		Addr:     host + ":" + port,
+		Password: password, // no password set
+		DB:       db,       // use default DB
 	})
 	_, err = Gclient0.Ping().Result()
 	if err != nil {
@@ -64,15 +74,6 @@ func (rp *RedisParams) Getdbsize() (int64, error) {
 	if GRedisIsactive {
 		return Gclient0.DBSize().Result()
 	}
-	return 0, err
-}
-
-func (rp *RedisParams) Cleardb() error {
-	err := rediserr
-	var cursor uint64
-	var n int
-	var keys []string
-
 	if GRedisIsactive {
 		err = nil
 		for {
