@@ -3,3 +3,9 @@
 contract RunOBS {
 	data {
 		OBSName string
+	}	
+	conditions {
+	}	
+	action {
+		$OBSName = ToLower($OBSName)
+		StartOBS($OBSName)
