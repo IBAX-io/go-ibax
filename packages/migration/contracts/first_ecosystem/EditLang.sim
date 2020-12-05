@@ -8,3 +8,7 @@ contract EditLang {
 
     conditions {
         EvalCondition("parameters", "changing_language", "value")
+        $lang = DBFind("languages").Where({id: $Id}).Row()
+    }
+
+    action {

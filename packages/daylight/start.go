@@ -71,6 +71,15 @@ func killOld() {
 	}
 }
 
+func initLogs() error {
+	switch conf.Config.Log.LogFormat {
+	case "json":
+		log.SetFormatter(&log.JSONFormatter{})
+	default:
+		log.SetFormatter(&log.TextFormatter{})
+	}
+	switch conf.Config.Log.LogTo {
+	case "stdout":
 		log.SetOutput(os.Stdout)
 	case "syslog":
 		facility := conf.Config.Log.Syslog.Facility
@@ -220,19 +229,6 @@ func Start() {
 				}).Error("can't init redis")
 				Exit(1)
 			}
-		}
-		//if err := utils.MakeDirectory(conf.Config.PoolPub.Path); err != nil {
-		//	log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.TempDir}).Error("can't create temporary directory")
-		//	os.Exit(-1)
-		//}
-		//if err := model.Init_leveldb(conf.Config.PoolPub.Path); err != nil {
-		//	log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.TempDir}).Error("can't create temporary directory")
-		//	os.Exit(-1)
-		//}
-	}
-
-	initGorm(conf.Config.DB)
-	log.WithFields(log.Fields{"work_dir": conf.Config.DataDir, "version": consts.Version()}).Info("started with")
 
 	killOld()
 

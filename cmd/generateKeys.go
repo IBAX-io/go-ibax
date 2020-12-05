@@ -27,6 +27,14 @@ var generateKeysCmd = &cobra.Command{
 	Short:  "Keys generation",
 	PreRun: loadConfig,
 	Run: func(cmd *cobra.Command, args []string) {
+		_, publicKey, err := createKeyPair(
+			filepath.Join(conf.Config.KeysDir, consts.PrivateKeyFilename),
+			filepath.Join(conf.Config.KeysDir, consts.PublicKeyFilename),
+		)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Fatal("generating user keys")
+			return
+		}
 		_, _, err = createKeyPair(
 			filepath.Join(conf.Config.KeysDir, consts.NodePrivateKeyFilename),
 			filepath.Join(conf.Config.KeysDir, consts.NodePublicKeyFilename),
@@ -64,17 +72,4 @@ func createKeyPair(privFilename, pubFilename string) (priv, pub []byte, err erro
 		log.WithFields(log.Fields{"error": err}).Error("generate keys")
 		return
 	}
-
-	err = createFile(privFilename, []byte(hex.EncodeToString(priv)))
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "path": privFilename}).Error("creating private key")
-		return
-	}
-
-	err = createFile(pubFilename, []byte(crypto.PubToHex(pub)))
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "path": pubFilename}).Error("creating public key")
-		return
-	}
-	return
 }

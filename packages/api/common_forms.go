@@ -129,6 +129,21 @@ type SubNodeSrcTaskForm struct {
 	TaskState  int64  `schema:"task_state"`
 
 	TaskRunParms    string `schema:"task_run_parms"`
+	TaskRunState    int64  `schema:"task_run_state"`
+	TaskRunStateErr string `schema:"task_run_state_err"`
+
+	//TxHash     string `schema:"tx_hash"`
+	//ChainState int64  `schema:"chain_state"`
+	//BlockId    int64  `schema:"block_id"`
+	//ChainId    int64  `schema:"chain_id"`
+	//ChainErr   string `schema:"chain_err"`
+}
+
+func (f *SubNodeSrcTaskForm) Validate(r *http.Request) error {
+	return nil
+}
+
+type SubNodeSrcDataForm struct {
 	TaskUUID string `schema:"task_uuid"`
 	DataUUID string `schema:"data_uuid"`
 	Hash     string `schema:"hash"`
@@ -382,16 +397,6 @@ type VDESrcTaskAuthForm struct {
 	VDEPubKey            string `schema:"vde_pub_key"`
 	ContractRunHttp      string `schema:"contract_run_http"`
 	ContractRunEcosystem string `schema:"contract_run_ecosystem"`
-	ChainState           int64  `schema:"chain_state"`
-}
-
-func (f *VDESrcTaskAuthForm) Validate(r *http.Request) error {
-	return nil
-}
-
-type VDEAgentMemberForm struct {
-	VDEPubKey            string `schema:"vde_pub_key"`
-	VDEComment           string `schema:"vde_comment"`
 	VDEName              string `schema:"vde_name"`
 	VDEIp                string `schema:"vde_ip"`
 	VDEType              int64  `schema:"vde_type"`

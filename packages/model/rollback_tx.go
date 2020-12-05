@@ -39,16 +39,6 @@ func (rt *RollbackTx) GetRollbackTxsByTableIDAndTableName(tableID, tableName str
 	rollbackTx := new([]RollbackTx)
 	if err := DBConn.Where("table_id = ? AND table_name = ?", tableID, tableName).
 		Order("id desc").Limit(limit).Find(rollbackTx).Error; err != nil {
-		return nil, err
-	}
-	return rollbackTx, nil
-}
-
-// DeleteByHash is deleting rollbackTx by hash
-func (rt *RollbackTx) DeleteByHash(dbTransaction *DbTransaction) error {
-	return GetDB(dbTransaction).Exec("DELETE FROM rollback_tx WHERE tx_hash = ?", rt.TxHash).Error
-}
-
 // DeleteByHashAndTableName is deleting tx by hash and table name
 func (rt *RollbackTx) DeleteByHashAndTableName(transaction *DbTransaction) error {
 	return GetDB(transaction).Where("tx_hash = ? and table_name = ?", rt.TxHash, rt.NameTable).Delete(rt).Error
@@ -63,6 +53,12 @@ func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
 	if rollbackSys.ID, err = GetNextID(&DbTransaction{conn: dbTx}, rollbackSys.TableName()); err != nil {
 		return err
 	}
+	for i := 1; i < len(rts)+1; i++ {
+		rts[i-1].ID = rollbackSys.ID + int64(i) - 1
+	}
+	return dbTx.Model(&RollbackTx{}).Create(&rts).Error
+}
+
 // Create is creating record of model
 func (rt *RollbackTx) Create(transaction *DbTransaction) error {
 	return nil

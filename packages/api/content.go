@@ -222,16 +222,25 @@ func getPageHashHandler(w http.ResponseWriter, r *http.Request) {
 
 	if ecosystem := r.FormValue("ecosystem"); len(ecosystem) > 0 &&
 		!strings.HasPrefix(params["name"], "@") {
-		params["name"] = "@" + ecosystem + params["name"]
-	}
-	result, err := getPage(r)
+	out, err := json.Marshal(result)
 	if err != nil {
-		errorResponse(w, err)
+		logger.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("getting string for hash")
+		errorResponse(w, errServer)
 		return
 	}
 
-	out, err := json.Marshal(result)
-	if err != nil {
+	jsonResponse(w, &hashResult{Hash: hex.EncodeToString(crypto.Hash(out))})
+}
+
+func getMenuHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	client := getClient(r)
+	logger := getLogger(r)
+
+	var ecosystem string
+	menu := &model.Menu{}
+	name := params["name"]
+	if strings.HasPrefix(name, `@`) {
 		ecosystem, name = parseEcosystem(name)
 		if len(name) == 0 {
 			logger.WithFields(log.Fields{

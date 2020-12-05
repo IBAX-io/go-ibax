@@ -4,9 +4,11 @@
  *--------------------------------------------------------------------------------------------*/
 package crypto
 
+import "hash/crc64"
 
-var (
-	table64 *crc64.Table
+type checksumProvider int
+
+const (
 )
 
 func init() {
