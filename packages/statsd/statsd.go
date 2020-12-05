@@ -1,14 +1,13 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package statsd
 
-const (
-	Count = ".count"
-	Time  = ".time"
-)
+import (
+	"fmt"
+	"strings"
 
-var Client statsd.Statter
-
-func Init(host string, port int, name string) error {
-	var err error
 	Client, err = statsd.NewClient(fmt.Sprintf("%s:%d", host, port), name)
 	if err != nil {
 		return err

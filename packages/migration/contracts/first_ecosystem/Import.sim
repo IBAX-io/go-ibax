@@ -6,16 +6,6 @@ contract Import {
     }
     conditions {
         $ApplicationId = 0
-        var app_map map
-        app_map = DBFind("@1buffer_data").Columns("value->app_name").Where({"key": "import_info", "account": $account_id, "ecosystem": $ecosystem_id}).Row()
-        if app_map {
-            var app_id int ival string
-            ival = Str(app_map["value.app_name"])
-            app_id = DBFind("@1applications").Columns("id").Where({"name": ival, "ecosystem": $ecosystem_id}).One("id")
-            if app_id {
-                $ApplicationId = Int(app_id)
-            }
-        }
     }
     action {
         var editors, creators map
@@ -35,6 +25,18 @@ contract Import {
         creators["tables"] = "NewTable"
         var dataImport array
         dataImport = JSONDecode($Data)
+        var i int
+        while i < Len(dataImport) {
+            var item cdata map type name string
+            cdata = dataImport[i]
+            if cdata {
+                cdata["ApplicationId"] = $ApplicationId
+                type = cdata["Type"]
+                name = cdata["Name"]
+                // Println(Sprintf("import %v: %v", type, cdata["Name"]))
+                var tbl string
+                tbl = "@1" + Str(type)
+                if type == "app_params" {
                     item = DBFind(tbl).Where({"name": name, "ecosystem": $ecosystem_id, "app_id": $ApplicationId}).Row()
                 } else {
                     item = DBFind(tbl).Where({"name": name, "ecosystem": $ecosystem_id}).Row()

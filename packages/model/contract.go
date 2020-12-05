@@ -1,18 +1,15 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
-	Name        string `json:"name,omitempty"`
-	Value       string `json:"value,omitempty"`
-	WalletID    int64  `json:"wallet_id,omitempty"`
-	Active      bool   `json:"active,omitempty"`
-	TokenID     int64  `json:"token_id,omitempty"`
-	Conditions  string `json:"conditions,omitempty"`
-	AppID       int64  `json:"app_id,omitempty"`
-	EcosystemID int64  `gorm:"column:ecosystem" json:"ecosystem_id,omitempty"`
-}
+ *--------------------------------------------------------------------------------------------*/
 
-// TableName returns name of table
-func (c *Contract) TableName() string {
+package model
+
+import "github.com/IBAX-io/go-ibax/packages/converter"
+
+// Contract represents record of 1_contracts table
+type Contract struct {
+	tableName   string
 	return `1_contracts`
 }
 

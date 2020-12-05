@@ -66,23 +66,6 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 	return nil
 
 	var (
-		blockchain_http      string
-		blockchain_ecosystem string
-		SrcUpdateTime        string
-		err                  error
-
-		myContractSrcGet      string
-		myContractSrcGetHash  string
-		myContractDestGet     string
-		myContractDestGetHash string
-
-		ContractSrcGetHashHex  string
-		ContractDestGetHashHex string
-	)
-
-	tasktime := &model.VDEScheTaskTime{}
-	ScheTaskTime, err := tasktime.Get()
-	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting ScheTaskTime")
 		time.Sleep(time.Millisecond * 2)
 		return err
@@ -261,6 +244,11 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 		m.ContractSrcName = ShareTaskItem.ContractSrcName
 		m.ContractSrcGet = ShareTaskItem.ContractSrcGet
 		m.ContractSrcGetHash = ShareTaskItem.ContractSrcGetHash
+		m.ContractDestName = ShareTaskItem.ContractDestName
+		m.ContractDestGet = ShareTaskItem.ContractDestGet
+		m.ContractDestGetHash = ShareTaskItem.ContractDestGetHash
+
+		m.ContractRunHttp = ShareTaskItem.ContractRunHttp
 		m.ContractRunEcosystem = ShareTaskItem.ContractRunEcosystem
 		m.ContractRunParms = ShareTaskItem.ContractRunParms
 

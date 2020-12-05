@@ -146,14 +146,6 @@ func sendPost(apiAddress string, gAuth string, url string, form *url.Values, v i
 //		`ecosystem`: {converter.Int64ToStr(state)}, "role_id": {"0"}}
 //	if gMobile {
 //		form[`mobile`] = []string{`true`}
-//	}
-//	var logret loginResult
-//	err = sendPost(apiAddress, `login`, &form, &logret)
-//	if err != nil {
-//		return
-//	}
-//	gAddress = logret.Address
-//	gPrivate = string(key)
 //	gPublic, err = PrivateToPublicHex(gPrivate)
 //	gAuth = logret.Token
 //	if err != nil {
@@ -587,6 +579,13 @@ func PostTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPrivat
 			Time: time.Now().Unix(),
 			//EcosystemID: 1,
 			EcosystemID: apiEcosystemID,
+			KeyID:       crypto.Address(publicKey),
+			NetworkID:   conf.Config.NetworkID,
+			PrivateFor:  ApiPrivateFor,
+		},
+		Params: params,
+	}, privateKey)
+	if err != nil {
 
 		//
 		//return 0, "", err

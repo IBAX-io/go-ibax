@@ -176,22 +176,6 @@ type Transaction struct {
 	RollBackTx    []*model.RollbackTx
 }
 
-// GetLogger returns logger
-func (t Transaction) GetLogger() *log.Entry {
-	logger := log.WithFields(log.Fields{"tx_type": t.TxType, "tx_time": t.TxTime, "tx_wallet_id": t.TxKeyID})
-	if t.BlockData != nil {
-		logger = logger.WithFields(log.Fields{"block_id": t.BlockData.BlockID, "block_time": t.BlockData.Time, "block_wallet_id": t.BlockData.KeyID, "block_state_id": t.BlockData.EcosystemID, "block_hash": t.BlockData.Hash, "block_version": t.BlockData.Version})
-	}
-	if t.PrevBlock != nil {
-		logger = logger.WithFields(log.Fields{"block_id": t.BlockData.BlockID, "block_time": t.BlockData.Time, "block_wallet_id": t.BlockData.KeyID, "block_state_id": t.BlockData.EcosystemID, "block_hash": t.BlockData.Hash, "block_version": t.BlockData.Version})
-	}
-	return logger
-}
-
-var txCache = &transactionCache{cache: make(map[string]*Transaction)}
-
-// UnmarshallTransaction is unmarshalling transaction
-func UnmarshallTransaction(buffer *bytes.Buffer, fillData bool) (*Transaction, error) {
 	rtx := &RawTransaction{}
 	if err := rtx.Unmarshall(buffer); err != nil {
 		return nil, err
@@ -278,6 +262,17 @@ func (t *Transaction) parseFromContract(fillData bool) error {
 
 	contract := smart.GetContractByID(int32(smartTx.ID))
 	if contract == nil {
+		log.WithFields(log.Fields{"contract_id": smartTx.ID, "type": consts.NotFound}).Error("unknown contract")
+		return fmt.Errorf(`unknown contract %d`, smartTx.ID)
+	}
+
+	t.TxContract = contract
+	t.TxHeader = &smartTx.Header
+
+	t.TxData = make(map[string]interface{})
+	txInfo := contract.Block.Info.(*script.ContractInfo).Tx
+
+	if txInfo != nil {
 		if fillData {
 			if err := t.fillTxData(*txInfo, smartTx.Params); err != nil {
 				return errors.Wrap(err, fmt.Sprintf("contract '%s'", contract.Name))

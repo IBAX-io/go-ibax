@@ -22,5 +22,14 @@ func (qb *QueueBlock) GetQueueBlockByHash(hash []byte) (bool, error) {
 	return isFound(DBConn.Where("hash = ?", hash).First(qb))
 }
 
+// Delete is deleting queue
+// DeleteOldBlocks is deleting old blocks
+func (qb *QueueBlock) DeleteOldBlocks() error {
+	query := DBConn.Exec("DELETE FROM queue_blocks WHERE block_id <= ?", qb.BlockID)
+	return query.Error
+}
+
+// Create is creating record of model
+func (qb *QueueBlock) Create() error {
 	return DBConn.Create(qb).Error
 }

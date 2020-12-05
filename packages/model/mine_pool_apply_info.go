@@ -1,5 +1,3 @@
-	Poolid           int64           `gorm:"not null"`  //poolid
-	Keyid            int64           `gorm:"not null"`  //keyid
 	LogoId           int64           `gorm:"not null" ` //logo
 	Name             string          `gorm:"not null" ` //poolname
 	SettlementType   int64           `gorm:"not null" ` // 1 pps   2  pplns

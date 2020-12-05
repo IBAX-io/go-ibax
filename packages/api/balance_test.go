@@ -2,17 +2,7 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"encoding/json"
-	"fmt"
-	"net/url"
-	"testing"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
-)
+		return
 	}
 	var ret balanceResult
 	err := sendGet(`balance/`+gAddress, nil, &ret)

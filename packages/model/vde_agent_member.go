@@ -14,11 +14,6 @@ type VDEAgentMember struct {
 	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
 	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
 
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
-func (VDEAgentMember) TableName() string {
 	return "vde_agent_member"
 }
 
@@ -50,3 +45,7 @@ func (m *VDEAgentMember) GetOneByPubKey(VDEPubKey string) (*VDEAgentMember, erro
 }
 
 func (m *VDEAgentMember) GetAllByType(Type int64) ([]VDEAgentMember, error) {
+	result := make([]VDEAgentMember, 0)
+	err := DBConn.Table("vde_agent_member").Where("vde_type = ?", Type).Find(&result).Error
+	return result, err
+}

@@ -8,7 +8,11 @@ type MineInvitepowadd struct {
 	Type         int64 `gorm:"not null"`
 	Stime        int64 `gorm:"not null"`
 	Etime        int64 `gorm:"not null"`
-	Date_created int64 `gorm:"not null"`
+func (m *MineInvitepowadd) GetALL(dbt *DbTransaction, time int64) ([]MineInvitepowadd, error) {
+	var mp []MineInvitepowadd
+	err := GetDB(dbt).Table(m.TableName()).
+		Where("stime <= ? and etime >=? ", time, time).
+		Order("devid asc").
+		Find(&mp).Error
+	return mp, err
 }
-
-// TableName returns name of table

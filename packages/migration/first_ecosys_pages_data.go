@@ -65,4 +65,3 @@ var firstEcosystemPagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, 
             Span(Class: text-muted, Body: "Select payload that you want to import")
         }
         Form(panel panel-primary){
-            Div(list-group-item){

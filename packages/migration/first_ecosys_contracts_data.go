@@ -160,11 +160,6 @@ VALUES
             DBUpdate("blocks", $Id, pars)
         }
     }
-}
-', '1', 'ContractConditions("MainCondition")', '1', '1'),
-	(next_id('1_contracts'), 'EditColumn', 'contract EditColumn {
-    data {
-        TableName string
         Name string
         Permissions string
     }
@@ -647,6 +642,16 @@ VALUES
         }
     }
 
+    action {
+        DBInsert("blocks", {name: $Name, value: $Value, conditions: $Conditions,
+              app_id: $ApplicationId})
+    }
+}
+', '1', 'ContractConditions("MainCondition")', '1', '1'),
+	(next_id('1_contracts'), 'NewContract', 'contract NewContract {
+    data {
+        ApplicationId int
+        Value string
         Conditions string
         TokenEcosystem int "optional"
     }
