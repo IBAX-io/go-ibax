@@ -12,3 +12,4 @@ contract EditLang {
     }
 
     action {
+        EditLanguage($Id, $lang["name"], $Trans)

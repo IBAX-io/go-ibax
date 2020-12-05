@@ -16,15 +16,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type rowResult struct {
+	Value map[string]string `json:"value"`
+}
+
+type rowForm struct {
+	Columns string `schema:"columns"`
+}
+
+func (f *rowForm) Validate(r *http.Request) error {
+	if len(f.Columns) > 0 {
+		f.Columns = converter.EscapeName(f.Columns)
+	}
+	return nil
+}
+
 func getRowHandler(w http.ResponseWriter, r *http.Request) {
 	form := &rowForm{}
 	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
-
-	params := mux.Vars(r)
-	client := getClient(r)
 	logger := getLogger(r)
 
 	q := model.GetDB(nil).Limit(1)

@@ -820,16 +820,6 @@ func parseViewWhereSql(sc *SmartContract, columns string) (tabsSQL, whsSQL strin
 			has[tableName1] = true
 		}
 		tableArr = append(tableArr, tableName1)
-		tableName2 := converter.ParseTable(icol.TableTwo, sc.TxSmart.EcosystemID)
-		if !has[tableName2] {
-			if !model.HasTableOrView(sc.DbTransaction, tableName2) {
-				err = fmt.Errorf(eTableNotFound, tableName2)
-				return
-			}
-			has[tableName2] = true
-		}
-		tableArr = append(tableArr, tableName2)
-		colName1 := converter.EscapeSQL(strings.ToLower(icol.ColOne))
 		if err = checkColumnName(colName1); err != nil {
 			return
 		}
@@ -1751,6 +1741,19 @@ func GetMapKeys(in *types.Map) []interface{} {
 }
 
 // SortedKeys returns the sorted array of keys of the map
+func SortedKeys(m *types.Map) []interface{} {
+	i, sorted := 0, make([]string, m.Size())
+	for _, k := range m.Keys() {
+		sorted[i] = k
+		i++
+	}
+	sort.Strings(sorted)
+
+	ret := make([]interface{}, len(sorted))
+	for k, v := range sorted {
+		ret[k] = v
+	}
+	return ret
 }
 
 func httpRequest(req *http.Request, headers map[string]interface{}) (string, error) {

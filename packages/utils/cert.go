@@ -5,6 +5,9 @@
 package utils
 
 import (
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
 )
 
 var (
@@ -29,16 +32,6 @@ func (c *Cert) Validate(pem []byte) error {
 	return nil
 }
 
-func (c *Cert) EqualBytes(bs ...[]byte) bool {
-	for _, b := range bs {
-		other, err := parseCert(b)
-		if err != nil {
-			return false
-		}
-
-		if c.cert.Equal(other) {
-			return true
-		}
 	}
 
 	return false

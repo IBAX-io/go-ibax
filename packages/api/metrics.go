@@ -68,6 +68,23 @@ func blocksCountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !found {
+		errorResponse(w, errNotFound)
+		return
+	}
+
+	bm := blockMetric{Count: b.ID}
+	jsonResponse(w, bm)
+}
+
+func blocksCountByNodeHandler(w http.ResponseWriter, r *http.Request) {
+	b := &model.Block{}
+	logger := getLogger(r)
+	params := mux.Vars(r)
+	Node := converter.StrToInt64(params["node"])
+
+	found, err := b.GetMaxBlock()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("on getting max block")
 		errorResponse(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -153,5 +170,3 @@ func banStatHandler(w http.ResponseWriter, _ *http.Request) {
 		})
 	}
 
-	jsonResponse(w, list)
-}

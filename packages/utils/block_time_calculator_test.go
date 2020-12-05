@@ -199,11 +199,7 @@ func TestBlockTImeCalculator_countBlockTime(t *testing.T) {
 	}{
 		// Current time before first block case
 		{
-			firstBlockTime: time.Unix(1, 0),
-			clock:          time.Unix(0, 0),
-
-			err: TimeError,
-		},
+			nodesCount:     5,
 			clock:          time.Unix(0, 0),
 
 			result: blockGenerationState{

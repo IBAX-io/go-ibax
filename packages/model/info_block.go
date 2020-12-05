@@ -5,6 +5,11 @@
 
 package model
 
+import (
+	"github.com/IBAX-io/go-ibax/packages/converter"
+)
+
+// InfoBlock is model
 type InfoBlock struct {
 	Hash           []byte `gorm:"not null"`
 	EcosystemID    int64  `gorm:"not null default 0"`
@@ -35,17 +40,6 @@ func (ib *InfoBlock) Update(transaction *DbTransaction) error {
 // GetUnsent is retrieving model from database
 func (ib *InfoBlock) GetUnsent() (bool, error) {
 	return isFound(DBConn.Where("sent = ?", "0").First(&ib))
-}
-
-// Create is creating record of model
-func (ib *InfoBlock) Create(transaction *DbTransaction) error {
-	return GetDB(transaction).Omit("rollbacks_hash").Create(ib).Error
-}
-
-// MarkSent update model sent field
-func (ib *InfoBlock) MarkSent() error {
-	return DBConn.Model(ib).Update("sent", 1).Error
-}
 
 // UpdRollbackHash update model rollbacks_hash field
 func UpdRollbackHash(transaction *DbTransaction, hash []byte) error {
