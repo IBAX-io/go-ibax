@@ -9,6 +9,17 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/url"
+	"testing"
+
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+
+	"github.com/stretchr/testify/assert"
+)
+		json.Unmarshal([]byte(err.Error()[4:]), &v)
+		t.Error(err)
+		return
+	}
+	gAuth = ret.Token
 	priv, pub, err := crypto.GenHexKeys()
 	if err != nil {
 		t.Error(err)

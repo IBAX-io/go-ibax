@@ -50,7 +50,5 @@ func (g *GRefreshClaims) RefreshClaims() {
 	GClaims.mutex.Lock()
 	defer GClaims.mutex.Unlock()
 
-	GClaims.mutex.Lock()
-	defer GClaims.mutex.Unlock()
-	delete(GClaims.cache, g.Header)
+	GClaims.cache[g.Header] = g
 }

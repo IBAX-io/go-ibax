@@ -29,6 +29,17 @@ func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []interface{}, e
 		}
 		rows, err := db.Table(tableName).Exec(`select * from "` + tableName + `" where id = ` + id).Rows()
 		defer rows.Close()
+		if err == nil {
+			cols, er := rows.Columns()
+			if er != nil {
+				continue
+			}
+			values := make([][]byte, len(cols))
+			scanArgs := make([]interface{}, len(values))
+			for i := range values {
+				scanArgs[i] = &values[i]
+			}
+			for rows.Next() {
 				err = rows.Scan(scanArgs...)
 				if err == nil {
 					row := make(map[string]interface{})
@@ -46,5 +57,3 @@ func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []interface{}, e
 
 	}
 
-	return
-}
