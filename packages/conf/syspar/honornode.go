@@ -1,15 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package syspar
-
-import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"net/url"
 	"reflect"
 	"strconv"
 	"time"
@@ -99,6 +88,21 @@ func validateURL(rawurl string) error {
 		return fmt.Errorf("invalid scheme: %s", rawurl)
 	}
 
+	if len(u.Host) == 0 {
+		return fmt.Errorf("invalid host: %s", rawurl)
+	}
+
+	return nil
+}
+
+// Validate checks values
+func (fn *HonorNode) Validate() error {
+	if len(fn.PublicKey) !=
+		publicKeyLength || len(fn.TCPAddress) == 0 {
+		return errHonorNodeInvalidValues
+	}
+
+	if err := validateURL(fn.APIAddress); err != nil {
 		return err
 	}
 

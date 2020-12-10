@@ -16,6 +16,19 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
+)
+
+// explainQueryCost is counting query execution time
+func explainQueryCost(transaction *model.DbTransaction, withAnalyze bool, query string, args ...interface{}) (int64, error) {
+	var planStr string
+	explainTpl := "EXPLAIN (FORMAT JSON) %s"
+	if withAnalyze {
+		explainTpl = "EXPLAIN ANALYZE (FORMAT JSON) %s"
+	}
+	err := model.GetDB(transaction).Raw(fmt.Sprintf(explainTpl, query), args...).Row().Scan(&planStr)
+	switch {
+	case err == sql.ErrNoRows:
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": query}).Error("no rows while explaining query")
 		return 0, errors.New("No rows")
 	case err != nil:
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": query}).Error("error explaining query")
@@ -55,12 +68,3 @@ import (
 	if !ok {
 		log.Error("PlanMap has no TotalCost")
 		return 0, errors.New("Total cost is not a number")
-	}
-
-	totalCostF64, err := totalCostNum.Float64()
-	if err != nil {
-		log.Error("Total cost is not a number")
-		return 0, err
-	}
-	return int64(totalCostF64), nil
-}

@@ -6,6 +6,11 @@
 package daemons
 
 import (
+	"context"
+	"encoding/json"
+	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -58,19 +63,6 @@ func SendPrivateData(ctx context.Context, d *daemon) error {
 	if tran_mode, ok = dist["tran_mode"].(string); !ok {
 		log.WithFields(log.Fields{"error": err}).Error("tran mode parse error")
 		return nil
-	}
-
-	if tcpstr, ok = dist["tcp"].(string); !ok {
-		log.WithFields(log.Fields{"error": err}).Error("tcp address parse error")
-		return nil
-	}
-
-	if node_filename, ok = dist["node_filename"].(string); !ok {
-		log.WithFields(log.Fields{"error": err}).Error("node_filename parse error")
-		return nil
-	}
-	if mimetype, ok = dist["mimetype"].(string); !ok {
-		//log.WithFields(log.Fields{"error": err}).Error("mimetype parse error, set mimetype = \"application/octet-stream\"")
 		mimetype = "application/octet-stream"
 		//return nil
 	}

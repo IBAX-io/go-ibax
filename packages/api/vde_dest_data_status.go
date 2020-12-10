@@ -83,6 +83,13 @@ func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	id := converter.StrToInt64(params["id"])
+	form := &VDEDestDataStatusForm{}
+
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err)
 		return
 	}
 
@@ -105,16 +112,6 @@ func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
 		return
 	}
-
-	jsonResponse(w, result)
-}
-
-func VDEDestDataStatusDeleteHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-	id := converter.StrToInt64(params["id"])
-
-	m := &model.VDEDestDataStatus{}
 	m.ID = id
 	if err := m.Delete(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")

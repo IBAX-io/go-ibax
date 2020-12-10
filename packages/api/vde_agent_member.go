@@ -35,25 +35,6 @@ func unmarshalColumnVDEAgentMember(form *VDEAgentMemberForm) (*model.VDEAgentMem
 	return m, err
 }
 
-func VDEAgentMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
-	)
-	logger := getLogger(r)
-	form := &VDEAgentMemberForm{}
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-	m := &model.VDEAgentMember{}
-	if m, err = unmarshalColumnVDEAgentMember(form); err != nil {
-		fmt.Println(err)
-		errorResponse(w, err)
-		return
-	}
-
-	m.CreateTime = time.Now().Unix()
-
 	if err = m.Create(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
@@ -138,6 +119,19 @@ func VDEAgentMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	result, err := srcData.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
+		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, result)
+}
+
+func VDEAgentMemberByPubKeyHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	srcData := model.VDEAgentMember{}
+	result, err := srcData.GetOneByPubKey(params["pubkey"])
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query member data by pubkey failed")
 		errorResponse(w, err)

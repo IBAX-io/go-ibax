@@ -5,14 +5,10 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package daylight
-
-import (
-	"fmt"
-	"os/exec"
-	"regexp"
-	"time"
-
+// KillPid kills the process with the specified pid
+func KillPid(pid string) error {
+	if model.DBConn != nil {
+		sd := &model.StopDaemon{StopTime: time.Now().Unix()}
 		err := sd.Create()
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Error creating StopDaemon")

@@ -51,12 +51,6 @@ func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key i
 	var PublicKeys [][]byte
 	PublicKeys = append(PublicKeys, crypto.CutPub(rtx.SmartTx().PublicKey))
 	f, err := utils.CheckSign(PublicKeys, rtx.Hash(), rtx.Signature(), false)
-	if err != nil {
-		return "", err
-	}
-	if !f {
-		return "", errors.New("sign err")
-	}
 
 	//check keyid is exist user
 	if key == 0 {
@@ -139,6 +133,15 @@ func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 		return "", err
 	}
 
+	if err := model.SetTransactionStatusBlockMsg(nil, 1, res, tx.TxHash); err != nil {
+		le.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": tx.TxHash}).Error("updating transaction status block id")
+		return "", err
+	}
+
+	return string(converter.BinToHex(tx.TxHash)), nil
+}
+func (p ObsTxPreprocessor) ProcessClientTxBatches(txData [][]byte, key int64, le *log.Entry) ([]string, error) {
+	return nil, nil
 }
 func GetClientTxPreprocessor() types.ClientTxPreprocessor {
 	if conf.Config.IsSupportingOBS() {
