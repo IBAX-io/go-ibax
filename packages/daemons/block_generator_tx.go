@@ -4,19 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daemons
-
-import (
-	"encoding/hex"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-
-	log "github.com/sirupsen/logrus"
-)
-
 const (
 	callDelayedContract = "CallDelayedContract"
 	firstEcosystemID    = 1
@@ -72,3 +59,12 @@ func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]int
 
 	privateKey, err := hex.DecodeString(dtx.privateKey)
 	if err != nil {
+		return nil, err
+	}
+
+	txData, txHash, err := tx.NewInternalTransaction(smartTx, privateKey)
+	if err != nil {
+		return nil, err
+	}
+	return tx.CreateDelayTransactionHighRate(txData, txHash, keyID, highRate), nil
+}

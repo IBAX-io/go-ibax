@@ -11,17 +11,6 @@ import (
 
 const (
 	eContractLoop        = `There is loop in %s contract`
-	eContractExist       = `Contract %s already exists`
-	eLatin               = `Name %s must only contain latin, digit and '_', '-' characters`
-	eAccessContract      = `%s can only be called with condition: %s`
-	eColumnExist         = `column %s exists`
-	eColumnNotExist      = `column %s doesn't exist`
-	eColumnType          = `Type '%s' of columns is not supported`
-	eNotCustomTable      = `%s is not a custom table`
-	eEmptyCond           = `%v condition is empty`
-	eIncorrectSignature  = `incorrect signature %s`
-	eItemNotFound        = `item %d has not been found`
-	eManyColumns         = `Too many columns. Limit is %d`
 	eNotCondition        = `There is not %s in parameters`
 	eParamNotFound       = `Parameter %s has not been found`
 	eRecordNotFound      = `Record %s has not been found`
@@ -64,6 +53,11 @@ var (
 	errFounderAccount     = errors.New(`unknown founder account`)
 	errKeyIDAccount       = errors.New(`unknown address account`)
 	errFuelRate           = errors.New(`fuel rate must be greater than 0`)
+	errIncorrectSign      = errors.New(`incorrect sign`)
+	errIncorrectType      = errors.New(`incorrect type`)
+	errInvalidValue       = errors.New(`invalid value`)
+	errNameChange         = errors.New(`contracts or functions names cannot be changed`)
+	errNegPrice           = errors.New(`price value is negative`)
 	errOneContract        = errors.New(`only one contract must be in the record`)
 	errPermEmpty          = errors.New(`permissions are empty`)
 	errRecursion          = errors.New("recursion detected")

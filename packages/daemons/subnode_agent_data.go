@@ -33,6 +33,8 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 	m := &model.SubNodeAgentData{}
 	ShareData, err := m.GetAllByDataSendStatus(0) //0not send，1success，2fail
 	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all unsent task data")
+		time.Sleep(time.Millisecond * 2)
 		return err
 	}
 	if len(ShareData) == 0 {
@@ -40,11 +42,6 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 		time.Sleep(time.Millisecond * 2)
 		return nil
 	}
-
-	//chaininfo := &model.SubNodeAgentChainInfo{}
-	//AgentChainInfo, err := chaininfo.Get()
-	//if err != nil {
-	//	//log.WithFields(log.Fields{"error": err}).Error("VDE Agent fromchain getting chain info")
 	//	log.Info("Agent chain info not found")
 	//	time.Sleep(time.Millisecond * 100)
 	//	return err

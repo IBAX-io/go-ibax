@@ -25,7 +25,3 @@ func (tc *transactionCache) Set(t *Transaction) {
 
 	tc.cache[string(t.TxHash)] = t
 }
-
-func (tc *transactionCache) Clean() {
-	tc.mutex.Lock()
-	defer tc.mutex.Unlock()

@@ -74,6 +74,16 @@ func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []model.Tr
 
 	wg.Wait()
 
+	if int(errCount) == len(hosts) {
+		return ErrNodesUnavailable
+	}
+
+	return nil
+}
+
+func SendFullBlockToAll(ctx context.Context, hosts []string, block *model.InfoBlock, txes []model.Transaction, nodeID int64) error {
+	if len(hosts) == 0 {
+		return nil
 	}
 
 	req := prepareFullBlockRequest(block, txes, nodeID)
@@ -104,17 +114,6 @@ func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []model.Tr
 			defer con.Close()
 
 			response, err := sendFullBlockRequest(con, req)
-			if err != nil {
-				increaseErrCount()
-				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": h}).Error("on sending full block request")
-				return
-			}
-
-			if len(response) == 0 || len(response) < consts.HashSize {
-				return
-			}
-
-			var buf bytes.Buffer
 			requestedHashes := parseTxHashesFromResponse(response)
 			for _, txhash := range requestedHashes {
 				if data, ok := txDataMap[string(txhash)]; ok && len(data) > 0 {

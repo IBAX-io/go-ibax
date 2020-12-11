@@ -8,7 +8,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-		return true
+type BanError struct {
+	err error
+}
+
+func (b *BanError) Error() string {
+	return b.err.Error()
+}
+
+func WithBan(err error) error {
+	return &BanError{
 	}
 	return false
 }

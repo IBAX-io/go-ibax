@@ -19,6 +19,3 @@ func TestBanError(t *testing.T) {
 		errors.Wrap(WithBan(errors.New("case 4")), "message"): true,
 	}
 
-	for err, ok := range cases {
-		assert.Equal(t, ok, IsBanError(err), err.Error())
-	}

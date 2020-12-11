@@ -14,5 +14,5 @@ type NodeBanLogs struct {
 	Reason   string
 }
 
-	return "1_node_ban_logs"
-}
+// TableName returns name of table
+func (r NodeBanLogs) TableName() string {

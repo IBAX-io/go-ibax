@@ -35,6 +35,25 @@ func unmarshalColumnVDEAgentMember(form *VDEAgentMemberForm) (*model.VDEAgentMem
 	return m, err
 }
 
+func VDEAgentMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
+	)
+	logger := getLogger(r)
+	form := &VDEAgentMemberForm{}
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.VDEAgentMember{}
+	if m, err = unmarshalColumnVDEAgentMember(form); err != nil {
+		fmt.Println(err)
+		errorResponse(w, err)
+		return
+	}
+
+	m.CreateTime = time.Now().Unix()
+
 	if err = m.Create(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
@@ -88,21 +107,6 @@ func VDEAgentMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	id := converter.StrToInt64(params["id"])
 
 	m := &model.VDEAgentMember{}
-	m.ID = id
-	if err := m.Delete(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
-	}
-
-	jsonResponse(w, "ok")
-}
-
-func VDEAgentMemberListHandlre(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
-	srcData := model.VDEAgentMember{}
-
-	result, err := srcData.GetAll()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
 		errorResponse(w, err)
 		return
 	}
