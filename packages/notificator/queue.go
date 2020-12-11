@@ -23,15 +23,6 @@ type Roles struct {
 	List      []int64
 }
 
-func (q *Queue) Size() int {
-	return len(q.Accounts) + len(q.Roles)
-}
-
-func (q *Queue) AddAccounts(ecosystem int64, list ...string) {
-	q.Accounts = append(q.Accounts, &Accounts{
-		Ecosystem: ecosystem,
-		List:      list,
-	})
 }
 
 func (q *Queue) AddRoles(ecosystem int64, list ...int64) {
@@ -54,3 +45,6 @@ func (q *Queue) Send() {
 func NewQueue() types.Notifications {
 	return &Queue{
 		Accounts: make([]*Accounts, 0),
+		Roles:    make([]*Roles, 0),
+	}
+}

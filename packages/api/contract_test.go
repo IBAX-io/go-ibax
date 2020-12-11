@@ -718,6 +718,15 @@ var contracts = []smartContract{
 				Test("split",  Str(ar[1]))
 				$ret = DBFind("contracts").Columns("id,value").Where({"id":[{"$gte": 3}, {"$lte":5}]}).Order("id")
 				Test("edit",  "edit value 0")
+			}
+		}`,
+		[]smartParams{
+			{nil, map[string]string{`edit`: `edit value 0`, `split`: `point 2`}},
+		}},
+	{`testEmpty`, `contract testEmpty {
+					action { Test("empty",  "empty value")}}`,
+		[]smartParams{
+			{nil, map[string]string{`empty`: `empty value`}},
 		}},
 	{`testUpd`, `contract testUpd {
 						action { Test("date",  "-2006.01.02-")}}`,
@@ -1122,13 +1131,6 @@ func TestEditContracts_ChangeWallet(t *testing.T) {
 	}
 	if ret.Address != "1248-5499-7861-4204-5166" {
 		t.Error(`wrong address`, ret.Address, "!= 1248-5499-7861-4204-5166")
-		return
-	}
-}
-
-func TestUpdateFunc(t *testing.T) {
-	assert.NoError(t, keyLogin(1))
-
 	rnd := `rnd` + crypto.RandSeq(6)
 	form := url.Values{`Value`: {`contract f` + rnd + ` {
 		data {

@@ -79,16 +79,6 @@ func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, 
 		if err = enc.Encode(&rtx); err != nil {
 			return nil, err
 		}
-	}
-
-	return crypto.Hash(buf.Bytes()), nil
-}
-
-// InsertIntoBlockchain inserts a block into the blockchain
-func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error {
-	// for local tests
-	blockID := block.Header.BlockID
-
 	// record into the block chain
 	bl := &model.Block{}
 	err := bl.DeleteById(transaction, blockID)
@@ -142,6 +132,14 @@ func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error 
 }
 
 // GetBlockDataFromBlockChain is retrieving block data from blockchain
+func GetBlockDataFromBlockChain(blockID int64) (*utils.BlockData, error) {
+	BlockData := new(utils.BlockData)
+	block := &model.Block{}
+	_, err := block.Get(blockID)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting block by ID")
+		return BlockData, err
+	}
 
 	header, _, err := utils.ParseBlockHeader(bytes.NewBuffer(block.Data))
 	if err != nil {

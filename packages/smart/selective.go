@@ -85,20 +85,6 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 			logger.WithFields(log.Fields{"type": consts.NotFound, "err": errUpdNotExistRecord, "table": table, "fields": fields, "values": shortString(fmt.Sprintf("%+v", ivalues), 100), "where": inWhere, "query": shortString(selectQuery, 100)}).Error("updating for not existing record")
 			return 0, "", errUpdNotExistRecord
 		}
-		if sqlBuilder.IsEmptyWhere() {
-			logger.WithFields(log.Fields{"type": consts.NotFound,
-				"error": errWhereUpdate}).Error("update without where")
-			return 0, "", errWhereUpdate
-		}
-	}
-
-	if !sqlBuilder.Where.IsEmpty() && len(logData) > 0 {
-		var err error
-		rollbackInfoStr, err = sqlBuilder.GenerateRollBackInfoString(logData)
-		if err != nil {
-			logger.WithFields(log.Fields{"error": err}).Error("on generate rollback info string for update")
-			return 0, "", err
-		}
 
 		updateExpr, err := sqlBuilder.GetSQLUpdateExpr(logData)
 		if err != nil {
@@ -134,6 +120,18 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 			logger.WithFields(log.Fields{"error": err}).Error("on build insert query")
 			return 0, "", err
 		}
+
+		insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery)
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
+			return 0, "", err
+		}
+
+		cost += insertCost
+		err = model.GetDB(sc.DbTransaction).Exec(insertQuery).Error
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
+			return 0, "", err
 		}
 	}
 

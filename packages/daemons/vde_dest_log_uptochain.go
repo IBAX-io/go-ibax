@@ -109,6 +109,17 @@ func VDEDestLogUpToChain(ctx context.Context, d *daemon) error {
 		item.ChainErr = ""
 		item.UpdateTime = time.Now().Unix()
 		err = item.Updates()
+		if err != nil {
+			fmt.Println("Update VDEDestLog table err: ", err)
+			log.WithFields(log.Fields{"error": err}).Error("Update VDEDestLog table!")
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+	}
+	return nil
+}
+
 //Query the status of the chain on the scheduling task data log information
 func VDEDestLogUpToChainState(ctx context.Context, d *daemon) error {
 	var (
@@ -118,14 +129,6 @@ func VDEDestLogUpToChainState(ctx context.Context, d *daemon) error {
 	)
 
 	m := &model.VDEDestDataLog{}
-	DestTaskDataLog, err := m.GetAllByChainState(1) //1
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data log")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-	if len(DestTaskDataLog) == 0 {
-		//log.Info("Dest task data log not found")
 		time.Sleep(time.Millisecond * 2)
 		return nil
 	}

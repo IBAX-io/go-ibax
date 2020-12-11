@@ -1,6 +1,21 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package ecies
+
+import (
+	"encoding/hex"
+	"fmt"
+	"testing"
+
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+)
+
+// HexToBytes converts the hexadecimal representation to []byte
+func HexToBytes(hexdata string) ([]byte, error) {
+	return hex.DecodeString(hexdata)
 }
 
 func TestEccencryptoKey(t *testing.T) {
@@ -12,17 +27,6 @@ func TestEccencryptoKey(t *testing.T) {
 	privateKeyBytes, err := HexToBytes(privateHex)
 	if err != nil {
 		fmt.Println(err)
-	}
-
-	publicKeyBytes, err := crypto.HexToPub(pubkeyHex)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	pub, err2 := crypto.GetPublicKeys(publicKeyBytes)
-	if err2 != nil {
-		fmt.Println(err2)
-	}
 
 	pri, err2 := crypto.GetPrivateKeys(privateKeyBytes)
 	if err2 != nil {
