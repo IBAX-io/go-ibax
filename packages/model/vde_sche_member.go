@@ -49,5 +49,3 @@ func (m *VDEScheMember) GetOneByPubKey(VDEPubKey string) (*VDEScheMember, error)
 	return m, err
 }
 
-func (m *VDEScheMember) GetAllByType(Type int64) ([]VDEScheMember, error) {
-	result := make([]VDEScheMember, 0)

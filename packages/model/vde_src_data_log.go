@@ -2,6 +2,7 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+package model
 
 type VDESrcDataLog struct {
 	ID                  int64  `gorm:"primary_key; not null" json:"id"`
@@ -51,13 +52,6 @@ func (m *VDESrcDataLog) GetOneByID() (*VDESrcDataLog, error) {
 
 func (m *VDESrcDataLog) GetAllByTaskUUID(TaskUUID string) ([]VDESrcDataLog, error) {
 	result := make([]VDESrcDataLog, 0)
-	err := DBConn.Table("vde_src_data_log").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
-}
-
-func (m *VDESrcDataLog) GetOneByTaskUUID(TaskUUID string) (*VDESrcDataLog, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
 }
 
 func (m *VDESrcDataLog) GetAllByChainState(ChainState int64) ([]VDESrcDataLog, error) {

@@ -20,11 +20,6 @@ VALUES
 		}
 	}
 	action {
-		BndWallet($Id, $ecosystem_id)
-	}
-}
-', '1', 'ContractConditions("MainCondition")', '1', '1'),
-	(next_id('1_contracts'), 'CallDelayedContract', 'contract CallDelayedContract {
 	data {
         Id int
 	}
@@ -160,6 +155,11 @@ VALUES
             DBUpdate("blocks", $Id, pars)
         }
     }
+}
+', '1', 'ContractConditions("MainCondition")', '1', '1'),
+	(next_id('1_contracts'), 'EditColumn', 'contract EditColumn {
+    data {
+        TableName string
         Name string
         Permissions string
     }

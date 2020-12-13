@@ -27,12 +27,7 @@ func GetPrivateKeys(privateKey []byte) (ret *ecdsa.PrivateKey, err error) {
 	var pubkeyCurve elliptic.Curve
 
 	switch ellipticSize {
-	bi := new(big.Int).SetBytes(privateKey)
-	priv := new(ecdsa.PrivateKey)
-	priv.PublicKey.Curve = pubkeyCurve
-	priv.D = bi
-
-	return priv, nil
+	case elliptic256:
 }
 
 // GetPublicKeys return

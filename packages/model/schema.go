@@ -10,6 +10,15 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+// ExecSchemaEcosystem is executing ecosystem schema
+func ExecSchemaEcosystem(db *DbTransaction, id int, wallet int64, name string, founder, appID int64) error {
+	if id == 1 {
+		q, err := migration.GetCommonEcosystemScript()
+		if err != nil {
+			return err
+		}
+		if err := GetDB(db).Exec(q).Error; err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing comma ecosystem schema")
 			return err
 		}

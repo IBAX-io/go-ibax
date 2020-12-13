@@ -32,12 +32,6 @@ func NewNodeActualizer(availableBlockchainGap int64) NodeActualizer {
 }
 
 // Run is starting node monitoring
-func (n *NodeActualizer) Run(ctx context.Context) {
-	go func() {
-		log.Info("Node Actualizer monitoring starting")
-		for {
-			if ctx.Err() != nil {
-				log.WithFields(log.Fields{"error": ctx.Err(), "type": consts.ContextError}).Error("context error")
 				return
 			}
 
@@ -56,6 +50,17 @@ func (n *NodeActualizer) Run(ctx context.Context) {
 				log.Info("Node Actualizer is resuming node activity")
 				n.resumeNodeActivity()
 			}
+
+			time.Sleep(time.Second * 5)
+		}
+	}()
+}
+
+func (n *NodeActualizer) checkBlockchainActuality(ctx context.Context) (bool, error) {
+	curBlock := &model.InfoBlock{}
+	_, err := curBlock.Get()
+	if err != nil {
+		return false, errors.Wrapf(err, "retrieving info block")
 	}
 
 	remoteHosts, err := GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())

@@ -1,5 +1,16 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+type VDESrcData struct {
+	ID         int64  `gorm:"primary_key; not null" json:"id"`
+	DataUUID   string `gorm:"not null" json:"data_uuid"`
+	TaskUUID   string `gorm:"not null" json:"task_uuid"`
+	Hash       string `gorm:"not null" json:"hash"`
+	Data       []byte `gorm:"not null" json:"data"`
+	DataInfo   string `gorm:"type:jsonb" json:"data_info"`
 	DataState  int64  `gorm:"not null" json:"data_state"`
 	DataErr    string `gorm:"not null" json:"data_err"`
 	UpdateTime int64  `gorm:"not null" json:"update_time"`
@@ -12,14 +23,6 @@ func (VDESrcData) TableName() string {
 
 func (m *VDESrcData) Create() error {
 	return DBConn.Create(&m).Error
-}
-
-func (m *VDESrcData) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
-
-func (m *VDESrcData) Delete() error {
-	return DBConn.Delete(m).Error
 }
 
 func (m *VDESrcData) GetAll() ([]VDESrcData, error) {

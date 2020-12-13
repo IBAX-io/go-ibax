@@ -136,14 +136,6 @@ var (
 // GetHTTPTextAnswer returns HTTP answer as a string
 func GetHTTPTextAnswer(url string) (string, error) {
 	resp, err := http.Get(url)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "url": url}).Error("cannot get url")
-		return "", err
-	}
-	defer resp.Body.Close()
-	htmlData, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.IOError}).Error("cannot read response body")
 		return "", err
 	}
 	if resp.StatusCode == 404 {
@@ -170,6 +162,11 @@ func ErrInfo(verr interface{}, additionally ...string) error {
 		if len(additionally) > 0 {
 			return fmt.Errorf("%s # %s (%s)", err, additionally, Caller(1))
 		}
+		return fmt.Errorf("%s (%s)", err, Caller(1))
+	}
+	return err
+}
+
 // CallMethod calls the function by its name
 func CallMethod(i interface{}, methodName string) interface{} {
 	var ptr reflect.Value
