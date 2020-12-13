@@ -1,16 +1,12 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
+	"github.com/gorilla/mux"
 
-package api
+	log "github.com/sirupsen/logrus"
+)
 
-import (
-	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+type appParamsResult struct {
+	App  string        `json:"app_id"`
 	List []paramResult `json:"list"`
 }
 

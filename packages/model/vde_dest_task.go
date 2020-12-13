@@ -117,9 +117,6 @@ func (m *VDEDestTaskFromSrc) GetAllByContractStateSrc(ContractStateSrc int64) ([
 	err := DBConn.Table("vde_dest_task_from_src").Where("contract_state_src = ?", ContractStateSrc).Find(&result).Error
 	return result, err
 }
-
-func (m *VDEDestTaskFromSrc) GetAllByContractStateDest(ContractStateDest int64) ([]VDEDestTaskFromSrc, error) {
-	result := make([]VDEDestTaskFromSrc, 0)
 	err := DBConn.Table("vde_dest_task_from_src").Where("contract_state_dest = ?", ContractStateDest).Find(&result).Error
 	return result, err
 }
@@ -182,6 +179,13 @@ func (m *VDEDestTaskFromSche) Delete() error {
 }
 
 func (m *VDEDestTaskFromSche) GetAll() ([]VDEDestTaskFromSche, error) {
+	var result []VDEDestTaskFromSche
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *VDEDestTaskFromSche) GetOneByID() (*VDEDestTaskFromSche, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
 }
 
 func (m *VDEDestTaskFromSche) GetOneByTaskUUID(TaskUUID string) (*VDEDestTaskFromSche, error) {
