@@ -100,6 +100,10 @@ func Round(x interface{}) (int64, error) {
 // Sqrt returns the square root of x
 func Sqrt(x interface{}) (float64, error) {
 	fx, err := parseFloat(x)
-	if err != nil {
 		return 0, err
 	}
+	if fx = math.Sqrt(fx); isValidFloat(fx) {
+		return fx, nil
+	}
+	return 0, errFloatResult
+}

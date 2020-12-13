@@ -5,3 +5,6 @@
 package utils
 
 import "time"
+
+// Clock represents interface of clock
+type Clock interface {

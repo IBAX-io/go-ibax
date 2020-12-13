@@ -506,6 +506,10 @@ func TestVMCompile(t *testing.T) {
 			i = 256
 			var s string
 			$ext = "Ooops"
+			s = "Spain"
+			my = {conditions: "$Conditions"}
+			list = [0, i, {"item": i}, [$ext]]
+			sub = {"name": "John", "lastname": "Smith", myarr: []}
 			my = {qqq: 10, "22": "MY STRING", /* comment*/ "float": 1.2, "ext": $ext,
 			"in": true, "var": i, sub: sub, "Company": {"Name": "Ltd", Country: s, 
 				Arr: [s, 20, "finish"]}}
@@ -634,16 +638,6 @@ func TestVMCompile(t *testing.T) {
 			}
 		}
 		func getqq() string {
-			return qq2("Id,ID2", 10,20)
-		}`, `getqq`, `1020`},
-		{`func IND() string {
-			var a,b,d array
-			a[0] = 100
-			a[1] = 555
-			b[0] = 200
-			d[0] = a
-			d[1] = b
-			d[0][0] =  777
 	}`, `IND`, `multi-index is not supported`},
 		{`func result() {
 		/*

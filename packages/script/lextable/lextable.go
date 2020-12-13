@@ -96,20 +96,6 @@ var (
 		"d": ["error", "", ""]
 	},
 	"and": {
-			"&": ["main", "oper", "pop next"],
-			"d": ["error", "", ""]
-		},
-	"or": {
-			"|": ["main", "oper", "pop next"],
-			"d": ["error", "", ""]
-		},
-	"eq": {
-			"=": ["main", "oper", "pop next"],
-			"d": ["main", "sys", "pop"]
-		},
-	"solidus": {
-			"/": ["comline", "", "pop next"],
-			"*": ["comment", "", "next"],
 			"d": ["main", "oper", "pop"]
 		},
 	"oneq": {
@@ -237,6 +223,19 @@ var (
 							}
 						}
 					}
+					table[curstate][ind] = val
+					if ind == 0 { // default value
+						for i := range table[curstate] {
+							if table[curstate][i] == 0xFE0000 {
+								table[curstate][i] = val
+							}
+						}
+					}
+				}
+			}
+		}
+		out += "\t\tlexTable = [][" + fmt.Sprint(AlphaSize) + "]uint32{\r\n"
+		for _, line := range table {
 			out += "\t\t\t{"
 			for _, ival := range line {
 				out += fmt.Sprintf(" 0x%x,", ival)

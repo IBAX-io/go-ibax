@@ -1,15 +1,13 @@
 // +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract CallDelayedContract {
+	data {
+        Id int
+	}
 
-		if !Len(rows) {
-			warning Sprintf(LangRes("@1template_delayed_contract_not_exist"), $Id)
-		}
-		$cur = rows[0]
-		$limit = Int($cur["limit"])
-		$counter = Int($cur["counter"])
+	conditions {
+		HonorNodeCondition()
 
-		if $block < Int($cur["block_id"]) {
-			warning Sprintf(LangRes("@1template_delayed_contract_error"), $Id, $cur["block_id"], $block)
-		}
 
 		if $limit > 0 && $counter >= $limit {
 			warning Sprintf(LangRes("@1template_delayed_contract_limited"), $Id)

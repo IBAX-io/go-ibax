@@ -29,21 +29,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/obsmanager"
-	"github.com/IBAX-io/go-ibax/packages/scheduler"
-	"github.com/IBAX-io/go-ibax/packages/scheduler/contract"
-	"github.com/IBAX-io/go-ibax/packages/script"
-	qb "github.com/IBAX-io/go-ibax/packages/smart/queryBuilder"
-	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/pkg/errors"
-	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 const (
@@ -820,6 +805,16 @@ func parseViewWhereSql(sc *SmartContract, columns string) (tabsSQL, whsSQL strin
 			has[tableName1] = true
 		}
 		tableArr = append(tableArr, tableName1)
+		tableName2 := converter.ParseTable(icol.TableTwo, sc.TxSmart.EcosystemID)
+		if !has[tableName2] {
+			if !model.HasTableOrView(sc.DbTransaction, tableName2) {
+				err = fmt.Errorf(eTableNotFound, tableName2)
+				return
+			}
+			has[tableName2] = true
+		}
+		tableArr = append(tableArr, tableName2)
+		colName1 := converter.EscapeSQL(strings.ToLower(icol.ColOne))
 		if err = checkColumnName(colName1); err != nil {
 			return
 		}

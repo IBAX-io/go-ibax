@@ -3,17 +3,15 @@
 contract EditAppParam {
     data {
         Id int
-        RowConditions("app_params", $Id, onlyConditions())
-        if $Conditions {
-            ValidateCondition($Conditions, $ecosystem_id)
-        }
+        Value string "optional"
+        Conditions string "optional"
+    }
+    func onlyConditions() bool {
+        return $Conditions && !$Value
     }
 
-    action {
-        var pars map
-        if $Value {
-            pars["value"] = $Value
-        }
+    conditions {
+        RowConditions("app_params", $Id, onlyConditions())
         if $Conditions {
             pars["conditions"] = $Conditions
         }

@@ -99,14 +99,17 @@ func (e *ECDSA) checkECDSA(public, data, signature []byte) (bool, error) {
 	}
 
 	var pubkeyCurve elliptic.Curve
-	switch ellipticSize {
-	case elliptic256:
-		pubkeyCurve = elliptic.P256()
-	default:
-		return false, ErrUnsupportedCurveSize
+	if err != nil {
+		return false, err
 	}
-	pubkey := new(ecdsa.PublicKey)
-	pubkey.Curve = pubkeyCurve
+	verifystatus := ecdsa.Verify(pubkey, getHasher().hash(data), r, s)
+	if !verifystatus {
+		return false, ErrIncorrectSign
+	}
+	return true, nil
+}
+
+// parseSign converts the hex signature to r and s big number
 func (e *ECDSA) parseSign(sign string) (*big.Int, *big.Int, error) {
 	var (
 		binSign []byte

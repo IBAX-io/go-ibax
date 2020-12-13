@@ -64,19 +64,6 @@ func SubNodeSrcTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	logger := getLogger(r)
-	form := &SubNodeSrcTaskForm{}
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-	m := &model.SubNodeSrcTask{}
-	if m, err = unmarshalColumnSubNodeSrcTask(form); err != nil {
-		fmt.Println(err)
-		errorResponse(w, err)
-		return
-	}
-	m.CreateTime = time.Now().Unix()
-	if err = m.Create(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
 
@@ -123,6 +110,13 @@ func SubNodeSrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, result)
 }
+
+func SubNodeSrcTaskDeleteHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+	id := converter.StrToInt64(params["id"])
+
+	m := &model.SubNodeSrcTask{}
 	m.ID = id
 	if err := m.Delete(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")

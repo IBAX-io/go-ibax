@@ -9,6 +9,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+func unmarshalColumnVDESrcTask(form *VDESrcTaskForm) (*model.VDESrcTask, error) {
+	var (
+		parms              map[string]interface{}
 		contract_run_parms map[string]interface{}
 		err                error
 	)
@@ -227,8 +240,3 @@ func VDESrcTaskByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query task data by TaskUUID failed")
 		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
-}

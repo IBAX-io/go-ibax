@@ -9,20 +9,19 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-
-	log "github.com/sirupsen/logrus"
-)
-
-var wrongAddressError = errors.New("Wrong address")
-
-// NormalizeHostAddress get address. if port not defined returns combined string with ip and defaultPort
-func NormalizeHostAddress(address string, defaultPort int64) (string, error) {
-
-	_, _, err := net.SplitHostPort(address)
 	if err != nil {
+		if strings.HasSuffix(err.Error(), "missing port in address") {
+			return fmt.Sprintf("%s:%d", address, defaultPort), nil
+		}
+
+		return "", err
+	}
+
+	return address, nil
+}
+
+func newConnection(addr string) (net.Conn, error) {
+	if len(addr) == 0 {
 		return nil, wrongAddressError
 	}
 
