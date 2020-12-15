@@ -47,6 +47,19 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 		}
 		blocks = blocks[:0]
 	}
+	block := &model.Block{}
+	_, err = block.Get(blockID)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block")
+		return err
+	}
+
+	header, _, err := utils.ParseBlockHeader(bytes.NewBuffer(block.Data))
+	if err != nil {
+		return err
+	}
+
+	ib := &model.InfoBlock{
 		Hash:           block.Hash,
 		BlockID:        header.BlockID,
 		Time:           header.Time,
@@ -61,7 +74,3 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating info block")
 		return err
-	}
-
-	return nil
-}

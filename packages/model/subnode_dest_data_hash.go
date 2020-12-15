@@ -16,15 +16,6 @@ type SubNodeDestDataHash struct {
 	SubNodeSrcPubkey string `gorm:"column:subnode_src_pubkey;not null" json:"subnode_src_pubkey"`
 	//SubNodeDestPubkey    string `gorm:"not null" json:"subnode_dest_pubkey"`
 	SubNodeDestPubkey string `gorm:"column:subnode_dest_pubkey;not null" json:"subnode_dest_pubkey"`
-	//SubNodeDestIP        string `gorm:"not null" json:"subnode_dest_ip"`
-	SubNodeDestIP string `gorm:"column:subnode_dest_ip;not null" json:"subnode_dest_ip"`
-	//SubNodeAgentPubkey   string `gorm:"not null" json:"subnode_agent_pubkey"`
-	SubNodeAgentPubkey string `gorm:"column:subnode_agent_pubkey;not null" json:"subnode_agent_pubkey"`
-	//SubNodeAgentIP       string `gorm:"not null" json:"subnode_agent_ip"`
-	SubNodeAgentIP string `gorm:"column:subnode_agent_ip;not null" json:"subnode_agent_ip"`
-	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
-	TranMode       int64  `gorm:"not null" json:"tran_mode"`
-
 	UpdateTime int64 `gorm:"not null" json:"update_time"`
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }

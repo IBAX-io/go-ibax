@@ -220,5 +220,3 @@ func GetLang(state int, accept string) (lng string) {
 		if len(val) < 2 {
 			continue
 		}
-		if !IsLang(val[:2]) {
-			continue

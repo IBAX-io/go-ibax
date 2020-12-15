@@ -19,14 +19,10 @@ type ClientTxPreprocessor interface {
 // SmartContractRunner run serialized contract
 type SmartContractRunner interface {
 	RunContract(data, hash []byte, keyID, tnow int64, le *log.Entry) error
-}
 
-type DaemonListFactory interface {
-	GetDaemonsList() []string
-}
-
-type EcosystemLookupGetter interface {
-	GetEcosystemLookup() ([]int64, []string, error)
+// DaemonLoader allow implement different ways for loading daemons
+type DaemonLoader interface {
+	Load(context.Context) error
 }
 
 type EcosystemNameGetter interface {

@@ -51,19 +51,21 @@ func (m *SubNodeSrcTask) Delete() error {
 func (m *SubNodeSrcTask) GetAll() ([]SubNodeSrcTask, error) {
 	var result []SubNodeSrcTask
 	err := DBConn.Find(&result).Error
-
-func (m *SubNodeSrcTask) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcTask, error) {
-	result := make([]SubNodeSrcTask, 0)
-	err := DBConn.Table("subnode_src_task").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
 }
-
-func (m *SubNodeSrcTask) GetOneByTaskUUID(TaskUUID string) (*SubNodeSrcTask, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+func (m *SubNodeSrcTask) GetOneByID() (*SubNodeSrcTask, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
 }
 
-func (m *SubNodeSrcTask) GetOneByTaskUUIDAndTaskState(TaskUUID string, TaskState int64) (*SubNodeSrcTask, error) {
+func (m *SubNodeSrcTask) GetAllByTaskUUIDAndTaskState(TaskUUID string, TaskState int64) ([]SubNodeSrcTask, error) {
+	result := make([]SubNodeSrcTask, 0)
+	err := DBConn.Table("subnode_src_task").Where("task_uuid = ? AND task_state=?", TaskUUID, TaskState).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeSrcTask) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcTask, error) {
+	result := make([]SubNodeSrcTask, 0)
 	err := DBConn.Where("task_uuid=? AND task_state=?", TaskUUID, TaskState).First(&m).Error
 	return m, err
 }

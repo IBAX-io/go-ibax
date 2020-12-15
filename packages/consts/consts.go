@@ -17,10 +17,6 @@ const VERSION = "1.3.0"
 const BvRollbackHash = 2
 const BvIncludeRollbackHash = 3
 
-// BlockVersion is block version
-const BlockVersion = BvIncludeRollbackHash
-
-// DEFAULT_TCP_PORT used when port number missed in host addr
 const DEFAULT_TCP_PORT = 7078
 
 // FounderAmount is the starting amount of founder
@@ -101,6 +97,23 @@ const (
 
 	TxTypeParserApiContract    = "ApiContract"
 	TxTypeParserEcosystemMiner = "EcosystemMiner"
+	TxTypeParserSystemMiner    = "SystemMiner"
+)
+
+// TxTypes is the list of the embedded transactions
+var TxTypes = map[int64]string{
+	TxTypeFirstBlock:     TxTypeParserFirstBlock,
+	TxTypeApiContract:    TxTypeParserApiContract,
+	TxTypeSystemServer:   TxTypeSystemServerWork,
+	TxTypeEcosystemMiner: TxTypeParserEcosystemMiner,
+	TxTypeSystemMiner:    TxTypeParserSystemMiner,
+	TxTypeStopNetwork:    TxTypeParserStopNetwork,
+}
+
+// ApiPath is the beginning of the api url
+var ApiPath = `/api/v2/`
+
+// BuildInfo should be defined through -ldflags
 var BuildInfo string
 
 const (

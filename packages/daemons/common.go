@@ -168,20 +168,22 @@ func StartDaemons(ctx context.Context, daemonsToStart []string) {
 	for _, name := range daemonsToStart {
 		handler, ok := daemonsList[name]
 		if ok {
-			go daemonLoop(ctx, name, handler, utils.ReturnCh)
-			log.WithFields(log.Fields{"daemon_name": name}).Info("started")
-			utils.DaemonsCount++
-			continue
-		}
-
-		log.WithFields(log.Fields{"daemon_name": name}).Warning("unknown daemon name")
-	}
-}
-
 func getHostPort(h string) string {
 	if strings.Contains(h, ":") {
 		return h
 	}
+	return fmt.Sprintf("%s:%d", h, consts.DEFAULT_TCP_PORT)
+}
+
+//ntp
+func Ntp_Work(ctx context.Context) {
+	var count = 0
+	for {
+		select {
+		case <-ctx.Done():
+			log.Error("Ntp_Work done his work")
+			return
+		case <-time.After(time.Second * 4):
 			b, err := utils.CheckClockDrift()
 			if err != nil {
 				log.WithFields(log.Fields{"daemon_name Ntp_Work err": err.Error()}).Error("Ntp_Work")

@@ -105,6 +105,15 @@ var (
 		t.Column("table_name", "string", {"default": "", "size":255})
 		t.Column("table_id", "string", {"default": "", "size":255})
 		t.Column("data", "text", {"default": ""})
+	{{footer "seq" "primary" "index(table_name, table_id, block_id)"}}
+
+	{{head "stop_daemons"}}
+		t.Column("stop_time", "int", {"default": "0"})
+	{{footer}}
+
+	{{head "transactions"}}
+		t.Column("hash", "bytea", {"default": ""})
+		t.Column("data", "bytea", {"default": ""})
 		t.Column("used", "smallint", {"default": "0"})
 		t.Column("high_rate", "smallint", {"default": "0"})
 		t.Column("expedite", "decimal(30)", {"default_raw": "'0' CHECK (expedite >= 0)"})
@@ -139,15 +148,6 @@ var (
 		t.Column("hash", "text", {"default": ""})
 		t.Column("data", "bytea", {"default": ""})
 		t.Column("time", "int", {"default": "0"})
-	{{footer "seq" "primary"}}
-
-	{{headseq "subnode_privatefile_packets"}}
-		t.Column("id", "int", {"default_raw": "nextval('subnode_privatefile_packets_id_seq')"})
-		t.Column("task_uuid", "text", {"default": ""})
-		t.Column("task_name", "text", {"default": ""})
-		t.Column("task_sender", "text", {"default": ""})
-		t.Column("task_type", "text", {"default": "0"})
-		t.Column("mimetype", "text", {"default": ""})
 		t.Column("name", "text", {"default": ""})
 		t.Column("hash", "text", {"default": ""})
 		t.Column("data", "bytea", {"default": ""})
