@@ -146,6 +146,14 @@ func sendPost(apiAddress string, gAuth string, url string, form *url.Values, v i
 //		`ecosystem`: {converter.Int64ToStr(state)}, "role_id": {"0"}}
 //	if gMobile {
 //		form[`mobile`] = []string{`true`}
+//	}
+//	var logret loginResult
+//	err = sendPost(apiAddress, `login`, &form, &logret)
+//	if err != nil {
+//		return
+//	}
+//	gAddress = logret.Address
+//	gPrivate = string(key)
 //	gPublic, err = PrivateToPublicHex(gPrivate)
 //	gAuth = logret.Token
 //	if err != nil {
@@ -262,14 +270,6 @@ func postTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPrivat
 		case "float":
 			params[name], err = strconv.ParseFloat(value, 64)
 		case "string", "money":
-			params[name] = value
-		case "file", "bytes":
-			if cp, ok := form.(*contractParams); !ok {
-				err = fmt.Errorf("Form is not *contractParams type")
-			} else {
-				params[name] = cp.GetRaw(name)
-			}
-		}
 
 		if err != nil {
 			err = fmt.Errorf("Parse param '%s': %s", name, err)

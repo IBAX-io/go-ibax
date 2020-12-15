@@ -83,19 +83,15 @@ func SubNodeDestData(ctx context.Context, d *daemon) error {
 
 			if err = DestDataStatus.Create(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Insert subnode_dest_data_status table failed")
-				continue
-			}
-			fmt.Println("Insert subnode_dest_data_status table ok, DataUUID:", item.DataUUID)
-		} else {
-			log.WithFields(log.Fields{"error": err}).Error("TranMode err!")
-			item.DataState = 3
-			err = item.Updates()
-			//err = item.Delete()
-			if err != nil {
-				log.WithError(err)
-				continue
-			}
 			continue
 		}
 		item.DataState = 1 // success
 		err = item.Updates()
+		//err = item.Delete()
+		if err != nil {
+			log.WithError(err)
+			continue
+		}
+	} //for
+	return nil
+}

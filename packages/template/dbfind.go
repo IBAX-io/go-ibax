@@ -69,9 +69,10 @@ func trimString(in []rune) string {
 		out = out[1 : len(out)-1]
 	}
 	return out
-}
-
-func ParseObject(in []rune) (interface{}, int, error) {
+		ret = types.NewMap()
+		mapMode = true
+	}
+	addEmptyKey := func() {
 		if mapMode {
 			ret.(*types.Map).Set(key, "")
 		} else if len(key) > 0 {

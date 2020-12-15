@@ -36,22 +36,6 @@ func isValidFloat(x float64) bool {
 // Floor returns the greatest integer value less than or equal to x
 func Floor(x interface{}) (int64, error) {
 	fx, err := parseFloat(x)
-	if err != nil {
-		return 0, err
-	}
-	if fx = math.Floor(fx); isValidFloat(fx) {
-		return int64(fx), nil
-	}
-	return 0, errFloatResult
-}
-
-// Log returns the natural logarithm of x
-func Log(x interface{}) (float64, error) {
-	fx, err := parseFloat(x)
-	if err != nil {
-		return 0, err
-	}
-	if fx = math.Log(fx); isValidFloat(fx) {
 		return fx, nil
 	}
 	return 0, errFloatResult
@@ -100,6 +84,7 @@ func Round(x interface{}) (int64, error) {
 // Sqrt returns the square root of x
 func Sqrt(x interface{}) (float64, error) {
 	fx, err := parseFloat(x)
+	if err != nil {
 		return 0, err
 	}
 	if fx = math.Sqrt(fx); isValidFloat(fx) {

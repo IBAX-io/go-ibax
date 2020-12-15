@@ -56,6 +56,15 @@ func (btc *BlockTimeCounter) nodePosition(t time.Time) (int, error) {
 func (btc *BlockTimeCounter) NodeTimeExists(t time.Time, nodePosition int) (bool, error) {
 	ps, err := btc.nodePosition(t)
 	if err != nil {
+		return false, err
+	}
+	if ps == nodePosition {
+		return true, nil
+	}
+
+	//startInterval, endInterval, err := btc.RangeByTime(t)
+	//if err != nil {
+	//	return false, err
 	//}
 
 	return false, nil
@@ -83,24 +92,6 @@ func (btc *BlockTimeCounter) nextTime(t time.Time, nodePosition int) (time.Time,
 	if nodePosition >= btc.numberNodes {
 		return time.Unix(0, 0), WrongNodePositionError
 	}
-
-	queue, err := btc.queue(t)
-	if err != nil {
-		return time.Unix(0, 0), err
-	}
-	curNodePosition := queue % btc.numberNodes
-
-	d := nodePosition - curNodePosition
-	if curNodePosition >= nodePosition {
-		d += btc.numberNodes
-	}
-
-	return btc.start.Add(btc.duration*time.Duration(queue+d) + time.Millisecond), nil
-}
-
-// RangeByTime returns start and end of interval by time
-func (btc *BlockTimeCounter) RangeByTime(t time.Time) (start, end time.Time, err error) {
-	queue, err := btc.queue(t)
 	if err != nil {
 		st := time.Unix(0, 0)
 		return st, st, err

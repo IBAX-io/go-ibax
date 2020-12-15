@@ -124,9 +124,6 @@ type PrivateFilePacketsAll struct {
 	TaskSender string `gorm:"column:task_sender;not null" json:"task_sender"`
 	TaskType   string `gorm:"column:task_type;not null" json:"task_type"`
 	Name       string `gorm:"column:name;not null" json:"name"`
-	MimeType   string `gorm:"column:mimetype;not null" json:"mimetype"`
-	Hash       string `gorm:"not null" json:"hash"`
-	Data       []byte `gorm:"column:sppadata;not null" json:"sppadata"`
 }
 
 // TableName returns name of table
@@ -150,3 +147,7 @@ func (pp *PrivateFilePacketsAll) DeleteByHash(dbTransaction *DbTransaction) erro
 	return GetDB(dbTransaction).Exec("DELETE FROM 2_subnode_share_data_502 WHERE hash = ?", pp.Hash).Error
 }
 
+// Create is creating record of model
+func (pp *PrivateFilePacketsAll) Create() error {
+	return DBConn.Create(&pp).Error
+}

@@ -46,10 +46,6 @@ func TestRequestType(t *testing.T) {
 	result := RequestType{}
 	require.NoError(t, rt.Write(b))
 	require.NoError(t, result.Read(b))
-	require.Equal(t, rt, result)
-	fmt.Println(rt, result)
-
-}
 
 	result := GetBodyResponse{}
 	require.NoError(t, rt.Write(b))

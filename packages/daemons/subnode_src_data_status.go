@@ -8,6 +8,24 @@ package daemons
 import (
 	"context"
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+
+	log "github.com/sirupsen/logrus"
+)
+
+func SubNodeSrcDataStatus(ctx context.Context, d *daemon) error {
+	m := &model.SubNodeSrcDataStatus{}
+	//ShareData, err := m.GetAllByDataSendStatus(0) //0
+	//ShareData, err := m.GetAllByDataSendStatusAndAgentMode(0, 0) //0
+	ShareData, err := m.GetAllByDataSendStatusAndAgentMode(0, 2) //sendstatus:0Indicates that the contract has not been installed, 1 means that the contract is successfully installed, 2 means that the contract is not installed successfully; 0 means that the contract has not been uploaded yet, and 1 means that a request has been generated
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all unsent task data")
+		time.Sleep(time.Millisecond * 200)
+		return err
 	}
 	if len(ShareData) == 0 {
 		//log.Info("task data from src to dest not found")
@@ -25,14 +43,6 @@ import (
 		//fmt.Println("item.AgentMode:", converter.Int64ToStr(item.AgentMode))
 		//hash := tcpclient.SendVDESrcData(item.VDEDestIP,item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), item.DataInfo, ItemDataBytes)
 		hash := tcpclient.SendSubNodeSrcData(item.SubNodeDestIP, item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), converter.Int64ToStr(item.TranMode), item.DataInfo, item.SubNodeSrcPubkey, item.SubNodeAgentPubkey, item.SubNodeAgentIP, item.SubNodeDestPubkey, item.SubNodeDestIP, ItemDataBytes)
-		if string(hash) == "0" {
-			//item.DataSendState = 3 //
-			item.DataSendState = 0 //
-			item.DataSendErr = "Network error"
-		} else if string(hash) == string(item.Hash) {
-			item.DataSendState = 1 //
-		} else {
-			item.DataSendState = 2 //
 			item.DataSendErr = "Hash mismatch"
 		}
 		err = item.Updates()

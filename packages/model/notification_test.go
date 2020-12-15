@@ -27,9 +27,3 @@ func TestGetNotificationCountFilter(t *testing.T) {
 		testItem{
 			Input:        nil,
 			Filter:       ` WHERE closed = false `,
-			ParamsLength: 0,
-		},
-	}
-
-	for i, item := range testTable {
-		filter, params := getNotificationCountFilter(item.Input, 1)

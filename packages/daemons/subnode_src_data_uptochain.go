@@ -116,19 +116,6 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 					fmt.Println("error", err)
 					log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
 					return nil
-				}
-				encodeString := base64.StdEncoding.EncodeToString(PrivateFile)
-
-				form := url.Values{
-					`TableName`: {blockchain_table},
-					`TaskUUID`:  {item.TaskUUID},
-					`DataUUID`:  {item.DataUUID},
-					`DataInfo`:  {item.DataInfo},
-					`Data`:      {encodeString},
-				}
-				tran_mode := converter.Int64ToStr(item.TranMode)
-				chain_api.ApiPrivateFor = []string{
-					tran_mode,
 					//"1",
 					//node_pubkey,
 				}
@@ -162,6 +149,11 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 		//item.ChainErr = ""
 		item.UpdateTime = time.Now().Unix()
 		err = item.Updates()
+		if err != nil {
+			fmt.Println("Update SubNodeSrcDataChainStatus table err: ", err)
+			log.WithFields(log.Fields{"error": err}).Error("Update SubNodeSrcDataChainStatus table!")
+			time.Sleep(time.Millisecond * 2)
+			continue
 		}
 	} //for
 	return nil
