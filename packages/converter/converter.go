@@ -236,6 +236,12 @@ func BinMarshal(out *[]byte, v interface{}) (*[]byte, error) {
 			var i uint8
 			tmp := make([]byte, 4)
 			binary.BigEndian.PutUint32(tmp, uint32(t.Int()))
+			for ; i < 4; i++ {
+				if tmp[i] != uint8(0) {
+					break
+				}
+			}
+			*out = append(*out, 128+4-i)
 			*out = append(*out, tmp[i:]...)
 		}
 	case reflect.Float64:
@@ -995,14 +1001,6 @@ func Escape(data string) string {
 	return string(out)
 }
 
-// FieldToBytes returns the value of n-th field of v as []byte
-func FieldToBytes(v interface{}, num int) []byte {
-	t := reflect.ValueOf(v)
-	ret := make([]byte, 0, 2048)
-	if t.Kind() == reflect.Struct && num < t.NumField() {
-		field := t.Field(num)
-		switch field.Kind() {
-		case reflect.Uint8, reflect.Uint32, reflect.Uint64:
 			ret = append(ret, []byte(fmt.Sprintf("%d", field.Uint()))...)
 		case reflect.Int8, reflect.Int32, reflect.Int64:
 			ret = append(ret, []byte(fmt.Sprintf("%d", field.Int()))...)

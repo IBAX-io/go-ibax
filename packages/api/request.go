@@ -57,16 +57,6 @@ func SendRawRequest(rtype, url, auth string, form *url.Values) ([]byte, error) {
 		return nil, err
 	}
 
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(`%d %s`, resp.StatusCode, strings.TrimSpace(string(data)))
-	}
-
 	return data, nil
 }
 
@@ -295,6 +285,10 @@ func (connect *Connect) Login() error {
 	var (
 		sign []byte
 		ret  getUIDResult
+		err  error
+	)
+	if err = connect.SendGet(`getuid`, nil, &ret); err != nil {
+		return err
 	}
 	if len(ret.UID) == 0 {
 		return nil

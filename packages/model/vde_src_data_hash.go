@@ -55,4 +55,7 @@ func (m *VDESrcDataHash) GetAllByTaskUUID(TaskUUID string) ([]VDESrcDataHash, er
 }
 
 func (m *VDESrcDataHash) GetOneByTaskUUID(TaskUUID string) (*VDESrcDataHash, error) {
+	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+	return m, err
 }
+

@@ -7,15 +7,6 @@ import (
 
 type GRefreshClaims struct {
 	Header           string `json:"aud,omitempty"`
-	Refresh          string `json:"ref,omitempty"`
-	ExpiresAt        int64  `json:"exp,omitempty"`
-	RefreshExpiresAt int64  `json:"refexp,omitempty"`
-}
-
-type GRefreshClaimsCache struct {
-	mutex sync.RWMutex
-	cache map[string]*GRefreshClaims
-}
 
 var GClaims = &GRefreshClaimsCache{cache: make(map[string]*GRefreshClaims)}
 
@@ -51,4 +42,10 @@ func (g *GRefreshClaims) RefreshClaims() {
 	defer GClaims.mutex.Unlock()
 
 	GClaims.cache[g.Header] = g
+}
+
+func (g *GRefreshClaims) DeleteClaims() {
+	GClaims.mutex.Lock()
+	defer GClaims.mutex.Unlock()
+	delete(GClaims.cache, g.Header)
 }

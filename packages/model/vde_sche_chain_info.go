@@ -4,17 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 package model
 
-	return "vde_sche_chain_info"
-}
-
-func (m *VDEScheChainInfo) Create() error {
-	return DBConn.Create(&m).Error
-}
-
-func (m *VDEScheChainInfo) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
-
+type VDEScheChainInfo struct {
+	ID                  int64  `gorm:"primary_key; not null" json:"id"`
+	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
 func (m *VDEScheChainInfo) Delete() error {
 	return DBConn.Delete(m).Error
 }

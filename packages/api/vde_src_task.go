@@ -74,16 +74,6 @@ func unmarshalColumnVDESrcTask(form *VDESrcTaskForm) (*model.VDESrcTask, error) 
 	}
 
 	return m, err
-}
-
-func VDESrcTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		ContractSrcGetHashHex  string
-		ContractDestGetHashHex string
-		err                    error
-	)
-	logger := getLogger(r)
-	form := &VDESrcTaskForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
@@ -240,3 +230,8 @@ func VDESrcTaskByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query task data by TaskUUID failed")
 		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, result)
+}

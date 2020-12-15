@@ -37,6 +37,18 @@ func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting table records count")
 		errorResponse(w, err)
+		return
+	}
+
+	contracts, err := contract.GetListByEcosystem(form.Offset, form.Limit)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all")
+		errorResponse(w, err)
+		return
+	}
+
+	list := make([]map[string]string, len(contracts))
+	for i, c := range contracts {
 		list[i] = c.ToMap()
 		list[i]["address"] = converter.AddressToString(c.WalletID)
 	}
@@ -48,5 +60,3 @@ func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, &listResult{
 		Count: count,
 		List:  list,
-	})
-}

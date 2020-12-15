@@ -7,13 +7,6 @@ package model
 import (
 	"encoding/json"
 	"errors"
-	"strconv"
-)
-
-// SystemParameter is model
-type SystemParameter struct {
-	ID         int64  `gorm:"primary_key;not null;"`
-	Name       string `gorm:"not null;size:255"`
 	Value      string `gorm:"not null"`
 	Conditions string `gorm:"not null"`
 }
@@ -61,6 +54,13 @@ func GetAllSystemParameters(transaction *DbTransaction) ([]SystemParameter, erro
 
 // ToMap is converting SystemParameter to map
 func (sp *SystemParameter) ToMap() map[string]string {
+	result := make(map[string]string, 0)
+	result["name"] = sp.Name
+	result["value"] = sp.Value
+	result["conditions"] = sp.Conditions
+	return result
+}
+
 // Update is update model
 func (sp SystemParameter) Update(value string) error {
 	return DBConn.Model(sp).Where("name = ?", sp.Name).Update(`value`, value).Error
