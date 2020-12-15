@@ -26,10 +26,6 @@ func (c *Contract) TableName() string {
 	return `1_contracts`
 }
 
-// GetList is retrieving records from database
-func (c *Contract) GetList(offset, limit int) ([]Contract, error) {
-	result := new([]Contract)
-	err := DBConn.Table(c.TableName()).Offset(offset).Limit(limit).Order("id asc").Find(&result).Error
 	return *result, err
 }
 
@@ -63,6 +59,13 @@ func (c *Contract) ToMap() (v map[string]string) {
 	v = make(map[string]string)
 	v["id"] = converter.Int64ToStr(c.ID)
 	v["name"] = c.Name
+	v["value"] = c.Value
+	v["wallet_id"] = converter.Int64ToStr(c.WalletID)
+	v["token_id"] = converter.Int64ToStr(c.TokenID)
+	v["conditions"] = c.Conditions
+	v["app_id"] = converter.Int64ToStr(c.AppID)
+	v["ecosystem_id"] = converter.Int64ToStr(c.EcosystemID)
+	return
 }
 
 // GetByApp returns all contracts belonging to selected app

@@ -17,11 +17,6 @@ import (
 
 const (
 	Select = "select"
-	Insert = "insert"
-	Update = "update"
-	Delete = "delete"
-
-	Set  = "set"
 	From = "from"
 	Into = "into"
 
@@ -79,6 +74,22 @@ type FormulaQueryCoster struct {
 type QueryType interface {
 	GetTableName() (string, error)
 	CalculateCost(int64) int64
+}
+
+type SelectQueryType string
+
+func (s SelectQueryType) GetTableName() (string, error) {
+	queryFields := strings.Fields(string(s))
+	fromFieldIndex := strSliceIndex(queryFields, From)
+	if fromFieldIndex == 0 {
+		return "", nil
+	}
+	return strings.Trim(queryFields[fromFieldIndex+1], Quote), nil
+}
+
+func (s SelectQueryType) CalculateCost(rowCount int64) int64 {
+	return SelectCost + int64(SelectRowCoeff*float64(rowCount))
+}
 
 type UpdateQueryType string
 

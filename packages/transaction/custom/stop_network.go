@@ -12,6 +12,14 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/service"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/IBAX-io/go-ibax/packages/utils/tx"
+
+	log "github.com/sirupsen/logrus"
+)
+
+var (
+	messageNetworkStopping = "Attention! The network is stopped!"
+
+	ErrNetworkStopping = errors.New("network is stopping")
 )
 
 type StopNetworkTransaction struct {
@@ -33,23 +41,6 @@ func (t *StopNetworkTransaction) Validate() error {
 	return nil
 }
 
-func (t *StopNetworkTransaction) validate() error {
-	data := t.Data.(*consts.StopNetwork)
-	cert, err := utils.ParseCert(data.StopNetworkCert)
-	if err != nil {
-		return err
-	}
-
-	fbdata, err := syspar.GetFirstBlockData()
-	if err != nil {
-		return err
-	}
-
-	if err = cert.Validate(fbdata.StopNetworkCertBundle); err != nil {
-		return err
-	}
-
-	t.Cert = cert
 	return nil
 }
 

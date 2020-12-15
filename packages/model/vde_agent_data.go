@@ -19,7 +19,6 @@ type VDEAgentData struct {
 	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
 	DataSendState  int64  `gorm:"not null" json:"data_send_state"`
 	DataSendErr    string `gorm:"not null" json:"data_send_err"`
-	UpdateTime     int64  `gorm:"not null" json:"update_time"`
 	CreateTime     int64  `gorm:"not null" json:"create_time"`
 }
 
@@ -52,6 +51,16 @@ func (m *VDEAgentData) GetOneByDataUUID(DataUUID string) (*VDEAgentData, error) 
 	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
 	return m, err
 }
+func (m *VDEAgentData) GetOneByTaskUUID(TaskUUID string) (*VDEAgentData, error) {
+	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+	return m, err
+}
+func (m *VDEAgentData) GetAllByTaskUUID(TaskUUID string) ([]VDEAgentData, error) {
+	result := make([]VDEAgentData, 0)
+	err := DBConn.Table("vde_agent_data").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	return result, err
+}
+
 func (m *VDEAgentData) GetAllByDataSendStatus(DataSendStatus int64) ([]VDEAgentData, error) {
 	result := make([]VDEAgentData, 0)
 	err := DBConn.Table("vde_agent_data").Where("data_send_state = ?", DataSendStatus).Find(&result).Error

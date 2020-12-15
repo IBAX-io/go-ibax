@@ -57,18 +57,6 @@ func (m *MineOwner) GetPoolManage(keyid int64) (bool, error) {
 
 	var mo MineOwner
 	fo, erro := mo.GetPool(keyid)
-	if erro != nil {
-		return false, erro
-	}
-
-	if !fo {
-
-		var mh MintPoolTransferHistory
-		fh, erro := mh.GetPool(keyid)
-		if erro != nil {
-			return false, erro
-		}
-
 		if fh {
 			return true, nil
 		}
@@ -100,3 +88,12 @@ func (m *MineOwner) GetAllPoolManage(dbt *DbTransaction, ts int64) (map[int64]in
 		Order("devid asc").
 		Find(&mp).Error
 	if err != nil {
+		return ret, err
+	}
+
+	for _, v := range mp {
+		ret[v.Devid] = v.Minerid
+	}
+
+	return ret, err
+}

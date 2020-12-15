@@ -57,6 +57,3 @@ func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 		list = nil
 	}
 
-	jsonResponse(w, &listResult{
-		Count: count,
-		List:  list,

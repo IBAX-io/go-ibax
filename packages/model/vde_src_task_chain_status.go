@@ -21,20 +21,6 @@ type VDESrcTaskChainStatus struct {
 	ContractDestName    string `gorm:"not null" json:"contract_dest_name"`
 	ContractDestGet     string `gorm:"not null" json:"contract_dest_get"`
 	ContractDestGetHash string `gorm:"not null" json:"contract_dest_get_hash"`
-	ContractMode        int64  `gorm:"not null" json:"contract_mode"`
-
-	ContractStateSrc     int64  `gorm:"not null" json:"contract_state_src"`
-	ContractStateDest    int64  `gorm:"not null" json:"contract_state_dest"`
-	ContractStateSrcErr  string `gorm:"not null" json:"contract_state_src_err"`
-	ContractStateDestErr string `gorm:"not null" json:"contract_state_dest_err"`
-
-	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
-	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
-	ContractRunParms     string `gorm:"type:jsonb" json:"contract_run_parms"`
-
-	TaskRunState    int64  `gorm:"not null" json:"task_run_state"`
-	TaskRunStateErr string `gorm:"not null" json:"task_run_state_err"`
-
 	TxHash     string `gorm:"not null" json:"tx_hash"`
 	ChainState int64  `gorm:"not null" json:"chain_state"`
 	BlockId    int64  `gorm:"not null" json:"block_id"`
@@ -104,6 +90,15 @@ func (m *VDESrcTaskChainStatus) GetAllByTaskState(TaskState int64) ([]VDESrcTask
 func (m *VDESrcTaskChainStatus) GetOneByTaskState(TaskState int64) (bool, error) {
 	return isFound(DBConn.Where("task_state = ?", TaskState).First(m))
 }
+
+func (m *VDESrcTaskChainStatus) GetOneByContractState(ContractState int64) (bool, error) {
+	return isFound(DBConn.Where("contract_state = ?", ContractState).First(m))
+}
+
+func (m *VDESrcTaskChainStatus) GetOneByChainState(ChainState int64) (bool, error) {
+	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
+}
+
 func (m *VDESrcTaskChainStatus) GetAllByContractStateAndChainState(ContractStateSrc int64, ContractStateDest int64, ChainState int64) ([]VDESrcTaskChainStatus, error) {
 	result := make([]VDESrcTaskChainStatus, 0)
 	err := DBConn.Table("vde_src_task_chain_status").Where("contract_state_src = ? AND contract_state_dest = ? AND chain_state = ?", ContractStateSrc, ContractStateDest, ChainState).Find(&result).Error

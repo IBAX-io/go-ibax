@@ -30,16 +30,6 @@ func VDEDestLogUpToChain(ctx context.Context, d *daemon) error {
 		blockchain_ecosystem string
 		err                  error
 	)
-
-	m := &model.VDEDestDataLog{}
-	DestTaskDataLog, err := m.GetAllByChainState(0) // 0
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data log")
-		return err
-	}
-	if len(DestTaskDataLog) == 0 {
-		//log.Info("Dest task data log not found")
-		time.Sleep(time.Second * 2)
 		return nil
 	}
 
@@ -129,6 +119,14 @@ func VDEDestLogUpToChainState(ctx context.Context, d *daemon) error {
 	)
 
 	m := &model.VDEDestDataLog{}
+	DestTaskDataLog, err := m.GetAllByChainState(1) //1
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data log")
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
+	if len(DestTaskDataLog) == 0 {
+		//log.Info("Dest task data log not found")
 		time.Sleep(time.Millisecond * 2)
 		return nil
 	}

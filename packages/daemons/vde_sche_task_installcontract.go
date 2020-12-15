@@ -192,6 +192,16 @@ func VDEScheTaskInstallContractDest(ctx context.Context, d *daemon) error {
 //		err                  error
 //	)
 //
+//	m := &model.VDEScheTaskFromSrc{}
+//	ScheTask, err := m.GetAllByContractStateSrc(0) //0
+//	if err != nil {
+//		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
+//		return err
+//	}
+//	if len(ScheTask) == 0 {
+//		//log.Info("Sche task not found")
+//		time.Sleep(time.Millisecond * 100)
+//		return nil
 //	}
 //
 //	// deal with task data
@@ -215,9 +225,6 @@ func VDEScheTaskInstallContractDest(ctx context.Context, d *daemon) error {
 //		// Login
 //		//err := api.KeyLogin(src, api.ApiEcosystemID)
 //		gAuth_sche, _, gPrivate_sche, _, _, err := vde_api.KeyLogin(vde_sche_apiAddress, src, vde_sche_apiEcosystemID)
-//		if err != nil {
-//			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
-//			time.Sleep(2 * time.Second)
 //			continue
 //		}
 //		//fmt.Println("Login OK!")

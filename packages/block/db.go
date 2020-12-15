@@ -79,6 +79,16 @@ func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, 
 		if err = enc.Encode(&rtx); err != nil {
 			return nil, err
 		}
+	}
+
+	return crypto.Hash(buf.Bytes()), nil
+}
+
+// InsertIntoBlockchain inserts a block into the blockchain
+func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error {
+	// for local tests
+	blockID := block.Header.BlockID
+
 	// record into the block chain
 	bl := &model.Block{}
 	err := bl.DeleteById(transaction, blockID)
@@ -163,13 +173,6 @@ func GetDataFromFirstBlock() (data *consts.FirstBlock, ok bool) {
 
 	if !isFound {
 		return
-	}
-
-	pb, err := UnmarshallBlock(bytes.NewBuffer(block.Data), true)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.ParserError, "error": err}).Error("parsing data of first block")
-		return
-	}
 
 	if len(pb.Transactions) == 0 {
 		log.WithFields(log.Fields{"type": consts.ParserError}).Error("list of parsers is empty")
