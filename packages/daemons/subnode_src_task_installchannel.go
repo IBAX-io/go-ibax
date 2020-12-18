@@ -82,6 +82,15 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 			continue
 		}
 
+		if tran_mode != "1" && tran_mode != "2" && tran_mode != "3" { //
+			item.ChannelState = 3 //fail
+			err = item.Updates()
+			if err != nil {
+				log.WithError(err)
+			}
+			continue
+		}
+
 		if tran_mode == "3" { //Under the chain tran
 			item.ChannelState = 4 //Indicates an error in parsing task parameters
 			err = item.Updates()
@@ -239,16 +248,6 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 			}
 		} else {
 			log.WithFields(log.Fields{"error": err}).Error("tran_mode error")
-			continue
-		}
-
-		chain_api.ApiPrivateFor = []string{
-			tran_mode,
-			//"1",
-			//node_pubkey,
-		}
-		chain_api.ApiPrivateFor = append(chain_api.ApiPrivateFor, node_pubkey_slice...)
-
 		ContractName := `@1NewTableJoint`
 		_, _, _, err = chain_api.PostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
 		if err != nil {

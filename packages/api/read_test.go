@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRead(t *testing.T) {
 	var (
 		retCont contentResult
 	)
@@ -123,3 +122,8 @@ func TestRead(t *testing.T) {
 
 	assert.NoError(t, sendPost(`content`, &url.Values{`template`: {
 		`DBFind(` + name + `, src).Limit(2)`}}, &retCont))
+	if !strings.Contains(RawToString(retCont.Tree), `No name`) {
+		t.Errorf(`wrong tree %s`, RawToString(retCont.Tree))
+		return
+	}
+}

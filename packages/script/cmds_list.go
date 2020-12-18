@@ -31,15 +31,8 @@ const (
 	cmdArrayInit             // array initialization
 	cmdError                 // error command
 )
-	cmdAnd
-	cmdOr
-	cmdEqual
-	cmdNotEq
-	cmdLess
-	cmdNotLess
-	cmdGreat
-	cmdNotGreat
 
-	cmdSys          = 0xff
-	cmdUnary uint16 = 50
+// the commands for operations in expressions are listed below
+const (
+	cmdNot = iota | 0x0100
 )

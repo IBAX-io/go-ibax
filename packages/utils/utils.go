@@ -136,6 +136,14 @@ var (
 // GetHTTPTextAnswer returns HTTP answer as a string
 func GetHTTPTextAnswer(url string) (string, error) {
 	resp, err := http.Get(url)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "url": url}).Error("cannot get url")
+		return "", err
+	}
+	defer resp.Body.Close()
+	htmlData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.IOError}).Error("cannot read response body")
 		return "", err
 	}
 	if resp.StatusCode == 404 {
@@ -197,18 +205,6 @@ func CallMethod(i interface{}, methodName string) interface{} {
 		finalMethod = method
 	}
 
-	if finalMethod.IsValid() {
-		return finalMethod.Call([]reflect.Value{})[0].Interface()
-	}
-
-	// return or panic, method not found of either type
-	log.WithFields(log.Fields{"method_name": methodName, "type": consts.NotFound}).Error("method not found")
-	return fmt.Errorf("method %s not found", methodName)
-}
-
-// Caller returns the name of the latest function
-func Caller(steps int) string {
-	name := "?"
 	if pc, _, num, ok := runtime.Caller(steps + 1); ok {
 		name = fmt.Sprintf("%s :  %d", filepath.Base(runtime.FuncForPC(pc).Name()), num)
 	}

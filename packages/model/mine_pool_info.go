@@ -17,7 +17,9 @@ type MinePoolInfo struct {
 	Status           int64           `gorm:"not null" ` //
 	HomeUrl          string          `gorm:"null" `     //
 	Date_created     int64           `gorm:"not null" ` //
-	var pools []MinePoolInfo
+}
+
+// TableName returns name of table
 	err := GetDB(dbt).Table(m.TableName()).Find(&pools).Error
 	if err != nil {
 		return pools, err

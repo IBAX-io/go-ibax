@@ -85,6 +85,20 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 			logger.WithFields(log.Fields{"type": consts.NotFound, "err": errUpdNotExistRecord, "table": table, "fields": fields, "values": shortString(fmt.Sprintf("%+v", ivalues), 100), "where": inWhere, "query": shortString(selectQuery, 100)}).Error("updating for not existing record")
 			return 0, "", errUpdNotExistRecord
 		}
+		if sqlBuilder.IsEmptyWhere() {
+			logger.WithFields(log.Fields{"type": consts.NotFound,
+				"error": errWhereUpdate}).Error("update without where")
+			return 0, "", errWhereUpdate
+		}
+	}
+
+	if !sqlBuilder.Where.IsEmpty() && len(logData) > 0 {
+		var err error
+		rollbackInfoStr, err = sqlBuilder.GenerateRollBackInfoString(logData)
+		if err != nil {
+			logger.WithFields(log.Fields{"error": err}).Error("on generate rollback info string for update")
+			return 0, "", err
+		}
 
 		updateExpr, err := sqlBuilder.GetSQLUpdateExpr(logData)
 		if err != nil {
@@ -141,15 +155,6 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		if len(rollbackInfoStr) <= 0 {
 			idNames := strings.SplitN(sqlBuilder.Table, `_`, 2)
 			if len(idNames) == 2 {
-				if sqlBuilder.KeyTableChkr.IsKeyTable(idNames[1]) {
-					tid = sqlBuilder.TableID() + "," + sqlBuilder.GetEcosystem()
-				}
-			}
-		}
-		if err := addRollback(sc, sqlBuilder.Table, tid, rollbackInfoStr); err != nil {
-			return 0, sqlBuilder.TableID(), err
-		}
-	}
 	return cost, sqlBuilder.TableID(), nil
 }
 

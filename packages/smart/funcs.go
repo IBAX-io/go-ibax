@@ -29,6 +29,21 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/obsmanager"
+	"github.com/IBAX-io/go-ibax/packages/scheduler"
+	"github.com/IBAX-io/go-ibax/packages/scheduler/contract"
+	"github.com/IBAX-io/go-ibax/packages/script"
+	qb "github.com/IBAX-io/go-ibax/packages/smart/queryBuilder"
+	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+	"github.com/IBAX-io/go-ibax/packages/utils/tx"
+
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
+	log "github.com/sirupsen/logrus"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 const (
@@ -305,13 +320,6 @@ func EmbedFuncs(vm *script.VM, vt script.VMType) {
 		"CheckNumberChars": CheckNumberChars,
 		"DateFormat":       Date,
 		"RegexpMatch":      RegexpMatch,
-		"DBCount":          DBCount,
-		"MathMod":          MathMod,
-		"CreateView":       CreateView,
-	}
-
-	switch vt {
-	case script.VMTypeOBS:
 		f["HTTPRequest"] = HTTPRequest
 		f["GetMapKeys"] = GetMapKeys
 		f["SortedKeys"] = SortedKeys

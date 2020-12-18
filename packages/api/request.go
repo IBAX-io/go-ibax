@@ -57,6 +57,16 @@ func SendRawRequest(rtype, url, auth string, form *url.Values) ([]byte, error) {
 		return nil, err
 	}
 
+	defer resp.Body.Close()
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(`%d %s`, resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+
 	return data, nil
 }
 
@@ -259,14 +269,6 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 	}, connect.PrivateKey)
 	if err != nil {
 		return 0, "", err
-	}
-
-	ret := &sendTxResult{}
-	err = connect.SendMultipart("sendTx", map[string][]byte{
-		fmt.Sprintf("%x", txhash): data,
-	}, &ret)
-	if err != nil {
-		return
 	}
 	if len(form.Get("nowait")) > 0 {
 		msg = ret.Hashes["data"]

@@ -19,17 +19,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var (
-	ErrDuplicatedTx = errors.New("Duplicated transaction")
-	ErrNotComeTime  = errors.New("Transaction processing time has not come")
-	ErrExpiredTime  = errors.New("Transaction processing time is expired")
-	ErrEarlyTime    = utils.WithBan(errors.New("Early transaction time"))
-	ErrEmptyKey     = utils.WithBan(errors.New("KeyID is empty"))
-)
-
-// InsertInLogTx is inserting tx in log
-func InsertInLogTx(t *Transaction, blockID int64) error {
-	ltx := &model.LogTransaction{Hash: t.TxHash, Block: blockID}
 	if err := ltx.Create(t.DbTransaction); err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("insert logged transaction")
 		return utils.ErrInfo(err)
@@ -81,6 +70,18 @@ func DeleteQueueTx(dbTransaction *model.DbTransaction, hash []byte) error {
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("deleting transaction if unused")
 		return err
+	}
+	//err = model.DeleteTransactionsAttemptsByHash(dbTransaction, hash)
+	//if err != nil {
+	//	log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("deleting DeleteTransactionsAttemptsByHash")
+	//	return err
+	//}
+	return nil
+}
+
+func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText string) error {
+	if hash == nil {
+		return nil
 	}
 	if len(errText) > 255 {
 		errText = errText[:255] + "..."

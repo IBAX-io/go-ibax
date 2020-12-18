@@ -13,6 +13,19 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/utils/tx"
+
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+)
+
+type localBannedNode struct {
+	HonorNode      *syspar.HonorNode
+	LocalUnBanTime time.Time
+}
+
+type NodesBanService struct {
 	localBannedNodes map[int64]localBannedNode
 	honorNodes       []syspar.HonorNode
 
@@ -54,19 +67,6 @@ func (nbs *NodesBanService) RegisterBadBlock(node syspar.HonorNode, badBlockId, 
 
 	return nil
 }
-
-// IsBanned is allows to check node ban (local or global)
-func (nbs *NodesBanService) IsBanned(node syspar.HonorNode) bool {
-	nbs.refreshNodes()
-
-	nbs.m.Lock()
-	defer nbs.m.Unlock()
-
-	nodeKeyID := crypto.Address(node.PublicKey)
-	// Searching for local ban
-	now := time.Now()
-	//fmt.Println("now:",now.Unix())
-
 	if fn, ok := nbs.localBannedNodes[nodeKeyID]; ok {
 		//fmt.Println("localunbantime:",fn.LocalUnBanTime.Unix())
 		if now.Equal(fn.LocalUnBanTime) || now.After(fn.LocalUnBanTime) {

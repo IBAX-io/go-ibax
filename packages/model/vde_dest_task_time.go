@@ -1,3 +1,10 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+func (VDEDestTaskTime) TableName() string {
+	return "vde_dest_task_time"
 }
 
 func (m *VDEDestTaskTime) Create() error {

@@ -4,4 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daemonsctl
+
+func RunAllDaemons(ctx context.Context) error {
+	loader := modes.GetDaemonLoader()
+
+	return loader.Load(ctx)
 }

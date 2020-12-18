@@ -157,6 +157,18 @@ type ConfirmResponse struct {
 func (resp *ConfirmResponse) Read(r io.Reader) error {
 	h, err := readSliceWithSize(r, consts.HashSize)
 	if err == io.EOF {
+	} else if err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on reading ConfirmResponse reverse order")
+		return err
+	}
+	resp.Hash = h
+	return nil
+}
+
+func (resp *ConfirmResponse) Write(w io.Writer) error {
+	if err := writeSliceWithSize(w, resp.Hash, consts.HashSize); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on sending ConfiremResponse hash")
+		return err
 	}
 
 	return nil
@@ -1571,16 +1583,6 @@ func (req *VDEAgentDataRequest) Write(w io.Writer) error {
 	err = writeSlice(w, []byte(req.TaskUUID))
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on sending TaskUUID request")
-		return err
-	}
-
-	err = writeSlice(w, []byte(req.DataUUID))
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on sending DataUUID request")
-		return err
-	}
-
-	err = writeSlice(w, []byte(req.AgentMode))
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on sending AgentMode request")
 		return err

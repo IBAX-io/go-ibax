@@ -22,6 +22,13 @@ type VDESrcDataHash struct {
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
+func (VDESrcDataHash) TableName() string {
+	return "vde_src_data_hash"
+}
+
+func (m *VDESrcDataHash) Create() error {
+	return DBConn.Create(&m).Error
+}
 
 func (m *VDESrcDataHash) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
@@ -42,16 +49,6 @@ func (m *VDESrcDataHash) GetOneByID() (*VDESrcDataHash, error) {
 }
 
 func (m *VDESrcDataHash) GetAllByTaskUUID(TaskUUID string) ([]VDESrcDataHash, error) {
-	result := make([]VDESrcDataHash, 0)
-	err := DBConn.Table("vde_src_data_hash").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
-}
-
-func (m *VDESrcDataHash) GetOneByTaskUUID(TaskUUID string) (*VDESrcDataHash, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
-}
-
 func (m *VDESrcDataHash) GetAllByChainState(ChainState int64) ([]VDESrcDataHash, error) {
 	result := make([]VDESrcDataHash, 0)
 	err := DBConn.Table("vde_src_data_hash").Where("chain_state = ?", ChainState).Find(&result).Error

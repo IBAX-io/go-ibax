@@ -9,16 +9,6 @@ import (
 	"context"
 	"net/http"
 
-	jwt "github.com/dgrijalva/jwt-go"
-	log "github.com/sirupsen/logrus"
-)
-
-type contextKey int
-
-const (
-	contextKeyLogger contextKey = iota
-	contextKeyToken
-	contextKeyClient
 )
 
 func setContext(r *http.Request, key, value interface{}) *http.Request {
@@ -38,6 +28,9 @@ func getLogger(r *http.Request) *log.Entry {
 		return v.(*log.Entry)
 	}
 	return nil
+}
+
+func setToken(r *http.Request, token *jwt.Token) *http.Request {
 	return setContext(r, contextKeyToken, token)
 }
 
