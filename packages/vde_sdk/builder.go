@@ -60,6 +60,15 @@ func newTransaction(smartTx SmartContract, privateKey []byte, internal bool) (da
 	data = append(append([]byte{128}, converter.EncodeLengthPlusData(data)...), converter.EncodeLengthPlusData(signature)...)
 	return
 }
+
+func NewInternalTransaction(smartTx SmartContract, privateKey []byte) (data, hash []byte, err error) {
+	return newTransaction(smartTx, privateKey, true)
+}
+
+func NewTransaction(smartTx SmartContract, privateKey []byte) (data, hash []byte, err error) {
+	return newTransaction(smartTx, privateKey, false)
+}
+
 /*
 // CreateTransaction creates transaction
 func CreateTransaction(data, hash []byte, keyID int64) error {
@@ -72,7 +81,3 @@ func CreateTransaction(data, hash []byte, keyID int64) error {
 	}
 	if err := tx.Create(); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating new transaction")
-		return err
-	}
-	return nil
-}*/

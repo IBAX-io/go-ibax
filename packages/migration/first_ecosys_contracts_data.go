@@ -20,17 +20,14 @@ VALUES
 		}
 	}
 	action {
+		BndWallet($Id, $ecosystem_id)
+	}
+}
+', '1', 'ContractConditions("MainCondition")', '1', '1'),
+	(next_id('1_contracts'), 'CallDelayedContract', 'contract CallDelayedContract {
 	data {
         Id int
 	}
-
-	conditions {
-		HonorNodeCondition()
-
-		var rows array
-		rows = DBFind("@1delayed_contracts").Where({"id": $Id, "deleted": 0})
-
-		if !Len(rows) {
 			warning Sprintf(LangRes("@1template_delayed_contract_not_exist"), $Id)
 		}
 		$cur = rows[0]

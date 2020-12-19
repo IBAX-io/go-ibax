@@ -1,5 +1,8 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
 package model
 
 import "github.com/IBAX-io/go-ibax/packages/converter"
@@ -17,11 +20,6 @@ type Member struct {
 func (m *Member) SetTablePrefix(prefix string) {
 	m.ecosystem = converter.StrToInt64(prefix)
 }
-
-// TableName returns name of table
-func (m *Member) TableName() string {
-	if m.ecosystem == 0 {
-		m.ecosystem = 1
 	}
 	return `1_members`
 }
