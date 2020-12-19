@@ -36,16 +36,6 @@ type walletHistoryForm struct {
 	Limit      int    `schema:"limit"`
 	Page       int    `schema:"page"`
 	SearchType string `schema:"searchType"`
-}
-
-func (f *walletHistoryForm) Validate(r *http.Request) error {
-	if len(f.SearchType) == 0 {
-		f.SearchType = ""
-	}
-	return nil
-}
-func getWalletHistory(w http.ResponseWriter, r *http.Request) {
-	form := &walletHistoryForm{}
 	token := getToken(r)
 	var err error
 
@@ -54,6 +44,11 @@ func getWalletHistory(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if form.Limit == 0 {
+		form.Limit = 20
+	}
+	if form.Page == 0 {
+		form.Page = 1
 	}
 	form.Page = (form.Page - 1) * form.Limit
 
