@@ -8,18 +8,6 @@ package migration
 var firstEcosystemPagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, conditions, app_id, ecosystem) VALUES
 	(next_id('1_pages'), 'notifications', '', 'default_menu', 'ContractConditions("@1DeveloperCondition")', '1', '1'),
 	(next_id('1_pages'), 'import_app', 'Div(content-wrapper){
-    DBFind(@1buffer_data).Columns("id,value->name,value->data").Where({"key": import, "account": #account_id#, "ecosystem": #ecosystem_id#}).Vars(import)
-    DBFind(@1buffer_data).Columns("value->app_name,value->pages,value->pages_count,value->blocks,value->blocks_count,value->menu,value->menu_count,value->parameters,value->parameters_count,value->languages,value->languages_count,value->contracts,value->contracts_count,value->tables,value->tables_count").Where({"key": import_info, "account": #account_id#, "ecosystem": #ecosystem_id#}).Vars(info)
-
-    SetTitle("Import - #info_value_app_name#")
-    Data(data_info, "DataName,DataCount,DataInfo"){
-        Pages,"#info_value_pages_count#","#info_value_pages#"
-        Blocks,"#info_value_blocks_count#","#info_value_blocks#"
-        Menu,"#info_value_menu_count#","#info_value_menu#"
-        Parameters,"#info_value_parameters_count#","#info_value_parameters#"
-        Language resources,"#info_value_languages_count#","#info_value_languages#"
-        Contracts,"#info_value_contracts_count#","#info_value_contracts#"
-        Tables,"#info_value_tables_count#","#info_value_tables#"
     }
     Div(breadcrumb){
         Span(Class: text-muted, Body: "Your data that you can import")
@@ -65,3 +53,12 @@ var firstEcosystemPagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, 
             Span(Class: text-muted, Body: "Select payload that you want to import")
         }
         Form(panel panel-primary){
+            Div(list-group-item){
+                Input(Name: Data, Type: file)
+            }
+            Div(list-group-item text-right){
+                Button(Body: "Load", Class: btn btn-primary, Contract: @1ImportUpload, Page: @1import_app)
+            }
+        }
+    }', 'developer_menu', 'ContractConditions("@1DeveloperCondition")', '1', '1');
+`

@@ -17,6 +17,10 @@ const VERSION = "1.3.0"
 const BvRollbackHash = 2
 const BvIncludeRollbackHash = 3
 
+// BlockVersion is block version
+const BlockVersion = BvIncludeRollbackHash
+
+// DEFAULT_TCP_PORT used when port number missed in host addr
 const DEFAULT_TCP_PORT = 7078
 
 // FounderAmount is the starting amount of founder
@@ -55,12 +59,6 @@ const WRITE_TIMEOUT = 20
 
 // DATA_TYPE_MAX_BLOCK_ID is block id max datatype
 const DATA_TYPE_MAX_BLOCK_ID = 10
-
-// DATA_TYPE_BLOCK_BODY is body block datatype
-const DATA_TYPE_BLOCK_BODY = 7
-
-// AddressLength is length of address
-const AddressLength = 20
 
 // PubkeySizeLength is pubkey length
 const PubkeySizeLength = 64

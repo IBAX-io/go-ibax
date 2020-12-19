@@ -93,6 +93,13 @@ func VDEDestMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := m.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
+		return
+	}
+
+	jsonResponse(w, result)
+}
 
 func VDEDestMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -100,24 +107,6 @@ func VDEDestMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	id := converter.StrToInt64(params["id"])
 
 	m := &model.VDEDestMember{}
-	m.ID = id
-	if err := m.Delete(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
-	}
-
-	jsonResponse(w, "ok")
-}
-
-func VDEDestMemberListHandlre(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
-	srcData := model.VDEDestMember{}
-
-	result, err := srcData.GetAll()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
-		errorResponse(w, err)
-		return
-	}
 	jsonResponse(w, result)
 }
 
