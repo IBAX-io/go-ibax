@@ -17,22 +17,10 @@ import (
 // Type7 writes the body of the specified block
 // blocksCollection and queue_parser_blocks daemons send the request through p.GetBlocks()
 func Type7(request *network.GetBodiesRequest, w net.Conn) error {
-	if request.ReverseOrder {
-		blocks, err = block.GetReverseBlockchain(int64(request.BlockID), network.BlocksPerRequest)
-	} else {
-		blocks, err = block.GetBlocksFrom(int64(request.BlockID-1), "ASC", network.BlocksPerRequest)
-	}
+	block := &model.Block{}
 
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "block_id": request.BlockID}).Error("Error getting 1000 blocks from block_id")
-		if err := network.WriteInt(0, w); err != nil {
-			log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on sending 0 requested blocks")
-		}
-		return err
-	}
-
-	if err := network.WriteInt(int64(len(blocks)), w); err != nil {
-		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on sending requested blocks count")
+	var blocks []model.Block
+	var err error
 		return err
 	}
 

@@ -124,12 +124,6 @@ func TestOutputFormat(t *testing.T) {
 
 	want := `[{"ecosystem":1,"role_id":1,"count":2},{"ecosystem":2,"role_id":2,"count":1}]`
 	bts, err := json.Marshal(records)
-	if assert.NoError(t, err) {
-		assert.Equal(t, string(bts), want, "marshaled not equal")
-	}
-}
-
-func TestStatsChanged(t *testing.T) {
 	type tsc struct {
 		old    []notificationRecord
 		new    []notificationRecord
@@ -155,6 +149,13 @@ func TestStatsChanged(t *testing.T) {
 		// count changed
 		tsc{
 			old: []notificationRecord{
+				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
+				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 1},
+				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
+			},
+
+			new: []notificationRecord{
+				notificationRecord{EcosystemID: 1, RoleID: 1, RecordsCount: 1},
 				notificationRecord{EcosystemID: 1, RoleID: 2, RecordsCount: 2}, //records count changed
 				notificationRecord{EcosystemID: 1, RoleID: 3, RecordsCount: 1},
 			},

@@ -13,14 +13,6 @@ You'll need to add Go's bin directories to your `$PATH` environment variable e.g
 
 ```
 export PATH=$PATH:/usr/local/go/bin
-export PATH=$PATH:$GOPATH/bin
-```
-
-(If you run into trouble, see the [Go install instructions](https://golang.org/doc/install)).
-
-#### Compile
-
-```
 $ export GOPROXY=https://athens.azurefd.net
 $ GO111MODULE=on go mod tidy -v
 
@@ -46,6 +38,20 @@ $    go-ibax generateKeys
 ```bash
 $    go-ibax generateFirstBlock \
         --test=true
+```
+
+4. Initialize the database.
+
+```bash
+$    go-ibax initDatabase
+```
+
+5.Starting go-ibax.
+
+```bash
+$    go-ibax start
+```
+
 
 # docker run
 

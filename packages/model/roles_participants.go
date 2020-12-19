@@ -63,9 +63,20 @@ func MemberHasRolebyName(tx *DbTransaction, ecosys int64, role, account string) 
 		ecosys, role, account).Count(&count).Error; err != nil {
 		return false, err
 	}
-	}
-	return
+
+	return count > 0, nil
 }
+
+// GetMemberRoles return map[id]name all roles assign to member in ecosystem
+func GetMemberRoles(tx *DbTransaction, ecosys int64, account string) (roles []int64, err error) {
+	query := `SELECT role->>'id' as "id" 
+		FROM "1_roles_participants"
+		WHERE ecosystem = ? and deleted = '0' and member->>'account' = ?`
+	list, err := GetAllTransaction(tx, query, -1, ecosys, account)
+	if err != nil {
+		return
+	}
+	for _, role := range list {
 
 // GetRoleMembers return []id all members assign to roles in ecosystem
 func GetRoleMembers(tx *DbTransaction, ecosys int64, roles []int64) (members []string, err error) {

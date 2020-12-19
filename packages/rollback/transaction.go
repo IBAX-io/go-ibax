@@ -9,15 +9,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/smart"
-
-	log "github.com/sirupsen/logrus"
-)
+			addSQLUpdate += k + `=NULL,`
+		} else if syspar.IsByteColumn(tx["table_name"], k) && len(v) != 0 {
 			addSQLUpdate += k + `=decode('` + v + `','HEX'),`
 		} else {
 			addSQLUpdate += k + `='` + strings.Replace(v, `'`, `''`, -1) + `',`

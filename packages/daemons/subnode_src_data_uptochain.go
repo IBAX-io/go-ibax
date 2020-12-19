@@ -21,9 +21,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
 )
 
 //Scheduling task data hash information up the chain
@@ -116,6 +113,19 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 					fmt.Println("error", err)
 					log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
 					return nil
+				}
+				encodeString := base64.StdEncoding.EncodeToString(PrivateFile)
+
+				form := url.Values{
+					`TableName`: {blockchain_table},
+					`TaskUUID`:  {item.TaskUUID},
+					`DataUUID`:  {item.DataUUID},
+					`DataInfo`:  {item.DataInfo},
+					`Data`:      {encodeString},
+				}
+				tran_mode := converter.Int64ToStr(item.TranMode)
+				chain_api.ApiPrivateFor = []string{
+					tran_mode,
 					//"1",
 					//node_pubkey,
 				}

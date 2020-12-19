@@ -94,12 +94,6 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-
-	client := getClient(r)
 	logger := getLogger(r)
 
 	if form.EcosystemID > 0 {
@@ -127,6 +121,11 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 	spfm.SetTablePrefix(converter.Int64ToStr(client.EcosystemID))
 	if ok, err := spfm.Get(nil, "free_membership"); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting free_membership parameter")
+		errorResponse(w, err)
+		return
+	} else if ok {
+		fm = converter.StrToInt64(spfm.Value)
+	}
 	publicKey = account.PublicKey
 	isExistPub = len(publicKey) == 0
 
