@@ -17,16 +17,6 @@ contract ImportUpload {
             DBUpdate("@1buffer_data", $import_id, {"value": initJson})
         } else {
             $import_id = DBInsert("@1buffer_data", {"account": $account_id, "key": "import", "value": initJson, "ecosystem": $ecosystem_id})
-        }
-        $info_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "import_info", "ecosystem": $ecosystem_id}).One("id")
-        if $info_id {
-            $info_id = Int($info_id)
-            DBUpdate("@1buffer_data", $info_id, {"value": initJson})
-        } else {
-            $info_id = DBInsert("@1buffer_data", {"account": $account_id, "key": "import_info", "value": initJson, "ecosystem": $ecosystem_id})
-        }
-        var input map arrData array
-        input = JSONDecode($Data)
         arrData = input["data"]
         var pages_arr blocks_arr menu_arr parameters_arr languages_arr contracts_arr tables_arr array
         // IMPORT INFO
@@ -92,6 +82,18 @@ contract ImportUpload {
         }
         if Len(contracts) > 0 {
             var batch map
+            batch["Data"] = JSONEncode(contracts)
+            sliced = Append(sliced, batch)
+        }
+        input["data"] = sliced
+        // storing
+        DBUpdate("@1buffer_data", $import_id, {"value": input})
+        DBUpdate("@1buffer_data", $info_id, {"value": inf})
+        var name string
+        name = Str(input["name"])
+        var cndns string
+        cndns = Str(input["conditions"])
+        if !DBFind("@1applications").Columns("id").Where({"name": name, "ecosystem": $ecosystem_id}).One("id") {
             DBInsert("@1applications", {"name": name, "conditions": cndns, "ecosystem": $ecosystem_id})
         }
     }

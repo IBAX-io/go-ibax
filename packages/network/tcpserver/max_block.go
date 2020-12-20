@@ -11,6 +11,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
+)
+
+// Type10 sends the last block ID
 // blocksCollection daemon sends this request
 func Type10() (*network.MaxBlockResponse, error) {
 	infoBlock := &model.InfoBlock{}
@@ -24,6 +27,3 @@ func Type10() (*network.MaxBlockResponse, error) {
 	}
 
 	return &network.MaxBlockResponse{
-		BlockID: infoBlock.BlockID,
-	}, nil
-}

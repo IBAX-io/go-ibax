@@ -21,9 +21,13 @@ const (
 )
 
 // CollectMetricDataForEcosystemTables returns metrics for some tables of ecosystems
-		tablePrefix := strconv.FormatInt(stateID, 10)
+func CollectMetricDataForEcosystemTables(timeBlock int64) (metricValues []*Value, err error) {
+	stateIDs, _, err := model.GetAllSystemStatesIDs()
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get all system states ids")
+		return nil, err
+	}
 
-		p := &model.Page{}
 		p.SetTablePrefix(tablePrefix)
 		if pagesCount, err = p.Count(); err != nil {
 			log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get count of pages")

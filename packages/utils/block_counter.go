@@ -1,13 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package utils
-
-import "github.com/IBAX-io/go-ibax/packages/model"
-
-type intervalBlocksCounter interface {
-	count(state blockGenerationState) (int, error)
 }
 
 type blocksCounter struct {
@@ -19,3 +12,5 @@ func (bc *blocksCounter) count(state blockGenerationState) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	return len(blocks), nil
+}

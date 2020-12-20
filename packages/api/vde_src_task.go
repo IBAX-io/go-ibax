@@ -7,6 +7,23 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+func unmarshalColumnVDESrcTask(form *VDESrcTaskForm) (*model.VDESrcTask, error) {
+	var (
+		parms              map[string]interface{}
+		contract_run_parms map[string]interface{}
+		err                error
 	)
 
 	err = json.Unmarshal([]byte(form.Parms), &parms)
@@ -15,17 +32,6 @@ import (
 		return nil, err
 	}
 	err = json.Unmarshal([]byte(form.ContractRunParms), &contract_run_parms)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("unmarshal ContractRunParms error")
-		return nil, err
-	}
-	//fmt.Println("TaskType,TaskState:", form.TaskType, int64(form.TaskType), form.TaskState, int64(form.TaskState))
-	m := &model.VDESrcTask{
-		TaskUUID:            form.TaskUUID,
-		TaskName:            form.TaskName,
-		TaskSender:          form.TaskSender,
-		Comment:             form.Comment,
-		Parms:               converter.MarshalJson(parms),
 		TaskType:            int64(form.TaskType),
 		TaskState:           int64(form.TaskState),
 		ContractSrcName:     form.ContractSrcName,
