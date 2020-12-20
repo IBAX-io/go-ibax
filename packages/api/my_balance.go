@@ -7,13 +7,6 @@ package api
 
 import (
 	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-
-func (m Mode) getMyBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	client := getClient(r)
 	logger := getLogger(r)
 	form := &ecosystemForm{

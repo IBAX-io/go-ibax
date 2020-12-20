@@ -9,18 +9,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/types"
-
-	log "github.com/sirupsen/logrus"
-)
-
-const (
-	columnTypeText     = "text"
-	columnTypeLongText = "long_text"
-	columnTypeBlob     = "blob"
-
-	substringLength = 32
 
 	errComma = `unexpected comma`
 )
@@ -69,6 +57,19 @@ func trimString(in []rune) string {
 		out = out[1 : len(out)-1]
 	}
 	return out
+}
+
+func ParseObject(in []rune) (interface{}, int, error) {
+	var (
+		ret            interface{}
+		key            string
+		mapMode, quote bool
+	)
+
+	length := len(in)
+	if in[0] == '[' {
+		ret = make([]interface{}, 0)
+	} else if in[0] == '{' {
 		ret = types.NewMap()
 		mapMode = true
 	}

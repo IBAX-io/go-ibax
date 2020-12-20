@@ -117,6 +117,10 @@ func VDEAgentLogUpToChain(ctx context.Context, d *daemon) error {
 			continue
 		}
 	}
+
+	return nil
+}
+
 //Query the status of the chain on the scheduling task data log information
 func VDEAgentLogUpToChainState(ctx context.Context, d *daemon) error {
 	var (
@@ -190,10 +194,6 @@ func VDEAgentLogUpToChainState(ctx context.Context, d *daemon) error {
 		} else {
 			//fmt.Println("VDEWaitTx! err: ", err)
 			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-		err = item.Updates()
-		if err != nil {
 			fmt.Println("Update VDEAgentLog table err: ", err)
 			log.WithFields(log.Fields{"error": err}).Error("Update VDEAgentLog table!")
 			time.Sleep(time.Millisecond * 2)

@@ -57,12 +57,6 @@ func GetAllSystemStatesIDs() ([]int64, []string, error) {
 func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
 	return isFound(GetDB(dbTx).First(sys, "id = ?", id))
 }
-
-// Delete is deleting record
-func (sys *Ecosystem) Delete(transaction *DbTransaction) error {
-	return GetDB(transaction).Delete(sys).Error
-				return true
-			}
 		}
 	}
 	return false

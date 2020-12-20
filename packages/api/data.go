@@ -24,19 +24,6 @@ import (
 
 const binaryColumn = "data"
 
-func compareHash(data []byte, urlHash string) bool {
-	urlHash = strings.ToLower(urlHash)
-
-	var hash []byte
-	switch len(urlHash) {
-	case 32:
-		h := md5.Sum(data)
-		hash = h[:]
-	case 64:
-		hash = crypto.Hash(data)
-	}
-
-	return hex.EncodeToString(hash) == urlHash
 func getDataHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)

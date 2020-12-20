@@ -539,14 +539,6 @@ var contracts = []smartContract{
 			var list array
 			list = DBFind("mytable").Where({"date": {"$lt": "CURRENT_DATE"}})
 		}
-	}`, []smartParams{
-		{nil, map[string]string{`error`: `{"type":"panic","error":"It is prohibited to use NOW() or current time functions"}`}},
-	}},
-	{`RowType`, `contract RowType {
-	action {
-		var app map
-		var result string
-		result = GetType(app)
 		app = DBFind("applications").Where({"id":"1"}).Row()
 		result = result + GetType(app)
 		app["app_id"] = 2
@@ -1131,6 +1123,13 @@ func TestEditContracts_ChangeWallet(t *testing.T) {
 	}
 	if ret.Address != "1248-5499-7861-4204-5166" {
 		t.Error(`wrong address`, ret.Address, "!= 1248-5499-7861-4204-5166")
+		return
+	}
+}
+
+func TestUpdateFunc(t *testing.T) {
+	assert.NoError(t, keyLogin(1))
+
 	rnd := `rnd` + crypto.RandSeq(6)
 	form := url.Values{`Value`: {`contract f` + rnd + ` {
 		data {
