@@ -146,25 +146,6 @@ func TestVMCompile(t *testing.T) {
 							func conditions {
 								var q int
 								Println("Front", $Par1, $parent)
-				//				my("Par1,Par2,ext", 123, "Parameter 2", "extended" )
-							}
-							func action {
-								Println("Main", $Par2, $ext)
-							}
-						}
-						contract mytest {
-							func init string {
-								empty()
-								my("Par1,Par2,ext", 123, "Parameter 2", "extended" )
-								//my("Par1,Par2,ext", 33123, "Parameter 332", "33extended" )
-								//@26empty("test",10)
-								empty("toempty", 10)
-								Println( "mytest", $parent)
-								return "OK INIT"
-							}
-						}
-						contract empty {
-							conditions {Println("EmptyCond")
 								}
 							action {
 								Println("Empty", $parent)
@@ -638,6 +619,16 @@ func TestVMCompile(t *testing.T) {
 			}
 		}
 		func getqq() string {
+			return qq2("Id,ID2", 10,20)
+		}`, `getqq`, `1020`},
+		{`func IND() string {
+			var a,b,d array
+			a[0] = 100
+			a[1] = 555
+			b[0] = 200
+			d[0] = a
+			d[1] = b
+			d[0][0] =  777
 	}`, `IND`, `multi-index is not supported`},
 		{`func result() {
 		/*

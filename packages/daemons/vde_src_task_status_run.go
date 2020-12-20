@@ -194,10 +194,6 @@ func VDESrcTaskStatusRunState(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("VDESrcTask getting one task by TaskUUID")
 			time.Sleep(time.Millisecond * 2)
 			continue
-		}
-
-		blockchain_http = item.ContractRunHttp
-		blockchain_ecosystem = item.ContractRunEcosystem
 		//fmt.Println("SrcChainInfo:", blockchain_http, blockchain_ecosystem)
 
 		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
@@ -217,6 +213,14 @@ func VDESrcTaskStatusRunState(ctx context.Context, d *daemon) error {
 			time.Sleep(time.Millisecond * 2)
 			continue
 		}
+		//fmt.Println("Login VDE src OK!")
+
+		blockId, err := vde_api.VDEWaitTx(vde_src_apiAddress, gAuth_src, string(item.TxHash))
+		if blockId > 0 {
+			//fmt.Println("call src task VDEWaitTx! OK!")
+			item.BlockId = blockId
+			item.ChainId = converter.StrToInt64(err.Error())
+			item.ChainState = 2
 			item.ChainErr = ""
 			ThisScrTask.TaskRunState = 1
 		} else if blockId == 0 {

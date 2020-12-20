@@ -9,12 +9,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/spf13/cobra"
-
-	"path/filepath"
-
-	"github.com/IBAX-io/go-ibax/packages/block"
-	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
@@ -113,3 +107,10 @@ func genesisBlock() ([]byte, error) {
 
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block body bin marshalling")
+	}
+
+	return block.MarshallBlock(header, [][]byte{tx}, &utils.BlockData{
+		Hash:          []byte(`0`),
+		RollbacksHash: []byte(`0`),
+	}, "")
+}

@@ -13,6 +13,14 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
+// Key is model
+type Key struct {
+	ecosystem    int64
+	accountKeyID int64 `gorm:"-"`
+
+	ID          int64  `gorm:"primary_key;not null"`
+	AccountID   string `gorm:"column:account;not null"`
+	PublicKey   []byte `gorm:"column:pub;not null"`
 	Amount      string `gorm:"not null"`
 	Mintsurplus string `gorm:"not null"`
 	Maxpay      string `gorm:"not null"`
@@ -43,18 +51,6 @@ func (m *Key) CapableAmount() decimal.Decimal {
 	}
 	maxpay := decimal.New(0, 0)
 	if len(m.Maxpay) > 0 {
-		maxpay, _ = decimal.NewFromString(m.Maxpay)
-	}
-	if maxpay.GreaterThan(decimal.New(0, 0)) && maxpay.LessThan(amount) {
-		amount = maxpay
-	}
-	return amount
-}
-
-// Get is retrieving model from database
-func (m *Key) Get(db *DbTransaction, wallet int64) (bool, error) {
-	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
-}
 
 // GetTr is retrieving model from database
 func (m *Key) GetTr(db *DbTransaction, wallet int64) (bool, error) {

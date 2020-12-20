@@ -208,6 +208,21 @@ func processToText(par parFunc, input string) (out string) {
 	}
 	return
 }
+
+func ifValue(val string, workspace *Workspace) bool {
+	var sep string
+
+	val = parseArg(val, workspace)
+
+	if strings.Index(val, `;base64`) < 0 {
+		for _, item := range []string{`==`, `!=`, `<=`, `>=`, `<`, `>`} {
+			if strings.Index(val, item) >= 0 {
+				sep = item
+				break
+			}
+		}
+	}
+	cond := []string{val}
 	if len(sep) > 0 {
 		cond = strings.SplitN(val, sep, 2)
 		cond[0], cond[1] = macro(strings.Trim(strings.TrimSpace(cond[0]), `"`), workspace.Vars),
@@ -401,12 +416,6 @@ func callFunc(curFunc *tplFunc, owner *node, workspace *Workspace, params *[][]r
 		parFunc.Tails = tailpars
 	}
 	if *workspace.Timeout {
-		return
-	}
-	parFunc.Pars = &pars
-	if getVar(workspace, `_full`) == `1` {
-		out = curFunc.Full(parFunc)
-	} else {
 		out = curFunc.Func(parFunc)
 	}
 	for key, v := range parFunc.Node.Attr {

@@ -64,10 +64,14 @@ func TestTask(t *testing.T) {
 		t.Error(err)
 	}
 
+	err = sch.UpdateTask(&Task{ID: "task2"})
+	if err != nil {
+		t.Error(err)
+	}
 
-	now := time.Now()
-	time.Sleep(task.Next(now).Sub(now) + time.Second)
-
+	handler := &mockHandler{}
+	task = &Task{ID: taskID, CronSpec: "* * * * *", Handler: handler}
+	sch.UpdateTask(task)
 	if handler.count == 0 {
 		t.Error("task not running")
 	}

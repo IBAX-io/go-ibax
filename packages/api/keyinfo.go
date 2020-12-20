@@ -32,6 +32,20 @@ type keyInfoResult struct {
 	Ecosystems []*keyEcosystemInfo `json:"ecosystems"`
 }
 
+type keyEcosystemInfo struct {
+	Ecosystem     string       `json:"ecosystem"`
+	Name          string       `json:"name"`
+	Roles         []roleInfo   `json:"roles,omitempty"`
+	Notifications []notifyInfo `json:"notifications,omitempty"`
+}
+
+func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	keysList := make([]*keyEcosystemInfo, 0)
+	keyID := converter.StringToAddress(params["wallet"])
+	if keyID == 0 {
 		errorResponse(w, errInvalidWallet.Errorf(params["wallet"]))
 		return
 	}
@@ -74,12 +88,6 @@ type keyInfoResult struct {
 			errorResponse(w, err)
 			return
 		}
-		for _, r := range roles {
-			var role roleInfo
-			if err := json.Unmarshal([]byte(r.Role), &role); err != nil {
-				logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling role")
-				errorResponse(w, err)
-				return
 			}
 			keyRes.Roles = append(keyRes.Roles, role)
 		}
