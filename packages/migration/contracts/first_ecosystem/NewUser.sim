@@ -22,5 +22,5 @@ contract NewUser {
 			"id": $id,
 			"account": $account,
 			"pub": $pub,
-	}
-}
+			"amount": $amount,
+			"ecosystem": 1

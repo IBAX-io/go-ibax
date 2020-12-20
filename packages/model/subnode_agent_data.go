@@ -28,14 +28,8 @@ type SubNodeAgentData struct {
 	DataSendErr    string `gorm:"not null" json:"data_send_err"`
 	UpdateTime     int64  `gorm:"not null" json:"update_time"`
 	CreateTime     int64  `gorm:"not null" json:"create_time"`
-}
 
-func (SubNodeAgentData) TableName() string {
-	return "subnode_agent_data"
-}
-
-func (m *SubNodeAgentData) Create() error {
-	return DBConn.Create(&m).Error
+func (m *SubNodeAgentData) GetAll() ([]SubNodeAgentData, error) {
 	var result []SubNodeAgentData
 	err := DBConn.Find(&result).Error
 	return result, err

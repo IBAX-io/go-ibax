@@ -199,6 +199,17 @@ func TestBlockTImeCalculator_countBlockTime(t *testing.T) {
 	}{
 		// Current time before first block case
 		{
+			firstBlockTime: time.Unix(1, 0),
+			clock:          time.Unix(0, 0),
+
+			err: TimeError,
+		},
+
+		// Zero duration case
+		{
+			firstBlockTime: time.Unix(0, 0),
+			blockGenTime:   time.Second * 0,
+			blocksGap:      time.Second * 0,
 			nodesCount:     5,
 			clock:          time.Unix(0, 0),
 
@@ -226,20 +237,6 @@ func TestBlockTImeCalculator_countBlockTime(t *testing.T) {
 			},
 		},
 
-		// Duration testing case
-		{
-			firstBlockTime: time.Unix(0, 0),
-			blockGenTime:   time.Second * 0,
-			blocksGap:      time.Second * 1,
-			nodesCount:     5,
-			clock:          time.Unix(0, 0),
-
-			result: blockGenerationState{
-				start:    time.Unix(0, 0),
-				duration: time.Second * 1,
-
-				nodePosition: 0,
-			},
 		},
 
 		// Duration testing case

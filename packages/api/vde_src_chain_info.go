@@ -46,15 +46,6 @@ func VDESrcChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		errorResponse(w, err)
 		return
-	}
-
-	m.CreateTime = time.Now().Unix()
-
-	if err = m.Create(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
-	}
-
-	model.DBConn.Last(&m)
 
 	jsonResponse(w, *m)
 }
@@ -134,5 +125,9 @@ func VDESrcChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	result, err := srcData.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query chain info data by ID failed")
+		errorResponse(w, err)
+		return
+	}
+
 	jsonResponse(w, result)
 }
