@@ -127,6 +127,10 @@ func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
 			myContractDestGet = item.ContractDestGet
 			myContractDestGetHash = item.ContractDestGetHash
 		}
+
+		ScheTaskChainStatusSrc := model.VDESrcTaskChainStatus{
+			TaskUUID:        item.TaskUUID,
+			TaskName:        item.TaskName,
 			TaskSender:      item.TaskSender,
 			TaskReceiver:    vde_src_pubkey,
 			Comment:         item.Comment,
@@ -254,13 +258,6 @@ func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
 
 	} //for
 	return nil
-}
-
-//Search a chain request
-func VDESrcTaskChainStatusState(ctx context.Context, d *daemon) error {
-	var (
-		err             error
-		TaskParms       map[string]interface{}
 		vde_src_pubkey  string
 		vde_dest_pubkey string
 		ok              bool

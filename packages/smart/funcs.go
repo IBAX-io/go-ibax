@@ -320,6 +320,13 @@ func EmbedFuncs(vm *script.VM, vt script.VMType) {
 		"CheckNumberChars": CheckNumberChars,
 		"DateFormat":       Date,
 		"RegexpMatch":      RegexpMatch,
+		"DBCount":          DBCount,
+		"MathMod":          MathMod,
+		"CreateView":       CreateView,
+	}
+
+	switch vt {
+	case script.VMTypeOBS:
 		f["HTTPRequest"] = HTTPRequest
 		f["GetMapKeys"] = GetMapKeys
 		f["SortedKeys"] = SortedKeys
@@ -419,14 +426,6 @@ func ContractAccess(sc *SmartContract, names ...interface{}) bool {
 					contName := sc.TxContract.StackCont[i].(string)
 					if strings.HasPrefix(contName, `@`) {
 						if contName == name {
-							return true
-						}
-						break
-					}
-				}
-			}
-		}
-	}
 	return false
 }
 

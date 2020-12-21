@@ -246,17 +246,6 @@ func BinMarshal(out *[]byte, v interface{}) (*[]byte, error) {
 		}
 	case reflect.Float64:
 		bin := float2Bytes(t.Float())
-		*out = append(*out, bin...)
-	case reflect.Int64:
-		EncodeLenInt64(out, t.Int())
-	case reflect.Uint64:
-		tmp := make([]byte, 8)
-		binary.BigEndian.PutUint64(tmp, t.Uint())
-		*out = append(*out, tmp...)
-	case reflect.String:
-		*out = append(append(*out, EncodeLength(int64(t.Len()))...), []byte(t.String())...)
-	case reflect.Struct:
-		for i := 0; i < t.NumField(); i++ {
 			if out, err = BinMarshal(out, t.Field(i).Interface()); err != nil {
 				return out, err
 			}
@@ -1001,6 +990,14 @@ func Escape(data string) string {
 	return string(out)
 }
 
+// FieldToBytes returns the value of n-th field of v as []byte
+func FieldToBytes(v interface{}, num int) []byte {
+	t := reflect.ValueOf(v)
+	ret := make([]byte, 0, 2048)
+	if t.Kind() == reflect.Struct && num < t.NumField() {
+		field := t.Field(num)
+		switch field.Kind() {
+		case reflect.Uint8, reflect.Uint32, reflect.Uint64:
 			ret = append(ret, []byte(fmt.Sprintf("%d", field.Uint()))...)
 		case reflect.Int8, reflect.Int32, reflect.Int64:
 			ret = append(ret, []byte(fmt.Sprintf("%d", field.Int()))...)

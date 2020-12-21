@@ -35,16 +35,6 @@ var hal Hval
 var Hal = &hal
 
 func (h Hval) String() string {
-	return h.name
-}
-
-func getHasher() Hasher {
-	switch hal.name {
-	case hSM3:
-		return &SM3{}
-	case hSHA256:
-		return &SHA256{}
-	default:
 		panic(fmt.Errorf("hash is not supported yet or empty"))
 	}
 }
@@ -83,6 +73,14 @@ func Address(pubKey []byte) int64 {
 	num := strconv.FormatUint(crc, 10)
 	val := []byte(strings.Repeat("0", consts.AddressLength-len(num)) + num)
 	return int64(crc - (crc % 10) + uint64(checkSum(val[:len(val)-1])))
+}
+
+type SM3 struct {
+	Hasher
+}
+
+type SHA256 struct {
+	Hasher
 }
 
 func (s *SM3) getHMAC(secret string, message string) ([]byte, error) {

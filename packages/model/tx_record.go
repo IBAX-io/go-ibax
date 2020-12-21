@@ -9,17 +9,6 @@ import (
 	"reflect"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
-)
-
-func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []interface{}, err error) {
-	db := GetDB(tx)
-	// get record from rollback_tx
-	var (
-		rollbackTxs []RollbackTx
-	)
-	err = db.Table("rollback_tx").Where("tx_hash = ?", []byte(converter.HexToBin(hashStr))).Find(&rollbackTxs).Error
-	if err != nil {
-		return
 	}
 	for _, rtx := range rollbackTxs {
 		id := rtx.TableID
@@ -57,3 +46,5 @@ func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []interface{}, e
 
 	}
 
+	return
+}

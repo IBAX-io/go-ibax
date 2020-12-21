@@ -63,9 +63,19 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 
 	// not open
 	time.Sleep(time.Millisecond * 1000 * 20)
-	return nil
 
-	var (
+		myContractSrcGet      string
+		myContractSrcGetHash  string
+		myContractDestGet     string
+		myContractDestGetHash string
+
+		ContractSrcGetHashHex  string
+		ContractDestGetHashHex string
+	)
+
+	tasktime := &model.VDEScheTaskTime{}
+	ScheTaskTime, err := tasktime.Get()
+	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting ScheTaskTime")
 		time.Sleep(time.Millisecond * 2)
 		return err

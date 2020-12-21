@@ -85,6 +85,21 @@ func (b *SQLQueryBuilder) Prepare() error {
 			} else {
 				b.Fields = append(b.Fields, "ecosystem")
 				b.FieldValues = append(b.FieldValues, b.keyEcosystem)
+			}
+		}
+	}
+
+	if err := b.normalizeValues(); err != nil {
+		b.WithFields(log.Fields{"error": err}).Error("on normalize field values")
+		return err
+	}
+
+	values, err := converter.InterfaceSliceToStr(b.FieldValues)
+	if err != nil {
+		b.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("on convert field values to string")
+		return err
+	}
+
 	b.stringValues = values
 	b.prepared = true
 	return nil
@@ -165,18 +180,6 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, e
 	if err := b.Prepare(); err != nil {
 		return "", err
 	}
-
-	expressions := make([]string, 0, len(b.Fields))
-	jsonFields := make(map[string]map[string]string)
-
-	for i := 0; i < len(b.Fields); i++ {
-		if b.isKeyTable && b.Fields[i] == "ecosystem" {
-			continue
-		}
-
-		if strings.Contains(b.Fields[i], `->`) {
-			colfield := strings.Split(b.Fields[i], `->`)
-			if len(colfield) == 2 {
 				if jsonFields[colfield[0]] == nil {
 					jsonFields[colfield[0]] = make(map[string]string)
 				}
