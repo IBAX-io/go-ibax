@@ -64,8 +64,6 @@ func prepareWorkDir() (string, error) {
 	}
 
 	return childConfigsPath, nil
-}
-
 // CreateOBS creates one instance of OBS
 func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) error {
 	if err := checkOBSName(name); err != nil {
@@ -150,6 +148,12 @@ func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) erro
 	log.Infoln(command)
 	section := ini.NewSection(procConfEntry.Name)
 	section.Add("command", command)
+	proc := process.NewProcess("obsMaster", procConfEntry)
+
+	mgr.processes.Add(name, proc)
+	mgr.processes.Find(name).Start(true)
+	return nil
+}
 
 // ListProcess returns list of process names with state of process
 func (mgr *OBSManager) ListProcess() (map[string]string, error) {

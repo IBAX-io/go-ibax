@@ -58,6 +58,19 @@ func TestReadRequestTag(t *testing.T) {
 	}
 	if test.Id != 10 {
 		t.Errorf("bad id value")
+	}
+	if string(test.Data) != "test" {
+		t.Errorf("bad data value: %+v", string(test.Data))
+	}
+}
+
+func TestSendRequest(t *testing.T) {
+	type testStruct2 struct {
+		Id   uint32
+		Id2  int64
+		Test []byte
+		Text []byte `size:"4"`
+	}
 
 	test := testStruct2{
 		Id:   15,
@@ -106,7 +119,3 @@ func TestGetBodiesRequest(t *testing.T) {
 	require.NoError(t, source.Write(&buf))
 
 	target := GetBodiesRequest{}
-	require.NoError(t, target.Read(&buf))
-	fmt.Printf("%+v %+v\n", source, target)
-	require.Equal(t, source, target)
-}

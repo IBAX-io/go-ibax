@@ -40,11 +40,8 @@ func Type101(r *network.VDESrcDataAgentRequest) (*network.VDESrcDataAgentRespons
 	//hash, err := crypto.HashHex(r.Data)
 	hash, err := crypto.HashHex(data)
 	if err != nil {
-		log.WithError(err)
-		return nil, err
-	}
-	resp := &network.VDESrcDataAgentResponse{}
-	resp.Hash = hash
+		VDEAgentPubkey: r.VDEAgentPubkey,
+		VDEAgentIp:     r.VDEAgentIp,
 		VDEDestPubkey:  r.VDEDestPubkey,
 		VDEDestIp:      r.VDEDestIp,
 		//Data:         r.Data,

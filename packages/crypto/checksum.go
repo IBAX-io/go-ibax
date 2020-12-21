@@ -9,18 +9,6 @@ import "hash/crc64"
 type checksumProvider int
 
 const (
-)
-
-func init() {
-	table64 = crc64.MakeTable(crc64.ECMA)
-}
-
-// CalcChecksum is calculates checksum
-func CalcChecksum(input []byte) (uint64, error) {
-	switch checksumProv {
-	case _CRC64:
-		return calcCRC64(input), nil
-	default:
 		return 0, ErrUnknownProvider
 	}
 }
