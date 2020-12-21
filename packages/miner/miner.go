@@ -76,14 +76,6 @@ func (m *mint) makeMiningPoolTime() (int64, int64, error) {
 		k := miners[i].Devid
 		v, ok := mineCount[k]
 		if ok {
-			da := minersCount{devid: k, start: st, end: st + v}
-			st = st + v
-			m.minerPool = append(m.minerPool, da)
-		}
-	}
-	m.MintMap = mineCount
-	m.MineCounts = miners
-	return st, capacity, nil
 }
 
 func (m *mint) getMiners() (map[int64]int64, []model.MineCount, int64, error) {
@@ -129,6 +121,11 @@ func (m *mint) getMintRandom(remainder int64) int64 {
 		dat := m.minerPool[mid]
 		if remainder >= dat.start && remainder < dat.end {
 			return dat.devid
+		} else if remainder >= dat.end {
+			start = mid + 1
+		} else {
+			end = mid - 1
+		}
 		mid = start + (end-start)/2
 	}
 	return 0

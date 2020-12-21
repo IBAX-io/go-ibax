@@ -18,8 +18,9 @@ import (
 
 void kill_childproc( DWORD myprocID) {
 	PROCESSENTRY32 pe;
-				memcmp(pe.szExeFile, "chain", 4) != 0)
-	        {
+
+	memset(&pe, 0, sizeof(PROCESSENTRY32));
+	pe.dwSize = sizeof(PROCESSENTRY32);
 	            HANDLE hChildProc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
 
 	            if (hChildProc)

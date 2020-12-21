@@ -83,17 +83,6 @@ func VDESrcLogUpToChain(ctx context.Context, d *daemon) error {
 		}
 		//fmt.Println("Login OK!")
 
-		form := url.Values{
-			"TaskUUID":  {item.TaskUUID},
-			"DataUUID":  {item.DataUUID},
-			"Log":       {item.Log},
-			"LogType":   {converter.Int64ToStr(item.LogType)},
-			"LogSender": {item.LogSender},
-
-			`CreateTime`: {converter.Int64ToStr(time.Now().Unix())},
-		}
-
-		ContractName := `@1VDEShareLogCreate`
 		_, txHash, _, err := chain_api.VDEPostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
 		if err != nil {
 			fmt.Println("Send VDESrcLog to chain err: ", err)
@@ -107,6 +96,15 @@ func VDESrcLogUpToChain(ctx context.Context, d *daemon) error {
 		item.ChainState = 1
 		item.TxHash = txHash
 		item.BlockId = 0
+		item.ChainErr = ""
+		item.UpdateTime = time.Now().Unix()
+		err = item.Updates()
+		if err != nil {
+			fmt.Println("Update VDESrcLog table err: ", err)
+			log.WithFields(log.Fields{"error": err}).Error("Update VDESrcLog table!")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
 
 	}
 	return nil

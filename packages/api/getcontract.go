@@ -3,17 +3,21 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-	Type     string `json:"type"`
-	Optional bool   `json:"optional"`
-}
+package api
 
-type getContractResult struct {
-	ID       uint32          `json:"id"`
-	StateID  uint32          `json:"state"`
-	TableID  string          `json:"tableid"`
-	WalletID string          `json:"walletid"`
-	TokenID  string          `json:"tokenid"`
-	Address  string          `json:"address"`
+import (
+	"net/http"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/script"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+type contractField struct {
+	Name     string `json:"name"`
 	Fields   []contractField `json:"fields"`
 	Name     string          `json:"name"`
 }

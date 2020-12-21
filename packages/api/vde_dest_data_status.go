@@ -112,6 +112,16 @@ func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
 		return
 	}
+
+	jsonResponse(w, result)
+}
+
+func VDEDestDataStatusDeleteHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+	id := converter.StrToInt64(params["id"])
+
+	m := &model.VDEDestDataStatus{}
 	m.ID = id
 	if err := m.Delete(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
@@ -188,15 +198,6 @@ type VDEDestDataStatusList struct {
 //		CreateTime       int64  `json:"create_time"`
 //	} `json:"list"`
 //}
-
-func VDEDestDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err            error
-		DataStatusList VDEDestDataStatusList
-	)
-
-	logger := getLogger(r)
-	form := &ListVDEDestDataStatusForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return

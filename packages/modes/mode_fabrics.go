@@ -111,14 +111,6 @@ func BuildEcosystemNameGetter() types.EcosystemNameGetter {
 
 	return BCEcosystemNameGetter{}
 }
-
-// BCDaemonLoader allow load blockchain daemons
-type BCDaemonLoader struct {
-	logger            *log.Entry
-	DaemonListFactory types.DaemonListFactory
-}
-
-// Load loads blockchain daemons
 func (l BCDaemonLoader) Load(ctx context.Context) error {
 	if err := daemons.InitialLoad(l.logger); err != nil {
 		return err
@@ -204,6 +196,22 @@ func (l SNDaemonLoader) Load(ctx context.Context) error {
 		return err
 	}
 
+	l.logger.Info("start subnode daemons")
+	daemons.StartDaemons(ctx, l.DaemonListFactory.GetDaemonsList())
+
+	if err := tcpserver.TcpListener(conf.Config.TCPServer.Str()); err != nil {
+		log.Errorf("can't start tcp servers, stop")
+		return err
+	}
+	service.NewNodeRelevanceService().Run(ctx)
+
+	if err := service.InitNodesBanService(); err != nil {
+		l.logger.WithError(err).Error("Can't init ban service")
+		return err
+	}
+
+	return nil
+}
 
 // OBSDaemonLoader allows load obs daemons
 type OBSDaemonLoader struct {

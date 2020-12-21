@@ -155,6 +155,12 @@ func GetWhere(inWhere *types.Map) (string, error) {
 		case `$gt`:
 			return oper(`>`, v)
 		case `$gte`:
+			return oper(`>=`, v)
+		case `$lt`:
+			return oper(`<`, v)
+		case `$lte`:
+			return oper(`<=`, v)
+		default:
 			if !strings.Contains(key, `>`) && len(key) > 0 {
 				key = `"` + key + `"`
 			}
@@ -192,12 +198,6 @@ func GetWhere(inWhere *types.Map) (string, error) {
 				}
 			default:
 				ival := escape(value)
-				if ival == `$isnull` {
-					ival = fmt.Sprintf(`%s is null`, key)
-				} else {
-					ival = fmt.Sprintf(`%s = '%s'`, key, ival)
-				}
-				cond = append(cond, ival)
 			}
 		}
 	}

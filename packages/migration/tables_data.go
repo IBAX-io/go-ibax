@@ -89,6 +89,15 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "name": "false",
             "value": "ContractAccess(\"@1EditMenu\",\"@1AppendMenu\")",
             "title": "ContractAccess(\"@1EditMenu\")",
+            "conditions": "ContractAccess(\"@1EditMenu\")",
+            "permissions": "ContractConditions(\"@1AdminCondition\")",
+            "ecosystem": "false"
+        }',
+        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
+    ),
+    (next_id('1_tables'), 'pages',
+        '{
+            "insert": "ContractConditions(\"DeveloperCondition\")",
             "update": "ContractConditions(\"DeveloperCondition\")",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',
@@ -127,15 +136,6 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "update": "ContractAccess(\"@1ProfileEdit\")",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',
-        '{
-            "image_id": "ContractAccess(\"@1ProfileEdit\")",
-            "member_info": "ContractAccess(\"@1ProfileEdit\")",
-            "member_name": "false",
-            "account":"false",
-            "ecosystem": "false"
-        }',
-        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
-    ),
     (next_id('1_tables'), 'roles',
         '{
             "insert": "ContractAccess(\"@1RolesCreate\",\"@1RolesInstall\")",
