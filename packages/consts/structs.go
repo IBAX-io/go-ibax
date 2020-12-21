@@ -27,23 +27,6 @@ type TxHeader struct {
 }
 
 // FirstBlock is the header of FirstBlock transaction
-type FirstBlock struct {
-	TxHeader
-	PublicKey             []byte
-	NodePublicKey         []byte
-	StopNetworkCertBundle []byte
-	Test                  int64
-	PrivateBlockchain     uint64
-}
-
-type StopNetwork struct {
-	TxHeader
-	StopNetworkCert []byte
-}
-
-// Don't forget to insert the structure in init() - list
-
-var blockStructs = make(map[string]reflect.Type)
 
 func init() {
 	// New structures must be inserted here
@@ -71,4 +54,13 @@ func IsStruct(tx int64) bool {
 // Header returns TxHeader
 func Header(v interface{}) TxHeader {
 	return reflect.ValueOf(v).Elem().Field(0).Interface().(TxHeader)
+}
+
+// Sign returns the signature attached to the header
+func Sign(v interface{}) (sign []byte) {
+	field := reflect.ValueOf(v).Elem().FieldByName(`Sign`)
+	if field.IsValid() && field.Kind() == reflect.Slice {
+		sign = field.Bytes()
+	}
+	return
 }

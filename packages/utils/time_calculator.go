@@ -6,6 +6,16 @@ package utils
 
 import (
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+)
+
+type BlockTimeCounter struct {
+	start       time.Time
+	duration    time.Duration
+	numberNodes int
 }
 
 // Block returns serial block number for time
@@ -16,11 +26,6 @@ func (btc *BlockTimeCounter) Block(t time.Time) int {
 // NodePosition returns generating node position for time
 func (btc *BlockTimeCounter) NodePosition(t time.Time) int {
 	return btc.Block(t) % btc.numberNodes
-}
-
-// ValidateBlock checks conformity between time and nodePosition
-func (btc *BlockTimeCounter) ValidateBlock(t time.Time, nodePosition int) bool {
-	return btc.NodePosition(t) == nodePosition
 }
 
 func (btc *BlockTimeCounter) BlockForTimeExists(t time.Time, nodePosition int) (bool, error) {

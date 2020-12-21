@@ -11,13 +11,6 @@ import (
 
 // RolesParticipants represents record of {prefix}roles_participants table
 type RolesParticipants struct {
-	ecosystem   int64
-	Id          int64
-	Role        string `gorm:"type":jsonb`
-	Member      string `gorm:"type":jsonb`
-	Appointed   string `gorm:"type":jsonb`
-	DateCreated int64
-	DateDeleted int64
 	Deleted     bool
 }
 
@@ -77,6 +70,10 @@ func GetMemberRoles(tx *DbTransaction, ecosys int64, account string) (roles []in
 		return
 	}
 	for _, role := range list {
+		roles = append(roles, converter.StrToInt64(role[`id`]))
+	}
+	return
+}
 
 // GetRoleMembers return []id all members assign to roles in ecosystem
 func GetRoleMembers(tx *DbTransaction, ecosys int64, roles []int64) (members []string, err error) {

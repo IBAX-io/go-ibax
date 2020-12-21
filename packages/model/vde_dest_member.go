@@ -42,3 +42,13 @@ func (m *VDEDestMember) GetAll() ([]VDEDestMember, error) {
 func (m *VDEDestMember) GetOneByID() (*VDEDestMember, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
+}
+
+func (m *VDEDestMember) GetOneByPubKey(VDEPubKey string) (*VDEDestMember, error) {
+	err := DBConn.Where("vde_pub_key=?", VDEPubKey).First(&m).Error
+	return m, err
+}
+
+func (m *VDEDestMember) GetAllByType(Type int64) ([]VDEDestMember, error) {
+	result := make([]VDEDestMember, 0)
+	err := DBConn.Table("vde_dest_member").Where("vde_type = ?", Type).Find(&result).Error

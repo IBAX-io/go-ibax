@@ -264,11 +264,9 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 			EcosystemID: 1,
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.NetworkID,
-		},
-		Params: params,
-	}, connect.PrivateKey)
+	}, &ret)
 	if err != nil {
-		return 0, "", err
+		return
 	}
 	if len(form.Get("nowait")) > 0 {
 		msg = ret.Hashes["data"]

@@ -49,16 +49,6 @@ type PrivateFilePackets struct {
 	TaskName   string `gorm:"column:task_name;not null" json:"task_name"`
 	TaskSender string `gorm:"column:task_sender;not null" json:"task_sender"`
 	TaskType   string `gorm:"column:task_type;not null" json:"task_type"`
-	Name       string `gorm:"column:name;not null" json:"name"`
-	MimeType   string `gorm:"column:mimetype;not null" json:"mimetype"`
-	Hash       string `gorm:"not null" json:"hash"`
-	Data       []byte `gorm:"not null" json:"data"`
-}
-
-// TableName returns name of table
-func (PrivateFilePackets) TableName() string {
-	return "subnode_privatefile_packets"
-}
 
 // Create is creating record of model
 func (pp *PrivateFilePackets) Create() error {
@@ -124,6 +114,9 @@ type PrivateFilePacketsAll struct {
 	TaskSender string `gorm:"column:task_sender;not null" json:"task_sender"`
 	TaskType   string `gorm:"column:task_type;not null" json:"task_type"`
 	Name       string `gorm:"column:name;not null" json:"name"`
+	MimeType   string `gorm:"column:mimetype;not null" json:"mimetype"`
+	Hash       string `gorm:"not null" json:"hash"`
+	Data       []byte `gorm:"column:sppadata;not null" json:"sppadata"`
 }
 
 // TableName returns name of table

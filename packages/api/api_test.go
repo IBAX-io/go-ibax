@@ -362,21 +362,6 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "string", "money":
-			params[name] = value
-		case "file", "bytes":
-			if cp, ok := form.(*contractParams); !ok {
-				err = fmt.Errorf("Form is not *contractParams type")
-			} else {
-				params[name] = cp.GetRaw(name)
-			}
-		}
-
-		if err != nil {
-			err = fmt.Errorf("Parse param '%s': %s", name, err)
-			return
-		}
-	}
-
 	var privateKey, publicKey []byte
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
 		return
@@ -608,6 +593,12 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 		return
 	}
 
+	if len(form.Get("nowait")) > 0 {
+		return
+	}
+	id, penalty, err := waitTx(ret.Hashes["data"])
+	if id != 0 && err != nil {
+		if penalty == 1 {
 			return
 		}
 		msg = err.Error()

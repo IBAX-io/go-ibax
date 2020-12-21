@@ -37,13 +37,6 @@ func (m *Key) SetTablePrefix(prefix int64) *Key {
 // TableName returns name of table
 func (m Key) TableName() string {
 	if m.ecosystem == 0 {
-		m.ecosystem = 1
-	}
-	return `1_keys`
-}
-func (m *Key) Disable() bool {
-	return m.Deleted != 0 || m.Blocked != 0
-}
 func (m *Key) CapableAmount() decimal.Decimal {
 	amount := decimal.New(0, 0)
 	if len(m.Amount) > 0 {
@@ -51,6 +44,18 @@ func (m *Key) CapableAmount() decimal.Decimal {
 	}
 	maxpay := decimal.New(0, 0)
 	if len(m.Maxpay) > 0 {
+		maxpay, _ = decimal.NewFromString(m.Maxpay)
+	}
+	if maxpay.GreaterThan(decimal.New(0, 0)) && maxpay.LessThan(amount) {
+		amount = maxpay
+	}
+	return amount
+}
+
+// Get is retrieving model from database
+func (m *Key) Get(db *DbTransaction, wallet int64) (bool, error) {
+	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
+}
 
 // GetTr is retrieving model from database
 func (m *Key) GetTr(db *DbTransaction, wallet int64) (bool, error) {
