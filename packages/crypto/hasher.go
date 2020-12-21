@@ -85,11 +85,16 @@ func Address(pubKey []byte) int64 {
 	return int64(crc - (crc % 10) + uint64(checkSum(val[:len(val)-1])))
 }
 
-type SM3 struct {
-	Hasher
+func (s *SM3) getHMAC(secret string, message string) ([]byte, error) {
+	mac := hmac.New(sm3.New, []byte(secret))
+	mac.Write([]byte(message))
+	return mac.Sum(nil), nil
 }
 
-type SHA256 struct {
+func (s *SM3) hash(msg []byte) []byte {
+	return sm3.Sm3Sum(msg)
+}
+
 func (s *SM3) doubleHash(msg []byte) []byte {
 	return s.doubleSM3(msg)
 }

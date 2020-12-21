@@ -30,9 +30,6 @@ const (
 	expMoney = 2
 )
 
-type token struct {
-	Type  int
-	Value interface{}
 }
 
 type opFunc func()
@@ -143,6 +140,13 @@ func calcExp(tokens []token, resType int, prec string) string {
 	}
 	subMoney := func() {
 		stack[top-1] = stack[top-1].(decimal.Decimal).Sub(stack[top].(decimal.Decimal))
+	}
+	mulInt := func() {
+		stack[top-1] = stack[top-1].(int64) * stack[top].(int64)
+	}
+	mulFloat := func() {
+		stack[top-1] = stack[top-1].(float64) * stack[top].(float64)
+	}
 	mulMoney := func() {
 		stack[top-1] = stack[top-1].(decimal.Decimal).Mul(stack[top].(decimal.Decimal))
 	}

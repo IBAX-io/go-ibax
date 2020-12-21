@@ -20,19 +20,18 @@ const (
 	ntpChecks      = 3                 // Number of measurements to do against the NTP server
 	driftThreshold = 1 * time.Second   // Allowed clock drift before warning user
 )
+	if err != nil {
+		return false, err
+	}
+	//fmt.Println("drift:"+ strconv.FormatInt(drift.Milliseconds(),10))
+	if drift < -driftThreshold || drift > driftThreshold {
+		return false, nil
+	}
 
-// durationSlice attaches the methods of sort.Interface to []time.Duration,
-// sorting in increasing order.
-type durationSlice []time.Duration
+	return true, nil
+}
 
-func (s durationSlice) Len() int           { return len(s) }
-func (s durationSlice) Less(i, j int) bool { return s[i] < s[j] }
-func (s durationSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-
-// checkClockDrift queries an NTP server for clock drifts and warns the user if
-// one large enough is detected.
-func CheckClockDrift() (bool, error) {
-	drift, err := sntpDrift(ntpChecks)
+// sntpDrift does a naive time resolution against an NTP server and returns the
 // measured drift. This method uses the simple version of NTP. It's not precise
 // but should be fine for these purposes.
 //

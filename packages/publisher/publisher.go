@@ -39,22 +39,23 @@ func (cn *ClientsChannels) Get(id int64) string {
 var (
 	clientsChannels   = ClientsChannels{storage: make(map[int64]string)}
 	centrifugoTimeout = time.Second * 5
-func GetJWTCent(userID, expire int64) (string, string, error) {
-	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	publisher         *gocent.Client
+	config            conf.CentrifugoConfig
+)
 
-	centJWT := CentJWT{
-		Sub: strconv.FormatInt(userID, 10),
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Second * time.Duration(expire)).Unix(),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, centJWT)
-	result, err := token.SignedString([]byte(config.Secret))
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("JWT centrifugo error")
-		return "", "", err
-	}
-	clientsChannels.Set(userID, result)
+type CentJWT struct {
+	Sub string
+	jwt.StandardClaims
+}
+
+// InitCentrifugo client
+func InitCentrifugo(cfg conf.CentrifugoConfig) {
+	config = cfg
+	publisher = gocent.New(gocent.Config{
+		Addr: cfg.URL,
+		Key:  cfg.Key,
+	})
+}
 	return result, timestamp, nil
 }
 

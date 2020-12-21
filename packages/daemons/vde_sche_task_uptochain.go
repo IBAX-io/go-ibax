@@ -213,8 +213,3 @@ func VDEScheTaskUpToChainState(ctx context.Context, d *daemon) error {
 			continue
 		}
 		err = item.Updates()
-		if err != nil {
-			fmt.Println("Update VDEScheTask table err: ", err)
-			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
-			time.Sleep(time.Millisecond * 2)
-			continue

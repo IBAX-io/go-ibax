@@ -24,6 +24,17 @@ type VDEDestData struct {
 
 func (VDEDestData) TableName() string {
 	return "vde_dest_data"
+}
+
+func (m *VDEDestData) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *VDEDestData) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEDestData) Delete() error {
 	return DBConn.Delete(m).Error
 }
 
@@ -48,14 +59,4 @@ func (m *VDEDestData) GetAllByTaskUUID(TaskUUID string) ([]VDEDestData, error) {
 	result := make([]VDEDestData, 0)
 	err := DBConn.Table("vde_dest_data").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
-}
-
-func (m *VDEDestData) GetAllByDataStatus(DataStatus int64) ([]VDEDestData, error) {
-	result := make([]VDEDestData, 0)
-	err := DBConn.Table("vde_dest_data").Where("data_state = ?", DataStatus).Find(&result).Error
-	return result, err
-}
-
-func (m *VDEDestData) GetOneByDataStatus(DataStatus int64) (bool, error) {
-	return isFound(DBConn.Where("data_state = ?", DataStatus).First(m))
 }

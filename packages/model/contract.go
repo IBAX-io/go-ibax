@@ -1,13 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
-
-import "github.com/IBAX-io/go-ibax/packages/converter"
-
-// Contract represents record of 1_contracts table
 type Contract struct {
 	tableName   string
 	ID          int64  `json:"id,omitempty"`
@@ -26,6 +16,10 @@ func (c *Contract) TableName() string {
 	return `1_contracts`
 }
 
+// GetList is retrieving records from database
+func (c *Contract) GetList(offset, limit int) ([]Contract, error) {
+	result := new([]Contract)
+	err := DBConn.Table(c.TableName()).Offset(offset).Limit(limit).Order("id asc").Find(&result).Error
 	return *result, err
 }
 

@@ -8,3 +8,6 @@ contract StopOBS {
 		conditions {
 		}
 	
+		action {
+			$OBSName = ToLower($OBSName)
+			StopOBSProcess($OBSName)

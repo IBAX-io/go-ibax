@@ -132,12 +132,6 @@ var (
 	{{head "transactions_status"}}
 		t.Column("hash", "bytea", {"default": ""})
 		t.Column("time", "int", {"default": "0"})
-		t.Column("type", "int", {"default": "0"})
-		t.Column("ecosystem", "int", {"default": "1"})
-		t.Column("wallet_id", "bigint", {"default": "0"})
-		t.Column("block_id", "int", {"default": "0"})
-		t.Column("error", "string", {"default": "", "size":255})
-		t.Column("penalty", "int", {"default": "0"})
 	{{footer "primary(hash)"}}
 
 `
@@ -148,6 +142,15 @@ var (
 		t.Column("hash", "text", {"default": ""})
 		t.Column("data", "bytea", {"default": ""})
 		t.Column("time", "int", {"default": "0"})
+	{{footer "seq" "primary"}}
+
+	{{headseq "subnode_privatefile_packets"}}
+		t.Column("id", "int", {"default_raw": "nextval('subnode_privatefile_packets_id_seq')"})
+		t.Column("task_uuid", "text", {"default": ""})
+		t.Column("task_name", "text", {"default": ""})
+		t.Column("task_sender", "text", {"default": ""})
+		t.Column("task_type", "text", {"default": "0"})
+		t.Column("mimetype", "text", {"default": ""})
 		t.Column("name", "text", {"default": ""})
 		t.Column("hash", "text", {"default": ""})
 		t.Column("data", "bytea", {"default": ""})

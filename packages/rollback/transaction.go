@@ -9,6 +9,25 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/smart"
+
+	log "github.com/sirupsen/logrus"
+)
+
+func rollbackUpdatedRow(tx map[string]string, where string, dbTransaction *model.DbTransaction, logger *log.Entry) error {
+	var rollbackInfo map[string]string
+	if err := json.Unmarshal([]byte(tx["data"]), &rollbackInfo); err != nil {
+		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollback.Data from json")
+		return err
+	}
+	addSQLUpdate := ""
+	for k, v := range rollbackInfo {
+		if v == "NULL" {
 			addSQLUpdate += k + `=NULL,`
 		} else if syspar.IsByteColumn(tx["table_name"], k) && len(v) != 0 {
 			addSQLUpdate += k + `=decode('` + v + `','HEX'),`
@@ -47,15 +66,6 @@ func rollbackTransaction(txHash []byte, dbTransaction *model.DbTransaction, logg
 				logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollback.Data from json")
 				return err
 			}
-			switch sysData.Type {
-			case "NewTable":
-				err = smart.SysRollbackTable(dbTransaction, sysData)
-			case "NewView":
-				err = smart.SysRollbackView(dbTransaction, sysData)
-			case "NewColumn":
-				err = smart.SysRollbackColumn(dbTransaction, sysData)
-			case "NewContract":
-				err = smart.SysRollbackNewContract(sysData, tx["table_id"])
 			case "EditContract":
 				err = smart.SysRollbackEditContract(dbTransaction, sysData, tx["table_id"])
 			case "NewEcosystem":

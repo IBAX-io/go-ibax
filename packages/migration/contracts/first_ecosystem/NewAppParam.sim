@@ -7,7 +7,6 @@ contract NewAppParam {
         Value string
         Conditions string
     }
-    }
 
     action {
         DBInsert("app_params", {app_id: $ApplicationId, name: $Name, value: $Value,

@@ -6,27 +6,17 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/IBAX-io/go-ibax/packages/block"
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
 )
 
 func InitialLoad(logger *log.Entry) error {
 
-	// check for initial load
-	toLoad, err := needLoad(logger)
-	if err != nil {
-		return err
-	}
-
-	if toLoad {
-		logger.Debug("start first block loading")
-
-		if err := firstLoad(logger); err != nil {
-			logger.WithFields(log.Fields{"error": err}).Error("cant load first block form file or host")
-			return err
-		}
-
-		if err := model.UpdateSchema(); err != nil {
-			return err
 		}
 	}
 
