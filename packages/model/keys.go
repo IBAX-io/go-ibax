@@ -37,6 +37,13 @@ func (m *Key) SetTablePrefix(prefix int64) *Key {
 // TableName returns name of table
 func (m Key) TableName() string {
 	if m.ecosystem == 0 {
+		m.ecosystem = 1
+	}
+	return `1_keys`
+}
+func (m *Key) Disable() bool {
+	return m.Deleted != 0 || m.Blocked != 0
+}
 func (m *Key) CapableAmount() decimal.Decimal {
 	amount := decimal.New(0, 0)
 	if len(m.Amount) > 0 {
@@ -76,8 +83,3 @@ func KeyTableName(prefix int64) string {
 
 // GetKeysCount returns common count of keys
 func GetKeysCount() (int64, error) {
-	var cnt int64
-	row := DBConn.Raw(`SELECT count(*) key_count FROM "1_keys" WHERE ecosystem = 1`).Select("key_count").Row()
-	err := row.Scan(&cnt)
-	return cnt, err
-}

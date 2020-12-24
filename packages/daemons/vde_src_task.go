@@ -35,6 +35,22 @@ func VDESrcTaskStatus(ctx context.Context, d *daemon) error {
 			//fmt.Println("SrcTask:", item.TaskUUID)
 			TaskStatus := &model.VDESrcTaskStatus{}
 			TaskStatus.TaskUUID = item.TaskUUID
+			TaskStatus.ContractRunHttp = item.ContractRunHttp
+			TaskStatus.ContractRunEcosystem = item.ContractRunEcosystem
+			TaskStatus.ContractRunParms = item.ContractRunParms
+			TaskStatus.ContractSrcName = item.ContractSrcName
+			TaskStatus.CreateTime = time.Now().Unix()
+			err = TaskStatus.Create()
+			if err != nil {
+				fmt.Println("Create VDESrcTaskStatus table err: ", err)
+				log.WithFields(log.Fields{"error": err}).Error("Create VDESrcTaskStatus table!")
+				time.Sleep(time.Millisecond * 2)
+				continue
+			}
+			item.TaskRunState = 3
+			item.UpdateTime = time.Now().Unix()
+			err = item.Updates()
+			if err != nil {
 				fmt.Println("Update VDESrcTask table err: ", err)
 				log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTask table!")
 				time.Sleep(time.Millisecond * 2)
@@ -63,10 +79,6 @@ func VDESrcTaskStatus(ctx context.Context, d *daemon) error {
 			TaskStatus.CreateTime = time.Now().Unix()
 			err = TaskStatus.Create()
 			if err != nil {
-				fmt.Println("Create VDESrcTaskStatus table err: ", err)
-				log.WithFields(log.Fields{"error": err}).Error("Create VDESrcTaskStatus table!")
-				time.Sleep(time.Millisecond * 2)
-				continue
 			}
 			item.TaskRunState = 3
 			item.UpdateTime = time.Now().Unix()
