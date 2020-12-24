@@ -62,16 +62,14 @@ func SendTx(rtx RawTransaction, adminWallet int64) error {
 }
 
 type RawTx struct {
-	TxType, Time int64
-	Hash         []byte
-	Data         []byte
-	Expedite     string
-	WalletID     int64
-}
 
 func (rtx *RawTx) GetExpedite() decimal.Decimal {
 	expedite, _ := decimal.NewFromString(rtx.Expedite)
 	return expedite
+}
+
+func SendTxBatches(rtxs []*RawTx) error {
+	var rawTxs []*TransactionStatus
 	var qtxs []*QueueTx
 	for _, rtx := range rtxs {
 		ts := &TransactionStatus{

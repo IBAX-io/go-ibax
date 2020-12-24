@@ -24,6 +24,21 @@ import (
 
 const binaryColumn = "data"
 
+func compareHash(data []byte, urlHash string) bool {
+	urlHash = strings.ToLower(urlHash)
+
+	var hash []byte
+	switch len(urlHash) {
+	case 32:
+		h := md5.Sum(data)
+		hash = h[:]
+	case 64:
+		hash = crypto.Hash(data)
+	}
+
+	return hex.EncodeToString(hash) == urlHash
+}
+
 func getDataHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
@@ -41,16 +56,6 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, errHashWrong)
 		return
 	}
-
-	w.Header().Set("Content-Type", "application/octet-stream")
-	w.Header().Set("Content-Disposition", "attachment")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Write([]byte(data))
-	return
-}
-
-func getBinaryHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
 	logger := getLogger(r)
 
 	bin := model.Binary{}
