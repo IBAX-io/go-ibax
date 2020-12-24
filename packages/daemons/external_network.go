@@ -130,6 +130,20 @@ func SendExternalTransaction() error {
 			values["txtime"] = []string{converter.Int64ToStr(item.TxTime)}
 			_, hash, err = connect.PostTxResult(item.ExternalContract, &values)
 			if err != nil {
+				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("PostContract")
+				if item.Attempts >= maxAttempts-1 {
+					sendResult(item, 0, errExternalAttempt, ``)
+				} else {
+					incAttempt(item.Id)
+				}
+			} else {
+				log.WithFields(log.Fields{"hash": hash, "txtime": values["txtime"][0],
+					"nodeKey": converter.Int64ToStr(nodeKeyID)}).Info("SendExternalTransaction")
+				bHash, err := hex.DecodeString(hash)
+				if err != nil {
+					log.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("DecodeHex")
+					incAttempt(item.Id)
+				} else if err = model.HashExternalTx(item.Id, bHash); err != nil {
 					log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("HashExternal")
 				}
 			}
@@ -146,19 +160,6 @@ func SendExternalTransaction() error {
 		for _, item := range waitList {
 			hashes = append(hashes, hex.EncodeToString(item.Hash))
 		}
-		results, err := connect.WaitTxList(hashes)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("WaitTxList")
-			continue
-		}
-		timeOut = time.Now().Unix() - statusTimeout
-		for _, item := range waitList {
-			if result, ok := results[hex.EncodeToString(item.Hash)]; ok {
-				errCode := int64(errExternalNone)
-				if result.BlockID == 0 {
-					errCode = errExternalTx
-				}
-				sendResult(item, result.BlockID, errCode, result.Msg)
 			} else if timeOut > item.TxTime {
 				sendResult(item, 0, errExternalTimeout, ``)
 			}
