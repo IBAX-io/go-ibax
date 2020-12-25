@@ -396,6 +396,20 @@ func GetMaxBlockFuel() int64 {
 }
 
 // GetMaxTxFuel is returns max tx fuel
+func GetMaxTxFuel() int64 {
+	return converter.StrToInt64(SysString(MaxTxFuel))
+}
+
+// GetMaxBlockGenerationTime is returns max block generation time (in ms)
+func GetMaxBlockGenerationTime() int64 {
+	return converter.StrToInt64(SysString(MaxBlockGenerationTime))
+}
+
+// GetMaxTxSize is returns max tx size
+func GetMaxTxSize() int64 {
+	return converter.StrToInt64(SysString(MaxTxSize))
+}
+
 // GetMaxTxTextSize is returns max tx text size
 func GetMaxForsignSize() int64 {
 	return converter.StrToInt64(SysString(MaxForsignSize))
@@ -506,13 +520,6 @@ func SetFirstBlockData(data *consts.FirstBlock) {
 	firstBlockData = data
 
 	// If list of nodes is empty, then used node from the first block
-	if len(nodesByPosition) == 0 {
-		addHonorNodeKeys(firstBlockData.NodePublicKey)
-
-		nodesByPosition = []*HonorNode{&HonorNode{
-			PublicKey: firstBlockData.NodePublicKey,
-			Stopped:   false,
-		}}
 	}
 }
 

@@ -28,18 +28,6 @@ func authRequire(next func(w http.ResponseWriter, r *http.Request)) func(w http.
 		}
 
 		logger := getLogger(r)
-		logger.WithFields(log.Fields{"type": consts.EmptyObject}).Debug("wallet is empty")
-		errorResponse(w, errUnauthorized)
-	}
-}
-
-func loggerFromRequest(r *http.Request) *log.Entry {
-	return log.WithFields(log.Fields{
-		"headers":  r.Header,
-		"path":     r.URL.Path,
-		"protocol": r.Proto,
-		"remote":   r.RemoteAddr,
-	})
 }
 func loggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -130,3 +118,12 @@ func statsdMiddleware(next http.Handler) http.Handler {
 
 		counterName := statsd.APIRouteCounterName(r.Method, route.GetName())
 		statsd.Client.Inc(counterName+statsd.Count, 1, v)
+		startTime := time.Now()
+
+		defer func() {
+			statsd.Client.TimingDuration(counterName+statsd.Time, time.Since(startTime), v)
+		}()
+
+		next.ServeHTTP(w, r)
+	})
+}

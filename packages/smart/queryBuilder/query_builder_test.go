@@ -30,8 +30,8 @@ func (tc TestKeyTableChecker) IsKeyTable(tableName string) bool {
 	return tc.Val
 }
 func TestSqlFields(t *testing.T) {
-	qb := SQLQueryBuilder{
-		Entry:        log.WithFields(log.Fields{"mod": "test"}),
+
+	fields, err := qb.GetSQLSelectFieldsExpr()
 	if err != nil {
 		t.Error(err)
 		return

@@ -15,16 +15,6 @@ type Confirmation struct {
 
 // GetGoodBlock returns last good block
 func (c *Confirmation) GetGoodBlock(goodCount int) (bool, error) {
-	return isFound(DBConn.Where("good >= ?", goodCount).Last(&c))
-}
-
-// Save is saving model
-func (c *Confirmation) Save() error {
-	return DBConn.Save(c).Error
-}
-
-// GetGoodBlockLast returns last good block
-func (c *Confirmation) GetGoodBlockLast() (bool, error) {
 	var sp SystemParameter
 	count, err := sp.GetNumberOfHonorNodes()
 	if err != nil {

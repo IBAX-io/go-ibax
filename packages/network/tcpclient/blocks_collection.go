@@ -16,6 +16,22 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+
+var ErrorEmptyBlockBody = errors.New("block is empty")
+var ErrorWrongSizeBytes = errors.New("wrong size bytes")
+
+const hasVal = "has value"
+const hasntVal = "has not value"
+
+const sizeBytesLength = 4
+
+// GetBlocksBodies send GetBodiesRequest returns channel of binary blocks data
+func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrder bool) (<-chan []byte, error) {
+	conn, err := newConnection(host)
+	if err != nil {
+		return nil, err
+	}
+
 	// send the type of data
 	rt := &network.RequestType{Type: network.RequestTypeBlockCollection}
 	if err = rt.Write(conn); err != nil {
@@ -25,18 +41,6 @@ import (
 
 	req := &network.GetBodiesRequest{
 		BlockID:      uint32(blockID),
-		ReverseOrder: reverseOrder,
-	}
-
-	if err = req.Write(conn); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on sending blocks bodies request")
-		return nil, err
-	}
-
-	blocksCount, err := network.ReadInt(conn)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on getting blocks count")
-		return nil, err
 	}
 
 	if blocksCount == 0 {

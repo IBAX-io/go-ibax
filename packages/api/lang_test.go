@@ -18,22 +18,6 @@ func TestLang(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
 
 	name := randName("lng")
-	utfName := randName("lngutf")
-
-	err := postTx("NewLang", &url.Values{
-		"Name":          {name},
-		"Trans":         {`{"en": "My test", "fr": "French string", "en-US": "US locale"}`},
-		"ApplicationId": {"1"},
-	})
-	assert.NoError(t, err)
-	var list listResult
-	err = sendGet(`list/languages`, nil, &list)
-	if err != nil {
-		return
-	}
-	id := strconv.FormatInt(list.Count, 10)
-
-	cases := []struct {
 		url    string
 		form   url.Values
 		expect string
@@ -124,6 +108,14 @@ func TestLang(t *testing.T) {
 			url.Values{
 				"template": {fmt.Sprintf(`MenuGroup($%s$){MenuItem(Ooops, ooops)}MenuGroup(nolang){MenuItem(no, no)}`, name)},
 				"app_id":   {"1"},
+			},
+			fmt.Sprintf(`[{"tag":"menugroup","attr":{"name":"$%s$","title":"My test"},"children":[{"tag":"menuitem","attr":{"page":"ooops","title":"Ooops"}}]},{"tag":"menugroup","attr":{"name":"nolang","title":"nolang"},"children":[{"tag":"menuitem","attr":{"page":"no","title":"no"}}]}]`, name),
+		},
+	}
+
+	for _, v := range cases {
+		var ret contentResult
+
 		if len(v.expect) == 0 {
 			assert.NoError(t, postTx(v.url, &v.form))
 			continue
