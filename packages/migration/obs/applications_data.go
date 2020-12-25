@@ -5,4 +5,3 @@
 
 package obs
 
-var applicationsDataSQL = `

@@ -42,17 +42,14 @@ func (t *StopNetworkTransaction) Validate() error {
 }
 
 func (t *StopNetworkTransaction) validate() error {
-	data := t.Data.(*consts.StopNetwork)
-	cert, err := utils.ParseCert(data.StopNetworkCert)
-	if err != nil {
-		return err
-	}
 
-	fbdata, err := syspar.GetFirstBlockData()
-	if err != nil {
-		return err
-	}
+	t.Cert = cert
+	return nil
+}
 
+func (t *StopNetworkTransaction) Action() error {
+	// Allow execute transaction, if the certificate was used
+	if t.Cert.EqualBytes(consts.UsedStopNetworkCerts...) {
 		return nil
 	}
 

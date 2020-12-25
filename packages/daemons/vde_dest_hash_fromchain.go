@@ -28,15 +28,17 @@ type dest_VDEDestDataHashResult struct {
 	List  []struct {
 		ID         string `json:"id"`
 		TaskUUID   string `json:"task_uuid"`
-		DataUUID   string `json:"data_uuid"`
-		Hash       string `json:"hash"`
-		UpdateTime string `json:"update_time"`
-		CreateTime string `json:"create_time"`
-	} `json:"list"`
 }
 
 //Getting task data hash from the chain
 func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
+	var (
+		blockchain_http      string
+		blockchain_ecosystem string
+		UpdateTime           string
+		err                  error
+	)
+
 	hashtime := &model.VDEDestHashTime{}
 	DestHashTime, err := hashtime.Get()
 	if err != nil {
