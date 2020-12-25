@@ -19,4 +19,3 @@ var (
 	commitHash  = ""
 )
 
-func main() {

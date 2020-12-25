@@ -52,14 +52,7 @@ func BannedTill(keyID int64) string {
 	defer mutex.RUnlock()
 	if ban, ok := banList[keyID]; ok {
 		return ban.Time.Format(`2006-01-02 15:04:05`)
-func BadTxForBan(keyID int64) {
-	var (
-		ban banKey
-		ok  bool
-	)
-	mutex.Lock()
-	defer mutex.Unlock()
-	now := time.Now()
+	}
 	if ban, ok = banList[keyID]; ok {
 		var bMin, count int
 		for i := 0; i < conf.Config.BanKey.BadTx; i++ {

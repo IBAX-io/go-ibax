@@ -27,6 +27,22 @@ type SqlData struct {
 	Account   string
 }
 
+var _ fizz.Translator = (*translators.Postgres)(nil)
+var pgt = translators.NewPostgres()
+var tblName string
+
+const (
+	sqlPrimary = "primary"
+	sqlUnique  = "unique"
+	sqlIndex   = "index"
+	sqlSeq     = "seq"
+)
+
+func sqlHeadSequence(name string) string {
+	ret := fmt.Sprintf(`sql("DROP SEQUENCE IF EXISTS %[1]s_id_seq CASCADE;")
+sql("CREATE SEQUENCE %[1]s_id_seq START WITH 1;")`, name)
+
+	return ret + "\r\n" + sqlHead(name)
 }
 
 func sqlHead(name string) string {
@@ -94,21 +110,6 @@ func sqlConvert(in []string) (ret string, err error) {
 			tmpl *template.Template
 			out  bytes.Buffer
 		)
-
-		if tmpl, err = sqlTmpl.Parse(sql); err != nil {
-			return
-		}
-		if err = tmpl.Execute(io.Writer(&out), nil); err != nil {
-			return
-		}
-		item, err = fizz.AString(out.String(), pgt)
-		if err != nil {
-			return
-		}
-		ret += item + "\r\n"
-	}
-	return
-}
 
 func sqlTemplate(input []string, data interface{}) (ret string, err error) {
 	for _, item := range input {

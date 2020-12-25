@@ -7,6 +7,20 @@ package api
 
 import (
 	"net/http"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
+type myBalanceResult struct {
+	Amount string `json:"amount"`
+	Money  string `json:"money"`
+}
+
+func (m Mode) getMyBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	client := getClient(r)
 	logger := getLogger(r)
 	form := &ecosystemForm{
@@ -32,9 +46,6 @@ import (
 		errorResponse(w, err)
 		return
 	}
-
-	jsonResponse(w, &myBalanceResult{
-		Amount: key.Amount,
 		Money:  converter.ChainMoney(key.Amount),
 	})
 }

@@ -28,6 +28,11 @@ func (btc *BlockTimeCounter) NodePosition(t time.Time) int {
 	return btc.Block(t) % btc.numberNodes
 }
 
+// ValidateBlock checks conformity between time and nodePosition
+func (btc *BlockTimeCounter) ValidateBlock(t time.Time, nodePosition int) bool {
+	return btc.NodePosition(t) == nodePosition
+}
+
 func (btc *BlockTimeCounter) BlockForTimeExists(t time.Time, nodePosition int) (bool, error) {
 	startInterval, endInterval := btc.RangesByTime(t)
 
@@ -51,10 +56,6 @@ func (btc *BlockTimeCounter) NextTime(t time.Time, nodePosition int) time.Time {
 
 	d := nodePosition - curNodePosition
 	if curNodePosition >= nodePosition {
-		d += btc.numberNodes
-	}
-
-	return btc.start.Add(btc.duration*time.Duration(block+d) + time.Second)
 }
 
 // RangesByTime returns start and end of interval by time

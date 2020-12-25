@@ -24,6 +24,15 @@ func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockDa
 	var blockDataTx []byte
 	var signed []byte
 	logger := log.WithFields(log.Fields{"block_id": header.BlockID, "block_hash": header.Hash, "block_time": header.Time, "block_version": header.Version, "block_wallet_id": header.KeyID, "block_state_id": header.EcosystemID})
+
+	for _, tr := range trData {
+		mrklArray = append(mrklArray, converter.BinToHex(crypto.DoubleHash(tr)))
+		blockDataTx = append(blockDataTx, converter.EncodeLengthPlusData(tr)...)
+	}
+
+	if key != "" {
+		if len(mrklArray) == 0 {
+			mrklArray = append(mrklArray, []byte("0"))
 		}
 		mrklRoot, err := utils.MerkleTreeRoot(mrklArray)
 		if err != nil {
@@ -34,19 +43,6 @@ func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockDa
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing block")
 			return nil, err
-		}
-	}
-
-	buf := new(bytes.Buffer)
-
-	// fill header
-	buf.Write(converter.DecToBin(header.Version, 2))
-	buf.Write(converter.DecToBin(header.BlockID, 4))
-	buf.Write(converter.DecToBin(header.Time, 4))
-	buf.Write(converter.DecToBin(header.EcosystemID, 4))
-	buf.Write(converter.EncodeLenInt64InPlace(header.KeyID))
-	buf.Write(converter.DecToBin(header.NodePosition, 1))
-	buf.Write(converter.EncodeLengthPlusData(prev.RollbacksHash))
 
 	// fill signature
 	buf.Write(converter.EncodeLengthPlusData(signed))

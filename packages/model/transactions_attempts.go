@@ -39,12 +39,25 @@ func IncrementTxAttemptCount(dbTransaction *DbTransaction, transactionHash []byt
 		}
 		ta.Attempt++
 	} else {
+		ta.Hash = transactionHash
+		ta.Attempt = 1
+		if err = GetDB(dbTransaction).Create(ta).Error; err != nil {
+			return 0, err
+		}
+	}
+	return int64(ta.Attempt), nil
+}
+
+func DecrementTxAttemptCount(dbTransaction *DbTransaction, transactionHash []byte) error {
+	return GetDB(dbTransaction).Exec("update transactions_attempts set attempt=attempt-1 where hash = ?",
+		transactionHash).Error
+}
+
+func FindTxAttemptCount(dbTransaction *DbTransaction, count int) ([]*TransactionsAttempts, error) {
+	var rs []*TransactionsAttempts
+	if err := GetDB(dbTransaction).Where("attempt > ?", count).Find(&rs).Error; err != nil {
 		return rs, err
 	}
 	return rs, nil
 }
 
-// GetByHash returns TransactionsAttempts existence by hash
-func DeleteTransactionsAttemptsByHash(dbTransaction *DbTransaction, hash []byte) error {
-	return GetDB(dbTransaction).Table("transactions_attempts").Delete(&TransactionsAttempts{}, hash).Error
-}

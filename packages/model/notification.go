@@ -40,17 +40,21 @@ func (n *Notification) SetTablePrefix(tablePrefix string) {
 }
 
 // TableName returns table name
+func (n *Notification) TableName() string {
+	if n.ecosystem == 0 {
+		n.ecosystem = 1
+	}
+	return `1_notifications`
+}
+
+type NotificationsCount struct {
+	RecipientID int64  `gorm:"recipient_id"`
+	Account     string `gorm:"account"`
+	RoleID      int64  `gorm:"role_id"`
+	Count       int64  `gorm:"count"`
 }
 
 // GetNotificationsCount returns all unclosed notifications by users and ecosystem through role_id
-// if userIDs is nil or empty then filter will be skipped
-func GetNotificationsCount(ecosystemID int64, accounts []string) ([]NotificationsCount, error) {
-	result := make([]NotificationsCount, 0, len(accounts))
-	for _, account := range accounts {
-		query := `SELECT k.id as "recipient_id", '0' as "role_id", count(n.id), k.account
-			FROM "1_keys" k
-			LEFT JOIN "1_notifications" n ON n.ecosystem = k.ecosystem AND n.closed = 0 AND n.notification->>'type' = '1' and n.recipient->>'account' = k.account
-			WHERE k.ecosystem = ? AND k.account = ?
 			GROUP BY recipient_id, k.account, role_id
 			UNION
 			SELECT k.id as "recipient_id", rp.role->>'id' as "role_id", count(n.id), k.account

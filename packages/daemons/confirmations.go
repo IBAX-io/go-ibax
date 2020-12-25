@@ -1,14 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"context"
-	"sync/atomic"
-	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -153,3 +144,4 @@ func IsReachable(host string, blockID int64, ch0 chan string, logger *log.Entry)
 	case <-time.After(consts.WAIT_CONFIRMED_NODES * time.Second):
 		ch0 <- "0"
 	}
+}

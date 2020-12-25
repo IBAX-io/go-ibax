@@ -100,22 +100,6 @@ func initLogs() error {
 		f, err := os.OpenFile(fileName, os.O_WRONLY|openMode, 0755)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Can't open log file: ", fileName)
-			return err
-		}
-		log.SetOutput(f)
-	}
-
-	switch conf.Config.Log.LogLevel {
-	case "DEBUG":
-		log.SetLevel(log.DebugLevel)
-	case "INFO":
-		log.SetLevel(log.InfoLevel)
-	case "WARN":
-		log.SetLevel(log.WarnLevel)
-	case "ERROR":
-		log.SetLevel(log.ErrorLevel)
-	default:
-		log.SetLevel(log.InfoLevel)
 	}
 
 	log.AddHook(logtools.ContextHook{})
@@ -201,6 +185,10 @@ func Start() {
 	initGorm := func(dbCfg conf.DBConfig) {
 		err = model.GormInit(dbCfg.Host, dbCfg.Port, dbCfg.User, dbCfg.Password, dbCfg.Name)
 		if err != nil {
+			log.WithFields(log.Fields{
+				"db_user": dbCfg.User, "db_password": dbCfg.Password, "db_name": dbCfg.Name, "type": consts.DBError,
+			}).Error("can't init gorm")
+			Exit(1)
 		}
 	}
 

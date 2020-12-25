@@ -20,6 +20,25 @@ import (
 )
 
 type TaskData struct {
+	DataUUID string `json:"data_uuid"`
+	Data     []byte `json:"data"`
+	Hash     string `json:"hash"`
+	DataInfo string `json:"data_info"`
+}
+
+func unmarshalColumnSubNodeSrcData(form *SubNodeSrcDataForm) (*model.SubNodeSrcData, error) {
+	var (
+		datainfo map[string]interface{}
+		taskdata TaskData
+		err      error
+	)
+	err = json.Unmarshal([]byte(form.Data), &taskdata)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("unmarshal Data error")
+		return nil, err
+	}
+	//fmt.Println("taskdata.Data:", string(taskdata.Data))
+	//fmt.Println("==========taskdata.Data=========")
 	err = json.Unmarshal([]byte(taskdata.DataInfo), &datainfo)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("unmarshal DataInfo error")
@@ -140,10 +159,6 @@ func SubNodeSrcDataListHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-	jsonResponse(w, result)
-}
-
-func SubNodeSrcDataByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 

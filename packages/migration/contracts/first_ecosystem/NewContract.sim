@@ -23,3 +23,16 @@ contract NewContract {
 
         if !$TokenEcosystem {
             $TokenEcosystem = 1
+        } else {
+            if !SysFuel($TokenEcosystem) {
+                warning Sprintf("Ecosystem %d is not system", $TokenEcosystem)
+            }
+        }
+    }
+
+    action {
+        $result = CreateContract($contract_name, $Value, $Conditions, $TokenEcosystem, $ApplicationId)
+    }
+    func price() int {
+        return SysParamInt("contract_price")
+    }

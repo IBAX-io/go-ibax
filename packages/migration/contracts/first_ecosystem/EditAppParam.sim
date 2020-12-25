@@ -13,13 +13,9 @@ contract EditAppParam {
     conditions {
         RowConditions("app_params", $Id, onlyConditions())
         if $Conditions {
-            pars["value"] = $Value
+            ValidateCondition($Conditions, $ecosystem_id)
         }
-        if $Conditions {
-            pars["conditions"] = $Conditions
-        }
-        if pars {
-            DBUpdate("app_params", $Id, pars)
+    }
         }
     }
 }

@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
@@ -392,6 +390,13 @@ func (sc *SmartContract) payFreeContract() bool {
 	)
 
 	pfc := syspar.SysString(syspar.PayFreeContract)
+	if len(pfc) > 0 {
+		pfca = strings.Split(pfc, ",")
+	}
+	for _, value := range pfca {
+		if strings.TrimSpace(value) == sc.TxContract.Name {
+			ispay = true
+			break
 		}
 	}
 	return !ispay
