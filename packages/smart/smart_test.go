@@ -21,16 +21,6 @@ func TestNewContract(t *testing.T) {
 	test := []TestSmart{
 		{`contract NewCitizen {
 			data {
-				Public bytes
-				MyVal  string
-			}
-			func conditions {
-				Println( "Front", Random(10, 5000))
-				//$tmp = "Test string"
-//				Println("NewCitizen Front", $tmp, $key_id, $ecosystem_id, $PublicKey )
-			}
-			func action {
-//				Println("NewCitizen Main", $tmp, $type, $key_id )
 //				DBInsert(Sprintf( "%d_citizens", $ecosystem_id), "public_key,block_id", $PublicKey, $block)
 			}
 }			
@@ -57,6 +47,8 @@ func TestNewContract(t *testing.T) {
 }
 
 func TestCheckAppend(t *testing.T) {
+	appendTestContract := `contract AppendTest {
+		action {
 			var list array
 			list = Append(list, "naw_value")
 			Println(list)
