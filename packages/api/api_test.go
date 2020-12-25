@@ -362,6 +362,21 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "string", "money":
+			params[name] = value
+		case "file", "bytes":
+			if cp, ok := form.(*contractParams); !ok {
+				err = fmt.Errorf("Form is not *contractParams type")
+			} else {
+				params[name] = cp.GetRaw(name)
+			}
+		}
+
+		if err != nil {
+			err = fmt.Errorf("Parse param '%s': %s", name, err)
+			return
+		}
+	}
+
 	var privateKey, publicKey []byte
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
 		return
@@ -565,19 +580,6 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 
 	var privateKey, publicKey []byte
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
-		return
-	}
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
-		return
-	}
-
-	data, _, err := tx.NewTransaction(tx.SmartContract{
-		Header: tx.Header{
-			ID:          int(contract.ID),
-			Time:        time.Now().Unix(),
-			EcosystemID: 1,
-			KeyID:       crypto.Address(publicKey),
-			NetworkID:   conf.Config.NetworkID,
 		},
 		Params: params,
 	}, privateKey)

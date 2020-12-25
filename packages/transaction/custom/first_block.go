@@ -58,15 +58,16 @@ func (t *FirstBlockTransaction) Action() error {
 		return utils.ErrInfo(err)
 	}
 
+	amount := decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()
 
-	err = model.GetDB(t.DbTransaction).Exec(`Update "1_system_parameters" SET value = ? where name = 'private_blockchain'`, strconv.FormatUint(data.PrivateBlockchain, 10)).Error
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating private_blockchain")
+	taxes := &model.SystemParameter{Name: `taxes_wallet`}
+	if err = taxes.SaveArray([][]string{{"1", converter.Int64ToStr(keyID)}}); err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("saving taxes_wallet array")
 		return utils.ErrInfo(err)
 	}
 
-	if err = syspar.SysUpdate(t.DbTransaction); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
+	err = model.GetDB(t.DbTransaction).Exec(`update "1_system_parameters" SET value = ? where name = 'test'`, strconv.FormatInt(data.Test, 10)).Error
+	if err != nil {
 		return utils.ErrInfo(err)
 	}
 

@@ -14,10 +14,6 @@ contract EditMenu {
     conditions {
         RowConditions("menu", $Id, onlyConditions())
         if $Conditions {
-            ValidateCondition($Conditions, $ecosystem_id)
-        }
-        }
-        if $Title {
             pars["title"] = $Title
         }
         if $Conditions {

@@ -60,6 +60,12 @@ const WRITE_TIMEOUT = 20
 // DATA_TYPE_MAX_BLOCK_ID is block id max datatype
 const DATA_TYPE_MAX_BLOCK_ID = 10
 
+// DATA_TYPE_BLOCK_BODY is body block datatype
+const DATA_TYPE_BLOCK_BODY = 7
+
+// AddressLength is length of address
+const AddressLength = 20
+
 // PubkeySizeLength is pubkey length
 const PubkeySizeLength = 64
 
@@ -152,21 +158,6 @@ const (
 	FromToPerDayLimit = 10000
 
 	// TokenMovementQtyPerBlockLimit block limit token transfer
-	TokenMovementQtyPerBlockLimit = 100
-
-	// TCPConnTimeout timeout of tcp connection
-	TCPConnTimeout = 5 * time.Second
-
-	// TxRequestExpire is expiration time for request of transaction
-	TxRequestExpire = 1 * time.Minute
-
-	// DefaultTempDirName is default name of temporary directory
-	DefaultTempDirName = "ibax-temp"
-
-	// DefaultOBS allways is 1
-	DefaultOBS = 1
-
-	// MoneyLength is the maximum number of digits in money value
 	MoneyLength = 30
 
 	DefaultTokenEcosystem = 1
