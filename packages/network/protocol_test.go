@@ -59,6 +59,13 @@ func TestGetBodyResponse(t *testing.T) {
 	result := GetBodyResponse{}
 	require.NoError(t, rt.Write(b))
 	require.NoError(t, result.Read(b))
+	require.Equal(t, rt, result)
+	fmt.Println(rt, result)
+
+}
+
+func TestBodyResponse(t *testing.T) {
+	rt := GetBodyResponse{Data: []byte(strings.Repeat("A", 32))}
 	require.Equal(t, rt.Data, result.Data)
 	fmt.Println(rt, result)
 
