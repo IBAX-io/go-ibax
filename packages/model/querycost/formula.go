@@ -17,6 +17,11 @@ import (
 
 const (
 	Select = "select"
+	Insert = "insert"
+	Update = "update"
+	Delete = "delete"
+
+	Set  = "set"
 	From = "from"
 	Into = "into"
 
@@ -148,17 +153,6 @@ func (s DeleteQueryType) CalculateCost(rowCount int64) int64 {
 	return DeleteCost + int64(DeleteRowCoeff*float64(rowCount))
 }
 
-func (f *FormulaQueryCoster) QueryCost(transaction *model.DbTransaction, query string, args ...interface{}) (int64, error) {
-	cleanedQuery := strings.TrimSpace(strings.ToLower(query))
-	var queryType QueryType
-	switch {
-	case strings.HasPrefix(cleanedQuery, Select):
-		queryType = SelectQueryType(cleanedQuery)
-	case strings.HasPrefix(cleanedQuery, Insert):
-		queryType = InsertQueryType(cleanedQuery)
-	case strings.HasPrefix(cleanedQuery, Update):
-		queryType = UpdateQueryType(cleanedQuery)
-	case strings.HasPrefix(cleanedQuery, Delete):
 		queryType = DeleteQueryType(cleanedQuery)
 	default:
 		log.WithFields(log.Fields{"type": consts.ParseError, "query": query}).Error("parsing sql query")

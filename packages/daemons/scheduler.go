@@ -1,3 +1,20 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"context"
+	"fmt"
+	"sync/atomic"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/scheduler"
+	"github.com/IBAX-io/go-ibax/packages/scheduler/contract"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -21,15 +38,6 @@ func loadContractTasks() error {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get all cron tasks")
 			return err
 		}
-
-		for _, cronTask := range tasks {
-			err = scheduler.UpdateTask(&scheduler.Task{
-				ID:       cronTask.UID(),
-				CronSpec: cronTask.Cron,
-				Handler: &contract.ContractHandler{
-					Contract: cronTask.Contract,
-				},
-			})
 			if err != nil {
 				return err
 			}

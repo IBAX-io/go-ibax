@@ -5,6 +5,15 @@
 
 package api
 
+import (
+	"encoding/hex"
+	"encoding/json"
+	"net/url"
+	"testing"
+
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestContentHash(t *testing.T) {
@@ -42,12 +51,6 @@ func TestContent(t *testing.T) {
 		"Value":         {`If(true){Div(){Span(My text)Address()}}.Else{Div(Body: Hidden text)}`},
 		"Menu":          {`default_menu`},
 		"Conditions":    {"true"},
-	}))
-
-	cases := []struct {
-		url      string
-		form     url.Values
-		expected string
 	}{
 		{
 			"content/source/" + name,

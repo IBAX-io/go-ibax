@@ -13,6 +13,9 @@ contract EditAppParam {
     conditions {
         RowConditions("app_params", $Id, onlyConditions())
         if $Conditions {
+            pars["value"] = $Value
+        }
+        if $Conditions {
             pars["conditions"] = $Conditions
         }
         if pars {

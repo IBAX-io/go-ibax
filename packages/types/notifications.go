@@ -5,3 +5,4 @@
 package types
 
 type Notifications interface {
+	AddAccounts(ecosystem int64, accounts ...string)

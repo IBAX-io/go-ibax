@@ -47,13 +47,6 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     (next_id('1_tables'), 'system_parameters',
         '{
             "insert": "false",
-            "update": "ContractAccess(\"@1UpdateSysParam\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
-        }',
-        '{
-            "value": "ContractAccess(\"@1UpdateSysParam\")",
-            "name": "false",
-            "conditions": "ContractAccess(\"@1UpdateSysParam\")"
         }',
         'ContractConditions("@1AdminCondition")'
     ),
@@ -75,6 +68,9 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     ),
     (next_id('1_tables'), 'node_ban_logs',
         '{
+            "insert": "ContractAccess(\"@1CheckNodesBan\")",
+            "update": "ContractAccess(\"@1CheckNodesBan\")",
+            "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',
         '{
             "node_id": "ContractAccess(\"@1CheckNodesBan\")",

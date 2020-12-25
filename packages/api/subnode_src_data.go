@@ -20,25 +20,6 @@ import (
 )
 
 type TaskData struct {
-	DataUUID string `json:"data_uuid"`
-	Data     []byte `json:"data"`
-	Hash     string `json:"hash"`
-	DataInfo string `json:"data_info"`
-}
-
-func unmarshalColumnSubNodeSrcData(form *SubNodeSrcDataForm) (*model.SubNodeSrcData, error) {
-	var (
-		datainfo map[string]interface{}
-		taskdata TaskData
-		err      error
-	)
-	err = json.Unmarshal([]byte(form.Data), &taskdata)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("unmarshal Data error")
-		return nil, err
-	}
-	//fmt.Println("taskdata.Data:", string(taskdata.Data))
-	//fmt.Println("==========taskdata.Data=========")
 	err = json.Unmarshal([]byte(taskdata.DataInfo), &datainfo)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("unmarshal DataInfo error")
@@ -126,6 +107,19 @@ func SubNodeSrcDataUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	result, err := m.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")
+		return
+	}
+
+	jsonResponse(w, result)
+}
+
+func SubNodeSrcDataDeleteHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+	id := converter.StrToInt64(params["id"])
 
 	m := &model.SubNodeSrcData{}
 	m.ID = id

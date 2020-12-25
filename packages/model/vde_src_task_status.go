@@ -21,11 +21,16 @@ type VDESrcTaskStatus struct {
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
-func (VDESrcTaskStatus) TableName() string {
-	return "vde_src_task_status"
+func (m *VDESrcTaskStatus) Delete() error {
+	return DBConn.Delete(m).Error
 }
 
-func (m *VDESrcTaskStatus) Create() error {
+func (m *VDESrcTaskStatus) GetAll() ([]VDESrcTaskStatus, error) {
+	var result []VDESrcTaskStatus
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *VDESrcTaskStatus) GetOneByID() (*VDESrcTaskStatus, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
 }

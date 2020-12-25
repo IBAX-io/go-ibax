@@ -7,3 +7,4 @@ contract RemoveOBS {
 	conditions {}
 	action{
         $OBSName = ToLower($OBSName)
+        DeleteOBS($OBSName)
