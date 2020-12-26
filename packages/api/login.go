@@ -94,6 +94,12 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+
+	client := getClient(r)
 	logger := getLogger(r)
 
 	if form.EcosystemID > 0 {
@@ -284,21 +290,6 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		KeyID:       result.KeyID,
 		AccountID:   account.AccountID,
 		EcosystemID: result.EcosystemID,
-		IsMobile:    form.IsMobile,
-		RoleID:      converter.Int64ToStr(form.RoleID),
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Second * time.Duration(form.Expire)).Unix(),
-		},
-	}
-
-	claims.StandardClaims.ExpiresAt = time.Now().Add(time.Hour * 30 * 24).Unix()
-
-	//result.Token, err = generateNewJWTToken(claims)
-	result.Token, err = generateJWTToken(claims)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.JWTError, "error": err}).Error("generating jwt token")
-		errorResponse(w, err)
-		return
 	}
 	//claims.StandardClaims.ExpiresAt = time.Now().Add(time.Hour * 30 * 24).Unix()
 

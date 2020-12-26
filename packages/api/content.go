@@ -74,16 +74,6 @@ func initVars(r *http.Request) *map[string]string {
 		}
 		if len(vars["roleID"]) > 0 {
 			vars["role_id"] = vars["roleID"]
-		} else {
-			vars["role_id"] = "0"
-		}
-		if len(vars["isMobile"]) == 0 {
-			vars["isMobile"] = "0"
-		}
-		if len(vars["ecosystem_id"]) != 0 {
-			ecosystems := model.Ecosystem{}
-			if found, _ := ecosystems.Get(nil, converter.StrToInt64(vars["ecosystem_id"])); found {
-				vars["ecosystem_name"] = ecosystems.Name
 			}
 		}
 	}
@@ -222,6 +212,14 @@ func getPageHashHandler(w http.ResponseWriter, r *http.Request) {
 
 	if ecosystem := r.FormValue("ecosystem"); len(ecosystem) > 0 &&
 		!strings.HasPrefix(params["name"], "@") {
+		params["name"] = "@" + ecosystem + params["name"]
+	}
+	result, err := getPage(r)
+	if err != nil {
+		errorResponse(w, err)
+		return
+	}
+
 	out, err := json.Marshal(result)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("getting string for hash")

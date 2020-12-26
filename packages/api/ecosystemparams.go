@@ -18,12 +18,7 @@ import (
 type paramResult struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
-	Value      string `json:"value"`
-	Conditions string `json:"conditions"`
-}
-
-type ecosystemParamsResult struct {
-	List []paramResult `json:"list"`
+	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}

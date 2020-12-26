@@ -4,17 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package model
-
-import (
-	"fmt"
-
-	"github.com/shopspring/decimal"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-)
-
-// Key is model
-type Key struct {
 	ecosystem    int64
 	accountKeyID int64 `gorm:"-"`
 
@@ -31,6 +20,24 @@ type Key struct {
 // SetTablePrefix is setting table prefix
 func (m *Key) SetTablePrefix(prefix int64) *Key {
 	m.ecosystem = prefix
+	return m
+}
+
+// TableName returns name of table
+func (m Key) TableName() string {
+	if m.ecosystem == 0 {
+		m.ecosystem = 1
+	}
+	return `1_keys`
+}
+func (m *Key) Disable() bool {
+	return m.Deleted != 0 || m.Blocked != 0
+}
+func (m *Key) CapableAmount() decimal.Decimal {
+	amount := decimal.New(0, 0)
+	if len(m.Amount) > 0 {
+		amount, _ = decimal.NewFromString(m.Amount)
+	}
 	maxpay := decimal.New(0, 0)
 	if len(m.Maxpay) > 0 {
 		maxpay, _ = decimal.NewFromString(m.Maxpay)

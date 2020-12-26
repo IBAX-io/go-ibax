@@ -1,6 +1,4 @@
-// +prop AppID = '1'
-// +prop Conditions = 'ContractConditions("MainCondition")'
-contract NewMenu {
+        if DBFind("menu").Columns("id").Where({name: $Name}).One("id") {
             warning Sprintf( "Menu %s already exists", $Name)
         }
     }

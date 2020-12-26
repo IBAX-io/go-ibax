@@ -14,13 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestGetInterfaceRow(t *testing.T) {
-	cases := []struct {
-		url        string
-		contract   string
-		equalAttrs []string
-	}{
 		{"interface/page/", "NewPage", []string{"Name", "Value", "Menu", "Conditions"}},
 		{"interface/menu/", "NewMenu", []string{"Name", "Value", "Title", "Conditions"}},
 		{"interface/block/", "NewBlock", []string{"Name", "Value", "Conditions"}},
@@ -68,6 +61,13 @@ func TestNewMenuNoError(t *testing.T) {
 
 func TestEditMenuNoError(t *testing.T) {
 	require.NoError(t, keyLogin(1))
+	form := url.Values{
+		"Id": {"1"},
+		"Value": {`first
+		second
+		third
+		andmore`},
+		"Title": {`My edited Test Menu`},
 	}
 	assert.NoError(t, postTx(`EditMenu`, &form))
 }

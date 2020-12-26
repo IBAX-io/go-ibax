@@ -143,6 +143,25 @@ var (
 		`map`:     {DtMap, reflect.TypeOf(&types.Map{})},
 		`money`:   {DtMoney, reflect.TypeOf(decimal.New(0, 0))},
 		`float`:   {DtFloat, reflect.TypeOf(float64(0.0))},
+		`string`:  {DtString, reflect.TypeOf(``)},
+		`file`:    {DtFile, reflect.TypeOf(&types.Map{})},
+	}
+)
+
+// Lexem contains information about language item
+type Lexem struct {
+	Type   uint32 // Type of the lexem
+	Ext    uint32
+	Value  interface{} // Value of lexem
+	Line   uint16      // Line of the lexem
+	Column uint32      // Position inside the line
+}
+
+// GetLogger returns logger
+func (l Lexem) GetLogger() *log.Entry {
+	return log.WithFields(log.Fields{"lex_type": l.Type, "lex_line": l.Line, "lex_column": l.Column})
+}
+
 type ifBuf struct {
 	count int
 	pair  int
@@ -157,14 +176,6 @@ type Lexems []*Lexem
 // and records it in the file lex_table.go. In fact, the lexTable array is a set of states and
 // depending on the next sign, the machine goes into a new state.
 // lexParser parsers the input language source code
-func lexParser(input []rune) (Lexems, error) {
-	var (
-		curState                                        uint8
-		length, line, off, offline, flags, start, lexID uint32
-	)
-
-	lexems := make(Lexems, 0, len(input)/4)
-	irune := len(alphabet) - 1
 
 	// This function according to the next symbol looks with help of lexTable what new state we will have,
 	// whether we got the lexeme and what flags are displayed

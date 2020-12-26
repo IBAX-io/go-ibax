@@ -28,6 +28,13 @@ type compileState struct {
 	Func     int // a handle function
 }
 
+type stateLine map[int]compileState
+
+// The list of compile states
+type compileStates []stateLine
+
+type compileFunc func(*[]*Block, int, *Lexem) error
+
 const (
 	mapConst = iota
 	mapVar
@@ -1056,13 +1063,6 @@ main:
 		return nil, errUnclosedArray
 	}
 	*ind = i
-	return ret, nil
-}
-
-func setWritable(block *[]*Block) {
-	for i := len(*block) - 1; i >= 0; i-- {
-		blockItem := (*block)[i]
-		if blockItem.Type == ObjFunc {
 			blockItem.Info.(*FuncInfo).CanWrite = true
 		}
 		if blockItem.Type == ObjContract {

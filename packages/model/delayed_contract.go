@@ -31,5 +31,6 @@ func (DelayedContract) TableName() string {
 func GetAllDelayedContractsForBlockID(blockID int64) ([]*DelayedContract, error) {
 	var contracts []*DelayedContract
 	if err := DBConn.Where("block_id <= ? and deleted = ?", blockID, availableDelayedContracts).Order("high_rate desc").Find(&contracts).Error; err != nil {
+		return nil, err
 	return isFound(DBConn.Where("id = ?", id).First(dc))
 }

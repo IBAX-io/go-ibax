@@ -16,6 +16,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const defaultSectionsLimit = 100
+
+type sectionsForm struct {
+	paginatorForm
+	Lang string `schema:"lang"`
+}
+func (f *sectionsForm) Validate(r *http.Request) error {
+	if err := f.paginatorForm.Validate(r); err != nil {
+		return err
 	}
 
 	if len(f.Lang) == 0 {
