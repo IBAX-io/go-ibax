@@ -74,16 +74,10 @@ func NewScheduler() *Scheduler {
 // AddTask adds task to global scheduler
 func AddTask(t *Task) error {
 	return scheduler.AddTask(t)
-}
-
-// UpdateTask updates task in global scheduler
-func UpdateTask(t *Task) error {
-	return scheduler.UpdateTask(t)
-}
-
-// Parse parses cron format
-func Parse(cronSpec string) (cron.Schedule, error) {
 	sch, err := cron.ParseStandard(cronSpec)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("parse cron format")
 		return nil, err
+	}
+	return sch, nil
+}

@@ -11,16 +11,6 @@ type VDEAgentChainInfo struct {
 	Comment             string `gorm:"not null" json:"comment"`
 	LogMode             int64  `gorm:"not null" json:"log_mode"`
 
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
-func (m *VDEAgentChainInfo) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
-}
-
-func (m *VDEAgentChainInfo) Delete() error {
-	return DBConn.Delete(m).Error
 }
 
 func (m *VDEAgentChainInfo) Get() (*VDEAgentChainInfo, error) {

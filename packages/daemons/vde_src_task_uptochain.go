@@ -141,20 +141,6 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 	var (
 		//TaskParms      map[string]interface{}
 
-		blockchain_http      string
-		blockchain_ecosystem string
-
-		//ok        bool
-		err error
-	)
-
-	m := &model.VDESrcTaskChainStatus{}
-	SrcTask, err := m.GetAllByContractStateAndChainState(1, 0, 1) //
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
 	if len(SrcTask) == 0 {
 		//log.Info("Src task not found")
 		time.Sleep(time.Millisecond * 2)
@@ -190,6 +176,15 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 			continue
 		}
 		chain_apiAddress := blockchain_http
+		chain_apiEcosystemID := int64(ecosystemID)
+
+		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
+		// Login
+		gAuth_chain, _, _, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
+			time.Sleep(time.Millisecond * 2)
+			continue
 		}
 		//fmt.Println("Login OK!")
 
