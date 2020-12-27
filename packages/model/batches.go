@@ -24,12 +24,6 @@ func DeleteTransactions(dbTx *gorm.DB, hs [][]byte) error {
 	return dbTx.Delete(&Transaction{}, hs).Error
 }
 
-type AfterTxs struct {
-	UsedTx      [][]byte
-	Rts         []*RollbackTx
-	Lts         []*LogTransaction
-	UpdTxStatus []*updateBlockMsg
-}
 
 func AfterPlayTxs(dbTx *DbTransaction, blockID int64, playTx AfterTxs, logger *log.Entry) error {
 	return GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
@@ -89,6 +83,8 @@ func (l txser) BatchFindByHash(tr *DbTransaction, hs ArrHashes) error {
 func (l queueser) BatchFindByHash(tr *DbTransaction, hs ArrHashes) error {
 	if result := GetDB(tr).Model(&QueueTx{}).Select("hash").Where("hash IN ?", hs).FindInBatches(&l, len(hs), func(tx *gorm.DB, batch int) error {
 		if tx.RowsAffected > 0 {
+			return errors.New("duplicated transaction at queue_tx")
+		}
 		return nil
 	}); result.Error != nil {
 		return result.Error
