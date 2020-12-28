@@ -65,6 +65,16 @@ func TestMapJson(t *testing.T) {
 	//apub := AssignRules{
 	//	StartBlockID:    1,
 	//	EndBlockID:      21600*365 + 21600*4*30 + 1,
+	//	IntervalBlockID: 21600 * 4 * 30,
+	//	Count:           4,
+	//	TotalAmount:     "105000000000000000000",
+	//}
+	apri := AssignRules{
+		StartBlockID:    INT64_MAX,
+		EndBlockID:      INT64_MAX,
+		IntervalBlockID: 21600 * 360,
+		Count:           3,
+		TotalAmount:     "63000000000000000000",
 	}
 	//Public offering
 	apub := AssignRules{
@@ -163,14 +173,6 @@ func TestMapJsonTs(t *testing.T) {
 	//Ecological partner
 	ad := AssignRules{
 		StartBlockID:    1,
-		EndBlockID:      49,
-		IntervalBlockID: 2,
-		Count:           24,
-		TotalAmount:     "168000000000000000000",
-	}
-
-	//
-	//ae :=AssignRules{
 	//	StartBlockID:21600*6*30,
 	//	EndBlockID:INT64_MAX,
 	//	IntervalBlockID:21600*30,

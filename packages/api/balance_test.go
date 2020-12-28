@@ -14,17 +14,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/model"
 )
 
-func TestBalance(t *testing.T) {
-	if err := keyLogin(1); err != nil {
-		t.Error(err)
-		return
-	}
-	var ret balanceResult
-	err := sendGet(`balance/`+gAddress, nil, &ret)
-	if err != nil {
-		t.Error(err)
-		return
-	}
 	if len(ret.Amount) < 10 {
 		t.Error(`too low balance`, ret)
 	}
@@ -54,6 +43,8 @@ func TestAssignBalance(t *testing.T) {
 	data, _ := json.Marshal(ret)
 	fmt.Println(string(data))
 	//err = sendGet(`assignbalance/3434341`, nil, &ret)
+	//if err != nil {
+	//	t.Error(err)
 	//	return
 	//}
 	//if len(ret.Amount) > 0 {

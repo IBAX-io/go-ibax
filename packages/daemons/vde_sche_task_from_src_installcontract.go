@@ -48,14 +48,6 @@ func VDEScheTaskFromSrcInstallContractSrc(ctx context.Context, d *daemon) error 
 		blockchain_http = item.ContractRunHttp
 		blockchain_ecosystem = item.ContractRunEcosystem
 		//fmt.Println("ContractRunHttp and ContractRunEcosystem:", blockchain_http, blockchain_ecosystem)
-		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("encode error")
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		//api.ApiAddress = blockchain_http
-		//api.ApiEcosystemID = int64(ecosystemID)
 		vde_sche_apiAddress := blockchain_http
 		vde_sche_apiEcosystemID := int64(ecosystemID)
 
@@ -86,6 +78,14 @@ func VDEScheTaskFromSrcInstallContractSrc(ctx context.Context, d *daemon) error 
 		} else {
 			item.ContractStateSrc = 1
 			item.ContractStateSrcErr = ""
+		}
+		//fmt.Println("Call api.PostTxResult Src OK")
+
+		item.UpdateTime = time.Now().Unix()
+		err = item.Updates()
+		if err != nil {
+			fmt.Println("Update VDEScheTask table err: ", err)
+			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
 			time.Sleep(time.Millisecond * 100)
 			continue
 		}

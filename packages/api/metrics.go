@@ -89,21 +89,6 @@ func blocksCountByNodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !found {
-		errorResponse(w, errNotFound)
-		return
-	}
-
-	c, err := model.GetBlockCountByNode(Node)
-	if err != nil {
-		logger := getLogger(r)
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting block count by node")
-		errorResponse(w, err, http.StatusInternalServerError)
-		return
-	}
-
-	bm := blockMetricByNode{TotalCount: b.ID, PartialCount: c}
-
 	jsonResponse(w, bm)
 }
 
@@ -170,3 +155,5 @@ func banStatHandler(w http.ResponseWriter, _ *http.Request) {
 		})
 	}
 
+	jsonResponse(w, list)
+}

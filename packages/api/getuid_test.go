@@ -15,13 +15,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
-		json.Unmarshal([]byte(err.Error()[4:]), &v)
-		t.Error(err)
-		return
-	}
-	gAuth = ret.Token
-	priv, pub, err := crypto.GenHexKeys()
+
+func TestGetUID(t *testing.T) {
+	var ret getUIDResult
+	err := sendGet(`getuid`, nil, &ret)
 	if err != nil {
+		var v map[string]string
+		json.Unmarshal([]byte(err.Error()[4:]), &v)
 		t.Error(err)
 		return
 	}

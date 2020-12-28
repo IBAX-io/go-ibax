@@ -564,15 +564,6 @@ func VdePostTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPri
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
 		return
 	}
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
-		return
-	}
-
-	/*data, _, err := tx.NewTransaction(tx.SmartContract{
-		Header: tx.Header{
-			ID:          int(contract.ID),
-			Time:        time.Now().Unix(),
-			EcosystemID: 1,
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   consts.NETWORK_ID,
 		},
@@ -613,6 +604,9 @@ func VdePostTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPri
 	}
 
 	id, err = waitTx(apiAddress, gAuth, ret.Hashes["data"])
+	if id != 0 && err != nil {
+		msg = err.Error()
+		err = nil
 	}
 
 	return

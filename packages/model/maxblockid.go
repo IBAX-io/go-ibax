@@ -23,6 +23,9 @@ func (b *BlockID) Marshal() ([]byte, error) {
 	if res, err := msgpack.Marshal(b); err != nil {
 		return nil, err
 	} else {
+		return res, err
+	}
+}
 
 //unmarshal
 func (b *BlockID) Unmarshal(bt []byte) error {
@@ -86,5 +89,3 @@ func (b *BlockID) GetRangeByName(n1, n2 string, count int64) (bool, error) {
 		return true, nil
 	}
 
-	return false, nil
-}

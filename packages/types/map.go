@@ -149,8 +149,6 @@ func (m *Map) Keys() []string {
 }
 
 // Values returns all values of the map (insertion order).
-func (m *Map) Values() []interface{} {
-	values := make([]interface{}, m.Size())
 	count := 0
 	for current := m.head; current != nil; current = current.next {
 		values[count] = current.value
@@ -162,6 +160,17 @@ func (m *Map) Values() []interface{} {
 // Clear removes all elements from the map.
 func (m *Map) Clear() {
 	m.m = make(map[string]*Link)
+	m.head = nil
+	m.tail = nil
+}
+
+// String returns a string representation of container
+func (m *Map) String() string {
+	str := "map["
+	for current := m.head; current != nil; current = current.next {
+		str += fmt.Sprintf("%v:%v ", current.key, current.value)
+	}
+	return strings.TrimRight(str, " ") + "]"
 }
 
 func (m *Map) MarshalJSON() ([]byte, error) {

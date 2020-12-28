@@ -73,6 +73,14 @@ func unmarshalColumnVDEScheTask(form *VDEScheTaskForm) (*model.VDEScheTask, erro
 	}
 
 	return m, err
+}
+
+func VDEScheTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		ContractSrcGetHashHex  string
+		ContractDestGetHashHex string
+		err                    error
+	)
 	logger := getLogger(r)
 	form := &VDEScheTaskForm{}
 	if err = parseForm(r, form); err != nil {
@@ -91,12 +99,6 @@ func unmarshalColumnVDEScheTask(form *VDEScheTaskForm) (*model.VDEScheTask, erro
 			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
 			errorResponse(w, err)
 			return
-		}
-		m.ContractSrcGetHash = ContractSrcGetHashHex
-	}
-	if len(m.ContractDestGetHash) == 0 {
-		if ContractDestGetHashHex, err = crypto.HashHex([]byte(m.ContractDestGet)); err != nil {
-			fmt.Println("ContractDestGetHashHex Raw data hash failed ")
 			errorResponse(w, err)
 			return
 		}
