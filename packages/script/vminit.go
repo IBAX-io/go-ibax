@@ -216,6 +216,17 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 	}
 	logger := log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError})
 	cblock := contract.Value.(*Block)
+	parnames := make(map[string]bool)
+	pars := strings.Split(txs, `,`)
+	if len(pars) != len(params) {
+		logger.WithFields(log.Fields{"contract_params_len": len(pars), "contract_params_len_needed": len(params), "type": consts.ContractError}).Error("wrong contract parameters pars")
+		return ``, errContractPars
+	}
+	for _, ipar := range pars {
+		parnames[ipar] = true
+	}
+	if _, ok := (*rt.extend)[`loop_`+name]; ok {
+		logger.WithFields(log.Fields{"type": consts.ContractError, "contract_name": name}).Error("there is loop in contract")
 		return nil, fmt.Errorf(eContractLoop, name)
 	}
 	(*rt.extend)[`loop_`+name] = true
@@ -477,20 +488,6 @@ func (vm *VM) Call(name string, params []interface{}, extend *map[string]interfa
 }
 
 // ExContract executes the name contract in the state with specified parameters
-func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (interface{}, error) {
-
-	name = StateName(state, name)
-	contract, ok := rt.vm.Objects[name]
-	if !ok {
-		log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError}).Error("unknown contract")
-		return nil, fmt.Errorf(eUnknownContract, name)
-	}
-	if params == nil {
-		params = types.NewMap()
-	}
-	logger := log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError})
-	names := make([]string, 0)
-	vals := make([]interface{}, 0)
 	cblock := contract.Value.(*Block)
 	if cblock.Info.(*ContractInfo).Tx != nil {
 		for _, tx := range *cblock.Info.(*ContractInfo).Tx {

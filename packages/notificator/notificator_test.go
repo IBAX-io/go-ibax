@@ -124,6 +124,12 @@ func TestOutputFormat(t *testing.T) {
 
 	want := `[{"ecosystem":1,"role_id":1,"count":2},{"ecosystem":2,"role_id":2,"count":1}]`
 	bts, err := json.Marshal(records)
+	if assert.NoError(t, err) {
+		assert.Equal(t, string(bts), want, "marshaled not equal")
+	}
+}
+
+func TestStatsChanged(t *testing.T) {
 	type tsc struct {
 		old    []notificationRecord
 		new    []notificationRecord
@@ -205,12 +211,6 @@ func TestOutputFormat(t *testing.T) {
 			},
 
 			new:    nil,
-			result: true,
-		},
-	}
-
-	for i, record := range table {
-		if assert.Equal(t, record.result, statsChanged(record.old, record.new)) != true {
 			t.Errorf("step %d the result is not the expected", i)
 		}
 	}

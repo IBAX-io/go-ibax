@@ -33,6 +33,23 @@ func Single(transaction *DbTransaction, query string, args ...interface{}) *Sing
 }
 
 // Int64 converts bytes to int64
+func (r *SingleResult) Int64() (int64, error) {
+	if r.err != nil {
+		return 0, r.err
+	}
+	return converter.BytesToInt64(r.result), nil
+}
+
+// Int converts bytes to int
+func (r *SingleResult) Int() (int, error) {
+	if r.err != nil {
+		return 0, r.err
+	}
+	return converter.BytesToInt(r.result), nil
+}
+
+// Float64 converts string to float64
+func (r *SingleResult) Float64() (float64, error) {
 	if r.err != nil {
 		return 0, r.err
 	}
@@ -107,17 +124,6 @@ func (r *OneRow) Float64() (map[string]float64, error) {
 
 // Int is extracts result from OneRow as int
 func (r *OneRow) Int() (map[string]int, error) {
-	result := make(map[string]int)
-	if r.err != nil {
-		return result, r.err
-	}
-	for k, v := range r.result {
-		result[k] = converter.StrToInt(v)
-	}
-	return result, nil
-}
-
-// GetAllTransaction is retrieve all query result rows
 func GetAllTransaction(transaction *DbTransaction, query string, countRows int, args ...interface{}) ([]map[string]string, error) {
 	request := GetDB(transaction).Raw(query, args...)
 	if countRows > 0 {

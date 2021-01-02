@@ -16,11 +16,6 @@ import (
 )
 
 type notificationRecord struct {
-	EcosystemID  string `json:"ecosystem"`
-	RoleID       string `json:"role_id"`
-	RecordsCount int64  `json:"count"`
-}
-
 // UpdateNotifications send stats about unreaded messages to centrifugo for ecosystem
 func UpdateNotifications(ecosystemID int64, accounts []string) {
 	notificationsStats, err := getEcosystemNotificationStats(ecosystemID, accounts)
@@ -61,6 +56,12 @@ func parseRecipientNotification(rows []model.NotificationsCount, systemID int64)
 			EcosystemID:  converter.Int64ToStr(systemID),
 			RoleID:       converter.Int64ToStr(r.RoleID),
 			RecordsCount: r.Count,
+		}
+
+		nr, ok := recipientNotifications[r.Account]
+		if ok {
+			*nr = append(*nr, roleNotifications)
+			continue
 		}
 
 		records := []notificationRecord{

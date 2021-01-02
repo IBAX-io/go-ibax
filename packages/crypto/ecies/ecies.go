@@ -206,6 +206,11 @@ func symEncrypt(rand io.Reader, params *ECIESParams, key, m []byte) (ct []byte, 
 	ct = make([]byte, len(m)+params.BlockSize)
 	copy(ct, iv)
 	ctr.XORKeyStream(ct[params.BlockSize:], m)
+	return
+}
+
+// symDecrypt carries out CTR decryption using the block cipher specified in
+// the parameters
 func symDecrypt(params *ECIESParams, key, ct []byte) (m []byte, err error) {
 	c, err := params.Cipher(key)
 	if err != nil {
@@ -367,21 +372,6 @@ var (
 		Cipher:    aes.NewCipher,
 		BlockSize: aes.BlockSize,
 		KeyLen:    32,
-	}
-
-	ECIES_AES256_SHA384 = &ECIESParams{
-		Hash:      sha512.New384,
-		hashAlgo:  crypto.SHA384,
-		Cipher:    aes.NewCipher,
-		BlockSize: aes.BlockSize,
-		KeyLen:    32,
-	}
-
-	ECIES_AES256_SHA512 = &ECIESParams{
-		Hash:      sha512.New,
-		hashAlgo:  crypto.SHA512,
-		Cipher:    aes.NewCipher,
-		BlockSize: aes.BlockSize,
 		KeyLen:    32,
 	}
 )
