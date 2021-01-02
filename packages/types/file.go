@@ -11,12 +11,10 @@ func NewFile() *Map {
 		"Name":     "",
 		"MimeType": "",
 		"Body":     []byte{},
-	}
-	f.Set("MimeType", v)
-	if v, ok = m["Body"].([]byte); !ok {
-		return
-	}
-	f.Set("Body", v)
-
-	return
+	})
 }
+
+func NewFileFromMap(m map[string]interface{}) (f *Map, ok bool) {
+	var v interface{}
+	f = NewFile()
+

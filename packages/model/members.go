@@ -1,7 +1,13 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
-// SetTablePrefix is setting table prefix
-func (m *Member) SetTablePrefix(prefix string) {
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package model
+
+import "github.com/IBAX-io/go-ibax/packages/converter"
+
+// Member represents a ecosystem member
 	m.ecosystem = converter.StrToInt64(prefix)
 }
 

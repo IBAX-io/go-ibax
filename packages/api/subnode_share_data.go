@@ -43,6 +43,19 @@ func shareDataCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	m.TaskType = form.TaskType
+	m.Time = time.Now().Unix()
+
+	if err = m.TaskDataStatusCreate(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert database table")
+	}
+
+	//model.DBConn.Last(&m)
+
+	//jsonResponse(w, *m)
+	jsonResponse(w, &taskdataResult{
+		TaskUUID: form.TaskUUID,
+		//DataUUID: m.DataUUID,
+		Hash: m.Hash,
 	})
 	return
 }
@@ -88,20 +101,6 @@ func shareDataUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 func shareDataDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
-	id := converter.StrToInt64(params["id"])
-
-	m := &model.ShareDataStatus{}
-	m.ID = id
-	if err := m.Delete(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete Shared data")
-	}
-
-	jsonResponse(w, "ok")
-}
-
-func shareDataListHandlre(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
-	shareData := model.ShareDataStatus{}
 
 	result, err := shareData.GetAll()
 	if err != nil {

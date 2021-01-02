@@ -8,13 +8,6 @@ package api
 import (
 	"crypto/md5"
 	"encoding/base64"
-	"fmt"
-	"io"
-	"math/rand"
-	"net/http"
-	"net/url"
-	"testing"
-	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
@@ -52,6 +45,13 @@ func TestAPI(t *testing.T) {
 	assert.NoError(t, postTx(`NewPage`, &form))
 
 	assert.NoError(t, sendPost(`content/hash/`+name, &url.Values{}, &retHash))
+	if len(retHash.Hash) != 64 {
+		t.Error(`wrong hash ` + retHash.Hash)
+		return
+	}
+	form = url.Values{"Name": {name}, "Value": {`contract ` + name + ` {
+		action {
+			$result = $key_id
 		}}`}, "ApplicationId": {`1`}, "Conditions": {`ContractConditions("MainCondition")`}}
 	assert.NoError(t, postTx("NewContract", &form))
 	_, msg, err = postTxResult(name, &url.Values{})

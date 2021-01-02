@@ -28,6 +28,11 @@ type dest_VDEDestDataHashResult struct {
 	List  []struct {
 		ID         string `json:"id"`
 		TaskUUID   string `json:"task_uuid"`
+		DataUUID   string `json:"data_uuid"`
+		Hash       string `json:"hash"`
+		UpdateTime string `json:"update_time"`
+		CreateTime string `json:"create_time"`
+	} `json:"list"`
 }
 
 //Getting task data hash from the chain
@@ -125,17 +130,6 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 		time.Sleep(time.Second * 2)
 		return nil
 	}
-
-	//utils.Print_json(t_struct)
-	for _, DataHashItem := range t_struct.List {
-		//fmt.Println("DataHashItem:", DataHashItem.ID, DataHashItem.TaskUUID)
-		m := &model.VDEDestDataHash{}
-		m.TaskUUID = DataHashItem.TaskUUID
-		m.DataUUID = DataHashItem.DataUUID
-		m.Hash = DataHashItem.Hash
-		m.BlockchainHttp = blockchain_http
-		m.BlockchainEcosystem = blockchain_ecosystem
-		m.CreateTime = converter.StrToInt64(DataHashItem.CreateTime)
 
 		if err = m.Create(); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Failed to insert vde_dest_data_hash table")

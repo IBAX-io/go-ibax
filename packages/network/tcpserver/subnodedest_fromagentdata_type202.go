@@ -55,14 +55,6 @@ func Type202(r *network.SubNodeAgentDataRequest) (*network.SubNodeAgentDataRespo
 		return nil, err
 	}
 	eccData, err := ecies.EccCryptoKey(data, NodePublicKey)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
-		return nil, err
-	}
-	encodeDataString := base64.StdEncoding.EncodeToString(eccData)
-	////
-
-	AgentMode := converter.StrToInt64(r.AgentMode)
 	TranMode := converter.StrToInt64(r.TranMode)
 	SubNodeDestData := model.SubNodeDestData{
 		TaskUUID:           r.TaskUUID,
@@ -75,6 +67,17 @@ func Type202(r *network.SubNodeAgentDataRequest) (*network.SubNodeAgentDataRespo
 		SubNodeAgentPubkey: r.SubNodeAgentPubkey,
 		SubNodeAgentIP:     r.SubNodeAgentIp,
 		SubNodeDestPubkey:  r.SubNodeDestPubkey,
+		SubNodeDestIP:      r.SubNodeDestIp,
+		//Data:         r.Data,
+		//Data:         data,
+		Data:       []byte(encodeDataString),
+		CreateTime: time.Now().Unix(),
+	}
+
+	err = SubNodeDestData.Create()
+	if err != nil {
+		log.WithError(err)
+		return nil, err
 	}
 
 	return resp, nil
