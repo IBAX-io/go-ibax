@@ -56,7 +56,15 @@ func GetAllSystemStatesIDs() ([]int64, []string, error) {
 // Get is fill receiver from db
 func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
 	return isFound(GetDB(dbTx).First(sys, "id = ?", id))
-}
+func (sys *Ecosystem) IsOpenMultiFee() bool {
+	if len(sys.Info) > 0 {
+		var info map[string]interface{}
+		json.Unmarshal([]byte(sys.Info), &info)
+		if v, ok := info["multi_fee"]; ok {
+			multi, _ := strconv.Atoi(fmt.Sprint(v))
+			if multi == 1 {
+				return true
+			}
 		}
 	}
 	return false

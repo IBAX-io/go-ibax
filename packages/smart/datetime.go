@@ -15,23 +15,14 @@ const (
 )
 
 // Date formats timestamp to specified date format
-func Date(timeFormat string, timestamp int64) string {
-	t := time.Unix(timestamp, 0)
-	return t.Format(timeFormat)
-}
-
-func BlockTime(sc *SmartContract) string {
-	var blockTime int64
-	if sc.BlockData != nil {
-		blockTime = sc.BlockData.Time
-	}
-	if sc.OBS {
-		blockTime = time.Now().Unix()
-	}
-	return Date(dateTimeFormat, blockTime)
-}
 
 func DateTime(unix int64) string {
+	return Date(dateTimeFormat, unix)
+}
+
+func DateTimeLocation(unix int64, locationName string) (string, error) {
+	loc, err := time.LoadLocation(locationName)
+	if err != nil {
 		return "", errors.Wrap(err, "Load location")
 	}
 

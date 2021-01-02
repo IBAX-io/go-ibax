@@ -24,10 +24,6 @@ func Init(host string, port int, name string) error {
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func Close() {
 	if Client != nil {
 		Client.Close()
 	}
@@ -36,3 +32,8 @@ func Close() {
 func APIRouteCounterName(method, pattern string) string {
 	routeCounterName := strings.Replace(strings.Replace(pattern, ":", "", -1), "/", ".", -1)
 	return "api." + strings.ToLower(method) + "." + routeCounterName
+}
+
+func DaemonCounterName(daemonName string) string {
+	return "daemon." + daemonName
+}

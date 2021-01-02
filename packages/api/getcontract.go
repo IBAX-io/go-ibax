@@ -12,12 +12,13 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/script"
 
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
-type contractField struct {
-	Name     string `json:"name"`
+type getContractResult struct {
+	ID       uint32          `json:"id"`
+	StateID  uint32          `json:"state"`
+	TableID  string          `json:"tableid"`
+	WalletID string          `json:"walletid"`
+	TokenID  string          `json:"tokenid"`
+	Address  string          `json:"address"`
 	Fields   []contractField `json:"fields"`
 	Name     string          `json:"name"`
 }

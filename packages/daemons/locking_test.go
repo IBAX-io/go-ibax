@@ -15,18 +15,11 @@ import (
 	"context"
 
 	"github.com/IBAX-io/go-ibax/packages/model"
-	CREATE TABLE "install" (
-		"progress" text NOT NULL DEFAULT ''
-	);
-	`
-	var err error
-	_, err = db.Exec(sql)
-	if err != nil {
-		t.Fatalf("%s", err)
-	}
-}
+)
 
-func TestWait(t *testing.T) {
+func createTables(t *testing.T, db *sql.DB) {
+	sql := `
+	CREATE TABLE "main_lock" (
 	db := initGorm(t)
 	createTables(t, db.DB())
 

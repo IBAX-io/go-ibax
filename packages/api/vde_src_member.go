@@ -76,17 +76,6 @@ func VDESrcMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)
 		return
-	}
-
-	m := &model.VDESrcMember{}
-
-	if m, err = unmarshalColumnVDESrcMember(form); err != nil {
-		errorResponse(w, err)
-		return
-	}
-
-	m.ID = id
-	m.UpdateTime = time.Now().Unix()
 	if err = m.Updates(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
 		return
@@ -117,6 +106,17 @@ func VDESrcMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 
 func VDESrcMemberListHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
+	srcData := model.VDESrcMember{}
+
+	result, err := srcData.GetAll()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
+		errorResponse(w, err)
+		return
+	}
+	jsonResponse(w, result)
+}
+
 func VDESrcMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)

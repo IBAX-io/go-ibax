@@ -25,16 +25,6 @@ func TestBlockTimeCalculator_TimeToGenerate(t *testing.T) {
 		result bool
 		err    error
 	}{
-		{
-			firstBlockTime: time.Unix(1, 0),
-
-			clock: func() Clock {
-				mc := &MockClock{}
-				mc.On("Now").Return(time.Unix(0, 0))
-				return mc
-			}(),
-
-			err: TimeError,
 		},
 
 		{
@@ -237,6 +227,20 @@ func TestBlockTImeCalculator_countBlockTime(t *testing.T) {
 			},
 		},
 
+		// Duration testing case
+		{
+			firstBlockTime: time.Unix(0, 0),
+			blockGenTime:   time.Second * 0,
+			blocksGap:      time.Second * 1,
+			nodesCount:     5,
+			clock:          time.Unix(0, 0),
+
+			result: blockGenerationState{
+				start:    time.Unix(0, 0),
+				duration: time.Second * 1,
+
+				nodePosition: 0,
+			},
 		},
 
 		// Duration testing case

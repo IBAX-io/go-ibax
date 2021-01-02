@@ -211,12 +211,6 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 		//api.ApiEcosystemID = int64(ecosystemID)
 		chain_apiAddress := blockchain_http
 		chain_apiEcosystemID := int64(ecosystemID)
-
-		src := filepath.Join(conf.Config.KeysDir, "chain_PrivateKey")
-		// Login
-		//err := api.KeyLogin(src, api.ApiEcosystemID)
-		gAuth_chain, _, gPrivate_chain, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
-		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
 			time.Sleep(time.Millisecond * 2)
 			continue
@@ -248,6 +242,16 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 			}
 		} else {
 			log.WithFields(log.Fields{"error": err}).Error("tran_mode error")
+			continue
+		}
+
+		chain_api.ApiPrivateFor = []string{
+			tran_mode,
+			//"1",
+			//node_pubkey,
+		}
+		chain_api.ApiPrivateFor = append(chain_api.ApiPrivateFor, node_pubkey_slice...)
+
 		ContractName := `@1NewTableJoint`
 		_, _, _, err = chain_api.PostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
 		if err != nil {
