@@ -32,15 +32,12 @@ func NewNodeActualizer(availableBlockchainGap int64) NodeActualizer {
 }
 
 // Run is starting node monitoring
-				return
-			}
-
-			actual, err := n.checkBlockchainActuality(ctx)
-			if err != nil {
-				log.WithFields(log.Fields{"type": consts.BCActualizationError, "err": err}).Error("checking blockchain actuality")
-				return
-			}
-
+func (n *NodeActualizer) Run(ctx context.Context) {
+	go func() {
+		log.Info("Node Actualizer monitoring starting")
+		for {
+			if ctx.Err() != nil {
+				log.WithFields(log.Fields{"error": ctx.Err(), "type": consts.ContextError}).Error("context error")
 			if !actual && !IsNodePaused() {
 				log.Info("Node Actualizer is pausing node activity")
 				n.pauseNodeActivity()

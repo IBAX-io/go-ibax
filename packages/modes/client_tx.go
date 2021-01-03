@@ -27,23 +27,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var ErrDiffKey = errors.New("Different keys")
-
-type blockchainTxPreprocessor struct{}
-
-func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, le *log.Entry) (string, error) {
-	rtx := &transaction.RawTransaction{}
-	if err := rtx.Unmarshall(bytes.NewBuffer(txData)); err != nil {
-		le.WithFields(log.Fields{"error": err}).Error("on unmarshalling to raw tx")
-		return "", err
-	}
-
-	if len(rtx.SmartTx().Expedite) > 0 {
-		if rtx.Expedite().LessThan(decimal.New(0, 0)) {
-			return "", fmt.Errorf("expedite fee %s must be greater than 0", rtx.SmartTx().Expedite)
-		}
-	}
-
 	if len(strings.TrimSpace(rtx.SmartTx().Lang)) > 2 {
 		return "", fmt.Errorf(`localization size is greater than 2`)
 	}
@@ -51,6 +34,12 @@ func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key i
 	var PublicKeys [][]byte
 	PublicKeys = append(PublicKeys, crypto.CutPub(rtx.SmartTx().PublicKey))
 	f, err := utils.CheckSign(PublicKeys, rtx.Hash(), rtx.Signature(), false)
+	if err != nil {
+		return "", err
+	}
+	if !f {
+		return "", errors.New("sign err")
+	}
 
 	//check keyid is exist user
 	if key == 0 {

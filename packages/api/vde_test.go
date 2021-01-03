@@ -69,18 +69,6 @@ func TestRemoveOBS(t *testing.T) {
 	require.NoError(t, keyLogin(1))
 	form := url.Values{
 		"OBSName": {"obs"},
-	}
-	require.NoError(t, postTx("RemoveOBS", &form))
-}
-
-func TestCreateTable(t *testing.T) {
-	require.NoError(t, keyLogin(1))
-
-	sql1 := `new_column`
-
-	form := url.Values{
-		"Name":          {"my_test_table"},
-		"Columns":       {"[{\"name\":\"" + sql1 + "\",\"type\":\"varchar\", \"index\": \"0\", \"conditions\":{\"update\":\"true\", \"read\":\"true\"}}]"},
 		"ApplicationId": {"1"},
 		"Permissions":   {"{\"insert\": \"true\", \"update\" : \"true\", \"new_column\": \"true\"}"},
 	}
@@ -415,6 +403,22 @@ func TestNodeHTTPRequest(t *testing.T) {
 			json = JSONDecode(ret)
 			$result = json["hash"]
 		}
+	}`}, `Conditions`: {`ContractConditions("MainCondition")`}, `obs`: {`true`}}
+	assert.NoError(t, postTx(`NewContract`, &form))
+
+	// You can specify the directory with NodePrivateKey & NodePublicKey files
+	if len(conf.Config.KeysDir) > 0 {
+		conf.Config.HTTP.Host = `localhost`
+		conf.Config.HTTP.Port = 7079
+
+		nodeResult, err := taskContract.NodeContract(`@1node` + rnd)
+		assert.NoError(t, err)
+
+		id, penalty, err := waitTx(nodeResult.Result)
+		if id != 0 && err != nil {
+			if penalty == 1 {
+				return
+			}
 			msg = err.Error()
 			err = nil
 		}

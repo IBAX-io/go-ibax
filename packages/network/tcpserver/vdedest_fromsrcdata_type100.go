@@ -53,7 +53,6 @@ func Type100(r *network.VDESrcDataRequest) (*network.VDESrcDataResponse, error) 
 		Hash:           hash,
 		DataInfo:       r.DataInfo,
 		VDESrcPubkey:   r.VDESrcPubkey,
-	if err != nil {
 		log.WithError(err)
 		return nil, err
 	}

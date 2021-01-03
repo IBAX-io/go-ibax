@@ -63,6 +63,13 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 
 	// not open
 	time.Sleep(time.Millisecond * 1000 * 20)
+	return nil
+
+	var (
+		blockchain_http      string
+		blockchain_ecosystem string
+		SrcUpdateTime        string
+		err                  error
 
 		myContractSrcGet      string
 		myContractSrcGetHash  string
@@ -156,14 +163,6 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 	err = chain_api.SendPost(chain_apiAddress, gAuth_chain, url, &form, &t_struct)
 	if err != nil {
 		fmt.Println("error", err)
-		return err
-	}
-	if len(t_struct.List) == 0 {
-		log.Info("ShareTaskItem not found, sleep...")
-		//fmt.Println("ShareTaskItem not found, sleep...")
-		time.Sleep(time.Second * 2)
-		return nil
-	}
 
 	//utils.Print_json(t_struct)
 	for _, ShareTaskItem := range t_struct.List {

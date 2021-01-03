@@ -69,18 +69,6 @@ func (rp *RedisParams) Getdb() error {
 	return err
 }
 
-func (rp *RedisParams) Getdbsize() (int64, error) {
-	err := rediserr
-	if GRedisIsactive {
-		return Gclient0.DBSize().Result()
-	}
-	return 0, err
-}
-
-func (rp *RedisParams) Cleardb() error {
-	err := rediserr
-	var cursor uint64
-	var n int
 	var keys []string
 
 	if GRedisIsactive {
@@ -88,6 +76,10 @@ func (rp *RedisParams) Cleardb() error {
 		for {
 			var key []string
 			var err error
+			key, cursor, err = Gclient0.Scan(cursor, "*", 10).Result()
+			if err != nil {
+				return err
+			}
 			n += len(keys)
 			keys = append(keys, key...)
 			if cursor == 0 {

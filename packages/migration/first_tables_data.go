@@ -47,6 +47,13 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     (next_id('1_tables'), 'system_parameters',
         '{
             "insert": "false",
+            "update": "ContractAccess(\"@1UpdateSysParam\")",
+            "new_column": "ContractConditions(\"@1AdminCondition\")"
+        }',
+        '{
+            "value": "ContractAccess(\"@1UpdateSysParam\")",
+            "name": "false",
+            "conditions": "ContractAccess(\"@1UpdateSysParam\")"
         }',
         'ContractConditions("@1AdminCondition")'
     ),
@@ -74,16 +81,6 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
         }',
         '{
             "node_id": "ContractAccess(\"@1CheckNodesBan\")",
-            "banned_at": "ContractAccess(\"@1CheckNodesBan\")",
-            "ban_time": "ContractAccess(\"@1CheckNodesBan\")",
-            "reason": "ContractAccess(\"@1CheckNodesBan\")"
-        }',
-        'ContractConditions("@1AdminCondition")'
-    ),
-    (next_id('1_tables'), 'time_zones',
-        '{
-            "insert": "false",
-            "update": "false",
             "new_column": "false"
         }',
         '{

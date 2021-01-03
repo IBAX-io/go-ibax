@@ -153,15 +153,19 @@ type Transaction struct {
 	TxFullData    []byte // full transaction, with type and data
 	TxHash        []byte
 	TxSignature   []byte
-	TxKeyID       int64
-	TxTime        int64
-	TxType        int64
-	TxCost        int64 // Maximum cost of executing contract
-	TxFuel        int64
-	TxUsedCost    decimal.Decimal // Used cost of CPU resources
-	TxPtr         interface{}     // Pointer to the corresponding struct in consts/struct.go
-	TxData        map[string]interface{}
-	TxSmart       *tx.SmartContract
+	TxHeader      *tx.Header
+	tx            custom.TransactionInterface
+	DbTransaction *model.DbTransaction
+	SysUpdate     bool
+	Rand          *rand.Rand
+	Notifications types.Notifications
+	GenBlock      bool
+	TimeLimit     int64
+
+	SmartContract *smart.SmartContract
+	RollBackTx    []*model.RollbackTx
+}
+
 // GetLogger returns logger
 func (t Transaction) GetLogger() *log.Entry {
 	logger := log.WithFields(log.Fields{"tx_type": t.TxType, "tx_time": t.TxTime, "tx_wallet_id": t.TxKeyID})

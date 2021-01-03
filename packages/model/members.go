@@ -8,16 +8,8 @@ package model
 import "github.com/IBAX-io/go-ibax/packages/converter"
 
 // Member represents a ecosystem member
-	m.ecosystem = converter.StrToInt64(prefix)
-}
-
-// TableName returns name of table
-func (m *Member) TableName() string {
-	if m.ecosystem == 0 {
-		m.ecosystem = 1
-	}
-	return `1_members`
-}
+type Member struct {
+	ecosystem  int64
 
 // Count returns count of records in table
 func (m *Member) Count() (count int64, err error) {

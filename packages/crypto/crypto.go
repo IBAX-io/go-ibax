@@ -30,13 +30,16 @@ const (
 	elliptic256 ellipticSizeProvider = iota
 )
 
-	// ErrEncryptingEmpty is Encrypting empty value error
-	ErrEncryptingEmpty = errors.New("Encrypting empty value")
-	// ErrDecryptingEmpty is Decrypting empty value error
-	ErrDecryptingEmpty = errors.New("Decrypting empty value")
-	// ErrSigningEmpty is Signing empty value error
-	ErrSigningEmpty = errors.New("Signing empty value")
-	// ErrCheckingSignEmpty is Checking sign of empty error
+var (
+	// ErrHashing is Hashing error
+	ErrHashing = errors.New("Hashing error") // nolint
+	// ErrEncrypting is Encoding error
+	ErrEncrypting = errors.New("Encoding error")
+	// ErrDecrypting is Decrypting error
+	ErrDecrypting = errors.New("Decrypting error")
+	// ErrUnknownProvider is Unknown provider error
+	ErrUnknownProvider = errors.New("Unknown provider")
+	// ErrHashingEmpty is Hashing empty value error
 	ErrCheckingSignEmpty = errors.New("Cheking sign of empty")
 	// ErrIncorrectSign is Incorrect sign
 	ErrIncorrectSign = errors.New("Incorrect sign")

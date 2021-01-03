@@ -9,17 +9,8 @@ import (
 	"time"
 )
 
-	ID          int64  `gorm:"primary_key;not null"`
-	Version     string `gorm:"not null"`
-	DateApplied int64  `gorm:"not null"`
-}
+const noVersion = "0.0.0"
 
-// TableName returns name of table
-func (mh *MigrationHistory) TableName() string {
-	return "migration_history"
-}
-
-// CurrentVersion returns current version of database migrations
 func (mh *MigrationHistory) CurrentVersion() (string, error) {
 	if !IsTable(mh.TableName()) {
 		return noVersion, nil

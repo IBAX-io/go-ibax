@@ -33,9 +33,6 @@ func unmarshalColumnVDEScheChainInfo(form *VDEScheChainInfoForm) (*model.VDESche
 
 func VDEScheChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
-		err error
-	)
-	logger := getLogger(r)
 	form := &VDEScheChainInfoForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
@@ -104,6 +101,15 @@ func VDEScheChainInfoDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 
 	m := &model.VDEScheChainInfo{}
 	m.ID = id
+	if err := m.Delete(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
+	}
+
+	jsonResponse(w, "ok")
+}
+
+func VDEScheChainInfoListHandlre(w http.ResponseWriter, r *http.Request) {
+	logger := getLogger(r)
 	srcData := model.VDEScheChainInfo{}
 
 	result, err := srcData.GetAll()
