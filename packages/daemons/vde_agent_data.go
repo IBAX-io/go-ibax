@@ -77,6 +77,18 @@ func VDEAgentData(ctx context.Context, d *daemon) error {
 			log.Info("Network error")
 		} else if string(hash) == string(item.Hash) {
 			item.DataSendState = 1 //
+			item.DataSendErr = "Send successfully"
+			log.Info("Send successfully")
+		} else {
+			item.DataSendState = 2 //
+			item.DataSendErr = "Hash mismatch"
+			log.Info("Hash mismatch")
+		}
+		err = item.Updates()
+		if err != nil {
+			log.WithError(err)
+		}
+		log_err = item.DataSendErr
 		//Generate a chain request on the log
 		log_type = 3      //
 		if LogMode == 3 { //0
@@ -98,13 +110,6 @@ func VDEAgentData(ctx context.Context, d *daemon) error {
 				BlockchainHttp:      blockchain_http,
 				BlockchainEcosystem: blockchain_ecosystem,
 				ChainState:          chain_state,
-				CreateTime:          time.Now().Unix()}
-
-			if err = SrcDataLog.Create(); err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Insert vde_agent_data_log table failed")
-				continue
-			}
-			//fmt.Println("Insert vde_agent_data_log table ok")
 		} else {
 			fmt.Println("Log mode err!")
 		}

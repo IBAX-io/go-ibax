@@ -67,6 +67,19 @@ func (nbs *NodesBanService) RegisterBadBlock(node syspar.HonorNode, badBlockId, 
 
 	return nil
 }
+
+// IsBanned is allows to check node ban (local or global)
+func (nbs *NodesBanService) IsBanned(node syspar.HonorNode) bool {
+	nbs.refreshNodes()
+
+	nbs.m.Lock()
+	defer nbs.m.Unlock()
+
+	nodeKeyID := crypto.Address(node.PublicKey)
+	// Searching for local ban
+	now := time.Now()
+	//fmt.Println("now:",now.Unix())
+
 	if fn, ok := nbs.localBannedNodes[nodeKeyID]; ok {
 		//fmt.Println("localunbantime:",fn.LocalUnBanTime.Unix())
 		if now.Equal(fn.LocalUnBanTime) || now.After(fn.LocalUnBanTime) {
@@ -83,18 +96,6 @@ func (nbs *NodesBanService) RegisterBadBlock(node syspar.HonorNode, badBlockId, 
 	for _, fn := range nbs.honorNodes {
 		if bytes.Equal(fn.PublicKey, node.PublicKey) {
 			if !fn.UnbanTime.Equal(time.Unix(0, 0)) {
-				return true
-			} else {
-				break
-			}
-		}
-	}
-
-	return false
-}
-
-func (nbs *NodesBanService) refreshNodes() {
-	nbs.m.Lock()
 	nbs.honorNodes = syspar.GetNodes()
 	nbs.m.Unlock()
 }
