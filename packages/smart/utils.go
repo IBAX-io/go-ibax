@@ -48,14 +48,6 @@ func logErrorDB(err error, comment string) error {
 }
 
 func unmarshalJSON(input []byte, v interface{}, comment string) (err error) {
-	if err = json.Unmarshal(input, v); err != nil {
-		return logErrorValue(err, consts.JSONUnmarshallError, comment, string(input))
-	}
-	return nil
-}
-
-func marshalJSON(v interface{}, comment string) (out []byte, err error) {
-	out, err = json.Marshal(v)
 	if err != nil {
 		logError(err, consts.JSONMarshallError, comment)
 	}
@@ -156,6 +148,10 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]interface{}) (
 					imap := make(map[string]interface{})
 					for ikey, ival := range val {
 						imap[fmt.Sprint(ikey)] = ival
+					}
+					v.([]interface{})[i] = types.LoadMap(imap)
+				}
+			}
 		case script.DtMap:
 			var val map[interface{}]interface{}
 			if val, ok = params[index].(map[interface{}]interface{}); !ok {

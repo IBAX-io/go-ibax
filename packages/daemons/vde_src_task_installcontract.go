@@ -28,9 +28,7 @@ func VDESrcTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 		blockchain_http      string
 		blockchain_ecosystem string
 		err                  error
-	)
-
-	m := &model.VDESrcTask{}
+		time.Sleep(time.Millisecond * 2)
 		return err
 	}
 	if len(SrcTask) == 0 {

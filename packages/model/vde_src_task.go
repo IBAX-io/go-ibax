@@ -76,6 +76,10 @@ func (m *VDESrcTask) GetAllByTaskUUIDAndTaskState(TaskUUID string, TaskState int
 	err := DBConn.Table("vde_src_task").Where("task_uuid = ? AND task_state=?", TaskUUID, TaskState).Find(&result).Error
 	return result, err
 }
+
+func (m *VDESrcTask) GetAllByTaskUUID(TaskUUID string) ([]VDESrcTask, error) {
+	result := make([]VDESrcTask, 0)
+	err := DBConn.Table("vde_src_task").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
 }
 
@@ -213,13 +217,6 @@ func (m *VDESrcTaskFromSche) GetOneByID() (*VDESrcTaskFromSche, error) {
 }
 
 func (m *VDESrcTaskFromSche) GetAllByTaskUUID(TaskUUID string) ([]VDESrcTaskFromSche, error) {
-	result := make([]VDESrcTaskFromSche, 0)
-	err := DBConn.Table("vde_src_task_from_sche").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
-}
-
-func (m *VDESrcTaskFromSche) GetAllByTaskUUIDAndTaskState(TaskUUID string, TaskState int64) ([]VDESrcTaskFromSche, error) {
-	result := make([]VDESrcTaskFromSche, 0)
 	err := DBConn.Table("vde_src_task_from_sche").Where("task_uuid = ? AND task_state=?", TaskUUID, TaskState).Find(&result).Error
 	return result, err
 }
