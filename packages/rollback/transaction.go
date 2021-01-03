@@ -66,19 +66,21 @@ func rollbackTransaction(txHash []byte, dbTransaction *model.DbTransaction, logg
 				logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollback.Data from json")
 				return err
 			}
+			switch sysData.Type {
+			case "NewTable":
+				err = smart.SysRollbackTable(dbTransaction, sysData)
+			case "NewView":
+				err = smart.SysRollbackView(dbTransaction, sysData)
+			case "NewColumn":
+				err = smart.SysRollbackColumn(dbTransaction, sysData)
+			case "NewContract":
+				err = smart.SysRollbackNewContract(sysData, tx["table_id"])
 			case "EditContract":
 				err = smart.SysRollbackEditContract(dbTransaction, sysData, tx["table_id"])
 			case "NewEcosystem":
 				err = smart.SysRollbackEcosystem(dbTransaction, sysData)
 			case "ActivateContract":
 				err = smart.SysRollbackActivate(sysData)
-			case "DeactivateContract":
-				err = smart.SysRollbackDeactivate(sysData)
-			case "DeleteColumn":
-				err = smart.SysRollbackDeleteColumn(dbTransaction, sysData)
-			case "DeleteTable":
-				err = smart.SysRollbackDeleteTable(dbTransaction, sysData)
-			}
 			if err != nil {
 				return err
 			}

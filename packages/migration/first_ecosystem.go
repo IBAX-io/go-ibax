@@ -28,22 +28,6 @@ var sqlFirstEcosystemSchema = `
 
 	{{head "1_delayed_contracts"}}
 		t.Column("id", "bigint", {"default": "0"})
-		t.Column("contract", "string", {"default": "", "size":255})
-		t.Column("key_id", "bigint", {"default": "0"})
-		t.Column("block_id", "bigint", {"default": "0"})
-		t.Column("every_block", "bigint", {"default": "0"})
-		t.Column("counter", "bigint", {"default": "0"})
-		t.Column("high_rate", "bigint", {"default": "0"})
-		t.Column("limit", "bigint", {"default": "0"})
-		t.Column("deleted", "bigint", {"default": "0"})
-		t.Column("conditions", "text", {"default": ""})
-	{{footer "primary" "index(block_id)"}}
-
-	{{head "1_bad_blocks"}}
-		t.Column("id", "bigint", {"default": "0"})
-		t.Column("producer_node_id", "bigint", {"default": "0"})
-		t.Column("block_id", "bigint", {"default": "0"})
-		t.Column("consumer_node_id", "bigint", {"default": "0"})
 		t.Column("block_time", "timestamp", {})
 		t.Column("reason", "text", {"default": ""})
 		t.Column("deleted", "bigint", {"default": "0"})
@@ -203,6 +187,18 @@ var sqlFirstEcosystemCommon = `
 		t.Column("creator", "jsonb", {"default": "{}"})
 		t.Column("date_created", "bigint", {"default": "0"})
 		t.Column("date_deleted", "bigint", {"default": "0"})
+		t.Column("company_id", "bigint", {"default": "0"})
+		t.Column("roles_access", "jsonb", {"null": true})
+		t.Column("image_id", "bigint", {"default": "0"})
+		t.Column("ecosystem", "bigint", {"default": "1"})
+	{{footer "primary" "index(ecosystem, deleted)"}}
+	add_index("1_roles", ["ecosystem", "role_type"], {})
+
+	{{head "1_roles_participants"}}
+		t.Column("id", "bigint", {"default": "0"})
+		t.Column("role", "jsonb", {"null": true})
+		t.Column("member", "jsonb", {"null": true})
+		t.Column("appointed", "jsonb", {"null": true})
 		t.Column("date_created", "bigint", {"default": "0"})
 		t.Column("date_deleted", "bigint", {"default": "0"})
 		t.Column("deleted", "bigint", {"default": "0"})

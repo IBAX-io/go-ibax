@@ -282,14 +282,23 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		EcosystemID: converter.Int64ToStr(client.EcosystemID),
 		KeyID:       converter.Int64ToStr(wallet),
 		IsOwner:     founder == wallet,
-		IsNode:      conf.Config.KeyID == wallet,
-		IsOBS:       conf.Config.IsSupportingOBS(),
-	}
-
-	claims := JWTClaims{
-		KeyID:       result.KeyID,
 		AccountID:   account.AccountID,
 		EcosystemID: result.EcosystemID,
+		IsMobile:    form.IsMobile,
+		RoleID:      converter.Int64ToStr(form.RoleID),
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Second * time.Duration(form.Expire)).Unix(),
+		},
+	}
+
+	claims.StandardClaims.ExpiresAt = time.Now().Add(time.Hour * 30 * 24).Unix()
+
+	//result.Token, err = generateNewJWTToken(claims)
+	result.Token, err = generateJWTToken(claims)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.JWTError, "error": err}).Error("generating jwt token")
+		errorResponse(w, err)
+		return
 	}
 	//claims.StandardClaims.ExpiresAt = time.Now().Add(time.Hour * 30 * 24).Unix()
 

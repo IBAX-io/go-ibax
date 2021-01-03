@@ -5,11 +5,7 @@
 
 package daemonsctl
 
-)
+import (
+	"context"
 
-// RunAllDaemons start daemons, load contracts and tcpserver
-func RunAllDaemons(ctx context.Context) error {
-	loader := modes.GetDaemonLoader()
-
-	return loader.Load(ctx)
-}
+	"github.com/IBAX-io/go-ibax/packages/modes"

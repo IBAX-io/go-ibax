@@ -8,14 +8,6 @@ type VDEAgentMember struct {
 	ID                   int64  `gorm:"primary_key; not null" json:"id"`
 	VDEPubKey            string `gorm:"not null" json:"vde_pub_key"`
 	VDEComment           string `gorm:"not null" json:"vde_comment"`
-	VDEName              string `gorm:"not null" json:"vde_name"`
-	VDEIp                string `gorm:"not null" json:"vde_ip"`
-	VDEType              int64  `gorm:"not null" json:"vde_type"`
-	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
-	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
-
-	return "vde_agent_member"
-}
 
 func (m *VDEAgentMember) Create() error {
 	return DBConn.Create(&m).Error

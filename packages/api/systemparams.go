@@ -34,6 +34,13 @@ func getSystemParamsHandler(w http.ResponseWriter, r *http.Request) {
 
 	acceptNames := form.AcceptNames()
 	for _, item := range list {
+		if len(acceptNames) > 0 && !acceptNames[item.Name] {
+			continue
+		}
+		result.List = append(result.List, paramResult{
+			Name:       item.Name,
+			Value:      item.Value,
+			Conditions: item.Conditions,
 		})
 	}
 
@@ -42,5 +49,3 @@ func getSystemParamsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse(w, result)
-}
