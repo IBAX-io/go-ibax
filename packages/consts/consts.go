@@ -90,16 +90,6 @@ const ChainSize = 1 << 20
 const (
 	TxTypeFirstBlock     = 1
 	TxTypeApiContract    = 2
-	TxTypeSystemServer   = 3
-	TxTypeEcosystemMiner = 4
-	TxTypeSystemMiner    = 5
-	TxTypeStopNetwork    = 6
-
-	TxTypeParserFirstBlock  = "FirstBlock"
-	TxTypeSystemServerWork  = "SystemServerWork"
-	TxTypeParserStopNetwork = "StopNetwork"
-
-	TxTypeParserApiContract    = "ApiContract"
 	TxTypeParserEcosystemMiner = "EcosystemMiner"
 	TxTypeParserSystemMiner    = "SystemMiner"
 )
@@ -158,6 +148,21 @@ const (
 	FromToPerDayLimit = 10000
 
 	// TokenMovementQtyPerBlockLimit block limit token transfer
+	TokenMovementQtyPerBlockLimit = 100
+
+	// TCPConnTimeout timeout of tcp connection
+	TCPConnTimeout = 5 * time.Second
+
+	// TxRequestExpire is expiration time for request of transaction
+	TxRequestExpire = 1 * time.Minute
+
+	// DefaultTempDirName is default name of temporary directory
+	DefaultTempDirName = "ibax-temp"
+
+	// DefaultOBS allways is 1
+	DefaultOBS = 1
+
+	// MoneyLength is the maximum number of digits in money value
 	MoneyLength = 30
 
 	DefaultTokenEcosystem = 1

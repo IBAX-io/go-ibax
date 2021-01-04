@@ -230,16 +230,6 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		if i > 0 {
 			pars[in-1] = reflect.ValueOf(rt.stack[size-i : size])
 		}
-		if finfo.Name == `ExecContract` && (pars[2].Type().String() != `string` || !pars[3].IsValid()) {
-			return fmt.Errorf(`unknown function %v`, pars[1])
-		}
-		if finfo.Variadic {
-			result = foo.CallSlice(pars)
-		} else {
-			result = foo.Call(pars)
-		}
-		rt.stack = rt.stack[:shift]
-		if stack != nil {
 			stack.PopStack(finfo.Name)
 		}
 
@@ -372,6 +362,11 @@ func (rt *RunTime) recalcMemVar(k int) {
 func valueToBool(v interface{}) bool {
 	switch val := v.(type) {
 	case int:
+		if val != 0 {
+			return true
+		}
+	case int64:
+		if val != 0 {
 			return true
 		}
 	case float64:

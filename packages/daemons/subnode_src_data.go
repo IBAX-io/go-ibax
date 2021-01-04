@@ -305,6 +305,9 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 			//Generate all data upto chain request
 			for _, subnode_dest_pubkey_item := range subnode_dest_pubkey_slice {
 				//Generate data send request
+					SubNodeDestPubkey:   subnode_dest_pubkey_item,
+					BlockchainTable:     blockchain_table,
+					BlockchainHttp:      blockchain_http,
 					BlockchainEcosystem: blockchain_ecosystem,
 					CreateTime:          time.Now().Unix()}
 				if err = SrcDataChainStatus.Create(); err != nil {
