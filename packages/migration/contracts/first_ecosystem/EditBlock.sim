@@ -7,9 +7,17 @@ contract EditBlock {
         Conditions string "optional"
     }
     func onlyConditions() bool {
-            pars["conditions"] = $Conditions
+        return $Conditions && !$Value
+    }
+
+    conditions {
+        RowConditions("blocks", $Id, onlyConditions())
+        if $Conditions {
+            ValidateCondition($Conditions, $ecosystem_id)
         }
-        if pars {
+    }
+
+    action {
             DBUpdate("blocks", $Id, pars)
         }
     }

@@ -22,6 +22,20 @@ import (
 // Table is model
 type Table struct {
 	ID          int64       `gorm:"primary_key;not null"`
+	Name        string      `gorm:"not null;size:100"`
+	Permissions Permissions `gorm:"not null;type:jsonb"`
+	Columns     string      `gorm:"not null"`
+	Conditions  string      `gorm:"not null"`
+	AppID       int64       `gorm:"not null"`
+	Ecosystem   int64       `gorm:"not null"`
+}
+
+type Permissions struct {
+	Insert    string `json:"insert"`
+	NewColumn string `json:"new_column"`
+	Update    string `json:"update"`
+	Read      string `json:"read"`
+	Filter    string `json:"filter"`
 }
 
 func (p Permissions) Value() (driver.Value, error) {
@@ -47,11 +61,6 @@ func (t *Table) SetTablePrefix(prefix string) {
 // TableName returns name of table
 func (t *Table) TableName() string {
 	if t.Ecosystem == 0 {
-		t.Ecosystem = 1
-	}
-	return `1_tables`
-}
-
 // Get is retrieving model from database
 func (t *Table) Get(transaction *DbTransaction, name string) (bool, error) {
 	return isFound(GetDB(transaction).Where("ecosystem = ? and name = ?", t.Ecosystem, name).First(t))

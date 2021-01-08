@@ -194,12 +194,9 @@ func VDESrcTaskStatusRunState(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("VDESrcTask getting one task by TaskUUID")
 			time.Sleep(time.Millisecond * 2)
 			continue
-		//fmt.Println("SrcChainInfo:", blockchain_http, blockchain_ecosystem)
+		}
 
-		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("blockchain_ecosystem encode error")
-			time.Sleep(time.Millisecond * 2)
+		blockchain_http = item.ContractRunHttp
 			continue
 		}
 		vde_src_apiAddress := blockchain_http

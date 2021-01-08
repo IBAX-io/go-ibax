@@ -7,6 +7,14 @@ contract EditCron {
 			Cron       string "optional"
 			Limit      int "optional"
 			Till       string "optional date"
+			Conditions string
+		}
+		action {
+			if !$Till {
+				$Till = "1970-01-01 00:00:00"
+			}
+			if !HasPrefix($Contract, "@") {
+				$Contract = "@" + Str($ecosystem_id) + $Contract
 			}
 			DBUpdate("cron", $Id, {"cron": $Cron,"contract": $Contract,
 			    "counter":$Limit, "till": $Till, "conditions":$Conditions})

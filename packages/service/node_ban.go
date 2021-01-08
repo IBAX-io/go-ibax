@@ -87,15 +87,8 @@ func (nbs *NodesBanService) IsBanned(node syspar.HonorNode) bool {
 			return false
 		}
 
-		return true
-	}
-
-	// Searching for global ban.
-	// Here we don't estimating global ban expiration. If ban time doesn't equal zero - we assuming
-	// that node is still banned (even if `unban` time has already passed)
-	for _, fn := range nbs.honorNodes {
-		if bytes.Equal(fn.PublicKey, node.PublicKey) {
-			if !fn.UnbanTime.Equal(time.Unix(0, 0)) {
+func (nbs *NodesBanService) refreshNodes() {
+	nbs.m.Lock()
 	nbs.honorNodes = syspar.GetNodes()
 	nbs.m.Unlock()
 }

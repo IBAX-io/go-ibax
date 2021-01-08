@@ -1,17 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
-
-import (
-	"fmt"
-
-	"gorm.io/gorm"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-)
 
 // TransactionStatus is model
 type TransactionStatus struct {
@@ -43,6 +29,15 @@ func (ts *TransactionStatus) Get(transactionHash []byte) (bool, error) {
 func (ts *TransactionStatus) UpdateBlockID(transaction *DbTransaction, newBlockID int64, transactionHash []byte) error {
 	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("block_id", newBlockID).Error
 }
+
+type updateBlockMsg struct {
+	Hash []byte
+	Msg  string
+}
+
+var updBlockMsg []updateBlockMsg
+
+// SetTransactionStatusBlockMsg is updating block msg
 func SetTransactionStatusBlockMsg(transaction *DbTransaction, newBlockID int64, msg string, transactionHash []byte) error {
 	if len(msg) > 255 {
 		msg = msg[:255]
