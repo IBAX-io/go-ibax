@@ -54,18 +54,19 @@ func waitSig() {
 func WaitForSignals() {
 	SigChan = make(chan os.Signal, 1)
 	waitSig()
-	go func() {
-		signal.Notify(SigChan, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT)
-		for {
-			select {
-			case <-SigChan:
-				if utils.CancelFunc != nil {
 					utils.CancelFunc()
 					for i := 0; i < utils.DaemonsCount; i++ {
 						name := <-utils.ReturnCh
 						log.WithFields(log.Fields{"daemon_name": name}).Debug("daemon stopped")
 					}
 
+					log.Debug("Daemons killed")
+				}
+
+				if model.DBConn != nil {
+					err := model.GormClose()
+					if err != nil {
+						log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("closing gorm")
 					}
 				}
 

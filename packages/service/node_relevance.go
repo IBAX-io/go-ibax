@@ -14,6 +14,19 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+)
+
+var updatingEndWhilePaused = make(chan struct{})
+
+type NodeRelevanceService struct {
+	availableBlockchainGap int64
+	checkingInterval       time.Duration
+}
+
+func NewNodeRelevanceService() *NodeRelevanceService {
+	var availableBlockchainGap int64 = consts.AvailableBCGap
+	if syspar.GetRbBlocks1() > consts.AvailableBCGap {
 		availableBlockchainGap = syspar.GetRbBlocks1() - consts.AvailableBCGap
 	}
 
@@ -106,8 +119,6 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 	}
 
 	// Node blockchain is stale
-	if curBlock.BlockID+n.availableBlockchainGap < maxBlockID {
-		log.WithFields(log.Fields{"maxBlockID": maxBlockID, "curBlockID": curBlock.BlockID, "Gap": n.availableBlockchainGap}).Info("blockchain is stale, stopping node relevance")
 		return false, nil
 	}
 

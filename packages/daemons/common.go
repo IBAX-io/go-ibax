@@ -134,16 +134,6 @@ func daemonLoop(ctx context.Context, goRoutineName string, handler func(context.
 			startTime := time.Now()
 			counterName := statsd.DaemonCounterName(goRoutineName)
 			handler(ctx, d)
-			statsd.Client.TimingDuration(counterName+statsd.Time, time.Now().Sub(startTime), 1.0)
-		}
-	}
-}
-
-// StartDaemons starts daemons
-func StartDaemons(ctx context.Context, daemonsToStart []string) {
-	go WaitStopTime()
-
-	daemonsTable := make(map[string]string)
 	go func() {
 		for {
 			daemonNameAndTime := <-MonitorDaemonCh
@@ -168,6 +158,16 @@ func StartDaemons(ctx context.Context, daemonsToStart []string) {
 	for _, name := range daemonsToStart {
 		handler, ok := daemonsList[name]
 		if ok {
+			go daemonLoop(ctx, name, handler, utils.ReturnCh)
+			log.WithFields(log.Fields{"daemon_name": name}).Info("started")
+			utils.DaemonsCount++
+			continue
+		}
+
+		log.WithFields(log.Fields{"daemon_name": name}).Warning("unknown daemon name")
+	}
+}
+
 func getHostPort(h string) string {
 	if strings.Contains(h, ":") {
 		return h

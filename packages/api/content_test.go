@@ -35,22 +35,10 @@ func TestContentHash(t *testing.T) {
 	hash := crypto.Hash(out)
 	urls = "content/hash/" + name
 	var hret hashResult
-	assert.NoError(t, sendPost(urls, &url.Values{}, &hret))
-	if hex.EncodeToString(hash) != hret.Hash {
-		t.Error(`wrong hash`, hex.EncodeToString(hash), hret.Hash)
-	}
-}
-
-func TestContent(t *testing.T) {
-	assert.NoError(t, keyLogin(1))
-
-	name := randName(`page`)
-	assert.NoError(t, postTx(`NewPage`, &url.Values{
-		"ApplicationId": {`1`},
-		"Name":          {name},
-		"Value":         {`If(true){Div(){Span(My text)Address()}}.Else{Div(Body: Hidden text)}`},
-		"Menu":          {`default_menu`},
-		"Conditions":    {"true"},
+	cases := []struct {
+		url      string
+		form     url.Values
+		expected string
 	}{
 		{
 			"content/source/" + name,

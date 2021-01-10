@@ -1,9 +1,15 @@
-		action {
-			if !$Till {
-				$Till = "1970-01-01 00:00:00"
-			}
-			if !HasPrefix($Contract, "@") {
-				$Contract = "@" + Str($ecosystem_id) + $Contract
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewCron {
+		data {
+			Cron       string
+			Contract   string
+			Limit      int "optional"
+			Till       string "optional date"
+			Conditions string
+		}
+		conditions {
+			ValidateCondition($Conditions,$ecosystem_id)
 			}
 			$result = DBInsert("cron", {owner: $key_id,cron:$Cron,contract: $Contract,
 				counter:$Limit, till: $Till,conditions: $Conditions})

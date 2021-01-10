@@ -22,12 +22,6 @@ var (
 	addrsForStopping        []string
 	stopNetworkCertFilepath string
 )
-
-// stopNetworkCmd represents the stopNetworkCmd command
-var stopNetworkCmd = &cobra.Command{
-	Use:    "stopNetwork",
-	Short:  "Sending a special transaction to stop the network",
-	PreRun: loadConfigWKey,
 	Run: func(cmd *cobra.Command, args []string) {
 		fp := filepath.Join(conf.Config.KeysDir, stopNetworkCertFilepath)
 		stopNetworkCert, err := os.ReadFile(fp)
@@ -49,6 +43,15 @@ var stopNetworkCmd = &cobra.Command{
 
 			log.WithFields(log.Fields{"addr": addr}).Info("Sending request")
 		}
+
+		log.WithFields(log.Fields{
+			"successful": len(addrsForStopping) - errCount,
+			"failed":     errCount,
+		}).Info("Complete")
+	},
+}
+
+func init() {
 	stopNetworkCmd.Flags().StringVar(&stopNetworkCertFilepath, "stopNetworkCert", "", "Filepath to certificate for network stopping")
 	stopNetworkCmd.Flags().StringArrayVar(&addrsForStopping, "addr", []string{}, "Node address")
 	stopNetworkCmd.MarkFlagRequired("stopNetworkCert")

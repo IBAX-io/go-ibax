@@ -9,10 +9,6 @@ import (
 	stdErrors "errors"
 	"testing"
 )
-
-func TestHistory(t *testing.T) {
-	}
-
 	err = sendGet("history/pages/1000", nil, &ret)
 	if err != nil {
 		t.Error(err)

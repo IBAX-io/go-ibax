@@ -70,6 +70,10 @@ func VDEDestTaskInstallContractDest(ctx context.Context, d *daemon) error {
 			continue
 		}
 		//fmt.Println("Login OK!")
+
+		ContractDest := item.ContractDestGet
+
+		//_, _, _, err = api.PostTxResult(ContractName, &form)
 		_, _, _, err = vde_api.PostTxResult(vde_dest_apiAddress, vde_dest_apiEcosystemID, gAuth_dest, gPrivate_dest, ContractName, &form)
 		if err != nil {
 			item.ContractStateDest = 2

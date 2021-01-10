@@ -198,6 +198,15 @@ type VDEDestDataStatusList struct {
 //		CreateTime       int64  `json:"create_time"`
 //	} `json:"list"`
 //}
+
+func VDEDestDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err            error
+		DataStatusList VDEDestDataStatusList
+	)
+
+	logger := getLogger(r)
+	form := &ListVDEDestDataStatusForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
@@ -213,18 +222,6 @@ type VDEDestDataStatusList struct {
 		errorResponse(w, err)
 		return
 	}
-	if len(result) > 0 {
-		for _, item := range result {
-			var DataListItem DataList
-			DataListItem.ID = item.ID
-			DataListItem.TaskUUID = item.TaskUUID
-			DataListItem.DataUUID = item.DataUUID
-			DataListItem.Hash = item.Hash
-			DataListItem.Data = item.Data
-			DataListItem.DataInfo = item.DataInfo
-			DataListItem.VDESrcPubkey = item.VDESrcPubkey
-			DataListItem.VDEDestPubkey = item.VDEDestPubkey
-			DataListItem.VDEDestIp = item.VDEDestIp
 			DataListItem.VDEAgentPubkey = item.VDEAgentPubkey
 			DataListItem.VDEAgentIp = item.VDEAgentIp
 			DataListItem.AgentMode = item.AgentMode
