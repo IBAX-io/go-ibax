@@ -66,15 +66,15 @@ func (m Mode) sendTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	for key := range r.Form {
 		txData, err := hex.DecodeString(r.FormValue(key))
-		errorResponse(w, err)
-		return
+		if err != nil {
+			errorResponse(w, err)
+			return
+		}
+		mtx[key] = txData
 	}
-	for _, key := range hash {
-		result.Hashes[key] = key
-	}
-	jsonResponse(w, result)
-}
 
+	hash, err := txHandlerBatches(r, m, mtx)
+	if err != nil {
 func (m Mode) sendSignTxHandler(w http.ResponseWriter, r *http.Request) {
 	//client := getClient(r)
 	keyid := int64(0)

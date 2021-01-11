@@ -32,8 +32,3 @@ func (m *VDEDestHashTime) Get() (*VDEDestHashTime, error) {
 }
 
 func (m *VDEDestHashTime) GetAll() ([]VDEDestHashTime, error) {
-	var result []VDEDestHashTime
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *VDEDestHashTime) GetOneByID() (*VDEDestHashTime, error) {

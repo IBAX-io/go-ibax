@@ -10,11 +10,16 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
-	"testing"
+		{`100%`, `100%%`},
+	}
 
-	"github.com/stretchr/testify/assert"
-)
+	for _, v := range cases {
+		assert.Equal(t, v.Expected, escape(v.Source))
+	}
+}
 
+func tempContract(appID int, conditions, value string) (string, error) {
+	file, err := os.CreateTemp("", "contract")
 	if err != nil {
 		return "", err
 	}

@@ -41,6 +41,18 @@ func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrd
 
 	req := &network.GetBodiesRequest{
 		BlockID:      uint32(blockID),
+		ReverseOrder: reverseOrder,
+	}
+
+	if err = req.Write(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on sending blocks bodies request")
+		return nil, err
+	}
+
+	blocksCount, err := network.ReadInt(conn)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on getting blocks count")
+		return nil, err
 	}
 
 	if blocksCount == 0 {
@@ -54,14 +66,6 @@ func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrd
 				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on reading block bodies")
 			}
 		}
-	}()
-
-	return blocksChan, nil
-}
-
-func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int64) (<-chan []byte, <-chan error) {
-	rawBlocksCh := make(chan []byte, blocksCount)
-	errChan := make(chan error, 1)
 
 	sizeBuf := make([]byte, sizeBytesLength)
 	var bodyBuf []byte

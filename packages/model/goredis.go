@@ -64,11 +64,11 @@ func (rp *RedisParams) Getdb() error {
 	if GRedisIsactive {
 		val, err1 := Gclient0.Get(rp.Key).Result()
 		rp.Value = val
-		return err1
-	}
-	return err
-}
 
+func (rp *RedisParams) Cleardb() error {
+	err := rediserr
+	var cursor uint64
+	var n int
 	var keys []string
 
 	if GRedisIsactive {

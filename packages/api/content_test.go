@@ -35,20 +35,27 @@ func TestContentHash(t *testing.T) {
 	hash := crypto.Hash(out)
 	urls = "content/hash/" + name
 	var hret hashResult
+	assert.NoError(t, sendPost(urls, &url.Values{}, &hret))
+	if hex.EncodeToString(hash) != hret.Hash {
+		t.Error(`wrong hash`, hex.EncodeToString(hash), hret.Hash)
+	}
+}
+
+func TestContent(t *testing.T) {
+	assert.NoError(t, keyLogin(1))
+
+	name := randName(`page`)
+	assert.NoError(t, postTx(`NewPage`, &url.Values{
+		"ApplicationId": {`1`},
+		"Name":          {name},
+		"Value":         {`If(true){Div(){Span(My text)Address()}}.Else{Div(Body: Hidden text)}`},
+		"Menu":          {`default_menu`},
+		"Conditions":    {"true"},
+	}))
+
 	cases := []struct {
 		url      string
 		form     url.Values
-		expected string
-	}{
-		{
-			"content/source/" + name,
-			url.Values{},
-			`[{"tag":"if","attr":{"condition":"true"},"children":[{"tag":"div","children":[{"tag":"span","children":[{"tag":"text","text":"My text"}]},{"tag":"address"}]}],"tail":[{"tag":"else","children":[{"tag":"div","children":[{"tag":"text","text":"Hidden text"}]}]}]}]`,
-		},
-		{
-			"content",
-			url.Values{
-				"template": {"input Div(myclass, #mytest# Div(mypar) the Div)"},
 				"mytest":   {"test value"},
 			},
 			`[{"tag":"text","text":"input "},{"tag":"div","attr":{"class":"myclass"},"children":[{"tag":"text","text":"test value "},{"tag":"div","attr":{"class":"mypar"}},{"tag":"text","text":" the Div"}]}]`,
