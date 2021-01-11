@@ -48,11 +48,6 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 		return err
 	}
 	if len(ShareData) == 0 {
-		//log.Info("task data not found")
-		time.Sleep(time.Millisecond * 100)
-		return nil
-	}
-
 	// deal with task data
 	var TaskParms_Str string
 	for _, item := range ShareData {
@@ -305,6 +300,13 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 			//Generate all data upto chain request
 			for _, subnode_dest_pubkey_item := range subnode_dest_pubkey_slice {
 				//Generate data send request
+				SrcDataChainStatus := model.SubNodeSrcDataChainStatus{
+					DataUUID:            item.DataUUID,
+					TaskUUID:            item.TaskUUID,
+					Hash:                item.Hash,
+					Data:                item.Data,
+					DataInfo:            item.DataInfo,
+					TranMode:            converter.StrToInt64(tran_mode),
 					SubNodeDestPubkey:   subnode_dest_pubkey_item,
 					BlockchainTable:     blockchain_table,
 					BlockchainHttp:      blockchain_http,

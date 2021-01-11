@@ -19,8 +19,6 @@ import (
 )
 
 /*
-#include <stdio.h>
-#include <signal.h>
 
 extern void go_callback_int();
 static inline void SigBreak_Handler(int n_signal){
@@ -54,6 +52,12 @@ func waitSig() {
 func WaitForSignals() {
 	SigChan = make(chan os.Signal, 1)
 	waitSig()
+	go func() {
+		signal.Notify(SigChan, syscall.SIGINT, syscall.SIGKILL, syscall.SIGTERM, syscall.SIGQUIT)
+		for {
+			select {
+			case <-SigChan:
+				if utils.CancelFunc != nil {
 					utils.CancelFunc()
 					for i := 0; i < utils.DaemonsCount; i++ {
 						name := <-utils.ReturnCh

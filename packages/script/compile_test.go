@@ -146,6 +146,25 @@ func TestVMCompile(t *testing.T) {
 							func conditions {
 								var q int
 								Println("Front", $Par1, $parent)
+				//				my("Par1,Par2,ext", 123, "Parameter 2", "extended" )
+							}
+							func action {
+								Println("Main", $Par2, $ext)
+							}
+						}
+						contract mytest {
+							func init string {
+								empty()
+								my("Par1,Par2,ext", 123, "Parameter 2", "extended" )
+								//my("Par1,Par2,ext", 33123, "Parameter 332", "33extended" )
+								//@26empty("test",10)
+								empty("toempty", 10)
+								Println( "mytest", $parent)
+								return "OK INIT"
+							}
+						}
+						contract empty {
+							conditions {Println("EmptyCond")
 								}
 							action {
 								Println("Empty", $parent)
@@ -394,18 +413,6 @@ func TestVMCompile(t *testing.T) {
 				i = i + "2" 
 				i = (i - "10")/"2"*"3"
 				return Sprintf("%T %[1]v", .21 + i)
-			  }`, `result`, `float64 138.21`},
-		{`func money_test string {
-				var my2, m1 money
-				my2 = 100
-				m1 = 1.2
-				return Sprintf( "Account %v %v %v", my2/Money(3),  my2 - Money(5.6), m1*Money(5) + Money(my2))
-			}`, `money_test`, `Account 33 95 105`},
-		{`func long() int {
-				return  99999999999999999999
-				}
-				func result() string {
-					return Sprintf("ok=%d", long())
 					}`, `result`, `strconv.ParseInt: parsing "99999999999999999999": value out of range 99999999999999999999 [Ln:2 Col:34]`},
 		{`func result() string {
 			var i, result int
