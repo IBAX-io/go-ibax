@@ -47,16 +47,15 @@ func (m *SubNodeSrcDataStatus) Delete() error {
 }
 
 func (m *SubNodeSrcDataStatus) GetAll() ([]SubNodeSrcDataStatus, error) {
-	err := DBConn.Table("subnode_src_data_status").Where("data_send_state = ?", DataSendStatus).Find(&result).Error
+	var result []SubNodeSrcDataStatus
+	err := DBConn.Find(&result).Error
 	return result, err
 }
-
-func (m *SubNodeSrcDataStatus) GetAllByDataSendStatusAndAgentMode(DataSendStatus int64, AgentMode int64) ([]SubNodeSrcDataStatus, error) {
-	result := make([]SubNodeSrcDataStatus, 0)
-	err := DBConn.Table("subnode_src_data_status").Where("data_send_state = ? AND agent_mode = ?", DataSendStatus, AgentMode).Find(&result).Error
-	return result, err
+func (m *SubNodeSrcDataStatus) GetOneByID() (*SubNodeSrcDataStatus, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error
+	return m, err
 }
 
-func (m *SubNodeSrcDataStatus) GetOneByDataSendStatus(DataSendStatus int64) (bool, error) {
+func (m *SubNodeSrcDataStatus) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcDataStatus, error) {
 	return isFound(DBConn.Where("data_send_state = ?", DataSendStatus).First(m))
 }
