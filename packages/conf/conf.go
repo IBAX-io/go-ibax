@@ -214,6 +214,19 @@ func GetConfigFromPath(path string) (*GlobalConfig, error) {
 		return c, errors.Wrapf(err, "marshalling config to global struct variable")
 	}
 
+	return c, nil
+}
+
+// SaveConfig save global parameters to configFile
+func SaveConfig(path string) error {
+	dir := filepath.Dir(path)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err := os.Mkdir(dir, 0775)
+		if err != nil {
+			return errors.Wrapf(err, "creating dir %s", dir)
+		}
+	}
+
 	cf, err := os.Create(path)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("Create config file failed")
@@ -233,13 +246,6 @@ func FillRuntimePaths() error {
 	if Config.DataDir == "" {
 		//cwd, err := os.Getwd()
 		//if err != nil {
-		//	return errors.Wrapf(err, "getting current wd")
-		//}
-
-		//Config.DataDir = filepath.Join(cwd, consts.DefaultWorkdirName)
-		Config.DataDir = filepath.Join(consts.DefaultWorkdirName)
-	}
-
 	if Config.KeysDir == "" {
 		Config.KeysDir = Config.DataDir
 	}

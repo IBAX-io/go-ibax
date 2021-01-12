@@ -1,11 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package tcpclient
-
-import (
-	"context"
 	"io"
 	"sync"
 
@@ -43,6 +36,15 @@ func getMaxBlock(host string) (blockID int64, err error) {
 
 	if err := rt.Write(con); err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.ConnectionError, "host": host}).Error("on sending Max block request type")
+		return -1, err
+	}
+
+	// response
+	resp := network.MaxBlockResponse{}
+	err = resp.Read(con)
+	if err == io.EOF {
+	} else if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.ConnectionError, "host": host}).Error("reading max block id from host")
 		return -1, err
 	}
 

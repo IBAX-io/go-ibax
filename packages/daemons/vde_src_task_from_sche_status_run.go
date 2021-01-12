@@ -47,15 +47,6 @@ func VDESrcTaskFromScheStatusRun(ctx context.Context, d *daemon) error {
 		time.Sleep(time.Millisecond * 2)
 		return err
 	}
-	if len(SrcTask) == 0 {
-		log.Info("Src task to run not found")
-		time.Sleep(time.Millisecond * 2)
-		return nil
-	}
-	// deal with task data
-	for _, item := range SrcTask {
-		//fmt.Println("SrcTask:", item.TaskUUID)
-		blockchain_http = item.ContractRunHttp
 		blockchain_ecosystem = item.ContractRunEcosystem
 		//fmt.Println("ContractRun:", blockchain_http, blockchain_ecosystem)
 
@@ -106,6 +97,7 @@ func VDESrcTaskFromScheStatusRun(ctx context.Context, d *daemon) error {
 			time.Sleep(time.Millisecond * 2)
 			continue
 		}
+		vde_src_apiAddress := vde_src_http
 		vde_src_apiEcosystemID := int64(vde_src_ecosystemID)
 		gAuth_src, _, _, _, _, err := vde_api.KeyLogin(vde_src_apiAddress, src, vde_src_apiEcosystemID)
 		if err != nil {

@@ -12,21 +12,6 @@ contract NewContract {
         ValidateCondition($Conditions,$ecosystem_id)
 
         if $ApplicationId == 0 {
-            warning "Application id cannot equal 0"
-        }
-
-        $contract_name = ContractName($Value)
-
-        if !$contract_name {
-            error "must be the name"
-        }
-
-        if !$TokenEcosystem {
-            $TokenEcosystem = 1
-        } else {
-            if !SysFuel($TokenEcosystem) {
-                warning Sprintf("Ecosystem %d is not system", $TokenEcosystem)
-            }
         }
     }
 
@@ -36,3 +21,4 @@ contract NewContract {
     func price() int {
         return SysParamInt("contract_price")
     }
+}

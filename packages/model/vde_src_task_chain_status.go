@@ -21,6 +21,20 @@ type VDESrcTaskChainStatus struct {
 	ContractDestName    string `gorm:"not null" json:"contract_dest_name"`
 	ContractDestGet     string `gorm:"not null" json:"contract_dest_get"`
 	ContractDestGetHash string `gorm:"not null" json:"contract_dest_get_hash"`
+	ContractMode        int64  `gorm:"not null" json:"contract_mode"`
+
+	ContractStateSrc     int64  `gorm:"not null" json:"contract_state_src"`
+	ContractStateDest    int64  `gorm:"not null" json:"contract_state_dest"`
+	ContractStateSrcErr  string `gorm:"not null" json:"contract_state_src_err"`
+	ContractStateDestErr string `gorm:"not null" json:"contract_state_dest_err"`
+
+	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`
+	ContractRunEcosystem string `gorm:"not null" json:"contract_run_ecosystem"`
+	ContractRunParms     string `gorm:"type:jsonb" json:"contract_run_parms"`
+
+	TaskRunState    int64  `gorm:"not null" json:"task_run_state"`
+	TaskRunStateErr string `gorm:"not null" json:"task_run_state_err"`
+
 	TxHash     string `gorm:"not null" json:"tx_hash"`
 	ChainState int64  `gorm:"not null" json:"chain_state"`
 	BlockId    int64  `gorm:"not null" json:"block_id"`
@@ -46,8 +60,6 @@ func (m *VDESrcTaskChainStatus) Updates() error {
 func (m *VDESrcTaskChainStatus) Delete() error {
 	return DBConn.Delete(m).Error
 }
-
-func (m *VDESrcTaskChainStatus) GetAll() ([]VDESrcTaskChainStatus, error) {
 	var result []VDESrcTaskChainStatus
 	err := DBConn.Find(&result).Error
 	return result, err

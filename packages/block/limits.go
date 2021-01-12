@@ -117,6 +117,20 @@ func (bl *txMaxLimit) check(t *transaction.Transaction, mode int) error {
 	}
 	return nil
 }
+
+// Checking the time of the start of generating block
+type timeBlockLimit struct {
+	Start time.Time     // the time of the start of generating block
+	Limit time.Duration // the maximum time
+}
+
+func (bl *timeBlockLimit) init(b *Block) {
+	bl.Start = time.Now()
+	bl.Limit = time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
+}
+
+func (bl *timeBlockLimit) check(t *transaction.Transaction, mode int) error {
+	if time.Since(bl.Start) < bl.Limit {
 		return nil
 	}
 
@@ -242,17 +256,5 @@ func (bl *txMaxFuel) init(b *Block) {
 	bl.LimitTx = syspar.GetMaxTxFuel()
 }
 
-func (bl *txMaxFuel) check(t *transaction.Transaction, mode int) error {
-	fuel := t.TxFuel
-	if fuel > bl.LimitTx {
-		return limitError(`txMaxFuel`, `Max fuel of tx %d > %d`, fuel, bl.LimitTx)
-	}
-	bl.Fuel += fuel
-	if bl.Fuel > bl.LimitBlock {
-		if mode == letGenBlock {
-			return ErrLimitStop
-		}
-		return limitError(`txMaxFuel`, `Max fuel of the block`)
-	}
 	return nil
 }

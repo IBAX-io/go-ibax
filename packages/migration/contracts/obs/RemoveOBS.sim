@@ -1,6 +1,10 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
-        DeleteOBS($OBSName)
-        $result = "OBS " + $OBSName + " removed"
+contract RemoveOBS {
+	data {
+			OBSName string
 	}
-}
+	conditions {}
+	action{
+        $OBSName = ToLower($OBSName)
+        DeleteOBS($OBSName)

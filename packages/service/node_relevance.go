@@ -114,18 +114,6 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 
 	// Node can't connect to others
 	if maxBlockID == -1 {
-		log.WithFields(log.Fields{"hosts": remoteHosts}).Info("can't connect to others, stopping node relevance")
-		return false, nil
-	}
-
-	// Node blockchain is stale
-		return false, nil
-	}
-
-	return true, nil
-}
-
-func (n *NodeRelevanceService) pauseNodeActivity() {
 	np.Set(PauseTypeUpdatingBlockchain)
 }
 

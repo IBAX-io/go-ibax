@@ -12,15 +12,6 @@ import (
 func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*model.QueueTx) error {
 	var (
 		checkTime = time.Now().Unix()
-		hashes    model.ArrHashes
-		trxs      []*model.Transaction
-		hs        []byte
-		err       error
-	)
-
-	defer func() {
-		if err != nil {
-			err = MarkTransactionBad(dbTransaction, hs, err.Error())
 			if err != nil {
 				return
 			}
@@ -30,6 +21,13 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 		binaryTx := qs[i].Data
 		hs = qs[i].Hash
 		tx := &Transaction{}
+		tx, err = UnmarshallTransaction(bytes.NewBuffer(binaryTx), true)
+		if err != nil {
+			return err
+		}
+		err = tx.CheckTime(checkTime)
+		if err != nil {
+			return err
 		}
 		var expedite decimal.Decimal
 		if len(tx.TxSmart.Expedite) > 0 {

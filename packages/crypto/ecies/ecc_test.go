@@ -27,10 +27,14 @@ func TestEccencryptoKey(t *testing.T) {
 	privateKeyBytes, err := HexToBytes(privateHex)
 	if err != nil {
 		fmt.Println(err)
+	}
 
-	pri, err2 := crypto.GetPrivateKeys(privateKeyBytes)
-	if err2 != nil {
-		fmt.Println(err2)
+	publicKeyBytes, err := crypto.HexToPub(pubkeyHex)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	pub, err2 := crypto.GetPublicKeys(publicKeyBytes)
 	}
 
 	cryptText, _ := EccPubEncrypt(plainText, pub)

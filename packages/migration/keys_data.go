@@ -4,3 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 package migration
+
+import (
+	"github.com/IBAX-io/go-ibax/packages/consts"
+)
+
+var keysDataSQL = `

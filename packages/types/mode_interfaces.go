@@ -10,12 +10,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ClientTxPreprocessor procees tx from client
-type ClientTxPreprocessor interface {
-	ProcessClientTranstaction([]byte, int64, *log.Entry) (string, error)
-type DaemonListFactory interface {
-	GetDaemonsList() []string
-}
 
 type EcosystemLookupGetter interface {
 	GetEcosystemLookup() ([]int64, []string, error)

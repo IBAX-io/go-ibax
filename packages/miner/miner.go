@@ -42,13 +42,6 @@ func (m *mint) MinerTime() (capacities, nonce, devid int64, err error) {
 	}
 	random := crypto.Address(m.prevHash)
 	if random < 0 {
-		random = -random
-	}
-	devid = m.getMintRandom(random % nonce)
-	if devid != 0 {
-		if conf.Config.PoolPub.Enable {
-			mc := model.MinterCount{
-				Devid:      devid,
 				Capacity:   capacities,
 				Nonce:      nonce,
 				BlockId:    m.blockid,
@@ -76,6 +69,14 @@ func (m *mint) makeMiningPoolTime() (int64, int64, error) {
 		k := miners[i].Devid
 		v, ok := mineCount[k]
 		if ok {
+			da := minersCount{devid: k, start: st, end: st + v}
+			st = st + v
+			m.minerPool = append(m.minerPool, da)
+		}
+	}
+	m.MintMap = mineCount
+	m.MineCounts = miners
+	return st, capacity, nil
 }
 
 func (m *mint) getMiners() (map[int64]int64, []model.MineCount, int64, error) {

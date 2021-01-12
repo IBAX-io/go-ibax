@@ -9,11 +9,6 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
-)
-
-var zeroTime time.Time
-
-// Handler represents interface of task handler
 type Handler interface {
 	Run(*Task)
 }
@@ -35,6 +30,18 @@ func (t *Task) String() string {
 
 // ParseCron parsed cron format
 func (t *Task) ParseCron() error {
+	if len(t.CronSpec) == 0 {
+		return nil
+	}
+
+	var err error
+	t.schedule, err = Parse(t.CronSpec)
+	return err
+}
+
+// Next returns time for next task
+func (t *Task) Next(tm time.Time) time.Time {
+	if len(t.CronSpec) == 0 {
 		return zeroTime
 	}
 	return t.schedule.Next(tm)
