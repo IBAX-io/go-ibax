@@ -27,6 +27,23 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var ErrDiffKey = errors.New("Different keys")
+
+type blockchainTxPreprocessor struct{}
+
+func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, le *log.Entry) (string, error) {
+	rtx := &transaction.RawTransaction{}
+	if err := rtx.Unmarshall(bytes.NewBuffer(txData)); err != nil {
+		le.WithFields(log.Fields{"error": err}).Error("on unmarshalling to raw tx")
+		return "", err
+	}
+
+	if len(rtx.SmartTx().Expedite) > 0 {
+		if rtx.Expedite().LessThan(decimal.New(0, 0)) {
+			return "", fmt.Errorf("expedite fee %s must be greater than 0", rtx.SmartTx().Expedite)
+		}
+	}
+
 	if len(strings.TrimSpace(rtx.SmartTx().Lang)) > 2 {
 		return "", fmt.Errorf(`localization size is greater than 2`)
 	}
@@ -120,21 +137,6 @@ func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 	if err != nil {
 		le.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("on execution contract")
 		return "", err
-	}
-
-	if err := model.SetTransactionStatusBlockMsg(nil, 1, res, tx.TxHash); err != nil {
-		le.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": tx.TxHash}).Error("updating transaction status block id")
-		return "", err
-	}
-
-	return string(converter.BinToHex(tx.TxHash)), nil
-}
-func (p ObsTxPreprocessor) ProcessClientTxBatches(txData [][]byte, key int64, le *log.Entry) ([]string, error) {
-	return nil, nil
-}
-func GetClientTxPreprocessor() types.ClientTxPreprocessor {
-	if conf.Config.IsSupportingOBS() {
-		return ObsTxPreprocessor{}
 	}
 
 	return blockchainTxPreprocessor{}

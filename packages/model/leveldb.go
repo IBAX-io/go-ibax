@@ -44,18 +44,6 @@ func Init_leveldb(filename string) error {
 	var err error
 	DBlevel, err = leveldb.OpenFile(filename, nil)
 	if err == nil {
-		GLeveldbIsactive = true
-	}
-
-	//go Deal_MintCount()
-	return err
-}
-
-func Struct2Map(obj interface{}) map[string]interface{} {
-	t := reflect.TypeOf(obj)
-	v := reflect.ValueOf(obj)
-
-	var data = make(map[string]interface{})
 	for i := 0; i < t.NumField(); i++ {
 		data[t.Field(i).Name] = v.Field(i).Interface()
 	}
@@ -67,6 +55,23 @@ func DBGetAllKey(prefix string, bvalue bool) (*[]string, error) {
 		//key []string
 	)
 	found := prefix != "nil"
+	iter := DBlevel.NewIterator(nil, nil)
+	for iter.Next() {
+		key := string(iter.Key())
+		if found {
+			if strings.HasPrefix(key, prefix) {
+				if bvalue {
+					value := string(iter.Value())
+					s := fmt.Sprintf("Key[%s]=[%s]\n", key, value)
+					ret = append(ret, s)
+				} else {
+					ret = append(ret, key)
+				}
+			}
+		} else {
+			if bvalue {
+				value := string(iter.Value())
+				s := fmt.Sprintf("Key[%s]=[%s]\n", key, value)
 				ret = append(ret, s)
 			} else {
 				ret = append(ret, key)

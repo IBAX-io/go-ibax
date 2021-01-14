@@ -100,6 +100,22 @@ func initLogs() error {
 		f, err := os.OpenFile(fileName, os.O_WRONLY|openMode, 0755)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Can't open log file: ", fileName)
+			return err
+		}
+		log.SetOutput(f)
+	}
+
+	switch conf.Config.Log.LogLevel {
+	case "DEBUG":
+		log.SetLevel(log.DebugLevel)
+	case "INFO":
+		log.SetLevel(log.InfoLevel)
+	case "WARN":
+		log.SetLevel(log.WarnLevel)
+	case "ERROR":
+		log.SetLevel(log.ErrorLevel)
+	default:
+		log.SetLevel(log.InfoLevel)
 	}
 
 	log.AddHook(logtools.ContextHook{})
@@ -254,16 +270,6 @@ func Start() {
 	}
 	if model.DBConn != nil {
 		if err := model.UpdateSchema(); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("on running update migrations")
-			os.Exit(1)
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		utils.CancelFunc = cancel
-		utils.ReturnCh = make(chan string)
-
-		// The installation process is already finished (where user has specified DB and where wallet has been restarted)
-		err := daemonsctl.RunAllDaemons(ctx)
 		log.Info("Daemons started")
 		if err != nil {
 			Exit(1)

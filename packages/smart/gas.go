@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
@@ -133,14 +135,6 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 				return err
 			}
 
-			return nil
-		}
-
-		if err := payTaxes(converter.Int64ToStr(pay.toID), money.Sub(taxes), 1, pay.tokenEco); err != nil {
-			return err
-		}
-
-		if err := payTaxes(syspar.GetTaxesWallet(pay.tokenEco), taxes, 2, pay.tokenEco); err != nil {
 			return err
 		}
 	}

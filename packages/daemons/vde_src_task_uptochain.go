@@ -28,14 +28,6 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 	var (
 		blockchain_http      string
 		blockchain_ecosystem string
-		err                  error
-	)
-
-	m := &model.VDESrcTaskChainStatus{}
-	SrcTask, err := m.GetAllByContractStateAndChainState(1, 0, 0) //0
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
-		time.Sleep(time.Millisecond * 2)
 		return err
 	}
 	if len(SrcTask) == 0 {
@@ -141,6 +133,20 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 	var (
 		//TaskParms      map[string]interface{}
 
+		blockchain_http      string
+		blockchain_ecosystem string
+
+		//ok        bool
+		err error
+	)
+
+	m := &model.VDESrcTaskChainStatus{}
+	SrcTask, err := m.GetAllByContractStateAndChainState(1, 0, 1) //
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
+		time.Sleep(time.Millisecond * 2)
+		return err
+	}
 	if len(SrcTask) == 0 {
 		//log.Info("Src task not found")
 		time.Sleep(time.Millisecond * 2)

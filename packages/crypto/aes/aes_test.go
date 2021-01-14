@@ -13,10 +13,15 @@ import (
 
 func TestAesEncryptAndDecrypt(t *testing.T) {
 
-		return
-	}
+	var aeskey = []byte("123456789012345612345678") // AES-128(16bytes) AES-256(32bytes)
+	pass := []byte("This is my private data!")
+	fmt.Printf("password:%v\n", string(aeskey))
+	fmt.Printf("src data:%v\n", string(pass))
 
-	tpass, err := AesDecrypt(bytesPass, aeskey)
+	xpass, err := AesEncrypt(pass, aeskey)
+	if err != nil {
+		fmt.Println(err)
+		return
 	if err != nil {
 		fmt.Println(err)
 		return
