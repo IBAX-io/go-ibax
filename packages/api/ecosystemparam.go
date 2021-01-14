@@ -14,16 +14,6 @@ import (
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-)
-
-func (m Mode) getEcosystemParamHandler(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
-
-	form := &ecosystemForm{
-		Validator: m.EcosysIDValidator,
-	}
-
-	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
@@ -70,3 +60,8 @@ func getEcosystemNameHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, &struct {
+		EcosystemName string `json:"ecosystem_name"`
+	}{
+		EcosystemName: ecosystems.Name,
+	})
+}
