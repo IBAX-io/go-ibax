@@ -17,16 +17,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func unmarshalColumnVDESrcMember(form *VDESrcMemberForm) (*model.VDESrcMember, error) {
-	var (
-		err error
-	)
-
-	m := &model.VDESrcMember{
-		VDEPubKey:            form.VDEPubKey,
-		VDEComment:           form.VDEComment,
-		VDEName:              form.VDEName,
-		VDEIp:                form.VDEIp,
 		VDEType:              int64(form.VDEType),
 		ContractRunHttp:      form.ContractRunHttp,
 		ContractRunEcosystem: form.ContractRunEcosystem,
@@ -76,6 +66,17 @@ func VDESrcMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)
 		return
+	}
+
+	m := &model.VDESrcMember{}
+
+	if m, err = unmarshalColumnVDESrcMember(form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
 	if err = m.Updates(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
 		return

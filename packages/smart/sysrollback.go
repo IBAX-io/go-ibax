@@ -186,6 +186,13 @@ func SysRollbackEditContract(transaction *model.DbTransaction, sysData SysRollDa
 // SysRollbackEcosystem is rolling back ecosystem
 func SysRollbackEcosystem(DbTransaction *model.DbTransaction, sysData SysRollData) error {
 	tables := make([]string, 0)
+	for table := range converter.FirstEcosystemTables {
+		tables = append(tables, table)
+		err := model.Delete(DbTransaction, `1_`+table, fmt.Sprintf(`where ecosystem='%d'`, sysData.ID))
+		if err != nil {
+			return err
+		}
+	}
 	if sysData.ID == 1 {
 		tables = append(tables, `node_ban_logs`, `bad_blocks`, `system_parameters`, `ecosystems`)
 		for _, name := range tables {
@@ -215,22 +222,6 @@ func SysRollbackActivate(sysData SysRollData) error {
 	ActivateContract(sysData.ID, sysData.EcosystemID, false)
 	return nil
 }
-
-// SysRollbackDeactivate sets Active status of the contract in smartVM
-func SysRollbackDeactivate(sysData SysRollData) error {
-	ActivateContract(sysData.ID, sysData.EcosystemID, true)
-	return nil
-}
-
-// SysRollbackDeleteColumn is rolling back delete column
-func SysRollbackDeleteColumn(DbTransaction *model.DbTransaction, sysData SysRollData) error {
-	var (
-		data map[string]string
-	)
-	err := unmarshalJSON([]byte(sysData.Data), &data, `rollback delete to json`)
-	if err != nil {
-		return err
-	}
 	sqlColType, err := columnType(data["type"])
 	if err != nil {
 		return err

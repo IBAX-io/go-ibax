@@ -28,18 +28,6 @@ func TestEmptyGetBodyResponse(t *testing.T) {
 func TestWriteReadInts(t *testing.T) {
 	buf := []byte{}
 	b := bytes.NewBuffer(buf)
-	st := uint16(2)
-	require.NoError(t, binary.Write(b, binary.LittleEndian, st))
-
-	var val uint16
-	err := binary.Read(b, binary.LittleEndian, &val)
-	require.NoError(t, err)
-	require.Equal(t, val, st)
-	fmt.Println(val)
-}
-
-func TestRequestType(t *testing.T) {
-	rt := RequestType{1}
 	buf := []byte{}
 	b := bytes.NewBuffer(buf)
 
@@ -66,6 +54,12 @@ func TestGetBodyResponse(t *testing.T) {
 
 func TestBodyResponse(t *testing.T) {
 	rt := GetBodyResponse{Data: []byte(strings.Repeat("A", 32))}
+	buf := []byte{}
+	b := bytes.NewBuffer(buf)
+
+	result := &GetBodyResponse{}
+	require.NoError(t, rt.Write(b))
+	require.NoError(t, result.Read(b))
 	require.Equal(t, rt.Data, result.Data)
 	fmt.Println(rt, result)
 

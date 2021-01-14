@@ -1,5 +1,14 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"context"
+	"sync/atomic"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -58,20 +67,6 @@ func Confirmations(ctx context.Context, d *daemon) error {
 	}
 
 	if startBlockID == 0 {
-		startBlockID = lastBlockID
-	}
-
-	return confirmationsBlocks(ctx, d, lastBlockID, startBlockID)
-}
-
-func confirmationsBlocks(ctx context.Context, d *daemon, lastBlockID, startBlockID int64) error {
-	for blockID := lastBlockID; blockID >= startBlockID; blockID-- {
-		if err := ctx.Err(); err != nil {
-			d.logger.WithFields(log.Fields{"type": consts.ContextError, "error": err}).Error("error in context")
-			return err
-		}
-
-		block := model.Block{}
 		_, err := block.Get(blockID)
 		if err != nil {
 			d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block by ID")

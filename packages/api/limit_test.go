@@ -1,16 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"fmt"
-	"net/url"
-	"strconv"
-	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -77,6 +66,9 @@ func TestLimit(t *testing.T) {
 			} else {
 				blocks[item["block"]] = 1
 			}
+		}
+		if wantBlocks > 0 && len(blocks) != wantBlocks {
+			return fmt.Errorf(`wrong number of blocks %d != %d`, len(blocks), wantBlocks)
 		}
 		return nil
 	}

@@ -42,6 +42,13 @@ func (t *StopNetworkTransaction) Validate() error {
 }
 
 func (t *StopNetworkTransaction) validate() error {
+	data := t.Data.(*consts.StopNetwork)
+	cert, err := utils.ParseCert(data.StopNetworkCert)
+	if err != nil {
+		return err
+	}
+
+	}
 
 	t.Cert = cert
 	return nil

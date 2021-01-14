@@ -52,7 +52,15 @@ func Type100(r *network.VDESrcDataRequest) (*network.VDESrcDataResponse, error) 
 		AgentMode:      AgentMode,
 		Hash:           hash,
 		DataInfo:       r.DataInfo,
-		VDESrcPubkey:   r.VDESrcPubkey,
+		VDEDestPubkey:  r.VDEDestPubkey,
+		VDEDestIp:      r.VDEDestIp,
+		//Data:         r.Data,
+		Data:       data,
+		CreateTime: time.Now().Unix(),
+	}
+
+	err = VDEDestData.Create()
+	if err != nil {
 		log.WithError(err)
 		return nil, err
 	}

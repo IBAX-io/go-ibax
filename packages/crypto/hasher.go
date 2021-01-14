@@ -37,17 +37,18 @@ var Hal = &hal
 func (h Hval) String() string {
 	return h.name
 }
+
+func getHasher() Hasher {
+	switch hal.name {
+	case hSM3:
+		return &SM3{}
+	case hSHA256:
+		return &SHA256{}
+	default:
+		panic(fmt.Errorf("hash is not supported yet or empty"))
 	}
 }
 
-func InitHash(s string) {
-	switch s {
-	case hSM3:
-		hal.name = hSM3
-		return
-	case hSHA256:
-		hal.name = hSHA256
-		return
 	}
 	panic(fmt.Errorf("hash [%v] is not supported yet", s))
 }

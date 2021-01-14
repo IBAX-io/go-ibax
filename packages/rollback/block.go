@@ -25,13 +25,6 @@ var (
 // BlockRollback is blocking rollback
 func RollbackBlock(data []byte) error {
 	bl, err := block.UnmarshallBlock(bytes.NewBuffer(data), true)
-	if err != nil {
-		return err
-	}
-
-	b := &model.Block{}
-	if _, err = b.GetMaxBlock(); err != nil {
-		return err
 	}
 
 	if b.ID != bl.Header.BlockID {
@@ -118,6 +111,16 @@ func rollbackBlock(dbTransaction *model.DbTransaction, block *block.Block) error
 		}
 
 		if t.TxContract != nil {
+			if err = rollbackTransaction(t.TxHash, t.DbTransaction, logger); err != nil {
+				return err
+			}
+		} else {
+			MethodName := consts.TxTypes[t.TxType]
+			txParser, err := transaction.GetTransaction(t, MethodName)
+			if err != nil {
+				return utils.ErrInfo(err)
+			}
+			result := txParser.Init()
 			if _, ok := result.(error); ok {
 				return utils.ErrInfo(result.(error))
 			}

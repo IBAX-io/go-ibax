@@ -8,6 +8,13 @@ package api
 import (
 	"crypto/md5"
 	"encoding/base64"
+	"fmt"
+	"io"
+	"math/rand"
+	"net/http"
+	"net/url"
+	"testing"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
@@ -398,17 +405,6 @@ func TestStringToBinary(t *testing.T) {
 					$result = $account_id
 				}
 			}
-		`}, "ApplicationId": {`1`}, "Conditions": {"true"},
-	}
-	assert.NoError(t, postTx("NewContract", &form))
-
-	form = url.Values{"Content": {content}}
-	_, account, err := postTxResult(contract, &form)
-	assert.NoError(t, err)
-
-	form = url.Values{
-		"template": {`SetVar(link, Binary(Name: ` + filename + `, AppID: 1, Account: "` + account + `"))#link#`},
-	}
 
 	var ret struct {
 		Tree []struct {

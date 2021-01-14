@@ -40,5 +40,3 @@ func GetQueryCoster(tp QueryCosterType) QueryCoster {
 	case ExplainQueryCosterType:
 		return &ExplainQueryCoster{}
 	case ExplainAnalyzeQueryCosterType:
-		return &ExplainAnalyzeQueryCoster{}
-	case FormulaQueryCosterType:

@@ -197,6 +197,13 @@ func VDESrcTaskStatusRunState(ctx context.Context, d *daemon) error {
 		}
 
 		blockchain_http = item.ContractRunHttp
+		blockchain_ecosystem = item.ContractRunEcosystem
+		//fmt.Println("SrcChainInfo:", blockchain_http, blockchain_ecosystem)
+
+		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("blockchain_ecosystem encode error")
+			time.Sleep(time.Millisecond * 2)
 			continue
 		}
 		vde_src_apiAddress := blockchain_http
@@ -248,8 +255,3 @@ func VDESrcTaskStatusRunState(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTask table!")
 			time.Sleep(time.Millisecond * 2)
 			continue
-		}
-		fmt.Println("Run VDE src Contract ok, TxHash:", string(item.TxHash))
-	} //for
-	return nil
-}
