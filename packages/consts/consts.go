@@ -27,9 +27,6 @@ const DEFAULT_TCP_PORT = 7078
 //const FounderAmount = 5250000
 const FounderAmount = 5250000
 
-// MoneyDigits is numbers of digits for tokens 1000000000000
-const MoneyDigits = 12
-
 // WAIT_CONFIRMED_NODES is used in confirmations
 const WAIT_CONFIRMED_NODES = 10
 
@@ -90,6 +87,16 @@ const ChainSize = 1 << 20
 const (
 	TxTypeFirstBlock     = 1
 	TxTypeApiContract    = 2
+	TxTypeSystemServer   = 3
+	TxTypeEcosystemMiner = 4
+	TxTypeSystemMiner    = 5
+	TxTypeStopNetwork    = 6
+
+	TxTypeParserFirstBlock  = "FirstBlock"
+	TxTypeSystemServerWork  = "SystemServerWork"
+	TxTypeParserStopNetwork = "StopNetwork"
+
+	TxTypeParserApiContract    = "ApiContract"
 	TxTypeParserEcosystemMiner = "EcosystemMiner"
 	TxTypeParserSystemMiner    = "SystemMiner"
 )

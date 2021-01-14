@@ -101,9 +101,6 @@ func VDEAgentLogUpToChain(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("Send VDEAgentLog to chain!")
 			time.Sleep(time.Second * 5)
 			continue
-		}
-		fmt.Println("Send chain Contract to run, ContractName:", ContractName)
-
 		item.ChainState = 1
 		item.TxHash = txHash
 		item.BlockId = 0
@@ -194,6 +191,10 @@ func VDEAgentLogUpToChainState(ctx context.Context, d *daemon) error {
 		} else {
 			//fmt.Println("VDEWaitTx! err: ", err)
 			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		err = item.Updates()
+		if err != nil {
 			fmt.Println("Update VDEAgentLog table err: ", err)
 			log.WithFields(log.Fields{"error": err}).Error("Update VDEAgentLog table!")
 			time.Sleep(time.Millisecond * 2)

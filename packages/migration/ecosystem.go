@@ -63,11 +63,6 @@ func sqlEnd(options ...string) (ret string) {
 		}
 		if strings.HasPrefix(opt, sqlPrimary) {
 			if opt == sqlPrimary {
-				opt = `PRIMARY KEY (id)`
-			} else {
-				opt = strings.Replace(opt, sqlPrimary, `PRIMARY KEY `, 1)
-			}
-			cname = "pkey"
 		}
 		if strings.HasPrefix(opt, sqlUnique) {
 			pars := strings.Split(strings.Trim(opt[len(sqlUnique):], `() `), `,`)
@@ -110,6 +105,21 @@ func sqlConvert(in []string) (ret string, err error) {
 			tmpl *template.Template
 			out  bytes.Buffer
 		)
+
+		if tmpl, err = sqlTmpl.Parse(sql); err != nil {
+			return
+		}
+		if err = tmpl.Execute(io.Writer(&out), nil); err != nil {
+			return
+		}
+		item, err = fizz.AString(out.String(), pgt)
+		if err != nil {
+			return
+		}
+		ret += item + "\r\n"
+	}
+	return
+}
 
 func sqlTemplate(input []string, data interface{}) (ret string, err error) {
 	for _, item := range input {

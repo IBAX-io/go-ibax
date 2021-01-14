@@ -141,6 +141,24 @@ func VDESrcTaskFromScheUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, result)
 }
 
+func VDESrcTaskFromScheDeleteHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+	id := converter.StrToInt64(params["id"])
+
+	m := &model.VDESrcTaskFromSche{}
+	m.ID = id
+	if err := m.Delete(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete sche task table record")
+	}
+
+	jsonResponse(w, "ok")
+}
+
+func VDESrcTaskFromScheListHandlre(w http.ResponseWriter, r *http.Request) {
+	logger := getLogger(r)
+	srcData := model.VDESrcTaskFromSche{}
+
 	result, err := srcData.GetAll()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Error reading sche task data list")
@@ -158,13 +176,6 @@ func VDESrcTaskFromScheByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	srcData := model.VDESrcTaskFromSche{}
 	srcData.ID = id
 	result, err := srcData.GetOneByID()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query sche task data by ID failed")
-		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
 }
 
 func VDESrcTaskFromScheByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {

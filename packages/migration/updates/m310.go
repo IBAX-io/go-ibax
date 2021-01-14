@@ -6,12 +6,6 @@ package updates
 
 var M310 = `
 
-UPDATE "1_system_parameters" 
-	SET name = 'price_exec_get_contract_by_name'
-	WHERE name = 'price_exec_contract_by_name';
-
-UPDATE "1_system_parameters" 
-	SET name = 'price_exec_get_contract_by_id'
 	WHERE name = 'price_exec_contract_by_id';
 
 INSERT INTO "1_system_parameters" (id, name, value, conditions) VALUES
@@ -94,6 +88,12 @@ INSERT INTO "1_system_parameters" (id, name, value, conditions) VALUES
 	(next_id('1_system_parameters'), 'access_exec_perm_column', 'ContractAccess("@1EditColumn")', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'access_exec_create_language', 'ContractAccess("@1NewLang", "@1NewLangJoint", "@1Import")', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'access_exec_edit_language', 'ContractAccess("@1EditLang", "@1EditLangJoint", "@1Import")', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'), 'access_exec_create_ecosystem', 'ContractAccess("@1NewEcosystem")', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'), 'access_exec_edit_ecosys_name', 'ContractAccess("@1EditEcosystemName")', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'), 'access_exec_bind_wallet', 'ContractAccess("@1BindWallet")', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'), 'access_exec_unbind_wallet', 'ContractAccess("@1UnbindWallet")', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'), 'access_exec_set_contract_wallet', 'ContractAccess("@1BindWallet", "@1UnbindWallet")', 'ContractAccess("@1UpdateSysParam")');
+
 INSERT INTO "1_system_parameters" (id, name, value, conditions) VALUES
 	(next_id('1_system_parameters'), 'price_exec_money_div', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_update_reward', '50', 'ContractAccess("@1UpdateSysParam")'),

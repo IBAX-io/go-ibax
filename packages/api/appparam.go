@@ -42,3 +42,4 @@ func (m Mode) GetAppParamHandler(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"type": consts.NotFound, "key": name}).Error("app parameter not found")
 		errorResponse(w, errParamNotFound.Errorf(name))
 		return
+	}

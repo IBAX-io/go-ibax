@@ -23,11 +23,6 @@ func Type7(request *network.GetBodiesRequest, w net.Conn) error {
 	var err error
 	if request.ReverseOrder {
 		blocks, err = block.GetReverseBlockchain(int64(request.BlockID), network.BlocksPerRequest)
-	} else {
-		blocks, err = block.GetBlocksFrom(int64(request.BlockID-1), "ASC", network.BlocksPerRequest)
-	}
-
-	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "block_id": request.BlockID}).Error("Error getting 1000 blocks from block_id")
 		if err := network.WriteInt(0, w); err != nil {
 			log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on sending 0 requested blocks")
@@ -51,6 +46,7 @@ func Type7(request *network.GetBodiesRequest, w net.Conn) error {
 			return err
 		}
 	}
+
 	return nil
 }
 

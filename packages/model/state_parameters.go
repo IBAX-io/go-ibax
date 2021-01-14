@@ -13,11 +13,13 @@ type StateParameter struct {
 	ID         int64  `gorm:"primary_key;not null"`
 	Name       string `gorm:"not null;size:100"`
 	Value      string `gorm:"not null"`
-		sp.ecosystem = 1
-	}
-	return `1_parameters`
+	Conditions string `gorm:"not null"`
 }
 
+// TableName returns name of table
+func (sp *StateParameter) TableName() string {
+	if sp.ecosystem == 0 {
+		sp.ecosystem = 1
 // SetTablePrefix is setting table prefix
 func (sp *StateParameter) SetTablePrefix(prefix string) *StateParameter {
 	sp.ecosystem = converter.StrToInt64(prefix)
