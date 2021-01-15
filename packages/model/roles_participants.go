@@ -11,6 +11,13 @@ import (
 
 // RolesParticipants represents record of {prefix}roles_participants table
 type RolesParticipants struct {
+	ecosystem   int64
+	Id          int64
+	Role        string `gorm:"type":jsonb`
+	Member      string `gorm:"type":jsonb`
+	Appointed   string `gorm:"type":jsonb`
+	DateCreated int64
+	DateDeleted int64
 	Deleted     bool
 }
 
@@ -49,10 +56,6 @@ func MemberHasRole(tx *DbTransaction, role, ecosys int64, account string) (bool,
 }
 
 // MemberHasRole returns true if member has role
-func MemberHasRolebyName(tx *DbTransaction, ecosys int64, role, account string) (bool, error) {
-	db := GetDB(tx)
-	var count int64
-	if err := db.Table("1_roles_participants").Where(`ecosystem=? and role->>'name' = ? and member->>'account' = ?`,
 		ecosys, role, account).Count(&count).Error; err != nil {
 		return false, err
 	}

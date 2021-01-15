@@ -1,10 +1,19 @@
 // +prop AppID = '1'
-            warning Sprintf( "Block %s already exists", $Name)
-        }
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewBlock {
+    data {
+        ApplicationId int
+        Name string
+        Value string
+        Conditions string
     }
 
-    action {
-        DBInsert("blocks", {name: $Name, value: $Value, conditions: $Conditions,
-              app_id: $ApplicationId})
-    }
-}
+    conditions {
+        ValidateCondition($Conditions, $ecosystem_id)
+
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
+        }
+
+        if DBFind("blocks").Columns("id").Where({name:$Name}).One("id") {
+            warning Sprintf( "Block %s already exists", $Name)

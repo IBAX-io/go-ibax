@@ -12,22 +12,12 @@ type VDEAgentDataLog struct {
 	LogType             int64  `gorm:"not null" json:"log_type"`
 	LogSender           string `gorm:"not null" json:"log_sender"`
 	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
-	ChainErr   string `gorm:"not null" json:"chain_err"`
+	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
 
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
-func (VDEAgentDataLog) TableName() string {
-	return "vde_agent_data_log"
-}
-
-func (m *VDEAgentDataLog) Create() error {
-	return DBConn.Create(&m).Error
-}
-
-func (m *VDEAgentDataLog) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
+	TxHash     string `gorm:"not null" json:"tx_hash"`
+	ChainState int64  `gorm:"not null" json:"chain_state"`
+	BlockId    int64  `gorm:"not null" json:"block_id"`
+	ChainId    int64  `gorm:"not null" json:"chain_id"`
 }
 
 func (m *VDEAgentDataLog) Delete() error {

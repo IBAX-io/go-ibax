@@ -101,6 +101,9 @@ func VDEAgentLogUpToChain(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("Send VDEAgentLog to chain!")
 			time.Sleep(time.Second * 5)
 			continue
+		}
+		fmt.Println("Send chain Contract to run, ContractName:", ContractName)
+
 		item.ChainState = 1
 		item.TxHash = txHash
 		item.BlockId = 0
@@ -167,11 +170,6 @@ func VDEAgentLogUpToChainState(ctx context.Context, d *daemon) error {
 		chain_apiAddress := blockchain_http
 		chain_apiEcosystemID := int64(ecosystemID)
 
-		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
-		// Login
-		gAuth_chain, _, _, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
 			time.Sleep(time.Millisecond * 2)
 			continue
 		}
