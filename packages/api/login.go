@@ -232,23 +232,6 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, errStateLogin.Errorf(wallet, client.EcosystemID))
 			return
 		}
-
-		if len(form.PublicKey.Bytes()) == 0 {
-			logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty")
-			errorResponse(w, errEmptyPublic)
-			return
-		}
-	}
-
-	if form.RoleID != 0 && client.RoleID == 0 {
-		checkedRole, err := checkRoleFromParam(form.RoleID, client.EcosystemID, account.AccountID)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-
-		if checkedRole != form.RoleID {
-			errorResponse(w, errCheckRole)
 			return
 		}
 
@@ -282,6 +265,12 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		EcosystemID: converter.Int64ToStr(client.EcosystemID),
 		KeyID:       converter.Int64ToStr(wallet),
 		IsOwner:     founder == wallet,
+		IsNode:      conf.Config.KeyID == wallet,
+		IsOBS:       conf.Config.IsSupportingOBS(),
+	}
+
+	claims := JWTClaims{
+		KeyID:       result.KeyID,
 		AccountID:   account.AccountID,
 		EcosystemID: result.EcosystemID,
 		IsMobile:    form.IsMobile,

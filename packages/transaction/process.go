@@ -12,6 +12,15 @@ import (
 func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*model.QueueTx) error {
 	var (
 		checkTime = time.Now().Unix()
+		hashes    model.ArrHashes
+		trxs      []*model.Transaction
+		hs        []byte
+		err       error
+	)
+
+	defer func() {
+		if err != nil {
+			err = MarkTransactionBad(dbTransaction, hs, err.Error())
 			if err != nil {
 				return
 			}
@@ -48,16 +57,6 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 			Sent:     0,
 		}
 		trxs = append(trxs, newTx)
-		hashes = append(hashes, hs)
-	}
-
-	if len(trxs) > 0 {
-		errTx := model.CreateTransactionBatches(dbTransaction, trxs)
-		if errTx != nil {
-			return errTx
-		}
-	}
-	if len(hashes) > 0 {
 		errQTx := model.DeleteQueueTxs(dbTransaction, hashes)
 		if errQTx != nil {
 			return errQTx
