@@ -143,17 +143,6 @@ type FuncInfo struct {
 type VarInfo struct {
 	Obj   *ObjInfo
 	Owner *Block
-}
-
-// IndexInfo contains the information for SetIndex
-type IndexInfo struct {
-	VarOffset int
-	Owner     *Block
-	Extend    string
-}
-
-// ObjInfo is the common object type
-type ObjInfo struct {
 	Type  int
 	Value interface{}
 }
@@ -488,6 +477,20 @@ func (vm *VM) Call(name string, params []interface{}, extend *map[string]interfa
 }
 
 // ExContract executes the name contract in the state with specified parameters
+func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (interface{}, error) {
+
+	name = StateName(state, name)
+	contract, ok := rt.vm.Objects[name]
+	if !ok {
+		log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError}).Error("unknown contract")
+		return nil, fmt.Errorf(eUnknownContract, name)
+	}
+	if params == nil {
+		params = types.NewMap()
+	}
+	logger := log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError})
+	names := make([]string, 0)
+	vals := make([]interface{}, 0)
 	cblock := contract.Value.(*Block)
 	if cblock.Info.(*ContractInfo).Tx != nil {
 		for _, tx := range *cblock.Info.(*ContractInfo).Tx {

@@ -14,6 +14,9 @@ func TestHistory(t *testing.T) {
 	if err := keyLogin(1); err != nil {
 		t.Error(err)
 		return
+	}
+
+	}
 
 	err = sendGet("history/pages/1000", nil, &ret)
 	if err != nil {

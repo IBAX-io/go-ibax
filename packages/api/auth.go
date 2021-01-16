@@ -151,16 +151,20 @@ func RefreshToken(header string) (*jwt.Token, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
-
-		return []byte(jwtSecret), nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return token, err
 }
 
+func getClientFromToken(token *jwt.Token, ecosysNameService types.EcosystemNameGetter) (*Client, error) {
+	claims, ok := token.Claims.(*JWTClaims)
+	if !ok {
+		return nil, nil
+	}
+	if len(claims.KeyID) == 0 {
+		return nil, nil
+	}
+
+	client := &Client{
+		EcosystemID: converter.StrToInt64(claims.EcosystemID),
+		KeyID:       converter.StrToInt64(claims.KeyID),
 		AccountID:   claims.AccountID,
 		IsMobile:    claims.IsMobile,
 		RoleID:      converter.StrToInt64(claims.RoleID),

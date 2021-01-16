@@ -44,20 +44,6 @@ func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key i
 		}
 	}
 
-	if len(strings.TrimSpace(rtx.SmartTx().Lang)) > 2 {
-		return "", fmt.Errorf(`localization size is greater than 2`)
-	}
-
-	var PublicKeys [][]byte
-	PublicKeys = append(PublicKeys, crypto.CutPub(rtx.SmartTx().PublicKey))
-	f, err := utils.CheckSign(PublicKeys, rtx.Hash(), rtx.Signature(), false)
-	if err != nil {
-		return "", err
-	}
-	if !f {
-		return "", errors.New("sign err")
-	}
-
 	//check keyid is exist user
 	if key == 0 {
 		//ok, err := model.MemberHasRole(nil, 7, 1, converter.AddressToString(rtx.SmartTx().KeyID))
@@ -106,6 +92,23 @@ func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key i
 		rtxs = append(rtxs, rtx.SetRawTx())
 		retTx = append(retTx, rtx.HashStr())
 	}
+	err = model.SendTxBatches(rtxs)
+	return
+}
+
+type ObsTxPreprocessor struct{}
+
+func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, le *log.Entry) (string, error) {
+
+	tx, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txData), true)
+	if err != nil {
+		le.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("on unmarshaling user tx")
+		return "", err
+	}
+
+	ts := &model.TransactionStatus{
+		BlockID:  1,
+		Hash:     tx.TxHash,
 		Time:     time.Now().Unix(),
 		WalletID: key,
 		Type:     tx.TxType,

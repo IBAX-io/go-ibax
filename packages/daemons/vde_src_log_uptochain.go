@@ -6,10 +6,6 @@
 package daemons
 
 import (
-	"context"
-	"fmt"
-	"net/url"
-	"strconv"
 	"time"
 
 	"path/filepath"
@@ -83,6 +79,17 @@ func VDESrcLogUpToChain(ctx context.Context, d *daemon) error {
 		}
 		//fmt.Println("Login OK!")
 
+		form := url.Values{
+			"TaskUUID":  {item.TaskUUID},
+			"DataUUID":  {item.DataUUID},
+			"Log":       {item.Log},
+			"LogType":   {converter.Int64ToStr(item.LogType)},
+			"LogSender": {item.LogSender},
+
+			`CreateTime`: {converter.Int64ToStr(time.Now().Unix())},
+		}
+
+		ContractName := `@1VDEShareLogCreate`
 		_, txHash, _, err := chain_api.VDEPostTxResult(chain_apiAddress, chain_apiEcosystemID, gAuth_chain, gPrivate_chain, ContractName, &form)
 		if err != nil {
 			fmt.Println("Send VDESrcLog to chain err: ", err)

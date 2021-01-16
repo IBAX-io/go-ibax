@@ -1,3 +1,7 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
 package api
 
@@ -110,15 +114,6 @@ func isMultipartForm(r *http.Request) bool {
 	return strings.HasPrefix(r.Header.Get(contentType), multipartFormData)
 }
 
-type hexValue struct {
-	value []byte
-}
-
-func (hv hexValue) Bytes() []byte {
-	return hv.value
-}
-
-func (hv *hexValue) UnmarshalText(v []byte) (err error) {
 	hv.value, err = hex.DecodeString(string(v))
 	return
 }

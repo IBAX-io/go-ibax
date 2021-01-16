@@ -4,13 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package tcpclient
 
-import (
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/network"
-
-	log "github.com/sirupsen/logrus"
-)
-
 //func SendSubNodeSrcData(host string, TaskUUID string, DataUUID string, AgentMode string, DataInfo string, dt []byte ) (hash string) {
 func SendSubNodeSrcData(host string, TaskUUID string, DataUUID string, AgentMode string, TranMode string, DataInfo string, SubNodeSrcPubkey string, SubNodeAgentPubkey string, SubNodeAgentIp string, SubNodeDestPubkey string, SubNodeDestIp string, dt []byte) (hash string) {
 
@@ -65,6 +58,13 @@ func SendSubNodeSrcDataAgent(host string, TaskUUID string, DataUUID string, Agen
 	defer conn.Close()
 
 	rt := &network.RequestType{Type: network.RequestTypeSendSubNodeSrcDataAgent}
+	if err = rt.Write(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending request type")
+		return "0"
+	}
+
+	req := &network.SubNodeSrcDataAgentRequest{
+		TaskUUID:           TaskUUID,
 		DataUUID:           DataUUID,
 		AgentMode:          AgentMode,
 		TranMode:           TranMode,

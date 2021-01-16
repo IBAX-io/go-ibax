@@ -4,16 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package tcpclient
 
-import (
-	"context"
-	"encoding/binary"
-	"errors"
-	"fmt"
-	"io"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/network"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -66,6 +56,14 @@ func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrd
 				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on reading block bodies")
 			}
 		}
+	}()
+
+	return blocksChan, nil
+}
+
+func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int64) (<-chan []byte, <-chan error) {
+	rawBlocksCh := make(chan []byte, blocksCount)
+	errChan := make(chan error, 1)
 
 	sizeBuf := make([]byte, sizeBytesLength)
 	var bodyBuf []byte

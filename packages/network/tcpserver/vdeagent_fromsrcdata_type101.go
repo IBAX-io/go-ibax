@@ -40,10 +40,18 @@ func Type101(r *network.VDESrcDataAgentRequest) (*network.VDESrcDataAgentRespons
 	//hash, err := crypto.HashHex(r.Data)
 	hash, err := crypto.HashHex(data)
 	if err != nil {
-		VDEAgentPubkey: r.VDEAgentPubkey,
-		VDEAgentIp:     r.VDEAgentIp,
-		VDEDestPubkey:  r.VDEDestPubkey,
-		VDEDestIp:      r.VDEDestIp,
+		log.WithError(err)
+		return nil, err
+	}
+	resp := &network.VDESrcDataAgentResponse{}
+	resp.Hash = hash
+	AgentMode := converter.StrToInt64(r.AgentMode)
+	VDEAgentData := model.VDEAgentData{
+		TaskUUID:       r.TaskUUID,
+		DataUUID:       r.DataUUID,
+		AgentMode:      AgentMode,
+		Hash:           hash,
+		DataInfo:       r.DataInfo,
 		//Data:         r.Data,
 		Data:       data,
 		CreateTime: time.Now().Unix(),
