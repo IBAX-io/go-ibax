@@ -28,9 +28,8 @@ func init() {
 		rollbackCmd,
 		startCmd,
 		configCmd,
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		log.WithError(err).Fatal("Executing root command")
+		stopNetworkCmd,
+		versionCmd,
 	}
 }
 

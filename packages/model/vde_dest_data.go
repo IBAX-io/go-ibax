@@ -7,6 +7,15 @@ package model
 type VDEDestData struct {
 	ID             int64  `gorm:"primary_key; not null" json:"id"`
 	DataUUID       string `gorm:"not null" json:"data_uuid"`
+	TaskUUID       string `gorm:"not null" json:"task_uuid"`
+	Hash           string `gorm:"not null" json:"hash"`
+	Data           []byte `gorm:"not null" json:"data"`
+	DataInfo       string `gorm:"type:jsonb" json:"data_info"`
+	VDESrcPubkey   string `gorm:"not null" json:"vde_src_pubkey"`
+	VDEDestPubkey  string `gorm:"not null" json:"vde_dest_pubkey"`
+	VDEDestIp      string `gorm:"not null" json:"vde_dest_ip"`
+	VDEAgentPubkey string `gorm:"not null" json:"vde_agent_pubkey"`
+	VDEAgentIp     string `gorm:"not null" json:"vde_agent_ip"`
 	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
 	DataState      int64  `gorm:"not null" json:"data_state"`
 	UpdateTime     int64  `gorm:"not null" json:"update_time"`
@@ -25,11 +34,6 @@ func (m *VDEDestData) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
 }
 
-func (m *VDEDestData) Delete() error {
-	return DBConn.Delete(m).Error
-}
-
-func (m *VDEDestData) GetAll() ([]VDEDestData, error) {
 	var result []VDEDestData
 	err := DBConn.Find(&result).Error
 	return result, err

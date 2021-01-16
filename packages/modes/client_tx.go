@@ -106,23 +106,6 @@ func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key i
 		rtxs = append(rtxs, rtx.SetRawTx())
 		retTx = append(retTx, rtx.HashStr())
 	}
-	err = model.SendTxBatches(rtxs)
-	return
-}
-
-type ObsTxPreprocessor struct{}
-
-func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, le *log.Entry) (string, error) {
-
-	tx, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txData), true)
-	if err != nil {
-		le.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("on unmarshaling user tx")
-		return "", err
-	}
-
-	ts := &model.TransactionStatus{
-		BlockID:  1,
-		Hash:     tx.TxHash,
 		Time:     time.Now().Unix(),
 		WalletID: key,
 		Type:     tx.TxType,
@@ -137,6 +120,21 @@ func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 	if err != nil {
 		le.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("on execution contract")
 		return "", err
+	}
+
+	if err := model.SetTransactionStatusBlockMsg(nil, 1, res, tx.TxHash); err != nil {
+		le.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": tx.TxHash}).Error("updating transaction status block id")
+		return "", err
+	}
+
+	return string(converter.BinToHex(tx.TxHash)), nil
+}
+func (p ObsTxPreprocessor) ProcessClientTxBatches(txData [][]byte, key int64, le *log.Entry) ([]string, error) {
+	return nil, nil
+}
+func GetClientTxPreprocessor() types.ClientTxPreprocessor {
+	if conf.Config.IsSupportingOBS() {
+		return ObsTxPreprocessor{}
 	}
 
 	return blockchainTxPreprocessor{}

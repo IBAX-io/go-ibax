@@ -386,6 +386,19 @@ func (b *Block) CheckHash() (bool, error) {
 
 		signSource := b.Header.ForSign(b.PrevHeader, b.MrklRoot)
 
+		resultCheckSign, err := utils.CheckSign(
+			[][]byte{nodePublicKey},
+			[]byte(signSource),
+			b.Header.Sign,
+			true)
+
+		if err != nil {
+			if err == crypto.ErrIncorrectSign {
+				if !bytes.Equal(b.PrevRollbacksHash, b.PrevHeader.RollbacksHash) {
+					return false, ErrIncorrectRollbackHash
+				}
+			}
+			logger.WithFields(log.Fields{"error": err, "type": consts.CryptoError}).Error("checking block header sign")
 			return false, utils.ErrInfo(fmt.Errorf("err: %v / block.PrevHeader.BlockID: %d /  block.PrevHeader.Hash: %x / ", err, b.PrevHeader.BlockID, b.PrevHeader.Hash))
 		}
 
@@ -393,14 +406,6 @@ func (b *Block) CheckHash() (bool, error) {
 	}
 
 	return true, nil
-}
-
-// InsertBlockWOForks is inserting blocks
-func InsertBlockWOForks(data []byte, genBlock, firstBlock bool) error {
-	block, err := ProcessBlockWherePrevFromBlockchainTable(data, !firstBlock)
-	if err != nil {
-		return err
-	}
 	block.GenBlock = genBlock
 	if err := block.Check(); err != nil {
 		return err

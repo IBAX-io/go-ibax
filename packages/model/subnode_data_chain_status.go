@@ -13,19 +13,13 @@ type SubNodeSrcDataChainStatus struct {
 	Data     []byte `gorm:"column:data;not null" json:"data"`
 	DataInfo string `gorm:"type:jsonb" json:"data_info"`
 	TranMode int64  `gorm:"not null" json:"tran_mode"`
+	//SubNodeDestPubkey      string `gorm:"not null" json:"subnode_dest_pubkey"`
+	SubNodeDestPubkey   string `gorm:"column:subnode_dest_pubkey;not null" json:"subnode_dest_pubkey"`
+	BlockchainTable     string `gorm:"not null" json:"blockchain_table"`
 	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
 	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
 
 	TxHash     string `gorm:"not null" json:"tx_hash"`
-	ChainState int64  `gorm:"not null" json:"chain_state"`
-	BlockId    int64  `gorm:"not null" json:"block_id"`
-	ChainId    int64  `gorm:"not null" json:"chain_id"`
-	ChainErr   string `gorm:"not null" json:"chain_err"`
-
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
-	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
 func (SubNodeSrcDataChainStatus) TableName() string {
 	return "subnode_src_data_chain_status"
 }

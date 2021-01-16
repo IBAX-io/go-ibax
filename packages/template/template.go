@@ -416,6 +416,12 @@ func callFunc(curFunc *tplFunc, owner *node, workspace *Workspace, params *[][]r
 		parFunc.Tails = tailpars
 	}
 	if *workspace.Timeout {
+		return
+	}
+	parFunc.Pars = &pars
+	if getVar(workspace, `_full`) == `1` {
+		out = curFunc.Full(parFunc)
+	} else {
 		out = curFunc.Func(parFunc)
 	}
 	for key, v := range parFunc.Node.Attr {
@@ -567,21 +573,6 @@ main:
 				if mode == 0 && (strings.Contains(curFunc.Params, `Body`) || strings.Contains(curFunc.Params, `Data`)) {
 					var isBody bool
 					next := off + 1
-					for next < len(input) {
-						if rune(input[next]) == modes[1][0] {
-							isBody = true
-							break
-						}
-						if rune(input[next]) == ' ' || rune(input[next]) == '\t' {
-							next++
-							continue
-						}
-						break
-					}
-					if isBody {
-						mode = 1
-						for _, keyp := range []string{`Body`, `Data`} {
-							if strings.Contains(curFunc.Params, keyp) {
 								irune := make([]rune, 0, sizeParam)
 								s := keyp + `:`
 								params = append(params, append(irune, []rune(s)...))

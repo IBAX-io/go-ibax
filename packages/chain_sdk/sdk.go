@@ -270,6 +270,14 @@ func postTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPrivat
 		case "float":
 			params[name], err = strconv.ParseFloat(value, 64)
 		case "string", "money":
+			params[name] = value
+		case "file", "bytes":
+			if cp, ok := form.(*contractParams); !ok {
+				err = fmt.Errorf("Form is not *contractParams type")
+			} else {
+				params[name] = cp.GetRaw(name)
+			}
+		}
 
 		if err != nil {
 			err = fmt.Errorf("Parse param '%s': %s", name, err)
@@ -440,20 +448,6 @@ func KeyLogin(apiAddress string, from string, state int64) (gAuth string, gAddre
 	var ret getUIDResult
 	err = sendGet(apiAddress, gAuth, `getuid`, nil, &ret)
 	if err != nil {
-		return "", "", "", "", false, err
-	}
-	gAuth = ret.Token
-
-	if len(ret.UID) == 0 {
-		return "", "", "", "", false, fmt.Errorf(`getuid has returned empty uid`)
-	}
-
-	var pub string
-
-	//sign, err = crypto.SignString(string(key), nonceSalt+ret.UID)
-	//if err != nil {
-	//	return
-	//}
 	sign, err = crypto.SignString(string(key), `LOGIN`+ret.NetworkID+ret.UID)
 	if err != nil {
 		return "", "", "", "", false, err

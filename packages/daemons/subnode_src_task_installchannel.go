@@ -211,6 +211,12 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 		//api.ApiEcosystemID = int64(ecosystemID)
 		chain_apiAddress := blockchain_http
 		chain_apiEcosystemID := int64(ecosystemID)
+
+		src := filepath.Join(conf.Config.KeysDir, "chain_PrivateKey")
+		// Login
+		//err := api.KeyLogin(src, api.ApiEcosystemID)
+		gAuth_chain, _, gPrivate_chain, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
+		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
 			time.Sleep(time.Millisecond * 2)
 			continue
@@ -222,17 +228,6 @@ func SubNodeSrcTaskInstallChannel(ctx context.Context, d *daemon) error {
 			form = url.Values{
 				"Name":          {blockchain_table},
 				"ColumnsArr":    {`["task_uuid","data_uuid","data_info","hash","spphdata","deleted","date_created","date_updated","date_deleted"]`},
-				"TypesArr":      {`["text","text","json","text","text","number","number","number","number"]`},
-				"InsertPerm":    {`true`},
-				"NewColumnPerm": {`true`},
-				"ReadPerm":      {`1`},
-				"UpdatePerm":    {`true`},
-				"ApplicationId": {`1`},
-			}
-		} else if tran_mode == "2" { //2 all data up to chain
-			form = url.Values{
-				"Name":          {blockchain_table},
-				"ColumnsArr":    {`["task_uuid","data_uuid","data_info","hash","sppadata","deleted","date_created","date_updated","date_deleted"]`},
 				"TypesArr":      {`["text","text","json","text","text","number","number","number","number"]`},
 				"InsertPerm":    {`true`},
 				"NewColumnPerm": {`true`},

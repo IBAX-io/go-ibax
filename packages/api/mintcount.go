@@ -27,9 +27,6 @@ func (m Mode) getMintCountHandler(w http.ResponseWriter, r *http.Request) {
 		mc := &model.MintCount{}
 		f, err := mc.Get(blockID)
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting Key for wallet")
-			ret.ReturnFailureString(err.Error())
-		}
 	} else {
 		ret.ReturnFailureString("PoolPub.Enable false")
 		JsonCodeResponse(w, &ret)

@@ -27,19 +27,6 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 		return err
 	}
 
-	// roll back our blocks
-	for {
-		block := &model.Block{}
-		blocks, err := block.GetBlocks(blockID, syspar.GetMaxTxCount())
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting blocks")
-			return err
-		}
-		if len(blocks) == 0 {
-			break
-		}
-		for _, block := range blocks {
-			// roll back our blocks to the block blockID
 			err = RollbackBlock(block.Data)
 			if err != nil {
 				return errors.WithMessagef(err, "block_id: %d", block.ID)
@@ -74,3 +61,7 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating info block")
 		return err
+	}
+
+	return nil
+}

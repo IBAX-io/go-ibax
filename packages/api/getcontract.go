@@ -12,6 +12,16 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/script"
 
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+type contractField struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Optional bool   `json:"optional"`
+}
+
 type getContractResult struct {
 	ID       uint32          `json:"id"`
 	StateID  uint32          `json:"state"`
@@ -19,10 +29,6 @@ type getContractResult struct {
 	WalletID string          `json:"walletid"`
 	TokenID  string          `json:"tokenid"`
 	Address  string          `json:"address"`
-	Fields   []contractField `json:"fields"`
-	Name     string          `json:"name"`
-}
-
 func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)

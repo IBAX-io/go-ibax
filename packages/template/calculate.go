@@ -30,6 +30,9 @@ const (
 	expMoney = 2
 )
 
+type token struct {
+	Type  int
+	Value interface{}
 }
 
 type opFunc func()
@@ -92,19 +95,6 @@ func parsing(input string, itype int) (*[]token, error) {
 			newToken(tkNumber, val)
 			numlen = 0
 		}
-		if item, ok := ops[ch]; ok {
-			if prevOper() {
-				return nil, errExp
-			}
-			newToken(item.id, item.pr)
-			continue
-		}
-		switch ch {
-		case '(':
-			if prevNumber() {
-				return nil, errExp
-			}
-			newToken(tkLPar, 3)
 		case ')':
 			if prevOper() {
 				return nil, errExp
