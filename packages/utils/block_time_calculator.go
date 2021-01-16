@@ -53,8 +53,14 @@ func (btc *BlockTimeCalculator) TimeToGenerate(nodePosition int64) (bool, error)
 	blocks, err := btc.blocksCounter.count(bgs)
 	if err != nil {
 		return false, err
-	blocks, err := btc.blocksCounter.count(bgs)
-	if err != nil {
+	}
+
+	if blocks != 0 {
+		return false, DuplicateBlockError
+	}
+
+	return bgs.nodePosition == nodePosition, nil
+}
 		return false, err
 	}
 

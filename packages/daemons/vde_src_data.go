@@ -14,20 +14,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
-)
-
-func VDESrcData(ctx context.Context, d *daemon) error {
-	var (
-		TaskParms map[string]interface{}
-
-		vde_src_pubkey       string
-		vde_dest_pubkey      string
-		vde_dest_ip          string
-		vde_agent_pubkey     string
-		vde_agent_ip         string
 		agent_mode           string
 		hash_mode            string
 		log_mode             string
@@ -138,6 +124,14 @@ func VDESrcData(ctx context.Context, d *daemon) error {
 			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {
+				log.WithError(err)
+			}
+			continue
+		}
+		if vde_agent_pubkey, ok = TaskParms["vde_agent_pubkey"].(string); !ok {
+			log.WithFields(log.Fields{"error": err}).Error("vde_agent_pubkey parse error")
+			item.DataState = 3 //Indicates an error in parsing task parameters
+			err = item.Updates()
 			if err != nil {
 				log.WithError(err)
 			}

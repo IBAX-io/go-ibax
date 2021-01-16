@@ -11,6 +11,17 @@ import (
 
 const (
 	eContractLoop        = `There is loop in %s contract`
+	eContractExist       = `Contract %s already exists`
+	eLatin               = `Name %s must only contain latin, digit and '_', '-' characters`
+	eAccessContract      = `%s can only be called with condition: %s`
+	eColumnExist         = `column %s exists`
+	eColumnNotExist      = `column %s doesn't exist`
+	eColumnType          = `Type '%s' of columns is not supported`
+	eNotCustomTable      = `%s is not a custom table`
+	eEmptyCond           = `%v condition is empty`
+	eIncorrectSignature  = `incorrect signature %s`
+	eItemNotFound        = `item %d has not been found`
+	eManyColumns         = `Too many columns. Limit is %d`
 	eNotCondition        = `There is not %s in parameters`
 	eParamNotFound       = `Parameter %s has not been found`
 	eRecordNotFound      = `Record %s has not been found`
@@ -54,21 +65,6 @@ var (
 	errKeyIDAccount       = errors.New(`unknown address account`)
 	errFuelRate           = errors.New(`fuel rate must be greater than 0`)
 	errIncorrectSign      = errors.New(`incorrect sign`)
-	errIncorrectType      = errors.New(`incorrect type`)
-	errInvalidValue       = errors.New(`invalid value`)
-	errNameChange         = errors.New(`contracts or functions names cannot be changed`)
-	errNegPrice           = errors.New(`price value is negative`)
-	errOneContract        = errors.New(`only one contract must be in the record`)
-	errPermEmpty          = errors.New(`permissions are empty`)
-	errRecursion          = errors.New("recursion detected")
-	errSameColumns        = errors.New(`there are the same columns`)
-	errTableName          = errors.New(`the name of the table cannot begin with @`)
-	errTableEmptyName     = errors.New(`the table name cannot be empty`)
-	errUndefColumns       = errors.New(`columns are undefined`)
-	errUpdNotExistRecord  = errors.New(`update for not existing record`)
-	errWrongSignature     = errors.New(`wrong signature`)
-	errIncorrectParameter = errors.New(`incorrect parameter of the condition function`)
-	errParseTransaction   = errors.New(`parse transaction`)
 	errWhereUpdate        = errors.New(`there is not Where in Update request`)
 	errNotValidUTF        = errors.New(`result is not valid utf-8 string`)
 	errFloat              = errors.New(`incorrect float value`)

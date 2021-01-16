@@ -14,6 +14,17 @@ type TestLexem struct {
 	Output string
 }
 
+func (lexems Lexems) String(source []rune) (ret string) {
+	for _, item := range lexems {
+		//		slex := string(source[item.Offset:item.Right])
+		if item.Type == 0 {
+			item.Value = `error`
+		}
+		ret += fmt.Sprintf("[%d %v]", item.Type, item.Value)
+	}
+	return
+}
+
 func TestLexParser(t *testing.T) {
 	test := []TestLexem{
 		{" my.test tail...) func 1 ...", "[4 my][11777 46][4 test][4 tail][4872 19][10497 41][520 2][3 1][4872 19]"},
@@ -38,10 +49,6 @@ func TestLexParser(t *testing.T) {
 			if err.Error() != item.Output {
 				fmt.Println(string(source))
 				t.Error(`error of lexical parser ` + err.Error())
-			}
-		} else if out.String(source) != item.Output {
-			t.Error(`error of lexical parser ` + item.Input)
-			fmt.Println(out.String(source))
 		}
 	}
 }

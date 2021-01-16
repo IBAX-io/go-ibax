@@ -49,6 +49,14 @@ func getHasher() Hasher {
 	}
 }
 
+func InitHash(s string) {
+	switch s {
+	case hSM3:
+		hal.name = hSM3
+		return
+	case hSHA256:
+		hal.name = hSHA256
+		return
 	}
 	panic(fmt.Errorf("hash [%v] is not supported yet", s))
 }
@@ -87,17 +95,6 @@ type SHA256 struct {
 
 func (s *SM3) getHMAC(secret string, message string) ([]byte, error) {
 	mac := hmac.New(sm3.New, []byte(secret))
-	mac.Write([]byte(message))
-	return mac.Sum(nil), nil
-}
-
-func (s *SM3) hash(msg []byte) []byte {
-	return sm3.Sm3Sum(msg)
-}
-
-func (s *SM3) doubleHash(msg []byte) []byte {
-	return s.doubleSM3(msg)
-}
 
 func (s *SM3) doubleSM3(data []byte) []byte {
 	return s.usingSM3(s.usingSM3(data))

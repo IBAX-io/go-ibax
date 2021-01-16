@@ -10,11 +10,6 @@ type VDEDestDataHash struct {
 	TaskUUID            string `gorm:"not null" json:"task_uuid"`
 	Hash                string `gorm:"not null" json:"hash"`
 	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
-	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
-
-	//TxHash                 string `gorm:"not null" json:"tx_hash"`
-	//ChainState             int64  `gorm:"not null" json:"chain_state"`
-	//BlockId                int64  `gorm:"not null" json:"block_id"`
 	//ChainId                int64  `gorm:"not null" json:"chain_id"`
 	//ChainErr               string `gorm:"not null" json:"chain_err"`
 
@@ -53,6 +48,14 @@ func (m *VDEDestDataHash) GetAllByTaskUUID(TaskUUID string) ([]VDEDestDataHash, 
 	err := DBConn.Table("vde_dest_data_hash").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
 }
+
+func (m *VDEDestDataHash) GetOneByTaskUUID(TaskUUID string) (*VDEDestDataHash, error) {
+	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+	return m, err
+}
+
+func (m *VDEDestDataHash) GetOneByTaskUUIDAndDataUUID(TaskUUID string, DataUUID string) (*VDEDestDataHash, error) {
+	err := DBConn.Where("task_uuid=? AND data_uuid=?", TaskUUID, DataUUID).First(&m).Error
 	return m, err
 }
 

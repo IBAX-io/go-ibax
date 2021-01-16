@@ -11,9 +11,8 @@ contract NewApplication {
 
         if Size($Name) == 0 {
             warning "Application name missing"
-        }
 
-        if DBFind("applications").Columns("id").Where({name:$Name}).One("id") {
-            warning Sprintf( "Application %s already exists", $Name)
-        }
+    action {
+        $result = DBInsert("applications", {name: $Name,conditions: $Conditions})
     }
+}
