@@ -9,19 +9,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/publisher"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
-type configOptionHandler func(w http.ResponseWriter, option string) error
-
-func getConfigOptionHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
 
 	if len(params["option"]) == 0 {
 		logger.WithFields(log.Fields{"type": consts.EmptyObject, "error": "option not specified"}).Error("on getting option in config handler")
@@ -37,6 +24,14 @@ func getConfigOptionHandler(w http.ResponseWriter, r *http.Request) {
 
 	errorResponse(w, errNotFound)
 }
+
+func replaceHttpSchemeToWs(centrifugoURL string) string {
+	if strings.HasPrefix(centrifugoURL, "http:") {
+		return strings.Replace(centrifugoURL, "http:", "ws:", -1)
+	} else if strings.HasPrefix(centrifugoURL, "https:") {
+		return strings.Replace(centrifugoURL, "https:", "wss:", -1)
+	}
+	return centrifugoURL
 }
 
 func centrifugoAddressHandler(w http.ResponseWriter, r *http.Request) {
