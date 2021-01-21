@@ -65,22 +65,10 @@ func GetNotificationsCount(ecosystemID int64, accounts []string) ([]Notification
 			WHERE k.ecosystem = ? AND k.account = ?
 			GROUP BY recipient_id, k.account, role_id
 			UNION
-			WHERE k.ecosystem=? AND k.account = ?
-			GROUP BY recipient_id, k.account, role_id`
-
-		list := make([]NotificationsCount, 0)
-		err := GetDB(nil).Raw(query, ecosystemID, account, ecosystemID, account).Scan(&list).Error
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, list...)
-	}
-	return result, nil
-}
-
-func getNotificationCountFilter(users []int64, ecosystemID int64) (filter string, params []interface{}) {
-	filter = fmt.Sprintf(` WHERE closed = 0 and ecosystem = '%d' `, ecosystemID)
-
+			SELECT k.id as "recipient_id", rp.role->>'id' as "role_id", count(n.id), k.account
+			FROM "1_keys" k
+			INNER JOIN "1_roles_participants" rp ON rp.member->>'account' = k.account
+			LEFT JOIN "1_notifications" n ON n.ecosystem = k.ecosystem AND n.closed = 0 AND n.notification->>'type' = '2' AND n.recipient->>'role_id' = rp.role->>'id'
 	if len(users) > 0 {
 		filter += `AND recipient->>'member_id' IN (?) `
 		usersStrs := []string{}

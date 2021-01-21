@@ -38,8 +38,10 @@ func (m Mode) getMyBalanceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse(w, &myBalanceResult{
-		Amount: key.Amount,
-		Money:  converter.ChainMoney(key.Amount),
-	})
-}
+	key := &model.Key{}
+	key.SetTablePrefix(form.EcosystemID)
+	_, err := key.Get(nil, keyID)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting Key for wallet")
+		errorResponse(w, err)
+		return

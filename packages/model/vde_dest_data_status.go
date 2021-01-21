@@ -55,13 +55,6 @@ func (m *VDEDestDataStatus) GetOneByDataUUID(DataUUID string) (*VDEDestDataStatu
 	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
 	return m, err
 }
-func (m *VDEDestDataStatus) GetOneByTaskUUID(TaskUUID string) (*VDEDestDataStatus, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
-}
-func (m *VDEDestDataStatus) GetAllByTaskUUID(TaskUUID string) ([]VDEDestDataStatus, error) {
-	result := make([]VDEDestDataStatus, 0)
-	err := DBConn.Table("vde_dest_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
 }
 
@@ -90,3 +83,7 @@ func (m *VDEDestDataStatus) GetAllByTaskUUIDAndDataStatus(TaskUUID string, AuthS
 }
 
 func (m *VDEDestDataStatus) GetAllByTaskUUIDAndDataStatusAndTime(TaskUUID string, AuthState int64, SignState int64, HashState int64, BTime int64, ETime int64) ([]VDEDestDataStatus, error) {
+	result := make([]VDEDestDataStatus, 0)
+	err := DBConn.Table("vde_dest_data_status").Where("task_uuid = ? AND auth_state = ? AND sign_state = ? AND hash_state = ? AND create_time > ? AND create_time <= ?", TaskUUID, AuthState, SignState, HashState, BTime, ETime).Find(&result).Error
+	return result, err
+}

@@ -246,6 +246,17 @@ func BinMarshal(out *[]byte, v interface{}) (*[]byte, error) {
 		}
 	case reflect.Float64:
 		bin := float2Bytes(t.Float())
+		*out = append(*out, bin...)
+	case reflect.Int64:
+		EncodeLenInt64(out, t.Int())
+	case reflect.Uint64:
+		tmp := make([]byte, 8)
+		binary.BigEndian.PutUint64(tmp, t.Uint())
+		*out = append(*out, tmp...)
+	case reflect.String:
+		*out = append(append(*out, EncodeLength(int64(t.Len()))...), []byte(t.String())...)
+	case reflect.Struct:
+		for i := 0; i < t.NumField(); i++ {
 			if out, err = BinMarshal(out, t.Field(i).Interface()); err != nil {
 				return out, err
 			}
@@ -497,9 +508,6 @@ func float2Bytes(float float64) []byte {
 // Bytes2Float converts []byte to float64
 func bytes2Float(bytes []byte) float64 {
 	return math.Float64frombits(binary.LittleEndian.Uint64(bytes))
-}
-
-// UInt32ToStr converts uint32 to string
 func UInt32ToStr(num uint32) string {
 	return strconv.FormatInt(int64(num), 10)
 }

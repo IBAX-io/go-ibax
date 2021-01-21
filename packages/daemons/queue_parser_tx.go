@@ -1,14 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"context"
-	"sync/atomic"
-
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 
 	log "github.com/sirupsen/logrus"
@@ -36,6 +28,22 @@ func QueueParserTx(ctx context.Context, d *daemon) error {
 	//}
 
 	p := new(transaction.Transaction)
+	err := transaction.ProcessTransactionsQueue(p.DbTransaction)
+	if err != nil {
+		d.logger.WithFields(log.Fields{"error": err}).Error("parsing transactions")
+		return err
+	}
+	//for {
+	//	select {
+	//	case attempt := <-transaction.ChanTxAttempt:
+	//		if attempt {
+	//			err = transaction.ProcessTransactionsAttempt(p.DbTransaction)
+	//			if err != nil {
+	//				d.logger.WithFields(log.Fields{"error": err}).Error("parsing transactions attempt")
+	//				return err
+	//			}
+	//		}
+	//	default:
 	//		return nil
 	//	}
 	//}

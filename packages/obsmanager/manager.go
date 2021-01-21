@@ -56,6 +56,8 @@ var (
 func prepareWorkDir() (string, error) {
 	childConfigsPath := path.Join(conf.Config.DataDir, childFolder)
 
+	if _, err := os.Stat(childConfigsPath); os.IsNotExist(err) {
+		if err := os.Mkdir(childConfigsPath, 0700); err != nil {
 			log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("creating configs directory")
 			return "", err
 		}
@@ -102,20 +104,6 @@ func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) erro
 	}
 
 	if err = mgr.createOBSDB(name, dbUser, dbPassword); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on creating OBS DB")
-		return fmt.Errorf(alreadyExistsErrorTemplate, name)
-	}
-
-	cancelChain = append(cancelChain, func() {
-		dropDb(name, dbUser)
-	})
-
-	dirPath := path.Join(mgr.childConfigsPath, name)
-	if directoryExists(dirPath) {
-		err = fmt.Errorf(alreadyExistsErrorTemplate, name)
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err, "dirPath": dirPath}).Error("on check directory")
-		return err
-	}
 
 	if err = mgr.initOBSDir(name); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "DirName": name, "error": err}).Error("on init OBS dir")

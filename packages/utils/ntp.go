@@ -17,9 +17,11 @@ import (
 //pool.ntp.org
 const (
 	ntpPool        = "ntp1.aliyun.com" // ntpPool is the NTP server to query for the current time
-	ntpChecks      = 3                 // Number of measurements to do against the NTP server
-	driftThreshold = 1 * time.Second   // Allowed clock drift before warning user
-)
+
+// checkClockDrift queries an NTP server for clock drifts and warns the user if
+// one large enough is detected.
+func CheckClockDrift() (bool, error) {
+	drift, err := sntpDrift(ntpChecks)
 	if err != nil {
 		return false, err
 	}

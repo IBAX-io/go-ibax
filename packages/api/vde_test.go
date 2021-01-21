@@ -69,6 +69,18 @@ func TestRemoveOBS(t *testing.T) {
 	require.NoError(t, keyLogin(1))
 	form := url.Values{
 		"OBSName": {"obs"},
+	}
+	require.NoError(t, postTx("RemoveOBS", &form))
+}
+
+func TestCreateTable(t *testing.T) {
+	require.NoError(t, keyLogin(1))
+
+	sql1 := `new_column`
+
+	form := url.Values{
+		"Name":          {"my_test_table"},
+		"Columns":       {"[{\"name\":\"" + sql1 + "\",\"type\":\"varchar\", \"index\": \"0\", \"conditions\":{\"update\":\"true\", \"read\":\"true\"}}]"},
 		"ApplicationId": {"1"},
 		"Permissions":   {"{\"insert\": \"true\", \"update\" : \"true\", \"new_column\": \"true\"}"},
 	}
@@ -423,11 +435,6 @@ func TestNodeHTTPRequest(t *testing.T) {
 			err = nil
 		}
 		assert.Equal(t, `Test NodeContract NodeContract testing `+rnd, msg)
-	}
-}
-
-func TestCreateCron(t *testing.T) {
-	require.NoError(t, keyLogin(1))
 
 	require.EqualError(t, postTx("NewCron", &url.Values{
 		"Cron":       {"60 * * * *"},

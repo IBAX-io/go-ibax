@@ -37,17 +37,6 @@ func Benchmark_MapJson(b *testing.B) {
 	for i := 0; i < b.N; i++ { //use b.N for looping
 		dl := rand.Intn(st)
 		miner.GetMiner(dl)
-	}
-}
-
-const INT64_MAX = int64(^uint64((0)) >> 1)
-
-//const INT_MIN = ^INT_MAX
-
-type AssignRules struct {
-	StartBlockID    int64  `json:"start_blockid"`
-	EndBlockID      int64  `json:"end_blockid"`
-	IntervalBlockID int64  `json:"interval_blockid"`
 	Count           int64  `json:"count"`
 	TotalAmount     string `json:"total_amount"`
 }
@@ -173,6 +162,14 @@ func TestMapJsonTs(t *testing.T) {
 	//Ecological partner
 	ad := AssignRules{
 		StartBlockID:    1,
+		EndBlockID:      49,
+		IntervalBlockID: 2,
+		Count:           24,
+		TotalAmount:     "168000000000000000000",
+	}
+
+	//
+	//ae :=AssignRules{
 	//	StartBlockID:21600*6*30,
 	//	EndBlockID:INT64_MAX,
 	//	IntervalBlockID:21600*30,

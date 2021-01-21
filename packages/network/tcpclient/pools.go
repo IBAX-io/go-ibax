@@ -33,16 +33,16 @@ type bytePool struct {
 }
 
 func (p *bytePool) Get(size int64) []byte {
+	power := powerOfTwo(int(size))
+	if pool, ok := p.pools[power]; ok {
+		return pool.Get().([]byte)
+	}
+
+	pool := &sync.Pool{
+		New: func() interface{} { return make([]byte, power) },
+	}
+
 	p.pools[power] = pool
 	return pool.Get().([]byte)
 }
 
-func (p *bytePool) Put(buf []byte) {
-	if len(buf) == 0 {
-		return
-	}
-
-	if pool, ok := p.pools[int64(len(buf))]; ok {
-		pool.Put(buf)
-	}
-}
