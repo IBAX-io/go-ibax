@@ -17,6 +17,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func unmarshalColumnVDESrcMember(form *VDESrcMemberForm) (*model.VDESrcMember, error) {
+	var (
+		err error
+	)
+
+	m := &model.VDESrcMember{
+		VDEPubKey:            form.VDEPubKey,
+		VDEComment:           form.VDEComment,
+		VDEName:              form.VDEName,
+		VDEIp:                form.VDEIp,
 		VDEType:              int64(form.VDEType),
 		ContractRunHttp:      form.ContractRunHttp,
 		ContractRunEcosystem: form.ContractRunEcosystem,
@@ -125,10 +135,6 @@ func VDESrcMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	id := converter.StrToInt64(params["id"])
 	srcData := model.VDESrcMember{}
 	srcData.ID = id
-	result, err := srcData.GetOneByID()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
-		errorResponse(w, err)
 		return
 	}
 

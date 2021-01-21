@@ -6,6 +6,19 @@
 package api
 
 import (
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+func unmarshalColumnVDEDestMember(form *VDEDestMemberForm) (*model.VDEDestMember, error) {
+	var (
 		err error
 	)
 
@@ -65,17 +78,6 @@ func VDEDestMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m := &model.VDEDestMember{}
-
-	if m, err = unmarshalColumnVDEDestMember(form); err != nil {
-		errorResponse(w, err)
-		return
-	}
-
-	m.ID = id
-	m.UpdateTime = time.Now().Unix()
-	if err = m.Updates(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
 		return
 	}
 

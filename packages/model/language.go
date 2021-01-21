@@ -21,10 +21,6 @@ type Language struct {
 // SetTablePrefix is setting table prefix
 func (l *Language) SetTablePrefix(prefix string) {
 	l.ecosystem = converter.StrToInt64(prefix)
-}
-
-// TableName returns name of table
-func (l *Language) TableName() string {
 	if l.ecosystem == 0 {
 		l.ecosystem = 1
 	}
@@ -42,3 +38,7 @@ func (l *Language) GetAll(transaction *DbTransaction, prefix string) ([]Language
 func (l *Language) ToMap() map[string]string {
 	result := make(map[string]string, 0)
 	result["name"] = l.Name
+	result["res"] = l.Res
+	result["conditions"] = l.Conditions
+	return result
+}

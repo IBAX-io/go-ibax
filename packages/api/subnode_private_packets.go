@@ -5,6 +5,15 @@
 
 package api
 
+import (
+	"net/http"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
+func privateDataListHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	privateData := model.PrivatePackets{}
 
@@ -16,4 +25,3 @@ package api
 	}
 
 	jsonResponse(w, result)
-}

@@ -42,11 +42,10 @@ func (g *GRefreshClaims) ContainsClaims(h string) bool {
 }
 
 func (g *GRefreshClaims) RefreshClaims() {
+}
 
-	if len(GClaims.cache) == 0 {
-		GClaims.cache = make(map[string]*GRefreshClaims)
-	}
-
+func (g *GRefreshClaims) DeleteClaims() {
 	GClaims.mutex.Lock()
 	defer GClaims.mutex.Unlock()
-
+	delete(GClaims.cache, g.Header)
+}

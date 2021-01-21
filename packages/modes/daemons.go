@@ -51,14 +51,18 @@ func (f OBSDaemonsListFactory) GetDaemonsList() []string {
 		"VDESrcTaskStatus",
 		"VDESrcTaskStatusRun",
 		"VDESrcTaskStatusRunState",
-
-type SubNodeDaemonsListFactory struct{}
-
-func (f SubNodeDaemonsListFactory) GetDaemonsList() []string {
-	return []string{
-		"BlocksCollection",
-		"BlockGenerator",
-		"QueueParserTx",
+		"VDESrcTaskFromScheStatus",
+		"VDESrcTaskFromScheStatusRun",
+		"VDESrcTaskFromScheStatusRunState",
+		"VDEAgentLogUpToChain",
+		"VDEScheTaskChainStatus",
+		"VDEScheTaskChainStatusState",
+		"VDESrcTaskChainStatus",
+		"VDESrcTaskChainStatusState",
+		"VDESrcTaskAuthChainStatus",
+		"VDESrcTaskAuthChainStatusState",
+		"VDEScheTaskSrcGetFromChain",
+		"VDEScheTaskFromSrcInstallContractSrc",
 		"QueueParserBlocks",
 		"Disseminator",
 		"Confirmations",

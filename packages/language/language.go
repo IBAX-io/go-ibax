@@ -51,10 +51,6 @@ func DefLang() string {
 	}
 	return LangList[0]
 }
-
-// UpdateLang updates language sources for the specified state
-func UpdateLang(state int, name, value string) error {
-	mutex.Lock()
 	defer mutex.Unlock()
 	if _, ok := lang[state]; !ok {
 		lang[state] = &cacheLang{make(map[string]*map[string]string)}
@@ -220,3 +216,11 @@ func GetLang(state int, accept string) (lng string) {
 		if len(val) < 2 {
 			continue
 		}
+		if !IsLang(val[:2]) {
+			continue
+		}
+		lng = val[:2]
+		break
+	}
+	return
+}
