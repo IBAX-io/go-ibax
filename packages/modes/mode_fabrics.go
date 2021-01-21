@@ -17,12 +17,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/network/tcpserver"
 	"github.com/IBAX-io/go-ibax/packages/service"
 	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	log "github.com/sirupsen/logrus"
-)
-
 type BCEcosysLookupGetter struct{}
 
 func (g BCEcosysLookupGetter) GetEcosystemLookup() ([]int64, []string, error) {
@@ -111,6 +105,14 @@ func BuildEcosystemNameGetter() types.EcosystemNameGetter {
 
 	return BCEcosystemNameGetter{}
 }
+
+// BCDaemonLoader allow load blockchain daemons
+type BCDaemonLoader struct {
+	logger            *log.Entry
+	DaemonListFactory types.DaemonListFactory
+}
+
+// Load loads blockchain daemons
 func (l BCDaemonLoader) Load(ctx context.Context) error {
 	if err := daemons.InitialLoad(l.logger); err != nil {
 		return err

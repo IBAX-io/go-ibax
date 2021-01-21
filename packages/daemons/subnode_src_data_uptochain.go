@@ -4,19 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daemons
-
-import (
-	"context"
-	"encoding/base64"
-	"fmt"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
-
-	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
-	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
-
 	"path/filepath"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -202,6 +189,16 @@ func SubNodeSrcHashUpToChainState(ctx context.Context, d *daemon) error {
 		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("encode error")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		chain_apiAddress := blockchain_http
+		chain_apiEcosystemID := int64(ecosystemID)
+
+		src := filepath.Join(conf.Config.KeysDir, "chain_PrivateKey")
+		// Login
+		gAuth_chain, _, _, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
+		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
 			time.Sleep(time.Millisecond * 2)
 			continue

@@ -8,15 +8,8 @@ if [ ! -f "/mnt/ibax/data/config.toml" ]; then
     --tls="$TLS_ENABLE" \
     --tls-cert="$TLS_CERT" \
     --tls-key="$TLS_KEY" \
-    --httpHost="$HTTP_HOST" \
-    --httpPort="$HTTP_PORT" \
-    --dbHost="$DB_HOST" \
-    --dbName="$DB_NAME" \
-    --dbPassword="$DB_PASSWORD" \
-    --dbPort="$DB_PORT" \
-    --dbUser="$DB_USER" \
-    --redisenable="$REDIS_ENABLE" \
-    --redisdb="$REDIS_DBNAME" \
+    --mbs="$HTTPSERVERMAXBODYSIZE" \
+    --mpgt="$MAXPAGEGENERATIONTIME" \
     --redishost="$REDIS_HOST" \
     --redispassword="$REDIS_PASSWORD" \
     --redisport="$REDIS_PORT" \

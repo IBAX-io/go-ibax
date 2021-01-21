@@ -74,6 +74,16 @@ func initVars(r *http.Request) *map[string]string {
 		}
 		if len(vars["roleID"]) > 0 {
 			vars["role_id"] = vars["roleID"]
+		} else {
+			vars["role_id"] = "0"
+		}
+		if len(vars["isMobile"]) == 0 {
+			vars["isMobile"] = "0"
+		}
+		if len(vars["ecosystem_id"]) != 0 {
+			ecosystems := model.Ecosystem{}
+			if found, _ := ecosystems.Get(nil, converter.StrToInt64(vars["ecosystem_id"])); found {
+				vars["ecosystem_name"] = ecosystems.Name
 			}
 		}
 	}
@@ -290,16 +300,6 @@ func jsonContentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var timeout bool
-	vars := initVars(r)
-
-	if form.Source {
-		(*vars)["_full"] = strOne
-	}
-
-	ret := template.Template2JSON(form.Template, &timeout, vars)
-	jsonResponse(w, &contentResult{Tree: ret})
-}
-
 func getSourceHandler(w http.ResponseWriter, r *http.Request) {
 	page, _, err := pageValue(r)
 	if err != nil {
