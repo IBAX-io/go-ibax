@@ -1,5 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
@@ -19,6 +18,8 @@ import (
 )
 
 /*
+#include <stdio.h>
+#include <signal.h>
 
 extern void go_callback_int();
 static inline void SigBreak_Handler(int n_signal){

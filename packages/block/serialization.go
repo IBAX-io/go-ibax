@@ -43,6 +43,19 @@ func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockDa
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing block")
 			return nil, err
+		}
+	}
+
+	buf := new(bytes.Buffer)
+
+	// fill header
+	buf.Write(converter.DecToBin(header.Version, 2))
+	buf.Write(converter.DecToBin(header.BlockID, 4))
+	buf.Write(converter.DecToBin(header.Time, 4))
+	buf.Write(converter.DecToBin(header.EcosystemID, 4))
+	buf.Write(converter.EncodeLenInt64InPlace(header.KeyID))
+	buf.Write(converter.DecToBin(header.NodePosition, 1))
+	buf.Write(converter.EncodeLengthPlusData(prev.RollbacksHash))
 
 	// fill signature
 	buf.Write(converter.EncodeLengthPlusData(signed))
@@ -89,17 +102,6 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 				transaction.MarkTransactionBad(t.DbTransaction, t.TxHash, err.Error())
 			}
 			return nil, fmt.Errorf("parse transaction error(%s)", err)
-		}
-		t.BlockData = &header
-
-		transactions = append(transactions, t)
-
-		// build merkle tree
-		if len(t.TxFullData) > 0 {
-			doubleHash := crypto.DoubleHash(t.TxFullData)
-			doubleHash = converter.BinToHex(doubleHash)
-			mrklSlice = append(mrklSlice, doubleHash)
-		}
 	}
 
 	if len(mrklSlice) == 0 {

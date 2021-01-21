@@ -23,6 +23,19 @@ const (
 
 	Set  = "set"
 	From = "from"
+	Into = "into"
+
+	Quote  = `"`
+	Lparen = "("
+)
+
+const (
+	SelectCost = 1
+	UpdateCost = 1
+	InsertCost = 1
+	DeleteCost = 1
+
+	SelectRowCoeff = 0.0001
 	InsertRowCoeff = 0.0001
 	DeleteRowCoeff = 0.0001
 	UpdateRowCoeff = 0.0001
@@ -57,18 +70,6 @@ func (d *DBCountQueryRowCounter) RowCount(transaction *model.DbTransaction, tabl
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": tableName}).Error("Getting record count from table")
 	}
 	return count, err
-}
-
-type FormulaQueryCoster struct {
-	rowCounter TableRowCounter
-}
-
-type QueryType interface {
-	GetTableName() (string, error)
-	CalculateCost(int64) int64
-}
-
-type SelectQueryType string
 
 func (s SelectQueryType) GetTableName() (string, error) {
 	queryFields := strings.Fields(string(s))

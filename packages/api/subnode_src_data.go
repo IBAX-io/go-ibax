@@ -27,13 +27,6 @@ type TaskData struct {
 }
 
 func unmarshalColumnSubNodeSrcData(form *SubNodeSrcDataForm) (*model.SubNodeSrcData, error) {
-	var (
-		datainfo map[string]interface{}
-		taskdata TaskData
-		err      error
-	)
-	err = json.Unmarshal([]byte(form.Data), &taskdata)
-	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("unmarshal Data error")
 		return nil, err
 	}
@@ -143,6 +136,16 @@ func SubNodeSrcDataDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	m := &model.SubNodeSrcData{}
 	m.ID = id
 	if err := m.Delete(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
+	}
+
+	jsonResponse(w, "ok")
+}
+
+func SubNodeSrcDataListHandlre(w http.ResponseWriter, r *http.Request) {
+	logger := getLogger(r)
+	srcData := model.SubNodeSrcData{}
+
 	result, err := srcData.GetAll()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")

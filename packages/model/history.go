@@ -91,6 +91,18 @@ func GetExcessTokenMovementQtyPerBlock(tx *DbTransaction, blockID int64) (excess
 	db := GetDB(tx)
 	err = db.Table("1_history").
 		Select("sender_id, count(*) tx_count").
+		Where("block_id = ? AND amount > ?", blockID, 0).
+		Group("sender_id").
+		Having("count(*) > ?", consts.TokenMovementQtyPerBlockLimit).
+		Scan(&excess).Error
+
+	return excess, err
+}
+
+func GetWalletRecordHistory(tx *DbTransaction, keyId string, searchType string, limit, offset int) (histories []History, err error) {
+	db := GetDB(tx)
+	if searchType == "income" {
+		err = db.Table("1_history").
 			Where("recipient_id = ?", keyId).
 			Order("id desc").
 			Limit(limit).
@@ -99,13 +111,6 @@ func GetExcessTokenMovementQtyPerBlock(tx *DbTransaction, blockID int64) (excess
 	} else if searchType == "outcome" {
 		err = db.Table("1_history").
 			Where("sender_id = ?", keyId).
-			Order("id desc").
-			Limit(limit).
-			Offset(offset).
-			Scan(&histories).Error
-	} else {
-		err = db.Table("1_history").
-			Where("recipient_id = ? OR sender_id = ?", keyId, keyId).
 			Order("id desc").
 			Limit(limit).
 			Offset(offset).

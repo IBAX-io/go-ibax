@@ -41,13 +41,6 @@ func VDEDestMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	)
 	logger := getLogger(r)
 	form := &VDEDestMemberForm{}
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-	m := &model.VDEDestMember{}
-	if m, err = unmarshalColumnVDEDestMember(form); err != nil {
-		fmt.Println(err)
 		errorResponse(w, err)
 		return
 	}
@@ -78,6 +71,17 @@ func VDEDestMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	m := &model.VDEDestMember{}
+
+	if m, err = unmarshalColumnVDEDestMember(form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
 		return
 	}
 
