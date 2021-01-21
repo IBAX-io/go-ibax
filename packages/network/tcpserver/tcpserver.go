@@ -57,15 +57,6 @@ func HandleTCPRequest(rw net.Conn) {
 			response, err = Type4(req)
 		}
 
-	case network.RequestTypeBlockCollection:
-		req := &network.GetBodiesRequest{}
-		if err = req.Read(rw); err == nil {
-			err = Type7(req, rw)
-		}
-
-	case network.RequestTypeMaxBlock:
-		response, err = Type10()
-
 	case network.RequestTypeSendSubNodeSrcData:
 		req := &network.SubNodeSrcDataRequest{}
 		if err = req.Read(rw); err == nil {
@@ -114,6 +105,14 @@ func HandleTCPRequest(rw net.Conn) {
 	if err != nil || response == nil {
 		return
 	}
+
+	log.WithFields(log.Fields{"response": response, "request_type": dType.Type}).Debug("tcpserver responded")
+	if err = response.(network.SelfReaderWriter).Write(rw); err != nil {
+		// err = SendRequest(response, rw)
+		log.Errorf("tcpserver handle error: %s", err)
+	}
+}
+
 // TcpListener is listening tcp address
 func TcpListener(laddr string) error {
 
