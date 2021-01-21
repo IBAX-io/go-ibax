@@ -63,8 +63,5 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 }
 
 func addKey(buf *bytes.Buffer, key string, value interface{}) error {
-	val, err := converter.InterfaceToStr(value)
-	if err != nil {
-		return err
-	}
-	line := fmt.Sprintf("%s\t%s\n", key, val)
+	return
+}

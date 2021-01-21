@@ -30,11 +30,6 @@ func NewSyslogHook(appName, facility string) (*SyslogHook, error) {
 	b_syslog.Openlog(appName, b_syslog.LOG_PID, syslogFacility(facility))
 	return &SyslogHook{nil, "", "localhost"}, nil
 }
-
-// Fire the log entry
-func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
-	line, err := entry.String()
-	jsonMap := map[string]interface{}{}
 	if err := json.Unmarshal([]byte(line), &jsonMap); err == nil {
 		delete(jsonMap, "time")
 		delete(jsonMap, "level")
@@ -108,5 +103,12 @@ func init() {
 		"authpriv": b_syslog.LOG_AUTHPRIV,
 		"ftp":      b_syslog.LOG_FTP,
 		"local0":   b_syslog.LOG_LOCAL0,
+		"local1":   b_syslog.LOG_LOCAL1,
+		"local2":   b_syslog.LOG_LOCAL2,
+		"local3":   b_syslog.LOG_LOCAL3,
+		"local4":   b_syslog.LOG_LOCAL4,
+		"local5":   b_syslog.LOG_LOCAL5,
+		"local6":   b_syslog.LOG_LOCAL6,
+		"local7":   b_syslog.LOG_LOCAL7,
 	}
 }

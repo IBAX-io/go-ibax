@@ -12,6 +12,12 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -43,19 +49,6 @@ func NodeContract(Name string) (result contractResult, err error) {
 		sign                          []byte
 		ret                           authResult
 		NodePrivateKey, NodePublicKey string
-	)
-	err = sendAPIRequest(`GET`, `getuid`, nil, &ret, ``)
-	if err != nil {
-		return
-	}
-	auth := ret.Token
-	if len(ret.UID) == 0 {
-		err = fmt.Errorf(`getuid has returned empty uid`)
-		return
-	}
-	NodePrivateKey, NodePublicKey = utils.GetNodeKeys()
-	if len(NodePrivateKey) == 0 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
 		err = errors.New(`empty node private key`)
 		return
 	}

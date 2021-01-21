@@ -9,11 +9,5 @@ import (
 )
 
 type BanError struct {
-
-func IsBanError(err error) bool {
-	err = errors.Cause(err)
-	if _, ok := err.(*BanError); ok {
-		return true
-	}
-	return false
+	err error
 }

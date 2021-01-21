@@ -21,23 +21,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-)
-
-type Connect struct {
-	Auth       string
-	Root       string
-	PrivateKey []byte
-	PublicKey  string
-}
-
-type WaitResult struct {
-	BlockID int64
-	Msg     string
-}
-
-func SendRawRequest(rtype, url, auth string, form *url.Values) ([]byte, error) {
 	client := &http.Client{}
 	var ioform io.Reader
 	if form != nil {
@@ -264,6 +247,16 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 			EcosystemID: 1,
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.NetworkID,
+		},
+		Params: params,
+	}, connect.PrivateKey)
+	if err != nil {
+		return 0, "", err
+	}
+
+	ret := &sendTxResult{}
+	err = connect.SendMultipart("sendTx", map[string][]byte{
+		fmt.Sprintf("%x", txhash): data,
 	}, &ret)
 	if err != nil {
 		return

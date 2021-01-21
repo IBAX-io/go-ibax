@@ -90,21 +90,6 @@ func TestSendRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read request failed: %s", err)
 	}
-
-	if !reflect.DeepEqual(test, test2) {
-		t.Errorf("different values: %+v and %+v", test, test2)
-	}
-}
-
-func TestRequestType(t *testing.T) {
-	source := RequestType{
-		Type: uint16(RequestTypeNotHonorNode),
-	}
-
-	buf := bytes.Buffer{}
-	require.NoError(t, source.Write(&buf))
-
-	target := RequestType{}
 	require.NoError(t, target.Read(&buf))
 	require.Equal(t, source.Type, target.Type)
 }
@@ -119,3 +104,7 @@ func TestGetBodiesRequest(t *testing.T) {
 	require.NoError(t, source.Write(&buf))
 
 	target := GetBodiesRequest{}
+	require.NoError(t, target.Read(&buf))
+	fmt.Printf("%+v %+v\n", source, target)
+	require.Equal(t, source, target)
+}

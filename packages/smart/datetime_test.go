@@ -23,12 +23,18 @@ func TestDateTimeLocation(t *testing.T) {
 		{"Chongqing", args{1562032800, "Asia/Chongqing"}, "2019-07-02 10:00:00", false},
 		{"Tokyo", args{1562032800, "Asia/Tokyo"}, "2019-07-02 11:00:00", false},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := DateTimeLocation(tt.args.unix, tt.args.locationName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DateTimeLocation() error = %v, wantErr %v", err, tt.wantErr)
 				return
+			}
+			if got != tt.want {
+				t.Errorf("DateTimeLocation() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUnixDateTimeLocation(t *testing.T) {
 	type args struct {
 		value        string
 		locationName string
