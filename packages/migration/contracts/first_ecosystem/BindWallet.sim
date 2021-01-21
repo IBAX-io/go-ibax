@@ -3,6 +3,10 @@
 contract BindWallet {
 	data {
 		Id  int
-		BndWallet($Id, $ecosystem_id)
+	}
+	conditions {
+		$cur = DBRow("contracts").Columns("id,conditions,wallet_id").WhereId($Id)
+		if !$cur {
+			error Sprintf("Contract %d does not exist", $Id)
 	}
 }

@@ -539,6 +539,14 @@ var contracts = []smartContract{
 			var list array
 			list = DBFind("mytable").Where({"date": {"$lt": "CURRENT_DATE"}})
 		}
+	}`, []smartParams{
+		{nil, map[string]string{`error`: `{"type":"panic","error":"It is prohibited to use NOW() or current time functions"}`}},
+	}},
+	{`RowType`, `contract RowType {
+	action {
+		var app map
+		var result string
+		result = GetType(app)
 		app = DBFind("applications").Where({"id":"1"}).Row()
 		result = result + GetType(app)
 		app["app_id"] = 2
@@ -580,15 +588,6 @@ var contracts = []smartContract{
 	{`RecCall`, `contract RecCall {
 		data {    }
 		conditions {    }
-		action {
-			var par map
-			CallContract("RecCall", par)
-		}
-	}`, []smartParams{
-		{nil, map[string]string{`error`: `{"type":"panic","error":"There is loop in @1RecCall contract"}`}},
-	}},
-	{`Recursion`, `contract Recursion {
-		data {    }
 		conditions {    }
 		action {
 			Recursion()

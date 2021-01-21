@@ -6,9 +6,14 @@
 package log
 
 import (
-	"encoding/hex"
+}
 
-	"github.com/sirupsen/logrus"
-)
-
-type HexHook struct{}
+// Fire the log entry
+func (hook HexHook) Fire(entry *logrus.Entry) error {
+	for i := range entry.Data {
+		if b, ok := entry.Data[i].([]byte); ok {
+			entry.Data[i] = hex.EncodeToString(b)
+		}
+	}
+	return nil
+}

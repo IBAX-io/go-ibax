@@ -39,6 +39,10 @@ func (m *VDESrcTaskStatus) Delete() error {
 
 func (m *VDESrcTaskStatus) GetAll() ([]VDESrcTaskStatus, error) {
 	var result []VDESrcTaskStatus
+	err := DBConn.Find(&result).Error
+	return result, err
+}
+func (m *VDESrcTaskStatus) GetOneByID() (*VDESrcTaskStatus, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
 }
@@ -52,18 +56,6 @@ func (m *VDESrcTaskStatus) GetAllByTaskUUID(TaskUUID string) ([]VDESrcTaskStatus
 func (m *VDESrcTaskStatus) GetOneByTaskUUID(TaskUUID string) (*VDESrcTaskStatus, error) {
 	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
 	return m, err
-}
-
-func (m *VDESrcTaskStatus) GetOneByChainState(ChainState int64) (bool, error) {
-	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
-}
-
-func (m *VDESrcTaskStatus) GetAllByChainState(ChainState int64) ([]VDESrcTaskStatus, error) {
-	result := make([]VDESrcTaskStatus, 0)
-	err := DBConn.Table("vde_src_task_status").Where("chain_state = ?", ChainState).Find(&result).Error
-	return result, err
-}
-
 type VDESrcTaskFromScheStatus struct {
 	ID                   int64  `gorm:"primary_key; not null" json:"id"`
 	TaskUUID             string `gorm:"not null" json:"task_uuid"`

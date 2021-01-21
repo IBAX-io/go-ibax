@@ -24,6 +24,10 @@ func getPageRowHandler(w http.ResponseWriter, r *http.Request) {
 	getInterfaceRow(w, r, &model.Page{})
 }
 
+func getMenuRowHandler(w http.ResponseWriter, r *http.Request) {
+	getInterfaceRow(w, r, &model.Menu{})
+	logger := getLogger(r)
+	client := getClient(r)
 
 	c.SetTablePrefix(client.Prefix())
 	if ok, err := c.Get(params["name"]); err != nil {

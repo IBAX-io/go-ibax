@@ -11,6 +11,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func SendSubNodeAgentData(host string, TaskUUID string, DataUUID string, AgentMode string, TranMode string, DataInfo string, SubNodeSrcPubkey string, SubNodeAgentPubkey string, SubNodeAgentIp string, SubNodeDestPubkey string, SubNodeDestIp string, dt []byte) (hash string) {
+	conn, err := newConnection(host)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": host}).Error("on creating tcp connection")
+		return "0"
+	}
 	defer conn.Close()
 
 	rt := &network.RequestType{Type: network.RequestTypeSendSubNodeAgentData}
@@ -23,17 +29,6 @@ import (
 		TaskUUID:           TaskUUID,
 		DataUUID:           DataUUID,
 		AgentMode:          AgentMode,
-		TranMode:           TranMode,
-		DataInfo:           DataInfo,
-		SubNodeSrcPubkey:   SubNodeSrcPubkey,
-		SubNodeAgentPubkey: SubNodeAgentPubkey,
-		SubNodeAgentIp:     SubNodeAgentIp,
-		SubNodeDestPubkey:  SubNodeDestPubkey,
-		SubNodeDestIp:      SubNodeDestIp,
-		Data:               dt,
-	}
-
-	if err = req.Write(conn); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending SubNodeSrcData request")
 		return "0"
 	}
