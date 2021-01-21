@@ -20,11 +20,9 @@ type SubNodeSrcDataChainStatus struct {
 	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
 
 	TxHash     string `gorm:"not null" json:"tx_hash"`
-func (SubNodeSrcDataChainStatus) TableName() string {
-	return "subnode_src_data_chain_status"
-}
-
-func (m *SubNodeSrcDataChainStatus) Create() error {
+	ChainState int64  `gorm:"not null" json:"chain_state"`
+	BlockId    int64  `gorm:"not null" json:"block_id"`
+	ChainId    int64  `gorm:"not null" json:"chain_id"`
 	return DBConn.Create(&m).Error
 }
 

@@ -18,14 +18,12 @@ type Binary struct {
 	ecosystem int64
 	ID        int64
 	Name      string
-	Data      []byte
-	Hash      string
-	MimeType  string
+	b.ecosystem = converter.StrToInt64(prefix)
 }
 
-// SetTablePrefix is setting table prefix
-func (b *Binary) SetTablePrefix(prefix string) {
-	b.ecosystem = converter.StrToInt64(prefix)
+// SetTableName sets name of table
+func (b *Binary) SetTableName(tableName string) {
+	ecosystem, _ := converter.ParseName(tableName)
 	b.ecosystem = ecosystem
 }
 

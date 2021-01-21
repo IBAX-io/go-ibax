@@ -5,14 +5,20 @@
 package script
 
 import "errors"
+	eArrIndex        = `index of array cannot be type %s`
+	eMapIndex        = `index of map cannot be type %s`
+	eUnknownIdent    = `unknown identifier %s`
+	eWrongVar        = `wrong var %v`
+	eDataType        = `expecting type of the data field [Ln:%d Col:%d]`
+	eDataName        = `expecting name of the data field [Ln:%d Col:%d]`
+	eDataTag         = `unexpected tag [Ln:%d Col:%d]`
+)
 
-const (
-	eContractLoop    = `there is loop in %s contract`
-	eSysVar          = `system variable $%s cannot be changed`
-	eTypeParam       = `parameter %d has wrong type`
-	eUndefinedParam  = `%s is not defined`
-	eUnknownContract = `unknown contract %s`
-	eWrongParams     = `function %s must have %d parameters`
+var (
+	errContractPars    = errors.New(`wrong contract parameters`)
+	errWrongCountPars  = errors.New(`wrong count of parameters`)
+	errDivZero         = errors.New(`divided by zero`)
+	errUnsupportedType = errors.New(`unsupported combination of types in the operator`)
 	errMaxArrayIndex   = errors.New(`The index is out of range`)
 	errMaxMapCount     = errors.New(`The maxumim length of map`)
 	errRecursion       = errors.New(`The contract can't call itself recursively`)

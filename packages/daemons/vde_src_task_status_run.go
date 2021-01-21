@@ -89,14 +89,6 @@ func VDESrcTaskStatusRun(ctx context.Context, d *daemon) error {
 		}
 
 		if vde_src_http, ok = ContractRunParms["vde_src_http"].(string); !ok {
-			fmt.Println("Error parsing ContractRunParms vde_src_http parameter!")
-			log.WithFields(log.Fields{"error": err}).Error("vde_src_http parse error")
-			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-		if vde_src_ecosystem, ok = ContractRunParms["vde_src_ecosystem"].(string); !ok {
-			fmt.Println("Error parsing ContractRunParms vde_src_ecosystem parameter!")
-			log.WithFields(log.Fields{"error": err}).Error("vde_src_ecosystem parse error")
 			time.Sleep(time.Millisecond * 2)
 			continue
 		}
@@ -255,3 +247,8 @@ func VDESrcTaskStatusRunState(ctx context.Context, d *daemon) error {
 			log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTask table!")
 			time.Sleep(time.Millisecond * 2)
 			continue
+		}
+		fmt.Println("Run VDE src Contract ok, TxHash:", string(item.TxHash))
+	} //for
+	return nil
+}

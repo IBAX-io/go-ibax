@@ -65,12 +65,6 @@ func sendRawRequest(apiAddress string, gAuth string, rtype, url string, form *ur
 	if form != nil {
 		ioform = strings.NewReader(form.Encode())
 	}
-	req, err := http.NewRequest(rtype, apiAddress+consts.ApiPath+url, ioform)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
 	if len(gAuth) > 0 {
 		req.Header.Set("Authorization", jwtPrefix+gAuth)
 	}
@@ -564,6 +558,15 @@ func VdePostTxResult(apiAddress string, apiEcosystemID int64, gAuth string, gPri
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
 		return
 	}
+	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+		return
+	}
+
+	/*data, _, err := tx.NewTransaction(tx.SmartContract{
+		Header: tx.Header{
+			ID:          int(contract.ID),
+			Time:        time.Now().Unix(),
+			EcosystemID: 1,
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   consts.NETWORK_ID,
 		},

@@ -40,6 +40,14 @@ var (
 	// ErrUnknownProvider is Unknown provider error
 	ErrUnknownProvider = errors.New("Unknown provider")
 	// ErrHashingEmpty is Hashing empty value error
+	ErrHashingEmpty = errors.New("Hashing empty value")
+	// ErrEncryptingEmpty is Encrypting empty value error
+	ErrEncryptingEmpty = errors.New("Encrypting empty value")
+	// ErrDecryptingEmpty is Decrypting empty value error
+	ErrDecryptingEmpty = errors.New("Decrypting empty value")
+	// ErrSigningEmpty is Signing empty value error
+	ErrSigningEmpty = errors.New("Signing empty value")
+	// ErrCheckingSignEmpty is Checking sign of empty error
 	ErrCheckingSignEmpty = errors.New("Cheking sign of empty")
 	// ErrIncorrectSign is Incorrect sign
 	ErrIncorrectSign = errors.New("Incorrect sign")
@@ -74,7 +82,6 @@ func Encrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
 }
 
 // Decrypt is decrypting
-func Decrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
 	if len(msg) == 0 {
 		return nil, ErrDecryptingEmpty
 	}

@@ -12,9 +12,6 @@ import (
 
 var (
 	errParseCert     = errors.New("Failed to parse certificate")
-	errParseRootCert = errors.New("Failed to parse root certificate")
-)
-
 type Cert struct {
 	cert *x509.Certificate
 }
@@ -32,6 +29,16 @@ func (c *Cert) Validate(pem []byte) error {
 	return nil
 }
 
+func (c *Cert) EqualBytes(bs ...[]byte) bool {
+	for _, b := range bs {
+		other, err := parseCert(b)
+		if err != nil {
+			return false
+		}
+
+		if c.cert.Equal(other) {
+			return true
+		}
 	}
 
 	return false

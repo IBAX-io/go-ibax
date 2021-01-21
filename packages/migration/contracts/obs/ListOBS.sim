@@ -1,5 +1,6 @@
 // +prop AppID = '1'
-		action {
-			$result = GetOBSList()
-		}
-	}
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract ListOBS {
+		data {}
+	
+		conditions {}

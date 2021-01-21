@@ -6,6 +6,15 @@ import (
 	"log"
 	"testing"
 )
+
+func TestGetCryptoer(t *testing.T) {
+	c := getCryptoer()
+	src := []byte("Hello")
+	encodedStr := hex.EncodeToString(src)
+	fmt.Println(src)
+	fmt.Printf("%s\n", encodedStr)
+	prv, pub, err := c.genKeyPair()
+	if err != nil {
 		return
 	}
 	prvStr := hex.EncodeToString(prv)
@@ -37,7 +46,3 @@ import (
 	fmt.Println("signedDataByPriv is:", signedDataByte)
 	ok, err := c.verify(pub, src, signedDataByte)
 	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(ok)
-}

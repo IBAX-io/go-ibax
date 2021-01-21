@@ -1,17 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"context"
-	"fmt"
-	"sync/atomic"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/utils"
@@ -80,3 +66,7 @@ func QueueParserBlocks(ctx context.Context, d *daemon) error {
 	}
 	blockID := queueBlock.BlockID
 
+	host := utils.GetHostPort(nodeHost)
+	// update our chain till maxBlockID from the host
+	return UpdateChain(ctx, d, host, blockID)
+}
