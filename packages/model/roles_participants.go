@@ -1,12 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package model
-
-import (
-	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
 // RolesParticipants represents record of {prefix}roles_participants table
@@ -63,6 +55,11 @@ func MemberHasRolebyName(tx *DbTransaction, ecosys int64, role, account string) 
 		ecosys, role, account).Count(&count).Error; err != nil {
 		return false, err
 	}
+
+	return count > 0, nil
+}
+
+// GetMemberRoles return map[id]name all roles assign to member in ecosystem
 func GetMemberRoles(tx *DbTransaction, ecosys int64, account string) (roles []int64, err error) {
 	query := `SELECT role->>'id' as "id" 
 		FROM "1_roles_participants"
