@@ -18,7 +18,9 @@ contract EditBlock {
     }
 
     action {
-            DBUpdate("blocks", $Id, pars)
+        var pars map
+        if $Value {
+            pars["value"] = $Value
         }
-    }
-}
+        if $Conditions {
+            pars["conditions"] = $Conditions

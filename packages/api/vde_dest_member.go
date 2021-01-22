@@ -35,12 +35,6 @@ func unmarshalColumnVDEDestMember(form *VDEDestMemberForm) (*model.VDEDestMember
 	return m, err
 }
 
-func VDEDestMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		err error
-	)
-	logger := getLogger(r)
-	form := &VDEDestMemberForm{}
 		errorResponse(w, err)
 		return
 	}

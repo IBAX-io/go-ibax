@@ -1,9 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package obs
 
 var (
 	migrationInitial = `
@@ -40,3 +37,9 @@ var (
 		
 		DROP TABLE IF EXISTS "install"; CREATE TABLE "install" (
 		"progress" varchar(10) NOT NULL DEFAULT ''
+		);
+		
+		DROP TABLE IF EXISTS "stop_daemons"; CREATE TABLE "stop_daemons" (
+		"stop_time" int NOT NULL DEFAULT '0'
+		);`
+)

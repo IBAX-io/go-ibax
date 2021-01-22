@@ -10,6 +10,14 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+func unmarshalColumnVDEAgentChainInfo(form *VDEAgentChainInfoForm) (*model.VDEAgentChainInfo, error) {
 	var (
 		err error
 	)
@@ -68,16 +76,6 @@ func VDEAgentChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)
-		return
-	}
-
-	m := &model.VDEAgentChainInfo{}
-
-	if m, err = unmarshalColumnVDEAgentChainInfo(form); err != nil {
-		errorResponse(w, err)
-		return
-	}
-
 	m.ID = id
 	m.UpdateTime = time.Now().Unix()
 	if err = m.Updates(); err != nil {

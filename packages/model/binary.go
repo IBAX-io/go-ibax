@@ -18,6 +18,13 @@ type Binary struct {
 	ecosystem int64
 	ID        int64
 	Name      string
+	Data      []byte
+	Hash      string
+	MimeType  string
+}
+
+// SetTablePrefix is setting table prefix
+func (b *Binary) SetTablePrefix(prefix string) {
 	b.ecosystem = converter.StrToInt64(prefix)
 }
 
@@ -44,9 +51,3 @@ func (b *Binary) Get(appID int64, account, name string) (bool, error) {
 // Link returns link to binary data
 func (b *Binary) Link() string {
 	return fmt.Sprintf(`/data/%s/%d/%s/%s`, b.TableName(), b.ID, "data", b.Hash)
-}
-
-// GetByID is retrieving model from db by id
-func (b *Binary) GetByID(id int64) (bool, error) {
-	return isFound(DBConn.Where("id=?", id).First(b))
-}

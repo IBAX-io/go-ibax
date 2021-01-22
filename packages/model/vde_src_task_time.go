@@ -24,16 +24,6 @@ func (m *VDESrcTaskTime) Updates() error {
 }
 
 func (m *VDESrcTaskTime) Delete() error {
-	return DBConn.Delete(m).Error
-}
-
-func (m *VDESrcTaskTime) Get() (*VDESrcTaskTime, error) {
-	err := DBConn.First(&m).Error
-	return m, err
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *VDESrcTaskTime) GetOneByID() (*VDESrcTaskTime, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error
 	return m, err
 }

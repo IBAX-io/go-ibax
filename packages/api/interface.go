@@ -1,17 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -26,6 +12,14 @@ func getPageRowHandler(w http.ResponseWriter, r *http.Request) {
 
 func getMenuRowHandler(w http.ResponseWriter, r *http.Request) {
 	getInterfaceRow(w, r, &model.Menu{})
+}
+
+func getBlockInterfaceRowHandler(w http.ResponseWriter, r *http.Request) {
+	getInterfaceRow(w, r, &model.BlockInterface{})
+}
+
+func getInterfaceRow(w http.ResponseWriter, r *http.Request, c componentModel) {
+	params := mux.Vars(r)
 	logger := getLogger(r)
 	client := getClient(r)
 

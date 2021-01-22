@@ -36,18 +36,6 @@ type node struct {
 	Tail     []*node                `json:"tail,omitempty"`
 }
 
-// Source describes dbfind or data source
-type Source struct {
-	Columns *[]string
-	Data    *[][]string
-}
-
-// Var stores value and additional parameter of variable
-type Var struct {
-	Value string
-	AsIs  bool
-}
-
 // Workspace represents a workspace of executable template
 type Workspace struct {
 	Sources       *map[string]Source
@@ -573,6 +561,21 @@ main:
 				if mode == 0 && (strings.Contains(curFunc.Params, `Body`) || strings.Contains(curFunc.Params, `Data`)) {
 					var isBody bool
 					next := off + 1
+					for next < len(input) {
+						if rune(input[next]) == modes[1][0] {
+							isBody = true
+							break
+						}
+						if rune(input[next]) == ' ' || rune(input[next]) == '\t' {
+							next++
+							continue
+						}
+						break
+					}
+					if isBody {
+						mode = 1
+						for _, keyp := range []string{`Body`, `Data`} {
+							if strings.Contains(curFunc.Params, keyp) {
 								irune := make([]rune, 0, sizeParam)
 								s := keyp + `:`
 								params = append(params, append(irune, []rune(s)...))

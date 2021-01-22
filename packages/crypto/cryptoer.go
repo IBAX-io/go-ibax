@@ -16,25 +16,12 @@ type Oval struct {
 	name string
 }
 
+const (
+	cSM2   = "SM2"
+	cECDSA = "ECDSA"
+)
 
 var Curve = &curve
-
-var curve Oval
-
-func InitCurve(s string) {
-	switch s {
-	case cECDSA:
-		curve.name = cECDSA
-		return
-	case cSM2:
-		curve.name = cSM2
-		return
-	}
-	panic(fmt.Errorf("curve [%v] is not supported yet", s))
-}
-
-func (o Oval) String() string {
-	return o.name
 }
 
 func getCryptoer() Cryptoer {

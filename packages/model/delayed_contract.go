@@ -22,14 +22,9 @@ type DelayedContract struct {
 	Conditions string `gorm:"not null"`
 }
 
-// TableName returns name of table
-func (DelayedContract) TableName() string {
-	return tableDelayedContracts
 }
 
-// GetAllDelayedContractsForBlockID returns contracts that want to execute for blockID
-func GetAllDelayedContractsForBlockID(blockID int64) ([]*DelayedContract, error) {
-	var contracts []*DelayedContract
-	if err := DBConn.Where("block_id <= ? and deleted = ?", blockID, availableDelayedContracts).Order("high_rate desc").Find(&contracts).Error; err != nil {
-		return nil, err
-	}
+// Get is retrieving model from database
+func (dc *DelayedContract) Get(id int64) (bool, error) {
+	return isFound(DBConn.Where("id = ?", id).First(dc))
+}

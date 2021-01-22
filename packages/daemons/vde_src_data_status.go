@@ -45,13 +45,6 @@ func VDESrcDataStatus(ctx context.Context, d *daemon) error {
 		hash := tcpclient.SendVDESrcData(item.VDEDestIP, item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), item.DataInfo, item.VDESrcPubkey, item.VDEAgentPubkey, item.VDEAgentIP, item.VDEDestPubkey, item.VDEDestIP, ItemDataBytes)
 		if string(hash) == "0" {
 			//item.DataSendState = 3 //
-			item.DataSendState = 0 //
-			item.DataSendErr = "Network error"
-		} else if string(hash) == string(item.Hash) {
-			item.DataSendState = 1 //success
-		} else {
-			item.DataSendState = 2 //
-			item.DataSendErr = "Hash mismatch"
 		}
 		err = item.Updates()
 		if err != nil {
@@ -76,6 +69,21 @@ func VDESrcDataStatusAgent(ctx context.Context, d *daemon) error {
 		time.Sleep(time.Millisecond * 100)
 		return nil
 	}
+
+	// send task data
+	for _, item := range ShareData {
+		//ItemDataBytes := item.Data
+		ItemDataBytes, err := ecies.EccCryptoKey(item.Data, item.VDEAgentPubkey)
+		if err != nil {
+			log.WithError(err)
+			continue
+		}
+		//fmt.Println("item.AgentMode:", converter.Int64ToStr(item.AgentMode))
+
+		hash := tcpclient.SendVDESrcDataAgent(item.VDEAgentIP, item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), item.DataInfo, item.VDESrcPubkey, item.VDEAgentPubkey, item.VDEAgentIP, item.VDEDestPubkey, item.VDEDestIP, ItemDataBytes)
+		if string(hash) == "0" {
+			//item.DataSendState = 3 //
+			item.DataSendState = 0 //
 			item.DataSendErr = "Network error"
 		} else if string(hash) == string(item.Hash) {
 			item.DataSendState = 1 //
