@@ -1,4 +1,5 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
@@ -32,20 +33,6 @@ static inline void waitSig() {
     signal(SIGINT, &SigBreak_Handler);
     #endif
 }
-*/
-import (
-	"C"
-)
-
-//export go_callback_int
-func go_callback_int() {
-	SigChan <- syscall.Signal(1)
-}
-
-// SigChan is a channel
-var SigChan chan os.Signal
-
-func waitSig() {
 	C.waitSig()
 }
 

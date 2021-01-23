@@ -14,7 +14,13 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 
 	"github.com/sirupsen/logrus"
+)
 
+// ContextHook storing nothing but behavior
+type ContextHook struct{}
+
+// Levels returns all log levels
+func (hook ContextHook) Levels() []logrus.Level {
 // Fire the log entry
 func (hook ContextHook) Fire(entry *logrus.Entry) error {
 	var pc []uintptr

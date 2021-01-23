@@ -60,6 +60,9 @@ func (m *VDESrcDataHash) GetOneByTaskUUID(TaskUUID string) (*VDESrcDataHash, err
 }
 
 func (m *VDESrcDataHash) GetAllByChainState(ChainState int64) ([]VDESrcDataHash, error) {
-func (m *VDESrcDataHash) GetOneByChainState(ChainState int64) (bool, error) {
-	return isFound(DBConn.Where("chain_state = ?", ChainState).First(m))
+	result := make([]VDESrcDataHash, 0)
+	err := DBConn.Table("vde_src_data_hash").Where("chain_state = ?", ChainState).Find(&result).Error
+	return result, err
 }
+
+func (m *VDESrcDataHash) GetOneByChainState(ChainState int64) (bool, error) {
