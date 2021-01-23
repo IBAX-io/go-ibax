@@ -15,18 +15,6 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-)
-
-const (
-	ext = ".sim"
-
-	defaultPackageName = "migration"
-)
-
-var (
-	scenarios = []scenario{
-		{
-			[]string{"./contracts/ecosystem"},
 			"./contracts_data.go",
 			"contractsDataSQL", "{{.Ecosystem}}", "{{.Owner}}",
 		},
@@ -177,6 +165,12 @@ func generate(s scenario) error {
 	defer file.Close()
 
 	pkg := filepath.Base(filepath.Dir(s.Dest))
+	if pkg == "." {
+		pkg = defaultPackageName
+	}
+
+	return contractsTemplate.Execute(file, map[string]interface{}{
+		"Package":   pkg,
 		"Variable":  s.Variable,
 		"Ecosystem": s.Ecosystem,
 		"Owner":     nil,
