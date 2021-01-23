@@ -1,5 +1,18 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewOBS {
+		data {
+			OBSName string
+			DBUser string
+			DBPassword string
+			OBSAPIPort int
+		}
+	
+		conditions {
+            if Size($OBSName) == 0 {
+                warning "OBSName was not received"
+            }
+            if Contains($OBSName, " ") {
                 error "OBSName can not contain spaces"
             }
             if Size($DBUser) == 0 {
@@ -15,9 +28,3 @@
 		}
 	
 		action {
-            $OBSName = ToLower($OBSName)
-            $DBUser = ToLower($DBUser)
-            CreateOBS($OBSName, $DBUser, $DBPassword, $OBSAPIPort)
-            $result = "OBS " + $OBSName + " created"
-		}
-}

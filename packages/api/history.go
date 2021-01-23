@@ -10,9 +10,6 @@ import (
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -45,3 +42,9 @@ func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 			logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollbackTx.Data from JSON")
 			errorResponse(w, err)
 			return
+		}
+		rollbackList = append(rollbackList, rollback)
+	}
+
+	jsonResponse(w, &historyResult{rollbackList})
+}

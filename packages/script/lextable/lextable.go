@@ -14,18 +14,6 @@ import (
 // The program creates packages/script/lex_table.go files.
 
 // Action is a map of actions
-type Action map[string][]string
-
-// States is a map of states
-type States map[string]Action
-
-const (
-	// AlphaSize is the length of alphabet
-	AlphaSize = 34
-)
-
-/* Здесь мы определяем алфавит, с которым будет работать наш язык и описываем конечный автомат, который
-   переходит из одного состояния в другое в зависимости от очередного полученного символа.
    Данная программа переводит список состояний в числовой массив и сохраняет его как
    packages/script/lex_table.go
 */
@@ -96,6 +84,20 @@ var (
 		"d": ["error", "", ""]
 	},
 	"and": {
+			"&": ["main", "oper", "pop next"],
+			"d": ["error", "", ""]
+		},
+	"or": {
+			"|": ["main", "oper", "pop next"],
+			"d": ["error", "", ""]
+		},
+	"eq": {
+			"=": ["main", "oper", "pop next"],
+			"d": ["main", "sys", "pop"]
+		},
+	"solidus": {
+			"/": ["comline", "", "pop next"],
+			"*": ["comment", "", "next"],
 			"d": ["main", "oper", "pop"]
 		},
 	"oneq": {

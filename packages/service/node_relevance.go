@@ -52,6 +52,20 @@ func (n *NodeRelevanceService) Run(ctx context.Context) {
 				return
 			}
 
+			if !relevance && !IsNodePaused() {
+				log.Info("Node Relevance Service is pausing node activity")
+				n.pauseNodeActivity()
+			}
+
+			if relevance && IsNodePaused() {
+				log.Info("Node Relevance Service is resuming node activity")
+				n.resumeNodeActivity()
+			}
+
+			select {
+			case <-time.After(n.checkingInterval):
+			case <-updatingEndWhilePaused:
+			}
 		}
 	}()
 }
@@ -94,13 +108,6 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 	if err != nil {
 		if err == tcpclient.ErrNodesUnavailable {
 			return false, nil
-		}
-		return false, errors.Wrapf(err, "choosing best host")
-	}
-
-	// Node can't connect to others
-	if maxBlockID == -1 {
-		log.WithFields(log.Fields{"hosts": remoteHosts}).Info("can't connect to others, stopping node relevance")
 		return false, nil
 	}
 

@@ -17,6 +17,20 @@ import (
 type Key struct {
 	ecosystem    int64
 	accountKeyID int64 `gorm:"-"`
+
+	ID          int64  `gorm:"primary_key;not null"`
+	AccountID   string `gorm:"column:account;not null"`
+	PublicKey   []byte `gorm:"column:pub;not null"`
+	Amount      string `gorm:"not null"`
+	Mintsurplus string `gorm:"not null"`
+	Maxpay      string `gorm:"not null"`
+	Deleted     int64  `gorm:"not null"`
+	Blocked     int64  `gorm:"not null"`
+}
+
+// SetTablePrefix is setting table prefix
+func (m *Key) SetTablePrefix(prefix int64) *Key {
+	m.ecosystem = prefix
 	return m
 }
 
@@ -62,12 +76,6 @@ func (m *Key) AccountKeyID() int64 {
 	return m.accountKeyID
 }
 
-// KeyTableName returns name of key table
-func KeyTableName(prefix int64) string {
-	return fmt.Sprintf("%d_keys", prefix)
-}
-
-// GetKeysCount returns common count of keys
 func GetKeysCount() (int64, error) {
 	var cnt int64
 	row := DBConn.Raw(`SELECT count(*) key_count FROM "1_keys" WHERE ecosystem = 1`).Select("key_count").Row()

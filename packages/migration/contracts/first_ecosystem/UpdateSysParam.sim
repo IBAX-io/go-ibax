@@ -1,4 +1,7 @@
-// +prop AppID = '1'
-// +prop Conditions = 'ContractConditions("MainCondition")'
-contract UpdateSysParam {
+        var params map
+        params["Value"] = $Value
+        CallContract($Name, params)
+        
+        DBUpdateSysParam($Name, $Value, $Conditions)
+     }
 }
