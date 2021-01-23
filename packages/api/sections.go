@@ -22,6 +22,7 @@ type sectionsForm struct {
 	paginatorForm
 	Lang string `schema:"lang"`
 }
+
 func (f *sectionsForm) Validate(r *http.Request) error {
 	if err := f.paginatorForm.Validate(r); err != nil {
 		return err
@@ -64,11 +65,6 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result.List, err = model.GetResult(rows)
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-
 	var sections []map[string]string
 	for _, item := range result.List {
 		var roles []int64

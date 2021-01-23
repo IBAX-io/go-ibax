@@ -19,5 +19,10 @@ func (tc *transactionCache) Get(hash string) (t *Transaction, ok bool) {
 	return
 }
 
-func (tc *transactionCache) Set(t *Transaction) {
+
+func (tc *transactionCache) Clean() {
 	tc.mutex.Lock()
+	defer tc.mutex.Unlock()
+
+	tc.cache = make(map[string]*Transaction)
+}
