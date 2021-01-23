@@ -49,6 +49,16 @@ type blockInfoResult struct {
 	KeyID         int64  `json:"key_id"`
 	Time          int64  `json:"time"`
 	Tx            int32  `json:"tx_count"`
+	RollbacksHash []byte `json:"rollbacks_hash"`
+	NodePosition  int64  `json:"node_position"`
+}
+
+func getBlockInfoHandler(w http.ResponseWriter, r *http.Request) {
+	logger := getLogger(r)
+	params := mux.Vars(r)
+
+	blockID := converter.StrToInt64(params["id"])
+	block := model.Block{}
 	found, err := block.Get(blockID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block")
@@ -83,15 +93,6 @@ type blocksTxInfoForm struct {
 	BlockID int64 `schema:"block_id"`
 	Count   int64 `schema:"count"`
 }
-
-func (f *blocksTxInfoForm) Validate(r *http.Request) error {
-	if f.BlockID > 0 {
-		f.BlockID--
-	}
-	return nil
-}
-
-func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 	form := &blocksTxInfoForm{}
 	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)

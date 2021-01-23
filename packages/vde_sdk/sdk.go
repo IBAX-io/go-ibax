@@ -65,6 +65,12 @@ func sendRawRequest(apiAddress string, gAuth string, rtype, url string, form *ur
 	if form != nil {
 		ioform = strings.NewReader(form.Encode())
 	}
+	req, err := http.NewRequest(rtype, apiAddress+consts.ApiPath+url, ioform)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
 	if len(gAuth) > 0 {
 		req.Header.Set("Authorization", jwtPrefix+gAuth)
 	}
@@ -141,16 +147,6 @@ func sendPost(apiAddress string, gAuth string, url string, form *url.Values, v i
 //		form[`mobile`] = []string{`true`}
 //	}
 //	var logret loginResult
-//	err = sendPost(apiAddress, `login`, &form, &logret)
-//	if err != nil {
-//		return
-//	}
-//	gAddress = logret.Address
-//	gPrivate = string(key)
-//	gPublic, err = PrivateToPublicHex(gPrivate)
-//	gAuth = logret.Token
-//	if err != nil {
-//		return
 //	}
 //	return
 //}

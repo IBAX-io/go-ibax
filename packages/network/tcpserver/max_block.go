@@ -25,5 +25,3 @@ func Type10() (*network.MaxBlockResponse, error) {
 	if !found {
 		log.WithFields(log.Fields{"type": consts.NotFound}).Debug("Can't found info block")
 	}
-
-	return &network.MaxBlockResponse{

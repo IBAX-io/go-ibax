@@ -107,6 +107,21 @@ func VDEAgentMemberDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	id := converter.StrToInt64(params["id"])
 
 	m := &model.VDEAgentMember{}
+	m.ID = id
+	if err := m.Delete(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
+	}
+
+	jsonResponse(w, "ok")
+}
+
+func VDEAgentMemberListHandlre(w http.ResponseWriter, r *http.Request) {
+	logger := getLogger(r)
+	srcData := model.VDEAgentMember{}
+
+	result, err := srcData.GetAll()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
 		errorResponse(w, err)
 		return
 	}
@@ -141,6 +156,3 @@ func VDEAgentMemberByPubKeyHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-
-	jsonResponse(w, result)
-}

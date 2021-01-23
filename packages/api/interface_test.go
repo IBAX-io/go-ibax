@@ -26,13 +26,16 @@ func TestGetInterfaceRow(t *testing.T) {
 		{"interface/block/", "NewBlock", []string{"Name", "Value", "Conditions"}},
 	}
 
-		name := randName("component")
-		form := url.Values{
-			"Name": {name}, "Value": {"value"}, "Menu": {"default_menu"}, "Title": {"title"},
-			"Conditions": {"true"},
+	checkEqualAttrs := func(form url.Values, result map[string]interface{}, equalKeys []string) {
+		for _, key := range equalKeys {
+			v := result[strings.ToLower(key)]
+			assert.EqualValues(t, form.Get(key), v)
 		}
-		assert.NoError(t, postTx(c.contract, &form))
-		result := map[string]interface{}{}
+	}
+
+	errUnauthorized := `401 {"error": "E_UNAUTHORIZED", "msg": "Unauthorized" }`
+	for _, c := range cases {
+		assert.EqualError(t, sendGet(c.url+"-", &url.Values{}, nil), errUnauthorized)
 		assert.NoError(t, sendGet(c.url+name, &url.Values{}, &result))
 		checkEqualAttrs(form, result, c.equalAttrs)
 	}
