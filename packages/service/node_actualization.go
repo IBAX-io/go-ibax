@@ -38,6 +38,15 @@ func (n *NodeActualizer) Run(ctx context.Context) {
 		for {
 			if ctx.Err() != nil {
 				log.WithFields(log.Fields{"error": ctx.Err(), "type": consts.ContextError}).Error("context error")
+				return
+			}
+
+			actual, err := n.checkBlockchainActuality(ctx)
+			if err != nil {
+				log.WithFields(log.Fields{"type": consts.BCActualizationError, "err": err}).Error("checking blockchain actuality")
+				return
+			}
+
 			if !actual && !IsNodePaused() {
 				log.Info("Node Actualizer is pausing node activity")
 				n.pauseNodeActivity()
@@ -57,15 +66,6 @@ func (n *NodeActualizer) checkBlockchainActuality(ctx context.Context) (bool, er
 	curBlock := &model.InfoBlock{}
 	_, err := curBlock.Get()
 	if err != nil {
-		return false, errors.Wrapf(err, "retrieving info block")
-	}
-
-	remoteHosts, err := GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
-	if err != nil {
-		return false, err
-	}
-
-	_, maxBlockID, err := tcpclient.HostWithMaxBlock(ctx, remoteHosts)
 	if err != nil {
 		return false, errors.Wrapf(err, "choosing best host")
 	}
