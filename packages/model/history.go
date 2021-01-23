@@ -23,22 +23,6 @@ type History struct {
 	Comment          string `json:"comment,omitempty"`
 	BlockID          int64  `json:"block_id,omitempty"`
 	TxHash           []byte `gorm:"column:txhash"`
-	CreatedAt        int64  `json:"created_at,omitempty"`
-	Type             int64
-}
-
-// SetTablePrefix is setting table prefix
-func (h *History) SetTablePrefix(prefix int64) *History {
-	h.ecosystem = prefix
-	return h
-}
-
-// TableName returns table name
-func (h *History) TableName() string {
-	if h.ecosystem == 0 {
-		h.ecosystem = 1
-	}
-	return `1_history`
 }
 
 // MoneyTransfer from to amount
@@ -111,6 +95,13 @@ func GetWalletRecordHistory(tx *DbTransaction, keyId string, searchType string, 
 	} else if searchType == "outcome" {
 		err = db.Table("1_history").
 			Where("sender_id = ?", keyId).
+			Order("id desc").
+			Limit(limit).
+			Offset(offset).
+			Scan(&histories).Error
+	} else {
+		err = db.Table("1_history").
+			Where("recipient_id = ? OR sender_id = ?", keyId, keyId).
 			Order("id desc").
 			Limit(limit).
 			Offset(offset).

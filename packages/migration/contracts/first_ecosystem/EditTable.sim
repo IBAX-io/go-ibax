@@ -6,14 +6,7 @@ contract EditTable {
         InsertPerm string
         UpdatePerm string
         NewColumnPerm string
-        ReadPerm string "optional"
-    }
-
-    conditions {
-        if !$InsertPerm {
-            info("Insert condition is empty")
-        }
-        if !$UpdatePerm {
+        permissions["insert"] = $InsertPerm
         permissions["update"] = $UpdatePerm
         permissions["new_column"] = $NewColumnPerm
         if $ReadPerm {

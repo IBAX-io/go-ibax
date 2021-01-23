@@ -57,6 +57,15 @@ func HandleTCPRequest(rw net.Conn) {
 			response, err = Type4(req)
 		}
 
+	case network.RequestTypeBlockCollection:
+		req := &network.GetBodiesRequest{}
+		if err = req.Read(rw); err == nil {
+			err = Type7(req, rw)
+		}
+
+	case network.RequestTypeMaxBlock:
+		response, err = Type10()
+
 	case network.RequestTypeSendSubNodeSrcData:
 		req := &network.SubNodeSrcDataRequest{}
 		if err = req.Read(rw); err == nil {
@@ -91,16 +100,6 @@ func HandleTCPRequest(rw net.Conn) {
 
 	case network.RequestTypeSendPrivateData:
 		req := &network.PrivateDateRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type88(req)
-		}
-
-	case network.RequestTypeSendPrivateFile:
-		req := &network.PrivateFileRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type99(req)
-		}
-	}
 
 	if err != nil || response == nil {
 		return

@@ -59,16 +59,9 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 		return err
 	}
 
-	ib := &model.InfoBlock{
-		Hash:           block.Hash,
-		BlockID:        header.BlockID,
-		Time:           header.Time,
-		EcosystemID:    header.EcosystemID,
-		KeyID:          header.KeyID,
-		NodePosition:   converter.Int64ToStr(header.NodePosition),
-		CurrentVersion: strconv.Itoa(header.Version),
-		RollbacksHash:  block.RollbacksHash,
-	}
+	err = ib.Update(dbTransaction)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating info block")
 		return err
 	}
 

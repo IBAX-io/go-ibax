@@ -42,11 +42,8 @@ func (m *mint) MinerTime() (capacities, nonce, devid int64, err error) {
 	}
 	random := crypto.Address(m.prevHash)
 	if random < 0 {
-				Capacity:   capacities,
-				Nonce:      nonce,
-				BlockId:    m.blockid,
-				MintMap:    m.MintMap,
-				MineCounts: m.MineCounts,
+		random = -random
+	}
 				Hash:       m.prevHash,
 				Time:       m.time,
 			}

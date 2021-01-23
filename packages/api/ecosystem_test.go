@@ -49,16 +49,6 @@ func TestEditEcosystem(t *testing.T) {
 
 	name := randName(`page`)
 	form := url.Values{"Name": {name}, "Value": {value},
-		"Menu": {menu}, "Conditions": {"ContractConditions(`MainCondition`)"}}
-	err = postTx(`@1NewPage`, &form)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = postTx(`@1NewPage`, &form)
-	if cutErr(err) != fmt.Sprintf(`{"type":"warning","error":"Page %s already exists"}`, name) {
-		t.Error(err)
-		return
 	}
 	form = url.Values{"Name": {name}, "Value": {`MenuItem(default_page)`}, "ApplicationId": {`1`},
 		"Conditions": {"ContractConditions(`MainCondition`)"}}
@@ -108,6 +98,18 @@ func TestEcosystemParams(t *testing.T) {
 
 	var ret ecosystemParamsResult
 	require.NoError(t, sendGet(`ecosystemparams`, nil, &ret))
+
+	if len(ret.List) < 5 {
+		t.Error(fmt.Errorf(`wrong count of parameters %d`, len(ret.List)))
+	}
+
+	require.NoError(t, sendGet(`ecosystemparams?names=ecosystem_name,new_table&ecosystem=1`, nil, &ret))
+
+	require.Equalf(t, 1, len(ret.List), `wrong count of parameters %d`, len(ret.List))
+}
+
+func TestSystemParams(t *testing.T) {
+
 	if err := keyLogin(1); err != nil {
 		t.Error(err)
 		return

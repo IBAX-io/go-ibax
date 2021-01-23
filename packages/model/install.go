@@ -10,5 +10,7 @@ const ProgressComplete = "complete"
 
 // Install is model
 type Install struct {
-	Progress string `gorm:"not null;size:10"`
+// Create is creating record of model
+func (i *Install) Create() error {
+	return DBConn.Create(i).Error
 }

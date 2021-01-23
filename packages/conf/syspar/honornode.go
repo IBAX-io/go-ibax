@@ -1,4 +1,15 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package syspar
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/url"
 	"reflect"
 	"strconv"
 	"time"
@@ -27,17 +38,6 @@ type honorNodeJSON struct {
 	Stopped    bool        `json:"stopped"`
 }
 
-// HonorNode is storing honor node data
-type HonorNode struct {
-	TCPAddress string
-	APIAddress string
-	PublicKey  []byte
-	UnbanTime  time.Time
-	Stopped    bool
-}
-
-// UnmarshalJSON is custom json unmarshaller
-func (fn *HonorNode) UnmarshalJSON(b []byte) (err error) {
 	data := honorNodeJSON{}
 	if err = json.Unmarshal(b, &data); err != nil {
 		log.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err, "value": string(b)}).Error("Unmarshalling honor nodes to json")

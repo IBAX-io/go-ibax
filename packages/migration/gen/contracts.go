@@ -94,6 +94,18 @@ func main() {
 
 func escape(data string) template.HTML {
 	//data = strings.Replace(data, `%`, `%%`, -1)
+	data = strings.Replace(data, `'`, `''`, -1)
+	data = strings.Replace(data, "`", "` + \"`\" + `", -1)
+	return template.HTML(data)
+}
+
+func loadSource(srcPath string) (*contract, error) {
+	file, err := os.Open(srcPath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
 	props := make([]byte, 0)
 	data := make([]byte, 0)
 
@@ -165,12 +177,6 @@ func generate(s scenario) error {
 	defer file.Close()
 
 	pkg := filepath.Base(filepath.Dir(s.Dest))
-	if pkg == "." {
-		pkg = defaultPackageName
-	}
-
-	return contractsTemplate.Execute(file, map[string]interface{}{
-		"Package":   pkg,
 		"Variable":  s.Variable,
 		"Ecosystem": s.Ecosystem,
 		"Owner":     nil,

@@ -4,8 +4,14 @@
  *--------------------------------------------------------------------------------------------*/
 package metric
 
-import (
-	"github.com/IBAX-io/go-ibax/packages/types"
+	Time   int64
+	Metric string
+	Key    string
+	Value  int64
+}
+
+// ToMap returns values as map
+func (v *Value) ToMap() *types.Map {
 	return types.LoadMap(map[string]interface{}{
 		"time":   v.Time,
 		"metric": v.Metric,
