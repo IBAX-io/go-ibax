@@ -122,13 +122,11 @@ func VDESrcTaskChainStatus(ctx context.Context, d *daemon) error {
 				fmt.Println("HashHex Raw data hash failed ")
 				continue
 			}
-
-		} else {
-			myContractDestGet = item.ContractDestGet
-			myContractDestGetHash = item.ContractDestGetHash
-		}
-
-		ScheTaskChainStatusSrc := model.VDESrcTaskChainStatus{
+			TaskState:       item.TaskState,
+			ContractSrcName: item.ContractSrcName,
+			//ContractSrcGet:       item.ContractSrcGet,
+			//ContractSrcGetHash:   item.ContractSrcGetHash,
+			ContractSrcGet:     myContractSrcGet,
 			ContractSrcGetHash: myContractSrcGetHash,
 			ContractDestName:   item.ContractDestName,
 			//ContractDestGet:      item.ContractDestGet,

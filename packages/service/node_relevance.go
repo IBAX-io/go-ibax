@@ -52,20 +52,6 @@ func (n *NodeRelevanceService) Run(ctx context.Context) {
 				return
 			}
 
-			if !relevance && !IsNodePaused() {
-				log.Info("Node Relevance Service is pausing node activity")
-				n.pauseNodeActivity()
-			}
-
-			if relevance && IsNodePaused() {
-				log.Info("Node Relevance Service is resuming node activity")
-				n.resumeNodeActivity()
-			}
-
-			select {
-			case <-time.After(n.checkingInterval):
-			case <-updatingEndWhilePaused:
-			}
 		}
 	}()
 }
@@ -114,6 +100,20 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 
 	// Node can't connect to others
 	if maxBlockID == -1 {
+		log.WithFields(log.Fields{"hosts": remoteHosts}).Info("can't connect to others, stopping node relevance")
+		return false, nil
+	}
+
+	// Node blockchain is stale
+	if curBlock.BlockID+n.availableBlockchainGap < maxBlockID {
+		log.WithFields(log.Fields{"maxBlockID": maxBlockID, "curBlockID": curBlock.BlockID, "Gap": n.availableBlockchainGap}).Info("blockchain is stale, stopping node relevance")
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (n *NodeRelevanceService) pauseNodeActivity() {
 	np.Set(PauseTypeUpdatingBlockchain)
 }
 

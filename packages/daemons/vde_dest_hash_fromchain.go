@@ -131,6 +131,17 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 		return nil
 	}
 
+	//utils.Print_json(t_struct)
+	for _, DataHashItem := range t_struct.List {
+		//fmt.Println("DataHashItem:", DataHashItem.ID, DataHashItem.TaskUUID)
+		m := &model.VDEDestDataHash{}
+		m.TaskUUID = DataHashItem.TaskUUID
+		m.DataUUID = DataHashItem.DataUUID
+		m.Hash = DataHashItem.Hash
+		m.BlockchainHttp = blockchain_http
+		m.BlockchainEcosystem = blockchain_ecosystem
+		m.CreateTime = converter.StrToInt64(DataHashItem.CreateTime)
+
 		if err = m.Create(); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Failed to insert vde_dest_data_hash table")
 			break
@@ -142,11 +153,3 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 	DestHashTime.UpdateTime = converter.StrToInt64(UpdateTime)
 	err = DestHashTime.Updates()
 	if err != nil {
-		fmt.Println("Update UpdateTime table err: ", err)
-		log.WithFields(log.Fields{"error": err}).Error("Update UpdateTime table!")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-	//fmt.Println("Update UpdateTime table OK")
-	return nil
-}

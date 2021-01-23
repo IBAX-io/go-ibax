@@ -49,6 +49,19 @@ func NodeContract(Name string) (result contractResult, err error) {
 		sign                          []byte
 		ret                           authResult
 		NodePrivateKey, NodePublicKey string
+	)
+	err = sendAPIRequest(`GET`, `getuid`, nil, &ret, ``)
+	if err != nil {
+		return
+	}
+	auth := ret.Token
+	if len(ret.UID) == 0 {
+		err = fmt.Errorf(`getuid has returned empty uid`)
+		return
+	}
+	NodePrivateKey, NodePublicKey = utils.GetNodeKeys()
+	if len(NodePrivateKey) == 0 {
+		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
 		err = errors.New(`empty node private key`)
 		return
 	}
@@ -100,16 +113,6 @@ func sendAPIRequest(rtype, url string, form *url.Values, v interface{}, auth str
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading api answer")
-		return err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("api status code")
-		return fmt.Errorf(`%d %s`, resp.StatusCode, strings.TrimSpace(string(data)))
-	}
-
-	if err = json.Unmarshal(data, v); err != nil {
-		log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling api answer")
 		return err
 	}
 	return nil

@@ -27,6 +27,9 @@ const DEFAULT_TCP_PORT = 7078
 //const FounderAmount = 5250000
 const FounderAmount = 5250000
 
+// MoneyDigits is numbers of digits for tokens 1000000000000
+const MoneyDigits = 12
+
 // WAIT_CONFIRMED_NODES is used in confirmations
 const WAIT_CONFIRMED_NODES = 10
 
@@ -75,18 +78,6 @@ const BlockSize = 16
 // HashSize is size of hash
 const HashSize = 32
 
-const AvailableBCGap = 4
-
-const DefaultNodesConnectDelay = 6
-
-const MaxTXAttempt = 10
-
-// ChainSize 1M = 1048576 byte
-const ChainSize = 1 << 20
-
-const (
-	TxTypeFirstBlock     = 1
-	TxTypeApiContract    = 2
 	TxTypeSystemServer   = 3
 	TxTypeEcosystemMiner = 4
 	TxTypeSystemMiner    = 5

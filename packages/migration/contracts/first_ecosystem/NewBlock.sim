@@ -8,6 +8,10 @@ contract NewBlock {
         Conditions string
     }
 
+            warning Sprintf( "Block %s already exists", $Name)
+        }
+    }
+
     action {
         DBInsert("blocks", {name: $Name, value: $Value, conditions: $Conditions,
               app_id: $ApplicationId})
