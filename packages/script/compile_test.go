@@ -413,6 +413,18 @@ func TestVMCompile(t *testing.T) {
 				i = i + "2" 
 				i = (i - "10")/"2"*"3"
 				return Sprintf("%T %[1]v", .21 + i)
+			  }`, `result`, `float64 138.21`},
+		{`func money_test string {
+				var my2, m1 money
+				my2 = 100
+				m1 = 1.2
+				return Sprintf( "Account %v %v %v", my2/Money(3),  my2 - Money(5.6), m1*Money(5) + Money(my2))
+			}`, `money_test`, `Account 33 95 105`},
+		{`func long() int {
+				return  99999999999999999999
+				}
+				func result() string {
+					return Sprintf("ok=%d", long())
 					}`, `result`, `strconv.ParseInt: parsing "99999999999999999999": value out of range 99999999999999999999 [Ln:2 Col:34]`},
 		{`func result() string {
 			var i, result int
@@ -725,17 +737,6 @@ func TestContractList(t *testing.T) {
 		`NewContract,MyFunc`},
 		{`contract demo_сontract {
 			data {
-				contract_txt str
-			}
-			func test() {
-			}
-			conditions {
-				if $contract_txt="" {
-					warning "Sorry, you do not have contract access to this action."
-				}
-			}
-		} contract another_contract {} func main { func subfunc(){}}`,
-			`demo_сontract,another_contract,main`},
 	}
 	for _, item := range test {
 		list, _ := ContractsList(item.Input)

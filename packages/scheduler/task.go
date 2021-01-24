@@ -9,16 +9,14 @@ import (
 	"time"
 
 	"github.com/robfig/cron/v3"
+)
+
+var zeroTime time.Time
+
+// Handler represents interface of task handler
 type Handler interface {
 	Run(*Task)
 }
-
-// Task represents task
-type Task struct {
-	ID       string
-	CronSpec string
-
-	Handler Handler
 
 	schedule cron.Schedule
 }

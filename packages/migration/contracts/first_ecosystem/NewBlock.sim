@@ -1,15 +1,5 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
-contract NewBlock {
-    data {
-        ApplicationId int
-        Name string
-        Value string
-        Conditions string
-    }
-
-            warning Sprintf( "Block %s already exists", $Name)
-        }
     }
 
     action {

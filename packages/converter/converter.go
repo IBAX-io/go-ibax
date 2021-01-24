@@ -182,25 +182,6 @@ func DecodeLengthBuf(buf *bytes.Buffer) (int, error) {
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("cannot read bytes from buffer")
 		return 0, err
-	}
-
-	if (length & 0x80) == 0 {
-		return int(length), nil
-	}
-
-	length &= 0x7F
-	if buf.Len() < int(length) {
-		log.WithFields(log.Fields{"data_length": buf.Len(), "length": int(length), "type": consts.UnmarshallingError}).Error("length of data is smaller then encoded length")
-		return 0, fmt.Errorf(`input slice has small size`)
-	}
-
-	n := int(binary.BigEndian.Uint64(append(make([]byte, 8-length), buf.Next(int(length))...)))
-	if n < 0 {
-		return 0, fmt.Errorf(`input slice has negative size`)
-	}
-
-	return n, nil
-}
 
 func DecodeBytesBuf(buf *bytes.Buffer) ([]byte, error) {
 	n, err := DecodeLengthBuf(buf)
@@ -508,6 +489,9 @@ func float2Bytes(float float64) []byte {
 // Bytes2Float converts []byte to float64
 func bytes2Float(bytes []byte) float64 {
 	return math.Float64frombits(binary.LittleEndian.Uint64(bytes))
+}
+
+// UInt32ToStr converts uint32 to string
 func UInt32ToStr(num uint32) string {
 	return strconv.FormatInt(int64(num), 10)
 }

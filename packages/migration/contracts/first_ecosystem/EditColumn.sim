@@ -7,6 +7,3 @@ contract EditColumn {
         Permissions string
     }
 
-    conditions {
-        ColumnCondition($TableName, $Name, "", $Permissions)
-    }

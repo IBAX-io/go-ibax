@@ -21,18 +21,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/daemons"
-	"github.com/IBAX-io/go-ibax/packages/daylight/daemonsctl"
-	logtools "github.com/IBAX-io/go-ibax/packages/log"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/modes"
-	"github.com/IBAX-io/go-ibax/packages/network/httpserver"
-	"github.com/IBAX-io/go-ibax/packages/obsmanager"
-	"github.com/IBAX-io/go-ibax/packages/publisher"
-	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/statsd"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -270,6 +258,16 @@ func Start() {
 	}
 	if model.DBConn != nil {
 		if err := model.UpdateSchema(); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("on running update migrations")
+			os.Exit(1)
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		utils.CancelFunc = cancel
+		utils.ReturnCh = make(chan string)
+
+		// The installation process is already finished (where user has specified DB and where wallet has been restarted)
+		err := daemonsctl.RunAllDaemons(ctx)
 		log.Info("Daemons started")
 		if err != nil {
 			Exit(1)
