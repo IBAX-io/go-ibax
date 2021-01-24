@@ -30,17 +30,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"github.com/theckman/go-flock"
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-)
-
-const (
-	firstBlock   = 1
-	minBlockSize = 9
-)
-
 var ErrBlockSize = errors.New("Bad block size")
 
 //BlockData is a structure of the block's header
@@ -205,6 +194,18 @@ func CallMethod(i interface{}, methodName string) interface{} {
 		finalMethod = method
 	}
 
+	if finalMethod.IsValid() {
+		return finalMethod.Call([]reflect.Value{})[0].Interface()
+	}
+
+	// return or panic, method not found of either type
+	log.WithFields(log.Fields{"method_name": methodName, "type": consts.NotFound}).Error("method not found")
+	return fmt.Errorf("method %s not found", methodName)
+}
+
+// Caller returns the name of the latest function
+func Caller(steps int) string {
+	name := "?"
 	if pc, _, num, ok := runtime.Caller(steps + 1); ok {
 		name = fmt.Sprintf("%s :  %d", filepath.Base(runtime.FuncForPC(pc).Name()), num)
 	}

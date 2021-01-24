@@ -206,9 +206,6 @@ var (
 			lexNewLine:                      {stateRoot, 0},
 			lexKeyword | (keyContract << 8): {stateContract | statePush, 0},
 			lexKeyword | (keyFunc << 8):     {stateFunc | statePush, 0},
-			0:                               {errUnknownCmd, cfError},
-		},
-		{ // stateBody
 			lexNewLine:                      {stateBody, 0},
 			lexKeyword | (keyFunc << 8):     {stateFunc | statePush, 0},
 			lexKeyword | (keyReturn << 8):   {stateEval, cfReturn},
@@ -799,6 +796,16 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
 		}
 		if (newState.NewState & stateToBlock) > 0 {
 			nextState = stateBlock
+		}
+		if (newState.NewState & stateToBody) > 0 {
+			nextState = stateBody
+		}
+		if newState.Func > 0 {
+			if err := funcs[newState.Func](&blockstack, nextState, lexem); err != nil {
+				return nil, err
+			}
+		}
+		curState = nextState
 	}
 	if len(stack) > 0 {
 		return nil, fError(&blockstack, errMustRCurly, lexems[len(lexems)-1])

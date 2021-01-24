@@ -145,6 +145,14 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if isAccount && !isExistPub {
+		if account.Deleted == 1 {
+			errorResponse(w, errDeletedKey)
+			return
+		}
+	} else {
+		if !allowCreateUser(client) {
+			errorResponse(w, errKeyNotFound)
 			return
 		}
 		if isCan(isAccount, isExistPub) {
@@ -164,24 +172,6 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 					ID:          int(contract.Block.Info.(*script.ContractInfo).ID),
 					Time:        time.Now().Unix(),
 					EcosystemID: 1,
-					KeyID:       conf.Config.KeyID,
-					NetworkID:   conf.Config.NetworkID,
-				},
-				Params: map[string]interface{}{
-					"NewPubkey": hex.EncodeToString(publicKey),
-					"Ecosystem": client.EcosystemID,
-				},
-			}
-
-			txData, txHash, err := tx.NewInternalTransaction(sc, nodePrivateKey)
-			if err != nil {
-				log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("Building transaction")
-				errorResponse(w, err)
-				return
-			}
-			if err := m.ContractRunner.RunContract(txData, txHash, sc.KeyID, sc.Time, logger); err != nil {
-				errorResponse(w, err)
-				return
 			}
 
 			if !conf.Config.IsSupportingOBS() {

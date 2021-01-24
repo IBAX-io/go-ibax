@@ -35,14 +35,6 @@ func unmarshalColumnVDEAgentChainInfo(form *VDEAgentChainInfoForm) (*model.VDEAg
 func VDEAgentChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
-	)
-	logger := getLogger(r)
-	form := &VDEAgentChainInfoForm{}
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-	m := &model.VDEAgentChainInfo{}
 	if m, err = unmarshalColumnVDEAgentChainInfo(form); err != nil {
 		fmt.Println(err)
 		errorResponse(w, err)
@@ -76,6 +68,16 @@ func VDEAgentChainInfoUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)
+		return
+	}
+
+	m := &model.VDEAgentChainInfo{}
+
+	if m, err = unmarshalColumnVDEAgentChainInfo(form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
 	m.ID = id
 	m.UpdateTime = time.Now().Unix()
 	if err = m.Updates(); err != nil {

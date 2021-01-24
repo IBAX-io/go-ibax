@@ -4,9 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daemons
-
-import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -89,6 +86,14 @@ func VDESrcTaskStatusRun(ctx context.Context, d *daemon) error {
 		}
 
 		if vde_src_http, ok = ContractRunParms["vde_src_http"].(string); !ok {
+			fmt.Println("Error parsing ContractRunParms vde_src_http parameter!")
+			log.WithFields(log.Fields{"error": err}).Error("vde_src_http parse error")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		if vde_src_ecosystem, ok = ContractRunParms["vde_src_ecosystem"].(string); !ok {
+			fmt.Println("Error parsing ContractRunParms vde_src_ecosystem parameter!")
+			log.WithFields(log.Fields{"error": err}).Error("vde_src_ecosystem parse error")
 			time.Sleep(time.Millisecond * 2)
 			continue
 		}
