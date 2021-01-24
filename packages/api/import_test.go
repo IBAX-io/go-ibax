@@ -18,6 +18,21 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
+
+func ImportApps(path, appname string) error {
+	apps, err := os.ReadFile(path + "/" + appname + ".json")
+	if err != nil {
+		return err
+	}
+	var val = make(map[interface{}]interface{})
+	val["Body"] = apps
+	val["MimeType"] = "application/json"
+	val["Name"] = appname + ".json"
+
+	params := contractParams{
+		"Data": val,
+	}
+	_, _, err = postTxResult("ImportUpload", &params)
 	if err != nil {
 		return err
 	}
@@ -42,10 +57,6 @@ import (
 }
 func TestImportApps(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
-	path, err := os.Getwd()
-	assert.NoError(t, err)
-	assert.NoError(t, ImportApps(path, "system"))
-	assert.NoError(t, ImportApps(path, "conditions"))
 	assert.NoError(t, ImportApps(path, "basic"))
 	//assert.NoError(t, ImportApps(path, "lang_res"))
 	assert.NoError(t, ImportApps(path, "platform_apps/ecosystems_catalog"))

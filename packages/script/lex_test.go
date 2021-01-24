@@ -1,12 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package script
-
-import (
-	"fmt"
-	"testing"
 )
 
 type TestLexem struct {
@@ -49,6 +43,10 @@ func TestLexParser(t *testing.T) {
 			if err.Error() != item.Output {
 				fmt.Println(string(source))
 				t.Error(`error of lexical parser ` + err.Error())
+			}
+		} else if out.String(source) != item.Output {
+			t.Error(`error of lexical parser ` + item.Input)
+			fmt.Println(out.String(source))
 		}
 	}
 }

@@ -185,6 +185,18 @@ VALUES
         Conditions string "optional"
     }
     func onlyConditions() bool {
+        return $Conditions && !$Value
+    }
+
+    conditions {
+        RowConditions("contracts", $Id, onlyConditions())
+        if $Conditions {
+            ValidateCondition($Conditions, $ecosystem_id)
+        }
+        $cur = DBFind("contracts").Columns("id,value,conditions,wallet_id,token_id").WhereId($Id).Row()
+        if !$cur {
+            error Sprintf("Contract %d does not exist", $Id)
+        }
         if $Value {
             ValidateEditContractNewValue($Value, $cur["value"])
         }
@@ -235,7 +247,6 @@ VALUES
     }
 
     action {
-        EditLanguage($Id, $lang["name"], $Trans)
     }
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),

@@ -56,6 +56,16 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, errHashWrong)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/octet-stream")
+	w.Header().Set("Content-Disposition", "attachment")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Write([]byte(data))
+	return
+}
+
+func getBinaryHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
 	logger := getLogger(r)
 
 	bin := model.Binary{}
@@ -76,9 +86,6 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", bin.MimeType)
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, bin.Name))
-	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Write(bin.Data)
 	return
 }

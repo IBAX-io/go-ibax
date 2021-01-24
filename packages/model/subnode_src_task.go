@@ -4,12 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package model
-
-type SubNodeSrcTask struct {
-	ID         int64  `gorm:"primary_key; not null" json:"id"`
-	TaskUUID   string `gorm:"not null" json:"task_uuid"`
-	TaskName   string `gorm:"not null" json:"task_name"`
-	TaskSender string `gorm:"not null" json:"task_sender"`
 	Comment    string `gorm:"not null" json:"comment"`
 	Parms      string `gorm:"type:jsonb" json:"parms"`
 	TaskType   int64  `gorm:"not null" json:"task_type"`
@@ -76,6 +70,18 @@ func (m *SubNodeSrcTask) GetOneByTaskUUID(TaskUUID string) (*SubNodeSrcTask, err
 }
 
 func (m *SubNodeSrcTask) GetOneByTaskUUIDAndTaskState(TaskUUID string, TaskState int64) (*SubNodeSrcTask, error) {
+	err := DBConn.Where("task_uuid=? AND task_state=?", TaskUUID, TaskState).First(&m).Error
+	return m, err
+}
+func (m *SubNodeSrcTask) GetAllByTaskState(TaskState int64) ([]SubNodeSrcTask, error) {
+	result := make([]SubNodeSrcTask, 0)
+	err := DBConn.Table("subnode_src_task").Where("task_state = ?", TaskState).Find(&result).Error
+	return result, err
+}
+
+func (m *SubNodeSrcTask) GetOneByTaskState(TaskState int64) (bool, error) {
+	return isFound(DBConn.Where("task_state = ?", TaskState).First(m))
+}
 
 func (m *SubNodeSrcTask) GetOneByChainState(ChainState int64) (bool, error) {
 	return isFound(DBConn.Where("chain_state = ?", ChainState).First(&m))

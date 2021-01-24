@@ -8,23 +8,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-
-	"github.com/tjfoc/gmsm/sm3"
+const (
+	hSM3    = "SM3"
+	hSHA256 = "SHA256"
 )
 
-type Hasher interface {
-	// GetHMAC returns HMAC hash
-	getHMAC(secret string, message string) ([]byte, error)
-	// Hash returns hash of passed bytes
-	hash(msg []byte) []byte
-	// DoubleHash returns double hash of passed bytes
-	doubleHash(msg []byte) []byte
-}
+var hal Hval
+var Hal = &hal
 
-type Hval struct {
-	name string
-}
 func (h Hval) String() string {
 	return h.name
 }

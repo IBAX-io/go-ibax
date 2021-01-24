@@ -1,19 +1,22 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"context"
-	"encoding/json"
-	"strings"
-
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
 	log "github.com/sirupsen/logrus"
 
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+)
+
+func VDESrcData(ctx context.Context, d *daemon) error {
+	var (
+		TaskParms map[string]interface{}
+
+		vde_src_pubkey       string
+		vde_dest_pubkey      string
+		vde_dest_ip          string
+		vde_agent_pubkey     string
+		vde_agent_ip         string
 		agent_mode           string
 		hash_mode            string
 		log_mode             string

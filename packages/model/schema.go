@@ -11,6 +11,11 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/migration"
+	"github.com/IBAX-io/go-ibax/packages/migration/obs"
+)
+
 // ExecSchemaEcosystem is executing ecosystem schema
 func ExecSchemaEcosystem(db *DbTransaction, id int, wallet int64, name string, founder, appID int64) error {
 	if id == 1 {
@@ -97,19 +102,6 @@ func ExecOBSSchema(id int, wallet int64) error {
 			}
 			return pubKey, nil
 		}
-
-		nodePubKey, err := pubfunc(consts.NodePrivateKeyFilename)
-		PubKey, err := pubfunc(consts.PrivateKeyFilename)
-		nodeKeyID := crypto.Address(nodePubKey)
-		keyID := crypto.Address(PubKey)
-		amount := decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()
-		if err = GetDB(nil).Exec(`insert into "1_keys" (account,pub,amount) values (?,?,?,?),(?,?,?,?)`,
-			keyID, converter.AddressToString(keyID), PubKey, amount, nodeKeyID, converter.AddressToString(nodeKeyID), nodePubKey, 0).Error; err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 // ExecSchema is executing schema
 func ExecSchema() error {

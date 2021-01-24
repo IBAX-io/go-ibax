@@ -17,7 +17,12 @@ type VDEAgentDataLog struct {
 	TxHash     string `gorm:"not null" json:"tx_hash"`
 	ChainState int64  `gorm:"not null" json:"chain_state"`
 	BlockId    int64  `gorm:"not null" json:"block_id"`
-	ChainId    int64  `gorm:"not null" json:"chain_id"`
+func (m *VDEAgentDataLog) Create() error {
+	return DBConn.Create(&m).Error
+}
+
+func (m *VDEAgentDataLog) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
 }
 
 func (m *VDEAgentDataLog) Delete() error {

@@ -97,23 +97,15 @@ func parseForm(r *http.Request, f formValidator) (err error) {
 		err = r.ParseMultipartForm(multipartBuf)
 	} else {
 		err = r.ParseForm()
-	}
-	if err != nil {
-		return
-	}
-
-	decoder := schema.NewDecoder()
-	decoder.IgnoreUnknownKeys(true)
-	if err := decoder.Decode(f, r.Form); err != nil {
-		return err
-	}
-	return f.Validate(r)
+type hexValue struct {
+	value []byte
 }
 
-func isMultipartForm(r *http.Request) bool {
-	return strings.HasPrefix(r.Header.Get(contentType), multipartFormData)
+func (hv hexValue) Bytes() []byte {
+	return hv.value
 }
 
+func (hv *hexValue) UnmarshalText(v []byte) (err error) {
 	hv.value, err = hex.DecodeString(string(v))
 	return
 }
