@@ -17,16 +17,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-
-	log "github.com/sirupsen/logrus"
-)
-
-const publicKeyLength = 64
-
-var (
-	errHonorNodeInvalidValues       = errors.New("invalid values of the honor_nodes parameter")
-	errHonorNodeDuplicatePublicKey  = errors.New("duplicate publicKey values of the honor_nodes parameter")
-	errHonorNodeDuplicateAPIAddress = errors.New("duplicate api address values of the honor_nodes parameter")
 	errHonorNodeDuplicateTCPAddress = errors.New("duplicate tcp address values of the honor_nodes parameter")
 )
 
@@ -38,6 +28,17 @@ type honorNodeJSON struct {
 	Stopped    bool        `json:"stopped"`
 }
 
+// HonorNode is storing honor node data
+type HonorNode struct {
+	TCPAddress string
+	APIAddress string
+	PublicKey  []byte
+	UnbanTime  time.Time
+	Stopped    bool
+}
+
+// UnmarshalJSON is custom json unmarshaller
+func (fn *HonorNode) UnmarshalJSON(b []byte) (err error) {
 	data := honorNodeJSON{}
 	if err = json.Unmarshal(b, &data); err != nil {
 		log.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err, "value": string(b)}).Error("Unmarshalling honor nodes to json")

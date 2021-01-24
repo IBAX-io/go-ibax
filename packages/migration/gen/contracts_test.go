@@ -10,6 +10,10 @@ import (
 	"html/template"
 	"os"
 	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 		{`100%`, `100%%`},
 	}
 
