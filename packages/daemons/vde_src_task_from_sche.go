@@ -48,14 +48,6 @@ func VDESrcTaskFromScheStatus(ctx context.Context, d *daemon) error {
 				continue
 			}
 			item.TaskRunState = 3
-			item.UpdateTime = time.Now().Unix()
-			err = item.Updates()
-			if err != nil {
-				fmt.Println("Update VDESrcTask table err: ", err)
-				log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTask table!")
-				time.Sleep(time.Millisecond * 2)
-				continue
-			}
 		} //for
 
 	}
@@ -80,6 +72,19 @@ func VDESrcTaskFromScheStatus(ctx context.Context, d *daemon) error {
 			err = TaskStatus.Create()
 			if err != nil {
 				fmt.Println("Create VDESrcTaskStatus table err: ", err)
+				log.WithFields(log.Fields{"error": err}).Error("Create VDESrcTaskStatus table!")
+				time.Sleep(time.Millisecond * 2)
+				continue
+			}
+			item.TaskRunState = 3
+			item.UpdateTime = time.Now().Unix()
+			err = item.Updates()
+			if err != nil {
+				fmt.Println("Update VDESrcTask table err: ", err)
+				log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTask table!")
+				time.Sleep(time.Millisecond * 2)
+				continue
+			}
 		} //for
 		time.Sleep(time.Second * 10)
 	}

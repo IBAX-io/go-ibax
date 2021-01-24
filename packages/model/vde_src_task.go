@@ -43,16 +43,6 @@ type VDESrcTask struct {
 
 	UpdateTime int64 `gorm:"not null" json:"update_time"`
 	CreateTime int64 `gorm:"not null" json:"create_time"`
-}
-
-func (VDESrcTask) TableName() string {
-	return "vde_src_task"
-}
-
-func (m *VDESrcTask) Create() error {
-	return DBConn.Create(&m).Error
-}
-
 func (m *VDESrcTask) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
 }
@@ -217,6 +207,13 @@ func (m *VDESrcTaskFromSche) GetOneByID() (*VDESrcTaskFromSche, error) {
 }
 
 func (m *VDESrcTaskFromSche) GetAllByTaskUUID(TaskUUID string) ([]VDESrcTaskFromSche, error) {
+	result := make([]VDESrcTaskFromSche, 0)
+	err := DBConn.Table("vde_src_task_from_sche").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	return result, err
+}
+
+func (m *VDESrcTaskFromSche) GetAllByTaskUUIDAndTaskState(TaskUUID string, TaskState int64) ([]VDESrcTaskFromSche, error) {
+	result := make([]VDESrcTaskFromSche, 0)
 	err := DBConn.Table("vde_src_task_from_sche").Where("task_uuid = ? AND task_state=?", TaskUUID, TaskState).Find(&result).Error
 	return result, err
 }

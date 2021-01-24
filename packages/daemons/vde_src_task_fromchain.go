@@ -147,6 +147,11 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 	//where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": "1"}`
 	//where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": {"$in": [1,3]}}`
 	where_str := `{"create_time": {"$gt": ` + create_time + `},` + ` "task_receiver": ` + NodePublicKey + `, "contract_mode": {"$in": [2,4]}}`
+	//fmt.Println("where_str:",where_str)
+	form := url.Values{
+		`where`: {where_str},
+	}
+	//var lret interface{}
 	t_struct := src_VDEShareTaskResult{}
 	url := `listWhere` + `/vde_share_task`
 	//err = api.SendPost(url, &form, &t_struct)
@@ -225,14 +230,6 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 		if ContractDestGetHashHex, err = crypto.HashHex([]byte(ShareTaskItem.ContractDestGet)); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
 			fmt.Println("ContractDestGetHashHex Raw data hash failed ")
-			continue
-		}
-		if ContractDestGetHashHex != ShareTaskItem.ContractDestGetHash {
-			log.WithFields(log.Fields{"error": err}).Error("Contract Dest Hash validity fails")
-			fmt.Println("Contract Dest Hash validity fails")
-			continue
-		}
-
 		m := &model.VDESrcTaskFromSche{}
 		m.TaskUUID = ShareTaskItem.TaskUUID
 		m.TaskName = ShareTaskItem.TaskName

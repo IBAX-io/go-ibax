@@ -37,3 +37,7 @@ func HexToPub(pub string) ([]byte, error) {
 	}
 	return CutPub(key), nil
 }
+
+// PubToHex decodes []byte of pub key to hex string
+func PubToHex(pub []byte) string {
+	if len(pub) == 64 {

@@ -290,18 +290,6 @@ func TestCutoff(t *testing.T) {
 	}
 	assert.NoError(t, postTx(name, &url.Values{
 		"ShortText": {shortText},
-		"LongText":  {longText},
-	}))
-
-	template = `DBFind("` + name + `", mysrc).Columns("id,name,short_text,long_text").Cutoff("short_text,long_text").WhereId(2).Vars(prefix)`
-	assert.NoError(t, sendPost(`content`, &url.Values{`template`: {template}}, &ret))
-
-	linkLongText := fmt.Sprintf("/data/1_%s/2/long_text/%x", name, md5.Sum([]byte(longText)))
-
-	want := `[{"tag":"dbfind","attr":{"columns":["id","name","short_text","long_text"],"cutoff":"short_text,long_text","data":[["2","test","{"link":"","title":"` + shortText + `"}","{"link":"` + linkLongText + `","title":"` + longText[:32] + `"}"]],"name":"` + name + `","source":"mysrc","types":["text","text","long_text","long_text"],"whereid":"2"}}]`
-	if RawToString(ret.Tree) != want {
-		t.Errorf("Wrong image tree %s != %s", RawToString(ret.Tree), want)
-	}
 
 	resp, err := http.Get(apiAddress + consts.ApiPath + linkLongText)
 	if err != nil {
@@ -405,6 +393,17 @@ func TestStringToBinary(t *testing.T) {
 					$result = $account_id
 				}
 			}
+		`}, "ApplicationId": {`1`}, "Conditions": {"true"},
+	}
+	assert.NoError(t, postTx("NewContract", &form))
+
+	form = url.Values{"Content": {content}}
+	_, account, err := postTxResult(contract, &form)
+	assert.NoError(t, err)
+
+	form = url.Values{
+		"template": {`SetVar(link, Binary(Name: ` + filename + `, AppID: 1, Account: "` + account + `"))#link#`},
+	}
 
 	var ret struct {
 		Tree []struct {

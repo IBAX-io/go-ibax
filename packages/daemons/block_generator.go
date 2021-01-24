@@ -72,6 +72,9 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		d.logger.WithFields(log.Fields{"type": consts.JustWaiting}).Debug("not my generation time")
 		return nil
 	}
+
+	//if !NtpDriftFlag {
+	//	d.logger.WithFields(log.Fields{"type": consts.Ntpdate}).Error("ntp time not ntpdate")
 	//	return nil
 	//}
 
@@ -111,16 +114,6 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		privateKey: NodePrivateKey,
 		publicKey:  NodePublicKey,
 		logger:     d.logger,
-		time:       st.Unix(),
-	}
-
-	txs, err := dtx.RunForDelayBlockID(prevBlock.BlockID + 1)
-	if err != nil {
-		return err
-	}
-
-	trs, err := processTransactions(d.logger, txs, done, st.Unix())
-	if err != nil {
 		return err
 	}
 

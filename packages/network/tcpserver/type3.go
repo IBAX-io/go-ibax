@@ -2,11 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package tcpserver
-
-import (
-	"errors"
-	"net"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -45,6 +40,15 @@ func processStopNetwork(b []byte) ([]byte, error) {
 		log.WithFields(log.Fields{"error": err, "type": consts.ParseError}).Error("parsing cert")
 		return nil, err
 	}
+
+	if cert.EqualBytes(consts.UsedStopNetworkCerts...) {
+		log.WithFields(log.Fields{"error": errStopCertAlreadyUsed, "type": consts.InvalidObject}).Error("checking cert")
+		return nil, errStopCertAlreadyUsed
+	}
+
+	fbdata, err := syspar.GetFirstBlockData()
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.ConfigError}).Error("getting data of first block")
 		return nil, err
 	}
 

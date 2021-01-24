@@ -17,6 +17,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func getAvatarHandler(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	account := params["account"]
+	ecosystemID := converter.StrToInt64(params["ecosystem"])
+
 	member := &model.Member{}
 	member.SetTablePrefix(converter.Int64ToStr(ecosystemID))
 
@@ -90,6 +97,3 @@ func getMemberHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-
-	jsonResponse(w, member)
-}

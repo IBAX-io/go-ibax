@@ -64,20 +64,6 @@ func VDESrcTaskAuthCreateHandlre(w http.ResponseWriter, r *http.Request) {
 
 func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
-		err error
-	)
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	id := converter.StrToInt64(params["id"])
-	form := &VDESrcTaskAuthForm{}
-
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err)
-		return
-	}
-
-	m := &model.VDESrcTaskAuth{}
 
 	if m, err = unmarshalColumnVDESrcTaskAuth(form); err != nil {
 		errorResponse(w, err)
@@ -110,6 +96,13 @@ func VDESrcTaskAuthDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	if err := m.Delete(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
 	}
+
+	jsonResponse(w, "ok")
+}
+
+func VDESrcTaskAuthListHandlre(w http.ResponseWriter, r *http.Request) {
+	logger := getLogger(r)
+	srcData := model.VDESrcTaskAuth{}
 
 	result, err := srcData.GetAll()
 	if err != nil {
