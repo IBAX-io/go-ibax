@@ -13,6 +13,19 @@ type MineOwner struct {
 	Devid       int64 `gorm:"primary_key;not null"`
 	Keyid       int64 `gorm:"not null"`
 	Minerid     int64 `gorm:"not null"`
+	Type        int64 `gorm:"not null"`
+	Transfers   int64 `gorm:"not null"`
+	Deleted     int64 `gorm:"not null"`
+	DateDeleted int64 `gorm:"not null"`
+	DateUpdated int64 `gorm:"not null"`
+	DateCreated int64 `gorm:"not null"`
+}
+
+// TableName returns name of table
+func (m MineOwner) TableName() string {
+	return `1_mine_owner`
+}
+
 // Get is retrieving model from database
 func (m *MineOwner) Get(devid int64) (bool, error) {
 	return isFound(DBConn.Where("devid = ? and type = ? and deleted = ? ", devid, 2, 0).First(m))
@@ -45,15 +58,6 @@ func (m *MineOwner) GetPoolManage(keyid int64) (bool, error) {
 	var mo MineOwner
 	fo, erro := mo.GetPool(keyid)
 	if erro != nil {
-		return false, erro
-	}
-
-	if !fo {
-
-		var mh MintPoolTransferHistory
-		fh, erro := mh.GetPool(keyid)
-		if erro != nil {
-			return false, erro
 		}
 
 		if fh {

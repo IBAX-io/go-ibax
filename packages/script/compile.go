@@ -799,16 +799,6 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
 		}
 		if (newState.NewState & stateToBlock) > 0 {
 			nextState = stateBlock
-		}
-		if (newState.NewState & stateToBody) > 0 {
-			nextState = stateBody
-		}
-		if newState.Func > 0 {
-			if err := funcs[newState.Func](&blockstack, nextState, lexem); err != nil {
-				return nil, err
-			}
-		}
-		curState = nextState
 	}
 	if len(stack) > 0 {
 		return nil, fError(&blockstack, errMustRCurly, lexems[len(lexems)-1])
@@ -1063,6 +1053,13 @@ main:
 		return nil, errUnclosedArray
 	}
 	*ind = i
+	return ret, nil
+}
+
+func setWritable(block *[]*Block) {
+	for i := len(*block) - 1; i >= 0; i-- {
+		blockItem := (*block)[i]
+		if blockItem.Type == ObjFunc {
 			blockItem.Info.(*FuncInfo).CanWrite = true
 		}
 		if blockItem.Type == ObjContract {

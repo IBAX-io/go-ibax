@@ -113,10 +113,6 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		}
 		if !sc.OBS {
 			updateQuery := `UPDATE "` + sqlBuilder.Table + `" SET ` + updateExpr + " " + whereExpr
-			updateCost, err := queryCoster.QueryCost(sc.DbTransaction, updateQuery)
-			if err != nil {
-				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": updateQuery}).Error("getting query total cost for update query")
-				return 0, "", err
 			}
 			cost += updateCost
 		}
@@ -155,6 +151,15 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		if len(rollbackInfoStr) <= 0 {
 			idNames := strings.SplitN(sqlBuilder.Table, `_`, 2)
 			if len(idNames) == 2 {
+				if sqlBuilder.KeyTableChkr.IsKeyTable(idNames[1]) {
+					tid = sqlBuilder.TableID() + "," + sqlBuilder.GetEcosystem()
+				}
+			}
+		}
+		if err := addRollback(sc, sqlBuilder.Table, tid, rollbackInfoStr); err != nil {
+			return 0, sqlBuilder.TableID(), err
+		}
+	}
 	return cost, sqlBuilder.TableID(), nil
 }
 
