@@ -14,8 +14,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/script"
 
 	log "github.com/sirupsen/logrus"
-)
-
 const (
 	SysName = `@system`
 )
@@ -177,6 +175,22 @@ func SysRollbackEditContract(transaction *model.DbTransaction, sysData SysRollDa
 			return err
 		}
 	} else if len(fields["wallet_id"]) > 0 {
+		return SysSetContractWallet(sysData.ID, converter.StrToInt64(EcosystemID),
+			converter.StrToInt64(fields["wallet_id"]))
+	}
+	return nil
+}
+
+// SysRollbackEcosystem is rolling back ecosystem
+func SysRollbackEcosystem(DbTransaction *model.DbTransaction, sysData SysRollData) error {
+	tables := make([]string, 0)
+	for table := range converter.FirstEcosystemTables {
+		tables = append(tables, table)
+		err := model.Delete(DbTransaction, `1_`+table, fmt.Sprintf(`where ecosystem='%d'`, sysData.ID))
+		if err != nil {
+			return err
+		}
+	}
 	if sysData.ID == 1 {
 		tables = append(tables, `node_ban_logs`, `bad_blocks`, `system_parameters`, `ecosystems`)
 		for _, name := range tables {

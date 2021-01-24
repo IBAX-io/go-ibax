@@ -58,6 +58,15 @@ func (m *MineOwner) GetPoolManage(keyid int64) (bool, error) {
 	var mo MineOwner
 	fo, erro := mo.GetPool(keyid)
 	if erro != nil {
+		return false, erro
+	}
+
+	if !fo {
+
+		var mh MintPoolTransferHistory
+		fh, erro := mh.GetPool(keyid)
+		if erro != nil {
+			return false, erro
 		}
 
 		if fh {
@@ -85,15 +94,6 @@ func (m *MineOwner) GetPoolManage(keyid int64) (bool, error) {
 func (m *MineOwner) GetAllPoolManage(dbt *DbTransaction, ts int64) (map[int64]int64, error) {
 	var mp []MineOwner
 	ret := make(map[int64]int64)
-	//DBConn.Table(m.TableName()).Where("etime <=?", time).Delete(MineInvitepowadd{})
-	err := GetDB(dbt).Table(m.TableName()).
-		Where("date_created <= ? and deleted =? and type = ?", ts, 0, 2).
-		Order("devid asc").
-		Find(&mp).Error
-	if err != nil {
-		return ret, err
-	}
-
 	for _, v := range mp {
 		ret[v.Devid] = v.Minerid
 	}
