@@ -48,24 +48,6 @@ var (
 	// ErrSigningEmpty is Signing empty value error
 	ErrSigningEmpty = errors.New("Signing empty value")
 	// ErrCheckingSignEmpty is Checking sign of empty error
-	ErrCheckingSignEmpty = errors.New("Cheking sign of empty")
-	// ErrIncorrectSign is Incorrect sign
-	ErrIncorrectSign = errors.New("Incorrect sign")
-	// ErrUnsupportedCurveSize is Unsupported curve size error
-	ErrUnsupportedCurveSize = errors.New("Unsupported curve size")
-	// ErrIncorrectPrivKeyLength is Incorrect private key length error
-	ErrIncorrectPrivKeyLength = errors.New("Incorrect private key length")
-	// ErrIncorrectPubKeyLength is Incorrect public key length
-	ErrIncorrectPubKeyLength = errors.New("Incorrect public key length")
-)
-
-var (
-	cryptoProv   = _AESCBC
-	hashProv     = _SHA256
-	ellipticSize = elliptic256
-	signProv     = _ECDSA
-	checksumProv = _CRC64
-	hmacProv     = _SHA256
 )
 
 // Encrypt is encrypting
@@ -82,6 +64,7 @@ func Encrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
 }
 
 // Decrypt is decrypting
+func Decrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
 	if len(msg) == 0 {
 		return nil, ErrDecryptingEmpty
 	}

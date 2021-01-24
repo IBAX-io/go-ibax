@@ -17,19 +17,13 @@ type MineStake struct {
 	MineType     int64           `gorm:"not null"`
 	MineNumber   string          `gorm:"not null"`
 	MineCapacity int64           `gorm:"not null"`
-
-// TableName returns name of table
-func (MineStake) TableName() string {
-	return `1_mine_stake`
-}
-
-// Get is retrieving model from database
-func (m *MineStake) GetActiveMiner(time, availableStatus int64) (mp []MineStake, err error) {
-	err = DBConn.Table(m.TableName()).
-		Where("stime <= ? and etime >=? and status = ?", time, time, availableStatus).
-		Order("devid asc").
-		Scan(&mp).Error
-	return mp, err
+	Cycle        int64           `gorm:"not null" `           //
+	Amount       decimal.Decimal `gorm:"not null default 0" ` //
+	Expired      int64           `gorm:"null" `
+	Status       int64           `gorm:"null"`            //
+	Review       int64           `gorm:"null default 0" ` //
+	Count        int64           `gorm:"null default 0" ` //
+	Stakes       int64           `gorm:"null default 0" ` //
 }
 
 // Get is retrieving model from database

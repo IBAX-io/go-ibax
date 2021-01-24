@@ -72,6 +72,14 @@ func (m *AssignGetInfo) GetBalance(db *DbTransaction, wallet int64) (bool, decim
 	if !found1 || len(sp.Value) == 0 {
 		return false, balance, total_balance, errors.New("assign_rule not found or not exist assign_rule")
 	}
+
+	rules := make(map[int64]AssignRules, 10)
+	err = json.Unmarshal([]byte(sp.Value), &rules)
+	if err != nil {
+		return false, balance, total_balance, err
+	}
+
+	maxblockid := block.ID
 	for _, t := range mps {
 		am := decimal.NewFromFloat(0)
 		tm := t.BalanceAmount
@@ -119,5 +127,3 @@ func (m *AssignGetInfo) GetBalance(db *DbTransaction, wallet int64) (bool, decim
 			total_balance = total_balance.Add(tm)
 		}
 	}
-	return true, balance, total_balance, err
-}

@@ -33,11 +33,19 @@ static inline void waitSig() {
     signal(SIGINT, &SigBreak_Handler);
     #endif
 }
-	C.waitSig()
+*/
+import (
+	"C"
+)
+
+//export go_callback_int
+func go_callback_int() {
+	SigChan <- syscall.Signal(1)
 }
 
-// WaitForSignals waits for Interrupt os.Kill signals
-func WaitForSignals() {
+// SigChan is a channel
+var SigChan chan os.Signal
+
 	SigChan = make(chan os.Signal, 1)
 	waitSig()
 	go func() {

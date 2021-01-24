@@ -76,22 +76,6 @@ func VDEScheTaskChainStatus(ctx context.Context, d *daemon) error {
 		//According to the contract mode flag, decide whether to perform contract encryption
 		//if item.ContractMode == 2 || item.ContractMode == 3 {
 		if item.ContractMode == 3 || item.ContractMode == 4 {
-			contractData, err := ecies.EccCryptoKey([]byte(ContractSrcGetPlusHash), vde_src_pubkey)
-			if err != nil {
-				fmt.Println("error", err)
-				log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
-				continue
-			}
-			contractDataBase64 := base64.StdEncoding.EncodeToString(contractData)
-			myContractSrcGet = contractDataBase64
-
-			if myContractSrcGetHash, err = crypto.HashHex([]byte(myContractSrcGet)); err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
-				fmt.Println("HashHex Raw data hash failed ")
-				continue
-			}
-
-		} else {
 			myContractSrcGet = item.ContractSrcGet
 			myContractSrcGetHash = item.ContractSrcGetHash
 		}
@@ -155,6 +139,15 @@ func VDEScheTaskChainStatus(ctx context.Context, d *daemon) error {
 		for index, vde_dest_pubkey_item := range vde_dest_pubkey_slice {
 			//According to the contract mode flag, decide whether to perform contract encryption
 			//if item.ContractMode == 2 || item.ContractMode == 3 {
+			if item.ContractMode == 3 || item.ContractMode == 4 {
+				contractData, err := ecies.EccCryptoKey([]byte(ContractSrcGetPlusHash), vde_dest_pubkey_item)
+				if err != nil {
+					fmt.Println("error", err)
+					log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
+					continue
+				}
+				contractDataBase64 := base64.StdEncoding.EncodeToString(contractData)
+				myContractSrcGet = contractDataBase64
 
 				if myContractSrcGetHash, err = crypto.HashHex([]byte(myContractSrcGet)); err != nil {
 					log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")

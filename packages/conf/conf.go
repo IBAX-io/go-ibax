@@ -102,11 +102,6 @@ type GFilesConfig struct {
 	Host   string
 }
 
-type PoolPubConfig struct {
-	Enable      bool //Pool is on/off.
-	MinersCount bool
-	TotalCount  bool
-	MininerMap  bool
 	RollBack    bool
 	Path        string
 }
@@ -246,6 +241,13 @@ func FillRuntimePaths() error {
 	if Config.DataDir == "" {
 		//cwd, err := os.Getwd()
 		//if err != nil {
+		//	return errors.Wrapf(err, "getting current wd")
+		//}
+
+		//Config.DataDir = filepath.Join(cwd, consts.DefaultWorkdirName)
+		Config.DataDir = filepath.Join(consts.DefaultWorkdirName)
+	}
+
 	if Config.KeysDir == "" {
 		Config.KeysDir = Config.DataDir
 	}

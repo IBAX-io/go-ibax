@@ -1,6 +1,18 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package model
+
+type VDEDestDataLog struct {
+	ID                  int64  `gorm:"primary_key; not null" json:"id"`
+	DataUUID            string `gorm:"not null" json:"data_uuid"`
+	TaskUUID            string `gorm:"not null" json:"task_uuid"`
+	Log                 string `gorm:"not null" json:"log"`
+	LogType             int64  `gorm:"not null" json:"log_type"`
+	LogSender           string `gorm:"not null" json:"log_sender"`
+	BlockchainHttp      string `gorm:"not null" json:"blockchain_http"`
+	BlockchainEcosystem string `gorm:"not null" json:"blockchain_ecosystem"`
 
 	TxHash     string `gorm:"not null" json:"tx_hash"`
 	ChainState int64  `gorm:"not null" json:"chain_state"`
@@ -40,15 +52,6 @@ func (m *VDEDestDataLog) GetOneByID() (*VDEDestDataLog, error) {
 
 func (m *VDEDestDataLog) GetAllByTaskUUID(TaskUUID string) ([]VDEDestDataLog, error) {
 	result := make([]VDEDestDataLog, 0)
-	err := DBConn.Table("vde_dest_data_log").Where("task_uuid = ?", TaskUUID).Find(&result).Error
-	return result, err
-}
-
-func (m *VDEDestDataLog) GetOneByTaskUUID(TaskUUID string) (*VDEDestDataLog, error) {
-	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
-	return m, err
-}
-
 func (m *VDEDestDataLog) GetAllByChainState(ChainState int64) ([]VDEDestDataLog, error) {
 	result := make([]VDEDestDataLog, 0)
 	err := DBConn.Table("vde_dest_data_log").Where("chain_state = ?", ChainState).Find(&result).Error

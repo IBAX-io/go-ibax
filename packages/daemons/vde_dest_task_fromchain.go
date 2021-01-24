@@ -83,6 +83,13 @@ func VDEDestTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 		return err
 	}
 	if DestTaskTime == nil {
+		//log.Info("DestTaskTime not found")
+		fmt.Println("Dest DestTaskTime not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
+
+	chaininfo := &model.VDEDestChainInfo{}
 	DestChainInfo, err := chaininfo.Get()
 	if err != nil {
 		//log.WithFields(log.Fields{"error": err}).Error("VDE Dest fromchain getting chain info")
@@ -268,10 +275,6 @@ func VDEDestTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 		if err != nil {
 			update_flag = 0
 		}
-		//
-		if update_flag == 1 {
-			m.ID = myTask.ID
-			if err = m.Updates(); err != nil {
 				log.WithFields(log.Fields{"error": err}).Error("Failed to update table")
 			}
 		} else {

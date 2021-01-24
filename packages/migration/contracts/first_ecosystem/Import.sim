@@ -19,14 +19,13 @@ contract Import {
     }
     action {
         var editors, creators map
-        dataImport = JSONDecode($Data)
-        var i int
-        while i < Len(dataImport) {
-            var item cdata map type name string
-            cdata = dataImport[i]
-            if cdata {
-                cdata["ApplicationId"] = $ApplicationId
-                type = cdata["Type"]
+        editors["pages"] = "EditPage"
+        editors["blocks"] = "EditBlock"
+        editors["menu"] = "EditMenu"
+        editors["app_params"] = "EditAppParam"
+        editors["languages"] = "EditLang"
+        editors["contracts"] = "EditContract"
+        editors["tables"] = "" // nothing
                 name = cdata["Name"]
                 // Println(Sprintf("import %v: %v", type, cdata["Name"]))
                 var tbl string

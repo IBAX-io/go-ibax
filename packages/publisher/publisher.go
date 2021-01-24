@@ -52,6 +52,11 @@ type CentJWT struct {
 func InitCentrifugo(cfg conf.CentrifugoConfig) {
 	config = cfg
 	publisher = gocent.New(gocent.Config{
+		Addr: cfg.URL,
+		Key:  cfg.Key,
+	})
+}
+
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, centJWT)
 	result, err := token.SignedString([]byte(config.Secret))
 	if err != nil {

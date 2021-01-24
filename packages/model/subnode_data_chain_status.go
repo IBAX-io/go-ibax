@@ -5,6 +5,11 @@
 
 package model
 
+type SubNodeSrcDataChainStatus struct {
+	ID       int64  `gorm:"primary_key; not null" json:"id"`
+	DataUUID string `gorm:"not null" json:"data_uuid"`
+	TaskUUID string `gorm:"not null" json:"task_uuid"`
+	Hash     string `gorm:"not null" json:"hash"`
 	Data     []byte `gorm:"column:data;not null" json:"data"`
 	DataInfo string `gorm:"type:jsonb" json:"data_info"`
 	TranMode int64  `gorm:"not null" json:"tran_mode"`
@@ -37,18 +42,6 @@ func (m *SubNodeSrcDataChainStatus) Updates() error {
 }
 
 func (m *SubNodeSrcDataChainStatus) Delete() error {
-	return DBConn.Delete(m).Error
-}
-
-func (m *SubNodeSrcDataChainStatus) GetAll() ([]SubNodeSrcDataChainStatus, error) {
-	var result []SubNodeSrcDataChainStatus
-	err := DBConn.Find(&result).Error
-	return result, err
-}
-func (m *SubNodeSrcDataChainStatus) GetOneByID() (*SubNodeSrcDataChainStatus, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
 
 func (m *SubNodeSrcDataChainStatus) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcDataChainStatus, error) {
 	result := make([]SubNodeSrcDataChainStatus, 0)
