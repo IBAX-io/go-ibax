@@ -116,17 +116,6 @@ func DecryptData(binaryTx *[]byte) ([]byte, []byte, []byte, error) {
 
 	myUserID := converter.BinToDecBytesShift(&*binaryTx, 5)
 	log.WithFields(log.Fields{"user_id": myUserID}).Debug("decrypted userID is")
-
-	// remove the encrypted key, and all that stay in $binary_tx will be encrypted keys of the transactions/blocks
-	length, err := converter.DecodeLength(&*binaryTx)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.ProtocolError, "error": err}).Error("Decoding binary tx length")
-		return nil, nil, nil, err
-	}
-	encryptedKey := converter.BytesShift(&*binaryTx, length)
-	iv := converter.BytesShift(&*binaryTx, 16)
-	log.WithFields(log.Fields{"encryptedKey": encryptedKey, "iv": iv}).Debug("binary tx encryptedKey and iv is")
-
 	if len(encryptedKey) == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("binary tx encrypted key is empty")
 		return nil, nil, nil, utils.ErrInfo("len(encryptedKey) == 0")
@@ -176,4 +165,9 @@ func DecryptData(binaryTx *[]byte) ([]byte, []byte, []byte, error) {
 
 	return decKey, iv, decrypted, nil
 }
+
+func UnmarshalTxPacket(dat []byte) ([][]byte, error) {
+	var txes [][]byte
+	err := json.Unmarshal(dat, &txes)
+	return txes, err
 }

@@ -89,6 +89,15 @@ func VDEDestTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 		return nil
 	}
 
+	chaininfo := &model.VDEDestChainInfo{}
+	DestChainInfo, err := chaininfo.Get()
+	if err != nil {
+		//log.WithFields(log.Fields{"error": err}).Error("VDE Dest fromchain getting chain info")
+		log.Info("Dest chain info not found")
+		time.Sleep(time.Millisecond * 100)
+		return err
+	}
+	if DestChainInfo == nil {
 		log.Info("Dest chain info not found")
 		//fmt.Println("Dest chain info not found")
 		time.Sleep(time.Millisecond * 100)
@@ -463,19 +472,6 @@ func VDEDestTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 		if ContractSrcGetHashHex, err = crypto.HashHex([]byte(ShareTaskItem.ContractSrcGet)); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
 			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
-			continue
-		}
-		if ContractSrcGetHashHex != ShareTaskItem.ContractSrcGetHash {
-			log.WithFields(log.Fields{"error": err}).Error("Contract Src Hash validity fails")
-			fmt.Println("Contract Src Hash validity fails")
-			continue
-		}
-		if ContractDestGetHashHex, err = crypto.HashHex([]byte(ShareTaskItem.ContractDestGet)); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
-			fmt.Println("ContractDestGetHashHex Raw data hash failed ")
-			continue
-		}
-		if ContractDestGetHashHex != ShareTaskItem.ContractDestGetHash {
 			log.WithFields(log.Fields{"error": err}).Error("Contract Dest Hash validity fails")
 			fmt.Println("Contract Dest Hash validity fails")
 			continue

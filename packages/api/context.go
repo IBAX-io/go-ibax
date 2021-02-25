@@ -15,16 +15,6 @@ import (
 
 type contextKey int
 
-const (
-	contextKeyLogger contextKey = iota
-	contextKeyToken
-	contextKeyClient
-)
-
-func setContext(r *http.Request, key, value interface{}) *http.Request {
-	return r.WithContext(context.WithValue(r.Context(), key, value))
-}
-
 func getContext(r *http.Request, key interface{}) interface{} {
 	return r.Context().Value(key)
 }
@@ -57,3 +47,7 @@ func setClient(r *http.Request, client *Client) *http.Request {
 
 func getClient(r *http.Request) *Client {
 	if v := getContext(r, contextKeyClient); v != nil {
+		return v.(*Client)
+	}
+	return nil
+}

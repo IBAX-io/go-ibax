@@ -3,6 +3,13 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package utils
+
+import (
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 )
 
 type BlockTimeCounter struct {
@@ -36,21 +43,6 @@ func (btc *BlockTimeCounter) BlockForTimeExists(t time.Time, nodePosition int) (
 	}
 
 	if len(blocks) != 0 {
-		return false, DuplicateBlockError
-	}
-
-	return true, nil
-}
-
-// NextTime returns next generation time for node position at time
-func (btc *BlockTimeCounter) NextTime(t time.Time, nodePosition int) time.Time {
-	block := btc.Block(t)
-	curNodePosition := block % btc.numberNodes
-
-	d := nodePosition - curNodePosition
-	if curNodePosition >= nodePosition {
-		d += btc.numberNodes
-	}
 
 	return btc.start.Add(btc.duration*time.Duration(block+d) + time.Second)
 }

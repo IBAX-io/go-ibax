@@ -1,5 +1,7 @@
-	BannedAt time.Time
-	BanTime  time.Duration
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 	Reason   string
 }
 

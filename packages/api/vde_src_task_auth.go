@@ -64,17 +64,21 @@ func VDESrcTaskAuthCreateHandlre(w http.ResponseWriter, r *http.Request) {
 
 func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
+		err error
+	)
+	params := mux.Vars(r)
+	logger := getLogger(r)
 
-	if m, err = unmarshalColumnVDESrcTaskAuth(form); err != nil {
+	id := converter.StrToInt64(params["id"])
+	form := &VDESrcTaskAuthForm{}
+
+	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err)
 		return
 	}
 
-	m.ID = id
-	m.UpdateTime = time.Now().Unix()
-	if err = m.Updates(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
-		return
+	m := &model.VDESrcTaskAuth{}
+
 	}
 
 	result, err := m.GetOneByID()
