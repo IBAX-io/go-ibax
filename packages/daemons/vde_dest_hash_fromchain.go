@@ -150,6 +150,7 @@ func VDEDestDataHashGetFromChain(ctx context.Context, d *daemon) error {
 		UpdateTime = DataHashItem.CreateTime
 	}
 
-	DestHashTime.UpdateTime = converter.StrToInt64(UpdateTime)
-	err = DestHashTime.Updates()
-	if err != nil {
+	}
+	//fmt.Println("Update UpdateTime table OK")
+	return nil
+}

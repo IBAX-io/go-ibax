@@ -9,16 +9,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"strconv"
-	"time"
-
-	"path/filepath"
-
-	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -57,6 +47,19 @@ func VDESrcLogUpToChain(ctx context.Context, d *daemon) error {
 	//	return nil
 	//}
 
+	// deal with task data
+	for _, item := range SrcTaskDataLog {
+		//fmt.Println("TaskUUID:", item.TaskUUID)
+		blockchain_http = item.BlockchainHttp
+		blockchain_ecosystem = item.BlockchainEcosystem
+		//fmt.Println("blockchain_http:", blockchain_http, blockchain_ecosystem)
+
+		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("encode error")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
 		chain_apiAddress := blockchain_http
 		chain_apiEcosystemID := int64(ecosystemID)
 
