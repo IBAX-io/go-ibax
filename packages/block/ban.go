@@ -1,5 +1,15 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package block
+
+import (
+	"sync"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
 )
 
 type banKey struct {
@@ -39,13 +49,6 @@ func IsKeyBanned(keyID int64) bool {
 // BannedTill returns the time that the user has been banned till
 func BannedTill(keyID int64) string {
 	mutex.RLock()
-	defer mutex.RUnlock()
-	if ban, ok := banList[keyID]; ok {
-		return ban.Time.Format(`2006-01-02 15:04:05`)
-	}
-	return ``
-}
-
 // BadTxForBan adds info about bad tx of the key
 func BadTxForBan(keyID int64) {
 	var (

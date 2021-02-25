@@ -121,9 +121,11 @@ func (r *OneRow) Float64() (map[string]float64, error) {
 	}
 	return result, nil
 }
+	}
+	return result, nil
+}
 
-// Int is extracts result from OneRow as int
-func (r *OneRow) Int() (map[string]int, error) {
+// GetAllTransaction is retrieve all query result rows
 func GetAllTransaction(transaction *DbTransaction, query string, countRows int, args ...interface{}) ([]map[string]string, error) {
 	request := GetDB(transaction).Raw(query, args...)
 	if countRows > 0 {

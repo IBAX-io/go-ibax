@@ -48,16 +48,6 @@ func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []model.Tr
 	if len(hosts) == 0 || len(txes) == 0 {
 		return nil
 	}
-
-	packet, err := MarshalTxPacket(txes)
-	if err != nil {
-		return err
-	}
-
-	var wg sync.WaitGroup
-	var errCount int32
-	for _, h := range hosts {
-		if err := ctx.Err(); err != nil {
 			log.Debug("exit by context error")
 			return err
 		}
@@ -114,6 +104,17 @@ func SendFullBlockToAll(ctx context.Context, hosts []string, block *model.InfoBl
 			defer con.Close()
 
 			response, err := sendFullBlockRequest(con, req)
+			if err != nil {
+				increaseErrCount()
+				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": h}).Error("on sending full block request")
+				return
+			}
+
+			if len(response) == 0 || len(response) < consts.HashSize {
+				return
+			}
+
+			var buf bytes.Buffer
 			requestedHashes := parseTxHashesFromResponse(response)
 			for _, txhash := range requestedHashes {
 				if data, ok := txDataMap[string(txhash)]; ok && len(data) > 0 {

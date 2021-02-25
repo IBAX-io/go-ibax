@@ -349,23 +349,6 @@ func TestHTTPPostJSON(t *testing.T) {
 		t.Error(err)
 		return
 	}
-}
-
-func TestNodeHTTPRequest(t *testing.T) {
-	var err error
-	assert.NoError(t, keyLogin(1))
-
-	rnd := `rnd` + crypto.RandSeq(4)
-	form := url.Values{`Value`: {`contract for` + rnd + ` {
-		data {
-			Par string
-		}
-		action { $result = "Test NodeContract " + $Par + " ` + rnd + `"}
-    }`}, `Conditions`: {`ContractConditions("MainCondition")`}}
-	assert.NoError(t, postTx(`NewContract`, &form))
-
-	var ret getContractResult
-	assert.NoError(t, sendGet(`contract/for`+rnd, nil, &ret))
 
 	assert.NoError(t, postTx(`ActivateContract`, &url.Values{`Id`: {ret.TableID}}))
 
@@ -435,6 +418,11 @@ func TestNodeHTTPRequest(t *testing.T) {
 			err = nil
 		}
 		assert.Equal(t, `Test NodeContract NodeContract testing `+rnd, msg)
+	}
+}
+
+func TestCreateCron(t *testing.T) {
+	require.NoError(t, keyLogin(1))
 
 	require.EqualError(t, postTx("NewCron", &url.Values{
 		"Cron":       {"60 * * * *"},

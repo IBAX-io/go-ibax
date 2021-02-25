@@ -28,15 +28,6 @@ import (
 func Type2(rw io.ReadWriter) error {
 	r := &network.DisRequest{}
 	if err := r.Read(rw); err != nil {
-		return err
-	}
-
-	txs, err := UnmarshalTxPacket(r.Data)
-	if err != nil {
-		return err
-	}
-	var rtxs []*model.RawTx
-	for _, tran := range txs {
 		if int64(len(tran)) > syspar.GetMaxTxSize() {
 			log.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_tx_size": syspar.GetMaxTxSize(), "current_size": len(tran)}).Error("transaction size exceeds max size")
 			return utils.ErrInfo("len(txBinData) > max_tx_size")
@@ -116,6 +107,17 @@ func DecryptData(binaryTx *[]byte) ([]byte, []byte, []byte, error) {
 
 	myUserID := converter.BinToDecBytesShift(&*binaryTx, 5)
 	log.WithFields(log.Fields{"user_id": myUserID}).Debug("decrypted userID is")
+
+	// remove the encrypted key, and all that stay in $binary_tx will be encrypted keys of the transactions/blocks
+	length, err := converter.DecodeLength(&*binaryTx)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.ProtocolError, "error": err}).Error("Decoding binary tx length")
+		return nil, nil, nil, err
+	}
+	encryptedKey := converter.BytesShift(&*binaryTx, length)
+	iv := converter.BytesShift(&*binaryTx, 16)
+	log.WithFields(log.Fields{"encryptedKey": encryptedKey, "iv": iv}).Debug("binary tx encryptedKey and iv is")
+
 	if len(encryptedKey) == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("binary tx encrypted key is empty")
 		return nil, nil, nil, utils.ErrInfo("len(encryptedKey) == 0")

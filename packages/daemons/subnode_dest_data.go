@@ -26,9 +26,11 @@ func SubNodeDestData(ctx context.Context, d *daemon) error {
 		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
 		time.Sleep(time.Millisecond * 2)
 		return err
-				TaskUUID:           item.TaskUUID,
-				Hash:               item.Hash,
-				Data:               item.Data,
+	}
+	if len(ShareData) == 0 {
+		//log.Info("task data not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
 				DataInfo:           item.DataInfo,
 				SubNodeSrcPubkey:   item.SubNodeSrcPubkey,
 				SubNodeDestPubkey:  item.SubNodeDestPubkey,

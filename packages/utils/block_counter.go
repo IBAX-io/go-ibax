@@ -1,9 +1,3 @@
-/*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
-}
-
-type blocksCounter struct {
 }
 
 func (bc *blocksCounter) count(state blockGenerationState) (int, error) {
