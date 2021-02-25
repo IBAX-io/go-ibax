@@ -1,14 +1,12 @@
-	log "github.com/sirupsen/logrus"
-)
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
-type componentModel interface {
-	SetTablePrefix(prefix string)
-	Get(name string) (bool, error)
-}
+package api
 
-func getPageRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &model.Page{})
-}
+import (
+	"net/http"
 
 func getMenuRowHandler(w http.ResponseWriter, r *http.Request) {
 	getInterfaceRow(w, r, &model.Menu{})

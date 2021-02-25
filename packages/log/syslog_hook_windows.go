@@ -18,12 +18,7 @@ type SyslogHook struct {
 }
 
 func NewSyslogHook(appName, facility string) (*SyslogHook, error) {
-	return &SyslogHook{"", "localhost"}, nil
-}
-
-func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
-	return nil
-}
 
 func (hook *SyslogHook) Levels() []logrus.Level {
 	return logrus.AllLevels
+}

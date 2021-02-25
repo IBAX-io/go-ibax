@@ -8,14 +8,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
-type contractsResult struct {
 	Count string              `json:"count"`
 	List  []map[string]string `json:"list"`
 }
@@ -57,3 +49,8 @@ func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 		list = nil
 	}
 
+	jsonResponse(w, &listResult{
+		Count: count,
+		List:  list,
+	})
+}

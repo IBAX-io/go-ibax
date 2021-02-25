@@ -33,3 +33,7 @@ func Close() {
 	}
 }
 
+func APIRouteCounterName(method, pattern string) string {
+	routeCounterName := strings.Replace(strings.Replace(pattern, ":", "", -1), "/", ".", -1)
+	return "api." + strings.ToLower(method) + "." + routeCounterName
+}

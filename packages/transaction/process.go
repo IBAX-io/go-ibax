@@ -7,13 +7,12 @@ import (
 	"github.com/shopspring/decimal"
 
 	"github.com/IBAX-io/go-ibax/packages/model"
-)
-
-func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*model.QueueTx) error {
-	var (
-		checkTime = time.Now().Unix()
-		hashes    model.ArrHashes
-		trxs      []*model.Transaction
+	defer func() {
+		if err != nil {
+			err = MarkTransactionBad(dbTransaction, hs, err.Error())
+			if err != nil {
+				return
+			}
 		}
 	}()
 	for i := 0; i < len(qs); i++ {

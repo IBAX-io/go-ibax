@@ -114,6 +114,16 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		privateKey: NodePrivateKey,
 		publicKey:  NodePublicKey,
 		logger:     d.logger,
+		time:       st.Unix(),
+	}
+
+	txs, err := dtx.RunForDelayBlockID(prevBlock.BlockID + 1)
+	if err != nil {
+		return err
+	}
+
+	trs, err := processTransactions(d.logger, txs, done, st.Unix())
+	if err != nil {
 		return err
 	}
 
@@ -126,24 +136,6 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		BlockID:      prevBlock.BlockID + 1,
 		Time:         st.Unix(),
 		EcosystemID:  0,
-		KeyID:        conf.Config.KeyID,
-		NodePosition: nodePosition,
-		Version:      consts.BlockVersion,
-	}
-
-	pb := &utils.BlockData{
-		BlockID:       prevBlock.BlockID,
-		Hash:          prevBlock.Hash,
-		RollbacksHash: prevBlock.RollbacksHash,
-	}
-
-	blockBin, err := generateNextBlock(header, trs, NodePrivateKey, pb)
-	if err != nil {
-		return err
-	}
-
-	err = block.InsertBlockWOForks(blockBin, true, false)
-	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on inserting new block")
 		return err
 	}

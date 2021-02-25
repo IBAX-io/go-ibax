@@ -20,8 +20,6 @@ import (
 
 // MarshallBlock is marshalling block
 func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockData, key string) ([]byte, error) {
-	var mrklArray [][]byte
-	var blockDataTx []byte
 	var signed []byte
 	logger := log.WithFields(log.Fields{"block_id": header.BlockID, "block_hash": header.Hash, "block_time": header.Time, "block_version": header.Version, "block_wallet_id": header.KeyID, "block_state_id": header.EcosystemID})
 
@@ -102,6 +100,17 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 				transaction.MarkTransactionBad(t.DbTransaction, t.TxHash, err.Error())
 			}
 			return nil, fmt.Errorf("parse transaction error(%s)", err)
+		}
+		t.BlockData = &header
+
+		transactions = append(transactions, t)
+
+		// build merkle tree
+		if len(t.TxFullData) > 0 {
+			doubleHash := crypto.DoubleHash(t.TxFullData)
+			doubleHash = converter.BinToHex(doubleHash)
+			mrklSlice = append(mrklSlice, doubleHash)
+		}
 	}
 
 	if len(mrklSlice) == 0 {

@@ -9,9 +9,8 @@ contract NewUser {
 		if $id == 0 {
 			error "Wrong pubkey"
 		}
-			"pub": $pub,
-			"amount": $amount,
-			"ecosystem": 1
-		})
+		if DBFind("keys").Columns("id").WhereId($id).One("id") != nil {
+			error "User already exists"
+		}
 	}
-}
+	action {

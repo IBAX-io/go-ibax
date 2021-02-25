@@ -52,8 +52,19 @@ type txstatusResult struct {
 	Message *txstatusError `json:"errmsg,omitempty"`
 	Result  string         `json:"result"`
 }
+
+type contractField struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Optional bool   `json:"optional"`
 }
 
-type sendTxResult struct {
-	Hashes map[string]string `json:"hashes"`
-}
+type getContractResult struct {
+	ID       uint32          `json:"id"`
+	StateID  uint32          `json:"state"`
+	Active   bool            `json:"active"`
+	TableID  string          `json:"tableid"`
+	WalletID string          `json:"walletid"`
+	TokenID  string          `json:"tokenid"`
+	Address  string          `json:"address"`
+	Fields   []contractField `json:"fields"`

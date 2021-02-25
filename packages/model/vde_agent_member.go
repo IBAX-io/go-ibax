@@ -47,3 +47,6 @@ func (m *VDEAgentMember) GetOneByID() (*VDEAgentMember, error) {
 func (m *VDEAgentMember) GetOneByPubKey(VDEPubKey string) (*VDEAgentMember, error) {
 	err := DBConn.Where("vde_pub_key=?", VDEPubKey).First(&m).Error
 	return m, err
+}
+
+func (m *VDEAgentMember) GetAllByType(Type int64) ([]VDEAgentMember, error) {

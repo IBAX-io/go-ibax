@@ -49,16 +49,8 @@ type PrivateFilePackets struct {
 	TaskName   string `gorm:"column:task_name;not null" json:"task_name"`
 	TaskSender string `gorm:"column:task_sender;not null" json:"task_sender"`
 	TaskType   string `gorm:"column:task_type;not null" json:"task_type"`
-
-// Create is creating record of model
-func (pp *PrivateFilePackets) Create() error {
-	return DBConn.Create(&pp).Error
-}
-
-func (pp *PrivateFilePackets) Get(Hash string) (PrivateFilePackets, error) {
-	var m PrivateFilePackets
-	err := DBConn.Where("hash=?", Hash).First(&m).Error
-	return m, err
+	Name       string `gorm:"column:name;not null" json:"name"`
+	MimeType   string `gorm:"column:mimetype;not null" json:"mimetype"`
 }
 
 // GetDataByHash is returns privatefile packet

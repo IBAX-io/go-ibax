@@ -29,6 +29,23 @@ func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse,
 			return nil, errors.New("Incorrect private key length")
 		}
 		return nil, err
+	}
+
+	data, err := ecies.EccDeCrypto(r.Data, nodePrivateKey)
+	if err != nil {
+		fmt.Println("EccDeCrypto err!")
+		log.WithError(err)
+		return nil, err
+	}
+
+	//hash, err := crypto.HashHex(r.Data)
+	hash, err := crypto.HashHex(data)
+	if err != nil {
+		log.WithError(err)
+		return nil, err
+	}
+	resp := &network.SubNodeSrcDataResponse{}
+	resp.Hash = hash
 
 	//
 	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
@@ -61,15 +78,3 @@ func Type200(r *network.SubNodeSrcDataRequest) (*network.SubNodeSrcDataResponse,
 		SubNodeDestIP:      r.SubNodeDestIp,
 		//Data:         r.Data,
 		//Data:         data,
-		Data:       []byte(encodeDataString),
-		CreateTime: time.Now().Unix(),
-	}
-
-	err = SubNodeDestData.Create()
-	if err != nil {
-		log.WithError(err)
-		return nil, err
-	}
-
-	return resp, nil
-}

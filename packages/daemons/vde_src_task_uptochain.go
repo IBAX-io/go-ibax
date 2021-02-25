@@ -28,6 +28,14 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 	var (
 		blockchain_http      string
 		blockchain_ecosystem string
+		err                  error
+	)
+
+	m := &model.VDESrcTaskChainStatus{}
+	SrcTask, err := m.GetAllByContractStateAndChainState(1, 0, 0) //0
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
+		time.Sleep(time.Millisecond * 2)
 		return err
 	}
 	if len(SrcTask) == 0 {
@@ -190,20 +198,6 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
 			time.Sleep(time.Millisecond * 2)
-			continue
-		}
-		//fmt.Println("Login OK!")
-
-		blockId, err := chain_api.VDEWaitTx(chain_apiAddress, gAuth_chain, string(item.TxHash))
-		if blockId > 0 {
-			item.BlockId = blockId
-			item.ChainId = converter.StrToInt64(err.Error())
-			item.ChainState = 2
-			item.ChainErr = ""
-
-		} else if blockId == 0 {
-			//item.ChainState = 3
-			item.ChainState = 1 //
 			item.ChainErr = err.Error()
 		} else {
 			//fmt.Println("VDEWaitTx! err: ", err)
