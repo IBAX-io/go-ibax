@@ -40,16 +40,6 @@ func getTxData(r *http.Request, key string) ([]byte, error) {
 	return txData, nil
 }
 
-func (m Mode) sendTxHandler(w http.ResponseWriter, r *http.Request) {
-	client := getClient(r)
-
-	if block.IsKeyBanned(client.KeyID) {
-		errorResponse(w, errBannded.Errorf(block.BannedTill(client.KeyID)))
-		return
-	}
-
-	err := r.ParseMultipartForm(multipartBuf)
-	if err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
@@ -75,6 +65,15 @@ func (m Mode) sendTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	hash, err := txHandlerBatches(r, m, mtx)
 	if err != nil {
+		errorResponse(w, err)
+		return
+	}
+	for _, key := range hash {
+		result.Hashes[key] = key
+	}
+	jsonResponse(w, result)
+}
+
 func (m Mode) sendSignTxHandler(w http.ResponseWriter, r *http.Request) {
 	//client := getClient(r)
 	keyid := int64(0)

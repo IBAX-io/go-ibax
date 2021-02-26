@@ -121,6 +121,15 @@ func (r *OneRow) Float64() (map[string]float64, error) {
 	}
 	return result, nil
 }
+
+// Int is extracts result from OneRow as int
+func (r *OneRow) Int() (map[string]int, error) {
+	result := make(map[string]int)
+	if r.err != nil {
+		return result, r.err
+	}
+	for k, v := range r.result {
+		result[k] = converter.StrToInt(v)
 	}
 	return result, nil
 }
@@ -189,17 +198,6 @@ func getResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
 		if countRows != -1 && r >= countRows {
 			break
 		}
-	}
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func getnodeResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
-	var result []map[string]string
-	defer rows.Close()
-	//rows.ColumnTypes()
 	columntypes, err := rows.ColumnTypes()
 	if err != nil {
 		return nil, err

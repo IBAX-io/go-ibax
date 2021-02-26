@@ -8,17 +8,18 @@ package api
 import (
 	"math/rand"
 	"net/http"
-	UID         string `json:"uid,omitempty"`
-	Token       string `json:"token,omitempty"`
-	Expire      string `json:"expire,omitempty"`
-	EcosystemID string `json:"ecosystem_id,omitempty"`
-	KeyID       string `json:"key_id,omitempty"`
-	Address     string `json:"address,omitempty"`
-	NetworkID   string `json:"network_id,omitempty"`
-}
+	"time"
 
-func getUIDHandler(w http.ResponseWriter, r *http.Request) {
-	result := new(getUIDResult)
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+
+	"github.com/dgrijalva/jwt-go"
+	log "github.com/sirupsen/logrus"
+)
+
+const jwtUIDExpire = time.Second * 5
+
 	result.NetworkID = converter.Int64ToStr(conf.Config.NetworkID)
 	token := getToken(r)
 	if token != nil {
