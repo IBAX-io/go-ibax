@@ -22,16 +22,6 @@ type contractField struct {
 	Optional bool   `json:"optional"`
 }
 
-type getContractResult struct {
-	ID       uint32          `json:"id"`
-	StateID  uint32          `json:"state"`
-	TableID  string          `json:"tableid"`
-	WalletID string          `json:"walletid"`
-	TokenID  string          `json:"tokenid"`
-	Address  string          `json:"address"`
-	Fields   []contractField `json:"fields"`
-	Name     string          `json:"name"`
-}
 
 func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -67,3 +57,6 @@ func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	result.Fields = fields
+
+	jsonResponse(w, result)
+}
