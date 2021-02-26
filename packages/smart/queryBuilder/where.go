@@ -34,6 +34,15 @@ func PrepareWhere(where string) string {
 				i++
 				slice = whereSlice[i]
 				if len(slice) != 4 {
+					break
+				}
+				colsWhere = append(colsWhere, where[slice[2]:slice[3]])
+			}
+			out += fmt.Sprintf(`%s::jsonb#>>'{%s}'`, where[startWhere:from], strings.Join(colsWhere, `,`))
+			startWhere = slice[3]
+		} else {
+			out += fmt.Sprintf(`%s->>'%s'`, where[startWhere:slice[0]], where[slice[2]:slice[3]])
+			startWhere = slice[3]
 		}
 	}
 	if len(out) > 0 {
@@ -100,12 +109,6 @@ func GetWhere(inWhere *types.Map) (string, error) {
 						list = append(list, where)
 					}
 				}
-			}
-			if len(list) > 0 {
-				ret = fmt.Sprintf(`(%s)`, strings.Join(list, ` `+action+` `))
-			}
-		}
-		return
 	}
 	for _, key := range inWhere.Keys() {
 		v, _ := inWhere.Get(key)

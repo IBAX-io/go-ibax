@@ -51,17 +51,18 @@ func SentPrivateData(host string, dt []byte) (hash string) {
 }
 
 func SentPrivateFile(host string, TaskUUID string, TaskName string, TaskSender string, TaskType string, FileName string, MimeType string, dt []byte) (hash string) {
-	conn, err := newConnection(host)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": host}).Error("on creating tcp connection")
-		time.Sleep(time.Millisecond * 100)
-		return "0"
+	req := &network.PrivateFileRequest{
+		TaskUUID:   TaskUUID,
+		TaskName:   TaskName,
+		TaskSender: TaskSender,
+		TaskType:   TaskType,
+		FileName:   FileName,
+		MimeType:   MimeType,
+		Data:       dt,
 	}
-	defer conn.Close()
 
-	rt := &network.RequestType{Type: network.RequestTypeSendPrivateFile}
-	if err = rt.Write(conn); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending request type")
+	if err = req.Write(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending privatefile request")
 		time.Sleep(time.Millisecond * 100)
 		return "0"
 	}

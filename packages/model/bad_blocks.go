@@ -37,16 +37,11 @@ func (r *BadBlocks) GetNeedToBanNodes(now time.Time, blocksPerNode int) ([]BanRe
 		Raw(
 			`SELECT
 				producer_node_id,
-					block_time > ?::date - interval '24 hours'
-					AND deleted = 0
-				GROUP BY
+				COUNT(consumer_node_id) as count
+			FROM (
+				SELECT
 					producer_node_id,
-					consumer_node_id
-				HAVING
-					count(DISTINCT block_id) >= ?) AS tbl
-			GROUP BY
-			producer_node_id`,
-			now,
+					consumer_node_id,
 			blocksPerNode,
 		).
 		Scan(&res).

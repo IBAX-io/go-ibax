@@ -56,17 +56,9 @@ $    go-ibax initDatabase
 
 5.Starting go-ibax.
 
-```bash
-$    go-ibax start
-```
 
-
-# docker run
-
-```bash
-
-docker volume prune -f
-docker-compose down
+docker-compose build
+docker-compose up
 
 docker-compose up -d
 docker-compose logs

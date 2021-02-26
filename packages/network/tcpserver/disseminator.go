@@ -1,6 +1,14 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package tcpserver
+
+import (
+	"bytes"
+	"errors"
+	"io"
+
 	"gorm.io/gorm/clause"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -174,17 +182,6 @@ func getUnknownTransactions(buf *bytes.Buffer) ([]byte, error) {
 		if exists > 0 {
 			log.WithFields(log.Fields{"txHash": hash, "type": consts.DuplicateObject}).Warning("tx with this hash already exists in log_tx")
 			continue
-		}
-
-		exists, err = model.GetTransactionsCount(hash)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "txHash": hash}).Error("Getting tx count")
-			return nil, utils.ErrInfo(err)
-		}
-		if exists > 0 {
-			log.WithFields(log.Fields{"txHash": hash, "type": consts.DuplicateObject}).Warning("tx with this hash already exists in tx")
-			continue
-		}
 
 		// check transaction queue
 		exists, err = model.GetQueuedTransactionsCount(hash)

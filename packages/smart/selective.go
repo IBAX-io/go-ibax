@@ -148,6 +148,15 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 			return 0, "", err
 		}
 	}
+
+	if generalRollback {
+		var tid string
+		tid = sqlBuilder.TableID()
+		if len(rollbackInfoStr) <= 0 {
+			idNames := strings.SplitN(sqlBuilder.Table, `_`, 2)
+			if len(idNames) == 2 {
+				if sqlBuilder.KeyTableChkr.IsKeyTable(idNames[1]) {
+					tid = sqlBuilder.TableID() + "," + sqlBuilder.GetEcosystem()
 				}
 			}
 		}
@@ -170,14 +179,3 @@ func (sc *SmartContract) updateWhere(fields []string, values []interface{},
 
 func (sc *SmartContract) update(fields []string, values []interface{},
 	table string, whereField string, whereValue interface{}) (int64, string, error) {
-	return sc.updateWhere(fields, values, table, types.LoadMap(map[string]interface{}{
-		whereField: fmt.Sprint(whereValue)}))
-}
-
-func shortString(raw string, length int) string {
-	if len(raw) > length {
-		return raw[:length]
-	}
-
-	return raw
-}

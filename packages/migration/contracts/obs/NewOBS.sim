@@ -12,8 +12,6 @@ contract NewOBS {
             if Size($OBSName) == 0 {
                 warning "OBSName was not received"
             }
-            if Contains($OBSName, " ") {
-                error "OBSName can not contain spaces"
             }
             if Size($DBUser) == 0 {
                 warning "DBUser was not received"
@@ -28,3 +26,9 @@ contract NewOBS {
 		}
 	
 		action {
+            $OBSName = ToLower($OBSName)
+            $DBUser = ToLower($DBUser)
+            CreateOBS($OBSName, $DBUser, $DBPassword, $OBSAPIPort)
+            $result = "OBS " + $OBSName + " created"
+		}
+}

@@ -48,20 +48,6 @@ type dest_VDEShareTaskResult struct {
 		ContractDestGetHash  string `json:"contract_dest_get_hash"`
 		ContractRunHttp      string `json:"contract_run_http"`
 		ContractRunEcosystem string `json:"contract_run_ecosystem"`
-		ContractRunParms     string `json:"contract_run_parms"`
-		ContractMode         string `json:"contract_mode"`
-		ContractState        string `json:"contract_state"`
-		UpdateTime           string `json:"update_time"`
-		CreateTime           string `json:"create_time"`
-		Deleted              string `json:"deleted"`
-		DateDeleted          string `json:"date_deleted"`
-	} `json:"list"`
-}
-
-//Getting task information from the chain
-func VDEDestTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
-	var (
-		blockchain_http      string
 		blockchain_ecosystem string
 		SrcUpdateTime        string
 		err                  error
@@ -472,6 +458,19 @@ func VDEDestTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 		if ContractSrcGetHashHex, err = crypto.HashHex([]byte(ShareTaskItem.ContractSrcGet)); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
 			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
+			continue
+		}
+		if ContractSrcGetHashHex != ShareTaskItem.ContractSrcGetHash {
+			log.WithFields(log.Fields{"error": err}).Error("Contract Src Hash validity fails")
+			fmt.Println("Contract Src Hash validity fails")
+			continue
+		}
+		if ContractDestGetHashHex, err = crypto.HashHex([]byte(ShareTaskItem.ContractDestGet)); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
+			fmt.Println("ContractDestGetHashHex Raw data hash failed ")
+			continue
+		}
+		if ContractDestGetHashHex != ShareTaskItem.ContractDestGetHash {
 			log.WithFields(log.Fields{"error": err}).Error("Contract Dest Hash validity fails")
 			fmt.Println("Contract Dest Hash validity fails")
 			continue

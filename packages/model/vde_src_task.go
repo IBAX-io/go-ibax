@@ -43,6 +43,16 @@ type VDESrcTask struct {
 
 	UpdateTime int64 `gorm:"not null" json:"update_time"`
 	CreateTime int64 `gorm:"not null" json:"create_time"`
+}
+
+func (VDESrcTask) TableName() string {
+	return "vde_src_task"
+}
+
+func (m *VDESrcTask) Create() error {
+	return DBConn.Create(&m).Error
+}
+
 func (m *VDESrcTask) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
 }
@@ -147,13 +157,6 @@ type VDESrcTaskFromSche struct {
 	Comment    string `gorm:"not null" json:"comment"`
 	Parms      string `gorm:"type:jsonb" json:"parms"`
 	TaskType   int64  `gorm:"not null" json:"task_type"`
-	TaskState  int64  `gorm:"not null" json:"task_state"`
-
-	ContractSrcName     string `gorm:"not null" json:"contract_src_name"`
-	ContractSrcGet      string `gorm:"not null" json:"contract_src_get"`
-	ContractSrcGetHash  string `gorm:"not null" json:"contract_src_get_hash"`
-	ContractDestName    string `gorm:"not null" json:"contract_dest_name"`
-	ContractDestGet     string `gorm:"not null" json:"contract_dest_get"`
 	ContractDestGetHash string `gorm:"not null" json:"contract_dest_get_hash"`
 
 	ContractRunHttp      string `gorm:"not null" json:"contract_run_http"`

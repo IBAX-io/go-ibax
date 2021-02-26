@@ -8,6 +8,24 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/consts"
+
+	"github.com/tjfoc/gmsm/sm3"
+)
+
+type Hasher interface {
+	// GetHMAC returns HMAC hash
+	getHMAC(secret string, message string) ([]byte, error)
+	// Hash returns hash of passed bytes
+	hash(msg []byte) []byte
+	// DoubleHash returns double hash of passed bytes
+	doubleHash(msg []byte) []byte
+}
+
+type Hval struct {
+	name string
+}
+
 const (
 	hSM3    = "SM3"
 	hSHA256 = "SHA256"
@@ -66,16 +84,6 @@ func Address(pubKey []byte) int64 {
 	val := []byte(strings.Repeat("0", consts.AddressLength-len(num)) + num)
 	return int64(crc - (crc % 10) + uint64(checkSum(val[:len(val)-1])))
 }
-
-type SM3 struct {
-	Hasher
-}
-
-type SHA256 struct {
-	Hasher
-}
-
-func (s *SM3) getHMAC(secret string, message string) ([]byte, error) {
 	mac := hmac.New(sm3.New, []byte(secret))
 	mac.Write([]byte(message))
 	return mac.Sum(nil), nil
