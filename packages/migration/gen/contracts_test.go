@@ -8,12 +8,9 @@ package main
 import (
 	"fmt"
 	"html/template"
-	"os"
-	"path/filepath"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
+	}{
+		{`'test'`, `''test''`},
+		{"`test`", "` + \"`\" + `test` + \"`\" + `"},
 		{`100%`, `100%%`},
 	}
 

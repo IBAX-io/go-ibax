@@ -109,6 +109,19 @@ func (e *ECDSA) checkECDSA(public, data, signature []byte) (bool, error) {
 	pubkey.Curve = pubkeyCurve
 	pubkey.X = new(big.Int).SetBytes(public[0:consts.PrivkeyLength])
 	pubkey.Y = new(big.Int).SetBytes(public[consts.PrivkeyLength:])
+	r, s, err := e.parseSign(hex.EncodeToString(signature))
+	if err != nil {
+		return false, err
+	}
+	verifystatus := ecdsa.Verify(pubkey, getHasher().hash(data), r, s)
+	if !verifystatus {
+		return false, ErrIncorrectSign
+	}
+	return true, nil
+}
+
+// parseSign converts the hex signature to r and s big number
+func (e *ECDSA) parseSign(sign string) (*big.Int, *big.Int, error) {
 	var (
 		binSign []byte
 		err     error
@@ -143,10 +156,3 @@ func (e *ECDSA) checkECDSA(public, data, signature []byte) (bool, error) {
 		sign = hex.EncodeToString(append(left, right...))
 	} else if len(sign) < 128 {
 		return nil, nil, fmt.Errorf(`wrong len of signature %d`, len(sign))
-	}
-	all, err := hex.DecodeString(sign[:])
-	if err != nil {
-		return nil, nil, fmt.Errorf("wrong signature size: %w", err)
-	}
-	return new(big.Int).SetBytes(all[:32]), new(big.Int).SetBytes(all[len(all)-32:]), nil
-}

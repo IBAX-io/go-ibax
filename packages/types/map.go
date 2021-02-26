@@ -49,15 +49,6 @@ func ConvertMap(in interface{}) interface{} {
 		}
 		sort.Strings(keys)
 		for _, key := range keys {
-			out.Set(key, ConvertMap(v[key]))
-		}
-		return out
-	case []interface{}:
-		for i, item := range v {
-			v[i] = ConvertMap(item)
-		}
-	}
-	return in
 }
 
 // LoadMap instantiates a linked hash map and initializing it from map[string]interface{}.
@@ -149,6 +140,8 @@ func (m *Map) Keys() []string {
 }
 
 // Values returns all values of the map (insertion order).
+func (m *Map) Values() []interface{} {
+	values := make([]interface{}, m.Size())
 	count := 0
 	for current := m.head; current != nil; current = current.next {
 		values[count] = current.value

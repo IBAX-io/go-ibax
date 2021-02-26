@@ -64,6 +64,19 @@ func SubNodeSrcTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	logger := getLogger(r)
+	form := &SubNodeSrcTaskForm{}
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.SubNodeSrcTask{}
+	if m, err = unmarshalColumnSubNodeSrcTask(form); err != nil {
+		fmt.Println(err)
+		errorResponse(w, err)
+		return
+	}
+	m.CreateTime = time.Now().Unix()
+	if err = m.Create(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
 
@@ -164,8 +177,3 @@ func SubNodeSrcTaskByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query task data by TaskUUID failed")
 		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
-}

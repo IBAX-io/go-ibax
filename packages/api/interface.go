@@ -1,12 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
+}
 
-package api
-
-import (
-	"net/http"
+func getPageRowHandler(w http.ResponseWriter, r *http.Request) {
+	getInterfaceRow(w, r, &model.Page{})
+}
 
 func getMenuRowHandler(w http.ResponseWriter, r *http.Request) {
 	getInterfaceRow(w, r, &model.Menu{})

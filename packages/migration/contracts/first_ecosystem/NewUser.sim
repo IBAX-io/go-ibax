@@ -14,3 +14,13 @@ contract NewUser {
 		}
 	}
 	action {
+		$pub = HexToPub($NewPubkey)
+		$account = IdToAddress($id)
+		$amount = Money(0)
+
+		DBInsert("keys", {
+			"id": $id,
+			"account": $account,
+			"pub": $pub,
+			"amount": $amount,
+			"ecosystem": 1

@@ -6,6 +6,12 @@ package updates
 
 var M310 = `
 
+UPDATE "1_system_parameters" 
+	SET name = 'price_exec_get_contract_by_name'
+	WHERE name = 'price_exec_contract_by_name';
+
+UPDATE "1_system_parameters" 
+	SET name = 'price_exec_get_contract_by_id'
 	WHERE name = 'price_exec_contract_by_id';
 
 INSERT INTO "1_system_parameters" (id, name, value, conditions) VALUES
@@ -56,20 +62,6 @@ INSERT INTO "1_system_parameters" (id, name, value, conditions) VALUES
 	(next_id('1_system_parameters'), 'price_exec_validate_edit_contract_new_value', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_format_money', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_create_language', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_role_access', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_decode_base64', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_unix_date_time', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_get_history', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_floor', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_json_decode', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_update_contract', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_log', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_json_encode', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_to_lower', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_unbnd_wallet', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_get_history_row', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_block_time', '50', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'), 'price_exec_contract_access', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_transaction_info', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_pow', '50', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'), 'price_exec_hash', '50', 'ContractAccess("@1UpdateSysParam")'),

@@ -48,6 +48,16 @@ func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []model.Tr
 	if len(hosts) == 0 || len(txes) == 0 {
 		return nil
 	}
+
+	packet, err := MarshalTxPacket(txes)
+	if err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	var errCount int32
+	for _, h := range hosts {
+		if err := ctx.Err(); err != nil {
 			log.Debug("exit by context error")
 			return err
 		}
@@ -245,9 +255,6 @@ func sendDisseminatorRequest(con net.Conn, requestType network.ReqTypesFlag, pac
 	// if err != nil {
 	// 	log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing data size to host")
 	// 	return err
-	// }
-
-	// // data
 	// _, err = con.Write(packet)
 	// if err != nil {
 	// 	log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing data to host")
