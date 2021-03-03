@@ -51,11 +51,12 @@ $    go-ibax generateFirstBlock \
 4. Initialize the database.
 
 ```bash
-$    go-ibax initDatabase
-```
+# docker run
 
-5.Starting go-ibax.
+```bash
 
+docker volume prune -f
+docker-compose down
 
 docker-compose build
 docker-compose up

@@ -4,22 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 package metric
 
-import (
-	"errors"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
-
-func MockValue(v int64) *Value {
-	return &Value{Time: 1, Metric: "test_metric", Key: "ecosystem_1", Value: v}
-}
-
-func MockCollectorFunc(v int64, err error) CollectorFunc {
-	return func() ([]*Value, error) {
-		if err != nil {
-			return nil, err
-		}
 
 		return []*Value{MockValue(v)}, nil
 	}
@@ -42,3 +26,5 @@ func TestCollector(t *testing.T) {
 		map[string]interface{}{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(100)},
 		map[string]interface{}{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(200)},
 	}
+	assert.Equal(t, result, c.Values())
+}

@@ -1,7 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
-// nodeContract is used when calling a cron contract in OBS mode
-func nodeContractHandler(w http.ResponseWriter, r *http.Request) {
-	errorResponse(w, errNotImplemented)
-}
+package api

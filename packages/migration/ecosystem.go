@@ -124,6 +124,15 @@ func sqlConvert(in []string) (ret string, err error) {
 		ret += item + "\r\n"
 	}
 	return
+}
+
+func sqlTemplate(input []string, data interface{}) (ret string, err error) {
+	for _, item := range input {
+		var (
+			out  bytes.Buffer
+			tmpl *template.Template
+		)
+		tmpl, err = template.New("sql").Parse(item)
 		if err != nil {
 			return
 		}
@@ -201,9 +210,6 @@ func GetCommonEcosystemScript() (string, error) {
 	sql, err := sqlConvert([]string{
 		sqlFirstEcosystemCommon,
 		sqlTimeZonesSQL,
-	})
-	if err != nil {
-		return ``, err
 	}
 	return sql + "\r\n" + timeZonesSQL, nil
 }
