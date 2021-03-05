@@ -8,23 +8,16 @@ package main
 import (
 	"fmt"
 	"html/template"
-	}{
-		{`'test'`, `''test''`},
-		{"`test`", "` + \"`\" + `test` + \"`\" + `"},
-		{`100%`, `100%%`},
-	}
+	"os"
+	"path/filepath"
+	"testing"
 
-	for _, v := range cases {
-		assert.Equal(t, v.Expected, escape(v.Source))
-	}
-}
+	"github.com/stretchr/testify/assert"
+)
 
-func tempContract(appID int, conditions, value string) (string, error) {
-	file, err := os.CreateTemp("", "contract")
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
+func TestEscape(t *testing.T) {
+	var cases = []struct {
+		Source   string
 
 	file.Write([]byte(fmt.Sprintf(`// +prop AppID = %d
 // +prop Conditions = '%s'

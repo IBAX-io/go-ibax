@@ -28,6 +28,12 @@ func TestEmptyGetBodyResponse(t *testing.T) {
 func TestWriteReadInts(t *testing.T) {
 	buf := []byte{}
 	b := bytes.NewBuffer(buf)
+	require.Equal(t, val, st)
+	fmt.Println(val)
+}
+
+func TestRequestType(t *testing.T) {
+	rt := RequestType{1}
 	buf := []byte{}
 	b := bytes.NewBuffer(buf)
 

@@ -81,17 +81,6 @@ func SendTxBatches(rtxs []*RawTx) error {
 		ts := &TransactionStatus{
 			Hash:     rtx.Hash,
 			Time:     rtx.Time,
-			Type:     rtx.TxType,
-			WalletID: rtx.WalletID,
-		}
-		rawTxs = append(rawTxs, ts)
-		qtx := &QueueTx{
-			Hash:     rtx.Hash,
-			Data:     rtx.Data,
-			Expedite: rtx.GetExpedite(),
-			Time:     rtx.Time,
-		}
-		qtxs = append(qtxs, qtx)
 	}
 	return DBConn.Clauses(clause.OnConflict{DoNothing: true}).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&rawTxs).Error; err != nil {
@@ -103,3 +92,4 @@ func SendTxBatches(rtxs []*RawTx) error {
 		return nil
 	})
 
+}

@@ -61,6 +61,15 @@ func (btc *BlockTimeCalculator) TimeToGenerate(nodePosition int64) (bool, error)
 
 	return bgs.nodePosition == nodePosition, nil
 }
+
+func (btc *BlockTimeCalculator) ValidateBlock(nodePosition int64, at time.Time) (bool, error) {
+	bgs, err := btc.countBlockTime(at)
+	if err != nil {
+		return false, err
+	}
+
+	blocks, err := btc.blocksCounter.count(bgs)
+	if err != nil {
 		return false, err
 	}
 
@@ -72,11 +81,6 @@ func (btc *BlockTimeCalculator) TimeToGenerate(nodePosition int64) (bool, error)
 }
 
 func (btc *BlockTimeCalculator) SetClock(clock Clock) *BlockTimeCalculator {
-	btc.clock = clock
-	return btc
-}
-
-func (btc *BlockTimeCalculator) setBlockCounter(counter intervalBlocksCounter) *BlockTimeCalculator {
 	btc.blocksCounter = counter
 	return btc
 }

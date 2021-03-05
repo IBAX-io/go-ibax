@@ -35,19 +35,6 @@ func (vm *VM) CompileEval(input string, state uint32) error {
 		evals[crc] = &evalCode{Source: input, Code: block}
 		return nil
 	}
-	return err
-
-}
-
-// EvalIf runs the conditional expression. It compiles the source code before that if that's necessary.
-func (vm *VM) EvalIf(input string, state uint32, vars *map[string]interface{}) (bool, error) {
-	if len(input) == 0 {
-		return true, nil
-	}
-	crc, err := crypto.CalcChecksum([]byte(input))
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("calculating compile eval checksum")
-		return false, err
 	}
 	if eval, ok := evals[crc]; !ok || eval.Source != input {
 		if err := vm.CompileEval(input, state); err != nil {
@@ -59,3 +46,9 @@ func (vm *VM) EvalIf(input string, state uint32, vars *map[string]interface{}) (
 	ret, err := rt.Run(evals[crc].Code.Children[0], nil, vars)
 	if err == nil {
 		if len(ret) == 0 {
+			return false, nil
+		}
+		return valueToBool(ret[0]), nil
+	}
+	return false, err
+}

@@ -1,22 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package api
-
-import (
-	"fmt"
-	"net/url"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-)
-
-func TestTables(t *testing.T) {
-	if err := keyLogin(1); err != nil {
-		t.Error(err)
-		return
 	}
 	var ret tablesResult
 	err := sendGet(`tables`, nil, &ret)
@@ -105,6 +87,11 @@ func TestTableName(t *testing.T) {
 	}
 	var retList listResult
 	err = sendGet(`list/tbl-`+name, nil, &retList)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if retList.Count != 1 {
 		t.Errorf(`wrong table count`)
 		return
 	}

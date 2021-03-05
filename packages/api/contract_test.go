@@ -588,6 +588,15 @@ var contracts = []smartContract{
 	{`RecCall`, `contract RecCall {
 		data {    }
 		conditions {    }
+		action {
+			var par map
+			CallContract("RecCall", par)
+		}
+	}`, []smartParams{
+		{nil, map[string]string{`error`: `{"type":"panic","error":"There is loop in @1RecCall contract"}`}},
+	}},
+	{`Recursion`, `contract Recursion {
+		data {    }
 		conditions {    }
 		action {
 			Recursion()
@@ -675,13 +684,6 @@ var contracts = []smartContract{
 			DBFind("members1").Where({"member_name": "name"})
 		}
 	}`,
-		[]smartParams{
-			{nil, map[string]string{`error`: `{"type":"panic","error":"pq: current transaction is aborted, commands ignored until end of transaction block"}`}},
-		}},
-	{`TestMultiForm`, `contract TestMultiForm {
-				data {
-					list array
-				}
 				action {
 					Test("multiform",  $list[0]+$list[1])
 				}

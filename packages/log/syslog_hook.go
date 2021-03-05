@@ -30,6 +30,11 @@ func NewSyslogHook(appName, facility string) (*SyslogHook, error) {
 	b_syslog.Openlog(appName, b_syslog.LOG_PID, syslogFacility(facility))
 	return &SyslogHook{nil, "", "localhost"}, nil
 }
+
+// Fire the log entry
+func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
+	line, err := entry.String()
+	jsonMap := map[string]interface{}{}
 	if err := json.Unmarshal([]byte(line), &jsonMap); err == nil {
 		delete(jsonMap, "time")
 		delete(jsonMap, "level")
@@ -69,15 +74,6 @@ func NewSyslogHook(appName, facility string) (*SyslogHook, error) {
 			b_syslog.Info(line)
 			return nil
 		}
-	case logrus.DebugLevel:
-		{
-			b_syslog.Debug(line)
-			return nil
-		}
-	default:
-		return nil
-	}
-}
 
 // Levels returns list of levels
 func (hook *SyslogHook) Levels() []logrus.Level {

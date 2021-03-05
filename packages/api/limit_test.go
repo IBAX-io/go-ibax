@@ -24,17 +24,6 @@ func TestLimit(t *testing.T) {
 	form := url.Values{"Name": {"tbl" + rnd}, "Columns": {`[{"name":"name","type":"number",   "conditions":"true"},
 	{"name":"block", "type":"varchar","conditions":"true"}]`},
 		"Permissions": {`{"insert": "true", "update" : "true", "new_column": "true"}`}}
-	assert.NoError(t, postTx(`NewTable`, &form))
-
-	form = url.Values{`Value`: {`contract Limit` + rnd + ` {
-		data {
-			Num int
-		}
-		conditions {
-		}
-		action {
-		   DBInsert("tbl` + rnd + `", {name: $Num, block: $block}) 
-		}
 	}`}, `Conditions`: {`true`}}
 	assert.NoError(t, postTx(`NewContract`, &form))
 
@@ -80,6 +69,13 @@ func TestLimit(t *testing.T) {
 		}
 		if wantBlocks > 0 && len(blocks) != wantBlocks {
 			return fmt.Errorf(`wrong number of blocks %d != %d`, len(blocks), wantBlocks)
+		}
+		return nil
+	}
+	sendList()
+	assert.NoError(t, checkList(10, 1))
+
+	var syspar ecosystemParamsResult
 	assert.NoError(t, sendGet(`systemparams?names=max_tx_block,max_tx_block_per_user`, nil, &syspar))
 
 	var maxusers, maxtx string

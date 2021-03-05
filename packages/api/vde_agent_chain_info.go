@@ -16,25 +16,20 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
-
-func unmarshalColumnVDEAgentChainInfo(form *VDEAgentChainInfoForm) (*model.VDEAgentChainInfo, error) {
-	var (
-		err error
-	)
-
-	m := &model.VDEAgentChainInfo{
-		BlockchainHttp:      form.BlockchainHttp,
-		BlockchainEcosystem: form.BlockchainEcosystem,
-		Comment:             form.Comment,
-		LogMode:             int64(form.LogMode),
-	}
-
 	return m, err
 }
 
 func VDEAgentChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
+	)
+	logger := getLogger(r)
+	form := &VDEAgentChainInfoForm{}
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.VDEAgentChainInfo{}
 	if m, err = unmarshalColumnVDEAgentChainInfo(form); err != nil {
 		fmt.Println(err)
 		errorResponse(w, err)

@@ -42,15 +42,6 @@ func rollbackUpdatedRow(tx map[string]string, where string, dbTransaction *model
 	}
 	return nil
 }
-
-func rollbackInsertedRow(tx map[string]string, where string, dbTransaction *model.DbTransaction, logger *log.Entry) error {
-	if err := model.Delete(dbTransaction, tx["table_name"], where); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "rollback_id": tx["id"], "table": tx["table_name"], "where": where}).Error("deleting from table for rollback")
-		return err
-	}
-	return nil
-}
-
 func rollbackTransaction(txHash []byte, dbTransaction *model.DbTransaction, logger *log.Entry) error {
 	rollbackTx := &model.RollbackTx{}
 	txs, err := rollbackTx.GetRollbackTransactions(dbTransaction, txHash)
@@ -81,6 +72,13 @@ func rollbackTransaction(txHash []byte, dbTransaction *model.DbTransaction, logg
 				err = smart.SysRollbackEcosystem(dbTransaction, sysData)
 			case "ActivateContract":
 				err = smart.SysRollbackActivate(sysData)
+			case "DeactivateContract":
+				err = smart.SysRollbackDeactivate(sysData)
+			case "DeleteColumn":
+				err = smart.SysRollbackDeleteColumn(dbTransaction, sysData)
+			case "DeleteTable":
+				err = smart.SysRollbackDeleteTable(dbTransaction, sysData)
+			}
 			if err != nil {
 				return err
 			}
