@@ -9,11 +9,19 @@ contract EditMenu {
     }
     func onlyConditions() bool {
         return $Conditions && !$Value && !$Title
-    }
-
     conditions {
         RowConditions("menu", $Id, onlyConditions())
         if $Conditions {
+            ValidateCondition($Conditions, $ecosystem_id)
+        }
+    }
+
+    action {
+        var pars map
+        if $Value {
+            pars["value"] = $Value
+        }
+        if $Title {
             pars["title"] = $Title
         }
         if $Conditions {

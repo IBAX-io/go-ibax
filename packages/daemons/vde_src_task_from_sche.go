@@ -48,6 +48,14 @@ func VDESrcTaskFromScheStatus(ctx context.Context, d *daemon) error {
 				continue
 			}
 			item.TaskRunState = 3
+			item.UpdateTime = time.Now().Unix()
+			err = item.Updates()
+			if err != nil {
+				fmt.Println("Update VDESrcTask table err: ", err)
+				log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTask table!")
+				time.Sleep(time.Millisecond * 2)
+				continue
+			}
 		} //for
 
 	}
@@ -56,11 +64,6 @@ func VDESrcTaskFromScheStatus(ctx context.Context, d *daemon) error {
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting GetScheTimeTasks data")
 		return err
-	}
-	if len(SrcTask) > 0 {
-		log.Info("Src task  found")
-		// deal with task data
-		for _, item := range SrcTask {
 			//fmt.Println("SrcTask:", item.TaskUUID)
 			TaskStatus := &model.VDESrcTaskFromScheStatus{}
 			TaskStatus.TaskUUID = item.TaskUUID

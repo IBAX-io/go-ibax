@@ -9,3 +9,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+)
+
+func TestGetEcosystemScript(t *testing.T) {
+	str := fmt.Sprintf(GetFirstEcosystemScript(), -1744264011260937456)

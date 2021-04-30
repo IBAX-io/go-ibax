@@ -1,12 +1,13 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+ *--------------------------------------------------------------------------------------------*/
 
-	log "github.com/sirupsen/logrus"
-)
+package daemons
 
-func SendPrivateData(ctx context.Context, d *daemon) error {
+import (
+	"context"
+	"encoding/json"
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
 		defer atomic.StoreUint32(&d.atomic, 0)
 	} else {

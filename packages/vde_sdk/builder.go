@@ -33,10 +33,6 @@ type SmartContract struct {
 	SignedBy       int64
 	Params         map[string]interface{}
 }
-
-func newTransaction(smartTx SmartContract, privateKey []byte, internal bool) (data, hash []byte, err error) {
-	var publicKey []byte
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
 		return
 	}
@@ -47,6 +43,14 @@ func newTransaction(smartTx SmartContract, privateKey []byte, internal bool) (da
 	}
 
 	if data, err = msgpack.Marshal(smartTx); err != nil {
+		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Error("marshalling smart contract to msgpack")
+		return
+	}
+	hash = crypto.DoubleHash(data)
+	signature, err := crypto.Sign(privateKey, hash)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by node private key")
+		return
 	}
 
 	data = append(append([]byte{128}, converter.EncodeLengthPlusData(data)...), converter.EncodeLengthPlusData(signature)...)

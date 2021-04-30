@@ -16,12 +16,14 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
-	return m, err
-}
 
-func VDEAgentChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
+func unmarshalColumnVDEAgentChainInfo(form *VDEAgentChainInfoForm) (*model.VDEAgentChainInfo, error) {
 	var (
 		err error
+	)
+
+	m := &model.VDEAgentChainInfo{
+		BlockchainHttp:      form.BlockchainHttp,
 	)
 	logger := getLogger(r)
 	form := &VDEAgentChainInfoForm{}

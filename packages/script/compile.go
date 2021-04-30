@@ -206,6 +206,9 @@ var (
 			lexNewLine:                      {stateRoot, 0},
 			lexKeyword | (keyContract << 8): {stateContract | statePush, 0},
 			lexKeyword | (keyFunc << 8):     {stateFunc | statePush, 0},
+			0:                               {errUnknownCmd, cfError},
+		},
+		{ // stateBody
 			lexNewLine:                      {stateBody, 0},
 			lexKeyword | (keyFunc << 8):     {stateFunc | statePush, 0},
 			lexKeyword | (keyReturn << 8):   {stateEval, cfReturn},
@@ -1349,16 +1352,6 @@ main:
 			if i < len(*lexems)-2 {
 				if (*lexems)[i+1].Type == isLPar {
 					var (
-						isContract  bool
-						objContract *Block
-					)
-					if vm.Extern && objInfo == nil {
-						objInfo = &ObjInfo{Type: ObjContract}
-					}
-					if objInfo == nil || (objInfo.Type != ObjExtFunc && objInfo.Type != ObjFunc &&
-						objInfo.Type != ObjContract) {
-						logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("unknown function")
-						return fmt.Errorf(`unknown function %s`, lexem.Value.(string))
 					}
 					if objInfo.Type == ObjContract {
 						if objInfo.Value != nil {

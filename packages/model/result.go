@@ -198,10 +198,13 @@ func getResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
 		if countRows != -1 && r >= countRows {
 			break
 		}
-	columntypes, err := rows.ColumnTypes()
-	if err != nil {
+	}
+	if err = rows.Err(); err != nil {
 		return nil, err
 	}
+	return result, nil
+}
+
 	// Get column names
 	columns, err := rows.Columns()
 	if err != nil {

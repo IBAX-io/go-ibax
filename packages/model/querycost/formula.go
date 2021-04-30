@@ -56,12 +56,6 @@ func strSliceIndex(fields []string, fieldToFind string) (index int) {
 	}
 	return
 }
-
-type TableRowCounter interface {
-	RowCount(*model.DbTransaction, string) (int64, error)
-}
-
-type DBCountQueryRowCounter struct {
 }
 
 func (d *DBCountQueryRowCounter) RowCount(transaction *model.DbTransaction, tableName string) (int64, error) {
@@ -70,6 +64,18 @@ func (d *DBCountQueryRowCounter) RowCount(transaction *model.DbTransaction, tabl
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": tableName}).Error("Getting record count from table")
 	}
 	return count, err
+}
+
+type FormulaQueryCoster struct {
+	rowCounter TableRowCounter
+}
+
+type QueryType interface {
+	GetTableName() (string, error)
+	CalculateCost(int64) int64
+}
+
+type SelectQueryType string
 
 func (s SelectQueryType) GetTableName() (string, error) {
 	queryFields := strings.Fields(string(s))

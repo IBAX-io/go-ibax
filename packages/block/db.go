@@ -106,6 +106,21 @@ func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error 
 		ID:            blockID,
 		Hash:          block.Header.Hash,
 		Data:          block.BinData,
+		EcosystemID:   block.Header.EcosystemID,
+		KeyID:         block.Header.KeyID,
+		NodePosition:  block.Header.NodePosition,
+		Time:          block.Header.Time,
+		RollbacksHash: rollbacksHash,
+		Tx:            int32(len(block.Transactions)),
+	}
+	validBlockTime := true
+	if blockID > 1 {
+		exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Time, 0), int(b.NodePosition))
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("block validation")
+			return err
+		validBlockTime = !exists
+	}
 	if validBlockTime {
 		if err = b.Create(transaction); err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating block")

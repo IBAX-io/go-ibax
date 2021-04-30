@@ -49,6 +49,15 @@ func ConvertMap(in interface{}) interface{} {
 		}
 		sort.Strings(keys)
 		for _, key := range keys {
+			out.Set(key, ConvertMap(v[key]))
+		}
+		return out
+	case []interface{}:
+		for i, item := range v {
+			v[i] = ConvertMap(item)
+		}
+	}
+	return in
 }
 
 // LoadMap instantiates a linked hash map and initializing it from map[string]interface{}.
@@ -170,16 +179,6 @@ func (m *Map) MarshalJSON() ([]byte, error) {
 	s := "{"
 	for current := m.head; current != nil; current = current.next {
 		k := current.key
-		escaped := strings.Replace(k, `"`, `\"`, -1)
-		s = s + `"` + escaped + `":`
-		v := current.value
-		vBytes, err := json.Marshal(v)
-		if err != nil {
-			return []byte{}, err
-		}
-		s = s + string(vBytes) + ","
-	}
-	if len(s) > 1 {
 		s = s[0 : len(s)-1]
 	}
 	s = s + "}"

@@ -25,6 +25,13 @@ var (
 // BlockRollback is blocking rollback
 func RollbackBlock(data []byte) error {
 	bl, err := block.UnmarshallBlock(bytes.NewBuffer(data), true)
+	if err != nil {
+		return err
+	}
+
+	b := &model.Block{}
+	if _, err = b.GetMaxBlock(); err != nil {
+		return err
 	}
 
 	if b.ID != bl.Header.BlockID {
@@ -62,15 +69,6 @@ func RollbackBlock(data []byte) error {
 	}
 
 	ib := &model.InfoBlock{
-		Hash:           b.Hash,
-		RollbacksHash:  b.RollbacksHash,
-		BlockID:        b.ID,
-		NodePosition:   strconv.Itoa(int(b.NodePosition)),
-		KeyID:          b.KeyID,
-		Time:           b.Time,
-		CurrentVersion: strconv.Itoa(bl.Header.Version),
-	}
-	err = ib.Update(dbTransaction)
 	if err != nil {
 		dbTransaction.Rollback()
 		return err

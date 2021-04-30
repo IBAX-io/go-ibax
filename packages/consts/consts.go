@@ -3,6 +3,11 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package consts
+
+import (
+	"fmt"
+	"strings"
 	"time"
 )
 
@@ -196,18 +201,4 @@ const (
 	MintMax           = "mint_max"
 	ChainMax          = "chain_max"
 	MintSettlementMax = "mint_settlement_max"
-	MintDetial        = "mint_detial"
-)
-
-const (
-	SavePointMarkBlock = "block"
-	SavePointMarkTx    = "tx"
-)
-
-func Version() string {
-	return strings.TrimSpace(strings.Join([]string{VERSION, BuildInfo}, " "))
-}
-
-func SetSavePointMarkBlock(idTx int) string {
-	return fmt.Sprintf("\"%s-%d\";", SavePointMarkBlock, idTx)
 }
