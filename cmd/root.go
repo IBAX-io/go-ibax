@@ -50,6 +50,11 @@ func defautConfigPath() string {
 	//	log.WithError(err).Fatal("getting cur wd")
 	//}
 	//
+	//return filepath.Join(p, "data", "config.toml")
+	return filepath.Join("data", "config.toml")
+}
+
+// Load the configuration from file
 func loadConfig(cmd *cobra.Command, args []string) {
 	err := conf.LoadConfig(conf.Config.ConfigPath)
 	if err != nil {
@@ -60,7 +65,3 @@ func loadConfig(cmd *cobra.Command, args []string) {
 func loadConfigWKey(cmd *cobra.Command, args []string) {
 	loadConfig(cmd, args)
 	err := conf.FillRuntimeKey()
-	if err != nil {
-		log.WithError(err).Fatal("Filling keys")
-	}
-}

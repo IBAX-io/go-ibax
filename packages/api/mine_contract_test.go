@@ -91,19 +91,6 @@ func TestMintImports(t *testing.T) {
 		`UpdatePerm`:    {`ContractConditions("@1AdminCondition")`},
 	}
 	assert.NoError(t, postTx(rnd, &form))
-
-	rnd = `@1EditTable`
-	form = url.Values{
-		`InsertPerm`:    {`ContractConditions("DeveloperCondition")`},
-		`Name`:          {`parameters`},
-		`NewColumnPerm`: {`ContractConditions("@1AdminCondition")`},
-		`ReadPerm`:      {`true`},
-		`UpdatePerm`:    {`ContractAccess("@1EditParameter","@1AddAssignMember","@1DelAssignMember","@1Mint")`},
-	}
-	assert.NoError(t, postTx(rnd, &form))
-
-	rnd = `@1EditColumn`
-	form = url.Values{
 		`Name`:       {`value`},
 		`ReadPerm`:   {`true`},
 		`TableName`:  {`parameters`},
@@ -596,6 +583,11 @@ func TestRegainPoolStake(t *testing.T) {
 }
 
 //user-join pool
+func TestNewMinePoolGroup(t *testing.T) {
+	assert.NoError(t, keyLoginex(1, "2"))
+
+	rnd := `@1NewMinePoolGroup`
+	form := url.Values{
 		`DevAddr`:  {`0874-3258-8928-9828-0009`},
 		`PoolAddr`: {`0454-4233-9004-4311-2470`},
 	}

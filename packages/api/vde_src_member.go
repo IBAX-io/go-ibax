@@ -40,16 +40,6 @@ func VDESrcMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	logger := getLogger(r)
-	form := &VDESrcMemberForm{}
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-	m := &model.VDESrcMember{}
-	if m, err = unmarshalColumnVDESrcMember(form); err != nil {
-		fmt.Println(err)
-		errorResponse(w, err)
-		return
 	}
 
 	m.CreateTime = time.Now().Unix()
@@ -135,6 +125,10 @@ func VDESrcMemberByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	id := converter.StrToInt64(params["id"])
 	srcData := model.VDESrcMember{}
 	srcData.ID = id
+	result, err := srcData.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("The query member data by ID failed")
+		errorResponse(w, err)
 		return
 	}
 

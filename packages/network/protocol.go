@@ -931,15 +931,6 @@ func (req *SubNodeSrcDataAgentRequest) Write(w io.Writer) error {
 		log.WithFields(log.Fields{"error": err}).Error("on sending Data request")
 		return err
 	}
-	return nil
-}
-
-type SubNodeSrcDataAgentResponse struct {
-	Hash string
-}
-
-func (resp *SubNodeSrcDataAgentResponse) Read(r io.Reader) error {
-	slice, err := ReadSlice(r)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on reading GetBodyResponse")
 		return err
@@ -1583,6 +1574,16 @@ func (req *VDEAgentDataRequest) Write(w io.Writer) error {
 	err = writeSlice(w, []byte(req.TaskUUID))
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on sending TaskUUID request")
+		return err
+	}
+
+	err = writeSlice(w, []byte(req.DataUUID))
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("on sending DataUUID request")
+		return err
+	}
+
+	err = writeSlice(w, []byte(req.AgentMode))
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on sending AgentMode request")
 		return err

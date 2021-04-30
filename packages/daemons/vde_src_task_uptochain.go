@@ -91,15 +91,6 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 			"TaskSender":   {item.TaskSender},
 			"TaskReceiver": {item.TaskReceiver},
 			"Comment":      {item.Comment},
-			"Parms":        {item.Parms},
-			"TaskType":     {converter.Int64ToStr(item.TaskType)},
-			"TaskState":    {converter.Int64ToStr(item.TaskState)},
-
-			"ContractSrcName":     {item.ContractSrcName},
-			"ContractSrcGet":      {item.ContractSrcGet},
-			"ContractSrcGetHash":  {item.ContractSrcGetHash},
-			"ContractDestName":    {item.ContractDestName},
-			"ContractDestGet":     {item.ContractDestGet},
 			"ContractDestGetHash": {item.ContractDestGetHash},
 
 			"ContractRunHttp":      {item.ContractRunHttp},
@@ -198,6 +189,20 @@ func VDESrcTaskUpToChainState(ctx context.Context, d *daemon) error {
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
 			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		//fmt.Println("Login OK!")
+
+		blockId, err := chain_api.VDEWaitTx(chain_apiAddress, gAuth_chain, string(item.TxHash))
+		if blockId > 0 {
+			item.BlockId = blockId
+			item.ChainId = converter.StrToInt64(err.Error())
+			item.ChainState = 2
+			item.ChainErr = ""
+
+		} else if blockId == 0 {
+			//item.ChainState = 3
+			item.ChainState = 1 //
 			item.ChainErr = err.Error()
 		} else {
 			//fmt.Println("VDEWaitTx! err: ", err)

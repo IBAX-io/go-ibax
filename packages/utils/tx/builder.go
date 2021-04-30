@@ -78,6 +78,6 @@ func CreateDelayTransactionHighRate(data, hash []byte, keyID, highRate int64) *m
 		KeyID:    keyID,
 		HighRate: model.GetTxRateByTxType(t),
 	}
-	return tx
-}
 
+	return ret
+}

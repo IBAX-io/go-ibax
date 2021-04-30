@@ -6,8 +6,8 @@
 package api
 
 import (
-	"net/http"
 
+type contractsResult struct {
 	Count string              `json:"count"`
 	List  []map[string]string `json:"list"`
 }

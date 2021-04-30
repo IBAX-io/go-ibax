@@ -27,17 +27,22 @@ var (
 var stopNetworkCmd = &cobra.Command{
 	Use:    "stopNetwork",
 	Short:  "Sending a special transaction to stop the network",
-	PreRun: loadConfigWKey,
-	Run: func(cmd *cobra.Command, args []string) {
-		fp := filepath.Join(conf.Config.KeysDir, stopNetworkCertFilepath)
-		stopNetworkCert, err := os.ReadFile(fp)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err, "type": consts.IOError, "filepath": fp}).Fatal("Reading cert data")
-		}
 
 		req := &network.StopNetworkRequest{
 			Data: stopNetworkCert,
 		}
+
+		errCount := 0
+		for _, addr := range addrsForStopping {
+			if err := tcpclient.SendStopNetwork(addr, req); err != nil {
+				log.WithFields(log.Fields{"error": err, "type": consts.NetworkError, "addr": addr}).Errorf("Sending request")
+				errCount++
+				continue
+			}
+
+			log.WithFields(log.Fields{"addr": addr}).Info("Sending request")
+		}
+
 		log.WithFields(log.Fields{
 			"successful": len(addrsForStopping) - errCount,
 			"failed":     errCount,
