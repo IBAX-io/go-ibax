@@ -415,22 +415,22 @@ func VDEDestData(ctx context.Context, d *daemon) error {
 		//		if err != nil {
 		//			log.WithError(err)
 		//		}
-		//		continue
-		//	}
-		//	if blockchain_http, ok = TaskParms["blockchain_http"].(string); !ok {
-		//		log.WithFields(log.Fields{"error": err}).Error("blockchain_http parse error")
-		//		item.DataState = 3 //Indicates an error in parsing task parameters
 		//		err = item.Updates()
 		//		if err != nil {
 		//			log.WithError(err)
 		//		}
 		//		continue
 		//	}
-		//	if blockchain_ecosystem, ok = TaskParms["blockchain_ecosystem"].(string); !ok {
-		//		log.WithFields(log.Fields{"error": err}).Error("blockchain_ecosystem parse error")
-		//		item.DataState = 3 //Indicates an error in parsing task parameters
-		//		err = item.Updates()
-		//		if err != nil {
+		//}else {
+		//	log.WithFields(log.Fields{"error": err}).Error("getting one task AgentMode")
+		//	item.DataState = 4 //Indicates an error in parsing task parameters
+		//	err = item.Updates()
+		//	if err != nil {
+		//		log.WithError(err)
+		//	}
+		//	time.Sleep(time.Millisecond * 100)
+		//	continue
+		//}
 
 		//fmt.Println("TaskParms:",TaskParms)
 		// fmt.Println("TaskParms:")

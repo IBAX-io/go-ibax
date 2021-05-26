@@ -40,6 +40,16 @@ func getTxData(r *http.Request, key string) ([]byte, error) {
 	return txData, nil
 }
 
+func (m Mode) sendTxHandler(w http.ResponseWriter, r *http.Request) {
+	client := getClient(r)
+
+	if block.IsKeyBanned(client.KeyID) {
+		errorResponse(w, errBannded.Errorf(block.BannedTill(client.KeyID)))
+		return
+	}
+
+	err := r.ParseMultipartForm(multipartBuf)
+	if err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
@@ -121,16 +131,6 @@ func (m Mode) sendSignTxHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonResponse(w, result)
 }
-
-func txHandler(r *http.Request, txData []byte, m Mode) (string, error) {
-	client := getClient(r)
-	logger := getLogger(r)
-	if int64(len(txData)) > syspar.GetMaxTxSize() {
-		logger.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_size": syspar.GetMaxTxSize(), "size": len(txData)}).Error("transaction size exceeds max size")
-		block.BadTxForBan(client.KeyID)
-		return "", errLimitTxSize.Errorf(len(txData))
-	}
-
 	hash, err := m.ClientTxProcessor.ProcessClientTranstaction(txData, client.KeyID, logger)
 	if err != nil {
 		return "", err

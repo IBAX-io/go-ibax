@@ -106,6 +106,16 @@ func (nbs *NodesBanService) IsBanned(node syspar.HonorNode) bool {
 	return false
 }
 
+func (nbs *NodesBanService) refreshNodes() {
+	nbs.m.Lock()
+	nbs.honorNodes = syspar.GetNodes()
+	nbs.m.Unlock()
+}
+
+func (nbs *NodesBanService) localBan(node syspar.HonorNode) {
+	nbs.m.Lock()
+	defer nbs.m.Unlock()
+
 	ts := time.Now().Unix()
 	te := time.Now().Add(syspar.GetLocalNodeBanTime()).Unix()
 	if te == ts {
@@ -144,7 +154,6 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 			ID:          int(info.ID),
 			Time:        time.Now().Unix(),
 			EcosystemID: 1,
-			KeyID:       conf.Config.KeyID,
 		},
 		Params: map[string]interface{}{
 			"ProducerNodeID": crypto.Address(producer.PublicKey),

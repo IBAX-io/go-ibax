@@ -6,6 +6,14 @@
 package api
 
 import (
+	"net/http"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
 
 type contractsResult struct {
 	Count string              `json:"count"`
@@ -27,9 +35,6 @@ func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 
 	count, err := contract.CountByEcosystem()
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting table records count")
-		errorResponse(w, err)
-		return
 	}
 
 	contracts, err := contract.GetListByEcosystem(form.Offset, form.Limit)
