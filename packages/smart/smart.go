@@ -385,8 +385,6 @@ func SetContractWallet(sc *SmartContract, tblid, state int64, wallet int64) erro
 	}
 	for i, item := range smartVM.Block.Children {
 		if item != nil && item.Type == script.ObjContract {
-			cinfo := item.Info.(*script.ContractInfo)
-			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
 				smartVM.Children[i].Info.(*script.ContractInfo).Owner.WalletID = wallet
 			}
 		}
@@ -449,6 +447,15 @@ func defineVMType() script.VMType {
 	}
 
 	if conf.Config.IsOBSMaster() {
+		return script.VMTypeOBSMaster
+	}
+
+	return script.VMTypeSmart
+}
+
+// LoadContracts reads and compiles contracts from smart_contracts tables
+func LoadContracts() error {
+	contract := &model.Contract{}
 	count, err := contract.Count()
 	if err != nil {
 		return logErrorDB(err, "getting count of contracts")

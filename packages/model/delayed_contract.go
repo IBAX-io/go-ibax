@@ -22,6 +22,13 @@ type DelayedContract struct {
 	Conditions string `gorm:"not null"`
 }
 
+// TableName returns name of table
+func (DelayedContract) TableName() string {
+	return tableDelayedContracts
+}
+		return nil, err
+	}
+	return contracts, nil
 }
 
 // Get is retrieving model from database

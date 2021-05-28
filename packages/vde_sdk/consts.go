@@ -8,3 +8,5 @@ const (
 	jwtPrefix = "Bearer "
 	//jwtExpire    = 36000  // By default, seconds
 	//multipartBuf = 100000 // the buffer size for ParseMultipartForm
+)
+

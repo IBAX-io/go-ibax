@@ -57,6 +57,15 @@ func InitCentrifugo(cfg conf.CentrifugoConfig) {
 	})
 }
 
+func GetJWTCent(userID, expire int64) (string, string, error) {
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+
+	centJWT := CentJWT{
+		Sub: strconv.FormatInt(userID, 10),
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Second * time.Duration(expire)).Unix(),
+		},
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, centJWT)
 	result, err := token.SignedString([]byte(config.Secret))
 	if err != nil {
@@ -80,6 +89,3 @@ func GetStats() (gocent.InfoResult, error) {
 		return gocent.InfoResult{}, fmt.Errorf("publisher not initialized")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), centrifugoTimeout)
-	defer cancel()
-	return publisher.Info(ctx)
-}

@@ -1,13 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package tcpclient
-
-import (
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network"
 
 	log "github.com/sirupsen/logrus"
@@ -51,6 +44,21 @@ func SentPrivateData(host string, dt []byte) (hash string) {
 }
 
 func SentPrivateFile(host string, TaskUUID string, TaskName string, TaskSender string, TaskType string, FileName string, MimeType string, dt []byte) (hash string) {
+	conn, err := newConnection(host)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": host}).Error("on creating tcp connection")
+		time.Sleep(time.Millisecond * 100)
+		return "0"
+	}
+	defer conn.Close()
+
+	rt := &network.RequestType{Type: network.RequestTypeSendPrivateFile}
+	if err = rt.Write(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending request type")
+		time.Sleep(time.Millisecond * 100)
+		return "0"
+	}
+
 	req := &network.PrivateFileRequest{
 		TaskUUID:   TaskUUID,
 		TaskName:   TaskName,

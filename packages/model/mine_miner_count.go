@@ -14,3 +14,8 @@ type MineCount struct {
 }
 
 // TableName returns name of table
+func (MineCount) TableName() string {
+	return `1_v_miner_count`
+}
+
+func (m *MineCount) GetActiveMiner(dbt *DbTransaction, time int64) ([]MineCount, error) {

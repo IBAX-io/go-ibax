@@ -4,6 +4,9 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daemons
+
+import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
@@ -123,21 +126,6 @@ func VDESrcTaskStatusRun(ctx context.Context, d *daemon) error {
 			"TaskUUID": {TaskUUID},
 			"Parms":    {Parms},
 		}
-
-		ContractName := `@1` + item.ContractSrcName
-		_, txHash, _, err := vde_api.VDEPostTxResult(vde_src_apiAddress, vde_src_apiEcosystemID, gAuth_src, gPrivate_src, ContractName, &form)
-		if err != nil {
-			fmt.Println("Run VDESrcTaskContract err: ", err)
-			log.WithFields(log.Fields{"error": err}).Error("Run VDESrcTaskContract!")
-
-			//
-			//item.ChainState = 4
-			item.ChainState = 3
-			item.ChainErr = err.Error()
-			item.UpdateTime = time.Now().Unix()
-			err = item.Updates()
-			if err != nil {
-				fmt.Println("Update VDESrcTaskStatus table err: ", err)
 				log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTaskStatus table!")
 			}
 			time.Sleep(time.Second * 5)
