@@ -13,11 +13,20 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-)
+		{`100%`, `100%%`},
+	}
 
-func TestEscape(t *testing.T) {
-	var cases = []struct {
-		Source   string
+	for _, v := range cases {
+		assert.Equal(t, v.Expected, escape(v.Source))
+	}
+}
+
+func tempContract(appID int, conditions, value string) (string, error) {
+	file, err := os.CreateTemp("", "contract")
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
 
 	file.Write([]byte(fmt.Sprintf(`// +prop AppID = %d
 // +prop Conditions = '%s'

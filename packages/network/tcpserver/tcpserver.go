@@ -95,11 +95,6 @@ func HandleTCPRequest(rw net.Conn) {
 	case network.RequestTypeSendVDEAgentData:
 		req := &network.VDEAgentDataRequest{}
 		if err = req.Read(rw); err == nil {
-			response, err = Type102(req)
-		}
-
-	case network.RequestTypeSendPrivateData:
-		req := &network.PrivateDateRequest{}
 
 	if err != nil || response == nil {
 		return

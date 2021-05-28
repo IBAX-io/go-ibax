@@ -104,6 +104,20 @@ func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) erro
 	}
 
 	if err = mgr.createOBSDB(name, dbUser, dbPassword); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on creating OBS DB")
+		return fmt.Errorf(alreadyExistsErrorTemplate, name)
+	}
+
+	cancelChain = append(cancelChain, func() {
+		dropDb(name, dbUser)
+	})
+
+	dirPath := path.Join(mgr.childConfigsPath, name)
+	if directoryExists(dirPath) {
+		err = fmt.Errorf(alreadyExistsErrorTemplate, name)
+		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err, "dirPath": dirPath}).Error("on check directory")
+		return err
+	}
 
 	if err = mgr.initOBSDir(name); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "DirName": name, "error": err}).Error("on init OBS dir")
@@ -254,20 +268,6 @@ func (mgr *OBSManager) StopOBS(name string) error {
 		state == process.Starting {
 		proc.Stop(true)
 		log.WithFields(log.Fields{"obs_name": name}).Info("OBS is stoped")
-		return nil
-	}
-
-	err := fmt.Errorf("OBS '%s' is %s", name, state)
-	log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on stoping OBS")
-	return err
-}
-
-func (mgr *OBSManager) createOBSDB(obsName, login, pass string) error {
-
-	if err := model.DBConn.Exec(fmt.Sprintf(createRoleTemplate, login, pass)).Error; err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating OBS DB User")
-		return err
-	}
 
 	if err := model.DBConn.Exec(fmt.Sprintf(createDBTemplate, obsName, login)).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating OBS DB")

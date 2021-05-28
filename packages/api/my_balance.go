@@ -17,17 +17,6 @@ import (
 
 type myBalanceResult struct {
 	Amount string `json:"amount"`
-	Money  string `json:"money"`
-}
-
-func (m Mode) getMyBalanceHandler(w http.ResponseWriter, r *http.Request) {
-	client := getClient(r)
-	logger := getLogger(r)
-	form := &ecosystemForm{
-		Validator: m.EcosysIDValidator,
-	}
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
 
@@ -45,3 +34,10 @@ func (m Mode) getMyBalanceHandler(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting Key for wallet")
 		errorResponse(w, err)
 		return
+	}
+
+	jsonResponse(w, &myBalanceResult{
+		Amount: key.Amount,
+		Money:  converter.ChainMoney(key.Amount),
+	})
+}

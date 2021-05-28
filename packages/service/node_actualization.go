@@ -21,19 +21,6 @@ import (
 // DefaultBlockchainGap is default value for the number of lagging blocks
 const DefaultBlockchainGap int64 = 10
 
-type NodeActualizer struct {
-	availableBlockchainGap int64
-}
-
-func NewNodeActualizer(availableBlockchainGap int64) NodeActualizer {
-	return NodeActualizer{
-		availableBlockchainGap: availableBlockchainGap,
-	}
-}
-
-// Run is starting node monitoring
-func (n *NodeActualizer) Run(ctx context.Context) {
-	go func() {
 		log.Info("Node Actualizer monitoring starting")
 		for {
 			if ctx.Err() != nil {
@@ -93,4 +80,16 @@ func (n *NodeActualizer) checkBlockchainActuality(ctx context.Context) (bool, er
 	// Node did not accept any blocks for an hour
 	t := time.Unix(foreignBlock.Time, 0)
 	if time.Since(t).Minutes() > 30 && len(remoteHosts) > 1 {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (n *NodeActualizer) pauseNodeActivity() {
+	np.Set(PauseTypeUpdatingBlockchain)
+}
+
+func (n *NodeActualizer) resumeNodeActivity() {
+	np.Unset()
 }
