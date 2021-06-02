@@ -4,6 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 package daemons
+
+import (
+	"context"
+	"encoding/base64"
+	"fmt"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
+	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
+	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
+
 	"path/filepath"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -92,22 +105,6 @@ func SubNodeSrcDataUpToChain(ctx context.Context, d *daemon) error {
 			fmt.Println("Send chain Contract to run, ContractName:", ContractName)
 
 			item.ChainState = 1 //success
-			item.TxHash = txHash
-			item.BlockId = 0
-			item.ChainErr = ""
-		} else if item.TranMode == 2 { // all data uptochain
-			node_pubkey_slice := strings.Split(item.SubNodeDestPubkey, ";")
-			for _, pubkey_value := range node_pubkey_slice {
-				PrivateFile, err := ecies.EccCryptoKey(item.Data, pubkey_value)
-				if err != nil {
-					fmt.Println("error", err)
-					log.WithFields(log.Fields{"error": err}).Error("EccCryptoKey error")
-					return nil
-				}
-				encodeString := base64.StdEncoding.EncodeToString(PrivateFile)
-
-				form := url.Values{
-					`TableName`: {blockchain_table},
 					`TaskUUID`:  {item.TaskUUID},
 					`DataUUID`:  {item.DataUUID},
 					`DataInfo`:  {item.DataInfo},

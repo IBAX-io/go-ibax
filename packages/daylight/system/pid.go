@@ -27,9 +27,11 @@ func CreatePidFile() error {
 func RemovePidFile() error {
 	return os.Remove(conf.Config.GetPidPath())
 }
+	}
 
-// ReadPidFile reads pid file
-func ReadPidFile() (int, error) {
-	pidPath := conf.Config.GetPidPath()
-	if _, err := os.Stat(pidPath); err != nil {
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		log.WithFields(log.Fields{"data": data, "error": err, "type": consts.ConversionError}).Error("pid file data to int")
+	}
+	return pid, err
 }

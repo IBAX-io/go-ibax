@@ -136,18 +136,6 @@ func TestOBSParams(t *testing.T) {
 
 	var retRow rowResult
 	assert.NoError(t, sendGet(`row/contracts/2?obs=true`, nil, &retRow))
-	if !strings.Contains(retRow.Value[`value`], `OBSFunctions`) {
-		t.Error(`wrong row result`)
-		return
-	}
-
-	var retCont contractsResult
-	assert.NoError(t, sendGet(`contracts?obs=true`, nil, &retCont))
-
-	form = url.Values{`Value`: {`contract ` + rnd + ` {
-		data {
-			Par string
-		}
 		action { Test("active",  $Par)}}`}, `Conditions`: {`ContractConditions("MainCondition")`}, `obs`: {`true`}}
 
 	assert.NoError(t, postTx(`NewContract`, &form))
@@ -349,6 +337,23 @@ func TestHTTPPostJSON(t *testing.T) {
 		t.Error(err)
 		return
 	}
+}
+
+func TestNodeHTTPRequest(t *testing.T) {
+	var err error
+	assert.NoError(t, keyLogin(1))
+
+	rnd := `rnd` + crypto.RandSeq(4)
+	form := url.Values{`Value`: {`contract for` + rnd + ` {
+		data {
+			Par string
+		}
+		action { $result = "Test NodeContract " + $Par + " ` + rnd + `"}
+    }`}, `Conditions`: {`ContractConditions("MainCondition")`}}
+	assert.NoError(t, postTx(`NewContract`, &form))
+
+	var ret getContractResult
+	assert.NoError(t, sendGet(`contract/for`+rnd, nil, &ret))
 
 	assert.NoError(t, postTx(`ActivateContract`, &url.Values{`Id`: {ret.TableID}}))
 

@@ -4,7 +4,3 @@ contract EditLang {
     data {
         Id int
         Trans string
-    }
-
-    conditions {
-}

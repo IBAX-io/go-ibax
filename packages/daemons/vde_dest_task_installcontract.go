@@ -16,6 +16,11 @@ import (
 
 	"path/filepath"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
 
 //Install task contract
 func VDEDestTaskInstallContractDest(ctx context.Context, d *daemon) error {
@@ -70,20 +75,6 @@ func VDEDestTaskInstallContractDest(ctx context.Context, d *daemon) error {
 
 		form := url.Values{
 			`Value`:         {ContractDest},
-			"ApplicationId": {"1"},
-			`Conditions`:    {`true`}}
-
-		ContractName := `@1NewContract`
-		//_, _, _, err = api.PostTxResult(ContractName, &form)
-		_, _, _, err = vde_api.PostTxResult(vde_dest_apiAddress, vde_dest_apiEcosystemID, gAuth_dest, gPrivate_dest, ContractName, &form)
-		if err != nil {
-			item.ContractStateDest = 2
-			item.ContractStateDestErr = err.Error()
-		} else {
-			item.ContractStateDest = 1
-			item.ContractStateDestErr = ""
-		}
-		//fmt.Println("Call api.PostTxResult Src OK")
 
 		item.UpdateTime = time.Now().Unix()
 		err = item.Updates()

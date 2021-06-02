@@ -21,6 +21,18 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/daemons"
+	"github.com/IBAX-io/go-ibax/packages/daylight/daemonsctl"
+	logtools "github.com/IBAX-io/go-ibax/packages/log"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/modes"
+	"github.com/IBAX-io/go-ibax/packages/network/httpserver"
+	"github.com/IBAX-io/go-ibax/packages/obsmanager"
+	"github.com/IBAX-io/go-ibax/packages/publisher"
+	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/statsd"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -210,21 +222,6 @@ func Start() {
 
 	if conf.Config.PoolPub.Enable {
 		if conf.Config.Redis.Enable {
-			err = model.RedisInit(conf.Config.Redis.Host, conf.Config.Redis.Port, conf.Config.Redis.Password, conf.Config.Redis.DbName)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"host": conf.Config.Redis.Host, "port": conf.Config.Redis.Port, "db_password": conf.Config.Redis.Password, "db_name": conf.Config.Redis.DbName, "type": consts.DBError,
-				}).Error("can't init redis")
-				Exit(1)
-			}
-		}
-		//if err := utils.MakeDirectory(conf.Config.PoolPub.Path); err != nil {
-		//	log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.TempDir}).Error("can't create temporary directory")
-		//	os.Exit(-1)
-		//}
-		//if err := model.Init_leveldb(conf.Config.PoolPub.Path); err != nil {
-		//	log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.TempDir}).Error("can't create temporary directory")
-		//	os.Exit(-1)
 		//}
 	}
 

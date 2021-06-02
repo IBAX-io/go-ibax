@@ -46,6 +46,18 @@ func unmarshalColumnSubNodeSrcTask(form *SubNodeSrcTaskForm) (*model.SubNodeSrcT
 		TaskState:  int64(form.TaskState),
 
 		TaskRunParms: converter.MarshalJson(task_run_parms),
+		//TaskRunState:    int64(form.TaskRunState),
+		//TaskRunStateErr: form.TaskRunStateErr,
+
+		//TxHash:     form.TxHash,
+		//ChainState: int64(form.ChainState),
+		//BlockId:    int64(form.BlockId),
+		//ChainId:    int64(form.ChainId),
+		//ChainErr:   form.ChainErr,
+	}
+
+	return m, err
+}
 
 func SubNodeSrcTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -149,21 +161,6 @@ func SubNodeSrcTaskByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	result, err := srcData.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query task data by ID failed")
-		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
-}
-
-func SubNodeSrcTaskByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	srcData := model.SubNodeSrcTask{}
-	result, err := srcData.GetAllByTaskUUID(params["taskuuid"])
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query task data by TaskUUID failed")
 		errorResponse(w, err)
 		return
 	}
