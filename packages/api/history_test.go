@@ -13,6 +13,8 @@ import (
 func TestHistory(t *testing.T) {
 	if err := keyLogin(1); err != nil {
 		t.Error(err)
+		return
+	}
 
 	var ret historyResult
 	err := sendGet("history/pages/1", nil, &ret)
@@ -31,5 +33,3 @@ func TestHistory(t *testing.T) {
 	}
 	if len(ret.List) != 0 {
 		t.Error(stdErrors.New("History should be empty"))
-	}
-}

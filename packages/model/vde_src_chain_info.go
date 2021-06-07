@@ -14,6 +14,9 @@ type VDESrcChainInfo struct {
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
+func (VDESrcChainInfo) TableName() string {
+	return "vde_src_chain_info"
+}
 
 func (m *VDESrcChainInfo) Create() error {
 	return DBConn.Create(&m).Error
@@ -38,6 +41,3 @@ func (m *VDESrcChainInfo) GetAll() ([]VDESrcChainInfo, error) {
 	return result, err
 }
 func (m *VDESrcChainInfo) GetOneByID() (*VDESrcChainInfo, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
