@@ -4,12 +4,6 @@
  *--------------------------------------------------------------------------------------------*/
 
 package model
-
-import "github.com/IBAX-io/go-ibax/packages/converter"
-
-
-// SetTablePrefix is setting table prefix
-func (m *Menu) SetTablePrefix(prefix string) {
 	m.ecosystem = converter.StrToInt64(prefix)
 }
 

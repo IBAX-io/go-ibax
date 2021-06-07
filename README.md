@@ -51,6 +51,16 @@ $    go-ibax generateFirstBlock \
 4. Initialize the database.
 
 ```bash
+$    go-ibax initDatabase
+```
+
+5.Starting go-ibax.
+
+```bash
+$    go-ibax start
+```
+
+
 # docker run
 
 ```bash
@@ -63,20 +73,6 @@ docker-compose up
 
 docker-compose up -d
 docker-compose logs
-
-https://127.0.0.1:7079/api/v2/getuid
-http://127.0.0.1:7079/api/v2/getuid
-
-https://127.0.0.1:8000
-http://127.0.0.1:8000
-
-
-docker build -t ibax/go-ibax -f Dockerfile .
-
-docker build -t ibax/go-ibax-src -f Dockerfile_src .
-
-```
-
 
 
 

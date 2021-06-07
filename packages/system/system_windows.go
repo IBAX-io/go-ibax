@@ -28,9 +28,10 @@ void kill_childproc( DWORD myprocID) {
 	    BOOL bContinue = TRUE;
 
 	    while (bContinue)
-	        }
-	        bContinue = Process32Next(hSnap, &pe);
-	    }
+	    {
+	        if (pe.th32ParentProcessID == myprocID && memcmp( pe.szExeFile, "tmp_", 4 ) != 0 &&
+				memcmp(pe.szExeFile, "chain", 4) != 0)
+	        {
 	}
 }
 */

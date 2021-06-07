@@ -19,17 +19,6 @@ import (
 
 func unmarshalColumnVDESrcTaskAuth(form *VDESrcTaskAuthForm) (*model.VDESrcTaskAuth, error) {
 	var (
-		err error
-	)
-
-	m := &model.VDESrcTaskAuth{
-		TaskUUID:             form.TaskUUID,
-		Comment:              form.Comment,
-		VDEPubKey:            form.VDEPubKey,
-		ContractRunHttp:      form.ContractRunHttp,
-		ContractRunEcosystem: form.ContractRunEcosystem,
-		ChainState:           form.ChainState,
-	}
 
 	return m, err
 }
@@ -79,6 +68,16 @@ func VDESrcTaskAuthUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 
 	m := &model.VDESrcTaskAuth{}
 
+	if m, err = unmarshalColumnVDESrcTaskAuth(form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m.ID = id
+	m.UpdateTime = time.Now().Unix()
+	if err = m.Updates(); err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
+		return
 	}
 
 	result, err := m.GetOneByID()

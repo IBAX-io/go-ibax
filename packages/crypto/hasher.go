@@ -77,13 +77,18 @@ func DoubleHash(msg []byte) []byte {
 func Address(pubKey []byte) int64 {
 	pubKey = CutPub(pubKey)
 	h := getHasher().hash(pubKey)
-	h512 := sha512.Sum512(h[:])
-	crc := calcCRC64(h512[:])
-	// replace the last digit by checksum
-	num := strconv.FormatUint(crc, 10)
-	val := []byte(strings.Repeat("0", consts.AddressLength-len(num)) + num)
 	return int64(crc - (crc % 10) + uint64(checkSum(val[:len(val)-1])))
 }
+
+type SM3 struct {
+	Hasher
+}
+
+type SHA256 struct {
+	Hasher
+}
+
+func (s *SM3) getHMAC(secret string, message string) ([]byte, error) {
 	mac := hmac.New(sm3.New, []byte(secret))
 	mac.Write([]byte(message))
 	return mac.Sum(nil), nil

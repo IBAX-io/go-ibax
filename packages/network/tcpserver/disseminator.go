@@ -58,13 +58,6 @@ func Type1(rw io.ReadWriter) error {
 		log.WithFields(log.Fields{"error": err}).Error("on getting node by position")
 		return err
 	}
-
-	// get data type (0 - block and transactions, 1 - only transactions)
-	newDataType := converter.BinToDec(buf.Next(1))
-
-	log.Debug("newDataType", newDataType)
-	if newDataType == 0 {
-		banned := n != nil && service.GetNodesBanService().IsBanned(*n)
 		if banned {
 			buf.Next(3)
 			buf.Next(consts.HashSize)
@@ -182,6 +175,17 @@ func getUnknownTransactions(buf *bytes.Buffer) ([]byte, error) {
 		if exists > 0 {
 			log.WithFields(log.Fields{"txHash": hash, "type": consts.DuplicateObject}).Warning("tx with this hash already exists in log_tx")
 			continue
+		}
+
+		exists, err = model.GetTransactionsCount(hash)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "txHash": hash}).Error("Getting tx count")
+			return nil, utils.ErrInfo(err)
+		}
+		if exists > 0 {
+			log.WithFields(log.Fields{"txHash": hash, "type": consts.DuplicateObject}).Warning("tx with this hash already exists in tx")
+			continue
+		}
 
 		// check transaction queue
 		exists, err = model.GetQueuedTransactionsCount(hash)

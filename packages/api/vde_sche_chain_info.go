@@ -17,22 +17,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func unmarshalColumnVDEScheChainInfo(form *VDEScheChainInfoForm) (*model.VDEScheChainInfo, error) {
-	var (
-		err error
-	)
-
-	m := &model.VDEScheChainInfo{
-		BlockchainHttp:      form.BlockchainHttp,
-		BlockchainEcosystem: form.BlockchainEcosystem,
-		Comment:             form.Comment,
-	}
-
 	return m, err
 }
 
 func VDEScheChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
+		err error
+	)
+	logger := getLogger(r)
 	form := &VDEScheChainInfoForm{}
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)

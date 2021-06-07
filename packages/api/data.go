@@ -30,16 +30,6 @@ func compareHash(data []byte, urlHash string) bool {
 	var hash []byte
 	switch len(urlHash) {
 	case 32:
-		h := md5.Sum(data)
-		hash = h[:]
-	case 64:
-		hash = crypto.Hash(data)
-	}
-
-	return hex.EncodeToString(hash) == urlHash
-}
-
-func getDataHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
@@ -86,6 +76,9 @@ func getBinaryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", bin.MimeType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, bin.Name))
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Write(bin.Data)
 	return
 }

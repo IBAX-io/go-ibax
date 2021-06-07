@@ -4,6 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 package model
+
+type SubNodeSrcTask struct {
+	ID         int64  `gorm:"primary_key; not null" json:"id"`
+	TaskUUID   string `gorm:"not null" json:"task_uuid"`
+	TaskName   string `gorm:"not null" json:"task_name"`
+	TaskSender string `gorm:"not null" json:"task_sender"`
 	Comment    string `gorm:"not null" json:"comment"`
 	Parms      string `gorm:"type:jsonb" json:"parms"`
 	TaskType   int64  `gorm:"not null" json:"task_type"`
@@ -96,11 +102,5 @@ func (m *SubNodeSrcTask) GetOneTimeTasks() ([]SubNodeSrcTask, error) {
 func (m *SubNodeSrcTask) GetScheTimeTasks() ([]SubNodeSrcTask, error) {
 	result := make([]SubNodeSrcTask, 0)
 	err := DBConn.Table("subnode_src_task").Where("task_state = 1 AND task_run_state != 3  AND task_type = 2").Find(&result).Error
-	return result, err
-}
-
-func (m *SubNodeSrcTask) GetAllByChannelState(ChannelState int64) ([]SubNodeSrcTask, error) {
-	result := make([]SubNodeSrcTask, 0)
-	err := DBConn.Table("subnode_src_task").Where("channel_state = ?", ChannelState).Find(&result).Error
 	return result, err
 }

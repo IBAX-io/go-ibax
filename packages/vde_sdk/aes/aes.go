@@ -34,5 +34,11 @@ func AesEncrypt(origData, key []byte) ([]byte, error) {
 	blockMode.CryptBlocks(crypted, origData)
 	return crypted, nil
 }
-	return origData, nil
+
+func AesDecrypt(crypted, key []byte) ([]byte, error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
 }
