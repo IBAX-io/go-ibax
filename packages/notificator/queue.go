@@ -1,5 +1,13 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package notificator
+
+import (
+	"github.com/IBAX-io/go-ibax/packages/types"
+)
+
 type Queue struct {
 	Accounts []*Accounts
 	Roles    []*Roles
@@ -44,8 +52,3 @@ func (q *Queue) Send() {
 }
 
 func NewQueue() types.Notifications {
-	return &Queue{
-		Accounts: make([]*Accounts, 0),
-		Roles:    make([]*Roles, 0),
-	}
-}

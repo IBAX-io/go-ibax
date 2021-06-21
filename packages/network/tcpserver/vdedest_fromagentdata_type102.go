@@ -44,6 +44,14 @@ func Type102(r *network.VDEAgentDataRequest) (*network.VDEAgentDataResponse, err
 		return nil, err
 	}
 	resp := &network.VDEAgentDataResponse{}
+	resp.Hash = hash
+	AgentMode := converter.StrToInt64(r.AgentMode)
+	VDEDestData := model.VDEDestData{
+		TaskUUID:       r.TaskUUID,
+		DataUUID:       r.DataUUID,
+		AgentMode:      AgentMode,
+		Hash:           hash,
+		DataInfo:       r.DataInfo,
 		VDESrcPubkey:   r.VDESrcPubkey,
 		VDEAgentPubkey: r.VDEAgentPubkey,
 		VDEAgentIp:     r.VDEAgentIp,
@@ -59,6 +67,3 @@ func Type102(r *network.VDEAgentDataRequest) (*network.VDEAgentDataResponse, err
 		log.WithError(err)
 		return nil, err
 	}
-
-	return resp, nil
-}

@@ -28,6 +28,15 @@ func GetLevelDB(tx *leveldb.Transaction) levelDBGetterPutterDeleter {
 	return DBlevel
 }
 
+func prefixFunc(prefix string) func([]byte) []byte {
+	return func(hash []byte) []byte {
+		return []byte(prefix + string(hash))
+	}
+}
+
+func prefixStringFunc(prefix string) func(key string) []byte {
+	return func(key string) []byte {
+		return []byte(prefix + key)
 	}
 }
 
@@ -43,15 +52,6 @@ func Init_leveldb(filename string) error {
 }
 
 func Struct2Map(obj interface{}) map[string]interface{} {
-	t := reflect.TypeOf(obj)
-	v := reflect.ValueOf(obj)
-
-	var data = make(map[string]interface{})
-	for i := 0; i < t.NumField(); i++ {
-		data[t.Field(i).Name] = v.Field(i).Interface()
-	}
-	return data
-}
 func DBGetAllKey(prefix string, bvalue bool) (*[]string, error) {
 	var (
 		ret []string

@@ -26,9 +26,6 @@ func (m *VDEScheMember) Create() error {
 	return DBConn.Create(&m).Error
 }
 
-func (m *VDEScheMember) GetOneByID() (*VDEScheMember, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
 }
 
 func (m *VDEScheMember) GetOneByPubKey(VDEPubKey string) (*VDEScheMember, error) {

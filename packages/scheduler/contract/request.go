@@ -105,14 +105,16 @@ func sendAPIRequest(rtype, url string, form *url.Values, v interface{}, auth str
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("api request")
 		return err
 	}
 
-	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading api answer")
+	if resp.StatusCode != http.StatusOK {
+		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("api status code")
+		return fmt.Errorf(`%d %s`, resp.StatusCode, strings.TrimSpace(string(data)))
+	}
+
+	if err = json.Unmarshal(data, v); err != nil {
+		log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling api answer")
 		return err
 	}
 	return nil

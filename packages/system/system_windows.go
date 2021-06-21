@@ -32,13 +32,14 @@ void kill_childproc( DWORD myprocID) {
 	        if (pe.th32ParentProcessID == myprocID && memcmp( pe.szExeFile, "tmp_", 4 ) != 0 &&
 				memcmp(pe.szExeFile, "chain", 4) != 0)
 	        {
-	}
-}
-*/
-import "C"
+	            HANDLE hChildProc = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pe.th32ProcessID);
 
-// lstrcmp( pe.szExeFile, TEXT("tmp_daylight.exe")) != 0 && lstrcmp( pe.szExeFile, TEXT("daylight.exe")) != 0
-
-func killChildProc() {
-	C.kill_childproc(C.DWORD(os.Getpid()))
-}
+	            if (hChildProc)
+	            {
+					kill_childproc(GetProcessId(hChildProc));
+	                TerminateProcess(hChildProc, 1);
+	                CloseHandle(hChildProc);
+	            }
+	        }
+	        bContinue = Process32Next(hSnap, &pe);
+	    }
