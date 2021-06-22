@@ -7,27 +7,17 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
+)
+
+// SystemParameter is model
+type SystemParameter struct {
+	ID         int64  `gorm:"primary_key;not null;"`
+	Name       string `gorm:"not null;size:255"`
 	Value      string `gorm:"not null"`
 	Conditions string `gorm:"not null"`
 }
 
-// TableName returns name of table
-func (sp SystemParameter) TableName() string {
-	return "1_system_parameters"
-}
-
-// Get is retrieving model from database
-func (sp *SystemParameter) Get(name string) (bool, error) {
-	return isFound(DBConn.Where("name = ?", name).First(sp))
-}
-
-// GetTransaction is retrieving model from database using transaction
-func (sp *SystemParameter) GetTransaction(transaction *DbTransaction, name string) (bool, error) {
-	return isFound(GetDB(transaction).Where("name = ?", name).First(sp))
-}
-
-// GetJSONField returns fields as json
-func (sp *SystemParameter) GetJSONField(jsonField string, name string) (string, error) {
 	var result string
 	err := DBConn.Table("1_system_parameters").Where("name = ?", name).Select(jsonField).Row().Scan(&result)
 	return result, err

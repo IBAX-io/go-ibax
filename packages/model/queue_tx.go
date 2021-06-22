@@ -7,23 +7,6 @@ package model
 
 import (
 	"github.com/shopspring/decimal"
-)
-
-// QueueTx is model
-type QueueTx struct {
-	Hash     []byte          `gorm:"primary_key;not null"`
-	Data     []byte          `gorm:"not null"`
-	FromGate int             `gorm:"not null"`
-	Expedite decimal.Decimal `gorm:"not null"`
-	Time     int64           `gorm:"not null"`
-}
-
-// TableName returns name of table
-func (qt *QueueTx) TableName() string {
-	return "queue_tx"
-}
-
-// DeleteTx is deleting tx
 func (qt *QueueTx) DeleteTx(transaction *DbTransaction) error {
 	return GetDB(transaction).Delete(qt).Error
 }
@@ -40,6 +23,13 @@ func (qt *QueueTx) Create() error {
 
 // GetByHash is retrieving model from database by hash
 func (qt *QueueTx) GetByHash(transaction *DbTransaction, hash []byte) (bool, error) {
+	return isFound(GetDB(transaction).Where("hash = ?", hash).First(qt))
+}
+
+// DeleteQueueTxByHash is deleting queue tx by hash
+func DeleteQueueTxByHash(transaction *DbTransaction, hash []byte) (int64, error) {
+	query := GetDB(transaction).Exec("DELETE FROM queue_tx WHERE hash = ?", hash)
+	return query.RowsAffected, query.Error
 }
 
 // GetQueuedTransactionsCount counting queued transactions

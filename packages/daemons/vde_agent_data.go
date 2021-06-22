@@ -91,25 +91,19 @@ func VDEAgentData(ctx context.Context, d *daemon) error {
 		log_err = item.DataSendErr
 		//Generate a chain request on the log
 		log_type = 3      //
-		if LogMode == 3 { //0
-			//fmt.Println("There is no need to generate a log")
-		} else if LogMode == 1 || LogMode == 2 {
-			if LogMode == 1 { //1
-				chain_state = 5
-			} else {
-				chain_state = 0
-			}
-			DataSendLog := "TaskUUID:" + item.TaskUUID + " DataUUID:" + item.DataUUID + "Log:" + log_err
-
-			SrcDataLog := model.VDEAgentDataLog{
-				DataUUID:            item.DataUUID,
-				TaskUUID:            item.TaskUUID,
 				Log:                 DataSendLog,
 				LogType:             log_type,
 				LogSender:           item.VDEAgentPubkey,
 				BlockchainHttp:      blockchain_http,
 				BlockchainEcosystem: blockchain_ecosystem,
 				ChainState:          chain_state,
+				CreateTime:          time.Now().Unix()}
+
+			if err = SrcDataLog.Create(); err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("Insert vde_agent_data_log table failed")
+				continue
+			}
+			//fmt.Println("Insert vde_agent_data_log table ok")
 		} else {
 			fmt.Println("Log mode err!")
 		}

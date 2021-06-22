@@ -2,15 +2,8 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-	"github.com/gorilla/mux"
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
+package api
 type appContentResult struct {
 	Blocks    []model.BlockInterface `json:"blocks"`
 	Pages     []model.Page           `json:"pages"`

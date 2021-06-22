@@ -17,6 +17,12 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/network/tcpserver"
 	"github.com/IBAX-io/go-ibax/packages/service"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
+	log "github.com/sirupsen/logrus"
+)
+
 type BCEcosysLookupGetter struct{}
 
 func (g BCEcosysLookupGetter) GetEcosystemLookup() ([]int64, []string, error) {
@@ -273,8 +279,3 @@ func GetDaemonLoader() types.DaemonLoader {
 }
 
 func logMode(logger *log.Entry, mode string) {
-	logLevel := log.GetLevel()
-	log.SetLevel(log.InfoLevel)
-	logger.WithFields(log.Fields{"mode": mode}).Info("Node running mode")
-	log.SetLevel(logLevel)
-}

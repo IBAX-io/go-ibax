@@ -13,6 +13,7 @@ func TestParse(t *testing.T) {
 	cases := map[string]string{
 		"60 * * * *":              "End of range (60) above maximum (59): 60",
 		"0-59 0-23 1-31 1-12 0-6": "",
+		"*/2 */2 */2 */2 */2":     "",
 		}
 
 		if expectedErr != "" {

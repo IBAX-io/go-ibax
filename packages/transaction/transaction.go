@@ -153,6 +153,16 @@ type Transaction struct {
 	TxFullData    []byte // full transaction, with type and data
 	TxHash        []byte
 	TxSignature   []byte
+	TxKeyID       int64
+	TxTime        int64
+	TxType        int64
+	TxCost        int64 // Maximum cost of executing contract
+	TxFuel        int64
+	TxUsedCost    decimal.Decimal // Used cost of CPU resources
+	TxPtr         interface{}     // Pointer to the corresponding struct in consts/struct.go
+	TxData        map[string]interface{}
+	TxSmart       *tx.SmartContract
+	TxContract    *smart.Contract
 	TxHeader      *tx.Header
 	tx            custom.TransactionInterface
 	DbTransaction *model.DbTransaction
@@ -452,13 +462,6 @@ func GetTxTypeAndUserID(binaryBlock []byte) (txType int64, keyID int64) {
 		keyID = txHead.KeyID
 	}
 	return
-}
-
-func GetTransaction(t *Transaction, txType string) (custom.TransactionInterface, error) {
-	switch txType {
-	case consts.TxTypeParserFirstBlock:
-		return &custom.FirstBlockTransaction{Logger: t.GetLogger(), DbTransaction: t.DbTransaction, Data: t.TxPtr}, nil
-	case consts.TxTypeParserStopNetwork:
 		return &custom.StopNetworkTransaction{Logger: t.GetLogger(), Data: t.TxPtr}, nil
 	}
 	log.WithFields(log.Fields{"tx_type": txType, "type": consts.UnknownObject}).Error("unknown txType")

@@ -13,6 +13,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+)
+
+func TestEscape(t *testing.T) {
+	var cases = []struct {
+		Source   string
+		Expected template.HTML
+	}{
+		{`'test'`, `''test''`},
+		{"`test`", "` + \"`\" + `test` + \"`\" + `"},
 		{`100%`, `100%%`},
 	}
 
@@ -33,19 +42,6 @@ func tempContract(appID int, conditions, value string) (string, error) {
 %s`, appID, conditions, value)))
 
 	return file.Name(), nil
-}
-
-func TestLoadSource(t *testing.T) {
-	value := "contract Test {}"
-
-	path, err := tempContract(5, "true", value)
-	assert.NoError(t, err)
-
-	source, err := loadSource(path)
-	assert.NoError(t, err)
-
-	assert.Equal(t, &contract{
-		Name:       filepath.Base(path),
 		Source:     template.HTML(value + "\n"),
 		Conditions: template.HTML("true"),
 		AppID:      5,
