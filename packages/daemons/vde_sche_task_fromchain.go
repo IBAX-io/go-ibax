@@ -163,6 +163,14 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 	err = chain_api.SendPost(chain_apiAddress, gAuth_chain, url, &form, &t_struct)
 	if err != nil {
 		fmt.Println("error", err)
+		return err
+	}
+	if len(t_struct.List) == 0 {
+		log.Info("ShareTaskItem not found, sleep...")
+		//fmt.Println("ShareTaskItem not found, sleep...")
+		time.Sleep(time.Second * 2)
+		return nil
+	}
 
 	//utils.Print_json(t_struct)
 	for _, ShareTaskItem := range t_struct.List {
@@ -196,22 +204,6 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 
 			ShareTaskItem.ContractSrcGet = myContractSrcGet
 			ShareTaskItem.ContractSrcGetHash = myContractSrcGetHash
-
-			contractDestDataBase64, err := base64.StdEncoding.DecodeString(ShareTaskItem.ContractDestGet)
-			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("base64 DecodeString err")
-				fmt.Println("base64 DecodeString err")
-				continue
-			}
-			ContractDestGetPlusHash, err := ecies.EccDeCrypto(contractDestDataBase64, nodePrivateKey)
-			if err != nil {
-				fmt.Println("Decryption error:", err)
-				log.WithFields(log.Fields{"type": consts.CryptoError}).Error("Decryption error")
-				continue
-			}
-			//fmt.Println(":", ContractDestGetPlusHash)
-			myContractDestGetHash = string(ContractDestGetPlusHash)[:64]
-			myContractDestGet = string(ContractDestGetPlusHash)[64:]
 			//fmt.Println("myContractDestGetHash:", myContractDestGetHash)
 			//fmt.Println("myContractDestGet:", myContractDestGet)
 

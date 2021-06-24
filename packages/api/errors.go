@@ -46,21 +46,16 @@ var (
 	errUnknownUID        = errType{"E_UNKNOWNUID", "Unknown uid", defaultStatus}
 	errOBS               = errType{"E_OBS", "Virtual Dedicated Ecosystem %d doesn't exist", defaultStatus}
 	errOBSCreated        = errType{"E_OBSCREATED", "Virtual Dedicated Ecosystem is already created", http.StatusBadRequest}
-	errRequestNotFound   = errType{"E_REQUESTNOTFOUND", "Request %s doesn't exist", defaultStatus}
-	errUpdating          = errType{"E_UPDATING", "Node is updating blockchain", http.StatusServiceUnavailable}
-	errStopping          = errType{"E_STOPPING", "Network is stopping", http.StatusServiceUnavailable}
-	errNotImplemented    = errType{"E_NOTIMPLEMENTED", "Not implemented", http.StatusNotImplemented}
-	errParamMoneyDigit   = errType{"E_PARAMMONEYDIGIT", "The number of decimal places cannot be exceeded ( %s )", http.StatusBadRequest}
-	errDiffKey           = errType{"E_DIFKEY", "Sender's key is different from tx key", defaultStatus}
-	errBannded           = errType{"E_BANNED", "The key is banned till %s", http.StatusForbidden}
-	errCheckRole         = errType{"E_CHECKROLE", "Access denied", http.StatusForbidden}
-	errNewUser           = errType{"E_NEWUSER", "The block packing in progress, please wait", http.StatusUnauthorized}
-	errEcoNotOpen        = errType{"E_ECONOTOPEN", "The ecosystem（%d）is not open and cannot be registered address", http.StatusUnauthorized}
-)
-
-type errType struct {
 	Err     string `json:"error"`
 	Message string `json:"msg"`
 	Status  int    `json:"-"`
 }
 
+func (et errType) Error() string {
+	return et.Err
+}
+
+func (et errType) Errorf(v ...interface{}) errType {
+	et.Message = fmt.Sprintf(et.Message, v...)
+	return et
+}

@@ -42,16 +42,18 @@ var rollbackCmd = &cobra.Command{
 			log.WithError(err).Error("can't read system parameters")
 		}
 		if err := syspar.SysTableColType(nil); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("updating sys table col type")
-		}
-
-		smart.InitVM()
-		if err := smart.LoadContracts(); err != nil {
-			log.WithError(err).Fatal("loading contracts")
-			return
-		}
 		err := rollback.ToBlockID(blockID, nil, log.WithFields(log.Fields{}))
 		if err != nil {
+			log.WithError(err).Fatal("rollback to block id")
+			return
+		}
+
+		// block id = 1, is a special case for full rollback
+		if blockID != 1 {
+			log.Info("Not full rollback, finishing work without checking")
+			return
+		}
+	},
 }
 
 func init() {

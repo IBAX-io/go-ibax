@@ -19,7 +19,14 @@ const (
 	cmdElse                  // run block if Value is false
 	cmdAssignVar             // list of assigned var
 	cmdAssign                // assign
-const (
+	cmdLabel                 // label for continue
+	cmdContinue              // continue from label
+	cmdWhile                 // while
+	cmdBreak                 // break
+	cmdIndex                 // get index []
+	cmdSetIndex              // set index []
+	cmdFuncName              // set func name Func(...).Name(...)
+	cmdUnwrapArr             // unwrap array to stack
 	cmdNot = iota | 0x0100
 	cmdSign
 )

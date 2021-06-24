@@ -9,14 +9,18 @@ import (
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
-type myBalanceResult struct {
 	Amount string `json:"amount"`
+	Money  string `json:"money"`
+}
+
+func (m Mode) getMyBalanceHandler(w http.ResponseWriter, r *http.Request) {
+	client := getClient(r)
+	logger := getLogger(r)
+	form := &ecosystemForm{
+		Validator: m.EcosysIDValidator,
+	}
+	if err := parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
 

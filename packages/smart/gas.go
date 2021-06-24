@@ -1,3 +1,15 @@
+package smart
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -67,15 +79,6 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 			}
 			tb, _ = decimal.NewFromString(toKey.Amount)
 			return
-		}
-
-		payTaxes := func(toID string, sum decimal.Decimal, t, eco int64) error {
-			if _, _, err := sc.updateWhere(
-				[]string{"+amount"}, []interface{}{sum}, walletTable,
-				types.LoadMap(map[string]interface{}{
-					"id":        toID,
-					"ecosystem": eco,
-				})); err != nil {
 				return err
 			}
 			if _, _, err := sc.updateWhere(

@@ -86,8 +86,6 @@ func (m *ShareDataStatus) GetChainShareTaskStatus() (bool, error) {
 //	//Ecosystem    int64  `gorm:"not null" json:"ecosystem"`
 //	//BlockId      int64  `gorm:"not null" json:"block_id"`
 //	//TxHash       []byte `gorm:"not null" json:"tx_hash"`
-//	//ChainID      int64  `gorm:"not null" json:"chain_id"`
-//	//ChainState   int64  `gorm:"not null" json:"chain_state"`    //1:send  2:success  3:error
 //	//ChainErr     string `json:"chain_err"`                      // error text
 //	//Time         int64  `gorm:"not null" json:"time"`
 //}
@@ -139,3 +137,6 @@ func (m *DataUpToChainStatus) Delete() error {
 
 func (m *DataUpToChainStatus) GetAllByTaskUUID(TaskUUID string) ([]DataUpToChainStatus, error) {
 	result := make([]DataUpToChainStatus, 0)
+	err := DBConn.Table("subnode_data_uptochain_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
+	return result, err
+}

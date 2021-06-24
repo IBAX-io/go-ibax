@@ -21,6 +21,10 @@ func unmarshalColumnVDEScheMember(form *VDEScheMemberForm) (*model.VDEScheMember
 	var (
 		err error
 	)
+
+	m := &model.VDEScheMember{
+		VDEPubKey:            form.VDEPubKey,
+		VDEComment:           form.VDEComment,
 		VDEName:              form.VDEName,
 		VDEIp:                form.VDEIp,
 		VDEType:              int64(form.VDEType),
@@ -63,8 +67,6 @@ func VDEScheMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
 	)
-	params := mux.Vars(r)
-	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
 	form := &VDEScheMemberForm{}
