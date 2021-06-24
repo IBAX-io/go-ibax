@@ -7,15 +7,6 @@ package script
 import (
 	"encoding/binary"
 	"fmt"
-	"reflect"
-	"strconv"
-	"strings"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/types"
-
-	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
 )
 
 // The lexical analysis of the incoming program is implemented in this file. It is the first phase of compilation
@@ -176,6 +167,14 @@ type Lexems []*Lexem
 // and records it in the file lex_table.go. In fact, the lexTable array is a set of states and
 // depending on the next sign, the machine goes into a new state.
 // lexParser parsers the input language source code
+func lexParser(input []rune) (Lexems, error) {
+	var (
+		curState                                        uint8
+		length, line, off, offline, flags, start, lexID uint32
+	)
+
+	lexems := make(Lexems, 0, len(input)/4)
+	irune := len(alphabet) - 1
 
 	// This function according to the next symbol looks with help of lexTable what new state we will have,
 	// whether we got the lexeme and what flags are displayed

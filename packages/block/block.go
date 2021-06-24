@@ -82,20 +82,6 @@ func (b *Block) PlaySafe() error {
 				err = ErrLimitTime
 			}
 			if inputTx[0].TxHeader != nil {
-				BadTxForBan(inputTx[0].TxHeader.KeyID)
-			}
-			if err := transaction.MarkTransactionBad(dbTransaction, inputTx[0].TxHash, err.Error()); err != nil {
-				return err
-			}
-		}
-		return err
-	}
-
-	if b.GenBlock {
-		if len(b.Transactions) == 0 {
-			dbTransaction.Commit()
-			return ErrEmptyBlock
-		} else if len(inputTx) != len(b.Transactions) {
 			if err = b.repeatMarshallBlock(); err != nil {
 				dbTransaction.Rollback()
 				return err
@@ -406,6 +392,14 @@ func (b *Block) CheckHash() (bool, error) {
 	}
 
 	return true, nil
+}
+
+// InsertBlockWOForks is inserting blocks
+func InsertBlockWOForks(data []byte, genBlock, firstBlock bool) error {
+	block, err := ProcessBlockWherePrevFromBlockchainTable(data, !firstBlock)
+	if err != nil {
+		return err
+	}
 	block.GenBlock = genBlock
 	if err := block.Check(); err != nil {
 		return err

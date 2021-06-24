@@ -62,7 +62,9 @@ func GetNotificationsCount(ecosystemID int64, accounts []string) ([]Notification
 		query := `SELECT k.id as "recipient_id", '0' as "role_id", count(n.id), k.account
 			FROM "1_keys" k
 			LEFT JOIN "1_notifications" n ON n.ecosystem = k.ecosystem AND n.closed = 0 AND n.notification->>'type' = '1' and n.recipient->>'account' = k.account
-			WHERE k.ecosystem = ? AND k.account = ?
+		err := GetDB(nil).Raw(query, ecosystemID, account, ecosystemID, account).Scan(&list).Error
+		if err != nil {
+			return nil, err
 		}
 		result = append(result, list...)
 	}

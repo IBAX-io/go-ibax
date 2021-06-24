@@ -5,10 +5,6 @@
 
 package syspar
 
-import (
-	"encoding/json"
-	"errors"
-	"fmt"
 	"net/url"
 	"reflect"
 	"strconv"
@@ -17,6 +13,16 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
+
+	log "github.com/sirupsen/logrus"
+)
+
+const publicKeyLength = 64
+
+var (
+	errHonorNodeInvalidValues       = errors.New("invalid values of the honor_nodes parameter")
+	errHonorNodeDuplicatePublicKey  = errors.New("duplicate publicKey values of the honor_nodes parameter")
+	errHonorNodeDuplicateAPIAddress = errors.New("duplicate api address values of the honor_nodes parameter")
 	errHonorNodeDuplicateTCPAddress = errors.New("duplicate tcp address values of the honor_nodes parameter")
 )
 

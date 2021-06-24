@@ -55,6 +55,16 @@ func UpdBlockInfo(dbTransaction *model.DbTransaction, block *Block) error {
 			KeyID:        block.Header.KeyID,
 			NodePosition: converter.Int64ToStr(block.Header.NodePosition),
 			Sent:         0,
+		}
+		if err := ibUpdate.Update(dbTransaction); err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating info block")
+			return fmt.Errorf("error while updating info_block: %s", err)
+		}
+	}
+
+	return nil
+}
+
 func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, error) {
 	r := &model.RollbackTx{}
 	list, err := r.GetBlockRollbackTransactions(transaction, blockID)
@@ -160,17 +170,6 @@ func GetDataFromFirstBlock() (data *consts.FirstBlock, ok bool) {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting record of first block")
 		return
 	}
-
-	if !isFound {
-		return
-	}
-
-	pb, err := UnmarshallBlock(bytes.NewBuffer(block.Data), true)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.ParserError, "error": err}).Error("parsing data of first block")
-		return
-	}
-
 	if len(pb.Transactions) == 0 {
 		log.WithFields(log.Fields{"type": consts.ParserError}).Error("list of parsers is empty")
 		return

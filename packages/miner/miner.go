@@ -1,19 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package miner
-
-import (
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	log "github.com/sirupsen/logrus"
-)
-
-type minersCount struct {
-	start, end, devid int64
-}
 type mint struct {
 	minerPool  []minersCount
 	db         *model.DbTransaction
@@ -44,6 +30,16 @@ func (m *mint) MinerTime() (capacities, nonce, devid int64, err error) {
 	if random < 0 {
 		random = -random
 	}
+	devid = m.getMintRandom(random % nonce)
+	if devid != 0 {
+		if conf.Config.PoolPub.Enable {
+			mc := model.MinterCount{
+				Devid:      devid,
+				Capacity:   capacities,
+				Nonce:      nonce,
+				BlockId:    m.blockid,
+				MintMap:    m.MintMap,
+				MineCounts: m.MineCounts,
 				Hash:       m.prevHash,
 				Time:       m.time,
 			}

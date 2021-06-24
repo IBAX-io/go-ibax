@@ -68,21 +68,6 @@ func VDEScheTaskUpToChain(ctx context.Context, d *daemon) error {
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("VDEScheTaskUpToChain encode error")
 			time.Sleep(2 * time.Second)
-			continue
-		}
-		chain_apiAddress := blockchain_http
-		chain_apiEcosystemID := int64(ecosystemID)
-
-		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
-		// Login
-		gAuth_chain, _, gPrivate_chain, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
-		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
-			time.Sleep(2 * time.Second)
-			continue
-		}
-		//fmt.Println("Login OK!")
-
 		form := url.Values{
 			"TaskUUID":     {item.TaskUUID},
 			"TaskName":     {item.TaskName},
@@ -213,3 +198,13 @@ func VDEScheTaskUpToChainState(ctx context.Context, d *daemon) error {
 			continue
 		}
 		err = item.Updates()
+		if err != nil {
+			fmt.Println("Update VDEScheTask table err: ", err)
+			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
+			time.Sleep(time.Millisecond * 2)
+			continue
+		}
+		fmt.Println("VDE Sche Run chain Contract ok, TxHash:", string(item.TxHash))
+	} //for
+	return nil
+}

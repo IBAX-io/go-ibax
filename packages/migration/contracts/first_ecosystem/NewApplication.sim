@@ -11,6 +11,8 @@ contract NewApplication {
 
         if Size($Name) == 0 {
             warning "Application name missing"
+        }
+    }
 
     action {
         $result = DBInsert("applications", {name: $Name,conditions: $Conditions})

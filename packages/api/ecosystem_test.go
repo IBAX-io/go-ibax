@@ -48,23 +48,6 @@ func TestEditEcosystem(t *testing.T) {
 	value := `P(test,test paragraph)`
 
 	name := randName(`page`)
-	form := url.Values{"Name": {name}, "Value": {value},
-		"Menu": {menu}, "Conditions": {"ContractConditions(`MainCondition`)"}}
-	err = postTx(`@1NewPage`, &form)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	err = postTx(`@1NewPage`, &form)
-	if cutErr(err) != fmt.Sprintf(`{"type":"warning","error":"Page %s already exists"}`, name) {
-		t.Error(err)
-		return
-	}
-	form = url.Values{"Name": {name}, "Value": {`MenuItem(default_page)`}, "ApplicationId": {`1`},
-		"Conditions": {"ContractConditions(`MainCondition`)"}}
-	assert.NoError(t, postTx(`@1NewMenu`, &form))
-
-	form = url.Values{"Id": {`1`}, "Value": {value},
 		"Menu": {menu}, "Conditions": {"ContractConditions(`MainCondition`)"}}
 	err = postTx(`@1EditPage`, &form)
 	if err != nil {
@@ -160,6 +143,17 @@ func TestEcosystemParam(t *testing.T) {
 		return
 	}
 	var ret, ret1 paramResult
+	err := sendGet(`ecosystemparam/changing_menu`, nil, &ret)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if ret.Value != `ContractConditions("MainCondition")` {
+		t.Error(err)
+		return
+	}
+	err = sendGet(`ecosystemparam/myval`, nil, &ret1)
+	if err != nil && err.Error() != `400 {"error": "E_PARAMNOTFOUND", "msg": "Parameter myval has not been found" , "params": ["myval"]}` {
 		t.Error(err)
 		return
 	}
