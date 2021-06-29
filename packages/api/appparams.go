@@ -1,5 +1,17 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"net/http"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
 	"github.com/gorilla/mux"
 
 	log "github.com/sirupsen/logrus"
@@ -7,13 +19,6 @@
 
 type appParamsResult struct {
 	App  string        `json:"app_id"`
-	List []paramResult `json:"list"`
-}
-
-type appParamsForm struct {
-	ecosystemForm
-	paramsForm
-}
 
 func (f *appParamsForm) Validate(r *http.Request) error {
 	return f.ecosystemForm.Validate(r)

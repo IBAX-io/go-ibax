@@ -30,6 +30,17 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"github.com/theckman/go-flock"
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
+)
+
+const (
+	firstBlock   = 1
+	minBlockSize = 9
+)
+
 var ErrBlockSize = errors.New("Bad block size")
 
 //BlockData is a structure of the block's header
@@ -233,16 +244,6 @@ func CopyFileContents(src, dst string) error {
 		}
 	}()
 	if _, err = io.Copy(out, in); err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "from_file": src, "to_file": dst}).Error("copying from to")
-		return ErrInfo(err)
-	}
-	err = out.Sync()
-	if err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "file_name": dst}).Error("syncing file")
-	}
-	return ErrInfo(err)
-}
-
 // CheckSign checks the signature
 func CheckSign(publicKeys [][]byte, forSign []byte, signs []byte, nodeKeyOrLogin bool) (bool, error) {
 	defer func() {

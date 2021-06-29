@@ -24,13 +24,6 @@ func getConfigOptionHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	if len(params["option"]) == 0 {
-		logger.WithFields(log.Fields{"type": consts.EmptyObject, "error": "option not specified"}).Error("on getting option in config handler")
-		errorResponse(w, errNotFound)
-		return
-	}
-
-	switch params["option"] {
-	case "centrifugo":
 		centrifugoAddressHandler(w, r)
 		return
 	}
@@ -57,3 +50,4 @@ func centrifugoAddressHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, replaceHttpSchemeToWs(conf.Config.Centrifugo.URL))
+}

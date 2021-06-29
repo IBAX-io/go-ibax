@@ -18,6 +18,23 @@ type SystemParameter struct {
 	Conditions string `gorm:"not null"`
 }
 
+// TableName returns name of table
+func (sp SystemParameter) TableName() string {
+	return "1_system_parameters"
+}
+
+// Get is retrieving model from database
+func (sp *SystemParameter) Get(name string) (bool, error) {
+	return isFound(DBConn.Where("name = ?", name).First(sp))
+}
+
+// GetTransaction is retrieving model from database using transaction
+func (sp *SystemParameter) GetTransaction(transaction *DbTransaction, name string) (bool, error) {
+	return isFound(GetDB(transaction).Where("name = ?", name).First(sp))
+}
+
+// GetJSONField returns fields as json
+func (sp *SystemParameter) GetJSONField(jsonField string, name string) (string, error) {
 	var result string
 	err := DBConn.Table("1_system_parameters").Where("name = ?", name).Select(jsonField).Row().Scan(&result)
 	return result, err
@@ -54,19 +71,6 @@ func (sp *SystemParameter) ToMap() map[string]string {
 // Update is update model
 func (sp SystemParameter) Update(value string) error {
 	return DBConn.Model(sp).Where("name = ?", sp.Name).Update(`value`, value).Error
-}
-
-// SaveArray is saving array
-func (sp *SystemParameter) SaveArray(list [][]string) error {
-	ret, err := json.Marshal(list)
-	if err != nil {
-		return err
-	}
-	return sp.Update(string(ret))
-}
-
-func (sp *SystemParameter) GetNumberOfHonorNodes() (int, error) {
-	var hns []map[string]interface{}
 	f, err := sp.GetTransaction(nil, `honor_nodes`)
 	if err != nil {
 		return 0, err

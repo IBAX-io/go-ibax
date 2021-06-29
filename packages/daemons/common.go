@@ -134,11 +134,15 @@ func daemonLoop(ctx context.Context, goRoutineName string, handler func(context.
 			startTime := time.Now()
 			counterName := statsd.DaemonCounterName(goRoutineName)
 			handler(ctx, d)
-	go func() {
-		for {
-			daemonNameAndTime := <-MonitorDaemonCh
-			daemonsTable[daemonNameAndTime[0]] = daemonNameAndTime[1]
-			if time.Now().Unix()%10 == 0 {
+			statsd.Client.TimingDuration(counterName+statsd.Time, time.Now().Sub(startTime), 1.0)
+		}
+	}
+}
+
+// StartDaemons starts daemons
+func StartDaemons(ctx context.Context, daemonsToStart []string) {
+	go WaitStopTime()
+
 				log.Debug("daemonsTable: %v\n", daemonsTable)
 			}
 		}

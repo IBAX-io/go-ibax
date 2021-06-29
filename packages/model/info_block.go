@@ -2,6 +2,18 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+package model
+
+import (
+	"github.com/IBAX-io/go-ibax/packages/converter"
+)
+
+// InfoBlock is model
+type InfoBlock struct {
+	Hash           []byte `gorm:"not null"`
+	EcosystemID    int64  `gorm:"not null default 0"`
+	KeyID          int64  `gorm:"not null default 0"`
 	NodePosition   string `gorm:"not null default 0"`
 	BlockID        int64  `gorm:"not null"`
 	Time           int64  `gorm:"not null"`
@@ -19,19 +31,6 @@ func (ib *InfoBlock) TableName() string {
 func (ib *InfoBlock) Get() (bool, error) {
 	return isFound(DBConn.Last(ib))
 }
-
-// Update is update model
-func (ib *InfoBlock) Update(transaction *DbTransaction) error {
-	return GetDB(transaction).Model(&InfoBlock{}).Updates(ib).Error
-}
-
-// GetUnsent is retrieving model from database
-func (ib *InfoBlock) GetUnsent() (bool, error) {
-	return isFound(DBConn.Where("sent = ?", "0").First(&ib))
-}
-
-// Create is creating record of model
-func (ib *InfoBlock) Create(transaction *DbTransaction) error {
 	return GetDB(transaction).Omit("rollbacks_hash").Create(ib).Error
 }
 

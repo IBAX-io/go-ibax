@@ -4,8 +4,6 @@ var (
 	MintCountCh = make(chan *MinterCount, 10)
 )
 
-func Put_MintCount() error {
-func Deal_MintCount() error {
 	//for {
 	//	select {
 	//	case dat := <-MintCountCh:

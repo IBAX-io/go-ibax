@@ -26,11 +26,6 @@ import (
 //Scheduling task information up the chain
 func VDEScheTaskUpToChain(ctx context.Context, d *daemon) error {
 	var (
-		blockchain_http      string
-		blockchain_ecosystem string
-		err                  error
-	)
-
 	m := &model.VDEScheTaskChainStatus{}
 	ScheTask, err := m.GetAllByContractStateAndChainState(1, 1, 0) //0 contract not install，1 contract installd，2 fail； 0not up to chain
 	if err != nil {
@@ -68,6 +63,21 @@ func VDEScheTaskUpToChain(ctx context.Context, d *daemon) error {
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("VDEScheTaskUpToChain encode error")
 			time.Sleep(2 * time.Second)
+			continue
+		}
+		chain_apiAddress := blockchain_http
+		chain_apiEcosystemID := int64(ecosystemID)
+
+		src := filepath.Join(conf.Config.KeysDir, "PrivateKey")
+		// Login
+		gAuth_chain, _, gPrivate_chain, _, _, err := chain_api.KeyLogin(chain_apiAddress, src, chain_apiEcosystemID)
+		if err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("Login chain failure")
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		//fmt.Println("Login OK!")
+
 		form := url.Values{
 			"TaskUUID":     {item.TaskUUID},
 			"TaskName":     {item.TaskName},

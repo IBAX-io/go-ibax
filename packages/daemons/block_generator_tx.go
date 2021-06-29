@@ -8,16 +8,6 @@ package daemons
 import (
 	"encoding/hex"
 
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-
-	log "github.com/sirupsen/logrus"
-)
-
-const (
 	callDelayedContract = "CallDelayedContract"
 	firstEcosystemID    = 1
 )
@@ -30,6 +20,10 @@ type DelayedTx struct {
 	time       int64
 }
 
+// RunForDelayBlockID creates the transactions that need to be run for blockID
+func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*model.Transaction, error) {
+
+	contracts, err := model.GetAllDelayedContractsForBlockID(blockID)
 	if err != nil {
 		dtx.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting delayed contracts for block")
 		return nil, err
