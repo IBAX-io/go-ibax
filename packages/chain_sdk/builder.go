@@ -39,15 +39,6 @@ func newTransaction(smartTx SmartContract, privateKey []byte, internal bool) (da
 	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
 		return
-	}
-	smartTx.PublicKey = publicKey
-
-	if internal {
-		smartTx.SignedBy = crypto.Address(publicKey)
-	}
-
-	if data, err = msgpack.Marshal(smartTx); err != nil {
-		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Error("marshalling smart contract to msgpack")
 		return
 	}
 
@@ -65,6 +56,15 @@ func newTransaction(smartTx SmartContract, privateKey []byte, internal bool) (da
 func NewInternalTransaction(smartTx SmartContract, privateKey []byte) (data, hash []byte, err error) {
 	return newTransaction(smartTx, privateKey, true)
 }
+
+func NewTransaction(smartTx SmartContract, privateKey []byte) (data, hash []byte, err error) {
+	return newTransaction(smartTx, privateKey, false)
+}
+
+/*
+// CreateTransaction creates transaction
+func CreateTransaction(data, hash []byte, keyID int64) error {
+	tx := &model.Transaction{
 		Hash:     hash,
 		Data:     data[:],
 		Type:     1,

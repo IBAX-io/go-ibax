@@ -48,10 +48,6 @@ func VDEScheMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	m := &model.VDEScheMember{}
 	if m, err = unmarshalColumnVDEScheMember(form); err != nil {
 		fmt.Println(err)
-		errorResponse(w, err)
-		return
-	}
-
 	m.CreateTime = time.Now().Unix()
 
 	if err = m.Create(); err != nil {
@@ -67,6 +63,8 @@ func VDEScheMemberUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	var (
 		err error
 	)
+	params := mux.Vars(r)
+	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
 	form := &VDEScheMemberForm{}

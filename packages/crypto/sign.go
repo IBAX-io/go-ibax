@@ -14,10 +14,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 )
 
-func SignString(privateKeyHex, data string) ([]byte, error) {
-	privateKey, err := hex.DecodeString(privateKeyHex)
-	if err != nil {
-
 // GetPrivateKeys return
 func GetPrivateKeys(privateKey []byte) (ret *ecdsa.PrivateKey, err error) {
 	var pubkeyCurve elliptic.Curve

@@ -232,6 +232,21 @@ func Str(v interface{}) (ret string) {
 	return
 }
 
+// Money converts the value into a numeric type for money
+func Money(v interface{}) (decimal.Decimal, error) {
+	return script.ValueToDecimal(v)
+}
+
+func MoneyDiv(d1, d2 interface{}) string {
+	val1, _ := script.ValueToDecimal(d1)
+	val2, _ := script.ValueToDecimal(d2)
+	return val1.Div(val2).Mul(decimal.New(1, 2)).StringFixed(0)
+}
+
+// Float converts the value to float64
+func Float(v interface{}) (ret float64) {
+	return script.ValueToFloat(v)
+}
 
 // Join is joining input with separator
 func Join(input []interface{}, sep string) string {
@@ -277,17 +292,6 @@ func CheckSign(pub, data, sign string) (bool, error) {
 	}
 	pk = crypto.CutPub(pk)
 	return crypto.CheckSign(pk, []byte(data), s)
-}
-
-// Replace replaces old substrings to new substrings
-func CheckNumberChars(data string) bool {
-	dat := []byte(data)
-	dl := len(dat)
-	for i := 0; i < dl; i++ {
-		d := dat[i]
-		if (d >= 0x30 && d <= 0x39) || (d >= 0x41 && d <= 0x5A) || (d >= 0x61 && d <= 0x7A) {
-		} else {
-			return false
 		}
 	}
 	return true
