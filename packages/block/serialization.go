@@ -20,6 +20,8 @@ import (
 
 // MarshallBlock is marshalling block
 func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockData, key string) ([]byte, error) {
+	var mrklArray [][]byte
+	var blockDataTx []byte
 	var signed []byte
 	logger := log.WithFields(log.Fields{"block_id": header.BlockID, "block_hash": header.Hash, "block_time": header.Time, "block_version": header.Version, "block_wallet_id": header.KeyID, "block_state_id": header.EcosystemID})
 
@@ -69,13 +71,6 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	logger := log.WithFields(log.Fields{"block_id": header.BlockID, "block_time": header.Time, "block_wallet_id": header.KeyID,
-		"block_state_id": header.EcosystemID, "block_hash": header.Hash, "block_version": header.Version})
-	transactions := make([]*transaction.Transaction, 0)
-
-	var mrklSlice [][]byte
-
 	// parse transactions
 	for blockBuffer.Len() > 0 {
 		transactionSize, err := converter.DecodeLengthBuf(blockBuffer)
