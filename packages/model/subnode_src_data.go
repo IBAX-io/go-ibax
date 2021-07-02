@@ -38,16 +38,6 @@ func (m *SubNodeSrcData) GetAll() ([]SubNodeSrcData, error) {
 	var result []SubNodeSrcData
 	err := DBConn.Find(&result).Error
 	return result, err
-}
-func (m *SubNodeSrcData) GetOneByID() (*SubNodeSrcData, error) {
-	err := DBConn.Where("id=?", m.ID).First(&m).Error
-	return m, err
-}
-
-func (m *SubNodeSrcData) GetOneByDataUUID(DataUUID string) (*SubNodeSrcData, error) {
-	err := DBConn.Where("data_uuid = ?", DataUUID).First(&m).Error
-	return m, err
-}
 func (m *SubNodeSrcData) GetAllByTaskUUID(TaskUUID string) ([]SubNodeSrcData, error) {
 	result := make([]SubNodeSrcData, 0)
 	err := DBConn.Table("subnode_src_data").Where("task_uuid = ?", TaskUUID).Find(&result).Error
@@ -61,3 +51,5 @@ func (m *SubNodeSrcData) GetAllByDataStatus(DataStatus int64) ([]SubNodeSrcData,
 }
 
 func (m *SubNodeSrcData) GetOneByDataStatus(DataStatus int64) (bool, error) {
+	return isFound(DBConn.Where("data_state = ?", DataStatus).First(m))
+}

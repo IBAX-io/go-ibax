@@ -2,16 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package transaction
-
-import (
-	"fmt"
-
-	"gorm.io/gorm"
-
-	"github.com/pkg/errors"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/utils"
@@ -181,6 +171,13 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //	}
 //
 //	delQueueTx := &model.QueueTx{Hash: hash}
+//	if err = delQueueTx.DeleteTx(dbTransaction); err != nil {
+//		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transaction from queue")
+//		return utils.ErrInfo(err)
+//	}
+//
+//	return nil
+//}
 
 // ProcessTransactionsQueue parses new transactions
 func ProcessTransactionsQueue(dbTransaction *model.DbTransaction) error {

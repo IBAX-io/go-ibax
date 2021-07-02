@@ -27,13 +27,8 @@ var (
 var stopNetworkCmd = &cobra.Command{
 	Use:    "stopNetwork",
 	Short:  "Sending a special transaction to stop the network",
-
-		req := &network.StopNetworkRequest{
-			Data: stopNetworkCert,
-		}
-
-		errCount := 0
-		for _, addr := range addrsForStopping {
+	PreRun: loadConfigWKey,
+	Run: func(cmd *cobra.Command, args []string) {
 			if err := tcpclient.SendStopNetwork(addr, req); err != nil {
 				log.WithFields(log.Fields{"error": err, "type": consts.NetworkError, "addr": addr}).Errorf("Sending request")
 				errCount++

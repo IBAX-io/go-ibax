@@ -151,8 +151,6 @@ func (l BCDaemonLoader) Load(ctx context.Context) error {
 	}
 
 	l.logger.Info("start daemons")
-	daemons.StartDaemons(ctx, l.DaemonListFactory.GetDaemonsList())
-
 	if err := tcpserver.TcpListener(conf.Config.TCPServer.Str()); err != nil {
 		log.Errorf("can't start tcp servers, stop")
 		return err
@@ -279,3 +277,8 @@ func GetDaemonLoader() types.DaemonLoader {
 }
 
 func logMode(logger *log.Entry, mode string) {
+	logLevel := log.GetLevel()
+	log.SetLevel(log.InfoLevel)
+	logger.WithFields(log.Fields{"mode": mode}).Info("Node running mode")
+	log.SetLevel(logLevel)
+}

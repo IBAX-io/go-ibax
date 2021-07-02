@@ -86,16 +86,6 @@ func getCost(name string) int64 {
 	return -1
 }
 
-// UpdateSysParam updates the system parameter
-func UpdateSysParam(sc *SmartContract, name, value, conditions string) (int64, error) {
-	var (
-		fields []string
-		values []interface{}
-	)
-	par := &model.SystemParameter{}
-	found, err := par.Get(name)
-	if err != nil {
-		return 0, logErrorDB(err, "system parameter get")
 	}
 	if !found {
 		return 0, logErrorf(eParamNotFound, name, consts.NotFound, "system parameter get")
@@ -292,6 +282,17 @@ func CheckSign(pub, data, sign string) (bool, error) {
 	}
 	pk = crypto.CutPub(pk)
 	return crypto.CheckSign(pk, []byte(data), s)
+}
+
+// Replace replaces old substrings to new substrings
+func CheckNumberChars(data string) bool {
+	dat := []byte(data)
+	dl := len(dat)
+	for i := 0; i < dl; i++ {
+		d := dat[i]
+		if (d >= 0x30 && d <= 0x39) || (d >= 0x41 && d <= 0x5A) || (d >= 0x61 && d <= 0x7A) {
+		} else {
+			return false
 		}
 	}
 	return true

@@ -147,6 +147,16 @@ func sendPost(apiAddress string, gAuth string, url string, form *url.Values, v i
 //		form[`mobile`] = []string{`true`}
 //	}
 //	var logret loginResult
+//	err = sendPost(apiAddress, `login`, &form, &logret)
+//	if err != nil {
+//		return
+//	}
+//	gAddress = logret.Address
+//	gPrivate = string(key)
+//	gPublic, err = PrivateToPublicHex(gPrivate)
+//	gAuth = logret.Token
+//	if err != nil {
+//		return
 //	}
 //	return
 //}
@@ -355,16 +365,6 @@ func cutErr(err error) string {
 //	req, err := http.NewRequest(http.MethodGet, url, nil)
 //	assert.NoError(t, err)
 //
-//	if len(gAuth) > 0 {
-//		req.Header.Set("Authorization", jwtPrefix+gAuth)
-//	}
-//
-//	cli := http.DefaultClient
-//	resp, err := cli.Do(req)
-//	assert.NoError(t, err)
-//
-//	defer resp.Body.Close()
-//	mime := resp.Header.Get("Content-Type")
 //	expectedMime := "image/png"
 //	assert.Equal(t, expectedMime, mime, "content type must be a '%s' but returns '%s'", expectedMime, mime)
 //}

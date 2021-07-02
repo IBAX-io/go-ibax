@@ -244,6 +244,16 @@ func CopyFileContents(src, dst string) error {
 		}
 	}()
 	if _, err = io.Copy(out, in); err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "from_file": src, "to_file": dst}).Error("copying from to")
+		return ErrInfo(err)
+	}
+	err = out.Sync()
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "file_name": dst}).Error("syncing file")
+	}
+	return ErrInfo(err)
+}
+
 // CheckSign checks the signature
 func CheckSign(publicKeys [][]byte, forSign []byte, signs []byte, nodeKeyOrLogin bool) (bool, error) {
 	defer func() {
@@ -513,9 +523,3 @@ func ToSnakeCase(s string) string {
 			if i > 0 && ((i+1 < len(in) && unicode.IsLower(in[i+1])) || unicode.IsLower(in[i-1])) {
 				out = append(out, '_')
 			}
-			c = unicode.ToLower(c)
-		}
-		out = append(out, c)
-	}
-	return string(out)
-}

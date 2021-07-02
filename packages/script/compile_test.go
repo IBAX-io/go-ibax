@@ -362,18 +362,6 @@ func TestVMCompile(t *testing.T) {
 			var par array
 			var item map
 			item["id"] = str(id)
-			item["name"] = "Test value " + str(id)
-			par[0] = item
-			return par
-		}
-		func GetEmpty().WhereId(id int) array {
-			var par array
-			return par
-		}
-		func result() string {
-			var m map
-			var s string
-			m = GetData().WhereId(123).Row()
 			s = GetEmpty().WhereId(1).One("name") 
 			if s != nil {
 				return "problem"
@@ -737,6 +725,17 @@ func TestContractList(t *testing.T) {
 		`NewContract,MyFunc`},
 		{`contract demo_сontract {
 			data {
+				contract_txt str
+			}
+			func test() {
+			}
+			conditions {
+				if $contract_txt="" {
+					warning "Sorry, you do not have contract access to this action."
+				}
+			}
+		} contract another_contract {} func main { func subfunc(){}}`,
+			`demo_сontract,another_contract,main`},
 	}
 	for _, item := range test {
 		list, _ := ContractsList(item.Input)

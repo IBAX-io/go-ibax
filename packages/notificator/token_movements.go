@@ -39,6 +39,8 @@ func init() {
 
 func sendEmail(conf conf.TokenMovementConfig, message string) error {
 	auth := smtp.PlainAuth("", conf.Username, conf.Password, conf.Host)
+	to := []string{conf.To}
+	msg := []byte(fmt.Sprintf("From: %s\r\n", conf.From) +
 		fmt.Sprintf("To: %s\r\n", conf.To) +
 		fmt.Sprintf("Subject: %s\r\n", conf.Subject) +
 		"\r\n" +
@@ -78,17 +80,6 @@ func CheckTokenMovementLimits(tx *model.DbTransaction, conf conf.TokenMovementCo
 			if len(transfers) > 0 {
 				lastLimitEvents[fromToDayLimitEvent] = time.Now()
 			}
-		}
-	}
-
-	excesses, err := model.GetExcessTokenMovementQtyPerBlock(tx, blockID)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("check token movement per block")
-	} else {
-		for _, excess := range excesses {
-			messages = append(messages, fmt.Sprintf(perBlockTokenMovementTemplate, excess.SenderID, excess.TxCount, blockID))
-		}
-	}
 
 	if len(messages) > 0 {
 		sendEmail(conf, strings.Join(messages, "\n"))

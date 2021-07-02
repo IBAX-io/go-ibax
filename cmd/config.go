@@ -39,6 +39,20 @@ var configCmd = &cobra.Command{
 			log.WithError(err).Fatal("Marshalling config to global struct variable")
 		}
 
+		err = conf.SaveConfig(configPath)
+		if err != nil {
+			log.WithError(err).Fatal("Saving config")
+		}
+
+		log.Infof("Config is saved to %s", configPath)
+	},
+}
+
+func init() {
+	viper.SetEnvPrefix("CHAIN")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
 	// Command flags
 	configCmd.Flags().String("path", "", "Generate config to (default dataDir/config.toml)")
 
@@ -154,16 +168,6 @@ var configCmd = &cobra.Command{
 	configCmd.Flags().Int64Var(&conf.Config.MaxPageGenerationTime, "mpgt", 3000, "Max page generation time in ms")
 	configCmd.Flags().Int64Var(&conf.Config.HTTPServerMaxBodySize, "mbs", 1<<20, "Max server body size in byte")
 	configCmd.Flags().StringSliceVar(&conf.Config.NodesAddr, "nodesAddr", []string{}, "List of addresses for downloading blockchain")
-	configCmd.Flags().Int64Var(&conf.Config.NetworkID, "networkID", 1, "Network ID")
-	configCmd.Flags().StringVar(&conf.Config.OBSMode, "obsMode", consts.NoneOBS, "OBS running mode")
-
-	viper.BindPFlag("PidFilePath", configCmd.Flags().Lookup("pid"))
-	viper.BindPFlag("LockFilePath", configCmd.Flags().Lookup("lock"))
-	viper.BindPFlag("KeysDir", configCmd.Flags().Lookup("keysDir"))
-	viper.BindPFlag("DataDir", configCmd.Flags().Lookup("dataDir"))
-	viper.BindPFlag("FirstBlockPath", configCmd.Flags().Lookup("firstBlock"))
-	viper.BindPFlag("TLS", configCmd.Flags().Lookup("tls"))
-	viper.BindPFlag("TLSCert", configCmd.Flags().Lookup("tls-cert"))
 	viper.BindPFlag("TLSKey", configCmd.Flags().Lookup("tls-key"))
 	viper.BindPFlag("MaxPageGenerationTime", configCmd.Flags().Lookup("mpgt"))
 	viper.BindPFlag("HTTPServerMaxBodySize", configCmd.Flags().Lookup("mbs"))

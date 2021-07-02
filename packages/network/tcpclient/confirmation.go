@@ -9,18 +9,12 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/network"
 
+	log "github.com/sirupsen/logrus"
+)
+
+func CheckConfirmation(host string, blockID int64, logger *log.Entry) (hash string) {
 	conn, err := newConnection(host)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.ConnectionError, "error": err, "host": host, "block_id": blockID}).Debug("dialing to host")
-		return "0"
-	}
-	defer conn.Close()
-
-	rt := &network.RequestType{Type: network.RequestTypeConfirmation}
-	if err = rt.Write(conn); err != nil {
-		logger.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host, "block_id": blockID}).Error("sending request type")
-		return "0"
-	}
 
 	req := &network.ConfirmRequest{
 		BlockID: uint32(blockID),
