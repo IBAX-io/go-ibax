@@ -126,6 +126,14 @@ func shareDataListHandlre(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, result)
 }
 
+func shareDataByIDHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
+
+	id := converter.StrToInt64(params["id"])
+	shareData := model.ShareDataStatus{}
+	shareData.ID = id
+	result, err := shareData.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("The query task data by ID failed")
 		errorResponse(w, err)
@@ -163,15 +171,6 @@ func shareDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, result)
-}
-
-func unmarshalColumnShareData(form *shareDataForm) (*model.ShareDataStatus, error) {
-	var (
-		dist map[string]interface{}
-		err  error
-	)
-
-	err = json.Unmarshal([]byte(form.Dist), &dist)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("unmarshal dist error")
 	}

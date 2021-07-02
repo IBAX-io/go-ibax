@@ -161,6 +161,16 @@ func (resp *ConfirmResponse) Read(r io.Reader) error {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on reading ConfirmResponse reverse order")
 		return err
 	}
+	resp.Hash = h
+	return nil
+}
+
+func (resp *ConfirmResponse) Write(w io.Writer) error {
+	if err := writeSliceWithSize(w, resp.Hash, consts.HashSize); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on sending ConfiremResponse hash")
+		return err
+	}
+
 	return nil
 }
 
@@ -335,12 +345,6 @@ func readSliceToBuf(r io.Reader, buf []byte) ([]byte, error) {
 }
 
 func writeSlice(w io.Writer, slice []byte) error {
-	byteSize := make([]byte, 4)
-	binary.PutUvarint(byteSize, uint64(len(slice)))
-
-	w.Write(byteSize)
-	_, err := w.Write(slice)
-	return err
 }
 
 // if bytesLen < 0 then slice length reads before reading slice body

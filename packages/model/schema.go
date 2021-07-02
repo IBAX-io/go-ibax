@@ -103,6 +103,15 @@ func ExecOBSSchema(id int, wallet int64) error {
 			return pubKey, nil
 		}
 
+		amount := decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()
+		if err = GetDB(nil).Exec(`insert into "1_keys" (account,pub,amount) values (?,?,?,?),(?,?,?,?)`,
+			keyID, converter.AddressToString(keyID), PubKey, amount, nodeKeyID, converter.AddressToString(nodeKeyID), nodePubKey, 0).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ExecSchema is executing schema
 func ExecSchema() error {
 	return migration.InitMigrate(&MigrationHistory{})

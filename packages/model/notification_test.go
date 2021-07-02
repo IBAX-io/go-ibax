@@ -9,18 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-)
-
-type testItem struct {
-	Input        []int64
-	Filter       string
-	ParamsLength int
-}
-
-func TestGetNotificationCountFilter(t *testing.T) {
-	testTable := []testItem{
-		testItem{
-			Input:        []int64{3, 5},
 			Filter:       ` WHERE closed = false AND recipient_id IN (?) `,
 			ParamsLength: 1,
 		},
@@ -37,3 +25,4 @@ func TestGetNotificationCountFilter(t *testing.T) {
 		assert.Equal(t, item.ParamsLength, len(params), "on %d step wrong params length %d", i, len(params))
 	}
 
+}

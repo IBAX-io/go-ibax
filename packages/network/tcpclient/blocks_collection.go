@@ -4,6 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 package tcpclient
 
+import (
+	"context"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"io"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/network"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -94,12 +104,6 @@ func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int6
 
 			_, err := io.ReadFull(src, sizeBuf)
 			if err != nil {
-				log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on reading size of block data")
-				errChan <- err
-				return
-			}
-
-			size, intErr := binary.Uvarint(sizeBuf)
 			if intErr < 0 {
 				log.WithFields(log.Fields{"type": consts.ConversionError, "error": ErrorWrongSizeBytes}).Error("on convert size body")
 				errChan <- ErrorWrongSizeBytes

@@ -8,19 +8,23 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
-)
 
 // DefaultBlockchainGap is default value for the number of lagging blocks
 const DefaultBlockchainGap int64 = 10
 
+type NodeActualizer struct {
+	availableBlockchainGap int64
+}
+
+func NewNodeActualizer(availableBlockchainGap int64) NodeActualizer {
+	return NodeActualizer{
+		availableBlockchainGap: availableBlockchainGap,
+	}
+}
+
+// Run is starting node monitoring
+func (n *NodeActualizer) Run(ctx context.Context) {
+	go func() {
 		log.Info("Node Actualizer monitoring starting")
 		for {
 			if ctx.Err() != nil {
