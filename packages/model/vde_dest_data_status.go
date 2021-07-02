@@ -16,13 +16,6 @@ type VDEDestDataStatus struct {
 	VDEDestIp      string `gorm:"not null" json:"vde_dest_ip"`
 	VDEAgentPubkey string `gorm:"not null" json:"vde_agent_pubkey"`
 	VDEAgentIp     string `gorm:"not null" json:"vde_agent_ip"`
-	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
-
-	AuthState int64 `gorm:"not null" json:"auth_state"`
-	SignState int64 `gorm:"not null" json:"sign_state"`
-	HashState int64 `gorm:"not null" json:"hash_state"`
-
-	UpdateTime int64 `gorm:"not null" json:"update_time"`
 	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
@@ -55,6 +48,13 @@ func (m *VDEDestDataStatus) GetOneByDataUUID(DataUUID string) (*VDEDestDataStatu
 	err := DBConn.Where("data_uuid=?", DataUUID).First(&m).Error
 	return m, err
 }
+func (m *VDEDestDataStatus) GetOneByTaskUUID(TaskUUID string) (*VDEDestDataStatus, error) {
+	err := DBConn.Where("task_uuid=?", TaskUUID).First(&m).Error
+	return m, err
+}
+func (m *VDEDestDataStatus) GetAllByTaskUUID(TaskUUID string) ([]VDEDestDataStatus, error) {
+	result := make([]VDEDestDataStatus, 0)
+	err := DBConn.Table("vde_dest_data_status").Where("task_uuid = ?", TaskUUID).Find(&result).Error
 	return result, err
 }
 
