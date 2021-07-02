@@ -109,18 +109,6 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 		return nil
 	}
 
-	blockchain_http = ScheChainInfo.BlockchainHttp
-	blockchain_ecosystem = ScheChainInfo.BlockchainEcosystem
-	//fmt.Println("ScheChainInfo:", blockchain_http, blockchain_ecosystem)
-
-	ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("encode error")
-		time.Sleep(time.Millisecond * 2)
-		return err
-	}
-	//api.ApiAddress = blockchain_http
-	//api.ApiEcosystemID = int64(ecosystemID)
 	chain_apiAddress := blockchain_http
 	chain_apiEcosystemID := int64(ecosystemID)
 
@@ -204,6 +192,22 @@ func VDEScheTaskSrcGetFromChain(ctx context.Context, d *daemon) error {
 
 			ShareTaskItem.ContractSrcGet = myContractSrcGet
 			ShareTaskItem.ContractSrcGetHash = myContractSrcGetHash
+
+			contractDestDataBase64, err := base64.StdEncoding.DecodeString(ShareTaskItem.ContractDestGet)
+			if err != nil {
+				log.WithFields(log.Fields{"error": err}).Error("base64 DecodeString err")
+				fmt.Println("base64 DecodeString err")
+				continue
+			}
+			ContractDestGetPlusHash, err := ecies.EccDeCrypto(contractDestDataBase64, nodePrivateKey)
+			if err != nil {
+				fmt.Println("Decryption error:", err)
+				log.WithFields(log.Fields{"type": consts.CryptoError}).Error("Decryption error")
+				continue
+			}
+			//fmt.Println(":", ContractDestGetPlusHash)
+			myContractDestGetHash = string(ContractDestGetPlusHash)[:64]
+			myContractDestGet = string(ContractDestGetPlusHash)[64:]
 			//fmt.Println("myContractDestGetHash:", myContractDestGetHash)
 			//fmt.Println("myContractDestGet:", myContractDestGet)
 

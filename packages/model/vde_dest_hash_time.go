@@ -32,3 +32,5 @@ func (m *VDEDestHashTime) Get() (*VDEDestHashTime, error) {
 }
 
 func (m *VDEDestHashTime) GetAll() ([]VDEDestHashTime, error) {
+	var result []VDEDestHashTime
+	err := DBConn.Find(&result).Error

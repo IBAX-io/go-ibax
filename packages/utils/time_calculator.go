@@ -66,6 +66,16 @@ func (btc *BlockTimeCounter) NextTime(t time.Time, nodePosition int) time.Time {
 func (btc *BlockTimeCounter) RangesByTime(t time.Time) (start, end time.Time) {
 	atTimePosition := btc.NodePosition(t)
 	end = btc.start.Add(btc.duration*time.Duration(atTimePosition) + 1)
-		numberNodes: int(syspar.GetCountOfActiveNodes()),
-	}
+	start = end.Add(-btc.duration)
+	return
 }
+
+// NewBlockTimeCounter return initialized BlockTimeCounter
+func NewBlockTimeCounter() *BlockTimeCounter {
+	firstBlock, _ := syspar.GetFirstBlockData()
+	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
+	blocksGapDuration := time.Second * time.Duration(syspar.GetGapsBetweenBlocks())
+
+	return &BlockTimeCounter{
+		start:       time.Unix(int64(firstBlock.Time), 0),
+		duration:    blockGenerationDuration + blocksGapDuration,

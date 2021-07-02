@@ -161,16 +161,6 @@ func (resp *ConfirmResponse) Read(r io.Reader) error {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on reading ConfirmResponse reverse order")
 		return err
 	}
-	resp.Hash = h
-	return nil
-}
-
-func (resp *ConfirmResponse) Write(w io.Writer) error {
-	if err := writeSliceWithSize(w, resp.Hash, consts.HashSize); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on sending ConfiremResponse hash")
-		return err
-	}
-
 	return nil
 }
 
@@ -1332,6 +1322,21 @@ func (req *VDESrcDataAgentRequest) Read(r io.Reader) error {
 	TaskUUID_slice, err := ReadSlice(r)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on reading TaskUUID request")
+		return err
+	}
+	req.TaskUUID = string(TaskUUID_slice)
+
+	DataUUID_slice, err := ReadSlice(r)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("on reading DataUUID request")
+		return err
+	}
+	req.DataUUID = string(DataUUID_slice)
+
+	AgentMode_slice, err := ReadSlice(r)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("on reading AgentMode request")
+		return err
 	}
 	req.AgentMode = string(AgentMode_slice)
 

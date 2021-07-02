@@ -16,18 +16,6 @@ import (
 	qb "github.com/IBAX-io/go-ibax/packages/smart/queryBuilder"
 
 	log "github.com/sirupsen/logrus"
-)
-
-func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) error {
-	rollbackTx := &model.RollbackTx{
-		BlockID:   sc.BlockData.BlockID,
-		TxHash:    sc.TxHash,
-		NameTable: table,
-		TableID:   tableID,
-		Data:      rollbackInfoStr,
-	}
-	sc.RollBackTx = append(sc.RollBackTx, rollbackTx)
-	err := rollbackTx.Create(sc.DbTransaction)
 	if err != nil {
 		return logErrorDB(err, "creating rollback tx")
 	}
@@ -181,3 +169,12 @@ func (sc *SmartContract) update(fields []string, values []interface{},
 	table string, whereField string, whereValue interface{}) (int64, string, error) {
 	return sc.updateWhere(fields, values, table, types.LoadMap(map[string]interface{}{
 		whereField: fmt.Sprint(whereValue)}))
+}
+
+func shortString(raw string, length int) string {
+	if len(raw) > length {
+		return raw[:length]
+	}
+
+	return raw
+}

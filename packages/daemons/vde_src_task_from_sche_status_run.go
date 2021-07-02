@@ -16,11 +16,6 @@ import (
 	vde_api "github.com/IBAX-io/go-ibax/packages/vde_sdk"
 
 	"path/filepath"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -47,6 +42,15 @@ func VDESrcTaskFromScheStatusRun(ctx context.Context, d *daemon) error {
 		time.Sleep(time.Millisecond * 2)
 		return err
 	}
+	if len(SrcTask) == 0 {
+		log.Info("Src task to run not found")
+		time.Sleep(time.Millisecond * 2)
+		return nil
+	}
+	// deal with task data
+	for _, item := range SrcTask {
+		//fmt.Println("SrcTask:", item.TaskUUID)
+		blockchain_http = item.ContractRunHttp
 		blockchain_ecosystem = item.ContractRunEcosystem
 		//fmt.Println("ContractRun:", blockchain_http, blockchain_ecosystem)
 

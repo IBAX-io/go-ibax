@@ -10,19 +10,6 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/script"
-	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-)
-
-type localBannedNode struct {
-	HonorNode      *syspar.HonorNode
-	LocalUnBanTime time.Time
 }
 
 type NodesBanService struct {
@@ -154,6 +141,7 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 			ID:          int(info.ID),
 			Time:        time.Now().Unix(),
 			EcosystemID: 1,
+			KeyID:       conf.Config.KeyID,
 		},
 		Params: map[string]interface{}{
 			"ProducerNodeID": crypto.Address(producer.PublicKey),

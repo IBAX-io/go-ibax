@@ -59,10 +59,6 @@ func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 			b_syslog.Crit(line)
 			return nil
 		}
-	case logrus.ErrorLevel:
-		{
-			b_syslog.Err(line)
-			return nil
 		}
 	case logrus.WarnLevel:
 		{
@@ -74,6 +70,15 @@ func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 			b_syslog.Info(line)
 			return nil
 		}
+	case logrus.DebugLevel:
+		{
+			b_syslog.Debug(line)
+			return nil
+		}
+	default:
+		return nil
+	}
+}
 
 // Levels returns list of levels
 func (hook *SyslogHook) Levels() []logrus.Level {
