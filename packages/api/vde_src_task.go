@@ -13,6 +13,17 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+func unmarshalColumnVDESrcTask(form *VDESrcTaskForm) (*model.VDESrcTask, error) {
+	var (
+		parms              map[string]interface{}
+		contract_run_parms map[string]interface{}
+		err                error
 	)
 
 	err = json.Unmarshal([]byte(form.Parms), &parms)
@@ -61,19 +72,6 @@ import (
 		ChainId:    int64(form.ChainId),
 		ChainErr:   form.ChainErr,
 	}
-
-	return m, err
-}
-
-func VDESrcTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
-	var (
-		ContractSrcGetHashHex  string
-		ContractDestGetHashHex string
-		err                    error
-	)
-	logger := getLogger(r)
-	form := &VDESrcTaskForm{}
-	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}

@@ -29,12 +29,12 @@ func (vm *VM) CompileEval(input string, state uint32) error {
 		crc, err := crypto.CalcChecksum([]byte(input))
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("calculating compile eval input checksum")
-
-			return err
-		}
-		evals[crc] = &evalCode{Source: input, Code: block}
-		return nil
+		return true, nil
 	}
+	crc, err := crypto.CalcChecksum([]byte(input))
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("calculating compile eval checksum")
+		return false, err
 	}
 	if eval, ok := evals[crc]; !ok || eval.Source != input {
 		if err := vm.CompileEval(input, state); err != nil {
