@@ -8,17 +8,6 @@ package api
 import (
 	"encoding/hex"
 	"encoding/json"
-	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/smart"
-
-	"github.com/gorilla/mux"
-)
-
-type txinfoResult struct {
-	BlockID string        `json:"blockid"`
 	Confirm int           `json:"confirm"`
 	Data    *smart.TxInfo `json:"data,omitempty"`
 }
@@ -74,6 +63,15 @@ func getTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	params := mux.Vars(r)
 	status, err := getTxInfo(r, params["hash"], form.ContractInfo)
+	if err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, status)
+}
+
+func getTxInfoMultiHandler(w http.ResponseWriter, r *http.Request) {
 	form := &txInfoForm{}
 	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)

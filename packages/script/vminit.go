@@ -143,6 +143,17 @@ type FuncInfo struct {
 type VarInfo struct {
 	Obj   *ObjInfo
 	Owner *Block
+}
+
+// IndexInfo contains the information for SetIndex
+type IndexInfo struct {
+	VarOffset int
+	Owner     *Block
+	Extend    string
+}
+
+// ObjInfo is the common object type
+type ObjInfo struct {
 	Type  int
 	Value interface{}
 }
@@ -429,13 +440,6 @@ func (vm *VM) getInParams(ret *ObjInfo) int {
 // Call executes the name object with the specified params and extended variables and functions
 func (vm *VM) Call(name string, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
 	var obj *ObjInfo
-	if state, ok := (*extend)[`rt_state`]; ok {
-		obj = vm.getObjByNameExt(name, state.(uint32))
-	} else {
-		obj = vm.getObjByName(name)
-	}
-	if obj == nil {
-		vm.logger.WithFields(log.Fields{"type": consts.VMError, "vm_func_name": name}).Error("unknown function")
 		return nil, fmt.Errorf(`unknown function %s`, name)
 	}
 	switch obj.Type {

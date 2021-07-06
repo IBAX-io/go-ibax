@@ -58,6 +58,13 @@ func Type1(rw io.ReadWriter) error {
 		log.WithFields(log.Fields{"error": err}).Error("on getting node by position")
 		return err
 	}
+
+	// get data type (0 - block and transactions, 1 - only transactions)
+	newDataType := converter.BinToDec(buf.Next(1))
+
+	log.Debug("newDataType", newDataType)
+	if newDataType == 0 {
+		banned := n != nil && service.GetNodesBanService().IsBanned(*n)
 		if banned {
 			buf.Next(3)
 			buf.Next(consts.HashSize)
@@ -89,8 +96,6 @@ func Type1(rw io.ReadWriter) error {
 	}
 
 	// get this new transactions
-	txBodies, err := resieveTxBodies(rw)
-	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on reading needed txes from disseminator")
 		return err
 	}
