@@ -50,9 +50,6 @@ func Type101(r *network.VDESrcDataAgentRequest) (*network.VDESrcDataAgentRespons
 		TaskUUID:       r.TaskUUID,
 		DataUUID:       r.DataUUID,
 		AgentMode:      AgentMode,
-		Hash:           hash,
-		DataInfo:       r.DataInfo,
-		VDESrcPubkey:   r.VDESrcPubkey,
 		VDEAgentPubkey: r.VDEAgentPubkey,
 		VDEAgentIp:     r.VDEAgentIp,
 		VDEDestPubkey:  r.VDEDestPubkey,
@@ -68,3 +65,4 @@ func Type101(r *network.VDESrcDataAgentRequest) (*network.VDESrcDataAgentRespons
 		return nil, err
 	}
 	return resp, nil
+}

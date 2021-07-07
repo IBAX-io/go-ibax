@@ -46,6 +46,12 @@ func go_callback_int() {
 // SigChan is a channel
 var SigChan chan os.Signal
 
+func waitSig() {
+	C.waitSig()
+}
+
+// WaitForSignals waits for Interrupt os.Kill signals
+func WaitForSignals() {
 	SigChan = make(chan os.Signal, 1)
 	waitSig()
 	go func() {
@@ -68,13 +74,6 @@ var SigChan chan os.Signal
 					if err != nil {
 						log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("closing gorm")
 					}
-				}
-
-				err := os.Remove(conf.Config.GetPidPath())
-				if err != nil {
-					log.WithFields(log.Fields{
-						"type": consts.IOError, "error": err, "path": conf.Config.GetPidPath(),
-					}).Error("removing file")
 				}
 
 				os.Exit(1)

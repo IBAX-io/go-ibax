@@ -48,6 +48,11 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 		return err
 	}
 	if len(ShareData) == 0 {
+		//log.Info("task data not found")
+		time.Sleep(time.Millisecond * 100)
+		return nil
+	}
+
 	// deal with task data
 	var TaskParms_Str string
 	for _, item := range ShareData {
@@ -194,14 +199,6 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 				log.WithError(err)
 			}
 			continue
-		}
-		if blockchain_ecosystem, ok = TaskParms["blockchain_ecosystem"].(string); !ok {
-			log.WithFields(log.Fields{"error": err}).Error("blockchain_ecosystem parse error")
-			item.DataState = 3 //Indicates an error in parsing task parameters
-			err = item.Updates()
-			if err != nil {
-				log.WithError(err)
-			}
 			continue
 		}
 

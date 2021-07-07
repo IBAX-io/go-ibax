@@ -10,6 +10,13 @@ type GRefreshClaims struct {
 	Refresh          string `json:"ref,omitempty"`
 	ExpiresAt        int64  `json:"exp,omitempty"`
 	RefreshExpiresAt int64  `json:"refexp,omitempty"`
+}
+
+type GRefreshClaimsCache struct {
+	mutex sync.RWMutex
+	cache map[string]*GRefreshClaims
+}
+
 var GClaims = &GRefreshClaimsCache{cache: make(map[string]*GRefreshClaims)}
 
 func (g *GRefreshClaims) ContainsClaims(h string) bool {
@@ -28,19 +35,6 @@ func (g *GRefreshClaims) ContainsClaims(h string) bool {
 			*g = *v
 			return true
 		}
-	} else {
-		return false
-	}
-	return false
-}
-
-func (g *GRefreshClaims) RefreshClaims() {
-
-	if len(GClaims.cache) == 0 {
-		GClaims.cache = make(map[string]*GRefreshClaims)
-	}
-
-	GClaims.mutex.Lock()
 	defer GClaims.mutex.Unlock()
 
 	GClaims.cache[g.Header] = g

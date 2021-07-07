@@ -3,17 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package migration
-
-var firstTablesDataSQL = `
-INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VALUES
-    (next_id('1_tables'), 'delayed_contracts',
-        '{
-            "insert": "ContractAccess(\"@1NewDelayedContract\")",
-            "update": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
-        }',
-        '{
             "contract": "ContractAccess(\"@1EditDelayedContract\")",
             "key_id": "ContractAccess(\"@1EditDelayedContract\")",
             "block_id": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
@@ -93,3 +82,10 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "update": "false",
             "new_column": "false"
         }',
+        '{
+            "name": "false",
+            "offset": "false"
+        }',
+        'ContractConditions("@1AdminCondition")'
+    );
+`

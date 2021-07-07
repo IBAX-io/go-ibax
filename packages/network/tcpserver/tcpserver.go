@@ -82,19 +82,18 @@ func HandleTCPRequest(rw net.Conn) {
 			response, err = Type202(req)
 		}
 	//
-	case network.RequestTypeSendVDESrcData:
-		req := &network.VDESrcDataRequest{}
+	case network.RequestTypeSendPrivateData:
+		req := &network.PrivateDateRequest{}
 		if err = req.Read(rw); err == nil {
-			response, err = Type100(req)
+			response, err = Type88(req)
 		}
-	case network.RequestTypeSendVDESrcDataAgent:
-		req := &network.VDESrcDataAgentRequest{}
+
+	case network.RequestTypeSendPrivateFile:
+		req := &network.PrivateFileRequest{}
 		if err = req.Read(rw); err == nil {
-			response, err = Type101(req)
+			response, err = Type99(req)
 		}
-	case network.RequestTypeSendVDEAgentData:
-		req := &network.VDEAgentDataRequest{}
-		if err = req.Read(rw); err == nil {
+	}
 
 	if err != nil || response == nil {
 		return

@@ -18,6 +18,13 @@ type Handler interface {
 	Run(*Task)
 }
 
+// Task represents task
+type Task struct {
+	ID       string
+	CronSpec string
+
+	Handler Handler
+
 	schedule cron.Schedule
 }
 
@@ -46,6 +53,3 @@ func (t *Task) Next(tm time.Time) time.Time {
 }
 
 // Run executes task
-func (t *Task) Run() {
-	t.Handler.Run(t)
-}

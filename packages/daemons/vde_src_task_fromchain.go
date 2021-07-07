@@ -230,6 +230,14 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 		if ContractDestGetHashHex, err = crypto.HashHex([]byte(ShareTaskItem.ContractDestGet)); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("Raw data hash failed")
 			fmt.Println("ContractDestGetHashHex Raw data hash failed ")
+			continue
+		}
+		if ContractDestGetHashHex != ShareTaskItem.ContractDestGetHash {
+			log.WithFields(log.Fields{"error": err}).Error("Contract Dest Hash validity fails")
+			fmt.Println("Contract Dest Hash validity fails")
+			continue
+		}
+
 		m := &model.VDESrcTaskFromSche{}
 		m.TaskUUID = ShareTaskItem.TaskUUID
 		m.TaskName = ShareTaskItem.TaskName
@@ -247,16 +255,6 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 
 		m.ContractRunHttp = ShareTaskItem.ContractRunHttp
 		m.ContractRunEcosystem = ShareTaskItem.ContractRunEcosystem
-		m.ContractRunParms = ShareTaskItem.ContractRunParms
-
-		m.ContractMode = converter.StrToInt64(ShareTaskItem.ContractMode)
-		//m.ContractState = converter.StrToInt64(ShareTaskItem.ContractState)
-
-		m.CreateTime = time.Now().Unix()
-
-		//If the record exists, update it.to do...
-		update_flag := 1
-		m2 := &model.VDESrcTaskFromSche{}
 		myTask, err := m2.GetOneByTaskUUID(ShareTaskItem.TaskUUID)
 		if err != nil {
 			update_flag = 0

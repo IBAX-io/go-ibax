@@ -24,6 +24,17 @@ func unmarshalColumnVDEAgentChainInfo(form *VDEAgentChainInfoForm) (*model.VDEAg
 
 	m := &model.VDEAgentChainInfo{
 		BlockchainHttp:      form.BlockchainHttp,
+		BlockchainEcosystem: form.BlockchainEcosystem,
+		Comment:             form.Comment,
+		LogMode:             int64(form.LogMode),
+	}
+
+	return m, err
+}
+
+func VDEAgentChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		err error
 	)
 	logger := getLogger(r)
 	form := &VDEAgentChainInfoForm{}
@@ -43,10 +54,6 @@ func unmarshalColumnVDEAgentChainInfo(form *VDEAgentChainInfoForm) (*model.VDEAg
 	}
 
 	m.CreateTime = time.Now().Unix()
-
-	if err = m.Create(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
-	}
 
 	model.DBConn.Last(&m)
 

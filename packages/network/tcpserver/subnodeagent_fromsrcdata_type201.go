@@ -37,12 +37,6 @@ func Type201(r *network.SubNodeSrcDataAgentRequest) (*network.SubNodeSrcDataAgen
 		log.WithError(err)
 		return nil, err
 	}
-
-	//hash, err := crypto.HashHex(r.Data)
-	hash, err := crypto.HashHex(data)
-	if err != nil {
-		log.WithError(err)
-		return nil, err
 	}
 	resp := &network.SubNodeSrcDataAgentResponse{}
 	resp.Hash = hash
@@ -68,6 +62,18 @@ func Type201(r *network.SubNodeSrcDataAgentRequest) (*network.SubNodeSrcDataAgen
 		TaskUUID:           r.TaskUUID,
 		DataUUID:           r.DataUUID,
 		AgentMode:          AgentMode,
+		TranMode:           TranMode,
+		Hash:               hash,
+		DataInfo:           r.DataInfo,
+		SubNodeSrcPubkey:   r.SubNodeSrcPubkey,
+		SubNodeAgentPubkey: r.SubNodeAgentPubkey,
+		SubNodeAgentIP:     r.SubNodeAgentIp,
+		SubNodeDestPubkey:  r.SubNodeDestPubkey,
+		SubNodeDestIP:      r.SubNodeDestIp,
+		//Data:         r.Data,
+		//Data:         data,
+		Data:       []byte(encodeDataString),
+		CreateTime: time.Now().Unix(),
 	}
 
 	err = SubNodeAgentData.Create()

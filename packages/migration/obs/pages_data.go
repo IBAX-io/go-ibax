@@ -129,6 +129,9 @@ var pagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, conditions, ap
         }
         If(#import_id# > 0){
             Div(list-group-item text-right){
+                VarAsIs(imp_data, "#import_value_data#")
+                Button(Body: "Import", Class: btn btn-primary, Page: @1apps_list).CompositeContract(@1Import, "#imp_data#")
+            }
         }
-    }', 'developer_menu', 'ContractConditions("@1DeveloperCondition")', '1', '1');
-`
+    }
+}', 'developer_menu', 'ContractConditions("@1DeveloperCondition")', '1', '1'),
