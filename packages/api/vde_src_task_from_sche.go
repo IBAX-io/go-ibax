@@ -48,13 +48,6 @@ func unmarshalColumnVDESrcTaskFromSche(form *VDESrcTaskFromScheForm) (*model.VDE
 		ContractSrcGet:      form.ContractSrcGet,
 		ContractSrcGetHash:  form.ContractSrcGetHash,
 		ContractDestName:    form.ContractDestName,
-		ContractDestGet:     form.ContractDestGet,
-		ContractDestGetHash: form.ContractDestGetHash,
-
-		ContractRunHttp:      form.ContractRunHttp,
-		ContractRunEcosystem: form.ContractRunEcosystem,
-		ContractRunParms:     converter.MarshalJson(contract_run_parms),
-
 		ContractMode: int64(form.ContractMode),
 
 		ContractStateSrc:     int64(form.ContractStateSrc),
@@ -176,6 +169,13 @@ func VDESrcTaskFromScheByIDHandlre(w http.ResponseWriter, r *http.Request) {
 	srcData := model.VDESrcTaskFromSche{}
 	srcData.ID = id
 	result, err := srcData.GetOneByID()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err}).Error("The query sche task data by ID failed")
+		errorResponse(w, err)
+		return
+	}
+
+	jsonResponse(w, result)
 }
 
 func VDESrcTaskFromScheByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {

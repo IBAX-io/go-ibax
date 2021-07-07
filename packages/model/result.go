@@ -143,19 +143,6 @@ func GetAllTransaction(transaction *DbTransaction, query string, countRows int, 
 	rows, err := request.Rows()
 	if err != nil {
 		return nil, fmt.Errorf("%s in query %s %s", err, query, args)
-	}
-	defer rows.Close()
-	result, err := getResult(rows, countRows)
-	if err != nil {
-		return nil, fmt.Errorf("%s in query %s %s", err, query, args)
-	}
-	return result, nil
-}
-
-func getResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
-	var result []map[string]string
-	defer rows.Close()
-	// Get column names
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, err
@@ -271,6 +258,11 @@ func getnodeResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
 // GetAll returns all transaction
 func GetAll(query string, countRows int, args ...interface{}) ([]map[string]string, error) {
 	return GetAllTransaction(nil, query, countRows, args)
+}
+
+// GetAllTx returns all tx's
+func GetAllTx(transaction *DbTransaction, query string, countRows int, args ...interface{}) ([]map[string]string, error) {
+	return GetAllTransaction(transaction, query, countRows, args)
 }
 
 // GetOneRowTransaction returns one row from transactions

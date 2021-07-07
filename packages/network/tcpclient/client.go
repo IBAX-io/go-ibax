@@ -22,14 +22,6 @@ var wrongAddressError = errors.New("Wrong address")
 func NormalizeHostAddress(address string, defaultPort int64) (string, error) {
 
 	_, _, err := net.SplitHostPort(address)
-	if err != nil {
-		if strings.HasSuffix(err.Error(), "missing port in address") {
-			return fmt.Sprintf("%s:%d", address, defaultPort), nil
-		}
-
-		return "", err
-	}
-
 	return address, nil
 }
 
@@ -51,3 +43,6 @@ func newConnection(addr string) (net.Conn, error) {
 	}
 
 	conn.SetReadDeadline(time.Now().Add(consts.READ_TIMEOUT * time.Second))
+	conn.SetWriteDeadline(time.Now().Add(consts.WRITE_TIMEOUT * time.Second))
+	return conn, nil
+}

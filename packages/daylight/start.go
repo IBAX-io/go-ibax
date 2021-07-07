@@ -188,20 +188,6 @@ func Start() {
 		if r := recover(); r != nil {
 			log.WithFields(log.Fields{"panic": r, "type": consts.PanicRecoveredError}).Error("recovered panic")
 			panic(r)
-		}
-	}()
-
-	Exit := func(code int) {
-		delPidFile()
-		model.GormClose()
-		statsd.Close()
-		os.Exit(code)
-	}
-
-	initGorm := func(dbCfg conf.DBConfig) {
-		err = model.GormInit(dbCfg.Host, dbCfg.Port, dbCfg.User, dbCfg.Password, dbCfg.Name)
-		if err != nil {
-			log.WithFields(log.Fields{
 				"db_user": dbCfg.User, "db_password": dbCfg.Password, "db_name": dbCfg.Name, "type": consts.DBError,
 			}).Error("can't init gorm")
 			Exit(1)
@@ -222,6 +208,21 @@ func Start() {
 
 	if conf.Config.PoolPub.Enable {
 		if conf.Config.Redis.Enable {
+			err = model.RedisInit(conf.Config.Redis.Host, conf.Config.Redis.Port, conf.Config.Redis.Password, conf.Config.Redis.DbName)
+			if err != nil {
+				log.WithFields(log.Fields{
+					"host": conf.Config.Redis.Host, "port": conf.Config.Redis.Port, "db_password": conf.Config.Redis.Password, "db_name": conf.Config.Redis.DbName, "type": consts.DBError,
+				}).Error("can't init redis")
+				Exit(1)
+			}
+		}
+		//if err := utils.MakeDirectory(conf.Config.PoolPub.Path); err != nil {
+		//	log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.TempDir}).Error("can't create temporary directory")
+		//	os.Exit(-1)
+		//}
+		//if err := model.Init_leveldb(conf.Config.PoolPub.Path); err != nil {
+		//	log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.TempDir}).Error("can't create temporary directory")
+		//	os.Exit(-1)
 		//}
 	}
 

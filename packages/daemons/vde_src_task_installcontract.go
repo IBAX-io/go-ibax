@@ -28,6 +28,12 @@ func VDESrcTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 		blockchain_http      string
 		blockchain_ecosystem string
 		err                  error
+	)
+
+	m := &model.VDESrcTask{}
+	SrcTask, err := m.GetAllByContractStateSrc(0) //0 not install，1 installed，2 fail
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting all untreated task data")
 		time.Sleep(time.Millisecond * 2)
 		return err
 	}
@@ -73,20 +79,6 @@ func VDESrcTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 			`Conditions`:    {`true`}}
 
 		ContractName := `@1NewContract`
-		//_, _, _, err = api.PostTxResult(ContractName, &form)
-		_, _, _, err = vde_api.PostTxResult(vde_src_apiAddress, vde_src_apiEcosystemID, gAuth_src, gPrivate_src, ContractName, &form)
-		if err != nil {
-			item.ContractStateSrc = 2
-			item.ContractStateSrcErr = err.Error()
-		} else {
-			item.ContractStateSrc = 1
-			item.ContractStateSrcErr = ""
-		}
-		//fmt.Println("Call api.PostTxResult Src OK")
-
-		item.UpdateTime = time.Now().Unix()
-		err = item.Updates()
-		if err != nil {
 			fmt.Println("Update VDEScheTask table err: ", err)
 			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
 			time.Sleep(time.Millisecond * 2)

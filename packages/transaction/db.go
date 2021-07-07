@@ -2,6 +2,16 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+package transaction
+
+import (
+	"fmt"
+
+	"gorm.io/gorm"
+
+	"github.com/pkg/errors"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/utils"
@@ -71,21 +81,6 @@ func DeleteQueueTx(dbTransaction *model.DbTransaction, hash []byte) error {
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("deleting transaction if unused")
 		return err
-	}
-	//err = model.DeleteTransactionsAttemptsByHash(dbTransaction, hash)
-	//if err != nil {
-	//	log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("deleting DeleteTransactionsAttemptsByHash")
-	//	return err
-	//}
-	return nil
-}
-
-func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText string) error {
-	if hash == nil {
-		return nil
-	}
-	if len(errText) > 255 {
-		errText = errText[:255] + "..."
 	}
 	log.WithFields(log.Fields{"type": consts.BadTxError, "tx_hash": hash, "error": errText}).Debug("tx marked as bad")
 

@@ -172,6 +172,24 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 					ID:          int(contract.Block.Info.(*script.ContractInfo).ID),
 					Time:        time.Now().Unix(),
 					EcosystemID: 1,
+					KeyID:       conf.Config.KeyID,
+					NetworkID:   conf.Config.NetworkID,
+				},
+				Params: map[string]interface{}{
+					"NewPubkey": hex.EncodeToString(publicKey),
+					"Ecosystem": client.EcosystemID,
+				},
+			}
+
+			txData, txHash, err := tx.NewInternalTransaction(sc, nodePrivateKey)
+			if err != nil {
+				log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("Building transaction")
+				errorResponse(w, err)
+				return
+			}
+			if err := m.ContractRunner.RunContract(txData, txHash, sc.KeyID, sc.Time, logger); err != nil {
+				errorResponse(w, err)
+				return
 			}
 
 			if !conf.Config.IsSupportingOBS() {
@@ -262,20 +280,6 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 	result := &loginResult{
 		Account:     account.AccountID,
 		EcosystemID: converter.Int64ToStr(client.EcosystemID),
-		KeyID:       converter.Int64ToStr(wallet),
-		IsOwner:     founder == wallet,
-		IsNode:      conf.Config.KeyID == wallet,
-		IsOBS:       conf.Config.IsSupportingOBS(),
-	}
-
-	claims := JWTClaims{
-		KeyID:       result.KeyID,
-		AccountID:   account.AccountID,
-		EcosystemID: result.EcosystemID,
-		IsMobile:    form.IsMobile,
-		RoleID:      converter.Int64ToStr(form.RoleID),
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Second * time.Duration(form.Expire)).Unix(),
 		},
 	}
 

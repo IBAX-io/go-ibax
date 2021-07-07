@@ -1,11 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
 	"bytes"
 	"fmt"
 	"net/http"
@@ -63,5 +56,16 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 }
 
 func addKey(buf *bytes.Buffer, key string, value interface{}) error {
+	val, err := converter.InterfaceToStr(value)
+	if err != nil {
+		return err
+	}
+	line := fmt.Sprintf("%s\t%s\n", key, val)
+	buf.Write([]byte(line))
+	return nil
+}
+
+func logError(w http.ResponseWriter, err error) {
+	w.Write([]byte(err.Error()))
 	return
 }

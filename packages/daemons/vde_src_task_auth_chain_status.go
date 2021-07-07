@@ -14,6 +14,17 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
 
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
+//Generate a chain request
+func VDESrcTaskAuthChainStatus(ctx context.Context, d *daemon) error {
+	var (
+		err error
+
+		myContractSrcGet      string
 		myContractSrcGetHash  string
 		myContractDestGet     string
 		myContractDestGetHash string
@@ -103,17 +114,6 @@ import (
 				fmt.Println("HashHex Raw data hash failed ")
 				continue
 			}
-
-		} else {
-			myContractDestGet = srcTask.ContractDestGet
-			myContractDestGetHash = srcTask.ContractDestGetHash
-		}
-
-		SrcTaskChainStatusAuth := model.VDESrcTaskChainStatus{
-			TaskUUID:        srcTask.TaskUUID,
-			TaskName:        srcTask.TaskName,
-			TaskSender:      srcTask.TaskSender,
-			TaskReceiver:    item.VDEPubKey,
 			Comment:         srcTask.Comment,
 			Parms:           srcTask.Parms,
 			TaskType:        srcTask.TaskType,

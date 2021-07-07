@@ -2,9 +2,3 @@
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract HonorNodeCondition {
 	conditions {
-		var account_key int
-			return
-		}
-		warning "HonorNodeCondition: Sorry, you do not have access to this action"
-	}
-}
