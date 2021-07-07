@@ -144,13 +144,6 @@ func (req *ConfirmRequest) Read(r io.Reader) error {
 	return binary.Read(r, binary.LittleEndian, &req.BlockID)
 }
 
-func (req *ConfirmRequest) Write(w io.Writer) error {
-	return binary.Write(w, binary.LittleEndian, req.BlockID)
-}
-
-// ConfirmResponse contains response data
-type ConfirmResponse struct {
-	// ConfType uint8
 	Hash []byte `size:"32"`
 }
 
@@ -345,6 +338,12 @@ func readSliceToBuf(r io.Reader, buf []byte) ([]byte, error) {
 }
 
 func writeSlice(w io.Writer, slice []byte) error {
+	byteSize := make([]byte, 4)
+	binary.PutUvarint(byteSize, uint64(len(slice)))
+
+	w.Write(byteSize)
+	_, err := w.Write(slice)
+	return err
 }
 
 // if bytesLen < 0 then slice length reads before reading slice body
