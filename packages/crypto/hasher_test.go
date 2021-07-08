@@ -1,4 +1,13 @@
 package crypto
+
+import (
+	"fmt"
+	"testing"
+)
+
+func TestGetHasher(t *testing.T) {
+	h := getHasher()
+	msg := []byte("Hello")
 	fmt.Println(h.hash(msg))
 
 	message := "Hello"
@@ -9,5 +18,3 @@ package crypto
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(hmacMsg)
-}

@@ -46,6 +46,16 @@ func (c *Contract) Count() (count int64, err error) {
 	return
 }
 
+func (c *Contract) GetListByEcosystem(offset, limit int) ([]Contract, error) {
+	var list []Contract
+	err := DBConn.Table(c.TableName()).Offset(offset).Limit(limit).
+		Order("id asc").Where("ecosystem = ?", c.EcosystemID).
+		Find(&list).Error
+	return list, err
+}
+
+func (c *Contract) CountByEcosystem() (n int64, err error) {
+	err = DBConn.Table(c.TableName()).Where("ecosystem = ?", c.EcosystemID).Count(&n).Error
 	return
 }
 
@@ -60,8 +70,6 @@ func (c *Contract) ToMap() (v map[string]string) {
 	v["app_id"] = converter.Int64ToStr(c.AppID)
 	v["ecosystem_id"] = converter.Int64ToStr(c.EcosystemID)
 	return
-}
-
 // GetByApp returns all contracts belonging to selected app
 func (c *Contract) GetByApp(appID int64, ecosystemID int64) ([]Contract, error) {
 	var result []Contract

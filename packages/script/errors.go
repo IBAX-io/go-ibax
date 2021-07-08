@@ -20,7 +20,10 @@ const (
 	eDataType        = `expecting type of the data field [Ln:%d Col:%d]`
 	eDataName        = `expecting name of the data field [Ln:%d Col:%d]`
 	eDataTag         = `unexpected tag [Ln:%d Col:%d]`
-	errUnexpColon      = errors.New(`unexpected lexem; expecting colon`)
+)
+
+var (
+	errContractPars    = errors.New(`wrong contract parameters`)
 	errUnexpComma      = errors.New(`unexpected lexem; expecting comma`)
 	errUnexpValue      = errors.New(`unexpected lexem; expecting string, int value or variable`)
 	errCondWrite       = errors.New(`'conditions' cannot call contracts or functions which can modify the blockchain database.`)

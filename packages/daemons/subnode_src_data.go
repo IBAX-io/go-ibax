@@ -160,19 +160,6 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {
-				log.WithError(err)
-			}
-			continue
-		}
-		if tran_mode, ok = TaskParms["tran_mode"].(string); !ok {
-			log.WithFields(log.Fields{"error": err}).Error("tran_mode parse error")
-			item.DataState = 3 //Indicates an error in parsing task parameters
-			err = item.Updates()
-			if err != nil {
-				log.WithError(err)
-			}
-			continue
-		}
 		//if log_mode, ok = TaskParms["log_mode"].(string); !ok {
 		//	log.WithFields(log.Fields{"error": err}).Error("log_mode parse error")
 		//	item.DataState = 3 //Indicates an error in parsing task parameters
@@ -199,6 +186,14 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 				log.WithError(err)
 			}
 			continue
+		}
+		if blockchain_ecosystem, ok = TaskParms["blockchain_ecosystem"].(string); !ok {
+			log.WithFields(log.Fields{"error": err}).Error("blockchain_ecosystem parse error")
+			item.DataState = 3 //Indicates an error in parsing task parameters
+			err = item.Updates()
+			if err != nil {
+				log.WithError(err)
+			}
 			continue
 		}
 

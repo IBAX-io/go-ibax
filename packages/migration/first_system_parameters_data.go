@@ -5,6 +5,16 @@
 
 package migration
 
+var firstSystemParametersDataSQL = `
+INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES 
+	(next_id('1_system_parameters'),'default_ecosystem_page', 'If(#ecosystem_id# > 1){Include(@1welcome)}', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'default_ecosystem_menu', '', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'default_ecosystem_contract', '', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'gap_between_blocks', '2', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'rollback_blocks', '60', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'honor_nodes', '', 'ContractAccess("@1UpdateSysParam","@1NodeRemoveByKey")'),
+	(next_id('1_system_parameters'),'number_of_nodes', '101', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_create_page', '100', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_block', '100', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_view', '100', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_application', '10000', 'ContractAccess("@1UpdateSysParam")'),

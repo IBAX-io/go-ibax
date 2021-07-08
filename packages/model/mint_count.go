@@ -69,6 +69,9 @@ func (m *MintCount) Marshal() ([]byte, error) {
 func (m *MintCount) Unmarshal(bt []byte) error {
 	if err := msgpack.Unmarshal(bt, &m); err != nil {
 		return err
+	}
+	return nil
+}
 
 func (m *MinterCount) Changes(dbt *DbTransaction) (*MintCount, error) {
 	var miners []MineStakeCount
@@ -107,15 +110,6 @@ func (m *MinterCount) Changes(dbt *DbTransaction) (*MintCount, error) {
 	gpm, err := mi.GetAllPoolManage(dbt, m.Time)
 	if err != nil {
 		return &mc, err
-	}
-	var pi MinePoolInfo
-	pis, err := pi.GetAllMinePoolInfos(dbt)
-	if err != nil {
-		return &mc, err
-	}
-	mc.PoolInfos = pis
-
-	dMC := m.MineCounts
 	dMP := m.MintMap
 	for i := 0; i < len(m.MineCounts); i++ {
 		md := MineStakeCount{

@@ -35,17 +35,6 @@ func Confirmations(ctx context.Context, d *daemon) error {
 
 	d.sleepTime = 1 * time.Second
 	if tick < 12 {
-		d.sleepTime = 10 * time.Second
-	}
-
-	var startBlockID int64
-
-	// check last blocks, but not more than 5
-	confirmations := &model.Confirmation{}
-	_, err := confirmations.GetGoodBlock(consts.MIN_CONFIRMED_NODES)
-	if err != nil {
-		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting good block")
-		return err
 	}
 
 	ConfirmedBlockID := confirmations.BlockID
@@ -67,6 +56,20 @@ func Confirmations(ctx context.Context, d *daemon) error {
 	}
 
 	if startBlockID == 0 {
+		startBlockID = lastBlockID
+	}
+
+	return confirmationsBlocks(ctx, d, lastBlockID, startBlockID)
+}
+
+func confirmationsBlocks(ctx context.Context, d *daemon, lastBlockID, startBlockID int64) error {
+	for blockID := lastBlockID; blockID >= startBlockID; blockID-- {
+		if err := ctx.Err(); err != nil {
+			d.logger.WithFields(log.Fields{"type": consts.ContextError, "error": err}).Error("error in context")
+			return err
+		}
+
+		block := model.Block{}
 		_, err := block.Get(blockID)
 		if err != nil {
 			d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block by ID")

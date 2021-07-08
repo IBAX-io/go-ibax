@@ -28,6 +28,22 @@ var sqlFirstEcosystemSchema = `
 
 	{{head "1_delayed_contracts"}}
 		t.Column("id", "bigint", {"default": "0"})
+		t.Column("contract", "string", {"default": "", "size":255})
+		t.Column("key_id", "bigint", {"default": "0"})
+		t.Column("block_id", "bigint", {"default": "0"})
+		t.Column("every_block", "bigint", {"default": "0"})
+		t.Column("counter", "bigint", {"default": "0"})
+		t.Column("high_rate", "bigint", {"default": "0"})
+		t.Column("limit", "bigint", {"default": "0"})
+		t.Column("deleted", "bigint", {"default": "0"})
+		t.Column("conditions", "text", {"default": ""})
+	{{footer "primary" "index(block_id)"}}
+
+	{{head "1_bad_blocks"}}
+		t.Column("id", "bigint", {"default": "0"})
+		t.Column("producer_node_id", "bigint", {"default": "0"})
+		t.Column("block_id", "bigint", {"default": "0"})
+		t.Column("consumer_node_id", "bigint", {"default": "0"})
 		t.Column("block_time", "timestamp", {})
 		t.Column("reason", "text", {"default": ""})
 		t.Column("deleted", "bigint", {"default": "0"})
@@ -228,13 +244,6 @@ var sqlFirstEcosystemCommon = `
 		t.Column("deleted", "bigint", {"default": "0"})
 		t.Column("ecosystem", "bigint", {"default": "1"})
 	{{footer "primary" "index(ecosystem)"}}
-
-	{{head "1_binaries"}}
-		t.Column("id", "bigint", {"default": "0"})
-		t.Column("app_id", "bigint", {"default": "1"})
-		t.Column("name", "string", {"default": "", "size": 255})
-		t.Column("data", "bytea", {"default": ""})
-		t.Column("hash", "string", {"default": "", "size": 64})
 		t.Column("mime_type", "string", {"default": "", "size": 255})
 		t.Column("ecosystem", "bigint", {"default": "1"})
 		t.Column("account", "char(24)", {})
