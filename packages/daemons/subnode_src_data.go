@@ -160,6 +160,17 @@ func SubNodeSrcData(ctx context.Context, d *daemon) error {
 			item.DataState = 3 //Indicates an error in parsing task parameters
 			err = item.Updates()
 			if err != nil {
+				log.WithError(err)
+		}
+		if tran_mode, ok = TaskParms["tran_mode"].(string); !ok {
+			log.WithFields(log.Fields{"error": err}).Error("tran_mode parse error")
+			item.DataState = 3 //Indicates an error in parsing task parameters
+			err = item.Updates()
+			if err != nil {
+				log.WithError(err)
+			}
+			continue
+		}
 		//if log_mode, ok = TaskParms["log_mode"].(string); !ok {
 		//	log.WithFields(log.Fields{"error": err}).Error("log_mode parse error")
 		//	item.DataState = 3 //Indicates an error in parsing task parameters

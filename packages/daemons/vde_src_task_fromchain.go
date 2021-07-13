@@ -255,11 +255,15 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 
 		m.ContractRunHttp = ShareTaskItem.ContractRunHttp
 		m.ContractRunEcosystem = ShareTaskItem.ContractRunEcosystem
-		myTask, err := m2.GetOneByTaskUUID(ShareTaskItem.TaskUUID)
-		if err != nil {
-			update_flag = 0
-		}
-		//
+		m.ContractRunParms = ShareTaskItem.ContractRunParms
+
+		m.ContractMode = converter.StrToInt64(ShareTaskItem.ContractMode)
+		//m.ContractState = converter.StrToInt64(ShareTaskItem.ContractState)
+
+		m.CreateTime = time.Now().Unix()
+
+		//If the record exists, update it.to do...
+		update_flag := 1
 		if update_flag == 1 {
 			m.ID = myTask.ID
 			if err = m.Updates(); err != nil {

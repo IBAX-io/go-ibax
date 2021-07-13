@@ -36,6 +36,18 @@ type node struct {
 	Tail     []*node                `json:"tail,omitempty"`
 }
 
+// Source describes dbfind or data source
+type Source struct {
+	Columns *[]string
+	Data    *[][]string
+}
+
+// Var stores value and additional parameter of variable
+type Var struct {
+	Value string
+	AsIs  bool
+}
+
 // Workspace represents a workspace of executable template
 type Workspace struct {
 	Sources       *map[string]Source
@@ -152,13 +164,6 @@ func setAllAttr(par parFunc) {
 					} else {
 						val := strings.TrimSpace(parval[off+1:])
 						if ret := re.FindStringSubmatch(val); len(ret) == 3 {
-							plist := strings.Split(ret[2], `,`)
-							for i, ilist := range plist {
-								plist[i] = strings.TrimSpace(ilist)
-							}
-							imap[strings.TrimSpace(parval[:off])] = map[string]interface{}{
-								`type`: ret[1], `params`: plist}
-						} else {
 							imap[strings.TrimSpace(parval[:off])] = map[string]interface{}{
 								`type`: `text`, `text`: val}
 						}

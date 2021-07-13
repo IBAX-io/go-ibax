@@ -29,8 +29,3 @@ func (m *VDEDestHashTime) Delete() error {
 func (m *VDEDestHashTime) Get() (*VDEDestHashTime, error) {
 	err := DBConn.First(&m).Error
 	return m, err
-}
-
-func (m *VDEDestHashTime) GetAll() ([]VDEDestHashTime, error) {
-	var result []VDEDestHashTime
-	err := DBConn.Find(&result).Error

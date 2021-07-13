@@ -17,6 +17,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func unmarshalColumnVDEScheChainInfo(form *VDEScheChainInfoForm) (*model.VDEScheChainInfo, error) {
+	var (
+		err error
+	)
+
+	m := &model.VDEScheChainInfo{
+		BlockchainHttp:      form.BlockchainHttp,
+		BlockchainEcosystem: form.BlockchainEcosystem,
+		Comment:             form.Comment,
+	}
+
 	return m, err
 }
 
@@ -35,11 +46,6 @@ func VDEScheChainInfoCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(err)
 		errorResponse(w, err)
 		return
-	}
-
-	m.CreateTime = time.Now().Unix()
-
-	if err = m.Create(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")
 	}
 

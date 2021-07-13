@@ -1,4 +1,15 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
 	log "github.com/sirupsen/logrus"
@@ -294,20 +305,6 @@ func VDESrcData(ctx context.Context, d *daemon) error {
 		//Generate a chain request on the Data
 		if hash_mode == "1" { //1
 			SrcDataHash := model.VDESrcDataHash{
-				DataUUID:            item.DataUUID,
-				TaskUUID:            item.TaskUUID,
-				Hash:                item.Hash,
-				BlockchainHttp:      blockchain_http,
-				BlockchainEcosystem: blockchain_ecosystem,
-				CreateTime:          time.Now().Unix()}
-
-			if err = SrcDataHash.Create(); err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("Insert vde_src_data_hash table failed")
-				continue
-			}
-			//fmt.Println("Insert vde_src_data_hash table ok")
-		}
-		//Generate a chain request on the log
 		if log_mode == "1" || log_mode == "2" { //1,2 Log
 
 			if log_mode == "1" { //1 Log not up to chain，2log up to chain

@@ -14,14 +14,26 @@ var (
 )
 
 type RedisParams struct {
-	}
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
 
-	Gclient1 = redis.NewClient(&redis.Options{
+func RedisInit(host string, port string, password string, db int) error {
+	var (
+		err error
+	)
+	GRedisIsactive = false
+
+	Gclient0 = redis.NewClient(&redis.Options{
 		Addr:     host + ":" + port,
 		Password: password, // no password set
-		DB:       1,        // use default DB
+		DB:       db,       // use default DB
 	})
-	_, err = Gclient1.Ping().Result()
+	_, err = Gclient0.Ping().Result()
+	if err != nil {
+		return err
+	}
+
 	if err != nil {
 		return err
 	}
