@@ -70,15 +70,13 @@ func VDESrcTaskInstallContractSrc(ctx context.Context, d *daemon) error {
 			continue
 		}
 		//fmt.Println("Login OK!")
+			item.ContractStateSrcErr = ""
+		}
+		//fmt.Println("Call api.PostTxResult Src OK")
 
-		ContractSrc := item.ContractSrcGet
-
-		form := url.Values{
-			`Value`:         {ContractSrc},
-			"ApplicationId": {"1"},
-			`Conditions`:    {`true`}}
-
-		ContractName := `@1NewContract`
+		item.UpdateTime = time.Now().Unix()
+		err = item.Updates()
+		if err != nil {
 			fmt.Println("Update VDEScheTask table err: ", err)
 			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
 			time.Sleep(time.Millisecond * 2)

@@ -12,15 +12,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 
-	log "github.com/sirupsen/logrus"
-)
-
-type contractsResult struct {
-	Count string              `json:"count"`
-	List  []map[string]string `json:"list"`
-}
-
-func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 	form := &paginatorForm{}
 	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
@@ -51,3 +42,14 @@ func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 	for i, c := range contracts {
 		list[i] = c.ToMap()
 		list[i]["address"] = converter.AddressToString(c.WalletID)
+	}
+
+	if len(list) == 0 {
+		list = nil
+	}
+
+	jsonResponse(w, &listResult{
+		Count: count,
+		List:  list,
+	})
+}

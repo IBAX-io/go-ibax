@@ -80,10 +80,11 @@ func CheckTokenMovementLimits(tx *model.DbTransaction, conf conf.TokenMovementCo
 			if len(transfers) > 0 {
 				lastLimitEvents[fromToDayLimitEvent] = time.Now()
 			}
-
-	if len(messages) > 0 {
-		sendEmail(conf, strings.Join(messages, "\n"))
+		}
 	}
+
+	excesses, err := model.GetExcessTokenMovementQtyPerBlock(tx, blockID)
+	if err != nil {
 }
 
 // checks needed only if we have'nt prevent events or if event older then 1 day

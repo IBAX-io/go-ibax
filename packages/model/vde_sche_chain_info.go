@@ -18,14 +18,6 @@ func (VDEScheChainInfo) TableName() string {
 	return "vde_sche_chain_info"
 }
 
-func (m *VDEScheChainInfo) Create() error {
-	return DBConn.Create(&m).Error
-}
-
-	err := DBConn.First(&m).Error
-	return m, err
-}
-
 func (m *VDEScheChainInfo) GetAll() ([]VDEScheChainInfo, error) {
 	var result []VDEScheChainInfo
 	err := DBConn.Find(&result).Error

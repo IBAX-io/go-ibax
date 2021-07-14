@@ -5,9 +5,8 @@
 
 package api
 
-import (
-	"encoding/hex"
-	"encoding/json"
+type txinfoResult struct {
+	BlockID string        `json:"blockid"`
 	Confirm int           `json:"confirm"`
 	Data    *smart.TxInfo `json:"data,omitempty"`
 }

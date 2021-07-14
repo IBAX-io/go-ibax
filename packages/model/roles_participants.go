@@ -3,22 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package model
-
-import (
-	"github.com/IBAX-io/go-ibax/packages/converter"
-)
-
-// RolesParticipants represents record of {prefix}roles_participants table
-type RolesParticipants struct {
-	ecosystem   int64
-	Id          int64
-	Role        string `gorm:"type":jsonb`
-	Member      string `gorm:"type":jsonb`
-	Appointed   string `gorm:"type":jsonb`
-	DateCreated int64
-	DateDeleted int64
-	Deleted     bool
 }
 
 // SetTablePrefix is setting table prefix
@@ -84,6 +68,17 @@ func GetMemberRoles(tx *DbTransaction, ecosys int64, account string) (roles []in
 
 // GetRoleMembers return []id all members assign to roles in ecosystem
 func GetRoleMembers(tx *DbTransaction, ecosys int64, roles []int64) (members []string, err error) {
+	rolesList := make([]string, 0, len(roles))
+	for _, role := range roles {
+		rolesList = append(rolesList, converter.Int64ToStr(role))
+	}
+	query := `SELECT member->>'account' as "id" 
+		FROM "1_roles_participants" 
+		WHERE role->>'id' in (?) group by 1`
+	list, err := GetAllTransaction(tx, query, -1, rolesList)
+	if err != nil {
+		return
+	}
 	for _, member := range list {
 		members = append(members, member[`id`])
 	}

@@ -21,6 +21,6 @@ type SmartContractRunner interface {
 	RunContract(data, hash []byte, keyID, tnow int64, le *log.Entry) error
 }
 
-type EcosystemNameGetter interface {
-	GetEcosystemName(id int64) (string, error)
+type DaemonListFactory interface {
+	GetDaemonsList() []string
 }
