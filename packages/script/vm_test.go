@@ -20,3 +20,6 @@ func TestCalcMem(t *testing.T) {
 		{int64(1), 8}, {int(1), 8},
 		{float32(1), 4}, {float64(1), 8},
 		{"test", 4},
+		assert.Equal(t, v.mem, calcMem(v.v))
+	}
+}

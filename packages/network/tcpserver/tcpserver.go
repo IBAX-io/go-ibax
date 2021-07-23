@@ -61,18 +61,6 @@ func HandleTCPRequest(rw net.Conn) {
 		req := &network.GetBodiesRequest{}
 		if err = req.Read(rw); err == nil {
 			err = Type7(req, rw)
-		}
-
-	case network.RequestTypeMaxBlock:
-		response, err = Type10()
-
-	case network.RequestTypeSendSubNodeSrcData:
-		req := &network.SubNodeSrcDataRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type200(req)
-		}
-	case network.RequestTypeSendSubNodeSrcDataAgent:
-		req := &network.SubNodeSrcDataAgentRequest{}
 		if err = req.Read(rw); err == nil {
 			response, err = Type201(req)
 		}
@@ -82,6 +70,22 @@ func HandleTCPRequest(rw net.Conn) {
 			response, err = Type202(req)
 		}
 	//
+	case network.RequestTypeSendVDESrcData:
+		req := &network.VDESrcDataRequest{}
+		if err = req.Read(rw); err == nil {
+			response, err = Type100(req)
+		}
+	case network.RequestTypeSendVDESrcDataAgent:
+		req := &network.VDESrcDataAgentRequest{}
+		if err = req.Read(rw); err == nil {
+			response, err = Type101(req)
+		}
+	case network.RequestTypeSendVDEAgentData:
+		req := &network.VDEAgentDataRequest{}
+		if err = req.Read(rw); err == nil {
+			response, err = Type102(req)
+		}
+
 	case network.RequestTypeSendPrivateData:
 		req := &network.PrivateDateRequest{}
 		if err = req.Read(rw); err == nil {

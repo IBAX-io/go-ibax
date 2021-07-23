@@ -31,17 +31,6 @@ type Notification struct {
 	DateCreated         int64
 	DateStartProcessing int64
 	DateClosed          int64
-	Closed              bool
-}
-
-// SetTablePrefix set table Prefix
-func (n *Notification) SetTablePrefix(tablePrefix string) {
-	n.ecosystem = converter.StrToInt64(tablePrefix)
-}
-
-// TableName returns table name
-func (n *Notification) TableName() string {
-	if n.ecosystem == 0 {
 		n.ecosystem = 1
 	}
 	return `1_notifications`
@@ -62,6 +51,18 @@ func GetNotificationsCount(ecosystemID int64, accounts []string) ([]Notification
 		query := `SELECT k.id as "recipient_id", '0' as "role_id", count(n.id), k.account
 			FROM "1_keys" k
 			LEFT JOIN "1_notifications" n ON n.ecosystem = k.ecosystem AND n.closed = 0 AND n.notification->>'type' = '1' and n.recipient->>'account' = k.account
+			WHERE k.ecosystem = ? AND k.account = ?
+			GROUP BY recipient_id, k.account, role_id
+			UNION
+			SELECT k.id as "recipient_id", rp.role->>'id' as "role_id", count(n.id), k.account
+			FROM "1_keys" k
+			INNER JOIN "1_roles_participants" rp ON rp.member->>'account' = k.account
+			LEFT JOIN "1_notifications" n ON n.ecosystem = k.ecosystem AND n.closed = 0 AND n.notification->>'type' = '2' AND n.recipient->>'role_id' = rp.role->>'id'
+													AND (n.date_start_processing = 0 OR n.processing_info->>'account' = k.account)
+			WHERE k.ecosystem=? AND k.account = ?
+			GROUP BY recipient_id, k.account, role_id`
+
+		list := make([]NotificationsCount, 0)
 		err := GetDB(nil).Raw(query, ecosystemID, account, ecosystemID, account).Scan(&list).Error
 		if err != nil {
 			return nil, err

@@ -9,18 +9,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/rollback"
-	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-)
-
-var blockID int64
-
-// rollbackCmd represents the rollback command
-		defer f.Unlock()
 
 		if err := model.GormInit(
 			conf.Config.DB.Host,

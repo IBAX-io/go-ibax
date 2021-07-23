@@ -29,13 +29,19 @@ func SendSubNodeAgentData(host string, TaskUUID string, DataUUID string, AgentMo
 		TaskUUID:           TaskUUID,
 		DataUUID:           DataUUID,
 		AgentMode:          AgentMode,
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending SubNodeSrcData request")
-		return "0"
+		TranMode:           TranMode,
+		DataInfo:           DataInfo,
+		SubNodeSrcPubkey:   SubNodeSrcPubkey,
+		SubNodeAgentPubkey: SubNodeAgentPubkey,
+		SubNodeAgentIp:     SubNodeAgentIp,
+		SubNodeDestPubkey:  SubNodeDestPubkey,
+		SubNodeDestIp:      SubNodeDestIp,
+		Data:               dt,
 	}
 
-	resp := &network.SubNodeAgentDataResponse{}
-
-	if err = resp.Read(conn); err != nil {
+	if err = req.Write(conn); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("sending SubNodeSrcData request")
+		return "0"
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("receiving SubNodeSrcData response")
 		return "0"
 	}

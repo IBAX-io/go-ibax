@@ -132,6 +132,12 @@ var (
 	{{head "transactions_status"}}
 		t.Column("hash", "bytea", {"default": ""})
 		t.Column("time", "int", {"default": "0"})
+		t.Column("type", "int", {"default": "0"})
+		t.Column("ecosystem", "int", {"default": "1"})
+		t.Column("wallet_id", "bigint", {"default": "0"})
+		t.Column("block_id", "int", {"default": "0"})
+		t.Column("error", "string", {"default": "", "size":255})
+		t.Column("penalty", "int", {"default": "0"})
 	{{footer "primary(hash)"}}
 
 `
@@ -539,16 +545,6 @@ var (
 
 	{{headseq "vde_src_task_status"}}
 		t.Column("id", "int", {"default_raw": "nextval('vde_src_task_status_id_seq')"})
-		t.Column("task_uuid", "text", {"default": ""})
-		t.Column("contract_run_http", "text", {"default": ""})
-		t.Column("contract_run_ecosystem", "text", {"default": ""})
-		t.Column("contract_run_parms", "jsonb", {"null": true})
-		t.Column("contract_src_name", "text", {"default": ""})
-		t.Column("tx_hash", "text", {"default": ""})
-		t.Column("chain_state", "int", {"default": "0"})
-		t.Column("block_id", "int", {"default": "0"})
-		t.Column("chain_id", "int", {"default": "0"})
-		t.Column("chain_err", "text", {"default": ""})
 		t.Column("update_time", "int", {"default": "0"})
 		t.Column("create_time", "int", {"default": "0"})
 	{{footer "seq" "primary"}}

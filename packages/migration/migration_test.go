@@ -1,17 +1,12 @@
-)
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
 
-type dbMock struct {
-	versions []string
-}
+package migration
 
-func (dbm *dbMock) CurrentVersion() (string, error) {
-	return dbm.versions[len(dbm.versions)-1], nil
-}
-
-func (dbm *dbMock) ApplyMigration(version, query string) error {
-	dbm.versions = append(dbm.versions, version)
-	return nil
-}
+import (
+	"testing"
 
 func createDBMock(version string) *dbMock {
 	return &dbMock{versions: []string{version}}

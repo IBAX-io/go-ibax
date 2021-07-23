@@ -191,15 +191,6 @@ func CallMethod(i interface{}, methodName string) interface{} {
 	} else {
 		ptr = reflect.New(reflect.TypeOf(i))
 		temp := ptr.Elem()
-		temp.Set(value)
-	}
-
-	// check for method on value
-	method := value.MethodByName(methodName)
-	if method.IsValid() {
-		finalMethod = method
-	}
-	// check for method on pointer
 	method = ptr.MethodByName(methodName)
 	if method.IsValid() {
 		finalMethod = method
@@ -207,6 +198,21 @@ func CallMethod(i interface{}, methodName string) interface{} {
 
 	if finalMethod.IsValid() {
 		return finalMethod.Call([]reflect.Value{})[0].Interface()
+	}
+
+	// return or panic, method not found of either type
+	log.WithFields(log.Fields{"method_name": methodName, "type": consts.NotFound}).Error("method not found")
+	return fmt.Errorf("method %s not found", methodName)
+}
+
+// Caller returns the name of the latest function
+func Caller(steps int) string {
+	name := "?"
+	if pc, _, num, ok := runtime.Caller(steps + 1); ok {
+		name = fmt.Sprintf("%s :  %d", filepath.Base(runtime.FuncForPC(pc).Name()), num)
+	}
+	return name
+}
 
 // CopyFileContents copy files
 func CopyFileContents(src, dst string) error {
