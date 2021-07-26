@@ -5,7 +5,10 @@
 
 package log
 
-import (
+
+// Levels returns all log levels
+func (hook HexHook) Levels() []logrus.Level {
+	return logrus.AllLevels
 }
 
 // Fire the log entry

@@ -14,19 +14,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/model"
 
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
-func unmarshalColumnVDESrcMember(form *VDESrcMemberForm) (*model.VDESrcMember, error) {
-	var (
-		err error
-	)
-
-	m := &model.VDESrcMember{
-		VDEPubKey:            form.VDEPubKey,
-		VDEComment:           form.VDEComment,
-		VDEName:              form.VDEName,
-		VDEIp:                form.VDEIp,
 		VDEType:              int64(form.VDEType),
 		ContractRunHttp:      form.ContractRunHttp,
 		ContractRunEcosystem: form.ContractRunEcosystem,
@@ -40,6 +27,16 @@ func VDESrcMemberCreateHandlre(w http.ResponseWriter, r *http.Request) {
 		err error
 	)
 	logger := getLogger(r)
+	form := &VDESrcMemberForm{}
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+	m := &model.VDESrcMember{}
+	if m, err = unmarshalColumnVDESrcMember(form); err != nil {
+		fmt.Println(err)
+		errorResponse(w, err)
+		return
 	}
 
 	m.CreateTime = time.Now().Unix()

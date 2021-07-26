@@ -35,3 +35,6 @@ contract CallDelayedContract {
 		if $limit == 0 || $limit > $counter {
 			block_id = block_id + Int($cur["every_block"])
 		}
+
+		DBUpdate("@1delayed_contracts", $Id, {"counter": $counter, "block_id": block_id})
+

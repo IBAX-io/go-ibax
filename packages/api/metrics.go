@@ -73,21 +73,18 @@ func blocksCountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bm := blockMetric{Count: b.ID}
-	jsonResponse(w, bm)
-}
+		return
+	}
 
-func blocksCountByNodeHandler(w http.ResponseWriter, r *http.Request) {
-	b := &model.Block{}
-	logger := getLogger(r)
-	params := mux.Vars(r)
-	Node := converter.StrToInt64(params["node"])
-
-	found, err := b.GetMaxBlock()
+	c, err := model.GetBlockCountByNode(Node)
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("on getting max block")
+		logger := getLogger(r)
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting block count by node")
 		errorResponse(w, err, http.StatusInternalServerError)
 		return
 	}
+
+	bm := blockMetricByNode{TotalCount: b.ID, PartialCount: c}
 
 	jsonResponse(w, bm)
 }

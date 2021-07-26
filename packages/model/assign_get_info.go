@@ -109,17 +109,6 @@ func (m *AssignGetInfo) GetBalance(db *DbTransaction, wallet int64) (bool, decim
 								am = t.Amount.Mul(decimal.NewFromFloat(float64(count)))
 							}
 
-						} else {
-							am = t.Amount.Mul(decimal.NewFromFloat(float64(count)))
-						}
-					}
-
-				} else {
-					if maxblockid > t.Latestid {
-						count := (maxblockid - t.Latestid) / iid
-						am = t.Amount.Mul(decimal.NewFromFloat(float64(count)))
-					}
-				}
 			}
 
 			tm = tm.Sub(am)
@@ -127,3 +116,5 @@ func (m *AssignGetInfo) GetBalance(db *DbTransaction, wallet int64) (bool, decim
 			total_balance = total_balance.Add(tm)
 		}
 	}
+	return true, balance, total_balance, err
+}

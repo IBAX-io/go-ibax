@@ -42,6 +42,11 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 		time.Sleep(time.Millisecond * 2)
 		return nil
 	}
+
+	//chaininfo := &model.SubNodeAgentChainInfo{}
+	//AgentChainInfo, err := chaininfo.Get()
+	//if err != nil {
+	//	//log.WithFields(log.Fields{"error": err}).Error("VDE Agent fromchain getting chain info")
 	//	log.Info("Agent chain info not found")
 	//	time.Sleep(time.Millisecond * 100)
 	//	return err
@@ -86,14 +91,6 @@ func SubNodeAgentData(ctx context.Context, d *daemon) error {
 		//
 
 		//ItemDataBytes := item.Data
-		ItemDataBytes, err := ecies.EccCryptoKey(item.Data, item.SubNodeDestPubkey)
-		if err != nil {
-			log.WithError(err)
-			continue
-		}
-		//fmt.Println("item.AgentMode:", converter.Int64ToStr(item.AgentMode))
-		fmt.Println("Send agent data, TaskUUID, DataUUID:", item.TaskUUID, item.DataUUID)
-		hash := tcpclient.SendSubNodeAgentData(item.SubNodeDestIP, item.TaskUUID, item.DataUUID, converter.Int64ToStr(item.AgentMode), converter.Int64ToStr(item.TranMode), item.DataInfo, item.SubNodeSrcPubkey, item.SubNodeAgentPubkey, item.SubNodeAgentIP, item.SubNodeDestPubkey, item.SubNodeDestIP, ItemDataBytes)
 		if string(hash) == "0" {
 			//item.DataSendState = 3 //
 			item.DataSendState = 0 //

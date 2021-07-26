@@ -23,6 +23,22 @@ type History struct {
 	Comment          string `json:"comment,omitempty"`
 	BlockID          int64  `json:"block_id,omitempty"`
 	TxHash           []byte `gorm:"column:txhash"`
+	CreatedAt        int64  `json:"created_at,omitempty"`
+	Type             int64
+}
+
+// SetTablePrefix is setting table prefix
+func (h *History) SetTablePrefix(prefix int64) *History {
+	h.ecosystem = prefix
+	return h
+}
+
+// TableName returns table name
+func (h *History) TableName() string {
+	if h.ecosystem == 0 {
+		h.ecosystem = 1
+	}
+	return `1_history`
 }
 
 // MoneyTransfer from to amount
@@ -39,14 +55,6 @@ type SenderTxCount struct {
 }
 
 // Get is retrieving model from database
-func (ts *History) Get(transactionHash []byte) (bool, error) {
-	return isFound(DBConn.Table(ts.TableName()).Where("txhash = ?", transactionHash).First(ts))
-}
-
-// GetExcessCommonTokenMovementPerDay returns sum of amounts 24 hours
-func GetExcessCommonTokenMovementPerDay(tx *DbTransaction) (amount decimal.Decimal, err error) {
-	db := GetDB(tx)
-	type result struct {
 		Amount decimal.Decimal
 	}
 

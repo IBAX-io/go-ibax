@@ -190,6 +190,16 @@ type VDESrcTaskForm struct {
 
 	ContractStateSrc     int64  `schema:"contract_state_src"`
 	ContractStateDest    int64  `schema:"contract_state_dest"`
+	ContractStateSrcErr  string `schema:"contract_state_src_err"`
+	ContractStateDestErr string `schema:"contract_state_dest_err"`
+
+	ContractRunHttp      string `schema:"contract_run_http"`
+	ContractRunEcosystem string `schema:"contract_run_ecosystem"`
+	ContractRunParms     string `schema:"contract_run_parms"`
+
+	TaskRunState    int64  `schema:"task_run_state"`
+	TaskRunStateErr string `schema:"task_run_state_err"`
+
 	TxHash     string `schema:"tx_hash"`
 	ChainState int64  `schema:"chain_state"`
 	BlockId    int64  `schema:"block_id"`
@@ -393,17 +403,6 @@ type VDESrcTaskAuthForm struct {
 func (f *VDESrcTaskAuthForm) Validate(r *http.Request) error {
 	return nil
 }
-
-type VDEAgentMemberForm struct {
-	VDEPubKey            string `schema:"vde_pub_key"`
-	VDEComment           string `schema:"vde_comment"`
-	VDEName              string `schema:"vde_name"`
-	VDEIp                string `schema:"vde_ip"`
-	VDEType              int64  `schema:"vde_type"`
-	ContractRunHttp      string `schema:"contract_run_http"`
-	ContractRunEcosystem string `schema:"contract_run_ecosystem"`
-}
-
 func (f *VDEAgentMemberForm) Validate(r *http.Request) error {
 	return nil
 }

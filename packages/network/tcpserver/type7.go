@@ -13,16 +13,11 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
+	} else {
+		blocks, err = block.GetBlocksFrom(int64(request.BlockID-1), "ASC", network.BlocksPerRequest)
+	}
 
-// Type7 writes the body of the specified block
-// blocksCollection and queue_parser_blocks daemons send the request through p.GetBlocks()
-func Type7(request *network.GetBodiesRequest, w net.Conn) error {
-	block := &model.Block{}
-
-	var blocks []model.Block
-	var err error
-	if request.ReverseOrder {
-		blocks, err = block.GetReverseBlockchain(int64(request.BlockID), network.BlocksPerRequest)
+	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "block_id": request.BlockID}).Error("Error getting 1000 blocks from block_id")
 		if err := network.WriteInt(0, w); err != nil {
 			log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on sending 0 requested blocks")

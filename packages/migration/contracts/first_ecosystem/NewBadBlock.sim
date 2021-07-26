@@ -4,3 +4,8 @@ contract NewBadBlock {
 	data {
 		ProducerNodeID int
 		ConsumerNodeID int
+		BlockID int
+		Timestamp int
+		Reason string
+	}
+	action {

@@ -99,6 +99,12 @@ func VDEScheTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("ContractSrcGetHashHex Raw data hash failed ")
 			errorResponse(w, err)
 			return
+		}
+		m.ContractSrcGetHash = ContractSrcGetHashHex
+	}
+	if len(m.ContractDestGetHash) == 0 {
+		if ContractDestGetHashHex, err = crypto.HashHex([]byte(m.ContractDestGet)); err != nil {
+			fmt.Println("ContractDestGetHashHex Raw data hash failed ")
 			errorResponse(w, err)
 			return
 		}
@@ -190,18 +196,6 @@ func VDEScheTaskDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, "ok")
-}
-
-func VDEScheTaskListHandlre(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
-	srcData := model.VDEScheTask{}
-
-	result, err := srcData.GetAll()
-	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Error reading task data list")
-		errorResponse(w, err)
-		return
-	}
 	jsonResponse(w, result)
 }
 

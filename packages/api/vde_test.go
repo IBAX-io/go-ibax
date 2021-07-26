@@ -256,6 +256,23 @@ func TestOBSImport(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	err := postTx(`Import`, &url.Values{"obs": {`true`}, "Data": {obsimp}})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestHTTPRequest(t *testing.T) {
+	if err := keyLogin(1); err != nil {
+		t.Error(err)
+		return
+	}
+	rnd := `rnd` + crypto.RandSeq(6)
+	form := url.Values{`Value`: {`contract ` + rnd + ` {
+		    data {
+				Auth string
+			}
 			action {
 				var ret string 
 				var pars, heads, json map
@@ -419,10 +436,6 @@ func TestNodeHTTPRequest(t *testing.T) {
 		}
 		assert.Equal(t, `Test NodeContract NodeContract testing `+rnd, msg)
 	}
-}
-
-func TestCreateCron(t *testing.T) {
-	require.NoError(t, keyLogin(1))
 
 	require.EqualError(t, postTx("NewCron", &url.Values{
 		"Cron":       {"60 * * * *"},

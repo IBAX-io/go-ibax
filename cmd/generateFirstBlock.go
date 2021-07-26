@@ -37,18 +37,6 @@ var generateFirstBlockCmd = &cobra.Command{
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block marshalling")
 		}
-		os.WriteFile(conf.Config.FirstBlockPath, block, 0644)
-		log.Info("first block generated")
-	},
-}
-
-func init() {
-	generateFirstBlockCmd.Flags().StringVar(&stopNetworkBundleFilepath, "stopNetworkCert", "", "Filepath to the fullchain of certificates for network stopping")
-	generateFirstBlockCmd.Flags().BoolVar(&testBlockchain, "test", false, "if true - test blockchain")
-	generateFirstBlockCmd.Flags().BoolVar(&privateBlockchain, "private", false, "if true - all transactions will be free")
-}
-
-func genesisBlock() ([]byte, error) {
 	now := time.Now().Unix()
 	header := &utils.BlockData{
 		BlockID:      1,
@@ -71,6 +59,19 @@ func genesisBlock() ([]byte, error) {
 			log.WithError(err).Fatalf("converting %s from hex", kName)
 		}
 
+		return decodedKey
+	}
+
+	var stopNetworkCert []byte
+	if len(stopNetworkBundleFilepath) > 0 {
+		var err error
+		fp := filepath.Join(conf.Config.KeysDir, stopNetworkBundleFilepath)
+		if stopNetworkCert, err = os.ReadFile(fp); err != nil {
+			log.WithError(err).WithFields(log.Fields{"filepath": fp}).Fatal("Reading cert data")
+		}
+	}
+
+	if len(stopNetworkCert) == 0 {
 		log.Warn("the fullchain of certificates for a network stopping is not specified")
 	}
 

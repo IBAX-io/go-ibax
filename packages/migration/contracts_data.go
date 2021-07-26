@@ -37,6 +37,15 @@ contract AdminCondition {
 // The contract requests the role ID from the ecosystem parameter and the contract checks the rights.
 
 contract DeveloperCondition {
+    conditions {
+        // check for Founder
+        if EcosysParam("founder_account") == AddressToId($account_id) {
+            return
+        }
+
+        // check for Developer role
+        var app_id int role_id string
+        app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "System"}).One("id"))
         role_id = AppParam(app_id, "role_developer", $ecosystem_id)
 
         if Size(role_id) == 0 {
@@ -52,9 +61,3 @@ contract DeveloperCondition {
 	conditions {
 		if EcosysParam("founder_account")!=$key_id
 		{
-			warning "Sorry, you do not have access to this action."
-		}
-	}
-}
-', '{{.Ecosystem}}', 'ContractConditions("MainCondition")', '{{.AppID}}', '{{.Ecosystem}}');
-`
