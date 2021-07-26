@@ -385,6 +385,8 @@ func SetContractWallet(sc *SmartContract, tblid, state int64, wallet int64) erro
 	}
 	for i, item := range smartVM.Block.Children {
 		if item != nil && item.Type == script.ObjContract {
+			cinfo := item.Info.(*script.ContractInfo)
+			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
 				smartVM.Children[i].Info.(*script.ContractInfo).Owner.WalletID = wallet
 			}
 		}
@@ -960,12 +962,6 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 		if err != nil {
 			logger.WithFields(log.Fields{"error": err}).Error("prepare multi")
 			return retError(err)
-		}
-	}
-
-	sc.TxContract.Extend = sc.getExtend()
-	if err = sc.AppendStack(sc.TxContract.Name); err != nil {
-		logger.WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("loop in contract")
 		return retError(err)
 	}
 	sc.VM = GetVM()

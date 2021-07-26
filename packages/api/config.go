@@ -17,13 +17,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type configOptionHandler func(w http.ResponseWriter, option string) error
-
-func getConfigOptionHandler(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	logger := getLogger(r)
-
-	if len(params["option"]) == 0 {
+	switch params["option"] {
+	case "centrifugo":
 		centrifugoAddressHandler(w, r)
 		return
 	}

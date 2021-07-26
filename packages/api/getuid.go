@@ -5,6 +5,10 @@
 
 package api
 
+import (
+	"math/rand"
+	"net/http"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -56,6 +60,3 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-
-	jsonResponse(w, result)
-}

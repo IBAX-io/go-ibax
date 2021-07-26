@@ -5,4 +5,3 @@ contract RemoveOBS {
 			OBSName string
 	}
 	conditions {}
-	action{

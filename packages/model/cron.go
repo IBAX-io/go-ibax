@@ -17,20 +17,17 @@ type Cron struct {
 	Contract  string
 }
 
-// SetTablePrefix is setting table prefix
-func (c *Cron) SetTablePrefix(prefix string) {
-	c.tableName = prefix + "_cron"
-}
-
-// TableName returns name of table
-func (c *Cron) TableName() string {
-	return c.tableName
-}
-
-// Get is retrieving model from database
-func (c *Cron) Get(id int64) (bool, error) {
 	return isFound(DBConn.Where("id = ?", id).First(c))
 }
+
+// GetAllCronTasks is returning all cron tasks
+func (c *Cron) GetAllCronTasks() ([]*Cron, error) {
+	var crons []*Cron
+	err := DBConn.Table(c.TableName()).Find(&crons).Error
+	return crons, err
+}
+
+// UID returns unique identifier for cron task
 func (c *Cron) UID() string {
 	return fmt.Sprintf("%s_%d", c.tableName, c.ID)
 }

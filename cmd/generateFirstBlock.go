@@ -3,6 +3,12 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package cmd
+
+import (
+	"os"
+	"time"
+
 	"github.com/spf13/cobra"
 
 	"path/filepath"
@@ -102,9 +108,6 @@ func genesisBlock() ([]byte, error) {
 			StopNetworkCertBundle: stopNetworkCert,
 			Test:                  test,
 			PrivateBlockchain:     pb,
-		},
-	)
-
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block body bin marshalling")
 	}

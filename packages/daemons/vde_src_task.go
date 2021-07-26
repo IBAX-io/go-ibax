@@ -47,6 +47,11 @@ func VDESrcTaskStatus(ctx context.Context, d *daemon) error {
 				time.Sleep(time.Millisecond * 2)
 				continue
 			}
+			item.TaskRunState = 3
+			item.UpdateTime = time.Now().Unix()
+			err = item.Updates()
+			if err != nil {
+				fmt.Println("Update VDESrcTask table err: ", err)
 				log.WithFields(log.Fields{"error": err}).Error("Update VDESrcTask table!")
 				time.Sleep(time.Millisecond * 2)
 				continue
@@ -90,7 +95,3 @@ func VDESrcTaskStatus(ctx context.Context, d *daemon) error {
 			}
 		} //for
 		time.Sleep(time.Second * 10)
-	}
-
-	return nil
-}

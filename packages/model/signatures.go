@@ -20,3 +20,6 @@ func (s *Signature) SetTablePrefix(prefix string) {
 
 // TableName returns name of table
 func (s *Signature) TableName() string {
+	return s.tableName
+}
+

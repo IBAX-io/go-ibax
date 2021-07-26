@@ -27,6 +27,13 @@ type TaskData struct {
 }
 
 func unmarshalColumnSubNodeSrcData(form *SubNodeSrcDataForm) (*model.SubNodeSrcData, error) {
+	var (
+		datainfo map[string]interface{}
+		taskdata TaskData
+		err      error
+	)
+	err = json.Unmarshal([]byte(form.Data), &taskdata)
+	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("unmarshal Data error")
 		return nil, err
 	}
@@ -63,18 +70,6 @@ func SubNodeSrcDataCreateHandlre(w http.ResponseWriter, r *http.Request) {
 	)
 
 	logger := getLogger(r)
-	form := &SubNodeSrcDataForm{}
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-	m := &model.SubNodeSrcData{}
-	if m, err = unmarshalColumnSubNodeSrcData(form); err != nil {
-		fmt.Println(err)
-		errorResponse(w, err)
-		return
-	}
-
 	m.CreateTime = time.Now().Unix()
 	if err = m.Create(); err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to insert table")

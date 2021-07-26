@@ -25,7 +25,6 @@ func (*RollbackTx) TableName() string {
 // GetRollbackTransactions is returns rollback transactions
 func (rt *RollbackTx) GetRollbackTransactions(dbTransaction *DbTransaction, transactionHash []byte) ([]map[string]string, error) {
 	return GetAllTx(dbTransaction, "SELECT * from rollback_tx WHERE tx_hash = ? ORDER BY ID DESC", -1, transactionHash)
-}
 
 // GetBlockRollbackTransactions returns records of rollback by blockID
 func (rt *RollbackTx) GetBlockRollbackTransactions(dbTransaction *DbTransaction, blockID int64) ([]RollbackTx, error) {
@@ -42,6 +41,8 @@ func (rt *RollbackTx) GetRollbackTxsByTableIDAndTableName(tableID, tableName str
 		return nil, err
 	}
 	return rollbackTx, nil
+}
+
 // DeleteByHash is deleting rollbackTx by hash
 func (rt *RollbackTx) DeleteByHash(dbTransaction *DbTransaction) error {
 	return GetDB(dbTransaction).Exec("DELETE FROM rollback_tx WHERE tx_hash = ?", rt.TxHash).Error

@@ -126,15 +126,6 @@ func (m *Map) Remove(key string) {
 		}
 	}
 }
-
-// IsEmpty returns true if map does not contain any elements
-func (m *Map) IsEmpty() bool {
-	return m == nil || m.Size() == 0
-}
-
-// Size returns number of elements in the map.
-func (m *Map) Size() int {
-	return len(m.m)
 }
 
 // Keys returns all keys of the map (insertion order).
@@ -179,6 +170,16 @@ func (m *Map) MarshalJSON() ([]byte, error) {
 	s := "{"
 	for current := m.head; current != nil; current = current.next {
 		k := current.key
+		escaped := strings.Replace(k, `"`, `\"`, -1)
+		s = s + `"` + escaped + `":`
+		v := current.value
+		vBytes, err := json.Marshal(v)
+		if err != nil {
+			return []byte{}, err
+		}
+		s = s + string(vBytes) + ","
+	}
+	if len(s) > 1 {
 		s = s[0 : len(s)-1]
 	}
 	s = s + "}"
