@@ -14,7 +14,3 @@ import (
 func TestBanError(t *testing.T) {
 	cases := map[error]bool{
 		errors.New("case 1"):                                  false,
-		WithBan(errors.New("case 2")):                         true,
-		errors.Wrap(errors.New("case 3"), "message"):          false,
-		errors.Wrap(WithBan(errors.New("case 4")), "message"): true,
-	}

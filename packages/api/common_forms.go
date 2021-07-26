@@ -150,6 +150,10 @@ type SubNodeSrcDataForm struct {
 	Data     string `schema:"data"`
 	DataInfo string `schema:"data_info"`
 	//DataState int64  `schema:"data_state"`
+	//DataErr   string `schema:"data_err"`
+}
+
+func (f *SubNodeSrcDataForm) Validate(r *http.Request) error {
 	return nil
 }
 
@@ -186,16 +190,6 @@ type VDESrcTaskForm struct {
 
 	ContractStateSrc     int64  `schema:"contract_state_src"`
 	ContractStateDest    int64  `schema:"contract_state_dest"`
-	ContractStateSrcErr  string `schema:"contract_state_src_err"`
-	ContractStateDestErr string `schema:"contract_state_dest_err"`
-
-	ContractRunHttp      string `schema:"contract_run_http"`
-	ContractRunEcosystem string `schema:"contract_run_ecosystem"`
-	ContractRunParms     string `schema:"contract_run_parms"`
-
-	TaskRunState    int64  `schema:"task_run_state"`
-	TaskRunStateErr string `schema:"task_run_state_err"`
-
 	TxHash     string `schema:"tx_hash"`
 	ChainState int64  `schema:"chain_state"`
 	BlockId    int64  `schema:"block_id"`

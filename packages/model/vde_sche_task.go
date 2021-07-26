@@ -54,13 +54,6 @@ func (m *VDEScheTask) Create() error {
 
 func (m *VDEScheTask) Updates() error {
 	return DBConn.Model(m).Updates(m).Error
-}
-
-func (m *VDEScheTask) Delete() error {
-	return DBConn.Delete(m).Error
-}
-
-func (m *VDEScheTask) GetAll() ([]VDEScheTask, error) {
 	var result []VDEScheTask
 	err := DBConn.Find(&result).Error
 	return result, err
@@ -158,6 +151,20 @@ type VDEScheTaskFromSrc struct {
 	TaskRunStateErr string `gorm:"not null" json:"task_run_state_err"`
 
 	//TxHash                 string `gorm:"not null" json:"tx_hash"`
+	//ChainState             int64  `gorm:"not null" json:"chain_state"`
+	//BlockId                int64  `gorm:"not null" json:"block_id"`
+	//ChainId                int64  `gorm:"not null" json:"chain_id"`
+	//ChainErr               string `gorm:"not null" json:"chain_err"`
+
+	UpdateTime int64 `gorm:"not null" json:"update_time"`
+	CreateTime int64 `gorm:"not null" json:"create_time"`
+}
+
+func (VDEScheTaskFromSrc) TableName() string {
+	return "vde_sche_task_from_src"
+}
+
+func (m *VDEScheTaskFromSrc) Create() error {
 	return DBConn.Create(&m).Error
 }
 

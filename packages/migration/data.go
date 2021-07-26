@@ -545,6 +545,16 @@ var (
 
 	{{headseq "vde_src_task_status"}}
 		t.Column("id", "int", {"default_raw": "nextval('vde_src_task_status_id_seq')"})
+		t.Column("task_uuid", "text", {"default": ""})
+		t.Column("contract_run_http", "text", {"default": ""})
+		t.Column("contract_run_ecosystem", "text", {"default": ""})
+		t.Column("contract_run_parms", "jsonb", {"null": true})
+		t.Column("contract_src_name", "text", {"default": ""})
+		t.Column("tx_hash", "text", {"default": ""})
+		t.Column("chain_state", "int", {"default": "0"})
+		t.Column("block_id", "int", {"default": "0"})
+		t.Column("chain_id", "int", {"default": "0"})
+		t.Column("chain_err", "text", {"default": ""})
 		t.Column("update_time", "int", {"default": "0"})
 		t.Column("create_time", "int", {"default": "0"})
 	{{footer "seq" "primary"}}
@@ -601,21 +611,6 @@ var (
 		t.Column("contract_state_src_err", "text", {"default": ""})
 		t.Column("contract_state_dest_err", "text", {"default": ""})
 		t.Column("task_run_state", "int", {"default": "0"})
-		t.Column("task_run_state_err", "text", {"default": ""})
-		t.Column("update_time", "int", {"default": "0"})
-		t.Column("create_time", "int", {"default": "0"})
-	{{footer "seq" "primary"}}
-
-	{{headseq "vde_dest_task_from_sche"}}
-		t.Column("id", "int", {"default_raw": "nextval('vde_dest_task_from_sche_id_seq')"})
-		t.Column("task_uuid", "text", {"default": ""})
-		t.Column("task_name", "text", {"default": ""})
-		t.Column("task_sender", "text", {"default": ""})
-		t.Column("comment", "text", {"default": ""})
-		t.Column("parms", "jsonb", {"null": true})
-		t.Column("task_type", "int", {"default": "0"})
-		t.Column("task_state", "int", {"default": "0"})
-		t.Column("contract_src_name", "text", {"default": ""})
 		t.Column("contract_src_get", "text", {"default": ""})
 		t.Column("contract_src_get_hash", "text", {"default": ""})
 		t.Column("contract_dest_name", "text", {"default": ""})

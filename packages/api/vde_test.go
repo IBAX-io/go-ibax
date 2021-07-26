@@ -136,6 +136,18 @@ func TestOBSParams(t *testing.T) {
 
 	var retRow rowResult
 	assert.NoError(t, sendGet(`row/contracts/2?obs=true`, nil, &retRow))
+	if !strings.Contains(retRow.Value[`value`], `OBSFunctions`) {
+		t.Error(`wrong row result`)
+		return
+	}
+
+	var retCont contractsResult
+	assert.NoError(t, sendGet(`contracts?obs=true`, nil, &retCont))
+
+	form = url.Values{`Value`: {`contract ` + rnd + ` {
+		data {
+			Par string
+		}
 		action { Test("active",  $Par)}}`}, `Conditions`: {`ContractConditions("MainCondition")`}, `obs`: {`true`}}
 
 	assert.NoError(t, postTx(`NewContract`, &form))
@@ -244,23 +256,6 @@ func TestOBSImport(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	err := postTx(`Import`, &url.Values{"obs": {`true`}, "Data": {obsimp}})
-	if err != nil {
-		t.Error(err)
-		return
-	}
-}
-
-func TestHTTPRequest(t *testing.T) {
-	if err := keyLogin(1); err != nil {
-		t.Error(err)
-		return
-	}
-	rnd := `rnd` + crypto.RandSeq(6)
-	form := url.Values{`Value`: {`contract ` + rnd + ` {
-		    data {
-				Auth string
-			}
 			action {
 				var ret string 
 				var pars, heads, json map

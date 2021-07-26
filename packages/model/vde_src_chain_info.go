@@ -41,3 +41,4 @@ func (m *VDESrcChainInfo) GetAll() ([]VDESrcChainInfo, error) {
 	return result, err
 }
 func (m *VDESrcChainInfo) GetOneByID() (*VDESrcChainInfo, error) {
+	err := DBConn.Where("id=?", m.ID).First(&m).Error

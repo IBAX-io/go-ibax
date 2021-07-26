@@ -49,20 +49,6 @@ func getHasher() Hasher {
 	}
 }
 
-func InitHash(s string) {
-	switch s {
-	case hSM3:
-		hal.name = hSM3
-		return
-	case hSHA256:
-		hal.name = hSHA256
-		return
-	}
-	panic(fmt.Errorf("hash [%v] is not supported yet", s))
-}
-
-func GetHMAC(secret string, message string) ([]byte, error) {
-	return getHasher().getHMAC(secret, message)
 }
 
 func Hash(msg []byte) []byte {
@@ -77,6 +63,11 @@ func DoubleHash(msg []byte) []byte {
 func Address(pubKey []byte) int64 {
 	pubKey = CutPub(pubKey)
 	h := getHasher().hash(pubKey)
+	h512 := sha512.Sum512(h[:])
+	crc := calcCRC64(h512[:])
+	// replace the last digit by checksum
+	num := strconv.FormatUint(crc, 10)
+	val := []byte(strings.Repeat("0", consts.AddressLength-len(num)) + num)
 	return int64(crc - (crc % 10) + uint64(checkSum(val[:len(val)-1])))
 }
 

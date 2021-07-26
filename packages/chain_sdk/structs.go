@@ -34,11 +34,6 @@ type rolesResult struct {
 }
 
 type multiTxStatusResult struct {
-	Results map[string]*txstatusResult `json:"results"`
-}
-
-type txstatusRequest struct {
-	Hashes []string `json:"hashes"`
 }
 
 type txstatusError struct {
@@ -68,3 +63,9 @@ type getContractResult struct {
 	TokenID  string          `json:"tokenid"`
 	Address  string          `json:"address"`
 	Fields   []contractField `json:"fields"`
+	Name     string          `json:"name"`
+}
+
+type sendTxResult struct {
+	Hashes map[string]string `json:"hashes"`
+}

@@ -34,11 +34,6 @@ func SendTx(rtx RawTransaction, adminWallet int64) error {
 		return errors.New("duplicated transaction from transactions status")
 	}
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction from transactions status")
-		return err
-	}
-	err = ts.Create()
-	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("transaction status create")
 		return err
 	}
@@ -81,6 +76,17 @@ func SendTxBatches(rtxs []*RawTx) error {
 		ts := &TransactionStatus{
 			Hash:     rtx.Hash,
 			Time:     rtx.Time,
+			Type:     rtx.TxType,
+			WalletID: rtx.WalletID,
+		}
+		rawTxs = append(rawTxs, ts)
+		qtx := &QueueTx{
+			Hash:     rtx.Hash,
+			Data:     rtx.Data,
+			Expedite: rtx.GetExpedite(),
+			Time:     rtx.Time,
+		}
+		qtxs = append(qtxs, qtx)
 	}
 	return DBConn.Clauses(clause.OnConflict{DoNothing: true}).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&rawTxs).Error; err != nil {

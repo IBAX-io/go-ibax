@@ -48,9 +48,17 @@ func TestEditEcosystem(t *testing.T) {
 	value := `P(test,test paragraph)`
 
 	name := randName(`page`)
+	form := url.Values{"Name": {name}, "Value": {value},
 		"Menu": {menu}, "Conditions": {"ContractConditions(`MainCondition`)"}}
-	err = postTx(`@1EditPage`, &form)
+	err = postTx(`@1NewPage`, &form)
 	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = postTx(`@1NewPage`, &form)
+	if cutErr(err) != fmt.Sprintf(`{"type":"warning","error":"Page %s already exists"}`, name) {
+		t.Error(err)
+		return
 		t.Error(err)
 		return
 	}

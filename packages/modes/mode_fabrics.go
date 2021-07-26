@@ -144,21 +144,6 @@ func (l BCDaemonLoader) Load(ctx context.Context) error {
 
 	logMode(l.logger, mode)
 
-	l.logger.Info("load contracts")
-	if err := smart.LoadContracts(); err != nil {
-		log.Errorf("Load Contracts error: %s", err)
-		return err
-	}
-
-	l.logger.Info("start daemons")
-	if err := tcpserver.TcpListener(conf.Config.TCPServer.Str()); err != nil {
-		log.Errorf("can't start tcp servers, stop")
-		return err
-	}
-
-	na := service.NewNodeRelevanceService()
-	na.Run(ctx)
-
 	if err := service.InitNodesBanService(); err != nil {
 		l.logger.WithError(err).Error("Can't init ban service")
 		return err
