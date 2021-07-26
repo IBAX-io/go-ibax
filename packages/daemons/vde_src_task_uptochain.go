@@ -5,19 +5,6 @@
 
 package daemons
 
-import (
-	"context"
-	"fmt"
-	"net/url"
-	"strconv"
-	"time"
-
-	chain_api "github.com/IBAX-io/go-ibax/packages/chain_sdk"
-
-	"path/filepath"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 
 	log "github.com/sirupsen/logrus"
@@ -91,6 +78,15 @@ func VDESrcTaskUpToChain(ctx context.Context, d *daemon) error {
 			"TaskSender":   {item.TaskSender},
 			"TaskReceiver": {item.TaskReceiver},
 			"Comment":      {item.Comment},
+			"Parms":        {item.Parms},
+			"TaskType":     {converter.Int64ToStr(item.TaskType)},
+			"TaskState":    {converter.Int64ToStr(item.TaskState)},
+
+			"ContractSrcName":     {item.ContractSrcName},
+			"ContractSrcGet":      {item.ContractSrcGet},
+			"ContractSrcGetHash":  {item.ContractSrcGetHash},
+			"ContractDestName":    {item.ContractDestName},
+			"ContractDestGet":     {item.ContractDestGet},
 			"ContractDestGetHash": {item.ContractDestGetHash},
 
 			"ContractRunHttp":      {item.ContractRunHttp},

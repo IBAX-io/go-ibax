@@ -8,14 +8,6 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
 
 func unmarshalColumnVDEAgentMember(form *VDEAgentMemberForm) (*model.VDEAgentMember, error) {
 	var (
@@ -156,3 +148,6 @@ func VDEAgentMemberByPubKeyHandlre(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+
+	jsonResponse(w, result)
+}

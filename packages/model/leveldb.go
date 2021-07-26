@@ -52,6 +52,15 @@ func Init_leveldb(filename string) error {
 }
 
 func Struct2Map(obj interface{}) map[string]interface{} {
+	t := reflect.TypeOf(obj)
+	v := reflect.ValueOf(obj)
+
+	var data = make(map[string]interface{})
+	for i := 0; i < t.NumField(); i++ {
+		data[t.Field(i).Name] = v.Field(i).Interface()
+	}
+	return data
+}
 func DBGetAllKey(prefix string, bvalue bool) (*[]string, error) {
 	var (
 		ret []string
@@ -74,14 +83,4 @@ func DBGetAllKey(prefix string, bvalue bool) (*[]string, error) {
 		} else {
 			if bvalue {
 				value := string(iter.Value())
-				s := fmt.Sprintf("Key[%s]=[%s]\n", key, value)
-				ret = append(ret, s)
-			} else {
-				ret = append(ret, key)
-			}
-		}
-
-	}
-	iter.Release()
-	return &ret, iter.Error()
 }

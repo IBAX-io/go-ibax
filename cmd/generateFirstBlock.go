@@ -71,19 +71,6 @@ func genesisBlock() ([]byte, error) {
 			log.WithError(err).Fatalf("converting %s from hex", kName)
 		}
 
-		return decodedKey
-	}
-
-	var stopNetworkCert []byte
-	if len(stopNetworkBundleFilepath) > 0 {
-		var err error
-		fp := filepath.Join(conf.Config.KeysDir, stopNetworkBundleFilepath)
-		if stopNetworkCert, err = os.ReadFile(fp); err != nil {
-			log.WithError(err).WithFields(log.Fields{"filepath": fp}).Fatal("Reading cert data")
-		}
-	}
-
-	if len(stopNetworkCert) == 0 {
 		log.Warn("the fullchain of certificates for a network stopping is not specified")
 	}
 
@@ -108,6 +95,9 @@ func genesisBlock() ([]byte, error) {
 			StopNetworkCertBundle: stopNetworkCert,
 			Test:                  test,
 			PrivateBlockchain:     pb,
+		},
+	)
+
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block body bin marshalling")
 	}

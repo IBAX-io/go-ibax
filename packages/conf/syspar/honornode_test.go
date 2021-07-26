@@ -5,6 +5,8 @@
 
 package syspar
 
+		err string
+		formattingErr bool
 	}{
 		{value: `[{"tcp_address":"127.0.0.1", "api_address":"https://127.0.0.1", "key_id":"100", "public_key":"c1a9e7b2fb8cea2a272e183c3e27e2d59a3ebe613f51873a46885c9201160bd263ef43b583b631edd1284ab42483712fd2ccc40864fe9368115ceeee47a7c7d0", "unban_time": 111111}]`, err: ``},
 		{value: `[{"tcp_address":"", "api_address":"https://127.0.0.1", "key_id":"100", "public_key":"c1a9e7b2fb8cea2a272e183c3e27e2d59a3ebe613f51873a46885c9201160bd263ef43b583b631edd1284ab42483712fd2ccc40864fe9368115ceeee47a7c7d0", "unban_time": 111111}]`, err: `Invalid values of the honor_nodes parameter`},

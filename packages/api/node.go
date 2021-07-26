@@ -3,8 +3,3 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package api
-
-import (
-	"net/http"
-)

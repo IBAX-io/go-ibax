@@ -41,6 +41,14 @@ func (s *Scheduler) UpdateTask(t *Task) error {
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("parse cron format")
 		return err
+	}
+
+	s.cron.Stop()
+	defer s.cron.Start()
+
+	entries := s.cron.Entries()
+	for _, entry := range entries {
+		task := entry.Schedule.(*Task)
 		if task.ID == t.ID {
 			*task = *t
 			log.WithFields(log.Fields{"task": t.String()}).Info("task updated")
@@ -58,9 +66,6 @@ func (s *Scheduler) UpdateTask(t *Task) error {
 
 // NewScheduler creates a new scheduler
 func NewScheduler() *Scheduler {
-	s := &Scheduler{cron: cron.New()}
-	s.cron.Start()
-	return s
 }
 
 // AddTask adds task to global scheduler

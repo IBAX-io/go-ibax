@@ -12,13 +12,6 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/go-redis/redis v6.15.9+incompatible
-	github.com/gobuffalo/fizz v1.13.0
-	github.com/libp2p/go-libp2p-core v0.7.0 // indirect
-	github.com/magiconair/properties v1.8.2 // indirect
-	github.com/microcosm-cc/bluemonday v1.0.4 // indirect
-	github.com/mitchellh/mapstructure v1.3.3 // indirect
-	github.com/multiformats/go-multiaddr v0.3.1 // indirect
-	github.com/ochinchina/go-ini v1.0.1
 	github.com/ochinchina/supervisord/config v0.0.0-20210709021912-96855de42ff6
 	github.com/ochinchina/supervisord/events v0.0.0-20210709021912-96855de42ff6 // indirect
 	github.com/ochinchina/supervisord/faults v0.0.0-20210709021912-96855de42ff6 // indirect

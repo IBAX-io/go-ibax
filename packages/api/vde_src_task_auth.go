@@ -5,20 +5,22 @@
 
 package api
 
-import (
-	"fmt"
-	"net/http"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
 
 func unmarshalColumnVDESrcTaskAuth(form *VDESrcTaskAuthForm) (*model.VDESrcTaskAuth, error) {
 	var (
+		err error
+	)
+
+	m := &model.VDESrcTaskAuth{
+		TaskUUID:             form.TaskUUID,
+		Comment:              form.Comment,
+		VDEPubKey:            form.VDEPubKey,
+		ContractRunHttp:      form.ContractRunHttp,
+		ContractRunEcosystem: form.ContractRunEcosystem,
+		ChainState:           form.ChainState,
+	}
 
 	return m, err
 }
