@@ -6,18 +6,6 @@
 package api
 
 import (
-	"net/http"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
-)
-
-func (m Mode) getEcosystemParamHandler(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
 
 	form := &ecosystemForm{
 		Validator: m.EcosysIDValidator,
@@ -27,6 +15,18 @@ func (m Mode) getEcosystemParamHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
+
+	params := mux.Vars(r)
+
+	sp := &model.StateParameter{}
+	sp.SetTablePrefix(form.EcosystemPrefix)
+	name := params["name"]
+
+	if found, err := sp.Get(nil, name); err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting state parameter by name")
+		errorResponse(w, err)
+		return
+	} else if !found {
 		logger.WithFields(log.Fields{"type": consts.NotFound, "key": name}).Error("state parameter not found")
 		errorResponse(w, errParamNotFound.Errorf(name))
 		return

@@ -242,19 +242,16 @@ func (bl *txMaxSize) check(t *transaction.Transaction, mode int) error {
 		return limitError(`txMaxSize`, `Max size of the block`)
 	}
 	return nil
-}
-
-// Checking the max tx & block size
-type txMaxFuel struct {
-	Fuel       int64 // the current fuel of the block
-	LimitBlock int64 // max fuel of the block
-	LimitTx    int64 // max fuel of tx
-}
-
-func (bl *txMaxFuel) init(b *Block) {
-	bl.LimitBlock = syspar.GetMaxBlockFuel()
-	bl.LimitTx = syspar.GetMaxTxFuel()
-}
-
+	fuel := t.TxFuel
+	if fuel > bl.LimitTx {
+		return limitError(`txMaxFuel`, `Max fuel of tx %d > %d`, fuel, bl.LimitTx)
+	}
+	bl.Fuel += fuel
+	if bl.Fuel > bl.LimitBlock {
+		if mode == letGenBlock {
+			return ErrLimitStop
+		}
+		return limitError(`txMaxFuel`, `Max fuel of the block`)
+	}
 	return nil
 }

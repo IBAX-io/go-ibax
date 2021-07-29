@@ -684,6 +684,13 @@ var contracts = []smartContract{
 			DBFind("members1").Where({"member_name": "name"})
 		}
 	}`,
+		[]smartParams{
+			{nil, map[string]string{`error`: `{"type":"panic","error":"pq: current transaction is aborted, commands ignored until end of transaction block"}`}},
+		}},
+	{`TestMultiForm`, `contract TestMultiForm {
+				data {
+					list array
+				}
 				action {
 					Test("multiform",  $list[0]+$list[1])
 				}
@@ -1782,16 +1789,6 @@ func TestExternalNetwork(t *testing.T) {
 	form = url.Values{"Name": {name}, "Value": {`contract ` + name + `Errors {
 		data {
 			hash string
-			block int
-			UID    string "optional"
-		}
-		action { 
-			if $UID == "stop" {
-				error("Error message")
-			}
-			$result = 1/0
-		}
-	}`},
 		"ApplicationId": {`1`}, "Conditions": {`true`}}
 	assert.NoError(t, postTx(`NewContract`, &form))
 

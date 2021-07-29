@@ -46,18 +46,6 @@ func (r *SingleResult) Int() (int, error) {
 		return 0, r.err
 	}
 	return converter.BytesToInt(r.result), nil
-}
-
-// Float64 converts string to float64
-func (r *SingleResult) Float64() (float64, error) {
-	if r.err != nil {
-		return 0, r.err
-	}
-	return converter.StrToFloat64(string(r.result)), nil
-}
-
-// String returns string
-func (r *SingleResult) String() (string, error) {
 	if r.err != nil {
 		return "", r.err
 	}
@@ -143,6 +131,19 @@ func GetAllTransaction(transaction *DbTransaction, query string, countRows int, 
 	rows, err := request.Rows()
 	if err != nil {
 		return nil, fmt.Errorf("%s in query %s %s", err, query, args)
+	}
+	defer rows.Close()
+	result, err := getResult(rows, countRows)
+	if err != nil {
+		return nil, fmt.Errorf("%s in query %s %s", err, query, args)
+	}
+	return result, nil
+}
+
+func getResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
+	var result []map[string]string
+	defer rows.Close()
+	// Get column names
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, err

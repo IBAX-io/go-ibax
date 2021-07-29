@@ -24,12 +24,28 @@ type MineStake struct {
 	Review       int64           `gorm:"null default 0" ` //
 	Count        int64           `gorm:"null default 0" ` //
 	Stakes       int64           `gorm:"null default 0" ` //
+	Transfers    int64           `gorm:"null"  `          //
+	Stime        int64           `gorm:"not null" `       //
+	Etime        int64           `gorm:"not null" `       //
+	DateUpdated  int64           `gorm:"not null" `
+	DateCreated  int64           `gorm:"not null" `
+}
+
+// TableName returns name of table
+func (MineStake) TableName() string {
+	return `1_mine_stake`
 }
 
 // Get is retrieving model from database
-func (m *MineStake) GetExpiredMiner(time int64) (mp []MineStake, err error) {
+func (m *MineStake) GetActiveMiner(time, availableStatus int64) (mp []MineStake, err error) {
 	err = DBConn.Table(m.TableName()).
-		Where("etime <=? and expired = 0", time).
+		Where("stime <= ? and etime >=? and status = ?", time, time, availableStatus).
+		Order("devid asc").
+		Scan(&mp).Error
+	return mp, err
+}
+
+// Get is retrieving model from database
 		Order("etime asc").
 		Limit(10).
 		Scan(&mp).Error

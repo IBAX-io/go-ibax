@@ -3,18 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package script
-
-import (
-	"fmt"
-	"testing"
-)
-
-type TestComp struct {
-	Input  string
-	Output string
-}
-
-func Multi(a, b int64) (int64, error) {
 	return a + b*2, nil
 }
 
@@ -55,6 +43,12 @@ func TestEvalIf(t *testing.T) {
 	vars := map[string]interface{}{
 		`citizenId`: 56789,
 		`wallet_id`: 893451,
+	}
+	vm := NewVM()
+	vm.Extend(&ExtendData{map[string]interface{}{"Multi": Multi}, nil, nil})
+	for _, item := range test {
+		out, err := vm.EvalIf(item.Input, 0, &vars)
+		if err != nil {
 			if err.Error() != item.Output {
 				t.Error(`error of ifeval ` + item.Input + ` ` + err.Error())
 			}

@@ -9,6 +9,18 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/types"
+
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	columnTypeText     = "text"
+	columnTypeLongText = "long_text"
+	columnTypeBlob     = "blob"
+
+	substringLength = 32
 
 	errComma = `unexpected comma`
 )
@@ -44,19 +56,6 @@ func (vl *valueLink) marshal() (string, error) {
 		"title": vl.title,
 		"link":  vl.link(),
 	})
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("marshalling valueLink to JSON")
-		return "", err
-	}
-	return string(b), nil
-}
-
-func trimString(in []rune) string {
-	out := strings.TrimSpace(string(in))
-	if len(out) > 0 && out[0] == '"' && out[len(out)-1] == '"' {
-		out = out[1 : len(out)-1]
-	}
-	return out
 }
 
 func ParseObject(in []rune) (interface{}, int, error) {

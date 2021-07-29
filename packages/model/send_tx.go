@@ -34,6 +34,11 @@ func SendTx(rtx RawTransaction, adminWallet int64) error {
 		return errors.New("duplicated transaction from transactions status")
 	}
 	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction from transactions status")
+		return err
+	}
+	err = ts.Create()
+	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("transaction status create")
 		return err
 	}
@@ -65,13 +70,6 @@ type RawTx struct {
 }
 
 func (rtx *RawTx) GetExpedite() decimal.Decimal {
-	expedite, _ := decimal.NewFromString(rtx.Expedite)
-	return expedite
-}
-
-func SendTxBatches(rtxs []*RawTx) error {
-	var rawTxs []*TransactionStatus
-	var qtxs []*QueueTx
 	for _, rtx := range rtxs {
 		ts := &TransactionStatus{
 			Hash:     rtx.Hash,

@@ -126,6 +126,15 @@ func (m *Map) Remove(key string) {
 		}
 	}
 }
+
+// IsEmpty returns true if map does not contain any elements
+func (m *Map) IsEmpty() bool {
+	return m == nil || m.Size() == 0
+}
+
+// Size returns number of elements in the map.
+func (m *Map) Size() int {
+	return len(m.m)
 }
 
 // Keys returns all keys of the map (insertion order).
@@ -134,17 +143,6 @@ func (m *Map) Keys() []string {
 	count := 0
 	for current := m.head; current != nil; current = current.next {
 		keys[count] = current.key
-		count++
-	}
-	return keys
-}
-
-// Values returns all values of the map (insertion order).
-func (m *Map) Values() []interface{} {
-	values := make([]interface{}, m.Size())
-	count := 0
-	for current := m.head; current != nil; current = current.next {
-		values[count] = current.value
 		count++
 	}
 	return values

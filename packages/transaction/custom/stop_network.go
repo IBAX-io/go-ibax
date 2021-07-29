@@ -15,17 +15,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-var (
-	messageNetworkStopping = "Attention! The network is stopped!"
-
-	ErrNetworkStopping = errors.New("network is stopping")
-)
-
-type StopNetworkTransaction struct {
-	Logger *log.Entry
-	Data   interface{}
-	Cert   *utils.Cert
 }
 
 func (t *StopNetworkTransaction) Init() error {
@@ -48,6 +37,13 @@ func (t *StopNetworkTransaction) validate() error {
 		return err
 	}
 
+	fbdata, err := syspar.GetFirstBlockData()
+	if err != nil {
+		return err
+	}
+
+	if err = cert.Validate(fbdata.StopNetworkCertBundle); err != nil {
+		return err
 	}
 
 	t.Cert = cert
