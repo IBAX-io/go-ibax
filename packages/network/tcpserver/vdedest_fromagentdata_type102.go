@@ -37,11 +37,6 @@ func Type102(r *network.VDEAgentDataRequest) (*network.VDEAgentDataResponse, err
 		return nil, err
 	}
 
-	//hash, err := crypto.HashHex(r.Data)
-	hash, err := crypto.HashHex(data)
-	if err != nil {
-		log.WithError(err)
-		return nil, err
 	}
 	resp := &network.VDEAgentDataResponse{}
 	resp.Hash = hash
@@ -67,3 +62,6 @@ func Type102(r *network.VDEAgentDataRequest) (*network.VDEAgentDataResponse, err
 		log.WithError(err)
 		return nil, err
 	}
+
+	return resp, nil
+}

@@ -11,13 +11,6 @@ import "github.com/IBAX-io/go-ibax/packages/converter"
 type Member struct {
 	ecosystem  int64
 	ID         int64  `gorm:"primary_key;not null"`
-	MemberName string `gorm:"not null"`
-	ImageID    *int64
-	MemberInfo string `gorm:"type:jsonb"`
-}
-
-// SetTablePrefix is setting table prefix
-func (m *Member) SetTablePrefix(prefix string) {
 	m.ecosystem = converter.StrToInt64(prefix)
 }
 
@@ -33,4 +26,9 @@ func (m *Member) TableName() string {
 func (m *Member) Count() (count int64, err error) {
 	err = DBConn.Table(m.TableName()).Where(`ecosystem=?`, m.ecosystem).Count(&count).Error
 	return
+}
+
+// Get init m as member with ID
+func (m *Member) Get(account string) (bool, error) {
+	return isFound(DBConn.Where("ecosystem=? and account = ?", m.ecosystem, account).First(m))
 }

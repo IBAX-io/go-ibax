@@ -34,9 +34,6 @@ func (b *Block) Create(transaction *DbTransaction) error {
 
 // Get is retrieving model from database
 func (b *Block) Get(blockID int64) (bool, error) {
-	return isFound(DBConn.Where("id = ?", blockID).First(b))
-}
-
 // GetMaxBlock returns last block existence
 func (b *Block) GetMaxBlock() (bool, error) {
 	return isFound(DBConn.Last(b))
@@ -85,6 +82,21 @@ func (b *Block) GetBlocksFrom(startFromID int64, ordering string, limit int) ([]
 	if limit == 0 {
 		err = DBConn.Order("id "+ordering).Where("id > ?", startFromID).Find(&blockchain).Error
 	} else {
+		err = DBConn.Order("id "+ordering).Where("id > ?", startFromID).Limit(limit).Find(&blockchain).Error
+	}
+	return *blockchain, err
+}
+
+// GetReverseBlockchain returns records of blocks in reverse ordering
+func (b *Block) GetReverseBlockchain(endBlockID int64, limit int) ([]Block, error) {
+	var err error
+	blockchain := new([]Block)
+	err = DBConn.Model(&Block{}).Order("id DESC").Where("id <= ?", endBlockID).Limit(limit).Find(&blockchain).Error
+	return *blockchain, err
+}
+
+// GetNodeBlocksAtTime returns records of blocks for time interval and position of node
+func (b *Block) GetNodeBlocksAtTime(from, to time.Time, node int64) ([]Block, error) {
 	var err error
 	blockchain := new([]Block)
 	err = DBConn.Model(&Block{}).Where("node_position = ? AND time BETWEEN ? AND ?", node, from.Unix(), to.Unix()).Find(&blockchain).Error

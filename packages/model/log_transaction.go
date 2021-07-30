@@ -3,10 +3,7 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package model
-
-import "gorm.io/gorm"
-
+// GetByHash returns LogTransactions existence by hash
 func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
 	return isFound(DBConn.Where("hash = ?", hash).First(lt))
 }

@@ -70,3 +70,6 @@ func (m *SubNodeSrcDataStatus) GetAllByDataSendStatus(DataSendStatus int64) ([]S
 
 func (m *SubNodeSrcDataStatus) GetAllByDataSendStatusAndAgentMode(DataSendStatus int64, AgentMode int64) ([]SubNodeSrcDataStatus, error) {
 	result := make([]SubNodeSrcDataStatus, 0)
+	err := DBConn.Table("subnode_src_data_status").Where("data_send_state = ? AND agent_mode = ?", DataSendStatus, AgentMode).Find(&result).Error
+	return result, err
+}

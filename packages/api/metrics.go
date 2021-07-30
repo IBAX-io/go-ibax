@@ -30,25 +30,6 @@ type blockMetricByNode struct {
 	PartialCount int64 `json:"partialcount"`
 }
 
-type txMetric struct {
-	Count int64 `json:"count"`
-}
-
-type ecosysMetric struct {
-	Count int64 `json:"count"`
-}
-
-type keyMetric struct {
-	Count int64 `json:"count"`
-}
-
-type honorNodeMetric struct {
-	Count int64 `json:"count"`
-}
-
-type memMetric struct {
-	Alloc uint64 `json:"alloc"`
-	Sys   uint64 `json:"sys"`
 }
 
 type banMetric struct {
@@ -73,6 +54,24 @@ func blocksCountHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bm := blockMetric{Count: b.ID}
+	jsonResponse(w, bm)
+}
+
+func blocksCountByNodeHandler(w http.ResponseWriter, r *http.Request) {
+	b := &model.Block{}
+	logger := getLogger(r)
+	params := mux.Vars(r)
+	Node := converter.StrToInt64(params["node"])
+
+	found, err := b.GetMaxBlock()
+	if err != nil {
+		logger.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("on getting max block")
+		errorResponse(w, err, http.StatusInternalServerError)
+		return
+	}
+
+	if !found {
+		errorResponse(w, errNotFound)
 		return
 	}
 
