@@ -12,10 +12,20 @@ import (
 type BadBlocks struct {
 	ID             int64
 	ProducerNodeId int64
-	var res []BanRequests
+	BlockId        int64
+	ConsumerNodeId int64
+	BlockTime      time.Time
+	Deleted        bool
+}
 
-	err := DBConn.
-		Raw(
+// TableName returns name of table
+func (r BadBlocks) TableName() string {
+	return "1_bad_blocks"
+}
+
+// BanRequests represents count of unique ban requests for node
+type BanRequests struct {
+	ProducerNodeId int64
 			`SELECT
 				producer_node_id,
 				COUNT(consumer_node_id) as count

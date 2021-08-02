@@ -4,6 +4,19 @@
  *--------------------------------------------------------------------------------------------*/
 
 package api
+
+import (
+	"net/http"
+
+	"github.com/gorilla/mux"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
+)
+
 type appContentResult struct {
 	Blocks    []model.BlockInterface `json:"blocks"`
 	Pages     []model.Page           `json:"pages"`
@@ -35,12 +48,6 @@ func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting block interfaces by appID")
 		errorResponse(w, err)
-		return
-	}
-
-	pages, err := p.GetByApp(appID, ecosystemID)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting pages by appID")
 		errorResponse(w, err)
 		return
 	}

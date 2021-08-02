@@ -81,15 +81,19 @@ func TestSendRequest(t *testing.T) {
 
 	bin := bytes.Buffer{}
 	err := SendRequest(&test, &bin)
-	if err != nil {
-		t.Fatalf("send request failed: %s", err)
+		t.Errorf("different values: %+v and %+v", test, test2)
+	}
+}
+
+func TestRequestType(t *testing.T) {
+	source := RequestType{
+		Type: uint16(RequestTypeNotHonorNode),
 	}
 
-	test2 := testStruct2{}
-	err = ReadRequest(&test2, &bin)
-	if err != nil {
-		t.Fatalf("read request failed: %s", err)
-	}
+	buf := bytes.Buffer{}
+	require.NoError(t, source.Write(&buf))
+
+	target := RequestType{}
 	require.NoError(t, target.Read(&buf))
 	require.Equal(t, source.Type, target.Type)
 }

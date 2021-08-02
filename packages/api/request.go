@@ -192,14 +192,6 @@ func (connect *Connect) WaitTxList(hashes []string) (map[string]WaitResult, erro
 			}
 			continue
 		}
-		if ret.Message != nil {
-			var msg string
-			errtext, err := json.Marshal(ret.Message)
-			if err != nil {
-				msg = err.Error()
-			} else {
-				msg = string(errtext)
-			}
 			waitResults[key] = WaitResult{
 				Msg: msg,
 			}
@@ -274,6 +266,11 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 	ret := &sendTxResult{}
 	err = connect.SendMultipart("sendTx", map[string][]byte{
 		fmt.Sprintf("%x", txhash): data,
+	}, &ret)
+	if err != nil {
+		return
+	}
+	if len(form.Get("nowait")) > 0 {
 		msg = ret.Hashes["data"]
 		return
 	}

@@ -38,21 +38,6 @@ func RollbackBlock(data []byte) error {
 		return ErrLastBlock
 	}
 
-	dbTransaction, err := model.StartTransaction()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting transaction")
-		return err
-	}
-
-	err = rollbackBlock(dbTransaction, bl)
-	if err != nil {
-		dbTransaction.Rollback()
-		return err
-	}
-
-	if err = b.DeleteById(dbTransaction, bl.Header.BlockID); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
-		dbTransaction.Rollback()
 		return err
 	}
 
@@ -69,6 +54,15 @@ func RollbackBlock(data []byte) error {
 	}
 
 	ib := &model.InfoBlock{
+		Hash:           b.Hash,
+		RollbacksHash:  b.RollbacksHash,
+		BlockID:        b.ID,
+		NodePosition:   strconv.Itoa(int(b.NodePosition)),
+		KeyID:          b.KeyID,
+		Time:           b.Time,
+		CurrentVersion: strconv.Itoa(bl.Header.Version),
+	}
+	err = ib.Update(dbTransaction)
 	if err != nil {
 		dbTransaction.Rollback()
 		return err

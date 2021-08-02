@@ -54,23 +54,20 @@ func (sp *SystemParameter) GetValueParameterByName(name, value string) (*string,
 func GetAllSystemParameters(transaction *DbTransaction) ([]SystemParameter, error) {
 	parameters := new([]SystemParameter)
 	if err := GetDB(transaction).Find(&parameters).Error; err != nil {
-		return nil, err
-	}
-	return *parameters, nil
-}
-
-// ToMap is converting SystemParameter to map
-func (sp *SystemParameter) ToMap() map[string]string {
-	result := make(map[string]string, 0)
-	result["name"] = sp.Name
-	result["value"] = sp.Value
-	result["conditions"] = sp.Conditions
-	return result
-}
-
-// Update is update model
-func (sp SystemParameter) Update(value string) error {
 	return DBConn.Model(sp).Where("name = ?", sp.Name).Update(`value`, value).Error
+}
+
+// SaveArray is saving array
+func (sp *SystemParameter) SaveArray(list [][]string) error {
+	ret, err := json.Marshal(list)
+	if err != nil {
+		return err
+	}
+	return sp.Update(string(ret))
+}
+
+func (sp *SystemParameter) GetNumberOfHonorNodes() (int, error) {
+	var hns []map[string]interface{}
 	f, err := sp.GetTransaction(nil, `honor_nodes`)
 	if err != nil {
 		return 0, err

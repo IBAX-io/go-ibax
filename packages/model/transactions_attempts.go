@@ -61,3 +61,5 @@ func FindTxAttemptCount(dbTransaction *DbTransaction, count int) ([]*Transaction
 	return rs, nil
 }
 
+// GetByHash returns TransactionsAttempts existence by hash
+func DeleteTransactionsAttemptsByHash(dbTransaction *DbTransaction, hash []byte) error {

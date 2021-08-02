@@ -3,22 +3,6 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package api
-
-import (
-	"net/http"
-	"runtime"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
-
-	"github.com/gorilla/mux"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/service"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type blockMetric struct {
@@ -30,6 +14,25 @@ type blockMetricByNode struct {
 	PartialCount int64 `json:"partialcount"`
 }
 
+type txMetric struct {
+	Count int64 `json:"count"`
+}
+
+type ecosysMetric struct {
+	Count int64 `json:"count"`
+}
+
+type keyMetric struct {
+	Count int64 `json:"count"`
+}
+
+type honorNodeMetric struct {
+	Count int64 `json:"count"`
+}
+
+type memMetric struct {
+	Alloc uint64 `json:"alloc"`
+	Sys   uint64 `json:"sys"`
 }
 
 type banMetric struct {

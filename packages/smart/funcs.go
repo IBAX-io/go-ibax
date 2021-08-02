@@ -426,6 +426,14 @@ func ContractAccess(sc *SmartContract, names ...interface{}) bool {
 					contName := sc.TxContract.StackCont[i].(string)
 					if strings.HasPrefix(contName, `@`) {
 						if contName == name {
+							return true
+						}
+						break
+					}
+				}
+			}
+		}
+	}
 	return false
 }
 
@@ -761,16 +769,6 @@ func parseViewColumnSql(sc *SmartContract, columns string) (colsSQL string, colo
 	colout, err = marshalJSON(outarr, `view columns to json`)
 	return
 }
-
-type ViewWheSch struct {
-	TableOne string `json:"table1,omitempty"`
-	TableTwo string `json:"table2,omitempty"`
-	ColOne   string `json:"col1,omitempty"`
-	ColTwo   string `json:"col2,omitempty"`
-	Compare  string `json:"compare,omitempty"`
-}
-
-func parseViewWhereSql(sc *SmartContract, columns string) (tabsSQL, whsSQL string, whsout []byte, err error) {
 	var (
 		cols, outarr []ViewWheSch
 		tabList      = make(map[string]bool)

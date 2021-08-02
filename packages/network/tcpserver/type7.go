@@ -3,16 +3,12 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package tcpserver
+	block := &model.Block{}
 
-import (
-	"net"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/network"
-
-	log "github.com/sirupsen/logrus"
-)
+	var blocks []model.Block
+	var err error
+	if request.ReverseOrder {
+		blocks, err = block.GetReverseBlockchain(int64(request.BlockID), network.BlocksPerRequest)
 	} else {
 		blocks, err = block.GetBlocksFrom(int64(request.BlockID-1), "ASC", network.BlocksPerRequest)
 	}

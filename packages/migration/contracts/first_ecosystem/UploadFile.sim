@@ -4,8 +4,6 @@ contract UploadFile {
     data {
         ApplicationId int
         Data file
-    action {
-        $Id = @1UploadBinary("ApplicationId,Name,Data,DataMimeType", $ApplicationId, $Name, $Body, $DataMimeType)
-        $result = $Id
+        Name string "optional"
     }
-}
+    conditions {
