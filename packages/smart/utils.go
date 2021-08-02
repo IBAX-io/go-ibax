@@ -48,6 +48,14 @@ func logErrorDB(err error, comment string) error {
 }
 
 func unmarshalJSON(input []byte, v interface{}, comment string) (err error) {
+	if err = json.Unmarshal(input, v); err != nil {
+		return logErrorValue(err, consts.JSONUnmarshallError, comment, string(input))
+	}
+	return nil
+}
+
+func marshalJSON(v interface{}, comment string) (out []byte, err error) {
+	out, err = json.Marshal(v)
 	if err != nil {
 		logError(err, consts.JSONMarshallError, comment)
 	}
@@ -180,17 +188,6 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]interface{}) (
 		}
 
 		if _, ok = txData[fitem.Name]; !ok {
-			txData[fitem.Name] = v
-		}
-	}
-
-	if len(txData) != len(fieldInfos) {
-		return nil, fmt.Errorf("invalid number of parameters")
-	}
-
-	return txData, nil
-}
-
 func getFieldDefaultValue(fieldType uint32) interface{} {
 	switch fieldType {
 	case script.DtBool:
