@@ -627,17 +627,6 @@ func (sc *SmartContract) getExtend() *map[string]interface{} {
 
 	return &extend
 }
-
-func PrefixName(table string) (prefix, name string) {
-	name = table
-	if off := strings.IndexByte(table, '_'); off > 0 && table[0] >= '0' && table[0] <= '9' {
-		prefix = table[:off]
-		name = table[off+1:]
-	}
-	return
-}
-
-func (sc *SmartContract) IsCustomTable(table string) (isCustom bool, err error) {
 	prefix, name := PrefixName(table)
 	if len(prefix) > 0 {
 		tables := &model.Table{}
@@ -962,6 +951,12 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 		if err != nil {
 			logger.WithFields(log.Fields{"error": err}).Error("prepare multi")
 			return retError(err)
+		}
+	}
+
+	sc.TxContract.Extend = sc.getExtend()
+	if err = sc.AppendStack(sc.TxContract.Name); err != nil {
+		logger.WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("loop in contract")
 		return retError(err)
 	}
 	sc.VM = GetVM()

@@ -108,19 +108,18 @@ func VDESrcChainInfoDeleteHandlre(w http.ResponseWriter, r *http.Request) {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to delete table record")
 	}
 
-	jsonResponse(w, "ok")
-}
-
-func VDESrcChainInfoListHandlre(w http.ResponseWriter, r *http.Request) {
-	logger := getLogger(r)
-	srcData := model.VDESrcChainInfo{}
-
 	result, err := srcData.GetAll()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Error reading chain info data list")
 		errorResponse(w, err)
 		return
 	}
+	jsonResponse(w, result)
+}
+
+func VDESrcChainInfoByIDHandlre(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
 	srcData := model.VDESrcChainInfo{}
