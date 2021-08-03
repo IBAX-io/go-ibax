@@ -114,16 +114,6 @@ var pagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, conditions, ap
                         }.Else{
                             Span(Class: text-muted, Body: "(0)")
                         }
-                    }
-                }
-                Div(row){
-                    Div(col-md-12 mc-sm text-left){
-                        If(#DataCount# > 0){
-                            Span(Class: h6, Body: "#DataInfo#")
-                        }.Else{
-                            Span(Class: text-muted h6, Body: "Nothing selected")
-                        }
-                    }
                 }
             }
         }
@@ -135,3 +125,18 @@ var pagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, conditions, ap
         }
     }
 }', 'developer_menu', 'ContractConditions("@1DeveloperCondition")', '1', '1'),
+	(next_id('1_pages'), 'import_upload', 'Div(content-wrapper){
+        SetTitle("Import")
+        Div(breadcrumb){
+            Span(Class: text-muted, Body: "Select payload that you want to import")
+        }
+        Form(panel panel-primary){
+            Div(list-group-item){
+                Input(Name: Data, Type: file)
+            }
+            Div(list-group-item text-right){
+                Button(Body: "Load", Class: btn btn-primary, Contract: @1ImportUpload, Page: @1import_app)
+            }
+        }
+    }', 'developer_menu', 'ContractConditions("@1DeveloperCondition")', '1', '1');
+`

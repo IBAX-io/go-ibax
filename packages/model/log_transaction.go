@@ -3,15 +3,9 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// GetByHash returns LogTransactions existence by hash
-func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
-	return isFound(DBConn.Where("hash = ?", hash).First(lt))
-}
+package model
 
-// Create is creating record of model
-func (lt *LogTransaction) Create(transaction *DbTransaction) error {
-	return GetDB(transaction).Create(lt).Error
-}
+import "gorm.io/gorm"
 
 func CreateLogTransactionBatches(dbTx *gorm.DB, lts []*LogTransaction) error {
 	if len(lts) == 0 {

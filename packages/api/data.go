@@ -6,12 +6,6 @@
 package api
 
 import (
-	"crypto/md5"
-	"encoding/hex"
-	"fmt"
-	"net/http"
-	"strings"
-
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
@@ -30,6 +24,16 @@ func compareHash(data []byte, urlHash string) bool {
 	var hash []byte
 	switch len(urlHash) {
 	case 32:
+		h := md5.Sum(data)
+		hash = h[:]
+	case 64:
+		hash = crypto.Hash(data)
+	}
+
+	return hex.EncodeToString(hash) == urlHash
+}
+
+func getDataHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 

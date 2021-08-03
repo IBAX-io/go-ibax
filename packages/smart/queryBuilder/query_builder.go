@@ -34,6 +34,8 @@ var (
 type KeyTableChecker interface {
 	IsKeyTable(string) bool
 }
+
+type NextIDGetter interface {
 	GetNextID(string) (int64, error)
 }
 
@@ -223,17 +225,6 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, e
 
 		if len(logData[colname]) > 0 && logData[colname] != `NULL` {
 			initial = colname
-		} else {
-			initial = `'{}'`
-		}
-
-		expressions = append(expressions, fmt.Sprintf(`%s=%s::jsonb || '%s'::jsonb`, colname, initial, string(out)))
-	}
-
-	return strings.Join(expressions, ","), nil
-}
-
-func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, error) {
 	if err := b.Prepare(); err != nil {
 		return "", err
 	}

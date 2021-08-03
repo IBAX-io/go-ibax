@@ -8,9 +8,3 @@ import "github.com/IBAX-io/go-ibax/packages/model"
 
 type intervalBlocksCounter interface {
 	count(state blockGenerationState) (int, error)
-}
-
-		return 0, err
-	}
-	return len(blocks), nil
-}

@@ -44,6 +44,20 @@ func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key i
 		}
 	}
 
+	if len(strings.TrimSpace(rtx.SmartTx().Lang)) > 2 {
+		return "", fmt.Errorf(`localization size is greater than 2`)
+	}
+
+	var PublicKeys [][]byte
+	PublicKeys = append(PublicKeys, crypto.CutPub(rtx.SmartTx().PublicKey))
+	f, err := utils.CheckSign(PublicKeys, rtx.Hash(), rtx.Signature(), false)
+	if err != nil {
+		return "", err
+	}
+	if !f {
+		return "", errors.New("sign err")
+	}
+
 	//check keyid is exist user
 	if key == 0 {
 		//ok, err := model.MemberHasRole(nil, 7, 1, converter.AddressToString(rtx.SmartTx().KeyID))
@@ -79,12 +93,6 @@ func (p blockchainTxPreprocessor) ProcessClientTranstaction(txData []byte, key i
 		return "", err
 	}
 
-	return rtx.HashStr(), nil
-}
-
-func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key int64, le *log.Entry) (retTx []string, err error) {
-	var rtxs []*model.RawTx
-	for _, txData := range txDatas {
 		rtx := &transaction.RawTransaction{}
 		if err = rtx.Processing(txData); err != nil {
 			return nil, err

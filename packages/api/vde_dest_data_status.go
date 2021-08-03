@@ -86,16 +86,6 @@ func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
-	form := &VDEDestDataStatusForm{}
-
-	if err = parseForm(r, form); err != nil {
-		errorResponse(w, err)
-		return
-	}
-
-	m := &model.VDEDestDataStatus{}
-
-	if m, err = unmarshalColumnVDEDestDataStatus(form); err != nil {
 		errorResponse(w, err)
 		return
 	}
@@ -222,6 +212,18 @@ func VDEDestDataStatusByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) 
 		errorResponse(w, err)
 		return
 	}
+	if len(result) > 0 {
+		for _, item := range result {
+			var DataListItem DataList
+			DataListItem.ID = item.ID
+			DataListItem.TaskUUID = item.TaskUUID
+			DataListItem.DataUUID = item.DataUUID
+			DataListItem.Hash = item.Hash
+			DataListItem.Data = item.Data
+			DataListItem.DataInfo = item.DataInfo
+			DataListItem.VDESrcPubkey = item.VDESrcPubkey
+			DataListItem.VDEDestPubkey = item.VDEDestPubkey
+			DataListItem.VDEDestIp = item.VDEDestIp
 			DataListItem.VDEAgentPubkey = item.VDEAgentPubkey
 			DataListItem.VDEAgentIp = item.VDEAgentIp
 			DataListItem.AgentMode = item.AgentMode

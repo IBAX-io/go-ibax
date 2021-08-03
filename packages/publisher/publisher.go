@@ -42,16 +42,6 @@ var (
 	publisher         *gocent.Client
 	config            conf.CentrifugoConfig
 )
-
-type CentJWT struct {
-	Sub string
-	jwt.StandardClaims
-}
-
-// InitCentrifugo client
-func InitCentrifugo(cfg conf.CentrifugoConfig) {
-	config = cfg
-	publisher = gocent.New(gocent.Config{
 		Addr: cfg.URL,
 		Key:  cfg.Key,
 	})
@@ -89,3 +79,6 @@ func GetStats() (gocent.InfoResult, error) {
 		return gocent.InfoResult{}, fmt.Errorf("publisher not initialized")
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), centrifugoTimeout)
+	defer cancel()
+	return publisher.Info(ctx)
+}

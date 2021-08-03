@@ -145,6 +145,22 @@ func GormClose() error {
 }
 
 // DbTransaction is gorm.DB wrapper
+type DbTransaction struct {
+	conn *gorm.DB
+}
+
+func NewDbTransaction(conn *gorm.DB) *DbTransaction {
+	return &DbTransaction{conn: conn}
+}
+
+// StartTransaction is beginning transaction
+func StartTransaction() (*DbTransaction, error) {
+	conn := DBConn.Begin()
+	if conn.Error != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": conn.Error}).Error("cannot start transaction because of connection error")
+		return nil, conn.Error
+	}
+
 	if err := setupConnOptions(conn); err != nil {
 		return nil, err
 	}
@@ -416,15 +432,6 @@ func HasTableOrView(tr *DbTransaction, names string) bool {
 type Namer struct {
 	TableType string
 }
-
-type SchemaInter interface {
-	HasExists(tr *DbTransaction, name string) bool
-}
-
-func (v Namer) HasExists(tr *DbTransaction, names string) bool {
-	var typs string
-	switch v.TableType {
-	case "table":
 		typs = `= 'BASE TABLE'`
 	case "view":
 		typs = `= 'VIEW'`

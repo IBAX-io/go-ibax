@@ -282,6 +282,17 @@ func VDEScheTaskInstallContractDest(ctx context.Context, d *daemon) error {
 //		//log.Info("Sche task not found")
 //		time.Sleep(time.Millisecond * 2)
 //		return nil
+//	}
+//
+//	// deal with task data
+//	for _, item := range ScheTask {
+//		//fmt.Println("ScheTask:", item.TaskUUID)
+//		blockchain_http = item.ContractRunHttp
+//		blockchain_ecosystem = item.ContractRunEcosystem
+//		//fmt.Println("ContractRunHttp and ContractRunEcosystem:", blockchain_http, blockchain_ecosystem)
+//		ecosystemID, err := strconv.Atoi(blockchain_ecosystem)
+//		if err != nil {
+//			log.WithFields(log.Fields{"error": err}).Error("encode error")
 //			time.Sleep(time.Millisecond * 2)
 //			continue
 //		}
@@ -327,9 +338,3 @@ func VDEScheTaskInstallContractDest(ctx context.Context, d *daemon) error {
 //			log.WithFields(log.Fields{"error": err}).Error("Update VDEScheTask table!")
 //			time.Sleep(time.Millisecond * 2)
 //			continue
-//		}
-//		time.Sleep(time.Second * 2)
-//	} //for
-//
-//	return nil
-//}

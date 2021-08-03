@@ -113,18 +113,6 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		wallet = converter.StringToAddress(form.KeyID)
 	} else if len(form.PublicKey.Bytes()) > 0 {
 		wallet = crypto.Address(form.PublicKey.Bytes())
-	}
-
-	account := &model.Key{}
-	account.SetTablePrefix(client.EcosystemID)
-	isAccount, err := account.Get(nil, wallet)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting public key from keys")
-		errorResponse(w, err)
-		return
-	}
-
-	spfm.SetTablePrefix(converter.Int64ToStr(client.EcosystemID))
 	if ok, err := spfm.Get(nil, "free_membership"); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting free_membership parameter")
 		errorResponse(w, err)
@@ -280,6 +268,20 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 	result := &loginResult{
 		Account:     account.AccountID,
 		EcosystemID: converter.Int64ToStr(client.EcosystemID),
+		KeyID:       converter.Int64ToStr(wallet),
+		IsOwner:     founder == wallet,
+		IsNode:      conf.Config.KeyID == wallet,
+		IsOBS:       conf.Config.IsSupportingOBS(),
+	}
+
+	claims := JWTClaims{
+		KeyID:       result.KeyID,
+		AccountID:   account.AccountID,
+		EcosystemID: result.EcosystemID,
+		IsMobile:    form.IsMobile,
+		RoleID:      converter.Int64ToStr(form.RoleID),
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Second * time.Duration(form.Expire)).Unix(),
 		},
 	}
 

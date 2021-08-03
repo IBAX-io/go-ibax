@@ -51,18 +51,29 @@ type PrivateFilePackets struct {
 	TaskType   string `gorm:"column:task_type;not null" json:"task_type"`
 	Name       string `gorm:"column:name;not null" json:"name"`
 	MimeType   string `gorm:"column:mimetype;not null" json:"mimetype"`
+	Hash       string `gorm:"not null" json:"hash"`
+	Data       []byte `gorm:"not null" json:"data"`
+}
+
+// TableName returns name of table
+func (PrivateFilePackets) TableName() string {
+	return "subnode_privatefile_packets"
+}
+
+// Create is creating record of model
+func (pp *PrivateFilePackets) Create() error {
+	return DBConn.Create(&pp).Error
+}
+
+func (pp *PrivateFilePackets) Get(Hash string) (PrivateFilePackets, error) {
+	var m PrivateFilePackets
+	err := DBConn.Where("hash=?", Hash).First(&m).Error
+	return m, err
 }
 
 // GetDataByHash is returns privatefile packet
 func (pp *PrivateFilePackets) GetDataByHash(dbTransaction *DbTransaction, Hash string) ([]map[string]string, error) {
 	return GetAllTx(dbTransaction, "SELECT * from subnode_privatefile_packets WHERE hash = ? ORDER BY ID DESC", -1, Hash)
-}
-
-// DeleteByHash is deleting privatefile packet by hash
-func (pp *PrivateFilePackets) DeleteByHash(dbTransaction *DbTransaction) error {
-	return GetDB(dbTransaction).Exec("DELETE FROM subnode_privatefile_packets WHERE hash = ?", pp.Hash).Error
-}
-
 type PrivateFilePacketsHash struct {
 	TaskUUID   string `gorm:"column:task_uuid;not null" json:"task_uuid"`
 	TaskName   string `gorm:"column:task_name;not null" json:"task_name"`

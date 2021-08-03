@@ -167,18 +167,6 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]interface{}) (
 				break
 			}
 			imap := make(map[string]interface{})
-			for ikey, ival := range val {
-				imap[fmt.Sprint(ikey)] = ival
-			}
-			v = types.LoadMap(imap)
-		case script.DtFile:
-			var val map[string]interface{}
-			if val, ok = params[index].(map[string]interface{}); !ok {
-				err = fmt.Errorf("invalid file type")
-				break
-			}
-
-			if v, ok = types.NewFileFromMap(val); !ok {
 				err = fmt.Errorf("invalid attrs of file")
 				break
 			}
@@ -188,6 +176,17 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]interface{}) (
 		}
 
 		if _, ok = txData[fitem.Name]; !ok {
+			txData[fitem.Name] = v
+		}
+	}
+
+	if len(txData) != len(fieldInfos) {
+		return nil, fmt.Errorf("invalid number of parameters")
+	}
+
+	return txData, nil
+}
+
 func getFieldDefaultValue(fieldType uint32) interface{} {
 	switch fieldType {
 	case script.DtBool:
