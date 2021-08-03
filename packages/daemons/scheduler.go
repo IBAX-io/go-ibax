@@ -38,8 +38,6 @@ func loadContractTasks() error {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get all cron tasks")
 			return err
 		}
-			if err != nil {
-				return err
 			}
 		}
 	}

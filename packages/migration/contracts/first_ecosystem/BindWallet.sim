@@ -4,9 +4,3 @@ contract BindWallet {
 	data {
 		Id  int
 	}
-	conditions {
-		$cur = DBRow("contracts").Columns("id,conditions,wallet_id").WhereId($Id)
-		if !$cur {
-			error Sprintf("Contract %d does not exist", $Id)
-	}
-}

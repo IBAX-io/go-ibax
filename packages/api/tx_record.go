@@ -1,4 +1,5 @@
-	"github.com/gorilla/mux"
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
 )
 
 func getTxRecord(w http.ResponseWriter, r *http.Request) {

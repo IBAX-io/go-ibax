@@ -1,4 +1,22 @@
 /*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package api
+
+import (
+	"fmt"
+	"net/url"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestTables(t *testing.T) {
+	if err := keyLogin(1); err != nil {
+		t.Error(err)
+		return
 	}
 	var ret tablesResult
 	err := sendGet(`tables`, nil, &ret)
@@ -244,15 +262,6 @@ func TestJSONTable(t *testing.T) {
 		{`DBFind(` + name + `,my).Columns("id,doc,doc->type").WhereId(2).Vars(my)
 			Span(#my_id##my_doc_type#)`,
 			`[{"tag":"dbfind","attr":{"columns":["id","doc","doc.type"],"data":[["2","{"doc": "Some test text.", "ind": "101", "type": "new\\"doc\\""}","new"doc""]],"name":"` + name + `","source":"my","types":["text","text","text"],"whereid":"2"}},{"tag":"span","children":[{"tag":"text","text":"2new"doc""}]}]`},
-		{`DBFind(` + name + `,my).Columns("id,doc->type").WhereId(2)`,
-			`[{"tag":"dbfind","attr":{"columns":["id","doc.type"],"data":[["2","new"doc""]],"name":"` + name + `","source":"my","types":["text","text"],"whereid":"2"}}]`},
-		{`DBFind(` + name + `,my).Columns("doc->type").Order(id).Custom(mytype, OK:#doc.type#)`,
-			`[{"tag":"dbfind","attr":{"columns":["doc.type","id","mytype"],"data":[["new"doc" val","1","[{"tag":"text","text":"OK:new"doc" val"}]"],["new"doc"","2","[{"tag":"text","text":"OK:new"doc""}]"],["","3","[{"tag":"text","text":"OK:NULL"}]"],["","4","[{"tag":"text","text":"OK:NULL"}]"],["","5","[{"tag":"text","text":"OK:NULL"}]"]],"name":"` + name + `","order":"id","source":"my","types":["text","text","tags"]}}]`},
-	}
-	var ret contentResult
-	for i, item := range forTest {
-		if i > 100 {
-			break
 		}
 		assert.NoError(t, sendPost(`content`, &url.Values{`template`: {item.input}}, &ret))
 		assert.Equal(t, item.want, RawToString(ret.Tree))
