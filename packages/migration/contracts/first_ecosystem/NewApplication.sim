@@ -5,9 +5,10 @@ contract NewApplication {
         Name string
         Conditions string
     }
+        }
+    }
 
-    conditions {
-        ValidateCondition($Conditions, $ecosystem_id)
-
-        if Size($Name) == 0 {
+    action {
+        $result = DBInsert("applications", {name: $Name,conditions: $Conditions})
+    }
 }

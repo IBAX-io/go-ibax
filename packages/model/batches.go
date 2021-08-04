@@ -59,12 +59,8 @@ type Batcher interface {
 }
 type ArrHashes [][]byte
 type logTxser []LogTransaction
-		return result.Error
-	}
-	return nil
-}
-
-func (l txser) BatchFindByHash(tr *DbTransaction, hs ArrHashes) error {
+type txser []Transaction
+type queueser []QueueTx
 	if result := GetDB(tr).Model(&Transaction{}).Select("hash").Where("hash IN ? AND verified = 1", hs).FindInBatches(&l, len(hs), func(tx *gorm.DB, batch int) error {
 		if tx.RowsAffected > 0 {
 			return errors.New("duplicated transaction at transactions")

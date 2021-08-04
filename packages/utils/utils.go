@@ -112,19 +112,6 @@ func ParseBlockHeader(buf *bytes.Buffer) (header, prev BlockData, err error) {
 	}
 
 	if int64(buf.Len()) > syspar.GetMaxBlockSize() {
-		err = ErrBlockSize
-		return
-	}
-
-	header.Sign, err = converter.DecodeBytesBuf(buf)
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-var (
 	// ReturnCh is chan for returns
 	ReturnCh chan string
 	// CancelFunc is represents cancel func
@@ -191,6 +178,15 @@ func CallMethod(i interface{}, methodName string) interface{} {
 	} else {
 		ptr = reflect.New(reflect.TypeOf(i))
 		temp := ptr.Elem()
+		temp.Set(value)
+	}
+
+	// check for method on value
+	method := value.MethodByName(methodName)
+	if method.IsValid() {
+		finalMethod = method
+	}
+	// check for method on pointer
 	method = ptr.MethodByName(methodName)
 	if method.IsValid() {
 		finalMethod = method

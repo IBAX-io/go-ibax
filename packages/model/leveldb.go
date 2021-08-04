@@ -18,19 +18,6 @@ type levelDBGetterPutterDeleter interface {
 	Put([]byte, []byte, *opt.WriteOptions) error
 	Write(batch *leveldb.Batch, wo *opt.WriteOptions) error
 	Delete([]byte, *opt.WriteOptions) error
-	NewIterator(slice *util.Range, ro *opt.ReadOptions) iterator.Iterator
-}
-
-func GetLevelDB(tx *leveldb.Transaction) levelDBGetterPutterDeleter {
-	if tx != nil {
-		return tx
-	}
-	return DBlevel
-}
-
-func prefixFunc(prefix string) func([]byte) []byte {
-	return func(hash []byte) []byte {
-		return []byte(prefix + string(hash))
 	}
 }
 
@@ -83,4 +70,14 @@ func DBGetAllKey(prefix string, bvalue bool) (*[]string, error) {
 		} else {
 			if bvalue {
 				value := string(iter.Value())
+				s := fmt.Sprintf("Key[%s]=[%s]\n", key, value)
+				ret = append(ret, s)
+			} else {
+				ret = append(ret, key)
+			}
+		}
+
+	}
+	iter.Release()
+	return &ret, iter.Error()
 }
