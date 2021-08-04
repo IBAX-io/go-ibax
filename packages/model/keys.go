@@ -28,6 +28,13 @@ type Key struct {
 	Blocked     int64  `gorm:"not null"`
 }
 
+// SetTablePrefix is setting table prefix
+func (m *Key) SetTablePrefix(prefix int64) *Key {
+	m.ecosystem = prefix
+	return m
+}
+
+// TableName returns name of table
 func (m Key) TableName() string {
 	if m.ecosystem == 0 {
 		m.ecosystem = 1
@@ -70,14 +77,3 @@ func (m *Key) AccountKeyID() int64 {
 }
 
 // KeyTableName returns name of key table
-func KeyTableName(prefix int64) string {
-	return fmt.Sprintf("%d_keys", prefix)
-}
-
-// GetKeysCount returns common count of keys
-func GetKeysCount() (int64, error) {
-	var cnt int64
-	row := DBConn.Raw(`SELECT count(*) key_count FROM "1_keys" WHERE ecosystem = 1`).Select("key_count").Row()
-	err := row.Scan(&cnt)
-	return cnt, err
-}

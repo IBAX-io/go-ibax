@@ -1,16 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package tcpserver
-
-import (
-	"encoding/base64"
-	"errors"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/crypto/ecies"
 	"github.com/IBAX-io/go-ibax/packages/model"
@@ -32,6 +20,15 @@ func Type88(r *network.PrivateDateRequest) (*network.PrivateDateResponse, error)
 	if err != nil {
 		log.WithError(err)
 		return nil, err
+	}
+	resp := &network.PrivateDateResponse{}
+	resp.Hash = hash
+
+	//
+	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
+	if len(NodePrivateKey) < 1 {
+		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
+		err = errors.New(`empty node private key`)
 		return nil, err
 	}
 	eccData, err := ecies.EccCryptoKey(data, NodePublicKey)

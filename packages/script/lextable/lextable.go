@@ -122,6 +122,16 @@ var (
 			"d": ["main", "number", "pop"]
 		},
 	"ident": {
+			"01a_r": ["ident", "", "next"],
+			"d": ["main", "ident", "pop"]
+		},
+	"mustident": {
+		"01a_r": ["ident", "", "next"],
+		"d": ["error", "", ""]
+	},
+	"comment": {
+			"*": ["comstop", "", "next"],
+			"d": ["comment", "", "next"]
 		},
 	"comstop": {
 			"/": ["main", "comment", "pop next"],
@@ -140,18 +150,6 @@ func main() {
 		i := byte(ind)
 		switch ch {
 		case ' ':
-			alpha[0x09] = i
-			alpha[0x0d] = i
-			alpha[' '] = i
-		case '1':
-			for k := '1'; k <= '9'; k++ {
-				alpha[k] = i
-			}
-		case 'a':
-			for k := 'A'; k <= 'Z'; k++ {
-				alpha[k] = i
-			}
-			for k := 'a'; k <= 'z'; k++ {
 				alpha[k] = i
 			}
 		case 128:

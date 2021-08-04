@@ -148,13 +148,6 @@ type SubNodeSrcDataForm struct {
 	DataUUID string `schema:"data_uuid"`
 	Hash     string `schema:"hash"`
 	Data     string `schema:"data"`
-	DataInfo string `schema:"data_info"`
-	//DataState int64  `schema:"data_state"`
-	//DataErr   string `schema:"data_err"`
-}
-
-func (f *SubNodeSrcDataForm) Validate(r *http.Request) error {
-	return nil
 }
 
 type VDESrcDataForm struct {
@@ -403,6 +396,17 @@ type VDESrcTaskAuthForm struct {
 func (f *VDESrcTaskAuthForm) Validate(r *http.Request) error {
 	return nil
 }
+
+type VDEAgentMemberForm struct {
+	VDEPubKey            string `schema:"vde_pub_key"`
+	VDEComment           string `schema:"vde_comment"`
+	VDEName              string `schema:"vde_name"`
+	VDEIp                string `schema:"vde_ip"`
+	VDEType              int64  `schema:"vde_type"`
+	ContractRunHttp      string `schema:"contract_run_http"`
+	ContractRunEcosystem string `schema:"contract_run_ecosystem"`
+}
+
 func (f *VDEAgentMemberForm) Validate(r *http.Request) error {
 	return nil
 }

@@ -25,14 +25,6 @@ import (
 
 	qb "github.com/IBAX-io/go-ibax/packages/smart/queryBuilder"
 
-	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
-)
-
-// Composite represents a composite contract
-type Composite struct {
-	Name string      `json:"name"`
-	Data interface{} `json:"data,omitempty"`
 }
 
 // Action describes a button action
@@ -86,6 +78,16 @@ func init() {
 	funcs[`Div`] = tplFunc{defaultTailTag, defaultTailTag, `div`, `Class,Body`}
 	funcs[`ForList`] = tplFunc{forlistTag, defaultTag, `forlist`, `Source,Data,Index`}
 	funcs[`Form`] = tplFunc{defaultTailTag, defaultTailTag, `form`, `Class,Body`}
+	funcs[`If`] = tplFunc{ifTag, ifFull, `if`, `Condition,Body`}
+	funcs[`Image`] = tplFunc{imageTag, defaultTailTag, `image`, `Src,Alt,Class`}
+	funcs[`Include`] = tplFunc{includeTag, defaultTag, `include`, `Name`}
+	funcs[`Input`] = tplFunc{defaultTailTag, defaultTailTag, `input`, `Name,Class,Placeholder,Type,Value,Disabled`}
+	funcs[`Label`] = tplFunc{defaultTailTag, defaultTailTag, `label`, `Body,Class,For`}
+	funcs[`LinkPage`] = tplFunc{defaultTailTag, defaultTailTag, `linkpage`, `Body,Page,Class,PageParams`}
+	funcs[`Data`] = tplFunc{dataTag, defaultTailTag, `data`, `Source,Columns,Data`}
+	funcs[`DBFind`] = tplFunc{dbfindTag, defaultTailTag, `dbfind`, `Name,Source`}
+	funcs[`And`] = tplFunc{andTag, defaultTag, `and`, `*`}
+	funcs[`Or`] = tplFunc{orTag, defaultTag, `or`, `*`}
 	funcs[`P`] = tplFunc{defaultTailTag, defaultTailTag, `p`, `Body,Class`}
 	funcs[`RadioGroup`] = tplFunc{defaultTailTag, defaultTailTag, `radiogroup`, `Name,Source,NameColumn,ValueColumn,Value,Class`}
 	funcs[`Span`] = tplFunc{defaultTailTag, defaultTailTag, `span`, `Body,Class`}

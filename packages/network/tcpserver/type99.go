@@ -1,8 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package tcpserver
 
 import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -40,6 +37,11 @@ func Type99(r *network.PrivateFileRequest) (*network.PrivateFileResponse, error)
 		TaskType:   r.TaskType,
 		MimeType:   r.MimeType,
 		Name:       r.FileName,
+		Hash:       hash,
+		//Data: r.Data,
+		Data: data,
+	}
+
 	err = PrivateFilePackets.Create()
 	if err != nil {
 		log.WithError(err)

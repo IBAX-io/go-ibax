@@ -12,7 +12,6 @@ contract CallDelayedContract {
 		rows = DBFind("@1delayed_contracts").Where({"id": $Id, "deleted": 0})
 
 		if !Len(rows) {
-			warning Sprintf(LangRes("@1template_delayed_contract_not_exist"), $Id)
 		}
 		$cur = rows[0]
 		$limit = Int($cur["limit"])
@@ -38,3 +37,7 @@ contract CallDelayedContract {
 
 		DBUpdate("@1delayed_contracts", $Id, {"counter": $counter, "block_id": block_id})
 
+		var params map
+		CallContract($cur["contract"], params)
+	}
+}

@@ -9,14 +9,6 @@ package consts
 type LogEventType int
 
 // Types of log errors
-const (
-	NetworkError             = "Network"
-	JSONMarshallError        = "JSONMarshall"
-	JSONUnmarshallError      = "JSONUnmarshall"
-	CommandExecutionError    = "CommandExecution"
-	ConversionError          = "Conversion"
-	TypeError                = "Type"
-	ProtocolError            = "Protocol"
 	MarshallingError         = "Marshall"
 	UnmarshallingError       = "Unmarshall"
 	ParseError               = "Parse"
@@ -59,5 +51,11 @@ const (
 	BCRelevanceError         = "BCRelevanceError"
 	BCActualizationError     = "BCActualizationError"
 	SchedulerError           = "SchedulerError"
+	SyncProcess              = "SyncProcess"
+	WrongModeError           = "WrongModeError"
+	OBSManagerError          = "OBSManagerError"
+	TCPClientError           = "TCPClientError"
+	BadTxError               = "BadTxError"
+	TimeCalcError            = "BlockTimeCounterError"
 	RegisterError            = "RegisterError"
 )
