@@ -113,20 +113,6 @@ func daemonLoop(ctx context.Context, goRoutineName string, handler func(context.
 	err := WaitDB(ctx)
 	if err != nil {
 		return
-	}
-
-	d := &daemon{
-		goRoutineName: goRoutineName,
-		sleepTime:     100 * time.Millisecond,
-		logger:        logger,
-	}
-	idleDelay := time.NewTimer(d.sleepTime)
-	//defer idleDelay.Stop()
-	for {
-		idleDelay.Reset(d.sleepTime)
-		select {
-		case <-ctx.Done():
-			logger.Info("daemon done his work")
 			retCh <- goRoutineName
 			return
 		case <-idleDelay.C:
@@ -143,6 +129,12 @@ func daemonLoop(ctx context.Context, goRoutineName string, handler func(context.
 func StartDaemons(ctx context.Context, daemonsToStart []string) {
 	go WaitStopTime()
 
+	daemonsTable := make(map[string]string)
+	go func() {
+		for {
+			daemonNameAndTime := <-MonitorDaemonCh
+			daemonsTable[daemonNameAndTime[0]] = daemonNameAndTime[1]
+			if time.Now().Unix()%10 == 0 {
 				log.Debug("daemonsTable: %v\n", daemonsTable)
 			}
 		}

@@ -56,17 +56,6 @@ func (t *FirstBlockTransaction) Action() error {
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing ecosystem schema")
 		return utils.ErrInfo(err)
-	}
-
-	amount := decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()
-
-	taxes := &model.SystemParameter{Name: `taxes_wallet`}
-	if err = taxes.SaveArray([][]string{{"1", converter.Int64ToStr(keyID)}}); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("saving taxes_wallet array")
-		return utils.ErrInfo(err)
-	}
-
-	err = model.GetDB(t.DbTransaction).Exec(`update "1_system_parameters" SET value = ? where name = 'test'`, strconv.FormatInt(data.Test, 10)).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating test parameter")
 		return utils.ErrInfo(err)
@@ -90,6 +79,12 @@ func (t *FirstBlockTransaction) Action() error {
 		return utils.ErrInfo(err)
 	}
 	id, err := model.GetNextID(t.DbTransaction, "1_pages")
+	if err != nil {
+		return utils.ErrInfo(err)
+	}
+	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_pages" (id,name,menu,value,conditions) values(?, 'default_page',
+		  'default_menu', ?, 'ContractConditions("@1DeveloperCondition")')`,
+		id, syspar.SysString(`default_ecosystem_page`)).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting default page")
 		return utils.ErrInfo(err)

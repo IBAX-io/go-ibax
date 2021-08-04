@@ -34,6 +34,12 @@ func RedisInit(host string, port string, password string, db int) error {
 		return err
 	}
 
+	Gclient1 = redis.NewClient(&redis.Options{
+		Addr:     host + ":" + port,
+		Password: password, // no password set
+		DB:       1,        // use default DB
+	})
+	_, err = Gclient1.Ping().Result()
 	if err != nil {
 		return err
 	}
@@ -78,17 +84,6 @@ func (rp *RedisParams) Cleardb() error {
 	var keys []string
 
 	if GRedisIsactive {
-		err = nil
-		for {
-			var key []string
-			var err error
-			key, cursor, err = Gclient0.Scan(cursor, "*", 10).Result()
-			if err != nil {
-				return err
-			}
-			n += len(keys)
-			keys = append(keys, key...)
-			if cursor == 0 {
 				break
 			}
 		}

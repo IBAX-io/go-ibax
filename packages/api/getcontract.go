@@ -51,11 +51,17 @@ func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
 		ID:       uint32(info.Owner.TableID + consts.ShiftContractID),
 		TableID:  converter.Int64ToStr(info.Owner.TableID),
 		Name:     info.Name,
+		StateID:  info.Owner.StateID,
+		WalletID: converter.Int64ToStr(info.Owner.WalletID),
+		TokenID:  converter.Int64ToStr(info.Owner.TokenID),
+		Address:  converter.AddressToString(info.Owner.WalletID),
+	}
+
+	if info.Tx != nil {
+		for _, fitem := range *info.Tx {
+			fields = append(fields, contractField{
+				Name:     fitem.Name,
+				Type:     script.OriginalToString(fitem.Original),
 				Optional: fitem.ContainsTag(script.TagOptional),
 			})
 		}
-	}
-	result.Fields = fields
-
-	jsonResponse(w, result)
-}

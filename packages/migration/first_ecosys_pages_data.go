@@ -48,6 +48,12 @@ var firstEcosystemPagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, 
                             Span(Class: text-muted h6, Body: "Nothing selected")
                         }
                     }
+                }
+            }
+        }
+        If(#import_id# > 0){
+            Div(list-group-item text-right){
+                VarAsIs(imp_data, "#import_value_data#")
                 Button(Body: "Import", Class: btn btn-primary, Page: @1apps_list).CompositeContract(@1Import, "#imp_data#")
             }
         }
@@ -62,9 +68,3 @@ var firstEcosystemPagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, 
             Div(list-group-item){
                 Input(Name: Data, Type: file)
             }
-            Div(list-group-item text-right){
-                Button(Body: "Load", Class: btn btn-primary, Contract: @1ImportUpload, Page: @1import_app)
-            }
-        }
-    }', 'developer_menu', 'ContractConditions("@1DeveloperCondition")', '1', '1');
-`

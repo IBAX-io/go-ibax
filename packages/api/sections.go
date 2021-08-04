@@ -25,11 +25,6 @@ type sectionsForm struct {
 
 func (f *sectionsForm) Validate(r *http.Request) error {
 	if err := f.paginatorForm.Validate(r); err != nil {
-		return err
-	}
-
-	if len(f.Lang) == 0 {
-		f.Lang = r.Header.Get("Accept-Language")
 	}
 
 	return nil
@@ -38,6 +33,16 @@ func (f *sectionsForm) Validate(r *http.Request) error {
 func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 	form := &sectionsForm{}
 	form.defaultLimit = defaultSectionsLimit
+	if err := parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+
+	client := getClient(r)
+	logger := getLogger(r)
+
+	table := "1_sections"
+	q := model.GetDB(nil).Table(table).Where("ecosystem = ? AND status > 0", client.EcosystemID).Order("id ASC")
 
 	result := new(listResult)
 	err := q.Count(&result.Count).Error

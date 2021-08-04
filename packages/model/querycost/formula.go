@@ -45,6 +45,13 @@ var FromStatementMissingError = errors.New("FROM statement missing")
 var DeleteMinimumThreeFieldsError = errors.New("DELETE query must consist minimum of 3 fields")
 var SetStatementMissingError = errors.New("SET statement missing")
 var IntoStatementMissingError = errors.New("INTO statement missing")
+var UnknownQueryTypeError = errors.New("Unknown query type")
+
+func strSliceIndex(fields []string, fieldToFind string) (index int) {
+	for i, field := range fields {
+		if field == fieldToFind {
+			index = i
+}
 
 type TableRowCounter interface {
 	RowCount(*model.DbTransaction, string) (int64, error)

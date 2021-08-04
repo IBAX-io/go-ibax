@@ -19,11 +19,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
-	log "github.com/sirupsen/logrus"
-)
-
-const (
-	multipartBuf      = 100000 // the buffer size for ParseMultipartForm
 	multipartFormData = "multipart/form-data"
 	contentType       = "Content-Type"
 )
@@ -97,6 +92,23 @@ func parseForm(r *http.Request, f formValidator) (err error) {
 		err = r.ParseMultipartForm(multipartBuf)
 	} else {
 		err = r.ParseForm()
+	}
+	if err != nil {
+		return
+	}
+
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+	if err := decoder.Decode(f, r.Form); err != nil {
+		return err
+	}
+	return f.Validate(r)
+}
+
+func isMultipartForm(r *http.Request) bool {
+	return strings.HasPrefix(r.Header.Get(contentType), multipartFormData)
+}
+
 type hexValue struct {
 	value []byte
 }

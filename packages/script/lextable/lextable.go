@@ -1,22 +1,6 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package main
-
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"strings"
-)
-
-// The program creates packages/script/lex_table.go files.
-
-// Action is a map of actions
-type Action map[string][]string
-
-// States is a map of states
 type States map[string]Action
 
 const (
@@ -150,6 +134,18 @@ func main() {
 		i := byte(ind)
 		switch ch {
 		case ' ':
+			alpha[0x09] = i
+			alpha[0x0d] = i
+			alpha[' '] = i
+		case '1':
+			for k := '1'; k <= '9'; k++ {
+				alpha[k] = i
+			}
+		case 'a':
+			for k := 'A'; k <= 'Z'; k++ {
+				alpha[k] = i
+			}
+			for k := 'a'; k <= 'z'; k++ {
 				alpha[k] = i
 			}
 		case 128:

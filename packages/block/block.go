@@ -82,6 +82,20 @@ func (b *Block) PlaySafe() error {
 				err = ErrLimitTime
 			}
 			if inputTx[0].TxHeader != nil {
+				BadTxForBan(inputTx[0].TxHeader.KeyID)
+			}
+			if err := transaction.MarkTransactionBad(dbTransaction, inputTx[0].TxHash, err.Error()); err != nil {
+				return err
+			}
+		}
+		return err
+	}
+
+	if b.GenBlock {
+		if len(b.Transactions) == 0 {
+			dbTransaction.Commit()
+			return ErrEmptyBlock
+		} else if len(inputTx) != len(b.Transactions) {
 			if err = b.repeatMarshallBlock(); err != nil {
 				dbTransaction.Rollback()
 				return err
@@ -148,14 +162,6 @@ func (b *Block) repeatMarshallBlock() error {
 	b.SysUpdate = nb.SysUpdate
 	return nil
 }
-
-func (b *Block) readPreviousBlockFromBlockchainTable() error {
-	if b.IsGenesis() {
-		b.PrevHeader = &utils.BlockData{}
-		return nil
-	}
-
-	var err error
 	b.PrevHeader, err = GetBlockDataFromBlockChain(b.Header.BlockID - 1)
 	if err != nil {
 		return errors.Wrapf(err, "Can't get block %d", b.Header.BlockID-1)

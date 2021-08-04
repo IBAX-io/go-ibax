@@ -388,15 +388,6 @@ func GetList(query string, args ...interface{}) *ListResult {
 	for _, v := range all {
 		for _, v2 := range v {
 			result = append(result, v2)
-		}
-	}
-	return &ListResult{result, nil}
-}
-
-// GetNextID returns next ID of table
-func GetNextID(transaction *DbTransaction, table string) (int64, error) {
-	var id int64
-	rows, err := GetDB(transaction).Raw(`select id from "` + table + `" order by id desc limit 1`).Rows()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("selecting next id from table")
 		return 0, err
@@ -432,6 +423,15 @@ func HasTableOrView(tr *DbTransaction, names string) bool {
 type Namer struct {
 	TableType string
 }
+
+type SchemaInter interface {
+	HasExists(tr *DbTransaction, name string) bool
+}
+
+func (v Namer) HasExists(tr *DbTransaction, names string) bool {
+	var typs string
+	switch v.TableType {
+	case "table":
 		typs = `= 'BASE TABLE'`
 	case "view":
 		typs = `= 'VIEW'`

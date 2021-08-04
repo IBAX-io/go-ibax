@@ -145,13 +145,6 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 				return errReplace
 			}
 			return err
-		}
-		return bl.PlaySafe()
-	}
-
-	var count int
-	st := time.Now()
-
 	//if conf.Config.PoolPub.Enable {
 	//	bi := model.BlockID{}
 	//	f, err := bi.GetRangeByName(consts.MintMax, consts.ChainMax, 2000)
@@ -182,6 +175,8 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 			}
 
 			for rawBlock := range rawBlocksChan {
+
+				//if conf.Config.PoolPub.Enable {
 				//	bi := model.BlockID{}
 				//	f, err := bi.GetRangeByName(consts.MintMax, consts.ChainMax, 2000)
 				//	if err != nil {

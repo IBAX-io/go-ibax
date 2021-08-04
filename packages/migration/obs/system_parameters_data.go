@@ -13,9 +13,6 @@ INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_system_parameters'),'gap_between_blocks', '2', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'rollback_blocks', '60', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'honor_nodes', '', 'ContractAccess("@1UpdateSysParam","@1NodeRemoveByKey")'),
-	(next_id('1_system_parameters'),'number_of_nodes', '101', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'),'price_create_ecosystem', '2000', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'),'price_create_table', '25', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_column', '25', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_contract', '25', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_menu', '10', 'ContractAccess("@1UpdateSysParam")'),
@@ -72,6 +69,11 @@ INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_system_parameters'),'price_tx_size_wallet', '15', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_rate', '1000000', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'test','false','false'),
+	(next_id('1_system_parameters'),'price_tx_data', '0', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_contract_by_name', '20', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_exec_contract_by_id', '20', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'private_blockchain', '1', 'false'),
+	(next_id('1_system_parameters'),'price_create_application', '100', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'external_blockchain', '', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'pay_free_contract', '@1CallDelayedContract', 'ContractAccess("@1UpdateSysParam")');
 `

@@ -36,9 +36,18 @@ func (m AssignGetInfo) TableName() string {
 
 // Get is retrieving model from database
 func (m *AssignGetInfo) GetBalance(db *DbTransaction, wallet int64) (bool, decimal.Decimal, decimal.Decimal, error) {
+
+	var mps []AssignGetInfo
+	var balance, total_balance decimal.Decimal
+	balance = decimal.NewFromFloat(0)
+	total_balance = decimal.NewFromFloat(0)
+	err := GetDB(db).Table(m.TableName()).
+		Where("keyid = ? and deleted =? ", wallet, 0).
+		Find(&mps).Error
+	if err != nil {
+		return false, balance, total_balance, err
 	}
 	if len(mps) == 0 {
-		return false, balance, total_balance, err
 	}
 
 	//newblockid
