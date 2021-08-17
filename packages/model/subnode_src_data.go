@@ -1,8 +1,4 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-
 package model
 
 type SubNodeSrcData struct {
@@ -24,6 +20,20 @@ func (SubNodeSrcData) TableName() string {
 
 func (m *SubNodeSrcData) Create() error {
 	return DBConn.Create(&m).Error
+}
+
+func (m *SubNodeSrcData) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *SubNodeSrcData) Delete() error {
+	return DBConn.Delete(m).Error
+}
+
+func (m *SubNodeSrcData) GetAll() ([]SubNodeSrcData, error) {
+	var result []SubNodeSrcData
+	err := DBConn.Find(&result).Error
+	return result, err
 }
 func (m *SubNodeSrcData) GetOneByID() (*SubNodeSrcData, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error

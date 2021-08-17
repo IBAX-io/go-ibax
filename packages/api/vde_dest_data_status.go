@@ -24,9 +24,6 @@ func unmarshalColumnVDEDestDataStatus(form *VDEDestDataStatusForm) (*model.VDEDe
 		err      error
 	)
 
-	err = json.Unmarshal([]byte(form.DataInfo), &datainfo)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("unmarshal DataInfo error")
 	}
 
 	m := &model.VDEDestDataStatus{
@@ -86,6 +83,16 @@ func VDEDestDataStatusUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	id := converter.StrToInt64(params["id"])
+	form := &VDEDestDataStatusForm{}
+
+	if err = parseForm(r, form); err != nil {
+		errorResponse(w, err)
+		return
+	}
+
+	m := &model.VDEDestDataStatus{}
+
+	if m, err = unmarshalColumnVDEDestDataStatus(form); err != nil {
 		errorResponse(w, err)
 		return
 	}

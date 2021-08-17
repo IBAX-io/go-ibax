@@ -26,6 +26,13 @@ func (m *VDEDestMember) Create() error {
 	return DBConn.Create(&m).Error
 }
 
+func (m *VDEDestMember) Updates() error {
+	return DBConn.Model(m).Updates(m).Error
+}
+
+func (m *VDEDestMember) Delete() error {
+	return DBConn.Delete(m).Error
+}
 
 func (m *VDEDestMember) GetAll() ([]VDEDestMember, error) {
 	var result []VDEDestMember
@@ -44,6 +51,3 @@ func (m *VDEDestMember) GetOneByPubKey(VDEPubKey string) (*VDEDestMember, error)
 
 func (m *VDEDestMember) GetAllByType(Type int64) ([]VDEDestMember, error) {
 	result := make([]VDEDestMember, 0)
-	err := DBConn.Table("vde_dest_member").Where("vde_type = ?", Type).Find(&result).Error
-	return result, err
-}

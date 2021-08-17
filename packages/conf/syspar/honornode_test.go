@@ -5,6 +5,17 @@
 
 package syspar
 
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestHonorNode(t *testing.T) {
+	cases := []struct {
+		value,
 		err string
 		formattingErr bool
 	}{
@@ -36,5 +47,3 @@ package syspar
 		if !v.formattingErr && len(v.err) != 0 {
 			assert.EqualError(t, err, v.err)
 		}
-	}
-}

@@ -244,13 +244,6 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 		m.TaskSender = ShareTaskItem.TaskSender
 		m.Comment = ShareTaskItem.Comment
 		m.Parms = ShareTaskItem.Parms
-		m.TaskType = converter.StrToInt64(ShareTaskItem.TaskType)
-		m.TaskState = converter.StrToInt64(ShareTaskItem.TaskState)
-		m.ContractSrcName = ShareTaskItem.ContractSrcName
-		m.ContractSrcGet = ShareTaskItem.ContractSrcGet
-		m.ContractSrcGetHash = ShareTaskItem.ContractSrcGetHash
-		m.ContractDestName = ShareTaskItem.ContractDestName
-		m.ContractDestGet = ShareTaskItem.ContractDestGet
 		m.ContractDestGetHash = ShareTaskItem.ContractDestGetHash
 
 		m.ContractRunHttp = ShareTaskItem.ContractRunHttp
@@ -264,6 +257,12 @@ func VDESrcTaskScheGetFromChain(ctx context.Context, d *daemon) error {
 
 		//If the record exists, update it.to do...
 		update_flag := 1
+		m2 := &model.VDESrcTaskFromSche{}
+		myTask, err := m2.GetOneByTaskUUID(ShareTaskItem.TaskUUID)
+		if err != nil {
+			update_flag = 0
+		}
+		//
 		if update_flag == 1 {
 			m.ID = myTask.ID
 			if err = m.Updates(); err != nil {

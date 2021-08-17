@@ -24,3 +24,10 @@ type SmartContractRunner interface {
 type DaemonListFactory interface {
 	GetDaemonsList() []string
 }
+
+type EcosystemLookupGetter interface {
+	GetEcosystemLookup() ([]int64, []string, error)
+}
+
+type EcosystemIDValidator interface {
+	Validate(id, clientID int64, le *log.Entry) (int64, error)

@@ -72,6 +72,19 @@ func unmarshalColumnVDESrcTask(form *VDESrcTaskForm) (*model.VDESrcTask, error) 
 		ChainId:    int64(form.ChainId),
 		ChainErr:   form.ChainErr,
 	}
+
+	return m, err
+}
+
+func VDESrcTaskCreateHandlre(w http.ResponseWriter, r *http.Request) {
+	var (
+		ContractSrcGetHashHex  string
+		ContractDestGetHashHex string
+		err                    error
+	)
+	logger := getLogger(r)
+	form := &VDESrcTaskForm{}
+	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
@@ -149,22 +162,6 @@ func VDESrcTaskUpdateHandlre(w http.ResponseWriter, r *http.Request) {
 	if len(m.ContractDestGetHash) == 0 {
 		if ContractDestGetHashHex, err = crypto.HashHex([]byte(m.ContractDestGet)); err != nil {
 			fmt.Println("ContractDestGetHashHex Raw data hash failed ")
-			errorResponse(w, err)
-			return
-		}
-		m.ContractDestGetHash = ContractDestGetHashHex
-	}
-	if m.ContractMode == 0 {
-		m.ContractMode = 3 //
-	}
-
-	m.ID = id
-	m.UpdateTime = time.Now().Unix()
-	if err = m.Updates(); err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("Update table failed")
-		return
-	}
-
 	result, err := m.GetOneByID()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("Failed to get table record")

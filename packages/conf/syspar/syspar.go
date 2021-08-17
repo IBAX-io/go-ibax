@@ -34,22 +34,6 @@ const (
 	// HonorNodes is the list of nodes
 	HonorNodes = `honor_nodes`
 	// GapsBetweenBlocks is the time between blocks
-	GapsBetweenBlocks = `gap_between_blocks`
-	// MaxBlockSize is the maximum size of the block
-	MaxBlockSize = `max_block_size`
-	// MaxTxSize is the maximum size of the transaction
-	MaxTxSize = `max_tx_size`
-	// MaxForsignSize is the maximum size of the forsign of transaction
-	MaxForsignSize = `max_forsign_size`
-	// MaxBlockFuel is the maximum fuel of the block
-	MaxBlockFuel = `max_fuel_block`
-	// MaxTxFuel is the maximum fuel of the transaction
-	MaxTxFuel = `max_fuel_tx`
-	// MaxTxCount is the maximum count of the transactions
-	MaxTxCount = `max_tx_block`
-	// MaxBlockGenerationTime is the time limit for block generation (in ms)
-	MaxBlockGenerationTime = `max_block_generation_time`
-	// MaxColumns is the maximum columns in tables
 	MaxColumns = `max_columns`
 	// MaxIndexes is the maximum indexes in tables
 	MaxIndexes = `max_indexes`
@@ -520,6 +504,13 @@ func SetFirstBlockData(data *consts.FirstBlock) {
 	firstBlockData = data
 
 	// If list of nodes is empty, then used node from the first block
+	if len(nodesByPosition) == 0 {
+		addHonorNodeKeys(firstBlockData.NodePublicKey)
+
+		nodesByPosition = []*HonorNode{&HonorNode{
+			PublicKey: firstBlockData.NodePublicKey,
+			Stopped:   false,
+		}}
 	}
 }
 

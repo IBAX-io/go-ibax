@@ -482,9 +482,6 @@ func TestBatchNewMineUserHard(t *testing.T) {
 		_, _, err = postTxResult(rnd, &form)
 		assert.NoError(t, err)
 	}
-}
-func TestBatchNewMineUserUnion(t *testing.T) {
-	assert.NoError(t, keyLoginex(1, "4"))
 	xlsx, err := excelize.OpenFile("/Users/scott/Desktop/mine_info-1585034424.xlsx")
 	if err != nil {
 		panic(err.Error())
@@ -922,6 +919,17 @@ func TestEditMineStatus1(t *testing.T) {
 	form := url.Values{
 		`DevAddr`:       {`0354-3002-5250-5835-2444`},
 		`Status`:        {`1`},
+		`IP`:            {`127.0.0.1`},
+		`Location`:      {`Singapore`},
+		`CapacityTotal`: {`3145728`},
+		`CapacityUsed`:  {`1024`},
+	}
+	_, _, err := postTxResult(rnd, &form)
+	assert.NoError(t, err)
+}
+
+//new stake rule
+func TestNewMineStakeRule(t *testing.T) {
 	assert.NoError(t, keyLoginex(1, "1"))
 	rnd := `NewMineStakeRule`
 	form := url.Values{
