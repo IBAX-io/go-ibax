@@ -10,19 +10,12 @@ contract NewPage {
         ValidateCount int "optional"
         ValidateMode string "optional"
     }
-    func preparePageValidateCount(count int) int {
-        var min, max int
-        min = Int(EcosysParam("min_page_validate_count"))
-        max = Int(EcosysParam("max_page_validate_count"))
-
-        if count < min {
-            count = min
-        } else {
-            if count > max {
-                count = max
-            }
         }
         return count
+    }
+
+    conditions {
+        ValidateCondition($Conditions,$ecosystem_id)
 
         if $ApplicationId == 0 {
             warning "Application id cannot equal 0"

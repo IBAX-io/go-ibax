@@ -22,5 +22,11 @@ contract UploadBinary {
             }
         }
     }
-    }
-}
+    action {
+        var hash string
+        hash = Hash($Data)
+        if $DataMimeType == "" {
+            $DataMimeType = "application/octet-stream"
+        }
+        if $Id != 0 {
+            DBUpdate("@1binaries", $Id, {"data": $Data, "hash": hash, "mime_type": $DataMimeType})

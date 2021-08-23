@@ -19,20 +19,20 @@ type VDEDestDataStatus struct {
 	AgentMode      int64  `gorm:"not null" json:"agent_mode"`
 
 	AuthState int64 `gorm:"not null" json:"auth_state"`
+	SignState int64 `gorm:"not null" json:"sign_state"`
+	HashState int64 `gorm:"not null" json:"hash_state"`
+
+	UpdateTime int64 `gorm:"not null" json:"update_time"`
+	CreateTime int64 `gorm:"not null" json:"create_time"`
 }
 
-func (m *VDEDestDataStatus) Updates() error {
-	return DBConn.Model(m).Updates(m).Error
+func (VDEDestDataStatus) TableName() string {
+	return "vde_dest_data_status"
 }
 
-func (m *VDEDestDataStatus) Delete() error {
-	return DBConn.Delete(m).Error
+func (m *VDEDestDataStatus) Create() error {
+	return DBConn.Create(&m).Error
 }
-
-func (m *VDEDestDataStatus) GetAll() ([]VDEDestDataStatus, error) {
-	var result []VDEDestDataStatus
-	err := DBConn.Find(&result).Error
-	return result, err
 }
 func (m *VDEDestDataStatus) GetOneByID() (*VDEDestDataStatus, error) {
 	err := DBConn.Where("id=?", m.ID).First(&m).Error

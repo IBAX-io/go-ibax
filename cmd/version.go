@@ -6,3 +6,10 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+
+		fmt.Println(consts.Version())
+	},
+}

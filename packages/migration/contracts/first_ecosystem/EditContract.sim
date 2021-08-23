@@ -22,3 +22,4 @@ contract EditContract {
         if $Value {
             ValidateEditContractNewValue($Value, $cur["value"])
         }
+   

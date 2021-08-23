@@ -1,15 +1,5 @@
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
-package model
-
-type VDESrcTask struct {
-	ID         int64  `gorm:"primary_key; not null" json:"id"`
-	TaskUUID   string `gorm:"not null" json:"task_uuid"`
-	TaskName   string `gorm:"not null" json:"task_name"`
-	TaskSender string `gorm:"not null" json:"task_sender"`
-	Comment    string `gorm:"not null" json:"comment"`
 	Parms      string `gorm:"type:jsonb" json:"parms"`
 	TaskType   int64  `gorm:"not null" json:"task_type"`
 	TaskState  int64  `gorm:"not null" json:"task_state"`
@@ -258,6 +248,24 @@ func (m *VDESrcTaskFromSche) GetOneByTaskState(TaskState int64) (bool, error) {
 //}
 
 func (m *VDESrcTaskFromSche) GetAllByContractStateAndChainState(ContractStateSrc int64, ContractStateDest int64, ChainState int64) ([]VDESrcTaskFromSche, error) {
+	result := make([]VDESrcTaskFromSche, 0)
+	err := DBConn.Table("vde_src_task_from_sche").Where("contract_state_src = ? AND contract_state_dest = ? AND chain_state = ?", ContractStateSrc, ContractStateDest, ChainState).Find(&result).Error
+	return result, err
+}
+
+func (m *VDESrcTaskFromSche) GetAllByContractStateSrc(ContractStateSrc int64) ([]VDESrcTaskFromSche, error) {
+	result := make([]VDESrcTaskFromSche, 0)
+	err := DBConn.Table("vde_src_task_from_sche").Where("contract_state_src = ?", ContractStateSrc).Find(&result).Error
+	return result, err
+}
+
+func (m *VDESrcTaskFromSche) GetAllByContractStateDest(ContractStateDest int64) ([]VDESrcTaskFromSche, error) {
+	result := make([]VDESrcTaskFromSche, 0)
+	err := DBConn.Table("vde_src_task_from_sche").Where("contract_state_dest = ?", ContractStateDest).Find(&result).Error
+	return result, err
+}
+
+func (m *VDESrcTaskFromSche) GetOneTimeTasks() ([]VDESrcTaskFromSche, error) {
 	result := make([]VDESrcTaskFromSche, 0)
 	err := DBConn.Table("vde_src_task_from_sche").Where("task_state = 1 AND contract_state_src = 0 AND contract_state_dest = 0 AND task_run_state = 0 AND task_type = 1").Find(&result).Error
 	return result, err

@@ -2,20 +2,6 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
-package daemons
-
-import (
-	"context"
-	"fmt"
-	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/model"
-
-	log "github.com/sirupsen/logrus"
-)
-
-//Scheduling task to run
 func VDESrcTaskFromScheStatus(ctx context.Context, d *daemon) error {
 	var (
 		err error
@@ -64,6 +50,11 @@ func VDESrcTaskFromScheStatus(ctx context.Context, d *daemon) error {
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting GetScheTimeTasks data")
 		return err
+	}
+	if len(SrcTask) > 0 {
+		log.Info("Src task  found")
+		// deal with task data
+		for _, item := range SrcTask {
 			//fmt.Println("SrcTask:", item.TaskUUID)
 			TaskStatus := &model.VDESrcTaskFromScheStatus{}
 			TaskStatus.TaskUUID = item.TaskUUID

@@ -150,17 +150,20 @@ func SubNodeSrcTaskListHandlre(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse(w, result)
 }
+		return
+	}
 
-func SubNodeSrcTaskByIDHandlre(w http.ResponseWriter, r *http.Request) {
+	jsonResponse(w, result)
+}
+
+func SubNodeSrcTaskByTaskUUIDHandlre(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
-	id := converter.StrToInt64(params["id"])
 	srcData := model.SubNodeSrcTask{}
-	srcData.ID = id
-	result, err := srcData.GetOneByID()
+	result, err := srcData.GetAllByTaskUUID(params["taskuuid"])
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("The query task data by ID failed")
+		logger.WithFields(log.Fields{"error": err}).Error("The query task data by TaskUUID failed")
 		errorResponse(w, err)
 		return
 	}

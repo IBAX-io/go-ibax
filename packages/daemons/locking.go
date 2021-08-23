@@ -41,14 +41,12 @@ func WaitDB(ctx context.Context) error {
 		}
 	}
 }
-	if install.Progress == model.ProgressComplete {
-		return true
-	}
 
-	return false
-}
+// CheckDB check if installation complete or not
+func CheckDB() bool {
+	install := &model.Install{}
 
-// DBLock locks daemons
+	err := install.Get()
 func DBLock() {
 	mutex.Lock()
 }

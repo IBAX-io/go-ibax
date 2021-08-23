@@ -45,3 +45,9 @@ func SendSubNodeAgentData(host string, TaskUUID string, DataUUID string, AgentMo
 	}
 
 	resp := &network.SubNodeAgentDataResponse{}
+
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host}).Error("receiving SubNodeSrcData response")
+		return "0"
+	}
+	return string(resp.Hash)
+}

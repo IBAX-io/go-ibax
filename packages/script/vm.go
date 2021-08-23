@@ -230,6 +230,16 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		if i > 0 {
 			pars[in-1] = reflect.ValueOf(rt.stack[size-i : size])
 		}
+		if finfo.Name == `ExecContract` && (pars[2].Type().String() != `string` || !pars[3].IsValid()) {
+			return fmt.Errorf(`unknown function %v`, pars[1])
+		}
+		if finfo.Variadic {
+			result = foo.CallSlice(pars)
+		} else {
+			result = foo.Call(pars)
+		}
+		rt.stack = rt.stack[:shift]
+		if stack != nil {
 			stack.PopStack(finfo.Name)
 		}
 
@@ -271,16 +281,6 @@ func (rt *RunTime) extendFunc(name string) error {
 	}
 	size := len(rt.stack)
 	foo := reflect.ValueOf(f)
-
-	count := foo.Type().NumIn()
-	pars := make([]reflect.Value, count)
-	for i := count; i > 0; i-- {
-		pars[count-i] = reflect.ValueOf(rt.stack[size-i])
-	}
-	result := foo.Call(pars)
-
-	rt.stack = rt.stack[:size-count]
-	for i, iret := range result {
 		if foo.Type().Out(i).String() == `error` {
 			if iret.Interface() != nil {
 				return iret.Interface().(error)

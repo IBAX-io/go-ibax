@@ -1,21 +1,9 @@
 /*---------------------------------------------------------------------------------------------
- *  Copyright (c) IBAX. All rights reserved.
- *  See LICENSE in the project root for license information.
- *--------------------------------------------------------------------------------------------*/
 
-package daemons
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
 
-import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"net/url"
-	"strconv"
-	"time"
-
-	vde_api "github.com/IBAX-io/go-ibax/packages/vde_sdk"
-
-	"path/filepath"
 	log "github.com/sirupsen/logrus"
 )
 
