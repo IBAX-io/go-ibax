@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: IBAX Official English Group
+    url: https://t.me/IBAXNetwork
+    about: A Decentralized Commercial Cross-Chain infrastructure Network.
+  - name: Discord Chat
+    url: https://discord.com/invite/zRX6Mwafya
+    about: Ask questions and discuss with other IBAX users in real time.
+  - name: Questions & Discussions
+    url: https://github.com/IBAX-io/go-ibax/discussions
+    about: Use GitHub discussions for message-board style questions and discussions.
