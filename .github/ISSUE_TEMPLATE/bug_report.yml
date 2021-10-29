@@ -1,5 +1,5 @@
 name: "\U0001F41E Bug report"
-description: Report an issue with Vite
+description: Report an issue with IBAX
 labels: [pending triage]
 body:
   - type: markdown
@@ -26,20 +26,9 @@ body:
     id: system-info
     attributes:
       label: System Info
-      description: Output of `npx envinfo --system --npmPackages vite,@vitejs/plugin-vue --binaries --browsers`
+      description: 
       render: shell
       placeholder: System, Binaries, Browsers
-    validations:
-      required: true
-  - type: dropdown
-    id: package-manager
-    attributes:
-      label: Used Package Manager
-      description: Select the used package manager
-      options:
-        - npm
-        - yarn
-        - pnpm
     validations:
       required: true
   - type: textarea
@@ -49,7 +38,7 @@ body:
       description: |
         Optional if provided reproduction. Please try not to insert an image but copy paste the log text.
 
-        1. Run `vite` or `vite build` with the `--debug` flag.
+        1. Run `go-ibax` or `go-ibax start` with the `--test` flag.
         2. Provide the error log here.
       render: shell
   - type: checkboxes
@@ -58,17 +47,11 @@ body:
       label: Validations
       description: Before submitting the issue, please make sure you do the following
       options:
-        - label: Follow our [Code of Conduct](https://github.com/vitejs/vite/blob/main/CODE_OF_CONDUCT.md)
+        - label: Read the [docs](https://docs.ibax.io).
           required: true
-        - label: Read the [Contributing Guidelines](https://github.com/vitejs/vite/blob/main/CONTRIBUTING.md).
+        - label: Check that there isn't [already an issue](https://github.com/IBAX-io/go-ibax/issues) that reports the same bug to avoid creating a duplicate.
           required: true
-        - label: Read the [docs](https://vitejs.dev/guide).
-          required: true
-        - label: Check that there isn't [already an issue](https://github.com/vitejs/vite/issues) that reports the same bug to avoid creating a duplicate.
-          required: true
-        - label: Make sure this is a Vite issue and not a framework-specific issue. For example, if it's a Vue SFC related bug, it should likely be reported to https://github.com/vuejs/vue-next instead.
-          required: true
-        - label: Check that this is a concrete bug. For Q&A open a [GitHub Discussion](https://github.com/vitejs/vite/discussions) or join our [Discord Chat Server](https://chat.vitejs.dev/).
+        - label: Check that this is a concrete bug. For Q&A open a [GitHub Discussion](https://github.com/IBAX-io/go-ibax/discussions) or join our [Discord Chat Server](https://discord.com/invite/zRX6Mwafya).
           required: true
         - label: The provided reproduction is a [minimal reproducible example](https://stackoverflow.com/help/minimal-reproducible-example) of the bug.
           required: true
