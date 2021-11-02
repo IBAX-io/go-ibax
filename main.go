@@ -9,7 +9,8 @@ import (
 	"runtime"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-
+	"github.com/IBAX-io/go-ibax/cmd"
+)
 
 var (
 	buildBranch = ""
