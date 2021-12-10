@@ -44,10 +44,25 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 			if err != nil {
 				return errors.WithMessagef(err, "block_id: %d", block.ID)
 			}
+			logger.WithFields(log.Fields{"rollback_tx": block.Tx}).Infof("rollback %d successful", block.ID)
 		}
 		blocks = blocks[:0]
 	}
 	block := &model.Block{}
+	_, err = block.Get(blockID)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block")
+		return err
+	}
+
+	header, _, err := utils.ParseBlockHeader(bytes.NewBuffer(block.Data))
+	if err != nil {
+		return err
+	}
+
+	ib := &model.InfoBlock{
+		Hash:           block.Hash,
+		BlockID:        header.BlockID,
 		Time:           header.Time,
 		EcosystemID:    header.EcosystemID,
 		KeyID:          header.KeyID,

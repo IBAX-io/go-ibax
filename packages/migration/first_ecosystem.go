@@ -244,6 +244,13 @@ var sqlFirstEcosystemCommon = `
 		t.Column("deleted", "bigint", {"default": "0"})
 		t.Column("ecosystem", "bigint", {"default": "1"})
 	{{footer "primary" "index(ecosystem)"}}
+
+	{{head "1_binaries"}}
+		t.Column("id", "bigint", {"default": "0"})
+		t.Column("app_id", "bigint", {"default": "1"})
+		t.Column("name", "string", {"default": "", "size": 255})
+		t.Column("data", "bytea", {"default": ""})
+		t.Column("hash", "string", {"default": "", "size": 64})
 		t.Column("mime_type", "string", {"default": "", "size": 255})
 		t.Column("ecosystem", "bigint", {"default": "1"})
 		t.Column("account", "char(24)", {})

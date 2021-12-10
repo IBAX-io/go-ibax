@@ -51,6 +51,16 @@ func CollectMetricDataForEcosystemTables(timeBlock int64) (metricValues []*Value
 
 		m := &model.Member{}
 		m.SetTablePrefix(tablePrefix)
+		if membersCount, err = m.Count(); err != nil {
+			log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get count of members")
+			return nil, err
+		}
+		metricValues = append(metricValues, &Value{
+			Time:   unixDate,
+			Metric: metricEcosystemMembers,
+			Key:    tablePrefix,
+			Value:  membersCount,
+		})
 	}
 
 	return metricValues, nil

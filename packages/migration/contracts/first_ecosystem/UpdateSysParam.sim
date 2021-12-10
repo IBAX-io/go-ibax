@@ -8,3 +8,14 @@ contract UpdateSysParam {
      }
      conditions {
          if !GetContractByName($Name){
+            warning "System parameter not found"
+         }
+     }
+     action {
+        var params map
+        params["Value"] = $Value
+        CallContract($Name, params)
+        
+        DBUpdateSysParam($Name, $Value, $Conditions)
+     }
+}

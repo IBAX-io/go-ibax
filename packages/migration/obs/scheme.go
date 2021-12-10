@@ -24,19 +24,10 @@ func GetOBSScript() string {
 		applicationsDataSQL,
 		keysDataSQL,
 		systemParametersDataSQL,
-		initTimeDataSQL,
 	}
 
 	return strings.Join(scripts, "\r\n")
 }
-
-//
-var initTimeDataSQL = `
-INSERT INTO public.vde_src_task_time(src_update_time)VALUES (0);
-INSERT INTO public.vde_dest_task_time(src_update_time) VALUES (0);
-INSERT INTO public.vde_dest_hash_time(update_time) VALUES (0);
-INSERT INTO public.vde_sche_task_time(src_update_time) VALUES (0);
-`
 
 // SchemaEcosystem contains SQL queries for creating ecosystem
 var schemaOBS = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
@@ -130,6 +121,16 @@ var schemaOBS = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
 		
 		DROP TABLE IF EXISTS "%[1]d_signatures"; CREATE TABLE "%[1]d_signatures" (
 			"id" bigint  NOT NULL DEFAULT '0',
+			"name" character varying(100) NOT NULL DEFAULT '',
+			"value" jsonb,
+			"conditions" text NOT NULL DEFAULT ''
+		);
+		ALTER TABLE ONLY "%[1]d_signatures" ADD CONSTRAINT "%[1]d_signatures_pkey" PRIMARY KEY (name);
+		
+		CREATE TABLE "%[1]d_contracts" (
+		"id" bigint NOT NULL  DEFAULT '0',
+		"name" text NOT NULL UNIQUE DEFAULT '',
+		"value" text  NOT NULL DEFAULT '',
 		"wallet_id" bigint NOT NULL DEFAULT '0',
 		"token_id" bigint NOT NULL DEFAULT '1',
 		"conditions" text  NOT NULL DEFAULT '',

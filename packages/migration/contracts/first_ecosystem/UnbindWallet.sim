@@ -9,3 +9,13 @@ contract UnbindWallet {
 		if !$cur {
 			error Sprintf("Contract %d does not exist", $Id)
 		}
+		
+		Eval($cur["conditions"])
+		if $key_id != Int($cur["wallet_id"]) {
+			error Sprintf("Wallet %d cannot deactivate the contract", $key_id)
+		}
+	}
+	action {
+		UnbndWallet($Id, $ecosystem_id)
+	}
+}

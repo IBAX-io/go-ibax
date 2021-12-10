@@ -66,6 +66,21 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
 	'{"insert": "ContractConditions(\"MainCondition\")", "update": "ContractConditions(\"MainCondition\")", 
 	  "new_column": "ContractConditions(\"MainCondition\")"}',
 	'{"name": "ContractConditions(\"MainCondition\")",
+"value": "ContractConditions(\"MainCondition\")",
+"conditions": "ContractConditions(\"MainCondition\")"
+	}', 'ContractAccess("@1EditTable")'),
+	('8', 'signatures', 
+	'{"insert": "ContractConditions(\"MainCondition\")", "update": "ContractConditions(\"MainCondition\")", 
+	  "new_column": "ContractConditions(\"MainCondition\")"}',
+	'{"name": "ContractConditions(\"MainCondition\")",
+"value": "ContractConditions(\"MainCondition\")",
+"conditions": "ContractConditions(\"MainCondition\")"
+	}', 'ContractAccess("@1EditTable")'),
+	('9', 'members', 
+		'{"insert":"ContractAccess(\"Profile_Edit\")","update":"ContractConditions(\"MainCondition\")","new_column":"ContractConditions(\"MainCondition\")"}',
+		'{
+			"image_id":"ContractAccess(\"Profile_Edit\")",
+			"member_info":"ContractAccess(\"Profile_Edit\")",
 			"member_name":"false",
 			"account":"false"
 		}', 

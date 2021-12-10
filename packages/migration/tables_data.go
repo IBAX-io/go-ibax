@@ -27,12 +27,12 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     (next_id('1_tables'), 'keys',
         '{
             "insert": "true",
-            "update": "ContractAccess(\"@1TokensTransfer\",\"@1TokensLockoutMember\",\"@1MultiwalletCreate\",\"@1NewToken\",\"@1TeBurn\",\"@1TokensDecDeposit\",\"@1TokensIncDeposit\",\"@1ProfileEdit\",\"@1NewUser\",\"@1GetAssignAvailableAmount\")",
+            "update": "ContractAccess(\"@1TokensTransfer\",\"@1TokensLockoutMember\",\"@1NewToken\",\"@1TeBurn\",\"@1TokensDecDeposit\",\"@1TokensIncDeposit\",\"@1ProfileEdit\",\"@1NewUser\")",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',
         '{
             "pub": "ContractAccess(\"@1NewUser\")",
-            "amount": "ContractAccess(\"@1TokensTransfer\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1GetAssignAvailableAmount\")",
+            "amount": "ContractAccess(\"@1TokensTransfer\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\")",
             "maxpay": "ContractConditions(\"@1AdminCondition\")",
             "deposit": "ContractAccess(\"@1TokensDecDeposit\",\"@1TokensIncDeposit\")",
             "deleted": "ContractConditions(\"@1AdminCondition\")",
@@ -45,7 +45,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     ),
     (next_id('1_tables'), 'history',
         '{
-            "insert": "ContractAccess(\"@1TokensTransfer\",\"@1NewUser\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1GetAssignAvailableAmount\")",
+            "insert": "ContractAccess(\"@1TokensTransfer\",\"@1NewUser\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\")",
             "update": "ContractConditions(\"@1AdminCondition\")",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',
@@ -136,6 +136,15 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "update": "ContractAccess(\"@1ProfileEdit\")",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',
+        '{
+            "image_id": "ContractAccess(\"@1ProfileEdit\")",
+            "member_info": "ContractAccess(\"@1ProfileEdit\")",
+            "member_name": "false",
+            "account":"false",
+            "ecosystem": "false"
+        }',
+        'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
+    ),
     (next_id('1_tables'), 'roles',
         '{
             "insert": "ContractAccess(\"@1RolesCreate\",\"@1RolesInstall\")",
@@ -246,12 +255,12 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     (next_id('1_tables'), 'parameters',
         '{
             "insert": "ContractConditions(\"DeveloperCondition\")",
-            "update": "ContractAccess(\"@1EditParameter\",\"@1AddAssignMember\",\"@1DelAssignMember\")",
+            "update": "ContractAccess(\"@1EditParameter\")",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',
         '{
             "name": "false",
-            "value": "ContractAccess(\"@1EditParameter\",\"@1AddAssignMember\",\"@1DelAssignMember\")",
+            "value": "ContractAccess(\"@1EditParameter\")",
             "conditions": "ContractAccess(\"@1EditParameter\")",
             "permissions": "ContractConditions(\"@1AdminCondition\")",
             "ecosystem": "false"
@@ -261,13 +270,13 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     (next_id('1_tables'), 'app_params',
         '{
             "insert": "ContractConditions(\"DeveloperCondition\")",
-            "update": "ContractAccess(\"@1EditAppParam\",\"@1VotingUpdateAssign\")",
+            "update": "ContractAccess(\"@1EditAppParam\")",
             "new_column": "ContractConditions(\"@1AdminCondition\")"
         }',
         '{
             "app_id": "ContractAccess(\"@1ItemChangeAppId\")",
             "name": "false",
-            "value": "ContractAccess(\"@1EditAppParam\",\"@1VotingUpdateAssign\")",
+            "value": "ContractAccess(\"@1EditAppParam\")",
             "conditions": "ContractAccess(\"@1EditAppParam\")",
             "permissions": "ContractConditions(\"@1AdminCondition\")",
             "ecosystem": "false"

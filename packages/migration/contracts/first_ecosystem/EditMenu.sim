@@ -9,6 +9,8 @@ contract EditMenu {
     }
     func onlyConditions() bool {
         return $Conditions && !$Value && !$Title
+    }
+
     conditions {
         RowConditions("menu", $Id, onlyConditions())
         if $Conditions {

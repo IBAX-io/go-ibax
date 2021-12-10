@@ -155,16 +155,10 @@ func GetEcosystemScript(id int, wallet int64, name string, founder,
 		AppID:     appID,
 		Account:   converter.AddressToString(wallet),
 	}
-	var parameters string
-	parameters = parametersDataSQL
-	if id == 1 {
-		parameters += parametersDataSQLMintBalance
-	}
 	return sqlTemplate([]string{
 		contractsDataSQL,
 		menuDataSQL,
 		pagesDataSQL,
-		//parameters,
 		parametersDataSQL,
 		membersDataSQL,
 		sectionsDataSQL,
@@ -210,6 +204,9 @@ func GetCommonEcosystemScript() (string, error) {
 	sql, err := sqlConvert([]string{
 		sqlFirstEcosystemCommon,
 		sqlTimeZonesSQL,
+	})
+	if err != nil {
+		return ``, err
 	}
 	return sql + "\r\n" + timeZonesSQL, nil
 }

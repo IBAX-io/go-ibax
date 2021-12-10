@@ -23,3 +23,10 @@ contract EditContract {
             ValidateEditContractNewValue($Value, $cur["value"])
         }
    
+        $recipient = Int($cur["wallet_id"])
+    }
+
+    action {
+        UpdateContract($Id, $Value, $Conditions, $recipient, $cur["token_id"])
+    }
+}

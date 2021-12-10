@@ -1,3 +1,9 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract RunOBS {
+	data {
+		OBSName string
+	}	
 	conditions {
 	}	
 	action {

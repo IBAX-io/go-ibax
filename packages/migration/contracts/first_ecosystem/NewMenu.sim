@@ -11,6 +11,11 @@ contract NewMenu {
     conditions {
         ValidateCondition($Conditions,$ecosystem_id)
 
+        if DBFind("menu").Columns("id").Where({name: $Name}).One("id") {
+            warning Sprintf( "Menu %s already exists", $Name)
+        }
+    }
+
     action {
         DBInsert("menu", {name:$Name,value: $Value, title: $Title, conditions: $Conditions})
     }

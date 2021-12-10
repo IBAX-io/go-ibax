@@ -8,17 +8,13 @@ import (
 	"net"
 	"sort"
 
-	//"strconv"
 	"time"
 )
 
-//ntp1.aliyun.com ~7
-//time1.cloud.tencent.com ~5
-//pool.ntp.org
 const (
-	ntpPool        = "ntp1.aliyun.com" // ntpPool is the NTP server to query for the current time
-	ntpChecks      = 3                 // Number of measurements to do against the NTP server
-	driftThreshold = 1 * time.Second   // Allowed clock drift before warning user
+	ntpPool        = "pool.ntp.org"  // ntpPool is the NTP server to query for the current time
+	ntpChecks      = 3               // Number of measurements to do against the NTP server
+	driftThreshold = 1 * time.Second // Allowed clock drift before warning user
 )
 
 // durationSlice attaches the methods of sort.Interface to []time.Duration,
@@ -63,7 +59,7 @@ func sntpDrift(measurements int) (time.Duration, error) {
 	request[0] = 3<<3 | 3
 
 	// Execute each of the measurements
-	drifts := []time.Duration{}
+	var drifts []time.Duration
 	for i := 0; i < measurements+2; i++ {
 		// Dial the NTP server and send the time retrieval request
 		conn, err := net.DialUDP("udp", nil, addr)
@@ -97,3 +93,11 @@ func sntpDrift(measurements int) (time.Duration, error) {
 		drifts = append(drifts, sent.Sub(t)+elapsed/2)
 	}
 	// Calculate average drif (drop two extremities to avoid outliers)
+	sort.Sort(durationSlice(drifts))
+
+	drift := time.Duration(0)
+	for i := 1; i < len(drifts)-1; i++ {
+		drift += drifts[i]
+	}
+	return drift / time.Duration(measurements), nil
+}

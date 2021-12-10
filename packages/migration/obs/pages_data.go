@@ -114,6 +114,16 @@ var pagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, conditions, ap
                         }.Else{
                             Span(Class: text-muted, Body: "(0)")
                         }
+                    }
+                }
+                Div(row){
+                    Div(col-md-12 mc-sm text-left){
+                        If(#DataCount# > 0){
+                            Span(Class: h6, Body: "#DataInfo#")
+                        }.Else{
+                            Span(Class: text-muted h6, Body: "Nothing selected")
+                        }
+                    }
                 }
             }
         }

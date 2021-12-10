@@ -1,4 +1,4 @@
-// +build !windows,!nacl,!plan9
+//go:build !windows && !nacl && !plan9
 
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
@@ -59,6 +59,10 @@ func (hook *SyslogHook) Fire(entry *logrus.Entry) error {
 			b_syslog.Crit(line)
 			return nil
 		}
+	case logrus.ErrorLevel:
+		{
+			b_syslog.Err(line)
+			return nil
 		}
 	case logrus.WarnLevel:
 		{

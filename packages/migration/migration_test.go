@@ -7,6 +7,20 @@ package migration
 
 import (
 	"testing"
+)
+
+type dbMock struct {
+	versions []string
+}
+
+func (dbm *dbMock) CurrentVersion() (string, error) {
+	return dbm.versions[len(dbm.versions)-1], nil
+}
+
+func (dbm *dbMock) ApplyMigration(version, query string) error {
+	dbm.versions = append(dbm.versions, version)
+	return nil
+}
 
 func createDBMock(version string) *dbMock {
 	return &dbMock{versions: []string{version}}
@@ -20,7 +34,7 @@ func TestMockMigration(t *testing.T) {
 
 	appVer := "0.0.2"
 
-	err = migrate(createDBMock("0"), appVer, []*migration{&migration{"error version", ""}})
+	err = migrate(createDBMock("0"), appVer, []*migration{{"error version", ""}})
 	if err.Error() != "Wrong version 0" {
 		t.Error(err)
 	}
@@ -29,8 +43,8 @@ func TestMockMigration(t *testing.T) {
 	err = migrate(
 		db, appVer,
 		[]*migration{
-			&migration{"0.0.1", ""},
-			&migration{"0.0.2", ""},
+			{"0.0.1", ""},
+			{"0.0.2", ""},
 		},
 	)
 	if err != nil {
@@ -42,7 +56,7 @@ func TestMockMigration(t *testing.T) {
 
 	db = createDBMock("0.0.2")
 	err = migrate(db, appVer, []*migration{
-		&migration{"0.0.3", ""},
+		{"0.0.3", ""},
 	})
 	if err != nil {
 		t.Error(err)

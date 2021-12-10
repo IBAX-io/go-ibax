@@ -10,6 +10,19 @@ contract Import {
         app_map = DBFind("@1buffer_data").Columns("value->app_name").Where({"key": "import_info", "account": $account_id, "ecosystem": $ecosystem_id}).Row()
         if app_map {
             var app_id int ival string
+            ival = Str(app_map["value.app_name"])
+            app_id = DBFind("@1applications").Columns("id").Where({"name": ival, "ecosystem": $ecosystem_id}).One("id")
+            if app_id {
+                $ApplicationId = Int(app_id)
+            }
+        }
+    }
+    action {
+        var editors, creators map
+        editors["pages"] = "EditPage"
+        editors["blocks"] = "EditBlock"
+        editors["menu"] = "EditMenu"
+        editors["app_params"] = "EditAppParam"
         editors["languages"] = "EditLang"
         editors["contracts"] = "EditContract"
         editors["tables"] = "" // nothing

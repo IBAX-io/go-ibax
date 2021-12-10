@@ -20,3 +20,8 @@ contract DeveloperCondition {
         if Size(role_id) == 0 {
             warning Sprintf(LangRes("@1x_not_access_action"),"DeveloperCondition")
         }
+        if !RoleAccess(Int(role_id)) {
+            warning Sprintf(LangRes("@1x_not_access_action"),"DeveloperCondition")
+        }
+    }
+}

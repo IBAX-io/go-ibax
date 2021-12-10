@@ -38,6 +38,17 @@ func rollbackUpdatedRow(tx map[string]string, where string, dbTransaction *model
 	addSQLUpdate = addSQLUpdate[0 : len(addSQLUpdate)-1]
 	if err := model.Update(dbTransaction, tx["table_name"], addSQLUpdate, where); err != nil {
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err, "rollback_id": tx["id"], "block_id": tx["block_id"], "update": addSQLUpdate, "where": where}).Error("updating table for rollback ")
+		return err
+	}
+	return nil
+}
+
+func rollbackInsertedRow(tx map[string]string, where string, dbTransaction *model.DbTransaction, logger *log.Entry) error {
+	if err := model.Delete(dbTransaction, tx["table_name"], where); err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "rollback_id": tx["id"], "table": tx["table_name"], "where": where}).Error("deleting from table for rollback")
+		return err
+	}
+	return nil
 }
 
 func rollbackTransaction(txHash []byte, dbTransaction *model.DbTransaction, logger *log.Entry) error {

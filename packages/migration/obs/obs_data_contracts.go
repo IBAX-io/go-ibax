@@ -247,6 +247,7 @@ VALUES
     }
 
     action {
+        EditLanguage($Id, $lang["name"], $Trans)
     }
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),

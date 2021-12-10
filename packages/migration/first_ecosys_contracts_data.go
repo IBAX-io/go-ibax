@@ -378,6 +378,17 @@ VALUES
         if app_map {
             var app_id int ival string
             ival = Str(app_map["value.app_name"])
+            app_id = DBFind("@1applications").Columns("id").Where({"name": ival, "ecosystem": $ecosystem_id}).One("id")
+            if app_id {
+                $ApplicationId = Int(app_id)
+            }
+        }
+    }
+    action {
+        var editors, creators map
+        editors["pages"] = "EditPage"
+        editors["blocks"] = "EditBlock"
+        editors["menu"] = "EditMenu"
         editors["app_params"] = "EditAppParam"
         editors["languages"] = "EditLang"
         editors["contracts"] = "EditContract"

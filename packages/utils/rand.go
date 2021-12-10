@@ -32,7 +32,18 @@ func RandInt(min, max int) int {
 		return max
 	}
 	return rand.Intn(max-min) + min
-	ikind, kinds, result := kind, [][]int{[]int{10, 48}, []int{26, 97}, []int{26, 65}}, make([]byte, size)
+}
+
+const (
+	KC_RAND_KIND_NUM   = 0 // number
+	KC_RAND_KIND_LOWER = 1 //
+	KC_RAND_KIND_UPPER = 2 //
+	KC_RAND_KIND_ALL   = 3 //
+)
+
+//
+func Krand(size int64, kind int) []byte {
+	ikind, kinds, result := kind, [][]int{{10, 48}, {26, 97}, {26, 65}}, make([]byte, size)
 	is_all := kind > 2 || kind < 0
 	rand.Seed(time.Now().UnixNano())
 	for i := 0; i < int(size); i++ {

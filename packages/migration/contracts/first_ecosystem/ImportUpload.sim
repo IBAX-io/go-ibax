@@ -66,6 +66,18 @@ contract ImportUpload {
         inf["contracts"] = Join(contracts_arr, ", ")
         inf["contracts_count"] = Len(contracts_arr)
         inf["tables"] = Join(tables_arr, ", ")
+        inf["tables_count"] = Len(tables_arr)
+        if 0 == inf["pages_count"] + inf["blocks_count"] + inf["menu_count"] + inf["parameters_count"] + inf["languages_count"] + inf["contracts_count"] + inf["tables_count"] {
+            warning "Invalid or empty import file"
+        }
+        // IMPORT DATA
+        // the contracts is imported in one piece, the rest is cut under the $limit
+        var sliced contracts array
+        i = 0
+        while i < lenArrData {
+            var items array l int item map
+            while l < $limit && (i + l < lenArrData) {
+                item = arrData[i + l]
                 if item["Type"] == "contracts" {
                     contracts = Append(contracts, item)
                 } else {

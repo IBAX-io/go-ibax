@@ -61,3 +61,9 @@ contract DeveloperCondition {
 	conditions {
 		if EcosysParam("founder_account")!=$key_id
 		{
+			warning "Sorry, you do not have access to this action."
+		}
+	}
+}
+', '{{.Ecosystem}}', 'ContractConditions("MainCondition")', '{{.AppID}}', '{{.Ecosystem}}');
+`

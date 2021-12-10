@@ -22,3 +22,5 @@ func TestRand(t *testing.T) {
 		for _, v := range values {
 			assert.Equal(t, v, r.Int63())
 		}
+	}
+}

@@ -14,6 +14,14 @@ contract NewAppParam {
         if $ApplicationId == 0 {
             warning "Application id cannot equal 0"
         }
+
+        if DBFind("app_params").Columns("id").Where({"name":$Name}).One("id") {
+            warning Sprintf( "Application parameter %s already exists", $Name)
+        }
+    }
+
+    action {
+        DBInsert("app_params", {app_id: $ApplicationId, name: $Name, value: $Value,
               conditions: $Conditions})
     }
 }

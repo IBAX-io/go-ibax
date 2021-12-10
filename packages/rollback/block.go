@@ -13,8 +13,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -38,6 +36,21 @@ func RollbackBlock(data []byte) error {
 		return ErrLastBlock
 	}
 
+	dbTransaction, err := model.StartTransaction()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting transaction")
+		return err
+	}
+
+	err = rollbackBlock(dbTransaction, bl)
+	if err != nil {
+		dbTransaction.Rollback()
+		return err
+	}
+
+	if err = b.DeleteById(dbTransaction, bl.Header.BlockID); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
+		dbTransaction.Rollback()
 		return err
 	}
 
@@ -78,48 +91,39 @@ func rollbackBlock(dbTransaction *model.DbTransaction, block *block.Block) error
 		t := block.Transactions[i]
 		t.DbTransaction = dbTransaction
 
-		_, err := model.MarkTransactionUnusedAndUnverified(dbTransaction, t.TxHash)
+		_, err := model.MarkTransactionUnusedAndUnverified(dbTransaction, t.TxHash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting transaction")
 			return err
 		}
-		_, err = model.DeleteLogTransactionsByHash(dbTransaction, t.TxHash)
+		_, err = model.DeleteLogTransactionsByHash(dbTransaction, t.TxHash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting log transactions by hash")
 			return err
 		}
 
 		ts := &model.TransactionStatus{}
-		err = ts.UpdateBlockID(dbTransaction, 0, t.TxHash)
+		err = ts.UpdateBlockID(dbTransaction, 0, t.TxHash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating block id in transaction status")
 			return err
 		}
 
-		_, err = model.DeleteQueueTxByHash(dbTransaction, t.TxHash)
+		_, err = model.DeleteQueueTxByHash(dbTransaction, t.TxHash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transacion from queue by hash")
 			return err
 		}
 
-		if t.TxContract != nil {
-			if err = rollbackTransaction(t.TxHash, t.DbTransaction, logger); err != nil {
+		switch t.Inner.(type) {
+		case *transaction.SmartContractTransaction:
+			if err = rollbackTransaction(t.TxHash(), t.DbTransaction, logger); err != nil {
 				return err
 			}
-		} else {
-			MethodName := consts.TxTypes[t.TxType]
-			txParser, err := transaction.GetTransaction(t, MethodName)
-			if err != nil {
-				return utils.ErrInfo(err)
-			}
-			result := txParser.Init()
-			if _, ok := result.(error); ok {
-				return utils.ErrInfo(result.(error))
-			}
-			result = txParser.Rollback()
-			if _, ok := result.(error); ok {
-				return utils.ErrInfo(result.(error))
-			}
+		}
+		err = t.Inner.TxRollback()
+		if err != nil {
+			return err
 		}
 	}
 

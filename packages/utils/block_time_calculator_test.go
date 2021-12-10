@@ -130,6 +130,16 @@ func TestBlockTimeCalculator_ValidateBlock(t *testing.T) {
 			firstBlockTime: time.Unix(1, 0),
 			blockGenTime:   time.Second * 2,
 			blocksGap:      time.Second * 3,
+			nodesCount:     3,
+			nodePosition:   2,
+
+			time: time.Unix(16, 0),
+			blocksCounter: func() intervalBlocksCounter {
+				ibc := &mockIntervalBlocksCounter{}
+				ibc.On("count", blockGenerationState{
+					start:        time.Unix(13, 0),
+					duration:     time.Second * 5,
+					nodePosition: 2,
 				}).Return(1, nil)
 				return ibc
 			}(),

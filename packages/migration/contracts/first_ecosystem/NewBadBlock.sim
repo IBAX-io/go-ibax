@@ -2,5 +2,14 @@
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract NewBadBlock {
 	data {
+		ProducerNodeID int
+		ConsumerNodeID int
+		BlockID int
+		Timestamp int
+		Reason string
+	}
+	action {
+        DBInsert("@1bad_blocks", {producer_node_id: $ProducerNodeID,consumer_node_id: $ConsumerNodeID,
+            block_id: $BlockID, "timestamp block_time": $Timestamp, reason: $Reason})
 	}
 }

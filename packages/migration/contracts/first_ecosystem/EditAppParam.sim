@@ -25,3 +25,8 @@ contract EditAppParam {
         if $Conditions {
             pars["conditions"] = $Conditions
         }
+        if pars {
+            DBUpdate("app_params", $Id, pars)
+        }
+    }
+}

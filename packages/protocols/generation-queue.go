@@ -73,6 +73,22 @@ func (btc *BlockTimeCounter) NodeTimeExists(t time.Time, nodePosition int) (bool
 // BlockForTimeExists checks conformity between time and nodePosition
 // changes functionality of ValidateBlock prevent blockTimeCalculator
 func (btc *BlockTimeCounter) BlockForTimeExists(t time.Time, nodePosition int) (bool, error) {
+	startInterval, endInterval, err := btc.RangeByTime(t)
+	if err != nil {
+		return false, err
+	}
+
+	b := &model.Block{}
+	blocks, err := b.GetNodeBlocksAtTime(startInterval, endInterval, int64(nodePosition))
+	if err != nil {
+		return false, err
+	}
+
+	return len(blocks) > 0, nil
+}
+
+// NextTime returns next generation time for node position at time
+func (btc *BlockTimeCounter) nextTime(t time.Time, nodePosition int) (time.Time, error) {
 	if nodePosition >= btc.numberNodes {
 		return time.Unix(0, 0), WrongNodePositionError
 	}

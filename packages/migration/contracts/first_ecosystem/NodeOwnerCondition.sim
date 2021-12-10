@@ -10,3 +10,12 @@ contract NodeOwnerCondition {
             var i int
             while i < Len($honor_nodes) {
                 $fn = $honor_nodes[i]
+                if $fn["key_id"] == $key_id {
+                    return true
+                }
+                i = i + 1
+            }
+            warning "Sorry, you do not have access to this action."
+        }
+	}
+}

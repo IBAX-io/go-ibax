@@ -68,3 +68,9 @@ var firstEcosystemPagesDataSQL = `INSERT INTO "1_pages" (id, name, value, menu, 
             Div(list-group-item){
                 Input(Name: Data, Type: file)
             }
+            Div(list-group-item text-right){
+                Button(Body: "Load", Class: btn btn-primary, Contract: @1ImportUpload, Page: @1import_app)
+            }
+        }
+    }', 'developer_menu', 'ContractConditions("@1DeveloperCondition")', '1', '1');
+`

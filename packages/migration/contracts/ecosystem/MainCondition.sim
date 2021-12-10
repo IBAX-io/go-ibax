@@ -1,0 +1,10 @@
+// +prop AppID = '{{.AppID}}'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract MainCondition {
+	conditions {
+		if EcosysParam("founder_account")!=$key_id
+		{
+			warning "Sorry, you do not have access to this action."
+		}
+	}
+}

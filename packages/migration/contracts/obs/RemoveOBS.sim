@@ -5,3 +5,9 @@ contract RemoveOBS {
 			OBSName string
 	}
 	conditions {}
+	action{
+        $OBSName = ToLower($OBSName)
+        DeleteOBS($OBSName)
+        $result = "OBS " + $OBSName + " removed"
+	}
+}

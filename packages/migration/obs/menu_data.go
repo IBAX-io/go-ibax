@@ -21,3 +21,5 @@ MenuGroup(Title:"Resources", Icon:"icon-share"){
 	MenuItem(Title:"Language resources", Page:app_langres, Icon:"icon-globe")
 	MenuItem(Title:"Binary data", Page:app_binary, Icon:"icon-layers")
 }
+MenuItem(Title:"Dashboard", Page:admin_dashboard, Icon:"icon-wrench")', 'ContractConditions("MainCondition")', '%[1]d');
+`

@@ -17,6 +17,8 @@ contract NewContract {
 
         $contract_name = ContractName($Value)
 
+        if !$contract_name {
+            error "must be the name"
         }
 
         if !$TokenEcosystem {

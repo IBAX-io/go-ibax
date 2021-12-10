@@ -15,6 +15,18 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+)
+
+const (
+	ext = ".sim"
+
+	defaultPackageName = "migration"
+)
+
+var (
+	scenarios = []scenario{
+		{
+			[]string{"./contracts/ecosystem"},
 			"./contracts_data.go",
 			"contractsDataSQL", "{{.Ecosystem}}", "{{.Owner}}",
 		},

@@ -10,9 +10,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/migration/updates"
+
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/migration/updates"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -22,21 +23,21 @@ const (
 )
 
 var migrations = []*migration{
-	// Inital migration
-	&migration{"0.0.1", migrationInitial, true},
-
 	// Initial schema
-	&migration{"0.1.5", migrationInitialTables, true},
-	&migration{"0.1.6", migrationInitialSchema, false},
+	{"0.0.1", migrationInitialTables, true},
+	{"0.0.2", migrationInitialSchema, false},
 }
 
-var migrationsSub = &migration{"0.1.7", migrationInitialTablesSub, true}
-
-var migrationsCLB = &migration{"0.1.8", migrationInitialTablesCLB, true}
-
 var updateMigrations = []*migration{
-	&migration{"3.1.0", updates.M310, false},
-	&migration{"3.2.0", updates.M320, false},
+	{"0.0.3", updates.MigrationUpdatePriceExec, false},
+	{"0.0.4", updates.MigrationUpdateAccessExec, false},
+}
+
+type migration struct {
+	version  string
+	data     string
+	template bool
+}
 
 type database interface {
 	CurrentVersion() (string, error)
@@ -119,10 +120,10 @@ func runMigrations(db database, migrationList []*migration) error {
 func InitMigrate(db database) error {
 	mig := migrations
 	if conf.Config.IsSubNode() {
-		mig = append(mig, migrationsSub)
+		//mig = append(mig, migrationsSub)
 	}
 	if conf.Config.IsSupportingOBS() {
-		mig = append(mig, migrationsCLB)
+		//mig = append(mig, migrationsCLB)
 	}
 	return runMigrations(db, mig)
 }

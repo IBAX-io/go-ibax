@@ -1,0 +1,10 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewEcosystem {
+	data {
+		Name  string
+	}
+	action {
+		$result = CreateEcosystem($key_id, $Name)
+	}
+}

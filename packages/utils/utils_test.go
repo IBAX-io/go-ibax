@@ -24,6 +24,13 @@ func TestToSnakeCase(t *testing.T) {
 		{"PubToID", "pub_to_id"},
 	}
 	for _, tt := range cases {
+		assert.Equal(t, tt.expected, ToSnakeCase(tt.arg))
+	}
+}
+
+func TestNtp(t *testing.T) {
+	for i := 0; i < 1000; i++ {
+		st := time.Now()
 		b, err := CheckClockDrift()
 		et := time.Now()
 		dr := et.Sub(st)

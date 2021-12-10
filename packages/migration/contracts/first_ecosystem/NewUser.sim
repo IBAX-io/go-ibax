@@ -7,6 +7,18 @@ contract NewUser {
 	conditions {
 		$id = PubToID($NewPubkey)
 		if $id == 0 {
+			error "Wrong pubkey"
+		}
+		if DBFind("keys").Columns("id").WhereId($id).One("id") != nil {
+			error "User already exists"
+		}
+	}
+	action {
+		$pub = HexToPub($NewPubkey)
+		$account = IdToAddress($id)
+		$amount = Money(0)
+
+		DBInsert("keys", {
 			"id": $id,
 			"account": $account,
 			"pub": $pub,

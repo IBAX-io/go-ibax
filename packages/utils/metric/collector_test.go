@@ -4,6 +4,22 @@
  *--------------------------------------------------------------------------------------------*/
 package metric
 
+import (
+	"errors"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func MockValue(v int64) *Value {
+	return &Value{Time: 1, Metric: "test_metric", Key: "ecosystem_1", Value: v}
+}
+
+func MockCollectorFunc(v int64, err error) CollectorFunc {
+	return func() ([]*Value, error) {
+		if err != nil {
+			return nil, err
+		}
 
 		return []*Value{MockValue(v)}, nil
 	}

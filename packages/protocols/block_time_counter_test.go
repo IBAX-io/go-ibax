@@ -4,6 +4,15 @@
  *--------------------------------------------------------------------------------------------*/
 package protocols
 
+import (
+	"fmt"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
 func TestBlockTimeCounter(t *testing.T) {
 	btc := BlockTimeCounter{
 		start:       time.Unix(0, 0),

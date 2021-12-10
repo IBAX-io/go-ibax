@@ -27,3 +27,6 @@ contract EditBlock {
         }
         if pars {
             DBUpdate("blocks", $Id, pars)
+        }
+    }
+}

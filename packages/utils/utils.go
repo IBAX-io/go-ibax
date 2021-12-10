@@ -5,7 +5,6 @@
 package utils
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -29,89 +28,14 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/theckman/go-flock"
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
 )
 
-const (
-	firstBlock   = 1
-	minBlockSize = 9
-)
-
-var ErrBlockSize = errors.New("Bad block size")
-
-//BlockData is a structure of the block's header
-type BlockData struct {
-	BlockID           int64
-	Time              int64
-	EcosystemID       int64
-	KeyID             int64
-	NodePosition      int64
-	Sign              []byte
-	Hash              []byte
-	RollbacksHash     []byte
-	Version           int
-	PrivateBlockchain bool
-}
-
-func (b BlockData) String() string {
-	return fmt.Sprintf("BlockID:%d, Time:%d, NodePosition %d", b.BlockID, b.Time, b.NodePosition)
-}
-
-func blockVer(cur, prev *BlockData) (ret string) {
-	if cur.Version >= consts.BvRollbackHash {
-		ret = fmt.Sprintf(",%x", prev.RollbacksHash)
-	}
-	return
-}
-
-func (b BlockData) ForSha(prev *BlockData, mrklRoot []byte) string {
-	return fmt.Sprintf("%d,%x,%s,%d,%d,%d,%d",
-		b.BlockID, prev.Hash, mrklRoot, b.Time, b.EcosystemID, b.KeyID, b.NodePosition) +
-		blockVer(&b, prev)
-}
-
-// ForSign from 128 bytes to 512 bytes. Signature of TYPE, BLOCK_ID, PREV_BLOCK_HASH, TIME, WALLET_ID, state_id, MRKL_ROOT
-func (b BlockData) ForSign(prev *BlockData, mrklRoot []byte) string {
-	return fmt.Sprintf("0,%v,%x,%v,%v,%v,%v,%s",
-		b.BlockID, prev.Hash, b.Time, b.EcosystemID, b.KeyID, b.NodePosition, mrklRoot) +
-		blockVer(&b, prev)
-}
-
-// ParseBlockHeader is parses block header
-func ParseBlockHeader(buf *bytes.Buffer) (header, prev BlockData, err error) {
-	if buf.Len() < minBlockSize {
-		err = ErrBlockSize
-		return
-	}
-
-	header.Version = int(converter.BinToDec(buf.Next(2)))
-	header.BlockID = converter.BinToDec(buf.Next(4))
-	header.Time = converter.BinToDec(buf.Next(4))
-	header.EcosystemID = converter.BinToDec(buf.Next(4))
-	header.KeyID, err = converter.DecodeLenInt64Buf(buf)
-	if err != nil {
-		return
-	}
-	header.NodePosition = converter.BinToDec(buf.Next(1))
-
-	// for version of block with included the rollback hash
-	if header.Version >= consts.BvIncludeRollbackHash {
-		prev.RollbacksHash, err = converter.DecodeBytesBuf(buf)
-		if err != nil {
-			return
-		}
-	}
-
-	if header.BlockID == firstBlock {
-		buf.Next(1)
-		return
-	}
-
-	if int64(buf.Len()) > syspar.GetMaxBlockSize() {
+var (
 	// ReturnCh is chan for returns
 	ReturnCh chan string
 	// CancelFunc is represents cancel func
@@ -321,16 +245,6 @@ func MerkleTreeRoot(dataArray [][]byte) ([]byte, error) {
 	return []byte(ret[0]), nil
 }
 
-// TypeInt returns the identifier of the embedded transaction
-func TypeInt(txType string) int64 {
-	for k, v := range consts.TxTypes {
-		if v == txType {
-			return int64(k)
-		}
-	}
-	return 0
-}
-
 // GetCurrentDir returns the current directory
 func GetCurrentDir() string {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
@@ -378,27 +292,6 @@ func GetNodeKeys() (string, string) {
 		hex.EncodeToString(syspar.GetNodePubKey())
 }
 
-// GetNodeKeys returns node private key and public key
-func VDEGetNodeKeys() (string, string, error) {
-	nprivkey, err := os.ReadFile(filepath.Join(conf.Config.KeysDir, consts.NodePrivateKeyFilename))
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading node private key from file")
-		return "", "", err
-	}
-	key, err := hex.DecodeString(string(nprivkey))
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("decoding private key from hex")
-		return "", "", err
-	}
-	npubkey, err := crypto.PrivateToPublic(key)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
-		return "", "", err
-	}
-	return string(nprivkey), crypto.PubToHex(npubkey), nil
-}
-
-//
 func GetNodePrivateKey() ([]byte, error) {
 	data, err := os.ReadFile(filepath.Join(conf.Config.KeysDir, consts.NodePrivateKeyFilename))
 	if err != nil {

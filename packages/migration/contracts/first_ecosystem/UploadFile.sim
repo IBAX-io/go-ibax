@@ -7,3 +7,14 @@ contract UploadFile {
         Name string "optional"
     }
     conditions {
+        if $Name == "" {
+            $Name = $Data["Name"]
+        }
+        $Body = $Data["Body"]
+        $DataMimeType = $Data["MimeType"]
+    }
+    action {
+        $Id = @1UploadBinary("ApplicationId,Name,Data,DataMimeType", $ApplicationId, $Name, $Body, $DataMimeType)
+        $result = $Id
+    }
+}

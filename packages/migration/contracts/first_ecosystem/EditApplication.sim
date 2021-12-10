@@ -24,3 +24,5 @@ contract EditApplication {
         if pars {
             DBUpdate("applications", $ApplicationId, pars)
         }
+    }
+}

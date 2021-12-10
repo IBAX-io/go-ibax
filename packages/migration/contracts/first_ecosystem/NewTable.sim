@@ -3,6 +3,16 @@
 contract NewTable {
     data {
         ApplicationId int
+        Name string
+        Columns string
+        Permissions string
+    }
+    conditions {
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
+        }
+        TableConditions($Name, $Columns, $Permissions)
+    }
     
     action {
         CreateTable($Name, $Columns, $Permissions, $ApplicationId)

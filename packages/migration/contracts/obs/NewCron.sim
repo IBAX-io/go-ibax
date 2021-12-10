@@ -21,3 +21,6 @@ contract NewCron {
 			}
 			$result = DBInsert("cron", {owner: $key_id,cron:$Cron,contract: $Contract,
 				counter:$Limit, till: $Till,conditions: $Conditions})
+			UpdateCron($result)
+		}
+	}

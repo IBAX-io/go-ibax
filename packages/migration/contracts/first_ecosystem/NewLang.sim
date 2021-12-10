@@ -1,5 +1,8 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewLang {
+    data {
+        ApplicationId int
         Name string
         Trans string
     }

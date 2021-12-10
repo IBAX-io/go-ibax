@@ -2,3 +2,11 @@
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract HonorNodeCondition {
 	conditions {
+		var account_key int
+		account_key = AddressToId($account_id)
+		if IsHonorNodeKey(account_key) {
+			return
+		}
+		warning "HonorNodeCondition: Sorry, you do not have access to this action"
+	}
+}

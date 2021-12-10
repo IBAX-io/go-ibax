@@ -25,6 +25,10 @@ type BlockTimeCalculator struct {
 type blockGenerationState struct {
 	start    time.Time
 	duration time.Duration
+
+	nodePosition int64
+}
+
 var TimeError = errors.New("current time before first block")
 var DuplicateBlockError = errors.New("block with that time interval already exists in db")
 

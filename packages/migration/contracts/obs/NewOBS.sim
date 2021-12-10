@@ -1,3 +1,17 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewOBS {
+		data {
+			OBSName string
+			DBUser string
+			DBPassword string
+			OBSAPIPort int
+		}
+	
+		conditions {
+            if Size($OBSName) == 0 {
+                warning "OBSName was not received"
+            }
             if Contains($OBSName, " ") {
                 error "OBSName can not contain spaces"
             }
