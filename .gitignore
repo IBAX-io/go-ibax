@@ -117,7 +117,7 @@ public/
 
 packages/api/helper_test.go
 /tempdir/*
-/tools/
+#/tools/
 .scannerwork/
 sonar-project.properties
 tempdir/

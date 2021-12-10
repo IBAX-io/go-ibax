@@ -1,0 +1,8 @@
+nodes_list = [
+    #    "http://127.0.0.1:7079",
+    #    "http://127.0.0.1:2079",
+    #    "http://127.0.0.1:3079",
+]
+[Daemon]
+    Daemon = true
+    querying_period = 4
