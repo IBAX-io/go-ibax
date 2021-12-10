@@ -17,6 +17,18 @@ var (
 	//errEmptySign         = errType{"E_EMPTYSIGN", "Signature is undefined", defaultStatus}
 	//errHashWrong         = errType{"E_HASHWRONG", "Hash is incorrect", http.StatusBadRequest}
 	//errHashNotFound      = errType{"E_HASHNOTFOUND", "Hash has not been found", defaultStatus}
+	//errHeavyPage         = errType{"E_HEAVYPAGE", "This page is heavy", defaultStatus}
+	//errInstalled         = errType{"E_INSTALLED", "Chain is already installed", defaultStatus}
+	//errInvalidWallet     = errType{"E_INVALIDWALLET", "Wallet %s is not valid", http.StatusBadRequest}
+	//errLimitForsign      = errType{"E_LIMITFORSIGN", "Length of forsign is too big (%d)", defaultStatus}
+	//errLimitTxSize       = errType{"E_LIMITTXSIZE", "The size of tx is too big (%d)", defaultStatus}
+	//errNotFound          = errType{"E_NOTFOUND", "Page not found", http.StatusNotFound}
+	//errNotFoundRecord    = errType{"E_NOTFOUND", "Record not found", http.StatusNotFound}
+	//errParamNotFound     = errType{"E_PARAMNOTFOUND", "Parameter %s has not been found", http.StatusNotFound}
+	//errPermission        = errType{"E_PERMISSION", "Permission denied", http.StatusUnauthorized}
+	//errQuery             = errType{"E_QUERY", "DB query is wrong", http.StatusInternalServerError}
+	//errRecovered         = errType{"E_RECOVERED", "API recovered", http.StatusInternalServerError}
+	//errServer            = errType{"E_SERVER", "Server error", defaultStatus}
 	//errSignature         = errType{"E_SIGNATURE", "Signature is incorrect", http.StatusBadRequest}
 	//errUnknownSign       = errType{"E_UNKNOWNSIGN", "Unknown signature", defaultStatus}
 	//errStateLogin        = errType{"E_STATELOGIN", "%s is not a membership of ecosystem %s", http.StatusForbidden}
@@ -93,8 +105,8 @@ var (
 	CodeSignError                = CodeType{400047, "sign err ", http.StatusOK, ""}
 	//CodeNotMineDevidBindActiveid = CodeType{400046, "not mine devid boind Activeid  ", http.StatusOK, ""}
 	//CodeReleaseRule          = CodeType{400042, "Release rule  conflict %s ", http.StatusOK, ""}
-//CodeGenerateMine          = CodeType{400041, "new miner generate faile ", http.StatusOK, ""}
-//CodeGenerateMine          = CodeType{400041, "new miner generate faile ", http.StatusOK, ""}
+	//CodeGenerateMine          = CodeType{400041, "new miner generate faile ", http.StatusOK, ""}
+	//CodeGenerateMine          = CodeType{400041, "new miner generate faile ", http.StatusOK, ""}
 )
 
 type CodeType struct {

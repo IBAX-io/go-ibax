@@ -26,7 +26,7 @@ type appContentResult struct {
 func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
 	form := &appParamsForm{
 		ecosystemForm: ecosystemForm{
-			Validator: m.EcosysIDValidator,
+			Validator: m.EcosystemGetter,
 		},
 	}
 
@@ -48,6 +48,12 @@ func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting block interfaces by appID")
 		errorResponse(w, err)
+		return
+	}
+
+	pages, err := p.GetByApp(appID, ecosystemID)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting pages by appID")
 		errorResponse(w, err)
 		return
 	}

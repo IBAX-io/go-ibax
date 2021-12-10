@@ -34,6 +34,9 @@ func (b *Block) Create(transaction *DbTransaction) error {
 
 // Get is retrieving model from database
 func (b *Block) Get(blockID int64) (bool, error) {
+	return isFound(DBConn.Where("id = ?", blockID).First(b))
+}
+
 // GetMaxBlock returns last block existence
 func (b *Block) GetMaxBlock() (bool, error) {
 	return isFound(DBConn.Last(b))

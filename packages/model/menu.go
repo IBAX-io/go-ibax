@@ -32,3 +32,5 @@ func (m Menu) TableName() string {
 
 // Get is retrieving model from database
 func (m *Menu) Get(name string) (bool, error) {
+	return isFound(DBConn.Where("ecosystem=? and name = ?", m.ecosystem, name).First(m))
+}

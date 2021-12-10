@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"net/http"
 
+	"github.com/IBAX-io/go-ibax/packages/common"
+
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -35,7 +37,7 @@ func getMaxBlockHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound}).Error("last block not found")
+		logger.WithFields(log.Fields{"type": consts.NotFound}).Debug("last block not found")
 		errorResponse(w, errNotFound)
 		return
 	}
@@ -66,7 +68,7 @@ func getBlockInfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound, "id": blockID}).Error("block with id not found")
+		logger.WithFields(log.Fields{"type": consts.NotFound, "id": blockID}).Debug("block with id not found")
 		errorResponse(w, errNotFound)
 		return
 	}
@@ -118,6 +120,19 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 	blocks, err := model.GetBlockchain(form.BlockID, form.BlockID+form.Count, model.OrderASC)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting blocks range")
+		errorResponse(w, err)
+		return
+	}
+
+	if len(blocks) == 0 {
+		errorResponse(w, errNotFound)
+		return
+	}
+
+	result := map[int64][]TxInfo{}
+	for _, blockModel := range blocks {
+		blck, err := block.UnmarshallBlock(bytes.NewBuffer(blockModel.Data), false)
+		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err, "bolck_id": blockModel.ID}).Error("on unmarshalling block")
 			errorResponse(w, err)
 			return
@@ -126,18 +141,18 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 		txInfoCollection := make([]TxInfo, 0, len(blck.Transactions))
 		for _, tx := range blck.Transactions {
 			txInfo := TxInfo{
-				Hash: tx.TxHash,
+				Hash: tx.TxHash(),
 			}
 
-			if tx.TxContract != nil {
-				txInfo.ContractName = tx.TxContract.Name
-				txInfo.Params = tx.TxData
+			if tx.IsSmartContract() {
+				txInfo.ContractName = tx.SmartContract().TxContract.Name
+				txInfo.Params = tx.SmartContract().TxData
 			}
 
 			if blck.IsGenesis() {
 				txInfo.KeyID = blck.Header.KeyID
 			} else {
-				txInfo.KeyID = tx.TxHeader.KeyID
+				txInfo.KeyID = tx.TxKeyID()
 			}
 
 			txInfoCollection = append(txInfoCollection, txInfo)
@@ -157,7 +172,8 @@ type TxDetailedInfo struct {
 	Params       map[string]interface{} `json:"params"`
 	KeyID        int64                  `json:"key_id"`
 	Time         int64                  `json:"time"`
-	Type         int64                  `json:"type"`
+	Type         byte                   `json:"type"`
+	Size         string                 `json:"size"`
 }
 
 type BlockHeaderInfo struct {
@@ -179,6 +195,7 @@ type BlockDetailedInfo struct {
 	KeyID         int64            `json:"key_id"`
 	Time          int64            `json:"time"`
 	Tx            int32            `json:"tx_count"`
+	Size          string           `json:"size"`
 	RollbacksHash []byte           `json:"rollbacks_hash"`
 	MrklRoot      []byte           `json:"mrkl_root"`
 	BinData       []byte           `json:"bin_data"`
@@ -226,15 +243,16 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 		txDetailedInfoCollection := make([]TxDetailedInfo, 0, len(blck.Transactions))
 		for _, tx := range blck.Transactions {
 			txDetailedInfo := TxDetailedInfo{
-				Hash: tx.TxHash,
+				Hash:  tx.TxHash(),
+				KeyID: tx.TxKeyID(),
+				Time:  tx.TxTime(),
+				Type:  tx.TxType(),
+				Size:  common.StorageSize(len(tx.TxPayload())).TerminalString(),
 			}
 
-			if tx.TxContract != nil {
-				txDetailedInfo.ContractName = tx.TxContract.Name
-				txDetailedInfo.Params = tx.TxData
-				txDetailedInfo.KeyID = tx.TxKeyID
-				txDetailedInfo.Time = tx.TxTime
-				txDetailedInfo.Type = tx.TxType
+			if tx.IsSmartContract() {
+				txDetailedInfo.ContractName = tx.SmartContract().TxContract.Name
+				txDetailedInfo.Params = tx.SmartContract().TxData
 			}
 
 			txDetailedInfoCollection = append(txDetailedInfoCollection, txDetailedInfo)
@@ -264,6 +282,7 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 			RollbacksHash: blockModel.RollbacksHash,
 			MrklRoot:      blck.MrklRoot,
 			BinData:       blck.BinData,
+			Size:          common.StorageSize(len(blockModel.Data)).TerminalString(),
 			SysUpdate:     blck.SysUpdate,
 			GenBlock:      blck.GenBlock,
 			Transactions:  txDetailedInfoCollection,

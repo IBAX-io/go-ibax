@@ -59,6 +59,15 @@ func TestEditEcosystem(t *testing.T) {
 	if cutErr(err) != fmt.Sprintf(`{"type":"warning","error":"Page %s already exists"}`, name) {
 		t.Error(err)
 		return
+	}
+	form = url.Values{"Name": {name}, "Value": {`MenuItem(default_page)`}, "ApplicationId": {`1`},
+		"Conditions": {"ContractConditions(`MainCondition`)"}}
+	assert.NoError(t, postTx(`@1NewMenu`, &form))
+
+	form = url.Values{"Id": {`1`}, "Value": {value},
+		"Menu": {menu}, "Conditions": {"ContractConditions(`MainCondition`)"}}
+	err = postTx(`@1EditPage`, &form)
+	if err != nil {
 		t.Error(err)
 		return
 	}

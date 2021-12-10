@@ -10,13 +10,12 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 )
 
 var (
@@ -38,42 +37,12 @@ type JWTClaims struct {
 	AccountID   string `json:"account_id,omitempty"`
 	RoleID      string `json:"role_id,omitempty"`
 	IsMobile    bool   `json:"is_mobile,omitempty"`
-	jwt.StandardClaims
+	jwt.RegisteredClaims
 }
 
 func generateJWTToken(claims JWTClaims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(jwtSecret)
-}
-
-func generateNewJWTToken(claims JWTClaims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ret, err := token.SignedString(jwtSecret)
-	if err == nil {
-		gr := GRefreshClaims{
-			Header:           ret,
-			Refresh:          ret,
-			ExpiresAt:        claims.ExpiresAt,
-			RefreshExpiresAt: claims.ExpiresAt,
-		}
-		gr.RefreshClaims()
-	}
-	return ret, err
-}
-
-func generateRefreshJWTToken(claims JWTClaims, h string) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ret, err := token.SignedString(jwtSecret)
-	if err == nil {
-		gr := GRefreshClaims{
-			Header:           h,
-			Refresh:          ret,
-			ExpiresAt:        claims.ExpiresAt,
-			RefreshExpiresAt: claims.ExpiresAt,
-		}
-		gr.RefreshClaims()
-	}
-	return ret, err
 }
 
 func parseJWTToken(header string) (*jwt.Token, error) {
@@ -95,65 +64,7 @@ func parseJWTToken(header string) (*jwt.Token, error) {
 	})
 }
 
-func RefreshToken(header string) (*jwt.Token, error) {
-	if len(header) == 0 {
-		return nil, nil
-	}
-	if strings.HasPrefix(header, jwtPrefix) {
-		header = header[len(jwtPrefix):]
-	} else {
-		return nil, errJWTAuthValue
-	}
-
-	gr := GRefreshClaims{}
-	f := gr.ContainsClaims(header)
-	if f {
-
-		token, err := jwt.ParseWithClaims(gr.Refresh, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-			}
-
-			return []byte(jwtSecret), nil
-		})
-		if err != nil {
-			return nil, err
-		}
-
-		if claims, ok := token.Claims.(*JWTClaims); ok && token.Valid {
-			dnw := time.Now().Add(time.Second * time.Duration(jwtrefeshExpire)).Unix()
-			if dnw > claims.StandardClaims.ExpiresAt {
-				claims.StandardClaims.ExpiresAt = dnw
-
-				tk, err := generateRefreshJWTToken(*claims, header)
-				if err != nil {
-					return nil, err
-				}
-
-				return jwt.ParseWithClaims(tk, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-					if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-						return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-					}
-
-					return []byte(jwtSecret), nil
-				})
-			}
-			return token, nil
-		}
-		gd := GRefreshClaims{
-			Header: header,
-		}
-		gd.DeleteClaims()
-		return token, err
-	}
-
-	token, err := jwt.ParseWithClaims(header, &JWTClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
-}
-
-func getClientFromToken(token *jwt.Token, ecosysNameService types.EcosystemNameGetter) (*Client, error) {
+func getClientFromToken(token *jwt.Token, ecosysNameService types.EcosystemGetter) (*Client, error) {
 	claims, ok := token.Claims.(*JWTClaims)
 	if !ok {
 		return nil, nil
@@ -200,5 +111,5 @@ func getAuthStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result.IsActive = true
-	result.ExpiresAt = claims.ExpiresAt
+	result.ExpiresAt = claims.ExpiresAt.Unix()
 }

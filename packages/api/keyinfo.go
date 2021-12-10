@@ -50,7 +50,7 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ids, names, err := m.EcosysLookupGetter.GetEcosystemLookup()
+	ids, names, err := m.EcosystemGetter.GetEcosystemLookup()
 	if err != nil {
 		errorResponse(w, err)
 		return
@@ -104,6 +104,14 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		keysList = append(keysList, keyRes)
+	}
+
+	// in test mode, registration is open in the first ecosystem
+	if len(keysList) == 0 && syspar.IsTestMode() {
+		account = converter.AddressToString(keyID)
+		notify := make([]notifyInfo, 0)
+		notify = append(notify, notifyInfo{})
 		keysList = append(keysList, &keyEcosystemInfo{
 			Ecosystem:     converter.Int64ToStr(ids[0]),
 			Name:          names[0],

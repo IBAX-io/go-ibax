@@ -19,16 +19,19 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
+	log "github.com/sirupsen/logrus"
+)
+
+const (
+	multipartBuf      = 100000 // the buffer size for ParseMultipartForm
 	multipartFormData = "multipart/form-data"
 	contentType       = "Content-Type"
 )
 
 type Mode struct {
-	EcosysIDValidator  types.EcosystemIDValidator
-	EcosysNameGetter   types.EcosystemNameGetter
-	EcosysLookupGetter types.EcosystemLookupGetter
-	ContractRunner     types.SmartContractRunner
-	ClientTxProcessor  types.ClientTxPreprocessor
+	EcosystemGetter   types.EcosystemGetter
+	ContractRunner    types.SmartContractRunner
+	ClientTxProcessor types.ClientTxPreprocessor
 }
 
 // Client represents data of client

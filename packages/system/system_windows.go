@@ -1,4 +1,4 @@
-// +build windows
+//go:build windows
 
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
@@ -44,3 +44,10 @@ void kill_childproc( DWORD myprocID) {
 	        bContinue = Process32Next(hSnap, &pe);
 	    }
 	}
+}
+*/
+import "C"
+
+func killChildProc() {
+	C.kill_childproc(C.DWORD(os.Getpid()))
+}

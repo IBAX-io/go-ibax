@@ -333,6 +333,20 @@ func filesMv(w http.ResponseWriter, r *http.Request) {
 func filesCp(w http.ResponseWriter, r *http.Request) {
 	form := &pathsForm{}
 	client := getClient(r)
+	params := mux.Vars(r)
+	if err := parseForm(r, form); err != nil {
+		errorResponse(w, err, http.StatusBadRequest)
+		return
+	}
+
+	s := shell.NewShell(conf.GetGFilesHost())
+
+	resp, err := s.Request("files/cp", fmt.Sprintf("/ipfs/%s", params["hash"]),
+		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Paths).
+		Send(context.Background())
+	if err != nil {
+		errorResponse(w, err)
+		return
 
 	}
 	defer resp.Close()

@@ -136,6 +136,18 @@ func TestRoleAccess(t *testing.T) {
 
 	form := url.Values{"Name": {name}, "Value": {value}, "Menu": {menu}, "ApplicationId": {`1`},
 		"Conditions": {`RoleAccess(10,1)`}}
+	assert.NoError(t, postTx(`NewPage`, &form))
+
+	var ret listResult
+	assert.NoError(t, sendGet(`list/pages`, nil, &ret))
+	id := strconv.FormatInt(ret.Count, 10)
+	form = url.Values{"Id": {id}, "Value": {"Div(){Ooops}"}, "Conditions": {`RoleAccess(65)`}}
+	assert.NoError(t, postTx(`EditPage`, &form))
+	form = url.Values{"Id": {id}, "Value": {"Div(){Update}"}}
+	assert.EqualError(t, postTx(`EditPage`, &form), `{"type":"panic","error":"Access denied"}`)
+}
+
+func TestDBFind(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
 	name := randName(`tbl`)
 	form := url.Values{"Name": {name}, "ApplicationId": {"1"}, "Columns": {`[{"name":"txt","type":"varchar", 
@@ -146,15 +158,15 @@ func TestRoleAccess(t *testing.T) {
 	form = url.Values{`Value`: {`contract sub` + name + ` {
 		action {
 			DBInsert("` + name + `", {txt:"ok", name: "thisis"})
-			DBInsert("` + name + `", {txt:"текст", name: "заголовок"})
-			$result = DBFind("` + name + `").Columns("name").Where({txt:"текст"}).One("name")
+			DBInsert("` + name + `", {txt:"test", name: "test"})
+			$result = DBFind("` + name + `").Columns("name").Where({txt:"test"}).One("name")
 		}
 	}`}, `Conditions`: {`true`}, "ApplicationId": {"1"}}
 	assert.NoError(t, postTx(`NewContract`, &form))
 	_, ret, err := postTxResult(`sub`+name, &url.Values{})
-	assert.Equal(t, `заголовок`, ret)
+	assert.Equal(t, `heading`, ret)
 	var retPage contentResult
-	value := `DBFind(` + name + `, src).Columns(name).Where({txt:текст})`
+	value := `DBFind(` + name + `, src).Columns(name).Where({txt:test})`
 	form = url.Values{"Name": {name}, "Value": {value}, "ApplicationId": {`1`},
 		"Menu": {`default_menu`}, "Conditions": {"ContractConditions(`MainCondition`)"}}
 	assert.NoError(t, postTx(`NewPage`, &form))
@@ -163,7 +175,7 @@ func TestRoleAccess(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if RawToString(retPage.Tree) != `[{"tag":"dbfind","attr":{"columns":["name","id"],"data":[["заголовок","2"]],"name":"`+name+`","source":"src","types":["text","text"],"where":"{txt:текст}"}}]` {
+	if RawToString(retPage.Tree) != `[{"tag":"dbfind","attr":{"columns":["name","id"],"data":[["test","2"]],"name":"`+name+`","source":"src","types":["text","text"],"where":"{txt:test}"}}]` {
 		t.Error(fmt.Errorf(`wrong tree %s`, RawToString(retPage.Tree)))
 		return
 	}
@@ -552,7 +564,7 @@ func TestValidateConditions(t *testing.T) {
 		"EditContract":  baseForm,
 		"EditParameter": baseForm,
 		"EditMenu":      baseForm,
-		"EditPage":      url.Values{"Id": {"1"}, "Value": {"Test"}, "Conditions": {"incorrectConditions"}, "Menu": {"1"}},
+		"EditPage":      {"Id": {"1"}, "Value": {"Test"}, "Conditions": {"incorrectConditions"}, "Menu": {"1"}},
 	}
 	expectedErr := `{"type":"panic","error":"unknown identifier incorrectConditions"}`
 

@@ -24,6 +24,17 @@ func TestLimit(t *testing.T) {
 	form := url.Values{"Name": {"tbl" + rnd}, "Columns": {`[{"name":"name","type":"number",   "conditions":"true"},
 	{"name":"block", "type":"varchar","conditions":"true"}]`},
 		"Permissions": {`{"insert": "true", "update" : "true", "new_column": "true"}`}}
+	assert.NoError(t, postTx(`NewTable`, &form))
+
+	form = url.Values{`Value`: {`contract Limit` + rnd + ` {
+		data {
+			Num int
+		}
+		conditions {
+		}
+		action {
+		   DBInsert("tbl` + rnd + `", {name: $Num, block: $block}) 
+		}
 	}`}, `Conditions`: {`true`}}
 	assert.NoError(t, postTx(`NewContract`, &form))
 

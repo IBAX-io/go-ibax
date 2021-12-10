@@ -145,6 +145,17 @@ func (m *Map) Keys() []string {
 		keys[count] = current.key
 		count++
 	}
+	return keys
+}
+
+// Values returns all values of the map (insertion order).
+func (m *Map) Values() []interface{} {
+	values := make([]interface{}, m.Size())
+	count := 0
+	for current := m.head; current != nil; current = current.next {
+		values[count] = current.value
+		count++
+	}
 	return values
 }
 

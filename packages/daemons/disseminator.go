@@ -10,11 +10,11 @@ import (
 	"sync/atomic"
 
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/service"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -77,6 +77,17 @@ func sendTransactions(ctx context.Context, logger *log.Entry) error {
 		}
 		if err := model.MarkTransactionSentBatches(hashArr); err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marking transaction sent")
+			return err
+		}
+	}
+	return nil
+}
+
+// send block and transactions hashes
+func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.Entry) error {
+	block, err := model.BlockGetUnsent()
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting unsent blocks")
 		return err
 	}
 
@@ -92,7 +103,7 @@ func sendTransactions(ctx context.Context, logger *log.Entry) error {
 		return nil
 	}
 
-	hosts, banHosts, err := service.GetNodesBanService().FilterHosts(syspar.GetRemoteHosts())
+	hosts, banHosts, err := node.GetNodesBanService().FilterHosts(syspar.GetRemoteHosts())
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on getting remotes hosts")
 		return err

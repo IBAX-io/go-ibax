@@ -64,6 +64,16 @@ func explainQueryCost(transaction *model.DbTransaction, withAnalyze bool, query 
 		return 0, errors.New("PlanMap has no TotalCost")
 	}
 
+	totalCostNum, ok := totalCost.(json.Number)
+	if !ok {
+		log.Error("PlanMap has no TotalCost")
+		return 0, errors.New("Total cost is not a number")
+	}
+
+	totalCostF64, err := totalCostNum.Float64()
+	if err != nil {
+		log.Error("Total cost is not a number")
+		return 0, err
 	}
 	return int64(totalCostF64), nil
 }

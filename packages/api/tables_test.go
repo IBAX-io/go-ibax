@@ -57,17 +57,17 @@ func TestTableName(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	form := url.Values{"Name": {`кириллица`}, "Columns": {`[{"name":"MyName","type":"varchar", "index": "0", 
+	form := url.Values{"Name": {`test`}, "Columns": {`[{"name":"MyName","type":"varchar", "index": "0", 
 		"conditions":{"update":"true", "read":"true"}}]`}, "ApplicationId": {"1"},
 		"Permissions": {`{"insert": "true", "update" : "true", "new_column": "true"}`}}
 	assert.EqualError(t, postTx(`NewTable`, &form),
-		`{"type":"panic","error":"Name кириллица must only contain latin, digit and '_', '-' characters"}`)
+		`{"type":"panic","error":"Name test must only contain latin, digit and '_', '-' characters"}`)
 
-	form = url.Values{"Name": {`latin`}, "Columns": {`[{"name":"колонка","type":"varchar", "index": "0", 
+	form = url.Values{"Name": {`latin`}, "Columns": {`[{"name":"test","type":"varchar", "index": "0", 
 		"conditions":{"update":"true", "read":"true"}}]`}, "ApplicationId": {"1"},
 		"Permissions": {`{"insert": "true", "update" : "true", "new_column": "true"}`}}
 	assert.EqualError(t, postTx(`NewTable`, &form),
-		`{"type":"panic","error":"Name колонка must only contain latin, digit and '_', '-' characters"}`)
+		`{"type":"panic","error":"Name latin must only contain latin, digit and '_', '-' characters"}`)
 
 	name := randName(`tbl`)
 	form = url.Values{"Name": {`tbl-` + name}, "Columns": {`[{"name":"MyName","type":"varchar", "index": "0", 
@@ -262,6 +262,15 @@ func TestJSONTable(t *testing.T) {
 		{`DBFind(` + name + `,my).Columns("id,doc,doc->type").WhereId(2).Vars(my)
 			Span(#my_id##my_doc_type#)`,
 			`[{"tag":"dbfind","attr":{"columns":["id","doc","doc.type"],"data":[["2","{"doc": "Some test text.", "ind": "101", "type": "new\\"doc\\""}","new"doc""]],"name":"` + name + `","source":"my","types":["text","text","text"],"whereid":"2"}},{"tag":"span","children":[{"tag":"text","text":"2new"doc""}]}]`},
+		{`DBFind(` + name + `,my).Columns("id,doc->type").WhereId(2)`,
+			`[{"tag":"dbfind","attr":{"columns":["id","doc.type"],"data":[["2","new"doc""]],"name":"` + name + `","source":"my","types":["text","text"],"whereid":"2"}}]`},
+		{`DBFind(` + name + `,my).Columns("doc->type").Order(id).Custom(mytype, OK:#doc.type#)`,
+			`[{"tag":"dbfind","attr":{"columns":["doc.type","id","mytype"],"data":[["new"doc" val","1","[{"tag":"text","text":"OK:new"doc" val"}]"],["new"doc"","2","[{"tag":"text","text":"OK:new"doc""}]"],["","3","[{"tag":"text","text":"OK:NULL"}]"],["","4","[{"tag":"text","text":"OK:NULL"}]"],["","5","[{"tag":"text","text":"OK:NULL"}]"]],"name":"` + name + `","order":"id","source":"my","types":["text","text","tags"]}}]`},
+	}
+	var ret contentResult
+	for i, item := range forTest {
+		if i > 100 {
+			break
 		}
 		assert.NoError(t, sendPost(`content`, &url.Values{`template`: {item.input}}, &ret))
 		assert.Equal(t, item.want, RawToString(ret.Tree))

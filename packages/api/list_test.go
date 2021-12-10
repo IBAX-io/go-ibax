@@ -36,6 +36,15 @@ func TestList(t *testing.T) {
 	var retTable tableResult
 	for _, item := range []string{`app_params`, `parameters`} {
 		err = sendGet(`table/`+item, nil, &retTable)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if retTable.Name != item {
+			t.Errorf(`wrong table name %s != %s`, retTable.Name, item)
+			return
+		}
+	}
 	var sec listResult
 	err = sendGet(`sections`, nil, &sec)
 	if err != nil {

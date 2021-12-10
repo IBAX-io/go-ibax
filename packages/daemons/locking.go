@@ -47,6 +47,18 @@ func CheckDB() bool {
 	install := &model.Install{}
 
 	err := install.Get()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting install")
+	}
+
+	if install.Progress == model.ProgressComplete {
+		return true
+	}
+
+	return false
+}
+
+// DBLock locks daemons
 func DBLock() {
 	mutex.Lock()
 }

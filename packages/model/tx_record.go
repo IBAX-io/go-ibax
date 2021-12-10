@@ -2,6 +2,15 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+package model
+
+import (
+	"reflect"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+)
+
 func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []interface{}, err error) {
 	db := GetDB(tx)
 	// get record from rollback_tx

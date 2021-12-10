@@ -59,6 +59,18 @@ func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromSelect() {
 
 func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromInsertNoInto() {
 	_, err := InsertQueryType(`insert "1_keys"(id) values (1)`).GetTableName()
+	assert.Error(s.T(), err)
+	assert.Equal(s.T(), err, IntoStatementMissingError)
+}
+
+func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromInsert() {
+	tableName, err := InsertQueryType("insert into keys(a,b,c) values (1,2,3)").GetTableName()
+	assert.Nil(s.T(), err)
+	assert.Equal(s.T(), tableName, "keys")
+	tableName, err = InsertQueryType(`insert into "1_keys" (a,b,c) values (1,2,3)`).GetTableName()
+	assert.Nil(s.T(), err)
+	assert.Equal(s.T(), tableName, "1_keys")
+}
 
 func (s *QueryCostByFormulaTestSuite) TestGetTableNameFromUpdateNoSet() {
 	_, err := UpdateQueryType(`update keys a = b where id = 1`).GetTableName()

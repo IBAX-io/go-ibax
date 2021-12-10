@@ -56,6 +56,17 @@ func TestContent(t *testing.T) {
 	cases := []struct {
 		url      string
 		form     url.Values
+		expected string
+	}{
+		{
+			"content/source/" + name,
+			url.Values{},
+			`[{"tag":"if","attr":{"condition":"true"},"children":[{"tag":"div","children":[{"tag":"span","children":[{"tag":"text","text":"My text"}]},{"tag":"address"}]}],"tail":[{"tag":"else","children":[{"tag":"div","children":[{"tag":"text","text":"Hidden text"}]}]}]}]`,
+		},
+		{
+			"content",
+			url.Values{
+				"template": {"input Div(myclass, #mytest# Div(mypar) the Div)"},
 				"mytest":   {"test value"},
 			},
 			`[{"tag":"text","text":"input "},{"tag":"div","attr":{"class":"myclass"},"children":[{"tag":"text","text":"test value "},{"tag":"div","attr":{"class":"mypar"}},{"tag":"text","text":" the Div"}]}]`,

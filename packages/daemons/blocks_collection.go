@@ -13,11 +13,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/script"
 
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -25,7 +26,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/rollback"
-	"github.com/IBAX-io/go-ibax/packages/service"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
@@ -79,7 +79,7 @@ func blocksCollection(ctx context.Context, d *daemon) (err error) {
 
 	DBLock()
 	defer func() {
-		service.NodeDoneUpdatingBlockchain()
+		node.NodeDoneUpdatingBlockchain()
 		DBUnlock()
 	}()
 
@@ -152,19 +152,6 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 	var count int
 	st := time.Now()
 
-	//if conf.Config.PoolPub.Enable {
-	//	bi := model.BlockID{}
-	//	f, err := bi.GetRangeByName(consts.MintMax, consts.ChainMax, 2000)
-	//	fmt.Println(f, err)
-	//	if err != nil {
-	//		return err
-	//	}
-	//	if f {
-	//		time.Sleep(4 * time.Second)
-	//		return errors.New("deal mint blockid please wait")
-	//	}
-	//}
-
 	d.logger.WithFields(log.Fields{"min_block": curBlock.BlockID, "max_block": maxBlockID, "count": maxBlockID - curBlock.BlockID}).Info("starting downloading blocks")
 	for blockID := curBlock.BlockID + 1; blockID <= maxBlockID; blockID += int64(network.BlocksPerRequest) {
 
@@ -183,29 +170,11 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 
 			for rawBlock := range rawBlocksChan {
 
-				//if conf.Config.PoolPub.Enable {
-				//	bi := model.BlockID{}
-				//	f, err := bi.GetRangeByName(consts.MintMax, consts.ChainMax, 2000)
-				//	if err != nil {
-				//		return err
-				//	}
-				//	if !f {
-				//		if err = playRawBlock(rawBlock); err != nil {
-				//			d.logger.WithFields(log.Fields{"error": err, "type": consts.BlockError}).Error("playing raw block")
-				//			return err
-				//		}
-				//	} else {
-				//		time.Sleep(4 * time.Second)
-				//		return errors.New("deal mint blockid please wait")
-				//	}
-				//} else {
-
 				if err = playRawBlock(rawBlock); err != nil {
 					d.logger.WithFields(log.Fields{"error": err, "type": consts.BlockError}).Error("playing raw block")
 					return err
 				}
 				count++
-				//}
 			}
 
 			return nil
@@ -222,13 +191,25 @@ func banNodePause(host string, blockID, blockTime int64, err error) {
 	}
 
 	reason := err.Error()
+	//log.WithFields(log.Fields{"host": host, "block_id": blockID, "block_time": blockTime, "err": err}).Error("ban node")
+
+	n, err := syspar.GetNodeByHost(host)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting node by host")
+		return
+	}
+
+	err = node.GetNodesBanService().RegisterBadBlock(n, blockID, blockTime, reason, false)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "node": hex.EncodeToString(n.PublicKey),
+			"block": blockID}).Error("registering bad block from node")
 	}
 }
 
 // GetHostWithMaxID returns host with maxBlockID
 func getHostWithMaxID(ctx context.Context, logger *log.Entry) (host string, maxBlockID int64, err error) {
 
-	nbs := service.GetNodesBanService()
+	nbs := node.GetNodesBanService()
 	hosts, err := nbs.FilterBannedHosts(syspar.GetRemoteHosts())
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("on filtering banned hosts")
@@ -283,13 +264,13 @@ func ReplaceBlocksFromHost(ctx context.Context, host string, blockID, replaceCou
 		}
 	}
 
-	smart.SavepointSmartVMObjects()
+	script.SavepointSmartVMObjects()
 	err = processBlocks(blocks)
 	if err != nil {
-		smart.RollbackSmartVMObjects()
+		script.RollbackSmartVMObjects()
 		return err
 	}
-	smart.ReleaseSmartVMObjects()
+	script.ReleaseSmartVMObjects()
 	return err
 }
 
@@ -388,28 +369,9 @@ func processBlocks(blocks []*block.Block) error {
 		prevBlocks[b.Header.BlockID] = b
 
 		// for last block we should update block info
-		if i == 0 {
-			err := block.UpdBlockInfo(dbTransaction, b)
-			if err != nil {
-				dbTransaction.Rollback()
-				return utils.ErrInfo(err)
-			}
-		}
-		if b.SysUpdate {
-			if err := syspar.SysUpdate(dbTransaction); err != nil {
-				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
-				return utils.ErrInfo(err)
-			}
-		}
-	}
-
-	// If all right we can delete old blockchain and write new
-	for i := len(blocks) - 1; i >= 0; i-- {
-		b := blocks[i]
-		// insert new blocks into blockchain
-		if err := block.InsertIntoBlockchain(dbTransaction, b); err != nil {
+		if err := b.InsertIntoBlockchain(dbTransaction); err != nil {
 			dbTransaction.Rollback()
-			return err
+			return utils.ErrInfo(err)
 		}
 	}
 

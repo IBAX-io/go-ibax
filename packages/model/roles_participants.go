@@ -1,3 +1,16 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package model
+
+import (
+	"github.com/IBAX-io/go-ibax/packages/converter"
+)
+
+// RolesParticipants represents record of {prefix}roles_participants table
+type RolesParticipants struct {
 	ecosystem   int64
 	Id          int64
 	Role        string `gorm:"type":jsonb`

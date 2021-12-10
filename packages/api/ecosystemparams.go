@@ -29,7 +29,7 @@ type ecosystemParamsResult struct {
 func (m Mode) getEcosystemParamsHandler(w http.ResponseWriter, r *http.Request) {
 	form := &appParamsForm{
 		ecosystemForm: ecosystemForm{
-			Validator: m.EcosysIDValidator,
+			Validator: m.EcosystemGetter,
 		},
 	}
 	if err := parseForm(r, form); err != nil {
@@ -54,6 +54,12 @@ func (m Mode) getEcosystemParamsHandler(w http.ResponseWriter, r *http.Request) 
 	for _, item := range list {
 		if len(acceptNames) > 0 && !acceptNames[item.Name] {
 			continue
+		}
+		result.List = append(result.List, paramResult{
+			ID:         converter.Int64ToStr(item.ID),
+			Name:       item.Name,
+			Value:      item.Value,
+			Conditions: item.Conditions,
 		})
 	}
 

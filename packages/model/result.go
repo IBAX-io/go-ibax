@@ -46,6 +46,18 @@ func (r *SingleResult) Int() (int, error) {
 		return 0, r.err
 	}
 	return converter.BytesToInt(r.result), nil
+}
+
+// Float64 converts string to float64
+func (r *SingleResult) Float64() (float64, error) {
+	if r.err != nil {
+		return 0, r.err
+	}
+	return converter.StrToFloat64(string(r.result)), nil
+}
+
+// String returns string
+func (r *SingleResult) String() (string, error) {
 	if r.err != nil {
 		return "", r.err
 	}

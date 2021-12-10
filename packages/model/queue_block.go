@@ -10,6 +10,18 @@ type QueueBlock struct {
 	Hash        []byte `gorm:"primary_key;not null"`
 	BlockID     int64  `gorm:"not null"`
 	HonorNodeID int64  `gorm:"not null"`
+}
+
+// Get is retrieving model from database
+func (qb *QueueBlock) Get() (bool, error) {
+	return isFound(DBConn.First(qb))
+}
+
+// GetQueueBlockByHash is retrieving blocks queue by hash
+func (qb *QueueBlock) GetQueueBlockByHash(hash []byte) (bool, error) {
+	return isFound(DBConn.Where("hash = ?", hash).First(qb))
+}
+
 // Delete is deleting queue
 func (qb *QueueBlock) Delete() error {
 	return DBConn.Delete(qb).Error

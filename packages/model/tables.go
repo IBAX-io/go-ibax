@@ -61,6 +61,11 @@ func (t *Table) SetTablePrefix(prefix string) {
 // TableName returns name of table
 func (t *Table) TableName() string {
 	if t.Ecosystem == 0 {
+		t.Ecosystem = 1
+	}
+	return `1_tables`
+}
+
 // Get is retrieving model from database
 func (t *Table) Get(transaction *DbTransaction, name string) (bool, error) {
 	return isFound(GetDB(transaction).Where("ecosystem = ? and name = ?", t.Ecosystem, name).First(t))
@@ -188,20 +193,4 @@ func GetTableListQuery(table string, ecosystemID int64) *gorm.DB {
 	}
 
 	return DBConn.Table(converter.ParseTable(table, ecosystemID))
-}
-
-//
-func SubNodeGetTableQuery(table string, ecosystemID int64) *gorm.DB {
-	//if converter.FirstEcosystemTables[table] {
-	//	return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)
-	//}
-	return DBConn.Table(converter.SubNodeParseTable(table, ecosystemID))
-}
-
-//
-func VDEGetTableQuery(table string, ecosystemID int64) *gorm.DB {
-	//if converter.FirstEcosystemTables[table] {
-	//	return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)
-	//}
-	return DBConn.Table(converter.VDEParseTable(table, ecosystemID))
 }

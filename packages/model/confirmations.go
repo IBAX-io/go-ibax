@@ -7,6 +7,14 @@ package model
 
 // Confirmation is model
 type Confirmation struct {
+	BlockID int64 `gorm:"primary_key"`
+	Good    int32 `gorm:"not null"`
+	Bad     int32 `gorm:"not null"`
+	Time    int64 `gorm:"not null"`
+}
+
+// GetGoodBlock returns last good block
+func (c *Confirmation) GetGoodBlock(goodCount int) (bool, error) {
 	return isFound(DBConn.Where("good >= ?", goodCount).Last(&c))
 }
 

@@ -2,6 +2,18 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"context"
+	"sync/atomic"
+
+	"github.com/IBAX-io/go-ibax/packages/transaction"
+
+	log "github.com/sirupsen/logrus"
+)
+
 // QueueParserTx parses transaction from the queue
 func QueueParserTx(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
@@ -23,8 +35,7 @@ func QueueParserTx(ctx context.Context, d *daemon) error {
 	//	return nil
 	//}
 
-	p := new(transaction.Transaction)
-	err := transaction.ProcessTransactionsQueue(p.DbTransaction)
+	err := transaction.ProcessTransactionsQueue(nil)
 	if err != nil {
 		d.logger.WithFields(log.Fields{"error": err}).Error("parsing transactions")
 		return err

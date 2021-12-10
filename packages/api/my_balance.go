@@ -24,7 +24,7 @@ func (m Mode) getMyBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	client := getClient(r)
 	logger := getLogger(r)
 	form := &ecosystemForm{
-		Validator: m.EcosysIDValidator,
+		Validator: m.EcosystemGetter,
 	}
 	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
@@ -46,3 +46,9 @@ func (m Mode) getMyBalanceHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+
+	jsonResponse(w, &myBalanceResult{
+		Amount: key.Amount,
+		Money:  converter.ChainMoney(key.Amount),
+	})
+}

@@ -18,7 +18,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
-	"github.com/IBAX-io/go-ibax/packages/service"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
@@ -33,7 +33,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return nil
 	}
 	d.sleepTime = time.Second
-	if service.IsNodePaused() {
+	if node.IsNodePaused() {
 		return nil
 	}
 
@@ -136,6 +136,24 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		BlockID:      prevBlock.BlockID + 1,
 		Time:         st.Unix(),
 		EcosystemID:  0,
+		KeyID:        conf.Config.KeyID,
+		NodePosition: nodePosition,
+		Version:      consts.BlockVersion,
+	}
+
+	pb := &utils.BlockData{
+		BlockID:       prevBlock.BlockID,
+		Hash:          prevBlock.Hash,
+		RollbacksHash: prevBlock.RollbacksHash,
+	}
+
+	blockBin, err := generateNextBlock(header, trs, NodePrivateKey, pb)
+	if err != nil {
+		return err
+	}
+
+	err = block.InsertBlockWOForks(blockBin, true, false)
+	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on inserting new block")
 		return err
 	}
@@ -155,7 +173,7 @@ func generateNextBlock(blockHeader *utils.BlockData, trs []*model.Transaction, k
 }
 
 func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-chan time.Time, st int64) ([]*model.Transaction, error) {
-	p := new(transaction.Transaction)
+	//p := new(transaction.Transaction)
 
 	//verify transactions
 	//err := transaction.ProcessTransactionsQueue(p.DbTransaction)
@@ -163,13 +181,13 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 	//	return nil, err
 	//}
 
-	trs, err := model.GetAllUnusedTransactions(p.DbTransaction, syspar.GetMaxTxCount())
+	trs, err := model.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount())
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unused transactions")
 		return nil, err
 	}
 
-	limits := block.NewLimits(nil)
+	limits := transaction.NewLimits(transaction.GetLetPreprocess())
 
 	type badTxStruct struct {
 		hash  []byte
@@ -182,7 +200,7 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 
 		go func() {
 			for badTxItem := range ch {
-				block.BadTxForBan(badTxItem.keyID)
+				transaction.BadTxForBan(badTxItem.keyID)
 				_ = transaction.MarkTransactionBad(dbTx, badTxItem.hash, badTxItem.msg)
 			}
 		}()
@@ -190,7 +208,7 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 		return ch
 	}
 
-	txBadChan := processBadTx(p.DbTransaction)
+	txBadChan := processBadTx(nil)
 
 	defer func() {
 		close(txBadChan)
@@ -212,23 +230,23 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 			tr, err := transaction.UnmarshallTransaction(bufTransaction, true)
 			if err != nil {
 				if tr != nil {
-					txBadChan <- badTxStruct{hash: tr.TxHash, msg: err.Error(), keyID: tr.TxHeader.KeyID}
+					txBadChan <- badTxStruct{hash: tr.TxHash(), msg: err.Error(), keyID: tr.TxKeyID()}
 				}
 				continue
 			}
 
-			//if err := p.Check(st, false); err != nil {
-			//	txBadChan <- badTxStruct{hash: p.TxHash, msg: err.Error(), keyID: p.TxHeader.KeyID}
-			//	continue
-			//}
+			if err := tr.Check(st); err != nil {
+				txBadChan <- badTxStruct{hash: tr.TxHash(), msg: err.Error(), keyID: tr.TxKeyID()}
+				continue
+			}
 
-			if tr.TxSmart != nil {
+			if tr.IsSmartContract() {
 				err = limits.CheckLimit(tr)
-				if err == block.ErrLimitStop && i > 0 {
+				if err == transaction.ErrLimitStop && i > 0 {
 					break
 				} else if err != nil {
-					if err != block.ErrLimitSkip {
-						txBadChan <- badTxStruct{hash: tr.TxHash, msg: err.Error(), keyID: tr.TxHeader.KeyID}
+					if err != transaction.ErrLimitSkip {
+						txBadChan <- badTxStruct{hash: tr.TxHash(), msg: err.Error(), keyID: tr.TxKeyID()}
 					}
 					continue
 				}

@@ -45,6 +45,17 @@ func QueueParserBlocks(ctx context.Context, d *daemon) error {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")
 		return err
 	}
+	queueBlock := &model.QueueBlock{}
+	_, err = queueBlock.Get()
+	if err != nil {
+		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting queue block")
+		return err
+	}
+	if len(queueBlock.Hash) == 0 {
+		d.logger.WithFields(log.Fields{"type": consts.NotFound}).Debug("queue block not found")
+		return err
+	}
+
 	// check if the block gets in the rollback_blocks_1 limit
 	if queueBlock.BlockID > infoBlock.BlockID+syspar.GetRbBlocks1() {
 		queueBlock.DeleteOldBlocks()

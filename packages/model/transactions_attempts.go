@@ -63,3 +63,5 @@ func FindTxAttemptCount(dbTransaction *DbTransaction, count int) ([]*Transaction
 
 // GetByHash returns TransactionsAttempts existence by hash
 func DeleteTransactionsAttemptsByHash(dbTransaction *DbTransaction, hash []byte) error {
+	return GetDB(dbTransaction).Table("transactions_attempts").Delete(&TransactionsAttempts{}, hash).Error
+}

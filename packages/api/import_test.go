@@ -7,6 +7,22 @@ package api
 
 import (
 	"errors"
+	"fmt"
+	"net/url"
+	"os"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/types"
+)
+
+func ImportApps(path, appname string) error {
+	apps, err := os.ReadFile(path + "/" + appname + ".json")
+	if err != nil {
+		return err
 	}
 	var val = make(map[interface{}]interface{})
 	val["Body"] = apps

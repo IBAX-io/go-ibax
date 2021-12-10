@@ -43,57 +43,7 @@ var daemonsList = map[string]func(context.Context, *daemon) error{
 	"QueueParserBlocks": QueueParserBlocks,
 	"Confirmations":     Confirmations,
 	"Scheduler":         Scheduler,
-	"ExternalNetwork":   ExternalNetwork,
-
-	"SubNodeSrcTaskInstallChannel": SubNodeSrcTaskInstallChannel,
-	"SubNodeSrcData":               SubNodeSrcData,
-	"SubNodeSrcDataStatus":         SubNodeSrcDataStatus,
-	"SubNodeSrcDataStatusAgent":    SubNodeSrcDataStatusAgent,
-	"SubNodeAgentData":             SubNodeAgentData,
-	"SubNodeSrcDataUpToChain":      SubNodeSrcDataUpToChain,
-	"SubNodeSrcHashUpToChainState": SubNodeSrcHashUpToChainState,
-	"SubNodeDestData":              SubNodeDestData,
-
-	"VDESrcDataStatus":                      VDESrcDataStatus,
-	"VDESrcDataStatusAgent":                 VDESrcDataStatusAgent,
-	"VDEAgentData":                          VDEAgentData,
-	"VDESrcData":                            VDESrcData,
-	"VDEScheTaskUpToChain":                  VDEScheTaskUpToChain,
-	"VDEScheTaskUpToChainState":             VDEScheTaskUpToChainState,
-	"VDESrcTaskUpToChain":                   VDESrcTaskUpToChain,
-	"VDESrcTaskUpToChainState":              VDESrcTaskUpToChainState,
-	"VDEDestTaskSrcGetFromChain":            VDEDestTaskSrcGetFromChain,
-	"VDEDestTaskScheGetFromChain":           VDEDestTaskScheGetFromChain,
-	"VDESrcTaskScheGetFromChain":            VDESrcTaskScheGetFromChain,
-	"VDEScheTaskInstallContractSrc":         VDEScheTaskInstallContractSrc,
-	"VDEScheTaskInstallContractDest":        VDEScheTaskInstallContractDest,
-	"VDESrcTaskInstallContractSrc":          VDESrcTaskInstallContractSrc,
-	"VDEDestTaskInstallContractDest":        VDEDestTaskInstallContractDest,
-	"VDEDestData":                           VDEDestData,
-	"VDEDestDataStatus":                     VDEDestDataStatus,
-	"VDESrcHashUpToChain":                   VDESrcHashUpToChain,
-	"VDESrcHashUpToChainState":              VDESrcHashUpToChainState,
-	"VDESrcLogUpToChain":                    VDESrcLogUpToChain,
-	"VDESrcLogUpToChainState":               VDESrcLogUpToChainState,
-	"VDEDestLogUpToChain":                   VDEDestLogUpToChain,
-	"VDEDestLogUpToChainState":              VDEDestLogUpToChainState,
-	"VDEDestDataHashGetFromChain":           VDEDestDataHashGetFromChain,
-	"VDESrcTaskStatus":                      VDESrcTaskStatus,
-	"VDESrcTaskStatusRun":                   VDESrcTaskStatusRun,
-	"VDESrcTaskStatusRunState":              VDESrcTaskStatusRunState,
-	"VDESrcTaskFromScheStatus":              VDESrcTaskFromScheStatus,
-	"VDESrcTaskFromScheStatusRun":           VDESrcTaskFromScheStatusRun,
-	"VDESrcTaskFromScheStatusRunState":      VDESrcTaskFromScheStatusRunState,
-	"VDEAgentLogUpToChain":                  VDEAgentLogUpToChain,
-	"VDEScheTaskChainStatus":                VDEScheTaskChainStatus,
-	"VDEScheTaskChainStatusState":           VDEScheTaskChainStatusState,
-	"VDESrcTaskChainStatus":                 VDESrcTaskChainStatus,
-	"VDESrcTaskChainStatusState":            VDESrcTaskChainStatusState,
-	"VDESrcTaskAuthChainStatus":             VDESrcTaskAuthChainStatus,
-	"VDESrcTaskAuthChainStatusState":        VDESrcTaskAuthChainStatusState,
-	"VDEScheTaskSrcGetFromChain":            VDEScheTaskSrcGetFromChain,
-	"VDEScheTaskFromSrcInstallContractSrc":  VDEScheTaskFromSrcInstallContractSrc,
-	"VDEScheTaskFromSrcInstallContractDest": VDEScheTaskFromSrcInstallContractDest,
+	//"ExternalNetwork":   ExternalNetwork,
 }
 
 var rollbackList = []string{
@@ -113,6 +63,20 @@ func daemonLoop(ctx context.Context, goRoutineName string, handler func(context.
 	err := WaitDB(ctx)
 	if err != nil {
 		return
+	}
+
+	d := &daemon{
+		goRoutineName: goRoutineName,
+		sleepTime:     100 * time.Millisecond,
+		logger:        logger,
+	}
+	idleDelay := time.NewTimer(d.sleepTime)
+	//defer idleDelay.Stop()
+	for {
+		idleDelay.Reset(d.sleepTime)
+		select {
+		case <-ctx.Done():
+			logger.Info("daemon done his work")
 			retCh <- goRoutineName
 			return
 		case <-idleDelay.C:

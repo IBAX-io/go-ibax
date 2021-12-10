@@ -5,10 +5,7 @@
 package model
 
 import (
-	"errors"
-	"github.com/shopspring/decimal"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"math"
 )
 
 // AppParam is model
@@ -48,51 +45,4 @@ func (sp *AppParam) GetAllAppParameters(app int64) ([]AppParam, error) {
 		return nil, err
 	}
 	return parameters, nil
-}
-
-// Get is retrieving model from database
-func (sp *AppParam) GetHvlvebalance(transaction *DbTransaction, blockid int64) (decimal.Decimal, error) {
-
-	//var halve,balance string
-	ret := decimal.NewFromFloat(0)
-	var halve, mine_reward AppParam
-	hf, err := isFound(GetDB(transaction).Where("ecosystem=? and app_id=? and name = ?", 1, 1, "halve_interval_blockid").First(&halve))
-	if err != nil {
-		return ret, err
-	}
-	if !hf || !md {
-		return ret, errors.New("param mine_reward or halve_interval_blockid not found")
-	}
-
-	hal := converter.StrToInt64(halve.Value)
-	if hal > 0 {
-		he := blockid / hal
-		mdv := converter.StrToFloat64(mine_reward.Value)
-
-		hm := math.Pow(2, float64(he))
-		ret1 := mdv / hm
-		ret2 := ret1 / 1000000000000
-		ret3 := math.Floor(ret2) * 1000000000000
-		ret = decimal.NewFromFloat(ret3)
-		return ret, nil
-	} else {
-		return ret, errors.New("param mine_reward or halve_interval_blockid not ok")
-	}
-}
-
-// Get is retrieving model from database
-func (sp *AppParam) GetFoundationbalance(transaction *DbTransaction) (decimal.Decimal, error) {
-
-	//var halve,balance string
-	ret := decimal.NewFromFloat(0)
-	var bal AppParam
-	hf, err := isFound(GetDB(transaction).Where("ecosystem=? and app_id=? and name = ?", 1, 1, "foundation_reward").First(&bal))
-	if err != nil {
-		return ret, err
-	}
-	if !hf {
-		return ret, errors.New("param  foundation_reward not found")
-	}
-
-	return decimal.NewFromString(bal.Value)
 }

@@ -69,6 +69,12 @@ func TestMoneyMoreSend(t *testing.T) {
 		t.Error(err)
 		return
 	}
+	//for i := 0; i < 100; i++ {
+	//	form := url.Values{`Amount`: {`1`}, `Recipient`: {`1088-3972-0775-1704-9008`}, `Comment`: {`Test`}}
+	//	if err := postSignTx(`TokensSend`, &form); err != nil {
+	//		t.Error(err)
+	//		return
+	//	}
 	//	time.Sleep(2 * time.Second)
 	//}
 	//for i := 0; i < 2; i++ {

@@ -7,16 +7,17 @@ package api
 
 import (
 	"errors"
-	//"encoding/json"
+
+	"github.com/IBAX-io/go-ibax/packages/script"
+
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
+	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/smart"
-	qb "github.com/IBAX-io/go-ibax/packages/smart/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/template"
 	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
 
 	//"io/ioutil"
 	"net/http"
@@ -67,9 +68,9 @@ func (f *SumWhereForm) Validate(r *http.Request) error {
 func checkAccess(tableName, columns string, client *Client) (table string, cols string, err error) {
 	sc := smart.SmartContract{
 		OBS: conf.Config.IsSupportingOBS(),
-		VM:  smart.GetVM(),
-		TxSmart: tx.SmartContract{
-			Header: tx.Header{
+		VM:  script.GetVM(),
+		TxSmart: &types.SmartContract{
+			Header: &types.Header{
 				EcosystemID: client.EcosystemID,
 				KeyID:       client.KeyID,
 				NetworkID:   conf.Config.NetworkID,
@@ -390,179 +391,4 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 		result.Sum = sum
 	}
 	jsonResponse(w, result)
-}
-
-//
-func getSubNodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
-	form := &listWhereForm{}
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-
-	params := mux.Vars(r)
-	client := getClient(r)
-	logger := getLogger(r)
-
-	var (
-		err          error
-		table, where string
-	)
-	table, form.Columns, err = checkAccess(params["name"], form.Columns, client)
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-	q := model.SubNodeGetTableQuery(params["name"], client.EcosystemID)
-
-	if len(form.Columns) > 0 {
-		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
-	}
-
-	if len(form.InWhere) > 0 {
-		inWhere, _, err := template.ParseObject([]rune(form.InWhere))
-		switch v := inWhere.(type) {
-		case string:
-			if len(v) == 0 {
-				where = `true`
-			} else {
-				errorResponse(w, errors.New(`Where has wrong format`))
-				return
-			}
-		case map[string]interface{}:
-			where, err = qb.GetWhere(types.LoadMap(v))
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		case *types.Map:
-			where, err = qb.GetWhere(v)
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		default:
-			errorResponse(w, errors.New(`Where has wrong format`))
-			return
-		}
-		q = q.Where(where)
-	}
-
-	result := new(listResult)
-	err = q.Count(&result.Count).Error
-
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
-		errorResponse(w, errTableNotFound.Errorf(table))
-		return
-	}
-
-	if len(form.Order) > 0 {
-		rows, err := q.Order(form.Order).Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			errorResponse(w, err)
-			return
-		}
-		result.List, err = model.GetResult(rows)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-	} else {
-		rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			errorResponse(w, err)
-			return
-		}
-		result.List, err = model.GetResult(rows)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-	}
-
-	jsonResponse(w, result)
-}
-
-func getVDEListWhereHandler(w http.ResponseWriter, r *http.Request) {
-	form := &listWhereForm{}
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-
-	params := mux.Vars(r)
-	client := getClient(r)
-	logger := getLogger(r)
-
-	var (
-		err          error
-		table, where string
-	)
-	table, form.Columns, err = checkAccess(params["name"], form.Columns, client)
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-	q := model.VDEGetTableQuery(params["name"], client.EcosystemID)
-
-	if len(form.Columns) > 0 {
-		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
-	}
-
-	if len(form.InWhere) > 0 {
-		inWhere, _, err := template.ParseObject([]rune(form.InWhere))
-		switch v := inWhere.(type) {
-		case string:
-			if len(v) == 0 {
-				where = `true`
-			} else {
-				errorResponse(w, errors.New(`Where has wrong format`))
-				return
-			}
-		case map[string]interface{}:
-			where, err = qb.GetWhere(types.LoadMap(v))
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		case *types.Map:
-			where, err = qb.GetWhere(v)
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		default:
-			errorResponse(w, errors.New(`Where has wrong format`))
-			return
-		}
-		q = q.Where(where)
-	}
-
-	result := new(listResult)
-	err = q.Count(&result.Count).Error
-
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
-		errorResponse(w, errTableNotFound.Errorf(table))
-		return
-	}
-
-	if len(form.Order) > 0 {
-		rows, err := q.Order(form.Order).Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			errorResponse(w, err)
-			return
-		}
-		result.List, err = model.GetResult(rows)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-	} else {
-		rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
 }

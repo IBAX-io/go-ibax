@@ -60,6 +60,19 @@ func getWalletHistory(w http.ResponseWriter, r *http.Request) {
 	if form.Page == 0 {
 		form.Page = 1
 	}
+	form.Page = (form.Page - 1) * form.Limit
+
+	if token != nil && token.Valid {
+		if claims, ok := token.Claims.(*JWTClaims); ok {
+			keyId := claims.KeyID
+			var (
+				histories       []model.History
+				walletHistories []WalletHistory
+			)
+			histories, err = model.GetWalletRecordHistory(nil, keyId, form.SearchType, form.Limit, form.Page)
+			if err == nil {
+				if len(histories) > 0 {
+					for _, history := range histories {
 						var walletHistory WalletHistory
 						walletHistory.Amount = history.Amount
 						walletHistory.Money = converter.ChainMoney(history.Amount.String())

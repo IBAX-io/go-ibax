@@ -23,13 +23,12 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
-
-	"github.com/stretchr/testify/assert"
-
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/stretchr/testify/assert"
 )
 
 var apiAddress = "http://localhost:7079"
@@ -385,8 +384,8 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 		return
 	}
 
-	data, hash, err := tx.NewTransaction(tx.SmartContract{
-		Header: tx.Header{
+	data, hash, err := transaction.NewTransaction(types.SmartContract{
+		Header: &types.Header{
 			ID:          int(contract.ID),
 			Time:        time.Now().Unix(),
 			EcosystemID: 1,
@@ -477,7 +476,7 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 		return
 	}
 	arrData := make(map[string][]byte)
-	for i := 0; i < 9000; i++ {
+	for i := 0; i < 1; i++ {
 		conname := crypto.RandSeq(10)
 		tnow := time.Now().Unix()
 		params["Value"] = fmt.Sprintf(`contract rnd%v%d%d  { action { }}`, conname, i, tnow)
@@ -486,8 +485,8 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 		//params["TokenEcosystem"] = int64(2)
 		expedite := strconv.Itoa(1)
 
-		data, txhash, _ := tx.NewTransaction(tx.SmartContract{
-			Header: tx.Header{
+		data, txhash, _ := transaction.NewTransaction(types.SmartContract{
+			Header: &types.Header{
 				ID:          int(contract.ID),
 				Time:        tnow,
 				EcosystemID: 1,
@@ -580,6 +579,19 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 
 	var privateKey, publicKey []byte
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
+		return
+	}
+	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+		return
+	}
+
+	data, _, err := transaction.NewTransaction(types.SmartContract{
+		Header: &types.Header{
+			ID:          int(contract.ID),
+			Time:        time.Now().Unix(),
+			EcosystemID: 1,
+			KeyID:       crypto.Address(publicKey),
+			NetworkID:   conf.Config.NetworkID,
 		},
 		Params: params,
 	}, privateKey)
@@ -663,8 +675,8 @@ func postTxResult2(name string, form getter) (id int64, msg string, err error) {
 		return
 	}
 
-	data, _, err := tx.NewTransaction(tx.SmartContract{
-		Header: tx.Header{
+	data, _, err := transaction.NewTransaction(types.SmartContract{
+		Header: &types.Header{
 			ID:          int(contract.ID),
 			Time:        time.Now().Unix(),
 			EcosystemID: 2,

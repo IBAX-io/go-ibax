@@ -18,6 +18,14 @@ type MigrationHistory struct {
 	DateApplied int64  `gorm:"not null"`
 }
 
+// TableName returns name of table
+func (mh *MigrationHistory) TableName() string {
+	return "migration_history"
+}
+
+// CurrentVersion returns current version of database migrations
+func (mh *MigrationHistory) CurrentVersion() (string, error) {
+	if !IsTable(mh.TableName()) {
 		return noVersion, nil
 	}
 

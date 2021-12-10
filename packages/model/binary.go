@@ -12,6 +12,19 @@ import (
 )
 
 const BinaryTableSuffix = "_binaries"
+
+// Binary represents record of {prefix}_binaries table
+type Binary struct {
+	ecosystem int64
+	ID        int64
+	Name      string
+	Data      []byte
+	Hash      string
+	MimeType  string
+}
+
+// SetTablePrefix is setting table prefix
+func (b *Binary) SetTablePrefix(prefix string) {
 	b.ecosystem = converter.StrToInt64(prefix)
 }
 

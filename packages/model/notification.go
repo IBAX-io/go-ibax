@@ -31,6 +31,17 @@ type Notification struct {
 	DateCreated         int64
 	DateStartProcessing int64
 	DateClosed          int64
+	Closed              bool
+}
+
+// SetTablePrefix set table Prefix
+func (n *Notification) SetTablePrefix(tablePrefix string) {
+	n.ecosystem = converter.StrToInt64(tablePrefix)
+}
+
+// TableName returns table name
+func (n *Notification) TableName() string {
+	if n.ecosystem == 0 {
 		n.ecosystem = 1
 	}
 	return `1_notifications`

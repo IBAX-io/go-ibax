@@ -1,13 +1,13 @@
 package model
 
 import (
-	"errors"
-
-	log "github.com/sirupsen/logrus"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	log "github.com/sirupsen/logrus"
 
 	"gorm.io/gorm"
 )
+
+type ArrHashes [][]byte
 
 func DeleteQueueTxs(transaction *DbTransaction, hs [][]byte) error {
 	return GetDB(transaction).Delete(&QueueTx{}, hs).Error
@@ -52,51 +52,4 @@ func AfterPlayTxs(dbTx *DbTransaction, blockID int64, playTx AfterTxs, logger *l
 
 		return nil
 	})
-}
-
-type Batcher interface {
-	BatchFindByHash(*DbTransaction, ArrHashes) error
-}
-type ArrHashes [][]byte
-type logTxser []LogTransaction
-type txser []Transaction
-type queueser []QueueTx
-	if result := GetDB(tr).Model(&Transaction{}).Select("hash").Where("hash IN ? AND verified = 1", hs).FindInBatches(&l, len(hs), func(tx *gorm.DB, batch int) error {
-		if tx.RowsAffected > 0 {
-			return errors.New("duplicated transaction at transactions")
-		}
-		return nil
-	}); result.Error != nil {
-		return result.Error
-	}
-	return nil
-}
-
-func (l queueser) BatchFindByHash(tr *DbTransaction, hs ArrHashes) error {
-	if result := GetDB(tr).Model(&QueueTx{}).Select("hash").Where("hash IN ?", hs).FindInBatches(&l, len(hs), func(tx *gorm.DB, batch int) error {
-		if tx.RowsAffected > 0 {
-			return errors.New("duplicated transaction at queue_tx")
-		}
-		return nil
-	}); result.Error != nil {
-		return result.Error
-	}
-	return nil
-}
-
-func CheckDupTx(transaction *DbTransaction, hs ArrHashes) error {
-	var (
-		logTxs = new(logTxser)
-		txs    = new(txser)
-		queues = new(queueser) //old not check that
-		batch  []Batcher
-	)
-	batch = append(batch, logTxs, txs, queues)
-	for _, d := range batch {
-		err := d.BatchFindByHash(transaction, hs)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

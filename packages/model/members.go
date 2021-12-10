@@ -22,6 +22,11 @@ func (m *Member) SetTablePrefix(prefix string) {
 }
 
 // TableName returns name of table
+func (m *Member) TableName() string {
+	if m.ecosystem == 0 {
+		m.ecosystem = 1
+	}
+	return `1_members`
 }
 
 // Count returns count of records in table

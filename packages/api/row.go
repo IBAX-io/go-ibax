@@ -14,6 +14,15 @@ import (
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+)
+
+type rowResult struct {
+	Value map[string]string `json:"value"`
+}
+
+type rowForm struct {
+	Columns string `schema:"columns"`
+}
 
 func (f *rowForm) Validate(r *http.Request) error {
 	if len(f.Columns) > 0 {

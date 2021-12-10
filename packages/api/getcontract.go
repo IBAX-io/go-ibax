@@ -65,3 +65,8 @@ func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
 				Optional: fitem.ContainsTag(script.TagOptional),
 			})
 		}
+	}
+	result.Fields = fields
+
+	jsonResponse(w, result)
+}

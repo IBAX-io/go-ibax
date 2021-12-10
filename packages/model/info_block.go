@@ -31,7 +31,20 @@ func (ib *InfoBlock) TableName() string {
 func (ib *InfoBlock) Get() (bool, error) {
 	return isFound(DBConn.Last(ib))
 }
-	return GetDB(transaction).Omit("rollbacks_hash").Create(ib).Error
+
+// Update is update model
+func (ib *InfoBlock) Update(transaction *DbTransaction) error {
+	return GetDB(transaction).Model(&InfoBlock{}).Updates(ib).Error
+}
+
+// GetUnsent is retrieving model from database
+func (ib *InfoBlock) GetUnsent() (bool, error) {
+	return isFound(DBConn.Where("sent = ?", "0").First(&ib))
+}
+
+// Create is creating record of model
+func (ib *InfoBlock) Create(transaction *DbTransaction) error {
+	return GetDB(transaction).Create(ib).Error
 }
 
 // MarkSent update model sent field

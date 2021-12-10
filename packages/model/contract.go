@@ -9,7 +9,6 @@ import "github.com/IBAX-io/go-ibax/packages/converter"
 
 // Contract represents record of 1_contracts table
 type Contract struct {
-	tableName   string
 	ID          int64  `json:"id,omitempty"`
 	Name        string `json:"name,omitempty"`
 	Value       string `json:"value,omitempty"`
@@ -70,6 +69,8 @@ func (c *Contract) ToMap() (v map[string]string) {
 	v["app_id"] = converter.Int64ToStr(c.AppID)
 	v["ecosystem_id"] = converter.Int64ToStr(c.EcosystemID)
 	return
+}
+
 // GetByApp returns all contracts belonging to selected app
 func (c *Contract) GetByApp(appID int64, ecosystemID int64) ([]Contract, error) {
 	var result []Contract

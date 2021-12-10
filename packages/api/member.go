@@ -97,3 +97,6 @@ func getMemberHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+
+	jsonResponse(w, member)
+}

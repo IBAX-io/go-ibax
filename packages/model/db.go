@@ -76,7 +76,7 @@ open:
 	//DBConn, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		if strings.Contains(err.Error(), fmt.Sprintf("database \"%s\" does not exist", dbName)) {
-			err := createDatabase(fmt.Sprintf("host=%s port=%d user=%s sslmode=disable TimeZone=UTC", host, port, user), dbName)
+			err := createDatabase(fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable TimeZone=UTC", host, port, user, pass), dbName)
 			if err != nil {
 				return err
 			}
@@ -200,11 +200,6 @@ func (tr *DbTransaction) ResetSavepoint(mark string) error {
 		return err
 	}
 	return tr.Savepoint(mark)
-}
-
-// ReleaseSavepoint releases PostgreSQL Savepoint
-func (tr *DbTransaction) ReleaseSavepoint(idTx int, mark string) error {
-	return tr.Connection().Exec(fmt.Sprintf("RELEASE SAVEPOINT \"%s-%d\";", mark, idTx)).Error
 }
 
 // GetDB is returning gorm.DB
@@ -388,6 +383,15 @@ func GetList(query string, args ...interface{}) *ListResult {
 	for _, v := range all {
 		for _, v2 := range v {
 			result = append(result, v2)
+		}
+	}
+	return &ListResult{result, nil}
+}
+
+// GetNextID returns next ID of table
+func GetNextID(transaction *DbTransaction, table string) (int64, error) {
+	var id int64
+	rows, err := GetDB(transaction).Raw(`select id from "` + table + `" order by id desc limit 1`).Rows()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("selecting next id from table")
 		return 0, err

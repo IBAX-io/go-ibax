@@ -51,6 +51,10 @@ func strSliceIndex(fields []string, fieldToFind string) (index int) {
 	for i, field := range fields {
 		if field == fieldToFind {
 			index = i
+			break
+		}
+	}
+	return
 }
 
 type TableRowCounter interface {

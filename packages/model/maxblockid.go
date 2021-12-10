@@ -76,3 +76,18 @@ func (b *BlockID) GetRangeByName(n1, n2 string, count int64) (bool, error) {
 	}
 
 	rp2 := &RedisParams{
+		Key: MihPrefix + n2,
+	}
+	if err := rp2.Getdb1(); err != nil {
+		return false, err
+	}
+	if err := nb2.Unmarshal([]byte(rp2.Value)); err != nil {
+		return false, err
+	}
+
+	if (nb2.ID - nb1.ID) > count {
+		return true, nil
+	}
+
+	return false, nil
+}

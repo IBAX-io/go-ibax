@@ -9,7 +9,7 @@ import (
 	"context"
 	"net/http"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -53,5 +53,11 @@ func getToken(r *http.Request) *jwt.Token {
 
 func setClient(r *http.Request, client *Client) *http.Request {
 	return setContext(r, contextKeyClient, client)
+}
+
+func getClient(r *http.Request) *Client {
+	if v := getContext(r, contextKeyClient); v != nil {
+		return v.(*Client)
+	}
 	return nil
 }

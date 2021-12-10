@@ -4,13 +4,23 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
+
+	"gorm.io/gorm"
+)
+
+func GetNodeRows(tableName string) (int64, error) {
+	var count int64
+	err := DBConn.Table(tableName).Count(&count).Error
+	if err == gorm.ErrRecordNotFound {
+		return 0, nil
+	}
 	if err != nil {
 		return 0, err
 	}
 	return count, nil
 }
 
-func GetRowsInfo(rows *sql.Rows,sqlQuest string) ([]map[string]string, error) {
+func GetRowsInfo(rows *sql.Rows, sqlQuest string) ([]map[string]string, error) {
 	var result []map[string]string
 	defer rows.Close()
 	columns, err := rows.Columns()
@@ -52,5 +62,5 @@ func GetRowsInfo(rows *sql.Rows,sqlQuest string) ([]map[string]string, error) {
 	if err = rows.Err(); err != nil {
 		return nil, fmt.Errorf("getRows rows err:%s in query %s", err, sqlQuest)
 	}
-	return  result,nil
+	return result, nil
 }

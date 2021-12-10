@@ -8,8 +8,25 @@ package daemons
 import (
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/daylight/system"
+	"github.com/IBAX-io/go-ibax/packages/chain/system"
 
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+
+	log "github.com/sirupsen/logrus"
+)
+
+// WaitStopTime closes the database and stop daemons
+func WaitStopTime() {
+	var first bool
+	for {
+		if model.DBConn == nil {
+			time.Sleep(time.Second * 3)
+			continue
+		}
+		if !first {
+			err := model.Delete(nil, "stop_daemons", "")
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting from stop daemons")
 			}

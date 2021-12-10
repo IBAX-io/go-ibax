@@ -33,3 +33,5 @@ func TestHistory(t *testing.T) {
 	}
 	if len(ret.List) != 0 {
 		t.Error(stdErrors.New("History should be empty"))
+	}
+}

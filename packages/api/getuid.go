@@ -3,12 +3,18 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package api
+
+import (
+	"math/rand"
+	"net/http"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
-	"github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,7 +37,7 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 	if token != nil {
 		if claims, ok := token.Claims.(*JWTClaims); ok && len(claims.KeyID) > 0 {
 			result.EcosystemID = claims.EcosystemID
-			result.Expire = converter.Int64ToStr(claims.ExpiresAt - time.Now().Unix())
+			result.Expire = claims.ExpiresAt.Sub(time.Now()).String()
 			result.KeyID = claims.KeyID
 			jsonResponse(w, result)
 			return
@@ -42,8 +48,8 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 	claims := JWTClaims{
 		UID:         result.UID,
 		EcosystemID: "1",
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(jwtUIDExpire).Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(jwtUIDExpire)},
 		},
 	}
 

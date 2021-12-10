@@ -68,3 +68,11 @@ func (sys *Ecosystem) IsOpenMultiFee() bool {
 		var info map[string]interface{}
 		json.Unmarshal([]byte(sys.Info), &info)
 		if v, ok := info["multi_fee"]; ok {
+			multi, _ := strconv.Atoi(fmt.Sprint(v))
+			if multi == 1 {
+				return true
+			}
+		}
+	}
+	return false
+}

@@ -2,12 +2,13 @@ package model
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/iterator"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"github.com/syndtr/goleveldb/leveldb/util"
-	"reflect"
-	"strings"
 )
 
 var DBlevel *leveldb.DB
@@ -18,6 +19,19 @@ type levelDBGetterPutterDeleter interface {
 	Put([]byte, []byte, *opt.WriteOptions) error
 	Write(batch *leveldb.Batch, wo *opt.WriteOptions) error
 	Delete([]byte, *opt.WriteOptions) error
+	NewIterator(slice *util.Range, ro *opt.ReadOptions) iterator.Iterator
+}
+
+func GetLevelDB(tx *leveldb.Transaction) levelDBGetterPutterDeleter {
+	if tx != nil {
+		return tx
+	}
+	return DBlevel
+}
+
+func prefixFunc(prefix string) func([]byte) []byte {
+	return func(hash []byte) []byte {
+		return []byte(prefix + string(hash))
 	}
 }
 
@@ -34,7 +48,6 @@ func Init_leveldb(filename string) error {
 		GLeveldbIsactive = true
 	}
 
-	//go Deal_MintCount()
 	return err
 }
 

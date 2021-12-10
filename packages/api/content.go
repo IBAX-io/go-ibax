@@ -271,7 +271,7 @@ func getMenuHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound}).Error("menu not found")
+		logger.WithFields(log.Fields{"type": consts.NotFound}).Debug("menu not found")
 		errorResponse(w, errNotFound)
 		return
 	}
@@ -300,6 +300,16 @@ func jsonContentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var timeout bool
+	vars := initVars(r)
+
+	if form.Source {
+		(*vars)["_full"] = strOne
+	}
+
+	ret := template.Template2JSON(form.Template, &timeout, vars)
+	jsonResponse(w, &contentResult{Tree: ret})
+}
+
 func getSourceHandler(w http.ResponseWriter, r *http.Request) {
 	page, _, err := pageValue(r)
 	if err != nil {

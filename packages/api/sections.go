@@ -25,6 +25,11 @@ type sectionsForm struct {
 
 func (f *sectionsForm) Validate(r *http.Request) error {
 	if err := f.paginatorForm.Validate(r); err != nil {
+		return err
+	}
+
+	if len(f.Lang) == 0 {
+		f.Lang = r.Header.Get("Accept-Language")
 	}
 
 	return nil

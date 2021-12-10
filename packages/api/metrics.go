@@ -3,6 +3,22 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
+package api
+
+import (
+	"net/http"
+	"runtime"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
+
+	"github.com/gorilla/mux"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type blockMetric struct {
@@ -104,7 +120,7 @@ func txCountHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m Mode) ecosysCountHandler(w http.ResponseWriter, r *http.Request) {
-	ids, _, err := m.EcosysLookupGetter.GetEcosystemLookup()
+	ids, _, err := m.EcosystemGetter.GetEcosystemLookup()
 	if err != nil {
 		logger := getLogger(r)
 		logger.WithFields(log.Fields{"error": err}).Error("on getting ecosystem count")
@@ -146,7 +162,7 @@ func banStatHandler(w http.ResponseWriter, _ *http.Request) {
 	nodes := syspar.GetNodes()
 	list := make([]banMetric, 0, len(nodes))
 
-	b := service.GetNodesBanService()
+	b := node.GetNodesBanService()
 	for i, n := range nodes {
 		list = append(list, banMetric{
 			NodePosition: i,

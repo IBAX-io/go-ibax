@@ -18,6 +18,22 @@ func TestLang(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
 
 	name := randName("lng")
+	utfName := randName("lngutf")
+
+	err := postTx("NewLang", &url.Values{
+		"Name":          {name},
+		"Trans":         {`{"en": "My test", "fr": "French string", "en-US": "US locale"}`},
+		"ApplicationId": {"1"},
+	})
+	assert.NoError(t, err)
+	var list listResult
+	err = sendGet(`list/languages`, nil, &list)
+	if err != nil {
+		return
+	}
+	id := strconv.FormatInt(list.Count, 10)
+
+	cases := []struct {
 		url    string
 		form   url.Values
 		expect string
@@ -26,7 +42,7 @@ func TestLang(t *testing.T) {
 			"NewLang",
 			url.Values{
 				"Name":          {utfName},
-				"Trans":         {`{"en": "тест"}`},
+				"Trans":         {`{"en": "test"}`},
 				"ApplicationId": {"1"},
 			},
 			"",
@@ -68,7 +84,7 @@ func TestLang(t *testing.T) {
 				},
 				"app_id": {"1"},
 			},
-			`[{"tag":"div","children":[{"tag":"button","attr":{"alert":{"cancelbutton":"$cancel$","confirmbutton":"$confirm$","text":"тест"},"page":"test"},"children":[{"tag":"text","text":"тест $"}]},{"tag":"button","attr":{"alert":{"cancelbutton":"$cancel$","text":"тест"},"pageparams":{"test":{"text":"test","type":"text"}}},"children":[{"tag":"text","text":"тест"},{"tag":"text","text":" LangRes"}]}]}]`,
+			`[{"tag":"div","children":[{"tag":"button","attr":{"alert":{"cancelbutton":"$cancel$","confirmbutton":"$confirm$","text":"test"},"page":"test"},"children":[{"tag":"text","text":"test $"}]},{"tag":"button","attr":{"alert":{"cancelbutton":"$cancel$","text":"test"},"pageparams":{"test":{"text":"test","type":"text"}}},"children":[{"tag":"text","text":"test"},{"tag":"text","text":" LangRes"}]}]}]`,
 		},
 		{
 			"content",

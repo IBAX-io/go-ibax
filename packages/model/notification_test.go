@@ -9,10 +9,22 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+)
+
+type testItem struct {
+	Input        []int64
+	Filter       string
+	ParamsLength int
+}
+
+func TestGetNotificationCountFilter(t *testing.T) {
+	testTable := []testItem{
+		{
+			Input:        []int64{3, 5},
 			Filter:       ` WHERE closed = false AND recipient_id IN (?) `,
 			ParamsLength: 1,
 		},
-		testItem{
+		{
 			Input:        nil,
 			Filter:       ` WHERE closed = false `,
 			ParamsLength: 0,

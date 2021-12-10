@@ -6,9 +6,21 @@
 package api
 
 import (
+	"net/http"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
+)
+
+func (m Mode) getEcosystemParamHandler(w http.ResponseWriter, r *http.Request) {
+	logger := getLogger(r)
 
 	form := &ecosystemForm{
-		Validator: m.EcosysIDValidator,
+		Validator: m.EcosystemGetter,
 	}
 
 	if err := parseForm(r, form); err != nil {
@@ -27,7 +39,7 @@ import (
 		errorResponse(w, err)
 		return
 	} else if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound, "key": name}).Error("state parameter not found")
+		logger.WithFields(log.Fields{"type": consts.NotFound, "key": name}).Debug("state parameter not found")
 		errorResponse(w, errParamNotFound.Errorf(name))
 		return
 	}
@@ -52,7 +64,7 @@ func getEcosystemNameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound, "ecosystem_id": ecosystemID}).Error("ecosystem by id not found")
+		logger.WithFields(log.Fields{"type": consts.NotFound, "ecosystem_id": ecosystemID}).Debug("ecosystem by id not found")
 		errorResponse(w, errParamNotFound.Errorf("name"))
 		return
 	}

@@ -1,9 +1,24 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package model
+
+import (
+	"fmt"
+	"strings"
+
+	"gorm.io/gorm"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+)
 
 // TransactionStatus is model
 type TransactionStatus struct {
 	Hash     []byte `gorm:"primary_key;not null"`
 	Time     int64  `gorm:"not null;"`
-	Type     int64  `gorm:"not null"`
+	Type     byte   `gorm:"not null"`
 	WalletID int64  `gorm:"not null"`
 	BlockID  int64  `gorm:"not null"`
 	Error    string `gorm:"not null"`
@@ -64,7 +79,7 @@ func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64) error {
 	)
 	for _, s := range updBlockMsg {
 		hashArr = append(hashArr, s.Hash)
-		upStr += fmt.Sprintf("WHEN decode('%x','hex') THEN '%s' ", s.Hash, s.Msg)
+		upStr += fmt.Sprintf("WHEN decode('%x','hex') THEN '%s' ", s.Hash, strings.Replace(s.Msg, `'`, `''`, -1))
 	}
 	sqlStr := fmt.Sprintf("UPDATE transactions_status SET error = CASE hash %s END , block_id  = %d WHERE hash in(?)", upStr, newBlockID)
 	return dbTx.Exec(sqlStr, hashArr).Error

@@ -39,6 +39,22 @@ func createTables(t *testing.T, db *sql.DB) {
 func TestWait(t *testing.T) {
 	db := initGorm(t)
 	createTables(t, db.DB())
+
+	ctx, cf := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer func() {
+		ctx.Done()
+		cf()
+	}()
+
+	err := WaitDB(ctx)
+	if err == nil {
+		t.Errorf("should be error")
+	}
+
+	install := &model.Install{}
+	install.Progress = "complete"
+	err = install.Create()
+	if err != nil {
 		t.Fatalf("save failed: %s", err)
 	}
 

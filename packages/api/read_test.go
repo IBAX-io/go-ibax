@@ -46,6 +46,19 @@ func TestRead(t *testing.T) {
 			row = DBFind("%[1]s").Where({id:[{$gte: 2},{"$lte":5}]})
 		}
 	}`,
+		`contract GetOK%s {
+		action {
+			var row array
+			row = DBFind("%[1]s").Columns("my,amount").Where({id:[{$gte: 2},{"$lte":5}]})
+		}
+	}`,
+		`contract GetData%s {
+		action {
+			var row array
+			row = DBFind("%[1]s").Columns("active").Where({id:[{$gte: 2},{"$lte":5}]})
+		}
+	}`,
+		`func ReadFilter%s bool {
 				var i int
 				var row map
 				while i < Len($data) {

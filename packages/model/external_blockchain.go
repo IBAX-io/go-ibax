@@ -45,3 +45,7 @@ func DelExternalList(list []int64) error {
 func HashExternalTx(id int64, hash []byte) error {
 	return DBConn.Exec("update external_blockchain set hash=?, sent = 1 where id = ?", hash, id).Error
 }
+
+func IncExternalAttempt(id int64) error {
+	return DBConn.Exec("update external_blockchain set attempts=attempts+1 where id = ?", id).Error
+}

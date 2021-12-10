@@ -27,6 +27,10 @@ type columnInfo struct {
 type tableResult struct {
 	Name       string       `json:"name"`
 	Insert     string       `json:"insert"`
+	NewColumn  string       `json:"new_column"`
+	Update     string       `json:"update"`
+	Read       string       `json:"read,omitempty"`
+	Filter     string       `json:"filter,omitempty"`
 	Conditions string       `json:"conditions"`
 	AppID      string       `json:"app_id"`
 	Columns    []columnInfo `json:"columns"`

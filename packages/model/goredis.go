@@ -45,7 +45,6 @@ func RedisInit(host string, port string, password string, db int) error {
 	}
 
 	GRedisIsactive = true
-	//go Deal_MintCount()
 
 	return nil
 }
@@ -84,6 +83,17 @@ func (rp *RedisParams) Cleardb() error {
 	var keys []string
 
 	if GRedisIsactive {
+		err = nil
+		for {
+			var key []string
+			var err error
+			key, cursor, err = Gclient0.Scan(cursor, "*", 10).Result()
+			if err != nil {
+				return err
+			}
+			n += len(keys)
+			keys = append(keys, key...)
+			if cursor == 0 {
 				break
 			}
 		}

@@ -36,6 +36,18 @@ func TestGetInterfaceRow(t *testing.T) {
 	errUnauthorized := `401 {"error": "E_UNAUTHORIZED", "msg": "Unauthorized" }`
 	for _, c := range cases {
 		assert.EqualError(t, sendGet(c.url+"-", &url.Values{}, nil), errUnauthorized)
+	}
+
+	assert.NoError(t, keyLogin(1))
+
+	for _, c := range cases {
+		name := randName("component")
+		form := url.Values{
+			"Name": {name}, "Value": {"value"}, "Menu": {"default_menu"}, "Title": {"title"},
+			"Conditions": {"true"},
+		}
+		assert.NoError(t, postTx(c.contract, &form))
+		result := map[string]interface{}{}
 		assert.NoError(t, sendGet(c.url+name, &url.Values{}, &result))
 		checkEqualAttrs(form, result, c.equalAttrs)
 	}

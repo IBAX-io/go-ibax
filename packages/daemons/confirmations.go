@@ -15,7 +15,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
-	"github.com/IBAX-io/go-ibax/packages/service"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -50,6 +50,8 @@ func Confirmations(ctx context.Context, d *daemon) error {
 
 	ConfirmedBlockID := confirmations.BlockID
 	infoBlock := &model.InfoBlock{}
+	_, err = infoBlock.Get()
+	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")
 		return err
 	}
@@ -92,7 +94,7 @@ func confirmationsBlocks(ctx context.Context, d *daemon, lastBlockID, startBlock
 			continue
 		}
 
-		hosts, err := service.GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
+		hosts, err := node.GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
 		if err != nil {
 			return err
 		}

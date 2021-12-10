@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/service"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/statsd"
 
 	"github.com/gorilla/mux"
@@ -54,19 +54,31 @@ func recoverMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
+				logger := getLogger(r)
+				logger.WithFields(log.Fields{
+					"type":  consts.PanicRecoveredError,
+					"error": err,
+					"stack": string(debug.Stack()),
+				}).Debug("panic recovered error")
+				fmt.Println("API Recovered", fmt.Sprintf("%s: %s", err, debug.Stack()))
+				errorResponse(w, errRecovered)
+			}
+		}()
+		next.ServeHTTP(w, r)
+	})
 }
 
 func nodeStateMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var reason errType
-		switch service.NodePauseType() {
-		case service.NoPause:
+		switch node.NodePauseType() {
+		case node.NoPause:
 			next.ServeHTTP(w, r)
 			return
-		case service.PauseTypeUpdatingBlockchain:
+		case node.PauseTypeUpdatingBlockchain:
 			reason = errUpdating
 			break
-		case service.PauseTypeStopingNetwork:
+		case node.PauseTypeStopingNetwork:
 			reason = errStopping
 			break
 		}
@@ -97,7 +109,7 @@ func (m Mode) clientMiddleware(next http.Handler) http.Handler {
 		var client *Client
 		if token != nil { // get client from token
 			var err error
-			if client, err = getClientFromToken(token, m.EcosysNameGetter); err != nil {
+			if client, err = getClientFromToken(token, m.EcosystemGetter); err != nil {
 				errorResponse(w, err)
 				return
 			}

@@ -12,7 +12,7 @@ import (
 
 // ClientTxPreprocessor procees tx from client
 type ClientTxPreprocessor interface {
-	ProcessClientTranstaction([]byte, int64, *log.Entry) (string, error)
+	//ProcessClientTranstaction([]byte, int64, *log.Entry) (string, error)
 	ProcessClientTxBatches([][]byte, int64, *log.Entry) ([]string, error)
 }
 
@@ -21,13 +21,7 @@ type SmartContractRunner interface {
 	RunContract(data, hash []byte, keyID, tnow int64, le *log.Entry) error
 }
 
-type DaemonListFactory interface {
+type DaemonFactory interface {
 	GetDaemonsList() []string
+	Load(context.Context) error
 }
-
-type EcosystemLookupGetter interface {
-	GetEcosystemLookup() ([]int64, []string, error)
-}
-
-type EcosystemIDValidator interface {
-	Validate(id, clientID int64, le *log.Entry) (int64, error)

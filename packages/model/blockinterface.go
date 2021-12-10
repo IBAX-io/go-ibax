@@ -4,6 +4,13 @@
  *--------------------------------------------------------------------------------------------*/
 
 package model
+
+import "github.com/IBAX-io/go-ibax/packages/converter"
+
+// BlockInterface is code snippet
+type BlockInterface struct {
+	ecosystem  int64
+	ID         int64  `gorm:"primary_key;not null" json:"id,omitempty"`
 	Name       string `gorm:"not null" json:"name,omitempty"`
 	Value      string `gorm:"not null" json:"value,omitempty"`
 	Conditions string `gorm:"not null" json:"conditions,omitempty"`
@@ -15,7 +22,7 @@ func (bi *BlockInterface) SetTablePrefix(prefix string) {
 }
 
 // TableName returns name of table
-func (bi BlockInterface) TableName() string {
+func (bi *BlockInterface) TableName() string {
 	if bi.ecosystem == 0 {
 		bi.ecosystem = 1
 	}

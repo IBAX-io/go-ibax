@@ -6,19 +6,16 @@
 package model
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"github.com/IBAX-io/go-ibax/packages/consts"
 )
 
 // This constants contains values of transactions priority
 const (
 	TransactionRateOnBlock transactionRate = iota + 1
 	TransactionRateApiContract
-	TransactionRateSystemServer
-	TransactionRateEcosystemMiner
-	TransactionRateSystemMiner
 	TransactionRateStopNetwork
 )
 const expediteOrder = `high_rate,expedite DESC,time ASC`
@@ -70,6 +67,17 @@ func GetAllUnsentTransactions(limit int) (*[]Transaction, error) {
 // GetTransactionCountAll count all transactions
 func GetTransactionCountAll() (int64, error) {
 	var rowsCount int64
+	if err := DBConn.Table("transactions").Count(&rowsCount).Error; err != nil {
+		return -1, err
+	}
+	return rowsCount, nil
+}
+
+// GetTransactionsCount count all transactions by hash
+func GetTransactionsCount(hash []byte) (int64, error) {
+	var rowsCount int64
+	if err := DBConn.Table("transactions").Where("hash = ?", hash).Count(&rowsCount).Error; err != nil {
+		return -1, err
 	}
 	return rowsCount, nil
 }
@@ -162,13 +170,7 @@ func (t *Transaction) Update(db *DbTransaction) error {
 
 func GetTxRateByTxType(txType int8) transactionRate {
 	switch txType {
-	case consts.TxTypeSystemServer:
-		return TransactionRateSystemServer
-	case consts.TxTypeEcosystemMiner:
-		return TransactionRateEcosystemMiner
-	case consts.TxTypeSystemMiner:
-		return TransactionRateSystemMiner
-	case consts.TxTypeStopNetwork:
+	case types.StopNetworkTxType:
 		return TransactionRateStopNetwork
 	default:
 		return TransactionRateApiContract
@@ -186,7 +188,7 @@ func GetManyTransactions(dbtx *DbTransaction, hashes [][]byte) ([]Transaction, e
 }
 
 func (t *Transaction) GetStopNetwork() (bool, error) {
-	return isFound(DBConn.Where("type = ?", consts.TxTypeStopNetwork).First(t))
+	return isFound(DBConn.Where("type = ?", types.StopNetworkTxType).First(t))
 }
 
 func (t *Transaction) GetTransactionRateStopNetwork() bool {

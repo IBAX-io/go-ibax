@@ -22,7 +22,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
 type Connect struct {
@@ -192,6 +193,14 @@ func (connect *Connect) WaitTxList(hashes []string) (map[string]WaitResult, erro
 			}
 			continue
 		}
+		if ret.Message != nil {
+			var msg string
+			errtext, err := json.Marshal(ret.Message)
+			if err != nil {
+				msg = err.Error()
+			} else {
+				msg = string(errtext)
+			}
 			waitResults[key] = WaitResult{
 				Msg: msg,
 			}
@@ -249,8 +258,8 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 		txTime = converter.StrToInt64(newTime)
 	}
 
-	data, txhash, err := tx.NewTransaction(tx.SmartContract{
-		Header: tx.Header{
+	data, txhash, err := transaction.NewTransaction(types.SmartContract{
+		Header: &types.Header{
 			ID:          int(contract.ID),
 			Time:        txTime,
 			EcosystemID: 1,

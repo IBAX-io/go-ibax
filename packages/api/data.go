@@ -6,6 +6,12 @@
 package api
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
