@@ -18,6 +18,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -37,6 +38,18 @@ var generateFirstBlockCmd = &cobra.Command{
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block marshalling")
 		}
+		os.WriteFile(conf.Config.FirstBlockPath, block, 0644)
+		log.Info("first block generated")
+	},
+}
+
+func init() {
+	generateFirstBlockCmd.Flags().StringVar(&stopNetworkBundleFilepath, "stopNetworkCert", "", "Filepath to the fullchain of certificates for network stopping")
+	generateFirstBlockCmd.Flags().BoolVar(&testBlockchain, "test", false, "if true - test blockchain")
+	generateFirstBlockCmd.Flags().BoolVar(&privateBlockchain, "private", false, "if true - all transactions will be free")
+}
+
+func genesisBlock() ([]byte, error) {
 	now := time.Now().Unix()
 	header := &utils.BlockData{
 		BlockID:      1,
@@ -85,9 +98,9 @@ var generateFirstBlockCmd = &cobra.Command{
 		pb = 1
 	}
 	_, err := converter.BinMarshal(&tx,
-		&consts.FirstBlock{
-			TxHeader: consts.TxHeader{
-				Type:  consts.TxTypeFirstBlock,
+		&types.FirstBlock{
+			TxHeader: types.TxHeader{
+				Type:  types.FirstBlockTxType,
 				Time:  uint32(now),
 				KeyID: conf.Config.KeyID,
 			},

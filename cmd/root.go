@@ -6,12 +6,21 @@
 package cmd
 
 import (
+	"fmt"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"path/filepath"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
+)
+
+var (
+	buildBranch = ""
+	buildDate   = ""
+	commitHash  = ""
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -32,6 +41,12 @@ func init() {
 		versionCmd,
 	)
 
+	consts.BuildInfo = func() string {
+		if buildBranch == "" {
+			return fmt.Sprintf("branch.%s commit.%s time.%s", "unknown", "unknown", "unknown")
+		}
+		return fmt.Sprintf("branch.%s commit.%s time.%s", buildBranch, commitHash, buildDate)
+	}()
 	// This flags are visible for all child commands
 	rootCmd.PersistentFlags().StringVar(&conf.Config.ConfigPath, "config", defautConfigPath(), "filepath to config.toml")
 }
@@ -65,3 +80,7 @@ func loadConfig(cmd *cobra.Command, args []string) {
 func loadConfigWKey(cmd *cobra.Command, args []string) {
 	loadConfig(cmd, args)
 	err := conf.FillRuntimeKey()
+	if err != nil {
+		log.WithError(err).Fatal("Filling keys")
+	}
+}

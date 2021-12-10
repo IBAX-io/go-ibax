@@ -8,8 +8,8 @@ package cmd
 import (
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/chain"
 	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/daylight"
 
 	"github.com/spf13/cobra"
 )
@@ -20,9 +20,12 @@ var startCmd = &cobra.Command{
 	Short:  "Starting node",
 	PreRun: loadConfigWKey,
 	Run: func(cmd *cobra.Command, args []string) {
-		daylight.Start()
+		chain.Start()
 	},
 }
 
 func init() {
 	time.Local = time.UTC
+	startCmd.Flags().BoolVar(&conf.Config.TestRollBack, "testRollBack", false, "Starts special set of daemons")
+	startCmd.Flags().BoolVar(&conf.Config.FuncBench, "funcBench", false, "Disable access checking in some built-in functions for benchmarks")
+}

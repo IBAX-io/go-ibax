@@ -74,6 +74,13 @@ func createKeyPair(privFilename, pubFilename string) (priv, pub []byte, err erro
 	}
 
 	err = createFile(privFilename, []byte(hex.EncodeToString(priv)))
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "path": privFilename}).Error("creating private key")
+		return
+	}
+
+	err = createFile(pubFilename, []byte(crypto.PubToHex(pub)))
+	if err != nil {
 		log.WithFields(log.Fields{"error": err, "path": pubFilename}).Error("creating public key")
 		return
 	}

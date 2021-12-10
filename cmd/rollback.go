@@ -35,6 +35,12 @@ var rollbackCmd = &cobra.Command{
 			conf.Config.DB.Password,
 			conf.Config.DB.Name,
 		); err != nil {
+			log.WithError(err).Fatal("init db")
+			return
+		}
+		if err := syspar.SysUpdate(nil); err != nil {
+			log.WithError(err).Error("can't read system parameters")
+		}
 		if err := syspar.SysTableColType(nil); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("updating sys table col type")
 		}
