@@ -85,6 +85,16 @@ func CheckTokenMovementLimits(tx *model.DbTransaction, conf conf.TokenMovementCo
 
 	excesses, err := model.GetExcessTokenMovementQtyPerBlock(tx, blockID)
 	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("check token movement per block")
+	} else {
+		for _, excess := range excesses {
+			messages = append(messages, fmt.Sprintf(perBlockTokenMovementTemplate, excess.SenderID, excess.TxCount, blockID))
+		}
+	}
+
+	if len(messages) > 0 {
+		sendEmail(conf, strings.Join(messages, "\n"))
+	}
 }
 
 // checks needed only if we have'nt prevent events or if event older then 1 day

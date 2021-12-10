@@ -23,3 +23,6 @@ func (ch *ContractHandler) Run(t *scheduler.Task) {
 		log.WithFields(log.Fields{"type": consts.ContractError, "error": err, "task": t.String(), "contract": ch.Contract}).Error("run contract task")
 		return
 	}
+
+	log.WithFields(log.Fields{"task": t.String(), "contract": ch.Contract}).Info("run contract task")
+}

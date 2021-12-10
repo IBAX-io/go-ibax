@@ -66,6 +66,9 @@ func (s *Scheduler) UpdateTask(t *Task) error {
 
 // NewScheduler creates a new scheduler
 func NewScheduler() *Scheduler {
+	s := &Scheduler{cron: cron.New()}
+	s.cron.Start()
+	return s
 }
 
 // AddTask adds task to global scheduler

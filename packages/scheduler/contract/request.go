@@ -45,6 +45,21 @@ type contractResult struct {
 // NodeContract creates a transaction to execute the contract.
 // The transaction is signed with a node key.
 func NodeContract(Name string) (result contractResult, err error) {
+	var (
+		sign                          []byte
+		ret                           authResult
+		NodePrivateKey, NodePublicKey string
+	)
+	err = sendAPIRequest(`GET`, `getuid`, nil, &ret, ``)
+	if err != nil {
+		return
+	}
+	auth := ret.Token
+	if len(ret.UID) == 0 {
+		err = fmt.Errorf(`getuid has returned empty uid`)
+		return
+	}
+	NodePrivateKey, NodePublicKey = utils.GetNodeKeys()
 	if len(NodePrivateKey) == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
 		err = errors.New(`empty node private key`)

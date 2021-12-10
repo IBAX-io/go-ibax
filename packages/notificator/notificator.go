@@ -57,6 +57,20 @@ func parseRecipientNotification(rows []model.NotificationsCount, systemID int64)
 			continue
 		}
 
+		roleNotifications := notificationRecord{
+			EcosystemID:  converter.Int64ToStr(systemID),
+			RoleID:       converter.Int64ToStr(r.RoleID),
+			RecordsCount: r.Count,
+		}
+
+		nr, ok := recipientNotifications[r.Account]
+		if ok {
+			*nr = append(*nr, roleNotifications)
+			continue
+		}
+
+		records := []notificationRecord{
+			roleNotifications,
 		}
 
 		recipientNotifications[r.Account] = &records

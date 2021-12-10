@@ -20,6 +20,22 @@ import (
 )
 
 //cacheLang is cache for language, first level is lang_name, second is lang dictionary
+type cacheLang struct {
+	res map[string]*map[string]string
+}
+
+var (
+	// LangList is the list of available languages. It stores two-bytes codes
+	LangList []string
+	lang     = make(map[int]*cacheLang)
+	mutex    = &sync.RWMutex{}
+)
+
+// IsLang checks if there is a language with code name
+func IsLang(code string) bool {
+	if LangList == nil {
+		return true
+	}
 	for _, val := range LangList {
 		if val == code {
 			return true

@@ -52,3 +52,8 @@ func (q *Queue) Send() {
 }
 
 func NewQueue() types.Notifications {
+	return &Queue{
+		Accounts: make([]*Accounts, 0),
+		Roles:    make([]*Roles, 0),
+	}
+}

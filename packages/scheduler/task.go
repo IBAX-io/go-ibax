@@ -53,3 +53,6 @@ func (t *Task) Next(tm time.Time) time.Time {
 }
 
 // Run executes task
+func (t *Task) Run() {
+	t.Handler.Run(t)
+}

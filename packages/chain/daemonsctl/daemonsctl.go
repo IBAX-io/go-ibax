@@ -2,15 +2,16 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package main
+
+package daemonsctl
 
 import (
-	"runtime"
+	"context"
 
-	"github.com/IBAX-io/go-ibax/cmd"
+	"github.com/IBAX-io/go-ibax/packages/modes"
 )
 
-func main() {
-	runtime.LockOSThread()
-	cmd.Execute()
+// RunAllDaemons start daemons, load contracts and tcpserver
+func RunAllDaemons(ctx context.Context) error {
+	return modes.GetDaemonLoader().Load(ctx)
 }

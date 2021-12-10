@@ -15,7 +15,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 
 	"github.com/centrifugal/gocent"
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/golang-jwt/jwt/v4"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -42,6 +42,16 @@ var (
 	publisher         *gocent.Client
 	config            conf.CentrifugoConfig
 )
+
+type CentJWT struct {
+	Sub string
+	jwt.RegisteredClaims
+}
+
+// InitCentrifugo client
+func InitCentrifugo(cfg conf.CentrifugoConfig) {
+	config = cfg
+	publisher = gocent.New(gocent.Config{
 		Addr: cfg.URL,
 		Key:  cfg.Key,
 	})
@@ -52,8 +62,8 @@ func GetJWTCent(userID, expire int64) (string, string, error) {
 
 	centJWT := CentJWT{
 		Sub: strconv.FormatInt(userID, 10),
-		StandardClaims: jwt.StandardClaims{
-			ExpiresAt: time.Now().Add(time.Second * time.Duration(expire)).Unix(),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(time.Second * time.Duration(expire))},
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, centJWT)

@@ -714,6 +714,14 @@ func StrToInt(s string) int {
 	i, _ := strconv.Atoi(s)
 	return i
 }
+
+// Float64ToStr converts float64 to string
+func Float64ToStr(f float64) string {
+	return strconv.FormatFloat(f, 'f', 13, 64)
+}
+
+// StrToFloat64 converts string to float64
+func StrToFloat64(s string) float64 {
 	Float64, _ := strconv.ParseFloat(s, 64)
 	return Float64
 }
@@ -876,21 +884,6 @@ func ParseTable(tblname string, defaultEcosystem int64) string {
 
 //
 func SubNodeParseTable(tblname string, defaultEcosystem int64) string {
-	ecosystem, name := ParseName(tblname)
-	if ecosystem == 0 {
-		if FirstEcosystemTables[tblname] {
-			ecosystem = 1
-		} else {
-			ecosystem = defaultEcosystem
-		}
-		name = tblname
-	}
-	//return strings.ToLower(fmt.Sprintf(`%d_%s`, ecosystem, Sanitize(name, ``)))
-	return strings.ToLower(fmt.Sprintf(`%s`, Sanitize(name, ``)))
-}
-
-//
-func VDEParseTable(tblname string, defaultEcosystem int64) string {
 	ecosystem, name := ParseName(tblname)
 	if ecosystem == 0 {
 		if FirstEcosystemTables[tblname] {

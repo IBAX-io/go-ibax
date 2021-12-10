@@ -16,12 +16,12 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/ochinchina/go-ini"
 	pConf "github.com/ochinchina/supervisord/config"
 	"github.com/ochinchina/supervisord/process"
 	log "github.com/sirupsen/logrus"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
 )
 
 const (
@@ -268,6 +268,20 @@ func (mgr *OBSManager) StopOBS(name string) error {
 		state == process.Starting {
 		proc.Stop(true)
 		log.WithFields(log.Fields{"obs_name": name}).Info("OBS is stoped")
+		return nil
+	}
+
+	err := fmt.Errorf("OBS '%s' is %s", name, state)
+	log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on stoping OBS")
+	return err
+}
+
+func (mgr *OBSManager) createOBSDB(obsName, login, pass string) error {
+
+	if err := model.DBConn.Exec(fmt.Sprintf(createRoleTemplate, login, pass)).Error; err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating OBS DB User")
+		return err
+	}
 
 	if err := model.DBConn.Exec(fmt.Sprintf(createDBTemplate, obsName, login)).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating OBS DB")
