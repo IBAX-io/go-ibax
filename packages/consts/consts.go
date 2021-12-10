@@ -87,33 +87,6 @@ const MaxTXAttempt = 10
 // ChainSize 1M = 1048576 byte
 const ChainSize = 1 << 20
 
-const (
-	TxTypeFirstBlock     = 1
-	TxTypeApiContract    = 2
-	TxTypeSystemServer   = 3
-	TxTypeEcosystemMiner = 4
-	TxTypeSystemMiner    = 5
-	TxTypeStopNetwork    = 6
-
-	TxTypeParserFirstBlock  = "FirstBlock"
-	TxTypeSystemServerWork  = "SystemServerWork"
-	TxTypeParserStopNetwork = "StopNetwork"
-
-	TxTypeParserApiContract    = "ApiContract"
-	TxTypeParserEcosystemMiner = "EcosystemMiner"
-	TxTypeParserSystemMiner    = "SystemMiner"
-)
-
-// TxTypes is the list of the embedded transactions
-var TxTypes = map[int64]string{
-	TxTypeFirstBlock:     TxTypeParserFirstBlock,
-	TxTypeApiContract:    TxTypeParserApiContract,
-	TxTypeSystemServer:   TxTypeSystemServerWork,
-	TxTypeEcosystemMiner: TxTypeParserEcosystemMiner,
-	TxTypeSystemMiner:    TxTypeParserSystemMiner,
-	TxTypeStopNetwork:    TxTypeParserStopNetwork,
-}
-
 // ApiPath is the beginning of the api url
 var ApiPath = `/api/v2/`
 
@@ -181,6 +154,12 @@ const (
 
 	// ShiftContractID is the offset of tx identifiers
 	ShiftContractID = 5000
+
+	// ContractList is the number of contracts per page on loading
+	ContractList = 200
+
+	// Guest key
+	GuestPublic  = "489347a1205c818d9a02f285faaedd0122a56138e3d985f5e1b4f6a9470f90f692a00a3453771dd7feea388ceb7aefeaf183e299c70ad1aecb7f870bfada3b86"
 	GuestKey     = "4544233900443112470"
 	GuestAddress = "0454-4233-9004-4311-2470"
 
@@ -189,13 +168,6 @@ const (
 
 	NoneOBS     = "none"
 	DBFindLimit = 10000
-)
-
-const (
-	MintMax           = "mint_max"
-	ChainMax          = "chain_max"
-	MintSettlementMax = "mint_settlement_max"
-	MintDetial        = "mint_detial"
 )
 
 const (

@@ -9,6 +9,14 @@ package consts
 type LogEventType int
 
 // Types of log errors
+const (
+	NetworkError             = "Network"
+	JSONMarshallError        = "JSONMarshall"
+	JSONUnmarshallError      = "JSONUnmarshall"
+	CommandExecutionError    = "CommandExecution"
+	ConversionError          = "Conversion"
+	TypeError                = "Type"
+	ProtocolError            = "Protocol"
 	MarshallingError         = "Marshall"
 	UnmarshallingError       = "Unmarshall"
 	ParseError               = "Parse"
