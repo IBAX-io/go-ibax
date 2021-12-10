@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/script"
+
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -23,8 +25,16 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
-	qb "github.com/IBAX-io/go-ibax/packages/smart/queryBuilder"
+	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
 
+	"github.com/shopspring/decimal"
+	log "github.com/sirupsen/logrus"
+)
+
+// Composite represents a composite contract
+type Composite struct {
+	Name string      `json:"name"`
+	Data interface{} `json:"data,omitempty"`
 }
 
 // Action describes a button action
@@ -844,7 +854,7 @@ func dbfindTag(par parFunc) string {
 			}
 			result[i] = reflect.ValueOf(row).Interface()
 		}
-		fltResult, err := smart.VMEvalIf(sc.VM, perm[`filter`], uint32(sc.TxSmart.EcosystemID),
+		fltResult, err := script.VMEvalIf(sc.VM, perm[`filter`], uint32(sc.TxSmart.EcosystemID),
 			&map[string]interface{}{
 				`data`:         result,
 				`ecosystem_id`: sc.TxSmart.EcosystemID,

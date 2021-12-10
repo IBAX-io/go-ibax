@@ -42,8 +42,8 @@ func outMap(v *types.Map) string {
 
 func TestObj(t *testing.T) {
 	list := []tplItem{
-		{`{"val": "value, [] 1", test: Test текст}`,
-			`{"test":"Test текст" "val":"value, [] 1"}`},
+		{`{"val": "value, [] 1", test: Test}`,
+			`{"test":"Test" "val":"value, [] 1"}`},
 		{`[ col1 , col2, {"val": "value 1", test: Test value} ]`,
 			`[col1 col2 map[val:value 1 test:Test value]]`},
 		{`{sub: {"test1": 23, test2:[34, 45]},"test2": "text"}`,
@@ -107,10 +107,10 @@ var forTest = tplList{
 	 VarAsIs(txt4, #mytest# #tmp# #txt#)
 	  P(#txt# #txt2# #txt3# #txt4#)`,
 		`[{"tag":"p","children":[{"tag":"text","text":"0Span(test)1 0Span(test)1 Some #mytest# #mytest# #tmp# #txt#"}]}]`},
-	{`SetVar(txt, "те").(txt1, "ещё")P(#txt# #txt1#)`,
-		`[{"tag":"p","children":[{"tag":"text","text":"те ещё"}]}]`},
-	{`Span(Body: "те").(Body: "ещё")`,
-		`[{"tag":"span","children":[{"tag":"text","text":"те"}]},{"tag":"span","children":[{"tag":"text","text":"ещё"}]}]`},
+	{`SetVar(txt, "test").(txt1, "yet")P(#txt# #txt1#)`,
+		`[{"tag":"p","children":[{"tag":"text","text":"test yet"}]}]`},
+	{`Span(Body: "test").(Body: "yet")`,
+		`[{"tag":"span","children":[{"tag":"text","text":"test"}]},{"tag":"span","children":[{"tag":"text","text":"yet"}]}]`},
 	{`SetVar(mykey,0266-5397-0542-4815-0876)Div(){AddressToId(#mykey#)=AddressToId()}`,
 		`[{"tag":"div","children":[{"tag":"text","text":"2665397054248150876"},{"tag":"text","text":"="}]}]`},
 	{`SetVar(t,7)
@@ -278,13 +278,13 @@ var forTest = tplList{
 			Div(){#id#. Em(#name#)}
 		}`,
 		`[{"tag":"data","attr":{"columns":["id","name"],"data":[["1","Test message 1"],["2","Test message 2"],["3","Test message 3"]],"source":"myforlist","types":["text","text"]}},{"tag":"forlist","attr":{"source":"myforlist"},"children":[{"tag":"div","children":[{"tag":"text","text":"1. "},{"tag":"em","children":[{"tag":"text","text":"Test message 1"}]}]},{"tag":"div","children":[{"tag":"text","text":"2. "},{"tag":"em","children":[{"tag":"text","text":"Test message 2"}]}]},{"tag":"div","children":[{"tag":"text","text":"3. "},{"tag":"em","children":[{"tag":"text","text":"Test message 3"}]}]}]}]`},
-	{`SetTitle(My pageР)AddToolButton(Title: Open, Page: default)`,
-		`[{"tag":"settitle","attr":{"title":"My pageР"}},{"tag":"addtoolbutton","attr":{"page":"default","title":"Open"}}]`},
+	{`SetTitle(My pageP)AddToolButton(Title: Open, Page: default)`,
+		`[{"tag":"settitle","attr":{"title":"My pageP"}},{"tag":"addtoolbutton","attr":{"page":"default","title":"Open"}}]`},
 	{`DateTime(2017-11-07T17:51:08)+DateTime(2015-08-27T09:01:00,HH:MI DD.MM.YYYY)
 	+CmpTime(2017-11-07T17:51:08,2017-11-07)CmpTime(2017-11-07T17:51:08,2017-11-07T20:22:01)CmpTime(2015-10-01T17:51:08,2015-10-01T17:51:08)=DateTime(NULL)`,
 		`[{"tag":"text","text":"2017-11-07 17:51:08"},{"tag":"text","text":"+09:01 27.08.2015"},{"tag":"text","text":"\n\t+1-10"},{"tag":"text","text":"="}]`},
-	{`SetVar(pref,unicode Р)Input(Name: myid, Value: #pref#)Strong(qqq)`,
-		`[{"tag":"input","attr":{"name":"myid","value":"unicode Р"}},{"tag":"strong","children":[{"tag":"text","text":"qqq"}]}]`},
+	{`SetVar(pref,unicode)Input(Name: myid, Value: #pref#)Strong(qqq)`,
+		`[{"tag":"input","attr":{"name":"myid","value":"unicode"}},{"tag":"strong","children":[{"tag":"text","text":"qqq"}]}]`},
 	{`ImageInput(myimg,100,40)`,
 		`[{"tag":"imageinput","attr":{"name":"myimg","ratio":"40","width":"100"}}]`},
 	{`LinkPage(My page,mypage,,"myvar1=Value 1, myvar2=Value2,myvar3=Val(myval)")`,
@@ -299,6 +299,19 @@ var forTest = tplList{
 	{`Select(myselect,mysrc,name,id,0,myclass)`,
 		`[{"tag":"select","attr":{"class":"myclass","name":"myselect","namecolumn":"name","source":"mysrc","value":"0","valuecolumn":"id"}}]`},
 	{`Data(mysrc,"id,name"){
+		"1",John Silver
+		2,"Mark, Smith"
+		3,"Unknown ""Person"""
+		}`,
+		`[{"tag":"data","attr":{"columns":["id","name"],"data":[["1","John Silver"],["2","Mark, Smith"],["3","Unknown \"Person\""]],"source":"mysrc","types":["text","text"]}}]`},
+	{`If(true) {OK}.Else {false} Div(){test} If(false, FALSE).ElseIf(0) { Skip }.ElseIf(1) {Else OK
+		}.Else {Fourth}If(0).Else{ALL right}`,
+		`[{"tag":"text","text":"OK"},{"tag":"div","children":[{"tag":"text","text":"test"}]},{"tag":"text","text":"Else OK"},{"tag":"text","text":"ALL right"}]`},
+	{`Button(Contract: MyContract, Body:My Contract, Class: myclass, Params:"Name=myid,Id=i10,Value")`,
+		`[{"tag":"button","attr":{"class":"myclass","contract":"MyContract","params":{"Id":{"text":"i10","type":"text"},"Name":{"text":"myid","type":"text"},"Value":{"text":"Value","type":"text"}}},"children":[{"tag":"text","text":"My Contract"}]}]`},
+	{`Simple text +=<b>bold</b>`, `[{"tag":"text","text":"Simple text +=\u003cb\u003ebold\u003c/b\u003e"}]`},
+	{`Div(myclass control, Content of the Div)`, `[{"tag":"div","attr":{"class":"myclass control"},"children":[{"tag":"text","text":"Content of the Div"}]}]`},
+	{`input Div(myclass, Content Div(mypar) the Div)`,
 		`[{"tag":"text","text":"input "},{"tag":"div","attr":{"class":"myclass"},"children":[{"tag":"text","text":"Content "},{"tag":"div","attr":{"class":"mypar"}},{"tag":"text","text":" the Div"}]}]`},
 	{`Div(, Input(myid, form-control, Your name)Input(,,,text))`,
 		`[{"tag":"div","children":[{"tag":"input","attr":{"class":"form-control","name":"myid","placeholder":"Your name"}},{"tag":"input","attr":{"type":"text"}}]}]`},

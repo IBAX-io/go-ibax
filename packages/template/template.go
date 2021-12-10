@@ -11,14 +11,16 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/IBAX-io/go-ibax/packages/script"
+
+	"github.com/IBAX-io/go-ibax/packages/types"
+
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/language"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
-
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -164,6 +166,13 @@ func setAllAttr(par parFunc) {
 					} else {
 						val := strings.TrimSpace(parval[off+1:])
 						if ret := re.FindStringSubmatch(val); len(ret) == 3 {
+							plist := strings.Split(ret[2], `,`)
+							for i, ilist := range plist {
+								plist[i] = strings.TrimSpace(ilist)
+							}
+							imap[strings.TrimSpace(parval[:off])] = map[string]interface{}{
+								`type`: ret[1], `params`: plist}
+						} else {
 							imap[strings.TrimSpace(parval[:off])] = map[string]interface{}{
 								`type`: `text`, `text`: val}
 						}
@@ -711,9 +720,9 @@ func Template2JSON(input string, timeout *bool, vars *map[string]string) []byte 
 	accountID := (*vars)["account_id"]
 	sc := smart.SmartContract{
 		OBS: isobs,
-		VM:  smart.GetVM(),
-		TxSmart: tx.SmartContract{
-			Header: tx.Header{
+		VM:  script.GetVM(),
+		TxSmart: &types.SmartContract{
+			Header: &types.Header{
 				EcosystemID: converter.StrToInt64((*vars)[`ecosystem_id`]),
 				KeyID:       keyID,
 				NetworkID:   conf.Config.NetworkID,
