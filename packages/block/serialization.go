@@ -71,6 +71,13 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	logger := log.WithFields(log.Fields{"block_id": header.BlockID, "block_time": header.Time, "block_wallet_id": header.KeyID,
+		"block_state_id": header.EcosystemID, "block_hash": header.Hash, "block_version": header.Version})
+	transactions := make([]*transaction.Transaction, 0)
+
+	var mrklSlice [][]byte
+
 	// parse transactions
 	for blockBuffer.Len() > 0 {
 		transactionSize, err := converter.DecodeLengthBuf(blockBuffer)
@@ -78,7 +85,7 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 			logger.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("transaction size is 0")
 			return nil, fmt.Errorf("bad block format (%s)", err)
 		}
-		if blockBuffer.Len() < int(transactionSize) {
+		if blockBuffer.Len() < transactionSize {
 			logger.WithFields(log.Fields{"size": blockBuffer.Len(), "match_size": int(transactionSize), "type": consts.SizeDoesNotMatch}).Error("transaction size does not matches encoded length")
 			return nil, fmt.Errorf("bad block format (transaction len is too big: %d)", transactionSize)
 		}
@@ -88,11 +95,11 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 			return nil, fmt.Errorf("transaction size is 0")
 		}
 
-		bufTransaction := bytes.NewBuffer(blockBuffer.Next(int(transactionSize)))
+		bufTransaction := bytes.NewBuffer(blockBuffer.Next(transactionSize))
 		t, err := transaction.UnmarshallTransaction(bufTransaction, fillData)
 		if err != nil {
-			if t != nil && t.TxHash != nil {
-				transaction.MarkTransactionBad(t.DbTransaction, t.TxHash, err.Error())
+			if t != nil && t.TxHash() != nil {
+				transaction.MarkTransactionBad(t.DbTransaction, t.TxHash(), err.Error())
 			}
 			return nil, fmt.Errorf("parse transaction error(%s)", err)
 		}
@@ -101,8 +108,8 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 		transactions = append(transactions, t)
 
 		// build merkle tree
-		if len(t.TxFullData) > 0 {
-			doubleHash := crypto.DoubleHash(t.TxFullData)
+		if len(t.FullData) > 0 {
+			doubleHash := crypto.DoubleHash(t.FullData)
 			doubleHash = converter.BinToHex(doubleHash)
 			mrklSlice = append(mrklSlice, doubleHash)
 		}

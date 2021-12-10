@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -22,22 +21,19 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/IBAX-io/go-ibax/packages/miner"
-
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
 	"github.com/IBAX-io/go-ibax/packages/model"
+	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/obsmanager"
 	"github.com/IBAX-io/go-ibax/packages/scheduler"
 	"github.com/IBAX-io/go-ibax/packages/scheduler/contract"
 	"github.com/IBAX-io/go-ibax/packages/script"
-	qb "github.com/IBAX-io/go-ibax/packages/smart/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
-	"github.com/IBAX-io/go-ibax/packages/utils/tx"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/pkg/errors"
@@ -49,7 +45,6 @@ import (
 const (
 	nodeBanNotificationHeader = "Your node was banned"
 	historyLimit              = 250
-	firstEcosystemID          = 1
 	contractTxType            = 128
 )
 
@@ -61,6 +56,20 @@ type ThrowError struct {
 	Type    string `json:"type"`
 	Code    string `json:"id"`
 	ErrText string `json:"error"`
+}
+
+func (throw *ThrowError) Error() string {
+	return throw.ErrText
+}
+
+func Throw(code, errText string) error {
+	if len(errText) > script.MaxErrLen {
+		errText = errText[:script.MaxErrLen] + `...`
+	}
+	if len(code) > 32 {
+		code = code[:32]
+	}
+	return &ThrowError{Code: code, ErrText: errText, Type: `exception`}
 }
 
 var BOM = []byte{0xEF, 0xBB, 0xBF}
@@ -96,6 +105,20 @@ type FlushInfo struct {
 	Name string // the name
 }
 
+func (finfo *FlushInfo) FlushVM() {
+	if finfo.Prev == nil {
+		if finfo.ID != uint32(len(script.GetVM().Children)-1) {
+			//logger.WithFields(log.Fields{"type": consts.ContractError, "value": finfo.ID, "len": len(GetVM().Children) - 1}).Error("flush rollback")
+		} else {
+			script.GetVM().Children = script.GetVM().Children[:len(script.GetVM().Children)-1]
+			delete(script.GetVM().Objects, finfo.Name)
+		}
+	} else {
+		script.GetVM().Children[finfo.ID] = finfo.Prev
+		script.GetVM().Objects[finfo.Name] = finfo.Info
+	}
+}
+
 // NotifyInfo is used for sending delayed notifications
 type NotifyInfo struct {
 	Roles       bool // if true then UpdateRolesNotifications, otherwise UpdateNotifications
@@ -103,84 +126,35 @@ type NotifyInfo struct {
 	List        []string
 }
 
-// SmartContract is storing smart contract data
-type SmartContract struct {
-	OBS           bool
-	Rollback      bool
-	FullAccess    bool
-	SysUpdate     bool
-	VM            *script.VM
-	TxSmart       tx.SmartContract
-	TxData        map[string]interface{}
-	TxContract    *Contract
-	TxFuel        int64           // The fuel of executing contract
-	TxCost        int64           // Maximum cost of executing contract
-	TxUsedCost    decimal.Decimal // Used cost of CPU resources
-	TXBlockFuel   decimal.Decimal
-	BlockData     *utils.BlockData
-	PreBlockData  *utils.BlockData
-	Loop          map[string]bool
-	TxHash        []byte
-	TxSignature   []byte
-	TxSize        int64
-	PublicKeys    [][]byte
-	DbTransaction *model.DbTransaction
-	Rand          *rand.Rand
-	FlushRollback []FlushInfo
-	Notifications types.Notifications
-	GenBlock      bool
-	TimeLimit     int64
-	Key           *model.Key
-	RollBackTx    []*model.RollbackTx
-	multiPays     multiPays
-	taxes         bool
-}
-
 var (
-	defaultSortOrder = map[string]string{
-		`keys`:    "ecosystem,id",
-		`members`: "ecosystem,id",
+	funcCallsDBP = map[string]struct{}{
+		"DBInsert":         {},
+		"DBUpdate":         {},
+		"DBUpdateSysParam": {},
+		"DBUpdateExt":      {},
+		"DBSelect":         {},
 	}
-)
-
-// AppendStack adds an element to the stack of contract call or removes the top element when name is empty
-func (sc *SmartContract) AppendStack(fn string) error {
-	if sc.isAllowStack(fn) {
-		cont := sc.TxContract
-		for _, item := range cont.StackCont {
-			if item == fn {
-				return fmt.Errorf(eContractLoop, fn)
-			}
-		}
-		cont.StackCont = append(cont.StackCont, fn)
-		(*sc.TxContract.Extend)["stack"] = cont.StackCont
-	}
-	return nil
-}
-
-func (sc *SmartContract) PopStack(fn string) {
-	if sc.isAllowStack(fn) {
-		cont := sc.TxContract
-		if len(cont.StackCont) > 0 {
-			cont.StackCont = cont.StackCont[:len(cont.StackCont)-1]
-			(*sc.TxContract.Extend)["stack"] = cont.StackCont
-		}
-	}
-}
-
-func (sc *SmartContract) isAllowStack(fn string) bool {
-	// Stack contains only contracts
-	c := VMGetContract(sc.VM, fn, uint32(sc.TxSmart.EcosystemID))
-	return c != nil
-}
-
-var (
-	funcCallsDB = map[string]struct{}{
-		"DBInsert":    {},
-		"DBSelect":    {},
-		"DBUpdate":    {},
-		"DBUpdateExt": {},
-		"SetPubKey":   {},
+	writeFuncs = map[string]struct{}{
+		"CreateColumn":     {},
+		"CreateTable":      {},
+		"DBInsert":         {},
+		"DBUpdate":         {},
+		"DBUpdateSysParam": {},
+		"DBUpdateExt":      {},
+		"CreateEcosystem":  {},
+		"CreateContract":   {},
+		"UpdateContract":   {},
+		"CreateLanguage":   {},
+		"EditLanguage":     {},
+		"BindWallet":       {},
+		"UnbindWallet":     {},
+		"EditEcosysName":   {},
+		"UpdateNodesBan":   {},
+		"UpdateCron":       {},
+		"CreateOBS":        {},
+		"DeleteOBS":        {},
+		"DelColumn":        {},
+		"DelTable":         {},
 	}
 	// map for table name to parameter with conditions
 	tableParamConditions = map[string]string{
@@ -207,7 +181,7 @@ var (
 )
 
 // EmbedFuncs is extending vm with embedded functions
-func EmbedFuncs(vm *script.VM, vt script.VMType) {
+func EmbedFuncs(vt script.VMType) map[string]interface{} {
 	f := map[string]interface{}{
 		"AddressToId":                  AddressToID,
 		"ColumnCondition":              ColumnCondition,
@@ -236,7 +210,6 @@ func EmbedFuncs(vm *script.VM, vt script.VMType) {
 		"GetContractById":              GetContractById,
 		"HMac":                         HMac,
 		"Join":                         Join,
-		"JSONToMap":                    JSONDecode, // Deprecated
 		"JSONDecode":                   JSONDecode,
 		"JSONEncode":                   JSONEncode,
 		"JSONEncodeIndent":             JSONEncodeIndent,
@@ -269,53 +242,55 @@ func EmbedFuncs(vm *script.VM, vt script.VMType) {
 		"EditLanguage":                 EditLanguage,
 		"BndWallet":                    BndWallet,
 		"UnbndWallet":                  UnbndWallet,
-		"check_signature":              CheckSignature,
-		"RowConditions":                RowConditions,
-		"DecodeBase64":                 DecodeBase64,
-		"EncodeBase64":                 EncodeBase64,
-		"Hash":                         Hash,
-		"EditEcosysName":               EditEcosysName,
-		"GetColumnType":                GetColumnType,
-		"GetType":                      GetType,
-		"AllowChangeCondition":         AllowChangeCondition,
-		"StringToBytes":                StringToBytes,
-		"BytesToString":                BytesToString,
-		"GetMapKeys":                   GetMapKeys,
-		"SortedKeys":                   SortedKeys,
-		"Append":                       Append,
-		"GetHistory":                   GetHistory,
-		"GetHistoryRow":                GetHistoryRow,
-		"GetDataFromXLSX":              GetDataFromXLSX,
-		"GetRowsCountXLSX":             GetRowsCountXLSX,
-		"BlockTime":                    BlockTime,
-		"IsObject":                     IsObject,
-		"DateTime":                     DateTime,
-		"UnixDateTime":                 UnixDateTime,
-		"DateTimeLocation":             DateTimeLocation,
-		"UnixDateTimeLocation":         UnixDateTimeLocation,
-		"UpdateNotifications":          UpdateNotifications,
-		"UpdateRolesNotifications":     UpdateRolesNotifications,
-		"TransactionInfo":              TransactionInfo,
-		"DelTable":                     DelTable,
-		"DelColumn":                    DelColumn,
-		"Throw":                        Throw,
-		"HexToPub":                     crypto.HexToPub,
-		"PubToHex":                     PubToHex,
-		"UpdateNodesBan":               UpdateNodesBan,
+		//"CheckSignature":               CheckSignature,
+		"RowConditions":            RowConditions,
+		"DecodeBase64":             DecodeBase64,
+		"EncodeBase64":             EncodeBase64,
+		"Hash":                     Hash,
+		"EditEcosysName":           EditEcosysName,
+		"GetColumnType":            GetColumnType,
+		"GetType":                  GetType,
+		"AllowChangeCondition":     AllowChangeCondition,
+		"StringToBytes":            StringToBytes,
+		"BytesToString":            BytesToString,
+		"GetMapKeys":               GetMapKeys,
+		"SortedKeys":               SortedKeys,
+		"Append":                   Append,
+		"Println":                  fmt.Println,
+		"Sprintf":                  fmt.Sprintf,
+		"GetHistory":               GetHistory,
+		"GetHistoryRow":            GetHistoryRow,
+		"GetDataFromXLSX":          GetDataFromXLSX,
+		"GetRowsCountXLSX":         GetRowsCountXLSX,
+		"BlockTime":                BlockTime,
+		"IsObject":                 IsObject,
+		"DateTime":                 DateTime,
+		"UnixDateTime":             UnixDateTime,
+		"DateTimeLocation":         DateTimeLocation,
+		"UnixDateTimeLocation":     UnixDateTimeLocation,
+		"UpdateNotifications":      UpdateNotifications,
+		"UpdateRolesNotifications": UpdateRolesNotifications,
+		"TransactionInfo":          TransactionInfo,
+		"DelTable":                 DelTable,
+		"DelColumn":                DelColumn,
+		"Throw":                    Throw,
+		"HexToPub":                 crypto.HexToPub,
+		"PubToHex":                 PubToHex,
+		"UpdateNodesBan":           UpdateNodesBan,
 		//"DBSelectMetrics":              DBSelectMetrics,
 		//"DBCollectMetrics":             DBCollectMetrics,
-		"Log":                     Log,
-		"Log10":                   Log10,
-		"Pow":                     Pow,
-		"Sqrt":                    Sqrt,
-		"Round":                   Round,
-		"Floor":                   Floor,
-		"CheckCondition":          CheckCondition,
-		"SendExternalTransaction": SendExternalTransaction,
-		"IsHonorNodeKey":          IsHonorNodeKey,
+		"Log":            Log,
+		"Log10":          Log10,
+		"Pow":            Pow,
+		"Sqrt":           Sqrt,
+		"Round":          Round,
+		"Floor":          Floor,
+		"CheckCondition": CheckCondition,
+		//"SendExternalTransaction": SendExternalTransaction,
+		"IsHonorNodeKey": IsHonorNodeKey,
 
-		"MoneyDiv":         MoneyDiv,
-		"UpdateReward":     UpdateReward,
+		"MoneyDiv": MoneyDiv,
+		//"UpdateReward":     UpdateReward,
 		"CheckSign":        CheckSign,
 		"CheckNumberChars": CheckNumberChars,
 		"DateFormat":       Date,
@@ -324,7 +299,6 @@ func EmbedFuncs(vm *script.VM, vt script.VMType) {
 		"MathMod":          MathMod,
 		"CreateView":       CreateView,
 	}
-
 	switch vt {
 	case script.VMTypeOBS:
 		f["HTTPRequest"] = HTTPRequest
@@ -334,8 +308,6 @@ func EmbedFuncs(vm *script.VM, vt script.VMType) {
 		f["HTTPPostJSON"] = HTTPPostJSON
 		f["ValidateCron"] = ValidateCron
 		f["UpdateCron"] = UpdateCron
-		vmExtendCost(vm, getCost)
-		vmFuncCallsDB(vm, funcCallsDB)
 	case script.VMTypeOBSMaster:
 		f["HTTPRequest"] = HTTPRequest
 		f["GetMapKeys"] = GetMapKeys
@@ -349,41 +321,10 @@ func EmbedFuncs(vm *script.VM, vt script.VMType) {
 		f["StartOBS"] = StartOBS
 		f["StopOBSProcess"] = StopOBSProcess
 		f["GetOBSList"] = GetOBSList
-		vmExtendCost(vm, getCost)
-		vmFuncCallsDB(vm, funcCallsDB)
 	case script.VMTypeSmart:
 		f["GetBlock"] = GetBlock
-		ExtendCost(getCost)
-		FuncCallsDB(funcCallsDBP)
 	}
-
-	vmExtend(vm, &script.ExtendData{
-		Objects: f, AutoPars: map[string]string{
-			`*smart.SmartContract`: `sc`,
-		},
-		WriteFuncs: map[string]struct{}{
-			"CreateColumn":     {},
-			"CreateTable":      {},
-			"DBInsert":         {},
-			"DBUpdate":         {},
-			"DBUpdateSysParam": {},
-			"DBUpdateExt":      {},
-			"CreateEcosystem":  {},
-			"CreateContract":   {},
-			"UpdateContract":   {},
-			"CreateLanguage":   {},
-			"EditLanguage":     {},
-			"BindWallet":       {},
-			"UnbindWallet":     {},
-			"EditEcosysName":   {},
-			"UpdateNodesBan":   {},
-			"UpdateCron":       {},
-			"CreateOBS":        {},
-			"DeleteOBS":        {},
-			"DelColumn":        {},
-			"DelTable":         {},
-		},
-	})
+	return f
 }
 
 func GetTableName(sc *SmartContract, tblname string) string {
@@ -406,7 +347,7 @@ func CompileContract(sc *SmartContract, code string, state, id, token int64) (in
 	if err := validateAccess(sc, "CompileContract"); err != nil {
 		return nil, err
 	}
-	return VMCompileBlock(sc.VM, code, &script.OwnerInfo{StateID: uint32(state), WalletID: id, TokenID: token})
+	return script.VMCompileBlock(sc.VM, code, &script.OwnerInfo{StateID: uint32(state), WalletID: id, TokenID: token})
 }
 
 // ContractAccess checks whether the name of the executable contract matches one of the names listed in the parameters.
@@ -485,7 +426,7 @@ func ContractConditions(sc *SmartContract, names ...interface{}) (bool, error) {
 			if err := sc.AppendStack(name); err != nil {
 				return false, err
 			}
-			_, err := VMRun(sc.VM, block, []interface{}{}, vars)
+			_, err := script.VMRun(sc.VM, block, []interface{}{}, vars)
 			if err != nil {
 				return false, err
 			}
@@ -581,7 +522,7 @@ func CreateContract(sc *SmartContract, name, value, conditions string, tokenEcos
 	if isExists != 0 {
 		log.WithFields(log.Fields{"type": consts.ContractError, "name": name,
 			"tableId": isExists}).Error("create existing contract")
-		return 0, fmt.Errorf(eContractExist, name)
+		return 0, fmt.Errorf(eContractExist, script.StateName(uint32(sc.TxSmart.EcosystemID), name))
 	}
 	root, err := CompileContract(sc, value, sc.TxSmart.EcosystemID, 0, tokenEcosystem)
 	if err != nil {
@@ -769,6 +710,16 @@ func parseViewColumnSql(sc *SmartContract, columns string) (colsSQL string, colo
 	colout, err = marshalJSON(outarr, `view columns to json`)
 	return
 }
+
+type ViewWheSch struct {
+	TableOne string `json:"table1,omitempty"`
+	TableTwo string `json:"table2,omitempty"`
+	ColOne   string `json:"col1,omitempty"`
+	ColTwo   string `json:"col2,omitempty"`
+	Compare  string `json:"compare,omitempty"`
+}
+
+func parseViewWhereSql(sc *SmartContract, columns string) (tabsSQL, whsSQL string, whsout []byte, err error) {
 	var (
 		cols, outarr []ViewWheSch
 		tabList      = make(map[string]bool)
@@ -1024,7 +975,11 @@ func GetColumns(inColumns interface{}) ([]string, error) {
 
 func GetOrder(tblname string, inOrder interface{}) (string, error) {
 	var (
-		orders []string
+		orders           []string
+		defaultSortOrder = map[string]string{
+			`keys`:    "ecosystem,id",
+			`members`: "ecosystem,id",
+		}
 	)
 	cols := types.NewMap()
 
@@ -1175,7 +1130,7 @@ func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64
 		result = append(result, reflect.ValueOf(row).Interface())
 	}
 	if perm != nil && len(perm[`filter`]) > 0 {
-		fltResult, err := VMEvalIf(
+		fltResult, err := script.VMEvalIf(
 			sc.VM, perm[`filter`], uint32(sc.TxSmart.EcosystemID),
 			sc.getExtend(),
 		)
@@ -1290,14 +1245,14 @@ func FlushContract(sc *SmartContract, iroot interface{}, id int64) error {
 			case script.ObjFunc:
 				id = cur.Value.(*script.Block).Info.(*script.FuncInfo).ID
 			}
-			sc.FlushRollback = append(sc.FlushRollback, FlushInfo{
+			sc.FlushRollback = append(sc.FlushRollback, &FlushInfo{
 				ID:   id,
 				Prev: sc.VM.Children[id],
 				Info: cur,
 				Name: key,
 			})
 		} else {
-			sc.FlushRollback = append(sc.FlushRollback, FlushInfo{
+			sc.FlushRollback = append(sc.FlushRollback, &FlushInfo{
 				ID:   uint32(len(sc.VM.Children)),
 				Prev: nil,
 				Info: nil,
@@ -1306,13 +1261,13 @@ func FlushContract(sc *SmartContract, iroot interface{}, id int64) error {
 		}
 
 	}
-	VMFlushBlock(sc.VM, root)
+	script.VMFlushBlock(sc.VM, root)
 	return nil
 }
 
 // IsObject returns true if there is the specified contract
 func IsObject(sc *SmartContract, name string, state int64) bool {
-	return VMObjectExists(sc.VM, name, uint32(state))
+	return script.VMObjectExists(sc.VM, name, uint32(state))
 }
 
 // Len returns the length of the slice
@@ -1397,11 +1352,11 @@ func columnConditions(sc *SmartContract, columns string) (err error) {
 		if len(perm.Update) == 0 {
 			return logErrorShort(errConditionEmpty, consts.EmptyObject)
 		}
-		if err = VMCompileEval(sc.VM, perm.Update, uint32(sc.TxSmart.EcosystemID)); err != nil {
+		if err = script.VMCompileEval(sc.VM, perm.Update, uint32(sc.TxSmart.EcosystemID)); err != nil {
 			return logError(err, consts.EvalError, "compile update conditions")
 		}
 		if len(perm.Read) > 0 {
-			if err = VMCompileEval(sc.VM, perm.Read, uint32(sc.TxSmart.EcosystemID)); err != nil {
+			if err = script.VMCompileEval(sc.VM, perm.Read, uint32(sc.TxSmart.EcosystemID)); err != nil {
 				return logError(err, consts.EvalError, "compile read conditions")
 			}
 		}
@@ -1447,7 +1402,7 @@ func TableConditions(sc *SmartContract, name, columns, permissions string) (err 
 		if len(cond) == 0 && name != `Read` && name != `Filter` {
 			return logErrorfShort(eEmptyCond, name, consts.EmptyObject)
 		}
-		if err = VMCompileEval(sc.VM, cond, uint32(sc.TxSmart.EcosystemID)); err != nil {
+		if err = script.VMCompileEval(sc.VM, cond, uint32(sc.TxSmart.EcosystemID)); err != nil {
 			return logError(err, consts.EvalError, "compile evaluating permissions")
 		}
 	}
@@ -1475,7 +1430,7 @@ func ValidateCondition(sc *SmartContract, condition string, state int64) error {
 	if len(condition) == 0 {
 		return logErrorShort(errConditionEmpty, consts.EmptyObject)
 	}
-	return VMCompileEval(sc.VM, condition, uint32(state))
+	return script.VMCompileEval(sc.VM, condition, uint32(state))
 }
 
 // ColumnCondition is contract func
@@ -1510,11 +1465,11 @@ func ColumnCondition(sc *SmartContract, tableName, name, coltype, permissions st
 		return logErrorShort(errPermEmpty, consts.EmptyObject)
 	}
 	perm, err := getPermColumns(permissions)
-	if err = VMCompileEval(sc.VM, perm.Update, uint32(sc.TxSmart.EcosystemID)); err != nil {
+	if err = script.VMCompileEval(sc.VM, perm.Update, uint32(sc.TxSmart.EcosystemID)); err != nil {
 		return err
 	}
 	if len(perm.Read) > 0 {
-		if err = VMCompileEval(sc.VM, perm.Read, uint32(sc.TxSmart.EcosystemID)); err != nil {
+		if err = script.VMCompileEval(sc.VM, perm.Read, uint32(sc.TxSmart.EcosystemID)); err != nil {
 			return err
 		}
 	}
@@ -1586,6 +1541,7 @@ func checkColumnName(name string) error {
 	}
 	return nil
 }
+
 func checkTableNameRule(name string) error {
 	if len(name) == 0 {
 		return errTableEmptyName
@@ -1853,24 +1809,6 @@ func UpdateCron(sc *SmartContract, id int64) error {
 	return err
 }
 
-func UpdateReward(sc *SmartContract) (capacity, nonce, senderID int64, err error) {
-	blockKeyID := sc.BlockData.KeyID
-	if err = validateAccess(sc, `UpdateReward`); err != nil {
-		return capacity, nonce, blockKeyID, err
-	}
-	blockid := sc.BlockData.BlockID
-	//nonce, senderID, err = miner.Miner(sc.PreBlockData.Hash, sc.BlockData.Time, blockKeyID)
-	//if err != nil {
-	//	return nonce, blockKeyID, err
-	//}
-	//capacity, nonce, senderID, err = miner.MinerTime(sc.PreBlockData.Hash, sc.BlockData.Time, blockid)
-	capacity, nonce, senderID, err = miner.NewMint(sc.DbTransaction, sc.PreBlockData.Hash, sc.BlockData.Time, blockid, sc.GetLogger()).MinerTime()
-	if err != nil {
-		return capacity, nonce, blockKeyID, err
-	}
-	return
-}
-
 func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
 	if conf.Config.IsSupportingOBS() {
 		return ErrNotImplementedOnOBS
@@ -2011,7 +1949,7 @@ func Hash(data interface{}) (string, error) {
 
 	switch v := data.(type) {
 	case []uint8:
-		b = []byte(v)
+		b = v
 	case string:
 		b = []byte(v)
 	default:
@@ -2113,7 +2051,7 @@ func GetHistoryRaw(transaction *model.DbTransaction, ecosystem int64, tableName 
 		}
 		curVal.Set(columns[i], value)
 	}
-	rollbackList := []interface{}{}
+	var rollbackList []interface{}
 	rollbackTx := &model.RollbackTx{}
 	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(converter.Int64ToStr(id),
 		table, historyLimit)
@@ -2134,7 +2072,7 @@ func GetHistoryRaw(transaction *model.DbTransaction, ecosystem int64, tableName 
 				return nil, err
 			}
 			if idRollback == tx.ID {
-				return rollbackList[len(rollbackList)-1 : len(rollbackList)], nil
+				return rollbackList[len(rollbackList)-1:], nil
 			}
 		}
 		if tx.Data == "" {
@@ -2266,8 +2204,7 @@ func TransactionData(blockId int64, hash []byte) (data *TxInfo, err error) {
 			err = errParseTransaction
 			return
 		}
-
-		if int64(b) < contractTxType {
+		if int64(b) != contractTxType && b != types.SmartContractTxType {
 			continue
 		}
 
@@ -2278,7 +2215,7 @@ func TransactionData(blockId int64, hash []byte) (data *TxInfo, err error) {
 
 		txHash = crypto.DoubleHash(txData)
 		if bytes.Equal(txHash, hash) {
-			smartTx := tx.SmartContract{}
+			smartTx := types.SmartContract{}
 			if err = msgpack.Unmarshal(txData, &smartTx); err != nil {
 				return
 			}
@@ -2499,20 +2436,6 @@ func FormatMoney(sc *SmartContract, exp string, digit int64) (string, error) {
 		exp = retDec.Shift(int32(-cents)).String()
 	}
 	return exp, nil
-}
-
-func (throw *ThrowError) Error() string {
-	return throw.ErrText
-}
-
-func Throw(code, errText string) error {
-	if len(errText) > script.MaxErrLen {
-		errText = errText[:script.MaxErrLen] + `...`
-	}
-	if len(code) > 32 {
-		code = code[:32]
-	}
-	return &ThrowError{Code: code, ErrText: errText, Type: `exception`}
 }
 
 func PubToHex(in interface{}) (ret string) {

@@ -2,6 +2,23 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
+package smart
+
+import (
+	"bytes"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
+
+	"github.com/IBAX-io/go-ibax/packages/model"
+
+	xl "github.com/360EntSecGroup-Skylar/excelize"
+	log "github.com/sirupsen/logrus"
+)
+
+// GetDataFromXLSX returns json by parameters range
+func GetDataFromXLSX(sc *SmartContract, binaryID, startLine, linesCount, sheetNum int64) (data []interface{}, err error) {
+	book, err := excelBookFromStoredBinary(sc, binaryID)
+	if err != nil || book == nil {
 		return nil, err
 	}
 

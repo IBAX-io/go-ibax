@@ -4,49 +4,68 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/shopspring/decimal"
-
 	"github.com/IBAX-io/go-ibax/packages/model"
+)
+
+func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*model.QueueTx) error {
+	var (
+		checkTime = time.Now().Unix()
+		hashes    model.ArrHashes
+		trxs      []*model.Transaction
+		err       error
+	)
+	type badTxStruct struct {
+		hash  []byte
+		msg   string
+		keyID int64
+	}
+
+	processBadTx := func(dbTx *model.DbTransaction) chan badTxStruct {
+		ch := make(chan badTxStruct)
+
+		go func() {
+			for badTxItem := range ch {
+				BadTxForBan(badTxItem.keyID)
+				_ = MarkTransactionBad(dbTx, badTxItem.hash, badTxItem.msg)
+			}
+		}()
+
+		return ch
+	}
+
+	txBadChan := processBadTx(dbTransaction)
+
 	defer func() {
-		if err != nil {
-			err = MarkTransactionBad(dbTransaction, hs, err.Error())
-			if err != nil {
-				return
-			}
-		}
+		close(txBadChan)
 	}()
+
 	for i := 0; i < len(qs); i++ {
-		binaryTx := qs[i].Data
-		hs = qs[i].Hash
 		tx := &Transaction{}
-		tx, err = UnmarshallTransaction(bytes.NewBuffer(binaryTx), true)
+		tx, err = UnmarshallTransaction(bytes.NewBuffer(qs[i].Data), true)
 		if err != nil {
-			return err
-		}
-		err = tx.CheckTime(checkTime)
-		if err != nil {
-			return err
-		}
-		var expedite decimal.Decimal
-		if len(tx.TxSmart.Expedite) > 0 {
-			expedite, err = decimal.NewFromString(tx.TxSmart.Expedite)
-			if err != nil {
-				return err
+			if tx != nil {
+				txBadChan <- badTxStruct{hash: tx.TxHash(), msg: err.Error(), keyID: tx.TxKeyID()}
 			}
+			continue
+		}
+		err = tx.Check(checkTime)
+		if err != nil {
+			txBadChan <- badTxStruct{hash: tx.TxHash(), msg: err.Error(), keyID: tx.TxKeyID()}
+			continue
 		}
 		newTx := &model.Transaction{
-			Hash:     hs,
-			Data:     binaryTx,
-			Type:     int8(tx.TxType),
-			KeyID:    tx.TxKeyID,
-			Expedite: expedite,
-			Time:     tx.TxTime,
+			Hash:     tx.TxHash(),
+			Data:     tx.FullData,
+			Type:     int8(tx.TxType()),
+			KeyID:    tx.TxKeyID(),
+			Expedite: tx.TxExpedite(),
+			Time:     tx.TxTime(),
 			Verified: 1,
 			Used:     0,
 			Sent:     0,
 		}
 		trxs = append(trxs, newTx)
-		hashes = append(hashes, hs)
+		hashes = append(hashes, qs[i].Hash)
 	}
 
 	if len(trxs) > 0 {

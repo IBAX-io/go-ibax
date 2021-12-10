@@ -4,11 +4,21 @@
  *--------------------------------------------------------------------------------------------*/
 package transaction
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type transactionCache struct {
 	mutex sync.RWMutex
 	cache map[string]*Transaction
+}
+
+var txCache = &transactionCache{cache: make(map[string]*Transaction)}
+
+// CleanCache cleans cache of transaction parsers
+func CleanCache() {
+	txCache.Clean()
 }
 
 func (tc *transactionCache) Get(hash string) (t *Transaction, ok bool) {
@@ -23,8 +33,12 @@ func (tc *transactionCache) Set(t *Transaction) {
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
-	tc.cache[string(t.TxHash)] = t
+	tc.cache[fmt.Sprintf("%x", t.TxHash())] = t
 }
 
 func (tc *transactionCache) Clean() {
 	tc.mutex.Lock()
+	defer tc.mutex.Unlock()
+
+	tc.cache = make(map[string]*Transaction)
+}

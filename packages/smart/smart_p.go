@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"strings"
 
-	qb "github.com/IBAX-io/go-ibax/packages/smart/queryBuilder"
+	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -30,18 +30,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
 )
-
-var funcCallsDBP = map[string]struct{}{
-	"DBInsert":         {},
-	"DBUpdate":         {},
-	"DBUpdateSysParam": {},
-	"DBUpdateExt":      {},
-	"DBSelect":         {},
-}
 
 const (
 	nBindWallet          = "BindWallet"
@@ -86,6 +78,16 @@ func getCost(name string) int64 {
 	return -1
 }
 
+// UpdateSysParam updates the system parameter
+func UpdateSysParam(sc *SmartContract, name, value, conditions string) (int64, error) {
+	var (
+		fields []string
+		values []interface{}
+	)
+	par := &model.SystemParameter{}
+	found, err := par.Get(name)
+	if err != nil {
+		return 0, logErrorDB(err, "system parameter get")
 	}
 	if !found {
 		return 0, logErrorf(eParamNotFound, name, consts.NotFound, "system parameter get")
@@ -167,7 +169,7 @@ func getCost(name string) int64 {
 		values = append(values, value)
 	}
 	if len(conditions) > 0 {
-		if err := CompileEval(conditions, 0); err != nil {
+		if err := script.CompileEval(conditions, 0); err != nil {
 			return 0, logErrorValue(err, consts.EvalError, "compiling eval", conditions)
 		}
 		fields = append(fields, "conditions")
@@ -555,9 +557,8 @@ func UnbndWallet(sc *SmartContract, tblid int64, state int64) error {
 }
 
 // CheckSignature checks the additional signatures for the contract
-func CheckSignature(i *map[string]interface{}, name string) error {
+func CheckSignature(sc *SmartContract, i *map[string]interface{}, name string) error {
 	state, name := converter.ParseName(name)
-	sc := (*i)[`sc`].(*SmartContract)
 	sn := model.Signature{}
 	sn.SetTablePrefix(converter.Int64ToStr(int64(state)))
 	_, err := sn.Get(name)
@@ -688,6 +689,7 @@ func RegexpMatch(str, reg string) bool {
 	re := regexp.MustCompile(reg)
 	return re.MatchString(str)
 }
+
 func DBCount(sc *SmartContract, tableName string, inWhere *types.Map) (count int64, err error) {
 	tblname := GetTableName(sc, tableName)
 	where, err := qb.GetWhere(inWhere)

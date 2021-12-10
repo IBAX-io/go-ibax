@@ -1,0 +1,169 @@
+package smart
+
+import (
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/script"
+)
+
+// Contract contains the information about the contract.
+type Contract struct {
+	Name          string
+	Called        uint32
+	FreeRequest   bool
+	TxGovAccount  int64   // state wallet
+	Rate          float64 // money rate
+	TableAccounts string
+	StackCont     []interface{} // Stack of called contracts
+	Extend        *map[string]interface{}
+	Block         *script.Block
+}
+
+func (c *Contract) Info() *script.ContractInfo {
+	return c.Block.Info.(*script.ContractInfo)
+}
+
+// LoadContracts reads and compiles contracts from smart_contracts tables
+func LoadContracts() error {
+	contract := &model.Contract{}
+	count, err := contract.Count()
+	if err != nil {
+		return logErrorDB(err, "getting count of contracts")
+	}
+
+	defer script.ExternOff()
+	var offset int
+	listCount := consts.ContractList
+	for ; int64(offset) < count; offset += listCount {
+		list, err := contract.GetList(offset, listCount)
+		if err != nil {
+			return logErrorDB(err, "getting list of contracts")
+		}
+		if err = loadContractList(list); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// LoadContract reads and compiles contract of new state
+func LoadContract(transaction *model.DbTransaction, ecosystem int64) (err error) {
+
+	contract := &model.Contract{}
+
+	defer script.ExternOff()
+	list, err := contract.GetFromEcosystem(transaction, ecosystem)
+	if err != nil {
+		return logErrorDB(err, "selecting all contracts from ecosystem")
+	}
+	if err = loadContractList(list); err != nil {
+		return err
+	}
+	return
+}
+
+func VMGetContract(vm *script.VM, name string, state uint32) *Contract {
+	if len(name) == 0 {
+		return nil
+	}
+	name = script.StateName(state, name)
+	obj, ok := vm.Objects[name]
+
+	if ok && obj.Type == script.ObjContract {
+		return &Contract{Name: name, Block: obj.Value.(*script.Block)}
+	}
+	return nil
+}
+
+func VMGetContractByID(vm *script.VM, id int32) *Contract {
+	var tableID int64
+	if id > consts.ShiftContractID {
+		tableID = int64(id - consts.ShiftContractID)
+		id = int32(tableID + vm.ShiftContract)
+	}
+	idcont := id
+	if len(vm.Children) <= int(idcont) {
+		return nil
+	}
+	if vm.Children[idcont] == nil || vm.Children[idcont].Type != script.ObjContract {
+		return nil
+	}
+	if tableID > 0 && vm.Children[idcont].Info.(*script.ContractInfo).Owner.TableID != tableID {
+		return nil
+	}
+	return &Contract{Name: vm.Children[idcont].Info.(*script.ContractInfo).Name,
+		Block: vm.Children[idcont]}
+}
+
+// GetContract returns true if the contract exists in smartVM
+func GetContract(name string, state uint32) *Contract {
+	return VMGetContract(script.GetVM(), name, state)
+}
+
+// GetUsedContracts returns the list of contracts which are called from the specified contract
+func GetUsedContracts(name string, state uint32, full bool) []string {
+	return vmGetUsedContracts(script.GetVM(), name, state, full)
+}
+
+// GetContractByID returns true if the contract exists
+func GetContractByID(id int32) *Contract {
+	return VMGetContractByID(script.GetVM(), id)
+}
+
+// GetFunc returns the block of the specified function in the contract
+func (contract *Contract) GetFunc(name string) *script.Block {
+	if block, ok := (*contract).Block.Objects[name]; ok && block.Type == script.ObjFunc {
+		return block.Value.(*script.Block)
+	}
+	return nil
+}
+
+func loadContractList(list []model.Contract) error {
+	if script.GetVM().ShiftContract == 0 {
+		script.LoadSysFuncs(script.GetVM(), 1)
+		script.GetVM().ShiftContract = int64(len(script.GetVM().Children) - 1)
+	}
+
+	for _, item := range list {
+		clist, err := script.ContractsList(item.Value)
+		if err != nil {
+			return err
+		}
+		owner := script.OwnerInfo{
+			StateID:  uint32(item.EcosystemID),
+			Active:   false,
+			TableID:  item.ID,
+			WalletID: item.WalletID,
+			TokenID:  item.TokenID,
+		}
+		if err = script.Compile(item.Value, &owner); err != nil {
+			logErrorValue(err, consts.EvalError, "Load Contract", strings.Join(clist, `,`))
+		}
+	}
+	return nil
+}
+
+func vmGetUsedContracts(vm *script.VM, name string, state uint32, full bool) []string {
+	contract := VMGetContract(vm, name, state)
+	if contract == nil || contract.Block.Info.(*script.ContractInfo).Used == nil {
+		return nil
+	}
+	ret := make([]string, 0)
+	used := make(map[string]bool)
+	for key := range contract.Block.Info.(*script.ContractInfo).Used {
+		ret = append(ret, key)
+		used[key] = true
+		if full {
+			sub := vmGetUsedContracts(vm, key, state, full)
+			for _, item := range sub {
+				if _, ok := used[item]; !ok {
+					ret = append(ret, item)
+					used[item] = true
+				}
+			}
+		}
+	}
+	return ret
+}

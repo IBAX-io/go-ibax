@@ -11,6 +11,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/transaction"
+
+	"github.com/IBAX-io/go-ibax/packages/types"
+
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -22,48 +26,41 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// UpdBlockInfo updates info_block table
-func UpdBlockInfo(dbTransaction *model.DbTransaction, block *Block) error {
-	blockID := block.Header.BlockID
-	// for the local tests
-	forSha := block.Header.ForSha(block.PrevHeader, block.MrklRoot)
-
-	hash := crypto.DoubleHash([]byte(forSha))
-
-	block.Header.Hash = hash
-	if block.IsGenesis() {
-		ib := &model.InfoBlock{
-			Hash:           hash,
-			BlockID:        blockID,
-			Time:           block.Header.Time,
-			EcosystemID:    block.Header.EcosystemID,
-			KeyID:          block.Header.KeyID,
-			NodePosition:   converter.Int64ToStr(block.Header.NodePosition),
-			CurrentVersion: fmt.Sprintf("%d", block.Header.Version),
-		}
+// upsertInfoBlock updates info_block table
+func (b *Block) upsertInfoBlock(dbTransaction *model.DbTransaction, block *model.Block) error {
+	ib := &model.InfoBlock{
+		Hash:          block.Hash,
+		BlockID:       block.ID,
+		Time:          block.Time,
+		EcosystemID:   block.EcosystemID,
+		KeyID:         block.KeyID,
+		NodePosition:  converter.Int64ToStr(block.NodePosition),
+		RollbacksHash: block.RollbacksHash,
+	}
+	if block.ID == 1 {
+		ib.CurrentVersion = fmt.Sprintf("%d", consts.BlockVersion)
 		err := ib.Create(dbTransaction)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating info block")
 			return fmt.Errorf("error insert into info_block %s", err)
 		}
 	} else {
-		ibUpdate := &model.InfoBlock{
-			Hash:         hash,
-			BlockID:      blockID,
-			Time:         block.Header.Time,
-			EcosystemID:  block.Header.EcosystemID,
-			KeyID:        block.Header.KeyID,
-			NodePosition: converter.Int64ToStr(block.Header.NodePosition),
-			Sent:         0,
-		}
-		if err := ibUpdate.Update(dbTransaction); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating info block")
-			return fmt.Errorf("error while updating info_block: %s", err)
+		ib.Sent = 0
+		if err := ib.Update(dbTransaction); err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating info block")
+			return fmt.Errorf("error while updating info_block %s", err)
 		}
 	}
 
 	return nil
 }
+
+func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, error) {
+	r := &model.RollbackTx{}
+	list, err := r.GetBlockRollbackTransactions(transaction, blockID)
+	if err != nil {
+		return nil, err
+	}
 
 	buf := new(bytes.Buffer)
 	enc := json.NewEncoder(buf)
@@ -78,59 +75,59 @@ func UpdBlockInfo(dbTransaction *model.DbTransaction, block *Block) error {
 }
 
 // InsertIntoBlockchain inserts a block into the blockchain
-func InsertIntoBlockchain(transaction *model.DbTransaction, block *Block) error {
-	// for local tests
-	blockID := block.Header.BlockID
-
-	// record into the block chain
+func (b *Block) InsertIntoBlockchain(dbTx *model.DbTransaction) error {
+	blockID := b.Header.BlockID
 	bl := &model.Block{}
-	err := bl.DeleteById(transaction, blockID)
+	err := bl.DeleteById(dbTx, blockID)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		return err
 	}
-	rollbacksHash, err := GetRollbacksHash(transaction, blockID)
+	rollbacksHash, err := GetRollbacksHash(dbTx, blockID)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
 		return err
 	}
 
-	b := &model.Block{
+	blockchain := &model.Block{
 		ID:            blockID,
-		Hash:          block.Header.Hash,
-		Data:          block.BinData,
-		EcosystemID:   block.Header.EcosystemID,
-		KeyID:         block.Header.KeyID,
-		NodePosition:  block.Header.NodePosition,
-		Time:          block.Header.Time,
+		Hash:          crypto.DoubleHash([]byte(b.Header.ForSha(b.PrevHeader, b.MrklRoot))),
+		Data:          b.BinData,
+		EcosystemID:   b.Header.EcosystemID,
+		KeyID:         b.Header.KeyID,
+		NodePosition:  b.Header.NodePosition,
+		Time:          b.Header.Time,
 		RollbacksHash: rollbacksHash,
-		Tx:            int32(len(block.Transactions)),
+		Tx:            int32(len(b.Transactions)),
 	}
-	validBlockTime := true
+	var validBlockTime bool
 	if blockID > 1 {
-		exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Time, 0), int(b.NodePosition))
+		validBlockTime, err = protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(blockchain.Time, 0), int(blockchain.NodePosition))
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("block validation")
 			return err
 		}
-
-		validBlockTime = !exists
+		if validBlockTime {
+			err = fmt.Errorf("invalid block time: %d", b.Header.Time)
+			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("invalid block time")
+			return err
+		}
 	}
-	if validBlockTime {
-		if err = b.Create(transaction); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating block")
-			return err
-		}
-		if err = model.UpdRollbackHash(transaction, rollbacksHash); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating info block")
-			return err
-		}
-	} else {
-		err := fmt.Errorf("invalid block time: %d", block.Header.Time)
-		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("invalid block time")
+
+	if err = blockchain.Create(dbTx); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating block")
 		return err
 	}
-
+	if err := b.upsertInfoBlock(dbTx, blockchain); err != nil {
+		return err
+	}
+	if b.SysUpdate {
+		b.SysUpdate = false
+		if err := syspar.SysUpdate(dbTx); err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
+			return err
+		}
+	}
 	return nil
 }
 
@@ -156,7 +153,7 @@ func GetBlockDataFromBlockChain(blockID int64) (*utils.BlockData, error) {
 }
 
 // GetDataFromFirstBlock returns data of first block
-func GetDataFromFirstBlock() (data *consts.FirstBlock, ok bool) {
+func GetDataFromFirstBlock() (data *types.FirstBlock, ok bool) {
 	block := &model.Block{}
 	isFound, err := block.Get(1)
 	if err != nil {
@@ -180,11 +177,12 @@ func GetDataFromFirstBlock() (data *consts.FirstBlock, ok bool) {
 	}
 
 	t := pb.Transactions[0]
-	data, ok = t.TxPtr.(*consts.FirstBlock)
+	tx, ok := t.Inner.(*transaction.FirstBlockTransaction)
 	if !ok {
 		log.WithFields(log.Fields{"type": consts.ParserError}).Error("getting data of first block")
 		return
 	}
+	data = &tx.Data
 	syspar.SysUpdate(nil)
 	return
 }

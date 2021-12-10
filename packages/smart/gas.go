@@ -25,8 +25,9 @@ type multiPays []struct {
 }
 
 func (sc *SmartContract) payContract(errNeedPay bool) error {
+	sc.Penalty = errNeedPay
 	for _, pay := range sc.multiPays {
-		placeholder := `Taxes for execution of %s contract`
+		placeholder := `taxes for execution of %s contract`
 		comment := fmt.Sprintf(placeholder, sc.TxContract.Name)
 		money := sc.TxUsedCost.Mul(pay.fuelRate).Add(pay.storageFuel)
 		if len(sc.TxSmart.Expedite) > 0 {
@@ -47,96 +48,105 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 			return errTaxes
 		}
 		taxes := money.Mul(decimal.New(syspar.SysInt64(syspar.TaxesSize), 0)).Div(decimal.New(100, 0)).Floor()
-		walletTable := model.KeyTableName(consts.DefaultTokenEcosystem)
 		fromIDStr := converter.Int64ToStr(pay.fromID)
-
-		balance := func(db *model.DbTransaction, fid, tid int64, a decimal.Decimal) (fb, tb decimal.Decimal, err error) {
-			if fid == tid {
-				toKey := &model.Key{}
-				_, err = toKey.SetTablePrefix(pay.tokenEco).GetTr(db, tid)
-				if err != nil {
-					sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": pay.tokenEco, "wallet": tid}).Error("get key balance")
-					return
-				}
-				tb, _ = decimal.NewFromString(toKey.Amount)
-				fb = tb
-				toKey.SetTablePrefix(pay.tokenEco)
-				return
-			}
-
-			fromKey := &model.Key{}
-			_, err = fromKey.SetTablePrefix(pay.tokenEco).GetTr(db, fid)
-			if err != nil {
-				sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": pay.tokenEco, "wallet": tid}).Error("get key balance")
-				return
-			}
-			fb, _ = decimal.NewFromString(fromKey.Amount)
-			toKey := &model.Key{}
-			_, err = toKey.SetTablePrefix(pay.tokenEco).GetTr(db, tid)
-			if err != nil {
-				sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": pay.tokenEco, "wallet": tid}).Error("get key balance")
-				return
-			}
-			tb, _ = decimal.NewFromString(toKey.Amount)
-			return
-				return err
-			}
-			if _, _, err := sc.updateWhere(
-				[]string{`-amount`}, []interface{}{sum}, walletTable,
-				types.LoadMap(map[string]interface{}{
-					`id`:        fromIDStr,
-					`ecosystem`: eco,
-				})); err != nil {
-				return errTaxes
-			}
-			fromIDBalance, toIDBalance, err := balance(sc.DbTransaction, converter.StrToInt64(fromIDStr), converter.StrToInt64(toID), sum)
-			if err != nil {
-				return err
-			}
-			_, _, err = sc.insert(
-				[]string{
-					"sender_id",
-					"recipient_id",
-					"sender_balance",
-					"recipient_balance",
-					"amount",
-					"comment",
-					"block_id",
-					"txhash",
-					"ecosystem",
-					"type",
-					"created_at",
-				},
-				[]interface{}{
-					fromIDStr,
-					toID,
-					fromIDBalance,
-					toIDBalance,
-					sum,
-					comment,
-					sc.BlockData.BlockID,
-					sc.TxHash,
-					pay.tokenEco,
-					t,
-					sc.BlockData.Time,
-				},
-				`1_history`)
-
-			if err != nil {
-				return err
-			}
-
-			return nil
-		}
-
-		if err := payTaxes(converter.Int64ToStr(pay.toID), money.Sub(taxes), 1, pay.tokenEco); err != nil {
+		if err := sc.payTaxes(converter.Int64ToStr(pay.toID), money.Sub(taxes), 1, pay.tokenEco, fromIDStr, comment); err != nil {
 			return err
 		}
 
-		if err := payTaxes(syspar.GetTaxesWallet(pay.tokenEco), taxes, 2, pay.tokenEco); err != nil {
+		if err := sc.payTaxes(syspar.GetTaxesWallet(pay.tokenEco), taxes, 2, pay.tokenEco, fromIDStr, comment); err != nil {
 			return err
 		}
 	}
+	return nil
+}
+
+func (sc *SmartContract) accountBalance(db *model.DbTransaction, fid, tid int64, eco int64) (fb, tb decimal.Decimal, err error) {
+	if fid == tid {
+		toKey := &model.Key{}
+		_, err = toKey.SetTablePrefix(eco).GetTr(db, tid)
+		if err != nil {
+			sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": tid}).Error("get key balance")
+			return
+		}
+		tb, _ = decimal.NewFromString(toKey.Amount)
+		fb = tb
+		toKey.SetTablePrefix(eco)
+		return
+	}
+
+	fromKey := &model.Key{}
+	_, err = fromKey.SetTablePrefix(eco).GetTr(db, fid)
+	if err != nil {
+		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": tid}).Error("get key balance")
+		return
+	}
+	fb, _ = decimal.NewFromString(fromKey.Amount)
+	toKey := &model.Key{}
+	_, err = toKey.SetTablePrefix(eco).GetTr(db, tid)
+	if err != nil {
+		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": tid}).Error("get key balance")
+		return
+	}
+	tb, _ = decimal.NewFromString(toKey.Amount)
+	return
+}
+
+func (sc *SmartContract) payTaxes(toID string, sum decimal.Decimal, t, eco int64, fromIDStr, comment string) error {
+	walletTable := model.KeyTableName(consts.DefaultTokenEcosystem)
+
+	if _, _, err := sc.updateWhere(
+		[]string{"+amount"}, []interface{}{sum}, walletTable,
+		types.LoadMap(map[string]interface{}{
+			"id":        toID,
+			"ecosystem": eco,
+		})); err != nil {
+		return err
+	}
+	if _, _, err := sc.updateWhere(
+		[]string{`-amount`}, []interface{}{sum}, walletTable,
+		types.LoadMap(map[string]interface{}{
+			`id`:        fromIDStr,
+			`ecosystem`: eco,
+		})); err != nil {
+		return errTaxes
+	}
+	fromIDBalance, toIDBalance, err := sc.accountBalance(sc.DbTransaction, converter.StrToInt64(fromIDStr), converter.StrToInt64(toID), eco)
+	if err != nil {
+		return err
+	}
+	_, _, err = sc.insert(
+		[]string{
+			"sender_id",
+			"recipient_id",
+			"sender_balance",
+			"recipient_balance",
+			"amount",
+			"comment",
+			"block_id",
+			"txhash",
+			"ecosystem",
+			"type",
+			"created_at",
+		},
+		[]interface{}{
+			fromIDStr,
+			toID,
+			fromIDBalance,
+			toIDBalance,
+			sum,
+			comment,
+			sc.BlockData.BlockID,
+			sc.TxHash,
+			eco,
+			t,
+			sc.BlockData.Time,
+		},
+		`1_history`)
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

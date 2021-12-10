@@ -28,43 +28,28 @@ var (
 )
 
 // InsertInLogTx is inserting tx in log
-func InsertInLogTx(t *Transaction, blockID int64) error {
-	ltx := &model.LogTransaction{Hash: t.TxHash, Block: blockID}
-	if err := ltx.Create(t.DbTransaction); err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("insert logged transaction")
-		return utils.ErrInfo(err)
-	}
-	return nil
-}
+//func InsertInLogTx(t *Transaction, blockID int64) error {
+//	ltx := &model.LogTransaction{Hash: t.TxHash, Block: blockID}
+//	if err := ltx.Create(t.DbTransaction); err != nil {
+//		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("insert logged transaction")
+//		return utils.ErrInfo(err)
+//	}
+//	return nil
+//}
 
 // CheckLogTx checks if this transaction exists
 // And it would have successfully passed a frontal test
-func CheckLogTx(txHash []byte, transactions, txQueue bool) error {
+func CheckLogTx(txHash []byte, logger *log.Entry) error {
 	logTx := &model.LogTransaction{}
 	found, err := logTx.GetByHash(txHash)
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting log transaction by hash")
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting log transaction by hash")
 		return err
 	}
 	if found {
-		log.WithFields(log.Fields{"tx_hash": txHash, "type": consts.DuplicateObject}).Error("double tx in log transactions")
+		logger.WithFields(log.Fields{"tx_hash": txHash, "type": consts.DuplicateObject}).Warning("double tx in log transactions")
 		return ErrDuplicatedTx
 	}
-
-	if transactions {
-		// check for duplicate transaction
-		tx := &model.Transaction{}
-		isfound, err := tx.GetVerified(txHash)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting verified transaction")
-			return utils.ErrInfo(err)
-		}
-		if isfound {
-			log.WithFields(log.Fields{"tx_hash": tx.Hash, "type": consts.DuplicateObject}).Error("double tx in transactions")
-			return ErrDuplicatedTx
-		}
-	}
-
 	return nil
 }
 
@@ -141,6 +126,15 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //
 //	if t.TxKeyID == 0 {
 //		errStr := "undefined keyID"
+//		return errors.New(errStr)
+//	}
+//	var found bool
+//	tx := &model.Transaction{}
+//	found, err = tx.Get(hash)
+//	if err != nil {
+//		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction by hash")
+//		return utils.ErrInfo(err)
+//	}
 //	if found {
 //		err = model.DeleteTransactionByHash(dbTransaction, hash)
 //		if err != nil {
@@ -150,8 +144,8 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //	}
 //	// put with verified=1
 //	var expedite decimal.Decimal
-//	if len(t.TxSmart.Expedite) > 0 {
-//		expedite, err = decimal.NewFromString(t.TxSmart.Expedite)
+//	if len(t.TxSmart.GetExpedite) > 0 {
+//		expedite, err = decimal.NewFromString(t.TxSmart.GetExpedite)
 //		if err != nil {
 //			return utils.ErrInfo(err)
 //		}
@@ -161,7 +155,7 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //		Data:     binaryTx,
 //		Type:     int8(t.TxType),
 //		KeyID:    t.TxKeyID,
-//		Expedite: expedite,
+//		GetExpedite: expedite,
 //		Time:     t.TxTime,
 //		Verified: 1,
 //	}

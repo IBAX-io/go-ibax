@@ -46,6 +46,21 @@ func DateTimeLocation(unix int64, locationName string) (string, error) {
 
 func UnixDateTime(value string) int64 {
 	t, err := time.Parse(dateTimeFormat, value)
+	if err != nil {
+		return 0
+	}
+	return t.Unix()
+}
+
+func UnixDateTimeLocation(value, locationName string) (int64, error) {
+	loc, err := time.LoadLocation(locationName)
+	if err != nil {
+		return 0, errors.Wrap(err, "Load location")
+	}
+
+	t, err := time.ParseInLocation(dateTimeFormat, value, loc)
+	if err != nil {
+		return 0, errors.Wrap(err, "Parse time")
 	}
 
 	return t.Unix(), nil

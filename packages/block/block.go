@@ -11,23 +11,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
+
+	"github.com/IBAX-io/go-ibax/packages/script"
 
 	"github.com/IBAX-io/go-ibax/packages/notificator"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
-	"github.com/IBAX-io/go-ibax/packages/script"
-	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
-	"github.com/IBAX-io/go-ibax/packages/transaction/custom"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
-
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -51,12 +50,12 @@ type Block struct {
 	Notifications     []types.Notifications
 }
 
-func (b Block) String() string {
+func (b *Block) String() string {
 	return fmt.Sprintf("header: %s, prevHeader: %s", b.Header, b.PrevHeader)
 }
 
 // GetLogger is returns logger
-func (b Block) GetLogger() *log.Entry {
+func (b *Block) GetLogger() *log.Entry {
 	return log.WithFields(log.Fields{"block_id": b.Header.BlockID, "block_time": b.Header.Time, "block_wallet_id": b.Header.KeyID,
 		"block_state_id": b.Header.EcosystemID, "block_hash": b.Header.Hash, "block_version": b.Header.Version})
 }
@@ -78,13 +77,13 @@ func (b *Block) PlaySafe() error {
 	if err != nil {
 		dbTransaction.Rollback()
 		if b.GenBlock && len(b.Transactions) == 0 {
-			if err == ErrLimitStop {
-				err = ErrLimitTime
+			if err == transaction.ErrLimitStop {
+				err = transaction.ErrLimitTime
 			}
-			if inputTx[0].TxHeader != nil {
-				BadTxForBan(inputTx[0].TxHeader.KeyID)
+			if inputTx[0].IsSmartContract() {
+				transaction.BadTxForBan(inputTx[0].TxKeyID())
 			}
-			if err := transaction.MarkTransactionBad(dbTransaction, inputTx[0].TxHash, err.Error()); err != nil {
+			if err := transaction.MarkTransactionBad(dbTransaction, inputTx[0].TxHash(), err.Error()); err != nil {
 				return err
 			}
 		}
@@ -103,23 +102,9 @@ func (b *Block) PlaySafe() error {
 		}
 	}
 
-	if err := UpdBlockInfo(dbTransaction, b); err != nil {
+	if err := b.InsertIntoBlockchain(dbTransaction); err != nil {
 		dbTransaction.Rollback()
 		return err
-	}
-
-	if err := InsertIntoBlockchain(dbTransaction, b); err != nil {
-		dbTransaction.Rollback()
-		return err
-	}
-
-	if b.SysUpdate {
-		b.SysUpdate = false
-		//if err = syspar.SysUpdate(dbTransaction); err != nil {
-		//	log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
-		//	dbTransaction.Rollback()
-		//	return err
-		//}
 	}
 
 	err = dbTransaction.Commit()
@@ -136,7 +121,7 @@ func (b *Block) PlaySafe() error {
 func (b *Block) repeatMarshallBlock() error {
 	trData := make([][]byte, 0, len(b.Transactions))
 	for _, tr := range b.Transactions {
-		trData = append(trData, tr.TxFullData)
+		trData = append(trData, tr.FullData)
 	}
 	NodePrivateKey, _ := utils.GetNodeKeys()
 	if len(NodePrivateKey) < 1 {
@@ -162,6 +147,14 @@ func (b *Block) repeatMarshallBlock() error {
 	b.SysUpdate = nb.SysUpdate
 	return nil
 }
+
+func (b *Block) readPreviousBlockFromBlockchainTable() error {
+	if b.IsGenesis() {
+		b.PrevHeader = &utils.BlockData{}
+		return nil
+	}
+
+	var err error
 	b.PrevHeader, err = GetBlockDataFromBlockChain(b.Header.BlockID - 1)
 	if err != nil {
 		return errors.Wrapf(err, "Can't get block %d", b.Header.BlockID-1)
@@ -169,21 +162,27 @@ func (b *Block) repeatMarshallBlock() error {
 	return nil
 }
 
+func (b *Block) limitMode() transaction.LimitMode {
+	if b == nil {
+		return transaction.GetLetPreprocess()
+	}
+	if b.GenBlock {
+		return transaction.GetLetGenBlock()
+	}
+	return transaction.GetLetParsing()
+}
+
 func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
 	var (
 		playTxs model.AfterTxs
 	)
 	logger := b.GetLogger()
-	limits := NewLimits(b)
+	limits := transaction.NewLimits(b.limitMode())
 	rand := utils.NewRand(b.Header.Time)
-	var timeLimit int64
-	if b.GenBlock {
-		timeLimit = syspar.GetMaxBlockGenerationTime()
-	}
-	proccessedTx := make([]*transaction.Transaction, 0, len(b.Transactions))
+	processedTx := make([]*transaction.Transaction, 0, len(b.Transactions))
 	defer func() {
 		if b.GenBlock {
-			b.Transactions = proccessedTx
+			b.Transactions = processedTx
 		}
 		if err := model.AfterPlayTxs(dbTransaction, b.Header.BlockID, playTxs, logger); err != nil {
 			batchErr = err
@@ -192,101 +191,75 @@ func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
 	}()
 
 	for curTx, t := range b.Transactions {
-		var (
-			msg string
-			err error
-		)
-		t.DbTransaction = dbTransaction
-		t.Rand = rand.BytesSeed(t.TxHash)
-		t.Notifications = notificator.NewQueue()
-
-		err = dbTransaction.Savepoint(consts.SetSavePointMarkBlock(curTx))
+		err := dbTransaction.Savepoint(consts.SetSavePointMarkBlock(curTx))
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash}).Error("using savepoint")
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash()}).Error("using savepoint")
 			return err
 		}
-		var flush []smart.FlushInfo
+
+		t.Notifications = notificator.NewQueue()
+		t.DbTransaction = dbTransaction
+		t.TxCheckLimits = limits
+		t.PreBlockData = b.PrevHeader
 		t.GenBlock = b.GenBlock
-		t.TimeLimit = timeLimit
-		t.PrevBlock = b.PrevHeader
-		msg, flush, err = t.Play(curTx)
-		if err == nil && t.TxSmart != nil {
-			err = limits.CheckLimit(t)
-		}
+		t.SqlDbSavePoint = curTx
+		t.Rand = rand.BytesSeed(t.TxHash())
+		err = t.Play()
 		if err != nil {
-			if flush != nil {
-				for i := len(flush) - 1; i >= 0; i-- {
-					finfo := flush[i]
-					if finfo.Prev == nil {
-						if finfo.ID != uint32(len(smart.GetVM().Children)-1) {
-							logger.WithFields(log.Fields{"type": consts.ContractError, "value": finfo.ID,
-								"len": len(smart.GetVM().Children) - 1}).Error("flush rollback")
-						} else {
-							smart.GetVM().Children = smart.GetVM().Children[:len(smart.GetVM().Children)-1]
-							delete(smart.GetVM().Objects, finfo.Name)
-						}
-					} else {
-						smart.GetVM().Children[finfo.ID] = finfo.Prev
-						smart.GetVM().Objects[finfo.Name] = finfo.Info
-					}
-				}
-			}
-			if err == custom.ErrNetworkStopping {
+			if err == transaction.ErrNetworkStopping {
+				// Set the node in a pause state
+				node.PauseNodeActivity(node.PauseTypeStopingNetwork)
 				return err
 			}
-
-			errRoll := dbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(curTx))
+			errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(curTx))
 			if errRoll != nil {
-				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash}).Error("rolling back to previous savepoint")
+				t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash()}).Error("rolling back to previous savepoint")
 				return errRoll
 			}
 			if b.GenBlock {
-				if err == ErrLimitStop {
+				if err == transaction.ErrLimitStop {
 					if curTx == 0 {
 						return err
 					}
 					break
 				}
-				if strings.Contains(err.Error(), script.ErrVMTimeLimit.Error()) { // very heavy tx
-					err = ErrLimitTime
+				if strings.Contains(err.Error(), script.ErrVMTimeLimit.Error()) {
+					err = transaction.ErrLimitTime
 				}
 			}
-			// skip this transaction
-			transaction.MarkTransactionBad(t.DbTransaction, t.TxHash, err.Error())
+			if t.IsSmartContract() {
+				transaction.BadTxForBan(t.TxKeyID())
+			}
+			_ = transaction.MarkTransactionBad(t.DbTransaction, t.TxHash(), err.Error())
 			if t.SysUpdate {
 				if err := syspar.SysUpdate(t.DbTransaction); err != nil {
 					log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
+					return err
 				}
 				t.SysUpdate = false
 			}
-
 			if b.GenBlock {
 				continue
 			}
 
 			return err
 		}
-		err = dbTransaction.ReleaseSavepoint(curTx, consts.SavePointMarkBlock)
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash}).Error("releasing savepoint")
-		}
 
 		if t.SysUpdate {
 			b.SysUpdate = true
 			t.SysUpdate = false
 		}
-
-		if err := model.SetTransactionStatusBlockMsg(t.DbTransaction, b.Header.BlockID, msg, t.TxHash); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash}).Error("updating transaction status block id")
+		if err := model.SetTransactionStatusBlockMsg(t.DbTransaction, t.BlockData.BlockID, t.TxResult, t.TxHash()); err != nil {
+			t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash()}).Error("updating transaction status block id")
 			return err
 		}
 		if t.Notifications.Size() > 0 {
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
-		playTxs.UsedTx = append(playTxs.UsedTx, t.TxHash)
-		playTxs.Lts = append(playTxs.Lts, &model.LogTransaction{Block: b.Header.BlockID, Hash: t.TxHash})
+		playTxs.UsedTx = append(playTxs.UsedTx, t.TxHash())
+		playTxs.Lts = append(playTxs.Lts, &model.LogTransaction{Block: b.Header.BlockID, Hash: t.TxHash()})
 		playTxs.Rts = append(playTxs.Rts, t.RollBackTx...)
-		proccessedTx = append(proccessedTx, t)
+		processedTx = append(processedTx, t)
 	}
 
 	return nil
@@ -327,22 +300,26 @@ func (b *Block) Check() error {
 	// check each transaction
 	txCounter := make(map[int64]int)
 	txHashes := make(map[string]struct{})
-	for _, t := range b.Transactions {
-		hexHash := string(converter.BinToHex(t.TxHash))
+	for i, t := range b.Transactions {
+		hexHash := string(converter.BinToHex(t.TxHash()))
 		// check for duplicate transactions
 		if _, ok := txHashes[hexHash]; ok {
-			logger.WithFields(log.Fields{"tx_hash": hexHash, "type": consts.DuplicateObject}).Error("duplicate transaction")
+			logger.WithFields(log.Fields{"tx_hash": hexHash, "type": consts.DuplicateObject}).Warning("duplicate transaction")
 			return utils.ErrInfo(fmt.Errorf("duplicate transaction %s", hexHash))
 		}
 		txHashes[hexHash] = struct{}{}
 
 		// check for max transaction per user in one block
-		//txCounter[t.TxKeyID]++
-		if txCounter[t.TxKeyID] > syspar.GetMaxBlockUserTx() {
+		txCounter[t.TxKeyID()]++
+		if txCounter[t.TxKeyID()] > syspar.GetMaxBlockUserTx() {
 			return utils.WithBan(utils.ErrInfo(fmt.Errorf("max_block_user_transactions")))
 		}
 
-		if err := t.CheckTime(b.Header.Time); err != nil {
+		err := t.Check(b.Header.Time)
+		if err != nil {
+			transaction.MarkTransactionBad(t.DbTransaction, t.TxHash(), err.Error())
+			delete(txHashes, hexHash)
+			b.Transactions = append(b.Transactions[:i], b.Transactions[i+1:]...)
 			return errors.Wrap(err, "check transaction")
 		}
 	}

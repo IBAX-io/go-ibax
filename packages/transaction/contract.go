@@ -9,7 +9,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/types"
+
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/smart"
+)
+
+const (
 	errUnknownContract = `Cannot find %s contract`
 )
 
@@ -23,8 +32,8 @@ func CreateContract(contractName string, keyID int64, params map[string]interfac
 	if contract == nil {
 		return fmt.Errorf(errUnknownContract, contractName)
 	}
-	sc := tx.SmartContract{
-		Header: tx.Header{
+	sc := types.SmartContract{
+		Header: &types.Header{
 			ID:          int(contract.Block.Info.(*script.ContractInfo).ID),
 			Time:        time.Now().Unix(),
 			EcosystemID: ecosysID,
@@ -33,11 +42,12 @@ func CreateContract(contractName string, keyID int64, params map[string]interfac
 		},
 		Params: params,
 	}
-	txData, _, err := tx.NewTransaction(sc, privateKey)
+	txData, _, err := NewTransaction(sc, privateKey)
 	if err == nil {
-		rtx := &RawTransaction{}
+		rtx := &Transaction{}
 		if err = rtx.Unmarshall(bytes.NewBuffer(txData)); err == nil {
-			err = model.SendTx(rtx, sc.KeyID)
+			//err = model.SendTx(rtx, sc.KeyID)
+			err = model.SendTxBatches([]*model.RawTx{rtx.SetRawTx()})
 		}
 	}
 	return err
