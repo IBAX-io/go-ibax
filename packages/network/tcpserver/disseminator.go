@@ -15,19 +15,19 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/service"
 
 	log "github.com/sirupsen/logrus"
 )
 
-// Type1 get the list of transactions which belong to the sender from 'disseminator' daemon
+// Disseminator get the list of transactions which belong to the sender from 'disseminator' daemon
 // do not load the blocks here because here could be the chain of blocks that are loaded for a long time
 // download the transactions here, because they are small and definitely will be downloaded in 60 sec
-func Type1(rw io.ReadWriter) error {
+func Disseminator(rw io.ReadWriter) error {
 	r := &network.DisRequest{}
 	if err := r.Read(rw); err != nil {
 		return err
@@ -64,7 +64,7 @@ func Type1(rw io.ReadWriter) error {
 
 	log.Debug("newDataType", newDataType)
 	if newDataType == 0 {
-		banned := n != nil && service.GetNodesBanService().IsBanned(*n)
+		banned := n != nil && node.GetNodesBanService().IsBanned(*n)
 		if banned {
 			buf.Next(3)
 			buf.Next(consts.HashSize)
@@ -96,6 +96,8 @@ func Type1(rw io.ReadWriter) error {
 	}
 
 	// get this new transactions
+	txBodies, err := resieveTxBodies(rw)
+	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on reading needed txes from disseminator")
 		return err
 	}
@@ -249,12 +251,12 @@ func saveNewTransactions(binaryTxs []byte) error {
 			return utils.ErrInfo("len(txBinData) > max_tx_size")
 		}
 
-		tx := transaction.RawTransaction{}
-		if err = tx.Unmarshall(bytes.NewBuffer(txBinData)); err != nil {
+		rtx := transaction.Transaction{}
+		if err = rtx.Unmarshall(bytes.NewBuffer(txBinData)); err != nil {
 			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("unmarshalling transaction")
 			return err
 		}
-		queueTxs = append(queueTxs, &model.QueueTx{Hash: tx.Hash(), Data: txBinData, Expedite: tx.Expedite(), Time: tx.Time(), FromGate: 1})
+		queueTxs = append(queueTxs, &model.QueueTx{Hash: rtx.TxHash(), Data: txBinData, Expedite: rtx.TxExpedite(), Time: rtx.TxTime(), FromGate: 1})
 	}
 	if err := model.GetDB(nil).Clauses(clause.OnConflict{DoNothing: true}).Create(&queueTxs).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("error creating QueueTx")

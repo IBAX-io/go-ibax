@@ -38,3 +38,7 @@ func CheckConfirmation(host string, blockID int64, logger *log.Entry) (hash stri
 
 	if err := resp.Read(conn); err != nil {
 		logger.WithFields(log.Fields{"type": consts.IOError, "error": err, "host": host, "block_id": blockID}).Error("receiving confirmation response")
+		return "0"
+	}
+	return string(converter.BinToHex(resp.Hash))
+}

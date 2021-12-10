@@ -13,9 +13,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Type10 sends the last block ID
+// MaxBlock sends the last block ID
 // blocksCollection daemon sends this request
-func Type10() (*network.MaxBlockResponse, error) {
+func MaxBlock() (*network.MaxBlockResponse, error) {
 	infoBlock := &model.InfoBlock{}
 	found, err := infoBlock.Get()
 	if err != nil {
@@ -25,3 +25,8 @@ func Type10() (*network.MaxBlockResponse, error) {
 	if !found {
 		log.WithFields(log.Fields{"type": consts.NotFound}).Debug("Can't found info block")
 	}
+
+	return &network.MaxBlockResponse{
+		BlockID: infoBlock.BlockID,
+	}, nil
+}

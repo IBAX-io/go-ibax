@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -211,6 +212,9 @@ func prepareFullBlockRequest(block *model.InfoBlock, trs []model.Transaction, no
 func resieveRequiredTransactions(con net.Conn) (response []byte, err error) {
 	needTxResp := network.DisHashResponse{}
 	if err := needTxResp.Read(con); err != nil {
+		if err == io.EOF {
+			return nil, nil
+		}
 		if err == network.ErrMaxSize {
 			log.WithFields(log.Fields{"max_size": syspar.GetMaxTxSize(), "type": consts.ParameterExceeded}).Warning("response size is larger than max tx size")
 			return nil, nil
@@ -255,6 +259,9 @@ func sendDisseminatorRequest(con net.Conn, requestType network.ReqTypesFlag, pac
 	// if err != nil {
 	// 	log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing data size to host")
 	// 	return err
+	// }
+
+	// // data
 	// _, err = con.Write(packet)
 	// if err != nil {
 	// 	log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing data to host")

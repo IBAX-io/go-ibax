@@ -11,7 +11,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network"
-	"github.com/IBAX-io/go-ibax/packages/service"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -26,77 +26,45 @@ func HandleTCPRequest(rw net.Conn) {
 	}
 
 	log.WithFields(log.Fields{"request_type": dType.Type}).Debug("tcpserver got request type")
-	var response interface{}
+	var response network.SelfReaderWriter
 
 	switch dType.Type {
 	case network.RequestTypeHonorNode:
-		if service.IsNodePaused() {
+		if node.IsNodePaused() {
 			return
 		}
-		err = Type1(rw)
+		err = Disseminator(rw)
 
 	case network.RequestTypeNotHonorNode:
-		if service.IsNodePaused() {
+		if node.IsNodePaused() {
 			return
 		}
-		err = Type2(rw)
+		err = DisseminateTxs(rw)
 
 	case network.RequestTypeStopNetwork:
 		req := &network.StopNetworkRequest{}
 		if err = req.Read(rw); err == nil {
-			err = Type3(req, rw)
+			err = StopNetwork(req, rw)
 		}
 
 	case network.RequestTypeConfirmation:
-		//if service.IsNodePaused() {
+		//if node.IsNodePaused() {
 		//	return
 		//}
 
 		req := &network.ConfirmRequest{}
 		if err = req.Read(rw); err == nil {
-			response, err = Type4(req)
+			response, err = Confirmation(req)
 		}
 
 	case network.RequestTypeBlockCollection:
 		req := &network.GetBodiesRequest{}
 		if err = req.Read(rw); err == nil {
-			err = Type7(req, rw)
-		if err = req.Read(rw); err == nil {
-			response, err = Type201(req)
-		}
-	case network.RequestTypeSendSubNodeAgentData:
-		req := &network.SubNodeAgentDataRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type202(req)
-		}
-	//
-	case network.RequestTypeSendVDESrcData:
-		req := &network.VDESrcDataRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type100(req)
-		}
-	case network.RequestTypeSendVDESrcDataAgent:
-		req := &network.VDESrcDataAgentRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type101(req)
-		}
-	case network.RequestTypeSendVDEAgentData:
-		req := &network.VDEAgentDataRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type102(req)
+			err = BlockCollection(req, rw)
 		}
 
-	case network.RequestTypeSendPrivateData:
-		req := &network.PrivateDateRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type88(req)
-		}
-
-	case network.RequestTypeSendPrivateFile:
-		req := &network.PrivateFileRequest{}
-		if err = req.Read(rw); err == nil {
-			response, err = Type99(req)
-		}
+	case network.RequestTypeMaxBlock:
+		response, err = MaxBlock()
 	}
 
 	if err != nil || response == nil {
@@ -104,7 +72,7 @@ func HandleTCPRequest(rw net.Conn) {
 	}
 
 	log.WithFields(log.Fields{"response": response, "request_type": dType.Type}).Debug("tcpserver responded")
-	if err = response.(network.SelfReaderWriter).Write(rw); err != nil {
+	if err = response.Write(rw); err != nil {
 		// err = SendRequest(response, rw)
 		log.Errorf("tcpserver handle error: %s", err)
 	}

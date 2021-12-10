@@ -30,3 +30,19 @@ func TestBytesPoolPut(t *testing.T) {
 	require.Equal(t, newBuf[:5], short)
 	fmt.Println(newBuf[:6])
 }
+
+func TestBytesPoolCicle(t *testing.T) {
+	short := []byte(strings.Repeat("A", 5))
+	buf := BytesPool.Get(int64(len(short)))
+	copy(buf[:5], short)
+	BytesPool.Put(buf)
+
+	power := powerOfTwo(5)
+	fmt.Println("power", power)
+
+	newBuf := BytesPool.Get(5)
+	require.Equal(t, power, int64(len(newBuf)))
+
+	require.Equal(t, newBuf[:5], short)
+	fmt.Println(newBuf)
+}

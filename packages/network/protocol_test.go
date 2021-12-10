@@ -67,3 +67,12 @@ func TestGetBodyResponse(t *testing.T) {
 func TestBodyResponse(t *testing.T) {
 	rt := GetBodyResponse{Data: []byte(strings.Repeat("A", 32))}
 	buf := []byte{}
+	b := bytes.NewBuffer(buf)
+
+	result := &GetBodyResponse{}
+	require.NoError(t, rt.Write(b))
+	require.NoError(t, result.Read(b))
+	require.Equal(t, rt.Data, result.Data)
+	fmt.Println(rt, result)
+
+}
