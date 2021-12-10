@@ -1,3 +1,11 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+package modes
+
+import (
+	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/api"
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -5,11 +13,9 @@
 
 func RegisterRoutes() http.Handler {
 	m := api.Mode{
-		EcosysIDValidator:  GetEcosystemIDValidator(),
-		EcosysNameGetter:   BuildEcosystemNameGetter(),
-		EcosysLookupGetter: BuildEcosystemLookupGetter(),
-		ContractRunner:     GetSmartContractRunner(),
-		ClientTxProcessor:  GetClientTxPreprocessor(),
+		EcosystemGetter:   GetEcosystemGetter(),
+		ContractRunner:    GetSmartContractRunner(),
+		ClientTxProcessor: GetClientTxPreprocessor(),
 	}
 
 	r := api.NewRouter(m)
@@ -23,9 +29,7 @@ func RegisterRoutes() http.Handler {
 		m.SetSubNodeRoutes(r)
 	}
 
-	//0303
 	if conf.Config.IsSupportingOBS() {
-		m.SetVDESrcRoutes(r)
 	}
 
 	return r.GetAPI()
