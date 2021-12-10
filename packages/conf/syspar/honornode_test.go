@@ -47,3 +47,5 @@ func TestHonorNode(t *testing.T) {
 		if !v.formattingErr && len(v.err) != 0 {
 			assert.EqualError(t, err, v.err)
 		}
+	}
+}

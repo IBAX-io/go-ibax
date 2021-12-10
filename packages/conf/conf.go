@@ -12,11 +12,11 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/toml"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
 )
 
 // HostPort endpoint in form "str:int"
@@ -102,18 +102,19 @@ type GFilesConfig struct {
 	Host   string
 }
 
-type PoolPubConfig struct {
-	Enable      bool //Pool is on/off.
-	MinersCount bool
-	TotalCount  bool
-	MininerMap  bool
-	RollBack    bool
-	Path        string
-}
-
 // GlobalConfig is storing all startup config as global struct
 type GlobalConfig struct {
 	KeyID        int64  `toml:"-"`
+	ConfigPath   string `toml:"-"`
+	TestRollBack bool   `toml:"-"`
+	FuncBench    bool   `toml:"-"`
+
+	PidFilePath           string
+	LockFilePath          string
+	DataDir               string // application work dir (cwd by default)
+	KeysDir               string // place for private keys files: NodePrivateKey, PrivateKey
+	TempDir               string // temporary dir
+	FirstBlockPath        string
 	TLS                   bool   // TLS is on/off. It is required for https
 	TLSCert               string // TLSCert is a filepath of the fullchain of certificate.
 	TLSKey                string // TLSKey is a filepath of the private key.
@@ -134,7 +135,6 @@ type GlobalConfig struct {
 	TokenMovement  TokenMovementConfig
 	BanKey         BanKeyConfig
 	GFiles         GFilesConfig
-	PoolPub        PoolPubConfig
 	NodesAddr      []string
 	CryptoSettings CryptoSettings
 }

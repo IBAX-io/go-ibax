@@ -44,3 +44,4 @@ func (rm RunMode) IsSupportingOBS() bool {
 //Add sub node processing
 func (rm RunMode) IsSubNode() bool {
 	return rm == subNode
+}

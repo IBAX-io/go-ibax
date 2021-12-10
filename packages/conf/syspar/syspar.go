@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/IBAX-io/go-ibax/packages/types"
+
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -34,6 +36,22 @@ const (
 	// HonorNodes is the list of nodes
 	HonorNodes = `honor_nodes`
 	// GapsBetweenBlocks is the time between blocks
+	GapsBetweenBlocks = `gap_between_blocks`
+	// MaxBlockSize is the maximum size of the block
+	MaxBlockSize = `max_block_size`
+	// MaxTxSize is the maximum size of the transaction
+	MaxTxSize = `max_tx_size`
+	// MaxForsignSize is the maximum size of the forsign of transaction
+	MaxForsignSize = `max_forsign_size`
+	// MaxBlockFuel is the maximum fuel of the block
+	MaxBlockFuel = `max_fuel_block`
+	// MaxTxFuel is the maximum fuel of the transaction
+	MaxTxFuel = `max_fuel_tx`
+	// MaxTxCount is the maximum count of the transactions
+	MaxTxCount = `max_tx_block`
+	// MaxBlockGenerationTime is the time limit for block generation (in ms)
+	MaxBlockGenerationTime = `max_block_generation_time`
+	// MaxColumns is the maximum columns in tables
 	MaxColumns = `max_columns`
 	// MaxIndexes is the maximum indexes in tables
 	MaxIndexes = `max_indexes`
@@ -79,7 +97,7 @@ var (
 	fuels             = make(map[int64]string)
 	wallets           = make(map[int64]string)
 	mutex             = &sync.RWMutex{}
-	firstBlockData    *consts.FirstBlock
+	firstBlockData    *types.FirstBlock
 	errFirstBlockData = errors.New("Failed to get data of the first block")
 	errNodeDisabled   = errors.New("node is disabled")
 	nodePubKey        []byte
@@ -497,7 +515,7 @@ func HasSys(name string) bool {
 }
 
 // SetFirstBlockData sets data of first block to global variable
-func SetFirstBlockData(data *consts.FirstBlock) {
+func SetFirstBlockData(data *types.FirstBlock) {
 	mutex.Lock()
 	defer mutex.Unlock()
 
@@ -507,7 +525,7 @@ func SetFirstBlockData(data *consts.FirstBlock) {
 	if len(nodesByPosition) == 0 {
 		addHonorNodeKeys(firstBlockData.NodePublicKey)
 
-		nodesByPosition = []*HonorNode{&HonorNode{
+		nodesByPosition = []*HonorNode{{
 			PublicKey: firstBlockData.NodePublicKey,
 			Stopped:   false,
 		}}
@@ -515,7 +533,7 @@ func SetFirstBlockData(data *consts.FirstBlock) {
 }
 
 // GetFirstBlockData gets data of first block from global variable
-func GetFirstBlockData() (*consts.FirstBlock, error) {
+func GetFirstBlockData() (*types.FirstBlock, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
 
