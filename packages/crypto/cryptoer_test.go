@@ -6,6 +6,10 @@ import (
 	"log"
 	"testing"
 )
+
+func TestGetCryptoer(t *testing.T) {
+	c := getCryptoer()
+	src := []byte("Hello")
 	encodedStr := hex.EncodeToString(src)
 	fmt.Println(src)
 	fmt.Printf("%s\n", encodedStr)

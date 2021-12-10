@@ -107,6 +107,18 @@ func (prv *PrivateKey) GenerateShared(pub *PublicKey, skLen, macLen int) (sk []b
 		return nil, ErrSharedKeyTooBig
 	}
 
+	x, _ := pub.Curve.ScalarMult(pub.X, pub.Y, prv.D.Bytes())
+	if x == nil {
+		return nil, ErrSharedKeyIsPointAtInfinity
+	}
+
+	sk = make([]byte, skLen+macLen)
+	skBytes := x.Bytes()
+	copy(sk[len(sk)-len(skBytes):], skBytes)
+	return sk, nil
+}
+
+var (
 	ErrKeyDataTooLong = fmt.Errorf("ecies: can't supply requested key data")
 	ErrSharedTooLong  = fmt.Errorf("ecies: shared secret is too long")
 	ErrInvalidMessage = fmt.Errorf("ecies: invalid message")
@@ -276,7 +288,7 @@ func (prv *PrivateKey) Decrypt(c, s1, s2 []byte) (m []byte, err error) {
 
 	var (
 		rLen   int
-		hLen   int = hash.Size()
+		hLen   = hash.Size()
 		mStart int
 		mEnd   int
 	)

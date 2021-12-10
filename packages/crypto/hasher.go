@@ -49,6 +49,20 @@ func getHasher() Hasher {
 	}
 }
 
+func InitHash(s string) {
+	switch s {
+	case hSM3:
+		hal.name = hSM3
+		return
+	case hSHA256:
+		hal.name = hSHA256
+		return
+	}
+	panic(fmt.Errorf("hash [%v] is not supported yet", s))
+}
+
+func GetHMAC(secret string, message string) ([]byte, error) {
+	return getHasher().getHMAC(secret, message)
 }
 
 func Hash(msg []byte) []byte {

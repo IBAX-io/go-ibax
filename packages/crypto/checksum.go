@@ -35,5 +35,20 @@ func calcCRC64(input []byte) uint64 {
 	return crc64.Checksum(input, table64)
 }
 
+// CheckSum calculates the 0-9 check sum of []byte
+func checkSum(val []byte) int {
+	var one, two int
+	for i, ch := range val {
+		digit := int(ch - '0')
+		if i&1 == 1 {
+			one += digit
+		} else {
+			two += digit
+		}
+	}
+	checksum := (two + 3*one) % 10
+	if checksum > 0 {
+		checksum = 10 - checksum
+	}
 	return checksum
 }

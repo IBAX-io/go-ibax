@@ -156,3 +156,10 @@ func (e *ECDSA) parseSign(sign string) (*big.Int, *big.Int, error) {
 		sign = hex.EncodeToString(append(left, right...))
 	} else if len(sign) < 128 {
 		return nil, nil, fmt.Errorf(`wrong len of signature %d`, len(sign))
+	}
+	all, err := hex.DecodeString(sign[:])
+	if err != nil {
+		return nil, nil, fmt.Errorf("wrong signature size: %w", err)
+	}
+	return new(big.Int).SetBytes(all[:32]), new(big.Int).SetBytes(all[len(all)-32:]), nil
+}

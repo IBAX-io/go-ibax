@@ -58,3 +58,4 @@ func hashSHA256(msg []byte) []byte {
 
 func HashHex(input []byte) (string, error) {
 	return hex.EncodeToString(getHasher().hash(input)), nil
+}
