@@ -118,7 +118,7 @@ func TestVMCompile(t *testing.T) {
 						var i int
 						i = 50
 						return Sprintf("val=%d", i 0)
-					}`, `runtime`, `runtime panic error`},
+					}`, `runtime`, `runtime panic error,reflect: CallSlice using int64 as type string`},
 		{`func nop {
 							return
 						}
@@ -320,14 +320,14 @@ func TestVMCompile(t *testing.T) {
 		func test() {
 			return mytest("one", "two")
 		}
-		`, `test`, `parameter 2 has wrong type`},
+		`, `test`, `parameter 2 has wrong type [:5]`},
 		{`func mytest(first string, second int) string {
 								return Sprintf("%s %d", first, second)
 						}
 						func test() string {
 							return mytest("one")
 						}
-						`, `test`, `wrong count of parameters`},
+						`, `test`, `wrong count of parameters [:5]`},
 		{
 			`func ifMap string {
 				var m map
@@ -362,6 +362,18 @@ func TestVMCompile(t *testing.T) {
 			var par array
 			var item map
 			item["id"] = str(id)
+			item["name"] = "Test value " + str(id)
+			par[0] = item
+			return par
+		}
+		func GetEmpty().WhereId(id int) array {
+			var par array
+			return par
+		}
+		func result() string {
+			var m map
+			var s string
+			m = GetData().WhereId(123).Row()
 			s = GetEmpty().WhereId(1).One("name") 
 			if s != nil {
 				return "problem"
@@ -512,16 +524,16 @@ func TestVMCompile(t *testing.T) {
 			data {}
 			conditions { }
 			action {
-			   //тест
+			   //test
 			   var a map
-			   a["тест"] = "тест"
-			   $result = a["тест"]
+			   a["test"] = "test"
+			   $result = a["test"]
 			}
 		}
 		func result() string {
 			var par map
 			return CallContract("TestCyr", par) 
-		}`, `result`, `тест`},
+		}`, `result`, `test`},
 		{`contract MainCond {
 			conditions {
 				error $test
@@ -723,7 +735,7 @@ func TestContractList(t *testing.T) {
 		}
 	}func MyFunc {}`,
 		`NewContract,MyFunc`},
-		{`contract demo_сontract {
+		{`contract demo_contract {
 			data {
 				contract_txt str
 			}
@@ -735,7 +747,7 @@ func TestContractList(t *testing.T) {
 				}
 			}
 		} contract another_contract {} func main { func subfunc(){}}`,
-			`demo_сontract,another_contract,main`},
+			`demo_contract,another_contract,main`},
 	}
 	for _, item := range test {
 		list, _ := ContractsList(item.Input)

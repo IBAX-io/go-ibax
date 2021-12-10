@@ -24,12 +24,11 @@ const (
 	AlphaSize = 34
 )
 
-/* Здесь мы определяем алфавит, с которым будет работать наш язык и описываем конечный автомат, который
-   переходит из одного состояния в другое в зависимости от очередного полученного символа.
-   Данная программа переводит список состояний в числовой массив и сохраняет его как
-   packages/script/lex_table.go
+/*
+	Here we define the alphabet with which our language will work and describe the state machine that
+	passes from one state to another depending on the next received character.
+	This program converts the list of states into a numeric array and saves it as packages/script/lex_table.go
 */
-
 var (
 	table [][AlphaSize]uint32
 	lexem = map[string]uint32{``: 0, `sys`: 1, `oper`: 2, `number`: 3, `ident`: 4, `newline`: 5, `string`: 6,
@@ -39,22 +38,22 @@ var (
 		//           default  n    s    q    Q
 		'|', '#', '.', ',', '<', '>', '=', '!', '*', '$', '@', ':',
 		'+', '-', '/', '\\', '0', '1', 'a', '_', 128}
-	//													r
-
-	// В states мы обозначили за d - все символы, которые не указаны в состоянии
-	// n - 0x0a, s - пробел, q - обратные кавычки `, Q - двойные кавычки, r - символы >= 128
-	// a - A-Z и a-z, 1 - 1-9
-	// В качестве ключей выступаю имена состояний, a в объекте-значении перечислены возможные наборы символов
-	// и затем для каждого такого набора идет новое состояние, куда следует сделать переход, далее имя лексемы,
-	// если нам нужно вернуться в начальное состояние и третьим параметром идут служебные флаги,
-	// которые указывают, что делать с текущим символом.
-	// Например, у нас сотояние main и входящий символ /. push говорит запомнить его в отедльном стеке и
-	// next - перейти к следующему символу, при этом мы меняе состояние на solidus.
-	// Берем следующий символ и смотрим на состоние solidus
-	// Если у нас / или * - то мы переходим в состояние комментарий, так они начинаются с // или /*.
-	// При этом видно, что для каждого комментария разные последующие состояния, так как заканчиваются
-	// они разными символами.  А если у нас следующий символ не / и не *, то мы все что у нас положено
-	// в стэк (/) записываем как лексему с типом oper, очищаем стэк и возвращаемся в состояние main.
+	/*
+		In states we have designated for d - all characters that are not specified in the state
+		n - 0x0a, s - space, q - back quotes `, Q - double quotes, r - characters> = 128
+		a - A-Z and a-z, 1 - 1-9
+		State names are used as keys, and possible character sets are listed in the value object
+		and then for each such set there is a new state where the transition should be made, then the name of the token,
+		if we need to return to the initial state and the service flags are the third parameter,
+		which indicate what to do with the current symbol.
+		For example, we have the state main and the incoming symbol /. push says to remember it in a separate stack and
+		next - go to the next character, while we change the state to solidus.
+		Take the next character and look at the state of solidus
+		If we have / or * - then we go into the comment state, so they start with // or / *.
+		At the same time, you can see that for each comment, there are different subsequent states, since they end
+		they are different symbols. And if we have the next character not / and not *, then we are all that we have
+		write to the stack (/) as a token of type oper, clear the stack and return to the main state.
+	*/
 	states = `{
 	"main": {
 			"n;": ["main", "newline", "next"],
@@ -178,6 +177,21 @@ var (
 	for i, ch := range alpha {
 		out += fmt.Sprintf(`%d,`, ch)
 		if i > 0 && i%24 == 0 {
+			out += "\r\n\t\t\t"
+		}
+	}
+	out += "\r\n\t\t}\r\n"
+
+	var (
+		data States
+	)
+	state2int := map[string]uint{`main`: 0}
+	if err := json.Unmarshal([]byte(states), &data); err == nil {
+		for key := range data {
+			if key != `main` {
+				state2int[key] = uint(len(state2int))
+			}
+		}
 		table = make([][AlphaSize]uint32, len(state2int))
 		for key, istate := range data {
 			curstate := state2int[key]

@@ -159,16 +159,28 @@ const (
 	cfBreak
 	cfCmdError
 
-//	cfEval
+	//	cfEval
 )
 
 var (
 	// Array of operations and their priority
 	opers = map[uint32]operPrior{
-		isOr: {cmdOr, 10}, isAnd: {cmdAnd, 15}, isEqEq: {cmdEqual, 20}, isNotEq: {cmdNotEq, 20},
-		isLess: {cmdLess, 22}, isGrEq: {cmdNotLess, 22}, isGreat: {cmdGreat, 22}, isLessEq: {cmdNotGreat, 22},
-		isPlus: {cmdAdd, 25}, isMinus: {cmdSub, 25}, isAsterisk: {cmdMul, 30},
-		isSolidus: {cmdDiv, 30}, isSign: {cmdSign, cmdUnary}, isNot: {cmdNot, cmdUnary}, isLPar: {cmdSys, 0xff}, isRPar: {cmdSys, 0},
+		isOr:       {Cmd: cmdOr, Priority: 10},
+		isAnd:      {Cmd: cmdAnd, Priority: 15},
+		isEqEq:     {Cmd: cmdEqual, Priority: 20},
+		isNotEq:    {Cmd: cmdNotEq, Priority: 20},
+		isLess:     {Cmd: cmdLess, Priority: 22},
+		isGrEq:     {Cmd: cmdNotLess, Priority: 22},
+		isGreat:    {Cmd: cmdGreat, Priority: 22},
+		isLessEq:   {Cmd: cmdNotGreat, Priority: 22},
+		isPlus:     {Cmd: cmdAdd, Priority: 25},
+		isMinus:    {Cmd: cmdSub, Priority: 25},
+		isAsterisk: {Cmd: cmdMul, Priority: 30},
+		isSolidus:  {Cmd: cmdDiv, Priority: 30},
+		isSign:     {Cmd: cmdSign, Priority: cmdUnary},
+		isNot:      {Cmd: cmdNot, Priority: cmdUnary},
+		isLPar:     {Cmd: cmdSys, Priority: 0xff},
+		isRPar:     {Cmd: cmdSys, Priority: 0},
 	}
 	// The array of functions corresponding to the constants cf...
 	funcs = []compileFunc{nil,
@@ -203,143 +215,143 @@ var (
 	// 'states' describes a finite machine with states on the base of which a bytecode will be generated
 	states = compileStates{
 		{ // stateRoot
-			lexNewLine:                      {stateRoot, 0},
-			lexKeyword | (keyContract << 8): {stateContract | statePush, 0},
-			lexKeyword | (keyFunc << 8):     {stateFunc | statePush, 0},
-			0:                               {errUnknownCmd, cfError},
+			lexNewLine:                      {NewState: stateRoot, Func: 0},
+			lexKeyword | (keyContract << 8): {NewState: stateContract | statePush, Func: 0},
+			lexKeyword | (keyFunc << 8):     {NewState: stateFunc | statePush, Func: 0},
+			0:                               {NewState: errUnknownCmd, Func: cfError},
 		},
 		{ // stateBody
-			lexNewLine:                      {stateBody, 0},
-			lexKeyword | (keyFunc << 8):     {stateFunc | statePush, 0},
-			lexKeyword | (keyReturn << 8):   {stateEval, cfReturn},
-			lexKeyword | (keyContinue << 8): {stateBody, cfContinue},
-			lexKeyword | (keyBreak << 8):    {stateBody, cfBreak},
-			lexKeyword | (keyIf << 8):       {stateEval | statePush | stateToBlock | stateMustEval, cfIf},
-			lexKeyword | (keyWhile << 8):    {stateEval | statePush | stateToBlock | stateLabel | stateMustEval, cfWhile},
-			lexKeyword | (keyElse << 8):     {stateBlock | statePush, cfElse},
-			lexKeyword | (keyVar << 8):      {stateVar, 0},
-			lexKeyword | (keyTX << 8):       {stateTX, cfTX},
-			lexKeyword | (keySettings << 8): {stateSettings, cfSettings},
-			lexKeyword | (keyError << 8):    {stateEval, cfCmdError},
-			lexKeyword | (keyWarning << 8):  {stateEval, cfCmdError},
-			lexKeyword | (keyInfo << 8):     {stateEval, cfCmdError},
-			lexIdent:                        {stateAssignEval | stateFork, 0},
-			lexExtend:                       {stateAssignEval | stateFork, 0},
-			isRCurly:                        {statePop, 0},
-			0:                               {errMustRCurly, cfError},
+			lexNewLine:                      {NewState: stateBody, Func: 0},
+			lexKeyword | (keyFunc << 8):     {NewState: stateFunc | statePush, Func: 0},
+			lexKeyword | (keyReturn << 8):   {NewState: stateEval, Func: cfReturn},
+			lexKeyword | (keyContinue << 8): {NewState: stateBody, Func: cfContinue},
+			lexKeyword | (keyBreak << 8):    {NewState: stateBody, Func: cfBreak},
+			lexKeyword | (keyIf << 8):       {NewState: stateEval | statePush | stateToBlock | stateMustEval, Func: cfIf},
+			lexKeyword | (keyWhile << 8):    {NewState: stateEval | statePush | stateToBlock | stateLabel | stateMustEval, Func: cfWhile},
+			lexKeyword | (keyElse << 8):     {NewState: stateBlock | statePush, Func: cfElse},
+			lexKeyword | (keyVar << 8):      {NewState: stateVar, Func: 0},
+			lexKeyword | (keyTX << 8):       {NewState: stateTX, Func: cfTX},
+			lexKeyword | (keySettings << 8): {NewState: stateSettings, Func: cfSettings},
+			lexKeyword | (keyError << 8):    {NewState: stateEval, Func: cfCmdError},
+			lexKeyword | (keyWarning << 8):  {NewState: stateEval, Func: cfCmdError},
+			lexKeyword | (keyInfo << 8):     {NewState: stateEval, Func: cfCmdError},
+			lexIdent:                        {NewState: stateAssignEval | stateFork, Func: 0},
+			lexExtend:                       {NewState: stateAssignEval | stateFork, Func: 0},
+			isRCurly:                        {NewState: statePop, Func: 0},
+			0:                               {NewState: errMustRCurly, Func: cfError},
 		},
 		{ // stateBlock
-			lexNewLine: {stateBlock, 0},
-			isLCurly:   {stateBody, 0},
-			0:          {errMustLCurly, cfError},
+			lexNewLine: {NewState: stateBlock, Func: 0},
+			isLCurly:   {NewState: stateBody, Func: 0},
+			0:          {NewState: errMustLCurly, Func: cfError},
 		},
 		{ // stateContract
-			lexNewLine: {stateContract, 0},
-			lexIdent:   {stateBlock, cfNameBlock},
-			0:          {errMustName, cfError},
+			lexNewLine: {NewState: stateContract, Func: 0},
+			lexIdent:   {NewState: stateBlock, Func: cfNameBlock},
+			0:          {NewState: errMustName, Func: cfError},
 		},
 		{ // stateFunc
-			lexNewLine: {stateFunc, 0},
-			lexIdent:   {stateFParams, cfNameBlock},
-			0:          {errMustName, cfError},
+			lexNewLine: {NewState: stateFunc, Func: 0},
+			lexIdent:   {NewState: stateFParams, Func: cfNameBlock},
+			0:          {NewState: errMustName, Func: cfError},
 		},
 		{ // stateFParams
-			lexNewLine: {stateFParams, 0},
-			isLPar:     {stateFParam, 0},
-			0:          {stateFResult | stateStay, 0},
+			lexNewLine: {NewState: stateFParams, Func: 0},
+			isLPar:     {NewState: stateFParam, Func: 0},
+			0:          {NewState: stateFResult | stateStay, Func: 0},
 		},
 		{ // stateFParam
-			lexNewLine: {stateFParam, 0},
-			lexIdent:   {stateFParamTYPE, cfFParam},
-			// lexType:    {stateFParam, cfFType},
-			isComma: {stateFParam, 0},
-			isRPar:  {stateFResult, 0},
-			0:       {errParams, cfError},
+			lexNewLine: {NewState: stateFParam, Func: 0},
+			lexIdent:   {NewState: stateFParamTYPE, Func: cfFParam},
+			// lexType:  {NewState: stateFParam, Func: cfFType},
+			isComma: {NewState: stateFParam, Func: 0},
+			isRPar:  {NewState: stateFResult, Func: 0},
+			0:       {NewState: errParams, Func: cfError},
 		},
 		{ // stateFParamTYPE
-			lexIdent:                    {stateFParamTYPE, cfFParam},
-			lexType:                     {stateFParam, cfFType},
-			lexKeyword | (keyTail << 8): {stateFTail, cfFTail},
-			isComma:                     {stateFParamTYPE, 0},
-			//			isRPar:   {stateFResult, 0},
-			0: {errVarType, cfError},
+			lexIdent:                    {NewState: stateFParamTYPE, Func: cfFParam},
+			lexType:                     {NewState: stateFParam, Func: cfFType},
+			lexKeyword | (keyTail << 8): {NewState: stateFTail, Func: cfFTail},
+			isComma:                     {NewState: stateFParamTYPE, Func: 0},
+			//			isRPar:  {NewState: stateFResult, Func: 0},
+			0: {NewState: errVarType, Func: cfError},
 		},
 		{ // stateFTail
-			lexNewLine: {stateFTail, 0},
-			isRPar:     {stateFResult, 0},
-			0:          {errParams, cfError},
+			lexNewLine: {NewState: stateFTail, Func: 0},
+			isRPar:     {NewState: stateFResult, Func: 0},
+			0:          {NewState: errParams, Func: cfError},
 		},
 		{ // stateFResult
-			lexNewLine: {stateFResult, 0},
-			isDot:      {stateFDot, 0},
-			lexType:    {stateFResult, cfFResult},
-			isComma:    {stateFResult, 0},
-			0:          {stateBlock | stateStay, 0},
+			lexNewLine: {NewState: stateFResult, Func: 0},
+			isDot:      {NewState: stateFDot, Func: 0},
+			lexType:    {NewState: stateFResult, Func: cfFResult},
+			isComma:    {NewState: stateFResult, Func: 0},
+			0:          {NewState: stateBlock | stateStay, Func: 0},
 		},
 		{ // stateFDot
-			lexNewLine: {stateFDot, 0},
-			lexIdent:   {stateFParams, cfFNameParam},
-			0:          {errMustName, cfError},
+			lexNewLine: {NewState: stateFDot, Func: 0},
+			lexIdent:   {NewState: stateFParams, Func: cfFNameParam},
+			0:          {NewState: errMustName, Func: cfError},
 		},
 		{ // stateVar
-			lexNewLine: {stateBody, 0},
-			lexIdent:   {stateVarType, cfFParam},
-			isRCurly:   {stateBody | stateStay, 0},
-			isComma:    {stateVar, 0},
-			0:          {errVars, cfError},
+			lexNewLine: {NewState: stateBody, Func: 0},
+			lexIdent:   {NewState: stateVarType, Func: cfFParam},
+			isRCurly:   {NewState: stateBody | stateStay, Func: 0},
+			isComma:    {NewState: stateVar, Func: 0},
+			0:          {NewState: errVars, Func: cfError},
 		},
 		{ // stateVarType
-			lexIdent: {stateVarType, cfFParam},
-			lexType:  {stateVar, cfFType},
-			isComma:  {stateVarType, 0},
-			0:        {errVarType, cfError},
+			lexIdent: {NewState: stateVarType, Func: cfFParam},
+			lexType:  {NewState: stateVar, Func: cfFType},
+			isComma:  {NewState: stateVarType, Func: 0},
+			0:        {NewState: errVarType, Func: cfError},
 		},
 		{ // stateAssignEval
-			isLPar:   {stateEval | stateToFork | stateToBody, 0},
-			isLBrack: {stateEval | stateToFork | stateToBody, 0},
-			0:        {stateAssign | stateToFork | stateStay, 0},
+			isLPar:   {NewState: stateEval | stateToFork | stateToBody, Func: 0},
+			isLBrack: {NewState: stateEval | stateToFork | stateToBody, Func: 0},
+			0:        {NewState: stateAssign | stateToFork | stateStay, Func: 0},
 		},
 		{ // stateAssign
-			isComma:   {stateAssign, 0},
-			lexIdent:  {stateAssign, cfAssignVar},
-			lexExtend: {stateAssign, cfAssignVar},
-			isEq:      {stateEval | stateToBody, cfAssign},
-			0:         {errAssign, cfError},
+			isComma:   {NewState: stateAssign, Func: 0},
+			lexIdent:  {NewState: stateAssign, Func: cfAssignVar},
+			lexExtend: {NewState: stateAssign, Func: cfAssignVar},
+			isEq:      {NewState: stateEval | stateToBody, Func: cfAssign},
+			0:         {NewState: errAssign, Func: cfError},
 		},
 		{ // stateTX
-			lexNewLine: {stateTX, 0},
-			isLCurly:   {stateFields, 0},
-			0:          {errMustLCurly, cfError},
+			lexNewLine: {NewState: stateTX, Func: 0},
+			isLCurly:   {NewState: stateFields, Func: 0},
+			0:          {NewState: errMustLCurly, Func: cfError},
 		},
 		{ // stateSettings
-			lexNewLine: {stateSettings, 0},
-			isLCurly:   {stateConsts, 0},
-			0:          {errMustLCurly, cfError},
+			lexNewLine: {NewState: stateSettings, Func: 0},
+			isLCurly:   {NewState: stateConsts, Func: 0},
+			0:          {NewState: errMustLCurly, Func: cfError},
 		},
 		{ // stateConsts
-			lexNewLine: {stateConsts, 0},
-			isComma:    {stateConsts, 0},
-			lexIdent:   {stateConstsAssign, cfConstName},
-			isRCurly:   {stateToBody, 0},
-			0:          {errMustRCurly, cfError},
+			lexNewLine: {NewState: stateConsts, Func: 0},
+			isComma:    {NewState: stateConsts, Func: 0},
+			lexIdent:   {NewState: stateConstsAssign, Func: cfConstName},
+			isRCurly:   {NewState: stateToBody, Func: 0},
+			0:          {NewState: errMustRCurly, Func: cfError},
 		},
 		{ // stateConstsAssign
-			isEq: {stateConstsValue, 0},
-			0:    {errAssign, cfError},
+			isEq: {NewState: stateConstsValue, Func: 0},
+			0:    {NewState: errAssign, Func: cfError},
 		},
 		{ // stateConstsValue
-			lexString: {stateConsts, cfConstValue},
-			lexNumber: {stateConsts, cfConstValue},
-			0:         {errStrNum, cfError},
+			lexString: {NewState: stateConsts, Func: cfConstValue},
+			lexNumber: {NewState: stateConsts, Func: cfConstValue},
+			0:         {NewState: errStrNum, Func: cfError},
 		},
 		{ // stateFields
-			lexNewLine: {stateFields, cfFieldLine},
-			isComma:    {stateFields, cfFieldComma},
-			lexIdent:   {stateFields, cfField},
-			lexType:    {stateFields, cfFieldType},
-			lexString:  {stateFields, cfFieldTag},
-			isRCurly:   {stateToBody, cfFields},
-			0:          {errMustRCurly, cfError},
+			lexNewLine: {NewState: stateFields, Func: cfFieldLine},
+			isComma:    {NewState: stateFields, Func: cfFieldComma},
+			lexIdent:   {NewState: stateFields, Func: cfField},
+			lexType:    {NewState: stateFields, Func: cfFieldType},
+			lexString:  {NewState: stateFields, Func: cfFieldTag},
+			isRCurly:   {NewState: stateToBody, Func: cfFields},
+			0:          {NewState: errMustRCurly, Func: cfError},
 		},
 	}
 )
@@ -537,7 +549,7 @@ func fAssignVar(buf *[]*Block, state int, lexem *Lexem) error {
 			lexem.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexem.Value.(string)}).Error("modifying system variable")
 			return fmt.Errorf(eSysVar, lexem.Value.(string))
 		}
-		ivar = VarInfo{&ObjInfo{ObjExtend, lexem.Value.(string)}, nil}
+		ivar = VarInfo{Obj: &ObjInfo{Type: ObjExtend, Value: lexem.Value.(string)}, Owner: nil}
 	} else {
 		objInfo, tobj := findVar(lexem.Value.(string), buf)
 		if objInfo == nil || objInfo.Type != ObjVar {
@@ -545,7 +557,7 @@ func fAssignVar(buf *[]*Block, state int, lexem *Lexem) error {
 			logger.WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexem.Value.(string)}).Error("unknown variable")
 			return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
 		}
-		ivar = VarInfo{objInfo, tobj}
+		ivar = VarInfo{Obj: objInfo, Owner: tobj}
 	}
 	if len(block.Code) > 0 {
 		if block.Code[len(block.Code)-1].Cmd == cmdAssignVar {
@@ -1352,6 +1364,16 @@ main:
 			if i < len(*lexems)-2 {
 				if (*lexems)[i+1].Type == isLPar {
 					var (
+						isContract  bool
+						objContract *Block
+					)
+					if vm.Extern && objInfo == nil {
+						objInfo = &ObjInfo{Type: ObjContract}
+					}
+					if objInfo == nil || (objInfo.Type != ObjExtFunc && objInfo.Type != ObjFunc &&
+						objInfo.Type != ObjContract) {
+						logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("unknown function")
+						return fmt.Errorf(`unknown function %s`, lexem.Value.(string))
 					}
 					if objInfo.Type == ObjContract {
 						if objInfo.Value != nil {

@@ -3,6 +3,18 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 package script
+
+import (
+	"fmt"
+	"testing"
+)
+
+type TestComp struct {
+	Input  string
+	Output string
+}
+
+func Multi(a, b int64) (int64, error) {
 	return a + b*2, nil
 }
 

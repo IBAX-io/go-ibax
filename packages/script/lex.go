@@ -7,6 +7,15 @@ package script
 import (
 	"encoding/binary"
 	"fmt"
+	"reflect"
+	"strconv"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/types"
+
+	"github.com/shopspring/decimal"
+	log "github.com/sirupsen/logrus"
 )
 
 // The lexical analysis of the incoming program is implemented in this file. It is the first phase of compilation
@@ -116,12 +125,28 @@ type typeInfo struct {
 
 var (
 	// The list of key words
-	keywords = map[string]uint32{`contract`: keyContract, `func`: keyFunc, `return`: keyReturn,
-		`if`: keyIf, `elif`: keyElif, `else`: keyElse, msgError: keyError, msgWarning: keyWarning,
-		msgInfo: keyInfo, `while`: keyWhile, `data`: keyTX, `settings`: keySettings, `nil`: keyNil,
-		`action`: keyAction, `conditions`: keyCond,
-		`true`: keyTrue, `false`: keyFalse, `break`: keyBreak, `continue`: keyContinue,
-		`var`: keyVar, `...`: keyTail}
+	keywords = map[string]uint32{
+		`contract`:   keyContract,
+		`func`:       keyFunc,
+		`return`:     keyReturn,
+		`if`:         keyIf,
+		`elif`:       keyElif,
+		`else`:       keyElse,
+		msgError:     keyError,
+		msgWarning:   keyWarning,
+		msgInfo:      keyInfo,
+		`while`:      keyWhile,
+		`data`:       keyTX,
+		`settings`:   keySettings,
+		`nil`:        keyNil,
+		`action`:     keyAction,
+		`conditions`: keyCond,
+		`true`:       keyTrue,
+		`false`:      keyFalse,
+		`break`:      keyBreak,
+		`continue`:   keyContinue,
+		`var`:        keyVar,
+		`...`:        keyTail}
 
 	// list of available types
 	// The list of types which save the corresponding 'reflect' type
