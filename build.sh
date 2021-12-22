@@ -8,7 +8,7 @@ function buildpkg() {
     buildModule=$2
     buildFile=$3
     buildBranch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
-    buildDate=$(date "+%Y-%m-%d-%H:%M:%S(UTC)")
+    buildDate=$(date -u "+%Y-%m-%d-%H:%M:%S(UTC)")
     commitHash=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
     go build -o "$buildBin" -ldflags "-X $buildModule/cmd.buildBranch=$buildBranch -X $buildModule/cmd.buildDate=$buildDate -X $buildModule/cmd.commitHash=$commitHash" "$buildFile"
 }
