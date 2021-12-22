@@ -64,7 +64,7 @@ func monitor(conf *config.Config) {
 
 	hash2Node := map[string][]string{}
 	for node, blockInfo := range blockInfos {
-		rollbacksHash := string(blockInfo.RollbacksHash)
+		rollbacksHash := fmt.Sprintf("%d: %x", blockInfo.BlockID, blockInfo.RollbacksHash)
 		if _, ok := hash2Node[rollbacksHash]; !ok {
 			hash2Node[rollbacksHash] = []string{}
 		}
@@ -80,10 +80,10 @@ func monitor(conf *config.Config) {
 
 	hash2NodeStrResults := []string{}
 	for k, v := range hash2Node {
-		hash2NodeStrResults = append(hash2NodeStrResults, fmt.Sprintf("%x: %s", k, v))
+		hash2NodeStrResults = append(hash2NodeStrResults, fmt.Sprintf("%s: %s", k, v))
 	}
 
-	log.Infof("nodes unsynced. Rollback hashes are: %s", strings.Join(hash2NodeStrResults, ","))
+	log.Infof("nodes unsynced. Rollback hashes are: %s", strings.Join(hash2NodeStrResults, ", "))
 }
 
 func main() {

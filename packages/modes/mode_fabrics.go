@@ -180,7 +180,7 @@ func (l OBSDaemonFactory) Load(ctx context.Context) error {
 		log.Errorf("can't table col type: %s", utils.ErrInfo(err))
 		return err
 	}
-	logMode(l.logger, conf.Config.OBSMode)
+	logMode(l.logger, conf.Config.LocalConf.RunNodeMode)
 	l.logger.Info("load contracts")
 	if err := smart.LoadContracts(); err != nil {
 		l.logger.Errorf("Load Contracts error: %s", err)

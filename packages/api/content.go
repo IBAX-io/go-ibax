@@ -186,11 +186,11 @@ func getPage(r *http.Request) (result *contentResult, err error) {
 	}()
 	go func() {
 		defer wg.Done()
-		if conf.Config.MaxPageGenerationTime == 0 {
+		if conf.Config.LocalConf.MaxPageGenerationTime == 0 {
 			return
 		}
 		select {
-		case <-time.After(time.Duration(conf.Config.MaxPageGenerationTime) * time.Millisecond):
+		case <-time.After(time.Duration(conf.Config.LocalConf.MaxPageGenerationTime) * time.Millisecond):
 			timeout = true
 		case <-success:
 		}

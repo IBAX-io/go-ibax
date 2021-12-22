@@ -38,7 +38,7 @@ func CreateContract(contractName string, keyID int64, params map[string]interfac
 			Time:        time.Now().Unix(),
 			EcosystemID: ecosysID,
 			KeyID:       keyID,
-			NetworkID:   conf.Config.NetworkID,
+			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		Params: params,
 	}

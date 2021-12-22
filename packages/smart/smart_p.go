@@ -360,7 +360,7 @@ func GetContractByName(sc *SmartContract, name string) int64 {
 
 // GetContractById returns the name of the contract with this id
 func GetContractById(sc *SmartContract, id int64) string {
-	_, ret, err := DBSelect(sc, "contracts", "value", id, `id`, 0, 1, nil, false)
+	_, ret, err := DBSelect(sc, "contracts", "value", id, `id`, 0, 1, nil, "", "", false)
 	if err != nil || len(ret) != 1 {
 		logErrorDB(err, "getting contract name")
 		return ``
@@ -468,7 +468,7 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 		ret []interface{}
 		pub string
 	)
-	_, ret, err = DBSelect(sc, "@1keys", "pub", wallet, `id`, 0, 1, nil, false)
+	_, ret, err = DBSelect(sc, "@1keys", "pub", wallet, `id`, 0, 1, nil, "", "", false)
 	if err != nil {
 		return 0, logErrorDB(err, "getting pub key")
 	}
@@ -691,7 +691,7 @@ func RegexpMatch(str, reg string) bool {
 }
 
 func DBCount(sc *SmartContract, tableName string, inWhere *types.Map) (count int64, err error) {
-	tblname := GetTableName(sc, tableName)
+	tblname := qb.GetTableName(sc.TxSmart.EcosystemID, tableName)
 	where, err := qb.GetWhere(inWhere)
 	if err != nil {
 		return 0, err

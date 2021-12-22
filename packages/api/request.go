@@ -264,7 +264,7 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 			Time:        txTime,
 			EcosystemID: 1,
 			KeyID:       crypto.Address(publicKey),
-			NetworkID:   conf.Config.NetworkID,
+			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		Params: params,
 	}, connect.PrivateKey)

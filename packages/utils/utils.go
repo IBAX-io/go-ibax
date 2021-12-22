@@ -293,7 +293,7 @@ func GetNodeKeys() (string, string) {
 }
 
 func GetNodePrivateKey() ([]byte, error) {
-	data, err := os.ReadFile(filepath.Join(conf.Config.KeysDir, consts.NodePrivateKeyFilename))
+	data, err := os.ReadFile(filepath.Join(conf.Config.DirPathConf.KeysDir, consts.NodePrivateKeyFilename))
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading node private key from file")
 		return nil, err

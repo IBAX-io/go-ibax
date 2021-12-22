@@ -28,7 +28,7 @@ func (c *Contract) Info() *script.ContractInfo {
 // LoadContracts reads and compiles contracts from smart_contracts tables
 func LoadContracts() error {
 	contract := &model.Contract{}
-	count, err := contract.Count()
+	count, err := contract.Count(nil)
 	if err != nil {
 		return logErrorDB(err, "getting count of contracts")
 	}

@@ -610,7 +610,7 @@ func dbfindTag(par parFunc) string {
 			inColumns = fields
 		}
 	}
-	columns, err = smart.GetColumns(inColumns)
+	columns, err = qb.GetColumns(inColumns)
 	if err != nil {
 		return err.Error()
 	}
@@ -685,7 +685,7 @@ func dbfindTag(par parFunc) string {
 			inColumns = order
 		}
 	}
-	order, err = smart.GetOrder(tblname, inColumns)
+	order, err = qb.GetOrder(tblname, inColumns)
 	if err != nil {
 		return err.Error()
 	}
@@ -1438,7 +1438,7 @@ func columntypeTag(par parFunc) string {
 	if len((*par.Pars)["Table"]) > 0 && len((*par.Pars)["Column"]) > 0 {
 		tableName := macro((*par.Pars)[`Table`], par.Workspace.Vars)
 		columnName := macro((*par.Pars)[`Column`], par.Workspace.Vars)
-		tblname := smart.GetTableName(par.Workspace.SmartContract, tableName)
+		tblname := qb.GetTableName(par.Workspace.SmartContract.TxSmart.EcosystemID, tableName)
 		colType, err := model.GetColumnType(tblname, columnName)
 		if err == nil {
 			return colType

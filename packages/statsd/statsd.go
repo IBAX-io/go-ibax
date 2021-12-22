@@ -5,8 +5,9 @@
 package statsd
 
 import (
-	"fmt"
 	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
 
 	"github.com/cactus/go-statsd-client/v5/statsd"
 )
@@ -18,9 +19,14 @@ const (
 
 var Client statsd.Statter
 
-func Init(host string, port int, name string) error {
+func Init(conf conf.StatsDConfig) error {
 	var err error
-	Client, err = statsd.NewClient(fmt.Sprintf("%s:%d", host, port), name)
+	config := &statsd.ClientConfig{
+		Address:     conf.Str(),
+		Prefix:      conf.Name,
+		UseBuffered: false,
+	}
+	Client, err = statsd.NewClientWithConfig(config)
 	if err != nil {
 		return err
 	}

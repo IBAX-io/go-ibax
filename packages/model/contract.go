@@ -40,8 +40,8 @@ func (c *Contract) GetFromEcosystem(db *DbTransaction, ecosystem int64) ([]Contr
 }
 
 // Count returns count of records in table
-func (c *Contract) Count() (count int64, err error) {
-	err = DBConn.Table(c.TableName()).Count(&count).Error
+func (c *Contract) Count(db *DbTransaction) (count int64, err error) {
+	err = GetDB(db).Table(c.TableName()).Count(&count).Error
 	return
 }
 

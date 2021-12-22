@@ -1349,11 +1349,6 @@ func (rt *RunTime) Run(block *Block, params []interface{}, extend *map[string]in
 	if genBlock {
 		timer = time.AfterFunc(time.Millisecond*time.Duration((*extend)[`time_limit`].(int64)), timeOver)
 	}
-	//if block.IsParentContract() {
-	//	rt.cost -= int64(len(block.Parent.Objects)) * CostCall
-	//	rt.cost -= int64(len(block.Parent.Info.(*ContractInfo).Settings)) * CostCall
-	//	rt.cost -= int64(len(*(block.Parent.Info.(*ContractInfo)).Tx)) * CostExtend
-	//}
 	if _, err = rt.RunCode(block); err == nil {
 		off := len(rt.stack) - len(info.Results)
 		for i := 0; i < len(info.Results); i++ {

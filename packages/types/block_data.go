@@ -1,10 +1,9 @@
-package utils
+package types
 
 import (
 	"bytes"
 	"fmt"
 
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/pkg/errors"
@@ -42,21 +41,21 @@ func blockVer(cur, prev *BlockData) (ret string) {
 	return
 }
 
-func (b BlockData) ForSha(prev *BlockData, mrklRoot []byte) string {
+func (b *BlockData) ForSha(prev *BlockData, mrklRoot []byte) string {
 	return fmt.Sprintf("%d,%x,%s,%d,%d,%d,%d",
 		b.BlockID, prev.Hash, mrklRoot, b.Time, b.EcosystemID, b.KeyID, b.NodePosition) +
-		blockVer(&b, prev)
+		blockVer(b, prev)
 }
 
 // ForSign from 128 bytes to 512 bytes. Signature of TYPE, BLOCK_ID, PREV_BLOCK_HASH, TIME, WALLET_ID, state_id, MRKL_ROOT
-func (b BlockData) ForSign(prev *BlockData, mrklRoot []byte) string {
+func (b *BlockData) ForSign(prev *BlockData, mrklRoot []byte) string {
 	return fmt.Sprintf("0,%v,%x,%v,%v,%v,%v,%s",
 		b.BlockID, prev.Hash, b.Time, b.EcosystemID, b.KeyID, b.NodePosition, mrklRoot) +
-		blockVer(&b, prev)
+		blockVer(b, prev)
 }
 
 // ParseBlockHeader is parses block header
-func ParseBlockHeader(buf *bytes.Buffer) (header, prev BlockData, err error) {
+func ParseBlockHeader(buf *bytes.Buffer, maxBlockSize int64) (header, prev BlockData, err error) {
 	if buf.Len() < minBlockSize {
 		err = ErrBlockSize
 		return
@@ -85,7 +84,7 @@ func ParseBlockHeader(buf *bytes.Buffer) (header, prev BlockData, err error) {
 		return
 	}
 
-	if int64(buf.Len()) > syspar.GetMaxBlockSize() {
+	if int64(buf.Len()) > maxBlockSize {
 		err = ErrBlockSize
 		return
 	}

@@ -11,12 +11,12 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 const fileMode = 0600
@@ -28,23 +28,23 @@ var generateKeysCmd = &cobra.Command{
 	PreRun: loadConfig,
 	Run: func(cmd *cobra.Command, args []string) {
 		_, publicKey, err := createKeyPair(
-			filepath.Join(conf.Config.KeysDir, consts.PrivateKeyFilename),
-			filepath.Join(conf.Config.KeysDir, consts.PublicKeyFilename),
+			filepath.Join(conf.Config.DirPathConf.KeysDir, consts.PrivateKeyFilename),
+			filepath.Join(conf.Config.DirPathConf.KeysDir, consts.PublicKeyFilename),
 		)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Fatal("generating user keys")
 			return
 		}
 		_, _, err = createKeyPair(
-			filepath.Join(conf.Config.KeysDir, consts.NodePrivateKeyFilename),
-			filepath.Join(conf.Config.KeysDir, consts.NodePublicKeyFilename),
+			filepath.Join(conf.Config.DirPathConf.KeysDir, consts.NodePrivateKeyFilename),
+			filepath.Join(conf.Config.DirPathConf.KeysDir, consts.NodePublicKeyFilename),
 		)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err}).Fatal("generating node keys")
 			return
 		}
 		address := crypto.Address(publicKey)
-		keyIDPath := filepath.Join(conf.Config.KeysDir, consts.KeyIDFilename)
+		keyIDPath := filepath.Join(conf.Config.DirPathConf.KeysDir, consts.KeyIDFilename)
 		err = createFile(keyIDPath, []byte(strconv.FormatInt(address, 10)))
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "path": keyIDPath}).Fatal("generating node keys")

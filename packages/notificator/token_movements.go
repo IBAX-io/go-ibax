@@ -45,7 +45,7 @@ func sendEmail(conf conf.TokenMovementConfig, message string) error {
 		fmt.Sprintf("Subject: %s\r\n", conf.Subject) +
 		"\r\n" +
 		fmt.Sprintf("%s\r\n", message))
-	err := smtp.SendMail(fmt.Sprintf("%s:%d", conf.Host, conf.Port), auth, conf.From, to, msg)
+	err := smtp.SendMail(conf.Str(), auth, conf.From, to, msg)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("sending email")
 	}

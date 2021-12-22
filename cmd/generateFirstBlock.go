@@ -19,7 +19,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -38,7 +37,7 @@ var generateFirstBlockCmd = &cobra.Command{
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block marshalling")
 		}
-		os.WriteFile(conf.Config.FirstBlockPath, block, 0644)
+		os.WriteFile(conf.Config.DirPathConf.FirstBlockPath, block, 0644)
 		log.Info("first block generated")
 	},
 }
@@ -51,7 +50,7 @@ func init() {
 
 func genesisBlock() ([]byte, error) {
 	now := time.Now().Unix()
-	header := &utils.BlockData{
+	header := &types.BlockData{
 		BlockID:      1,
 		Time:         now,
 		EcosystemID:  0,
@@ -61,7 +60,7 @@ func genesisBlock() ([]byte, error) {
 	}
 
 	decodeKeyFile := func(kName string) []byte {
-		filepath := filepath.Join(conf.Config.KeysDir, kName)
+		filepath := filepath.Join(conf.Config.DirPathConf.KeysDir, kName)
 		data, err := os.ReadFile(filepath)
 		if err != nil {
 			log.WithError(err).WithFields(log.Fields{"key": kName, "filepath": filepath}).Fatal("Reading key data")
@@ -78,7 +77,7 @@ func genesisBlock() ([]byte, error) {
 	var stopNetworkCert []byte
 	if len(stopNetworkBundleFilepath) > 0 {
 		var err error
-		fp := filepath.Join(conf.Config.KeysDir, stopNetworkBundleFilepath)
+		fp := filepath.Join(conf.Config.DirPathConf.KeysDir, stopNetworkBundleFilepath)
 		if stopNetworkCert, err = os.ReadFile(fp); err != nil {
 			log.WithError(err).WithFields(log.Fields{"filepath": fp}).Fatal("Reading cert data")
 		}
@@ -116,7 +115,7 @@ func genesisBlock() ([]byte, error) {
 		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block body bin marshalling")
 	}
 
-	return block.MarshallBlock(header, [][]byte{tx}, &utils.BlockData{
+	return block.MarshallBlock(header, [][]byte{tx}, &types.BlockData{
 		Hash:          []byte(`0`),
 		RollbacksHash: []byte(`0`),
 	}, "")

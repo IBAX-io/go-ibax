@@ -9,17 +9,20 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
 )
 
 // MarshallBlock is marshalling block
-func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockData, key string) ([]byte, error) {
+func MarshallBlock(header *types.BlockData, trData [][]byte, prev *types.BlockData, key string) ([]byte, error) {
 	var mrklArray [][]byte
 	var blockDataTx []byte
 	var signed []byte
@@ -67,7 +70,7 @@ func MarshallBlock(header *utils.BlockData, trData [][]byte, prev *utils.BlockDa
 }
 
 func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
-	header, prev, err := utils.ParseBlockHeader(blockBuffer)
+	header, prev, err := types.ParseBlockHeader(blockBuffer, syspar.GetMaxBlockSize())
 	if err != nil {
 		return nil, err
 	}

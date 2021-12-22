@@ -3,6 +3,8 @@ package model
 import (
 	"errors"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
+
 	"github.com/go-redis/redis"
 )
 
@@ -18,16 +20,16 @@ type RedisParams struct {
 	Value string `json:"value"`
 }
 
-func RedisInit(host string, port string, password string, db int) error {
+func RedisInit(conf conf.RedisConfig) error {
 	var (
 		err error
 	)
 	GRedisIsactive = false
 
 	Gclient0 = redis.NewClient(&redis.Options{
-		Addr:     host + ":" + port,
-		Password: password, // no password set
-		DB:       db,       // use default DB
+		Addr:     conf.Str(),
+		Password: conf.Password, // no password set
+		DB:       conf.DbName,   // use default DB
 	})
 	_, err = Gclient0.Ping().Result()
 	if err != nil {
@@ -35,9 +37,9 @@ func RedisInit(host string, port string, password string, db int) error {
 	}
 
 	Gclient1 = redis.NewClient(&redis.Options{
-		Addr:     host + ":" + port,
-		Password: password, // no password set
-		DB:       1,        // use default DB
+		Addr:     conf.Str(),
+		Password: conf.Password, // no password set
+		DB:       1,             // use default DB
 	})
 	_, err = Gclient1.Ping().Result()
 	if err != nil {

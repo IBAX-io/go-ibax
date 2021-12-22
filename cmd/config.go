@@ -31,7 +31,7 @@ var configCmd = &cobra.Command{
 		}
 
 		if configPath == "" {
-			configPath = filepath.Join(conf.Config.DataDir, consts.DefaultConfigFile)
+			configPath = filepath.Join(conf.Config.DirPathConf.DataDir, consts.DefaultConfigFile)
 		}
 		err = viper.Unmarshal(&conf.Config)
 		if err != nil {
@@ -51,6 +51,32 @@ func init() {
 	cmdFlags := configCmd.Flags()
 	// Command flags
 	cmdFlags.String("path", "", "Generate config to (default dataDir/config.toml)")
+
+	// Etc
+	cmdFlags.StringVar(&conf.Config.DirPathConf.PidFilePath, "pid", "",
+		fmt.Sprintf("ibax pid file name (default dataDir/%s)", consts.DefaultPidFilename),
+	)
+	cmdFlags.StringVar(&conf.Config.DirPathConf.LockFilePath, "lock", "",
+		fmt.Sprintf("ibax lock file name (default dataDir/%s)", consts.DefaultLockFilename),
+	)
+	cmdFlags.StringVar(&conf.Config.DirPathConf.KeysDir, "keysDir", "", "Keys directory (default dataDir)")
+	cmdFlags.StringVar(&conf.Config.DirPathConf.DataDir, "dataDir", "", "Data directory (default cwd/data)")
+	cmdFlags.StringVar(&conf.Config.DirPathConf.TempDir, "tempDir", "", "Temporary directory (default temporary directory of OS)")
+	cmdFlags.StringVar(&conf.Config.DirPathConf.FirstBlockPath, "firstBlock", "", "First block path (default dataDir/1block)")
+
+	// tls
+	cmdFlags.BoolVar(&conf.Config.TLSConf.Enabled, "tlsEnable", false, "Enable https")
+	cmdFlags.StringVar(&conf.Config.TLSConf.TLSCert, "tlsCert", "", "Filepath to the fullchain of certificates")
+	cmdFlags.StringVar(&conf.Config.TLSConf.TLSKey, "tlsKey", "", "Filepath to the private key")
+
+	//Bootstrap
+	cmdFlags.StringSliceVar(&conf.Config.BootNodes.NodesAddr, "bootNodes", []string{}, "List of addresses for downloading blockchain")
+
+	//LocalConf
+	cmdFlags.Int64Var(&conf.Config.LocalConf.MaxPageGenerationTime, "mpgt", 3000, "Max page generation time in ms")
+	cmdFlags.Int64Var(&conf.Config.LocalConf.HTTPServerMaxBodySize, "mbs", 1<<20, "Max server body size in byte")
+	cmdFlags.Int64Var(&conf.Config.LocalConf.NetworkID, "networkID", 1, "Network ID")
+	cmdFlags.StringVar(&conf.Config.LocalConf.RunNodeMode, "runMode", consts.NoneOBS, "running node mode, example NONE|OBS|OBSMaster|SubNode")
 
 	// TCP Server
 	cmdFlags.StringVar(&conf.Config.TCPServer.Host, "tcpHost", "127.0.0.1", "Node TCP host")
@@ -72,11 +98,11 @@ func init() {
 	cmdFlags.IntVar(&conf.Config.DB.MaxOpenConns, "dbMaxOpenConns", 100, "sets the maximum number of open connections to the database")
 
 	//Redis
-	cmdFlags.BoolVar(&conf.Config.Redis.Enable, "redisenable", false, "enable redis")
-	cmdFlags.StringVar(&conf.Config.Redis.Host, "redishost", "localhost", "redis host")
-	cmdFlags.StringVar(&conf.Config.Redis.Port, "redisport", "6379", "redis port")
-	cmdFlags.IntVar(&conf.Config.Redis.DbName, "redisdb", 0, "redis db")
-	cmdFlags.StringVar(&conf.Config.Redis.Password, "redispassword", "123456", "redis password")
+	cmdFlags.BoolVar(&conf.Config.Redis.Enable, "redisEnable", false, "enable redis")
+	cmdFlags.StringVar(&conf.Config.Redis.Host, "redisHost", "localhost", "redis host")
+	cmdFlags.IntVar(&conf.Config.Redis.Port, "redisPort", 6379, "redis port")
+	cmdFlags.IntVar(&conf.Config.Redis.DbName, "redisDb", 0, "redis db")
+	cmdFlags.StringVar(&conf.Config.Redis.Password, "redisPassword", "123456", "redis password")
 
 	// StatsD
 	cmdFlags.StringVar(&conf.Config.StatsD.Host, "statsdHost", "127.0.0.1", "StatsD host")
@@ -108,29 +134,9 @@ func init() {
 	cmdFlags.IntVar(&conf.Config.BanKey.BanTime, "banTime", 15, "Ban time in minutes")
 	cmdFlags.IntVar(&conf.Config.BanKey.BadTx, "badTx", 5, "Maximum bad tx during badTime minutes")
 
-	// Etc
-	cmdFlags.StringVar(&conf.Config.PidFilePath, "pid", "",
-		fmt.Sprintf("ibax pid file name (default dataDir/%s)", consts.DefaultPidFilename),
-	)
-	cmdFlags.StringVar(&conf.Config.LockFilePath, "lock", "",
-		fmt.Sprintf("ibax lock file name (default dataDir/%s)", consts.DefaultLockFilename),
-	)
-	cmdFlags.StringVar(&conf.Config.KeysDir, "keysDir", "", "Keys directory (default dataDir)")
-	cmdFlags.StringVar(&conf.Config.DataDir, "dataDir", "", "Data directory (default cwd/data)")
-	cmdFlags.StringVar(&conf.Config.TempDir, "tempDir", "", "Temporary directory (default temporary directory of OS)")
-	cmdFlags.StringVar(&conf.Config.FirstBlockPath, "firstBlock", "", "First block path (default dataDir/1block)")
-	cmdFlags.BoolVar(&conf.Config.TLS, "tls", false, "Enable https")
-	cmdFlags.StringVar(&conf.Config.TLSCert, "tls-cert", "", "Filepath to the fullchain of certificates")
-	cmdFlags.StringVar(&conf.Config.TLSKey, "tls-key", "", "Filepath to the private key")
-	cmdFlags.Int64Var(&conf.Config.MaxPageGenerationTime, "mpgt", 3000, "Max page generation time in ms")
-	cmdFlags.Int64Var(&conf.Config.HTTPServerMaxBodySize, "mbs", 1<<20, "Max server body size in byte")
-	cmdFlags.StringSliceVar(&conf.Config.NodesAddr, "nodesAddr", []string{}, "List of addresses for downloading blockchain")
-	cmdFlags.Int64Var(&conf.Config.NetworkID, "networkID", 1, "Network ID")
-	cmdFlags.StringVar(&conf.Config.OBSMode, "obsMode", consts.NoneOBS, "OBS running mode")
-
-	// GFiles
-	cmdFlags.BoolVar(&conf.Config.GFiles.GFiles, "gfs", false, "Enable GFiles")
-	cmdFlags.StringVar(&conf.Config.GFiles.Host, "gFilesHost", "127.0.0.1:5001", "GFiles host")
+	// IPFS
+	cmdFlags.BoolVar(&conf.Config.IpfsConf.Enabled, "ipfsEnable", false, "Enable IPFS")
+	cmdFlags.StringVar(&conf.Config.IpfsConf.Host, "ipfsHost", "127.0.0.1:5001", "IPFS host")
 
 	// CryptoSettings
 	cmdFlags.StringVar(&conf.Config.CryptoSettings.Hasher, "hasher", "SHA256", "Hash Algorithm")

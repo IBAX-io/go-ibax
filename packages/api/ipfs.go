@@ -159,7 +159,7 @@ func add(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, err, http.StatusBadRequest)
 			return
 		}
-		s := shell.NewShell(conf.GetGFilesHost())
+		s := shell.NewShell(conf.IpfsHost())
 		hash, err := s.Add(bytes.NewBuffer(fileData))
 		if err != nil {
 			errorResponse(w, err)
@@ -192,7 +192,7 @@ func addDir(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
-	s := shell.NewShell(conf.GetGFilesHost())
+	s := shell.NewShell(conf.IpfsHost())
 
 	hash, err := s.AddDir(form.Source)
 	if err != nil {
@@ -223,7 +223,7 @@ func cat(w http.ResponseWriter, r *http.Request) {
 	type link struct {
 		Link string
 	}
-	jsonResponse(w, link{Link: conf.GetGFilesHost() + fmt.Sprintf("/api/v0/cat?arg=/ipfs/%s", params["hash"])})
+	jsonResponse(w, link{Link: conf.IpfsHost() + fmt.Sprintf("/api/v0/cat?arg=/ipfs/%s", params["hash"])})
 }
 
 func filesMkdir(w http.ResponseWriter, r *http.Request) {
@@ -234,7 +234,7 @@ func filesMkdir(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s := shell.NewShell(conf.GetGFilesHost())
+	s := shell.NewShell(conf.IpfsHost())
 	resp, err := s.Request("files/mkdir").
 		Option("arg", leadingSlash+converter.Int64ToStr(client.KeyID)+form.Paths).
 		Option("parents", true).
@@ -260,7 +260,7 @@ func filesStat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s := shell.NewShell(conf.GetGFilesHost())
+	s := shell.NewShell(conf.IpfsHost())
 	out := &statResult{}
 	err := s.Request("files/stat").
 		Option("arg", leadingSlash+converter.Int64ToStr(client.KeyID)+form.Paths).
@@ -284,7 +284,7 @@ func filesRm(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, fmt.Errorf("cannot delete root"), http.StatusBadRequest)
 		return
 	}
-	s := shell.NewShell(conf.GetGFilesHost())
+	s := shell.NewShell(conf.IpfsHost())
 	resp, err := s.Request("files/rm").
 		Option("arg", leadingSlash+converter.Int64ToStr(client.KeyID)+form.Paths).
 		Option("recursive", true).
@@ -311,7 +311,7 @@ func filesMv(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s := shell.NewShell(conf.GetGFilesHost())
+	s := shell.NewShell(conf.IpfsHost())
 	resp, err := s.Request("files/mv",
 		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Source,
 		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Dest).
@@ -339,7 +339,7 @@ func filesCp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s := shell.NewShell(conf.GetGFilesHost())
+	s := shell.NewShell(conf.IpfsHost())
 
 	resp, err := s.Request("files/cp", fmt.Sprintf("/ipfs/%s", params["hash"]),
 		leadingSlash+converter.Int64ToStr(client.KeyID)+form.Paths).
@@ -360,7 +360,7 @@ func filesCp(w http.ResponseWriter, r *http.Request) {
 
 func fileLs(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	s := shell.NewShell(conf.GetGFilesHost())
+	s := shell.NewShell(conf.IpfsHost())
 	list, err := s.FileList(fmt.Sprintf("/ipfs/%s", params["hash"]))
 	if err != nil {
 		errorResponse(w, err)
@@ -377,7 +377,7 @@ func filesLs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s := shell.NewShell(conf.GetGFilesHost())
+	s := shell.NewShell(conf.IpfsHost())
 	var out interface{}
 	err := s.Request("files/ls").Option("arg", leadingSlash+converter.Int64ToStr(client.KeyID)+form.Paths).Option("l", true).
 		Exec(context.Background(), &out)
@@ -390,7 +390,7 @@ func filesLs(w http.ResponseWriter, r *http.Request) {
 
 func ls(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	s := shell.NewShell(conf.GetGFilesHost())
+	s := shell.NewShell(conf.IpfsHost())
 	list, err := s.List(fmt.Sprintf("/ipfs/%s", params["hash"]))
 	if err != nil {
 		errorResponse(w, err)

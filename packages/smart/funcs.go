@@ -33,7 +33,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/scheduler/contract"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/pkg/errors"
@@ -327,10 +326,6 @@ func EmbedFuncs(vt script.VMType) map[string]interface{} {
 	return f
 }
 
-func GetTableName(sc *SmartContract, tblname string) string {
-	return converter.ParseTable(tblname, sc.TxSmart.EcosystemID)
-}
-
 func accessContracts(sc *SmartContract, names ...string) bool {
 	contract := sc.TxContract.StackCont[len(sc.TxContract.StackCont)-1].(string)
 
@@ -616,7 +611,7 @@ func CreateView(sc *SmartContract, vname, columns, where string, applicationID i
 		colout, whsout                    []byte
 	)
 
-	viewName = GetTableName(sc, vname)
+	viewName = qb.GetTableName(sc.TxSmart.EcosystemID, vname)
 	var check = model.Namer{}
 	if check.HasExists(sc.DbTransaction, viewName) {
 		return fmt.Errorf(eTableExists, vname)
@@ -831,7 +826,7 @@ func CreateTable(sc *SmartContract, name, columns, permissions string, applicati
 		return errTableName
 	}
 
-	tableName := GetTableName(sc, name)
+	tableName := qb.GetTableName(sc.TxSmart.EcosystemID, name)
 	if model.IsTable(tableName) {
 		return fmt.Errorf(eTableExists, name)
 	}
@@ -897,7 +892,7 @@ func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64
 		return 0, 0, fmt.Errorf("system parameters access denied")
 	}
 
-	tblname = GetTableName(sc, tblname)
+	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
 	if err = sc.AccessTable(tblname, "insert"); err != nil {
 		return
 	}
@@ -945,112 +940,9 @@ func PrepareColumns(columns []string) string {
 	return strings.Join(colList, `,`)
 }
 
-func GetColumns(inColumns interface{}) ([]string, error) {
-	var columns []string
-
-	switch v := inColumns.(type) {
-	case string:
-		if len(v) > 0 {
-			columns = strings.Split(v, `,`)
-		}
-	case []interface{}:
-		for _, name := range v {
-			switch col := name.(type) {
-			case string:
-				columns = append(columns, col)
-			}
-		}
-	}
-	if len(columns) == 0 {
-		columns = []string{`*`}
-	}
-	for i, v := range columns {
-		columns[i] = converter.Sanitize(strings.ToLower(v), `*->`)
-	}
-	if err := qb.CheckNow(columns...); err != nil {
-		return nil, err
-	}
-	return columns, nil
-}
-
-func GetOrder(tblname string, inOrder interface{}) (string, error) {
-	var (
-		orders           []string
-		defaultSortOrder = map[string]string{
-			`keys`:    "ecosystem,id",
-			`members`: "ecosystem,id",
-		}
-	)
-	cols := types.NewMap()
-
-	sanitize := func(in string, value interface{}) {
-		in = converter.Sanitize(strings.ToLower(in), ``)
-		if len(in) > 0 {
-			cols.Set(in, true)
-			in = `"` + in + `"`
-			if fmt.Sprint(value) == `-1` {
-				in += ` desc`
-			} else if fmt.Sprint(value) == `1` {
-				in += ` asc`
-			} else {
-				in += ` asc`
-			}
-			orders = append(orders, in)
-		} else {
-			orders = append(orders, `"id" asc`)
-		}
-	}
-
-	if v, ok := defaultSortOrder[tblname[2:]]; ok {
-		for _, item := range strings.Split(v, `,`) {
-			cols.Set(item, false)
-		}
-	} else {
-		cols.Set(`id`, false)
-	}
-	switch v := inOrder.(type) {
-	case string:
-		sanitize(v, nil)
-	case *types.Map:
-		for _, ikey := range v.Keys() {
-			item, _ := v.Get(ikey)
-			sanitize(ikey, item)
-		}
-	case map[string]interface{}:
-		for ikey, item := range v {
-			sanitize(ikey, item)
-		}
-	case []interface{}:
-		for _, item := range v {
-			switch param := item.(type) {
-			case string:
-				sanitize(param, nil)
-			case *types.Map:
-				for _, ikey := range param.Keys() {
-					item, _ := param.Get(ikey)
-					sanitize(ikey, item)
-				}
-			case map[string]interface{}:
-				for key, value := range param {
-					sanitize(key, value)
-				}
-			}
-		}
-	}
-	for _, key := range cols.Keys() {
-		if state, found := cols.Get(key); !found || !state.(bool) {
-			orders = append(orders, key)
-		}
-	}
-	if err := qb.CheckNow(orders...); err != nil {
-		return ``, err
-	}
-	return strings.Join(orders, `,`), nil
-}
-
 // DBSelect returns an array of values of the specified columns when there is selection of data 'offset', 'limit', 'where'
 func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64, inOrder interface{},
-	offset, limit int64, inWhere *types.Map, all bool) (int64, []interface{}, error) {
+	offset, limit int64, inWhere *types.Map, query interface{}, group string, all bool) (int64, []interface{}, error) {
 
 	var (
 		err     error
@@ -1059,12 +951,12 @@ func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64
 		columns []string
 		order   string
 	)
-	columns, err = GetColumns(inColumns)
+	columns, err = qb.GetColumns(inColumns)
 	if err != nil {
 		return 0, nil, err
 	}
-	tblname = GetTableName(sc, tblname)
-	order, err = GetOrder(tblname, inOrder)
+	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
+	order, err = qb.GetOrder(tblname, inOrder)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -1089,8 +981,16 @@ func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64
 	if err = sc.AccessColumns(tblname, &columns, false); err != nil {
 		return 0, nil, err
 	}
-	q := model.GetDB(sc.DbTransaction).Table(tblname).Select(PrepareColumns(columns)).
-		Where(where).Order(order)
+	q := model.GetDB(sc.DbTransaction).Table(tblname).Select(PrepareColumns(columns)).Where(where)
+
+	if len(group) != 0 {
+		q = q.Group(group)
+	} else {
+		q = q.Order(order)
+	}
+	if query != "" {
+		q = q.Select(query)
+	}
 	if all {
 		rows, err = q.Rows()
 	} else {
@@ -1151,7 +1051,7 @@ func DBUpdateExt(sc *SmartContract, tblname string, where *types.Map,
 	if tblname == "system_parameters" {
 		return 0, fmt.Errorf("system parameters access denied")
 	}
-	tblname = GetTableName(sc, tblname)
+	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
 	if err = sc.AccessTable(tblname, "update"); err != nil {
 		return
 	}
@@ -1387,7 +1287,7 @@ func TableConditions(sc *SmartContract, name, columns, permissions string) (err 
 	} else if exists {
 		return logErrorfShort(eTableExists, name, consts.Found)
 	}
-	_, err = GetColumns(name)
+	_, err = qb.GetColumns(name)
 	if err != nil {
 		return err
 	}
@@ -1457,7 +1357,7 @@ func ColumnCondition(sc *SmartContract, tableName, name, coltype, permissions st
 	} else if exists {
 		return logErrorfShort(eColumnExist, name, consts.Found)
 	}
-	_, err = GetColumns(name)
+	_, err = qb.GetColumns(name)
 	if err != nil {
 		return err
 	}
@@ -1473,7 +1373,7 @@ func ColumnCondition(sc *SmartContract, tableName, name, coltype, permissions st
 			return err
 		}
 	}
-	tblName := GetTableName(sc, tableName)
+	tblName := qb.GetTableName(sc.TxSmart.EcosystemID, tableName)
 	if isExist {
 		return nil
 	}
@@ -1503,7 +1403,7 @@ func AllowChangeCondition(sc *SmartContract, tblname string) error {
 // RowConditions checks conditions for table row by id
 func RowConditions(sc *SmartContract, tblname string, id int64, conditionOnly bool) error {
 	condition, err := model.GetRowConditionsByTableNameAndID(sc.DbTransaction,
-		GetTableName(sc, tblname), id)
+		qb.GetTableName(sc.TxSmart.EcosystemID, tblname), id)
 	if err != nil {
 		return logErrorDB(err, "executing row condition query")
 	}
@@ -1569,7 +1469,7 @@ func CreateColumn(sc *SmartContract, tableName, name, colType, permissions strin
 		return
 	}
 
-	tblname := GetTableName(sc, tableName)
+	tblname := qb.GetTableName(sc.TxSmart.EcosystemID, tableName)
 
 	sqlColType, err = columnType(colType)
 
@@ -1963,7 +1863,7 @@ func Hash(data interface{}) (string, error) {
 
 // GetColumnType returns the type of the column
 func GetColumnType(sc *SmartContract, tableName, columnName string) (string, error) {
-	return model.GetColumnType(GetTableName(sc, tableName), columnName)
+	return model.GetColumnType(qb.GetTableName(sc.TxSmart.EcosystemID, tableName), columnName)
 }
 
 // GetType returns the name of the type of the value
@@ -2180,7 +2080,7 @@ func TransactionData(blockId int64, hash []byte) (data *TxInfo, err error) {
 	data = &TxInfo{}
 	data.Block = converter.Int64ToStr(blockId)
 	blockBuffer := bytes.NewBuffer(blockOwner.Data)
-	_, _, err = utils.ParseBlockHeader(blockBuffer)
+	_, _, err = types.ParseBlockHeader(blockBuffer, syspar.GetMaxBlockSize())
 	if err != nil {
 		return
 	}
@@ -2263,7 +2163,7 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 		permout []byte
 	)
 	name = converter.EscapeSQL(strings.ToLower(name))
-	tblname := GetTableName(sc, strings.ToLower(tableName))
+	tblname := qb.GetTableName(sc.TxSmart.EcosystemID, strings.ToLower(tableName))
 
 	t := model.Table{}
 	prefix := converter.Int64ToStr(sc.TxSmart.EcosystemID)
@@ -2339,7 +2239,7 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 	var (
 		count int64
 	)
-	tblname := GetTableName(sc, strings.ToLower(tableName))
+	tblname := qb.GetTableName(sc.TxSmart.EcosystemID, strings.ToLower(tableName))
 
 	t := model.Table{}
 	prefix := converter.Int64ToStr(sc.TxSmart.EcosystemID)

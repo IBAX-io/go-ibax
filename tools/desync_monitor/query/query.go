@@ -13,6 +13,7 @@ type MaxBlockID struct {
 }
 
 type blockInfoResult struct {
+	BlockID       int64  `json:"block_id"`
 	Hash          []byte `json:"hash"`
 	EcosystemID   int64  `json:"ecosystem_id"`
 	KeyID         int64  `json:"key_id"`
@@ -56,7 +57,7 @@ func BlockInfo(nodesList []string, blockID int64) (map[string]*blockInfoResult, 
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
-			blockInfo := &blockInfoResult{}
+			blockInfo := &blockInfoResult{BlockID: blockID}
 			if err := sendGetRequest(url+fmt.Sprintf(blockInfoEndpoint, blockID), blockInfo); err != nil {
 				workResults.Set(url, err)
 				return

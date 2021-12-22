@@ -39,8 +39,8 @@ var (
 
 // Block is storing block data
 type Block struct {
-	Header            utils.BlockData
-	PrevHeader        *utils.BlockData
+	Header            types.BlockData
+	PrevHeader        *types.BlockData
 	PrevRollbacksHash []byte
 	MrklRoot          []byte
 	BinData           []byte
@@ -150,7 +150,7 @@ func (b *Block) repeatMarshallBlock() error {
 
 func (b *Block) readPreviousBlockFromBlockchainTable() error {
 	if b.IsGenesis() {
-		b.PrevHeader = &utils.BlockData{}
+		b.PrevHeader = &types.BlockData{}
 		return nil
 	}
 

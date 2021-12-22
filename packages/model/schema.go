@@ -85,7 +85,7 @@ func ExecOBSSchema(id int, wallet int64) error {
 				privkey, privKey, pubKey []byte
 				err                      error
 			)
-			privkey, err = os.ReadFile(filepath.Join(conf.Config.KeysDir, privateKeyFilename))
+			privkey, err = os.ReadFile(filepath.Join(conf.Config.DirPathConf.KeysDir, privateKeyFilename))
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading private key from file")
 				return nil, err

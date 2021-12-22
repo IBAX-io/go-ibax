@@ -37,8 +37,7 @@ import (
 )
 
 func initStatsd() {
-	cfg := conf.Config.StatsD
-	if err := statsd.Init(cfg.Host, cfg.Port, cfg.Name); err != nil {
+	if err := statsd.Init(conf.Config.StatsD); err != nil {
 		log.WithFields(log.Fields{"type": consts.StatsdError, "error": err}).Fatal("cannot initialize statsd")
 	}
 }
@@ -55,7 +54,7 @@ func killOld() {
 		if err != nil {
 			log.WithFields(log.Fields{"data": dat, "error": err, "type": consts.JSONUnmarshallError}).Error("unmarshalling pid map")
 		}
-		log.WithFields(log.Fields{"path": conf.Config.DataDir + pidMap["pid"]}).Debug("old pid path")
+		log.WithFields(log.Fields{"path": conf.Config.DirPathConf.DataDir + pidMap["pid"]}).Debug("old pid path")
 
 		KillPid(pidMap["pid"])
 		if fmt.Sprintf("%s", err) != "null" {
@@ -91,7 +90,7 @@ func initLogs() error {
 			log.AddHook(sysLogHook)
 		}
 	default:
-		fileName := filepath.Join(conf.Config.DataDir, conf.Config.Log.LogTo)
+		fileName := filepath.Join(conf.Config.DirPathConf.DataDir, conf.Config.Log.LogTo)
 		openMode := os.O_APPEND
 		if _, err := os.Stat(fileName); os.IsNotExist(err) {
 			openMode = os.O_CREATE
@@ -142,17 +141,17 @@ func delPidFile() {
 func initRoutes(listenHost string) {
 	handler := modes.RegisterRoutes()
 	handler = api.WithCors(handler)
-	handler = httpserver.NewMaxBodyReader(handler, conf.Config.HTTPServerMaxBodySize)
+	handler = httpserver.NewMaxBodyReader(handler, conf.Config.LocalConf.HTTPServerMaxBodySize)
 
-	if conf.Config.TLS {
-		if len(conf.Config.TLSCert) == 0 || len(conf.Config.TLSKey) == 0 {
+	if conf.Config.TLSConf.Enabled {
+		if len(conf.Config.TLSConf.TLSCert) == 0 || len(conf.Config.TLSConf.TLSKey) == 0 {
 			log.Fatal("-tls-cert/TLSCert and -tls-key/TLSKey must be specified with -tls/TLS")
 		}
-		if _, err := os.Stat(conf.Config.TLSCert); os.IsNotExist(err) {
-			log.WithError(err).Fatalf(`Filepath -tls-cert/TLSCert = %s is invalid`, conf.Config.TLSCert)
+		if _, err := os.Stat(conf.Config.TLSConf.TLSCert); os.IsNotExist(err) {
+			log.WithError(err).Fatalf(`Filepath -tls-cert/TLSCert = %s is invalid`, conf.Config.TLSConf.TLSCert)
 		}
-		if _, err := os.Stat(conf.Config.TLSKey); os.IsNotExist(err) {
-			log.WithError(err).Fatalf(`Filepath -tls-key/TLSKey = %s is invalid`, conf.Config.TLSKey)
+		if _, err := os.Stat(conf.Config.TLSConf.TLSKey); os.IsNotExist(err) {
+			log.WithError(err).Fatalf(`Filepath -tls-key/TLSKey = %s is invalid`, conf.Config.TLSConf.TLSKey)
 		}
 		go func() {
 			s := &http.Server{
@@ -164,7 +163,7 @@ func initRoutes(listenHost string) {
 					//ClientAuth:   tls.RequireAndVerifyClientCert,
 				},
 			}
-			err := s.ListenAndServeTLS(conf.Config.TLSCert, conf.Config.TLSKey)
+			err := s.ListenAndServeTLS(conf.Config.TLSConf.TLSCert, conf.Config.TLSConf.TLSKey)
 
 			//err := http.ListenAndServeTLS(listenHost, conf.Config.TLSCert, conf.Config.TLSKey, handler)
 			if err != nil {
@@ -197,7 +196,7 @@ func Start() {
 	}
 
 	initGorm := func(dbCfg conf.DBConfig) {
-		err = model.GormInit(dbCfg.Host, dbCfg.Port, dbCfg.User, dbCfg.Password, dbCfg.Name)
+		err = model.GormInit(dbCfg)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"db_user": dbCfg.User, "db_password": dbCfg.Password, "db_name": dbCfg.Name, "type": consts.DBError,
@@ -206,20 +205,20 @@ func Start() {
 		}
 	}
 
-	//log.WithFields(log.Fields{"mode": conf.Config.OBSMode}).Info("Node running mode")
+	//log.WithFields(log.Fields{"mode": conf.Config.RunNodeMode}).Info("Node running mode")
 	if conf.Config.FuncBench {
 		log.Warning("Warning! Access checking is disabled in some built-in functions")
 	}
 
-	f := utils.LockOrDie(conf.Config.LockFilePath)
+	f := utils.LockOrDie(conf.Config.DirPathConf.LockFilePath)
 	defer f.Unlock()
-	if err := utils.MakeDirectory(conf.Config.TempDir); err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.TempDir}).Error("can't create temporary directory")
+	if err := utils.MakeDirectory(conf.Config.DirPathConf.TempDir); err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.DirPathConf.TempDir}).Error("can't create temporary directory")
 		Exit(1)
 	}
 
 	initGorm(conf.Config.DB)
-	log.WithFields(log.Fields{"work_dir": conf.Config.DataDir, "version": consts.Version()}).Info("started with")
+	log.WithFields(log.Fields{"work_dir": conf.Config.DirPathConf.DataDir, "version": consts.Version()}).Info("started with")
 
 	killOld()
 

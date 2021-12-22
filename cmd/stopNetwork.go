@@ -29,7 +29,7 @@ var stopNetworkCmd = &cobra.Command{
 	Short:  "Sending a special transaction to stop the network",
 	PreRun: loadConfigWKey,
 	Run: func(cmd *cobra.Command, args []string) {
-		fp := filepath.Join(conf.Config.KeysDir, stopNetworkCertFilepath)
+		fp := filepath.Join(conf.Config.DirPathConf.KeysDir, stopNetworkCertFilepath)
 		stopNetworkCert, err := os.ReadFile(fp)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "type": consts.IOError, "filepath": fp}).Fatal("Reading cert data")

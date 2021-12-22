@@ -54,7 +54,7 @@ var (
 )
 
 func prepareWorkDir() (string, error) {
-	childConfigsPath := path.Join(conf.Config.DataDir, childFolder)
+	childConfigsPath := path.Join(conf.Config.DirPathConf.DataDir, childFolder)
 
 	if _, err := os.Stat(childConfigsPath); os.IsNotExist(err) {
 		if err := os.Mkdir(childConfigsPath, 0700); err != nil {

@@ -98,7 +98,7 @@ var (
 	wallets           = make(map[int64]string)
 	mutex             = &sync.RWMutex{}
 	firstBlockData    *types.FirstBlock
-	errFirstBlockData = errors.New("Failed to get data of the first block")
+	errFirstBlockData = errors.New("failed to get data of the first block")
 	errNodeDisabled   = errors.New("node is disabled")
 	nodePubKey        []byte
 	nodePrivKey       []byte
@@ -109,7 +109,7 @@ func ReadNodeKeys() (err error) {
 	var (
 		nprivkey []byte
 	)
-	nprivkey, err = os.ReadFile(filepath.Join(conf.Config.KeysDir, consts.NodePrivateKeyFilename))
+	nprivkey, err = os.ReadFile(filepath.Join(conf.Config.DirPathConf.KeysDir, consts.NodePrivateKeyFilename))
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading node private key from file")
 		return
@@ -471,8 +471,8 @@ func GetDefaultRemoteHosts() []string {
 			ret = append(ret, item.TCPAddress)
 		}
 	}
-	if len(ret) == 0 && len(conf.Config.NodesAddr) > 0 {
-		ret = append(ret, conf.Config.NodesAddr[0])
+	if len(ret) == 0 && len(conf.Config.BootNodes.NodesAddr) > 0 {
+		ret = append(ret, conf.Config.BootNodes.NodesAddr[0])
 	}
 	return ret
 }

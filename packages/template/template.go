@@ -725,7 +725,7 @@ func Template2JSON(input string, timeout *bool, vars *map[string]string) []byte 
 			Header: &types.Header{
 				EcosystemID: converter.StrToInt64((*vars)[`ecosystem_id`]),
 				KeyID:       keyID,
-				NetworkID:   conf.Config.NetworkID,
+				NetworkID:   conf.Config.LocalConf.NetworkID,
 			},
 		},
 		Key: &model.Key{

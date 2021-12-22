@@ -32,7 +32,7 @@ type getUIDResult struct {
 
 func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 	result := new(getUIDResult)
-	result.NetworkID = converter.Int64ToStr(conf.Config.NetworkID)
+	result.NetworkID = converter.Int64ToStr(conf.Config.LocalConf.NetworkID)
 	token := getToken(r)
 	if token != nil {
 		if claims, ok := token.Claims.(*JWTClaims); ok && len(claims.KeyID) > 0 {

@@ -7,18 +7,13 @@ package conf
 
 type RunMode string
 
-// OBSManager const label for running mode
-const obsMaster RunMode = "OBSMaster"
-
-// OBS const label for running mode
-const obs RunMode = "OBS"
-
-// OBS const label for running mode
-const node RunMode = "NONE"
-
-//
-//Add sub node processing
-const subNode RunMode = "SubNode"
+const (
+	// running mode
+	node      RunMode = "NONE"
+	obsMaster RunMode = "OBSMaster"
+	obs       RunMode = "OBS"
+	subNode   RunMode = "SubNode"
+)
 
 // IsOBSMaster returns true if mode equal obsMaster
 func (rm RunMode) IsOBSMaster() bool {
@@ -40,8 +35,31 @@ func (rm RunMode) IsSupportingOBS() bool {
 	return rm.IsOBS() || rm.IsOBSMaster()
 }
 
-//
-//Add sub node processing
 func (rm RunMode) IsSubNode() bool {
 	return rm == subNode
+}
+
+// IsOBS check running mode
+func (c GlobalConfig) IsOBS() bool {
+	return RunMode(c.LocalConf.RunNodeMode).IsOBS()
+}
+
+// IsOBSMaster check running mode
+func (c GlobalConfig) IsOBSMaster() bool {
+	return RunMode(c.LocalConf.RunNodeMode).IsOBSMaster()
+}
+
+// IsSupportingOBS check running mode
+func (c GlobalConfig) IsSupportingOBS() bool {
+	return RunMode(c.LocalConf.RunNodeMode).IsSupportingOBS()
+}
+
+// IsNode check running mode
+func (c GlobalConfig) IsNode() bool {
+	return RunMode(c.LocalConf.RunNodeMode).IsNode()
+}
+
+// IsSubNode check running mode
+func (c GlobalConfig) IsSubNode() bool {
+	return RunMode(c.LocalConf.RunNodeMode).IsSubNode()
 }

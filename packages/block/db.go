@@ -21,8 +21,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -132,8 +130,8 @@ func (b *Block) InsertIntoBlockchain(dbTx *model.DbTransaction) error {
 }
 
 // GetBlockDataFromBlockChain is retrieving block data from blockchain
-func GetBlockDataFromBlockChain(blockID int64) (*utils.BlockData, error) {
-	BlockData := new(utils.BlockData)
+func GetBlockDataFromBlockChain(blockID int64) (*types.BlockData, error) {
+	BlockData := new(types.BlockData)
 	block := &model.Block{}
 	_, err := block.Get(blockID)
 	if err != nil {
@@ -141,7 +139,7 @@ func GetBlockDataFromBlockChain(blockID int64) (*utils.BlockData, error) {
 		return BlockData, err
 	}
 
-	header, _, err := utils.ParseBlockHeader(bytes.NewBuffer(block.Data))
+	header, _, err := types.ParseBlockHeader(bytes.NewBuffer(block.Data), syspar.GetMaxBlockSize())
 	if err != nil {
 		return nil, err
 	}

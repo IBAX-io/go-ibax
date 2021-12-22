@@ -61,9 +61,9 @@ func isFound(db *gorm.DB) (bool, error) {
 }
 
 // GormInit is initializes Gorm connection
-func GormInit(host string, port int, user string, pass string, dbName string) error {
+func GormInit(conf conf.DBConfig) error {
 	var err error
-	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable password=%s TimeZone=UTC", host, port, user, dbName, pass)
+	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable password=%s TimeZone=UTC", conf.Host, conf.Port, conf.User, conf.Name, conf.Password)
 open:
 	DBConn, err = gorm.Open(postgres.New(postgres.Config{
 		DSN:                  dsn,
@@ -75,8 +75,8 @@ open:
 	})
 	//DBConn, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		if strings.Contains(err.Error(), fmt.Sprintf("database \"%s\" does not exist", dbName)) {
-			err := createDatabase(fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable TimeZone=UTC", host, port, user, pass), dbName)
+		if strings.Contains(err.Error(), fmt.Sprintf("database \"%s\" does not exist", conf.Name)) {
+			err := createDatabase(fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable TimeZone=UTC", conf.Host, conf.Port, conf.User, conf.Password), conf.Name)
 			if err != nil {
 				return err
 			}
@@ -94,14 +94,15 @@ open:
 	}
 
 	sqlDB.SetConnMaxLifetime(time.Minute * 10)
-	sqlDB.SetMaxIdleConns(conf.Config.DB.MaxIdleConns)
-	sqlDB.SetMaxOpenConns(conf.Config.DB.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(conf.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(conf.MaxOpenConns)
 
 	if err = setupConnOptions(DBConn); err != nil {
 		return err
 	}
 	return nil
 }
+
 func createDatabase(dsn string, dbName string) error {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Error),
@@ -116,6 +117,7 @@ func createDatabase(dsn string, dbName string) error {
 	}()
 	return result.Error
 }
+
 func setupConnOptions(conr *gorm.DB) error {
 	if err := conr.Exec(fmt.Sprintf(`set lock_timeout = %d;`, conf.Config.DB.LockTimeout)).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("can't set lock timeout")
@@ -461,7 +463,7 @@ func GetColumnByID(table, column, id string) (result string, err error) {
 // InitDB drop all tables and exec db schema
 func InitDB(cfg conf.DBConfig) error {
 
-	err := GormInit(cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Name)
+	err := GormInit(cfg)
 	if err != nil || DBConn == nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("initializing DB")
 		return ErrDBConn
@@ -472,7 +474,7 @@ func InitDB(cfg conf.DBConfig) error {
 	}
 
 	if conf.Config.Redis.Enable {
-		err = RedisInit(conf.Config.Redis.Host, conf.Config.Redis.Port, conf.Config.Redis.Password, conf.Config.Redis.DbName)
+		err = RedisInit(conf.Config.Redis)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"host": conf.Config.Redis.Host, "port": conf.Config.Redis.Port, "db_password": conf.Config.Redis.Password, "db_name": conf.Config.Redis.DbName, "type": consts.DBError,

@@ -22,7 +22,7 @@ func RegisterRoutes() http.Handler {
 	if !conf.Config.IsSupportingOBS() {
 		m.SetBlockchainRoutes(r)
 	}
-	if conf.GetGFiles() {
+	if conf.IpfsEnabled() {
 		m.SetGafsRoutes(r)
 	}
 	if conf.Config.IsSubNode() {

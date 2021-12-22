@@ -14,6 +14,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
+
 	"github.com/IBAX-io/go-ibax/packages/common"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
@@ -67,8 +69,8 @@ type SmartContract struct {
 	TxCost        int64           // Maximum cost of executing contract
 	TxUsedCost    decimal.Decimal // Used cost of CPU resources
 	TXBlockFuel   decimal.Decimal
-	BlockData     *utils.BlockData
-	PreBlockData  *utils.BlockData
+	BlockData     *types.BlockData
+	PreBlockData  *types.BlockData
 	Loop          map[string]bool
 	TxHash        []byte
 	Payload       []byte
@@ -266,7 +268,7 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 	)
 	logger := sc.GetLogger()
 	isRead := action == `read`
-	if GetTableName(sc, table) == `1_parameters` || GetTableName(sc, table) == `1_app_params` {
+	if qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_parameters` || qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_app_params` {
 		if isRead || sc.TxSmart.KeyID == converter.StrToInt64(EcosysParam(sc, `founder_account`)) {
 			return tablePermission, nil
 		}
@@ -330,7 +332,7 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 	if sc.FullAccess {
 		return nil
 	}
-	if GetTableName(sc, table) == `1_parameters` || GetTableName(sc, table) == `1_app_params` {
+	if qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_parameters` || qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_app_params` {
 		if update {
 			if sc.TxSmart.KeyID == converter.StrToInt64(EcosysParam(sc, `founder_account`)) {
 				return nil
@@ -438,7 +440,7 @@ func (sc *SmartContract) CheckAccess(tableName, columns string, ecosystem int64)
 	var collist []string
 
 	table = converter.ParseTable(tableName, ecosystem)
-	collist, err = GetColumns(columns)
+	collist, err = qb.GetColumns(columns)
 	if err != nil {
 		return
 	}

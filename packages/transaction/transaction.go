@@ -10,8 +10,6 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
 	"github.com/IBAX-io/go-ibax/packages/model"
 
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -23,8 +21,8 @@ type Transaction struct {
 	GenBlock       bool
 	SysUpdate      bool
 	RollBackTx     []*model.RollbackTx
-	BlockData      *utils.BlockData
-	PreBlockData   *utils.BlockData
+	BlockData      *types.BlockData
+	PreBlockData   *types.BlockData
 	DbTransaction  *model.DbTransaction
 	Rand           *rand.Rand
 	TxCheckLimits  *Limits

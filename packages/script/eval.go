@@ -21,7 +21,7 @@ var (
 	evals = make(map[uint64]*evalCode)
 )
 
-// CompileEval compiles conditional exppression
+// CompileEval compiles conditional expression
 func (vm *VM) CompileEval(input string, state uint32) error {
 	source := `func eval bool { return ` + input + `}`
 	block, err := vm.CompileBlock([]rune(source), &OwnerInfo{StateID: state})

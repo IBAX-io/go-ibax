@@ -8,14 +8,14 @@ import (
 	"bytes"
 	"strconv"
 
+	"github.com/IBAX-io/go-ibax/packages/types"
+
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/pkg/errors"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -55,7 +55,7 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 		return err
 	}
 
-	header, _, err := utils.ParseBlockHeader(bytes.NewBuffer(block.Data))
+	header, _, err := types.ParseBlockHeader(bytes.NewBuffer(block.Data), syspar.GetMaxBlockSize())
 	if err != nil {
 		return err
 	}

@@ -41,11 +41,11 @@ func InitialLoad(logger *log.Entry) error {
 
 // init first block from file or from embedded value
 func loadFirstBlock(logger *log.Entry) error {
-	newBlock, err := os.ReadFile(conf.Config.FirstBlockPath)
-	if err != nil && len(conf.Config.NodesAddr) == 0 {
+	newBlock, err := os.ReadFile(conf.Config.DirPathConf.FirstBlockPath)
+	if err != nil && len(conf.Config.BootNodes.NodesAddr) == 0 {
 		return errors.Wrap(err, "reading first block from file path")
 	}
-	if len(conf.Config.NodesAddr) > 0 {
+	if len(conf.Config.BootNodes.NodesAddr) > 0 {
 		ctxDone, cancel := context.WithCancel(context.Background())
 		defer func() {
 			cancel()

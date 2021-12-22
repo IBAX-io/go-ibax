@@ -205,9 +205,9 @@ func Run(block *Block, params []interface{}, extend *map[string]interface{}) (re
 }
 
 func LoadSysFuncs(vm *VM, state int) error {
-	code := `func DBFind(table string).Columns(columns string).Where(where map)
-	.WhereId(id int).Order(order string).Limit(limit int).Offset(offset int).All(all bool) array {
-   return DBSelect(table, columns, id, order, offset, limit, where, all)
+	code := `func DBFind(table string).Select(query string).Columns(columns string).Where(where map)
+	.WhereId(id int).Order(order string).Limit(limit int).Offset(offset int).Group(group string).All(all bool) array {
+   return DBSelect(table, columns, id, order, offset, limit, where, query, group, all)
 }
 
 func One(list array, name string) string {

@@ -20,6 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/protocols"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -132,7 +133,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return nil
 	}
 
-	header := &utils.BlockData{
+	header := &types.BlockData{
 		BlockID:      prevBlock.BlockID + 1,
 		Time:         st.Unix(),
 		EcosystemID:  0,
@@ -141,7 +142,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		Version:      consts.BlockVersion,
 	}
 
-	pb := &utils.BlockData{
+	pb := &types.BlockData{
 		BlockID:       prevBlock.BlockID,
 		Hash:          prevBlock.Hash,
 		RollbacksHash: prevBlock.RollbacksHash,
@@ -163,7 +164,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	return nil
 }
 
-func generateNextBlock(blockHeader *utils.BlockData, trs []*model.Transaction, key string, prevBlock *utils.BlockData) ([]byte, error) {
+func generateNextBlock(blockHeader *types.BlockData, trs []*model.Transaction, key string, prevBlock *types.BlockData) ([]byte, error) {
 	trData := make([][]byte, 0, len(trs))
 	for _, tr := range trs {
 		trData = append(trData, tr.Data)
