@@ -38,8 +38,8 @@ var (
 	//errUnauthorized      = errType{"E_UNAUTHORIZED", "Unauthorized", http.StatusUnauthorized}
 	//errUndefineval       = errType{"E_UNDEFINEVAL", "Value %s is undefined", defaultStatus}
 	//errUnknownUID        = errType{"E_UNKNOWNUID", "Unknown uid", defaultStatus}
-	//errOBS               = errType{"E_OBS", "Virtual Dedicated Ecosystem %d doesn't exist", defaultStatus}
-	//errOBSCreated        = errType{"E_OBSCREATED", "Virtual Dedicated Ecosystem is already created", http.StatusBadRequest}
+	//errCLB               = errType{"E_CLB", "Virtual Dedicated Ecosystem %d doesn't exist", defaultStatus}
+	//errCLBCreated        = errType{"E_CLBCREATED", "Virtual Dedicated Ecosystem is already created", http.StatusBadRequest}
 	//errRequestNotFound   = errType{"E_REQUESTNOTFOUND", "Request %s doesn't exist", defaultStatus}
 	//errUpdating          = errType{"E_UPDATING", "Node is updating blockchain", http.StatusServiceUnavailable}
 	//errStopping          = errType{"E_STOPPING", "Network is stopping", http.StatusServiceUnavailable}

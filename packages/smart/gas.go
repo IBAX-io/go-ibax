@@ -151,7 +151,7 @@ func (sc *SmartContract) payTaxes(toID string, sum decimal.Decimal, t, eco int64
 }
 
 func (sc *SmartContract) needPayment() bool {
-	return sc.TxSmart.EcosystemID > 0 && !sc.OBS && !syspar.IsPrivateBlockchain() && sc.payFreeContract()
+	return sc.TxSmart.EcosystemID > 0 && !sc.CLB && !syspar.IsPrivateBlockchain() && sc.payFreeContract()
 }
 
 func (sc *SmartContract) prepareMultiPay() (err error) {
@@ -171,7 +171,7 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 	for _, eco := range sc.getTokenEcos() {
 		zero := decimal.New(0, 0)
 		pay.tokenEco = eco
-		if !sc.OBS {
+		if !sc.CLB {
 			pay.toID = sc.BlockData.KeyID
 			pay.fromID = sc.TxSmart.KeyID
 		}

@@ -1,0 +1,14 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract RunCLB {
+	data {
+		CLBName string
+	}	
+	conditions {
+	}	
+	action {
+		$CLBName = ToLower($CLBName)
+		StartCLB($CLBName)
+		$result = "CLB " + $CLBName + " running"
+	}
+}

@@ -10,48 +10,48 @@ type RunMode string
 const (
 	// running mode
 	node      RunMode = "NONE"
-	obsMaster RunMode = "OBSMaster"
-	obs       RunMode = "OBS"
+	clbMaster RunMode = "CLBMaster"
+	clb       RunMode = "CLB"
 	subNode   RunMode = "SubNode"
 )
 
-// IsOBSMaster returns true if mode equal obsMaster
-func (rm RunMode) IsOBSMaster() bool {
-	return rm == obsMaster
+// IsCLBMaster returns true if mode equal clbMaster
+func (rm RunMode) IsCLBMaster() bool {
+	return rm == clbMaster
 }
 
-// IsOBS returns true if mode equal obs
-func (rm RunMode) IsOBS() bool {
-	return rm == obs
+// IsCLB returns true if mode equal clb
+func (rm RunMode) IsCLB() bool {
+	return rm == clb
 }
 
-// IsNode returns true if mode not equal to any OBS
+// IsNode returns true if mode not equal to any CLB
 func (rm RunMode) IsNode() bool {
 	return rm == node
 }
 
-// IsSupportingOBS returns true if mode support obs
-func (rm RunMode) IsSupportingOBS() bool {
-	return rm.IsOBS() || rm.IsOBSMaster()
+// IsSupportingCLB returns true if mode support clb
+func (rm RunMode) IsSupportingCLB() bool {
+	return rm.IsCLB() || rm.IsCLBMaster()
 }
 
 func (rm RunMode) IsSubNode() bool {
 	return rm == subNode
 }
 
-// IsOBS check running mode
-func (c GlobalConfig) IsOBS() bool {
-	return RunMode(c.LocalConf.RunNodeMode).IsOBS()
+// IsCLB check running mode
+func (c GlobalConfig) IsCLB() bool {
+	return RunMode(c.LocalConf.RunNodeMode).IsCLB()
 }
 
-// IsOBSMaster check running mode
-func (c GlobalConfig) IsOBSMaster() bool {
-	return RunMode(c.LocalConf.RunNodeMode).IsOBSMaster()
+// IsCLBMaster check running mode
+func (c GlobalConfig) IsCLBMaster() bool {
+	return RunMode(c.LocalConf.RunNodeMode).IsCLBMaster()
 }
 
-// IsSupportingOBS check running mode
-func (c GlobalConfig) IsSupportingOBS() bool {
-	return RunMode(c.LocalConf.RunNodeMode).IsSupportingOBS()
+// IsSupportingCLB check running mode
+func (c GlobalConfig) IsSupportingCLB() bool {
+	return RunMode(c.LocalConf.RunNodeMode).IsSupportingCLB()
 }
 
 // IsNode check running mode

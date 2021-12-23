@@ -10,8 +10,8 @@ import (
 )
 
 func GetEcosystemGetter() types.EcosystemGetter {
-	if conf.Config.IsSupportingOBS() {
-		return OBSEcosystemGetter{}
+	if conf.Config.IsSupportingCLB() {
+		return CLBEcosystemGetter{}
 	}
 
 	return BCEcosystemGetter{}
@@ -60,16 +60,16 @@ func (v BCEcosystemGetter) ValidateId(formEcosysID, clientEcosysID int64, le *lo
 	return formEcosysID, nil
 }
 
-type OBSEcosystemGetter struct{}
+type CLBEcosystemGetter struct{}
 
-func (g OBSEcosystemGetter) GetEcosystemLookup() ([]int64, []string, error) {
+func (g CLBEcosystemGetter) GetEcosystemLookup() ([]int64, []string, error) {
 	return []int64{1}, []string{"Platform ecosystem"}, nil
 }
 
-func (OBSEcosystemGetter) ValidateId(id, clientID int64, le *log.Entry) (int64, error) {
-	return consts.DefaultOBS, nil
+func (CLBEcosystemGetter) ValidateId(id, clientID int64, le *log.Entry) (int64, error) {
+	return consts.DefaultCLB, nil
 }
 
-func (ng OBSEcosystemGetter) GetEcosystemName(id int64) (string, error) {
+func (ng CLBEcosystemGetter) GetEcosystemName(id int64) (string, error) {
 	return "Platform ecosystem", nil
 }

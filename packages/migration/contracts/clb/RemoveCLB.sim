@@ -1,0 +1,13 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract RemoveCLB {
+	data {
+			CLBName string
+	}
+	conditions {}
+	action{
+        $CLBName = ToLower($CLBName)
+        DeleteCLB($CLBName)
+        $result = "CLB " + $CLBName + " removed"
+	}
+}

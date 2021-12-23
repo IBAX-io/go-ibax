@@ -2,7 +2,7 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package obsmanager
+package clbmanager
 
 import (
 	"fmt"
@@ -16,8 +16,8 @@ const (
 	startCommand   = "start"
 )
 
-// ChildOBSConfig struct to manage child entry
-type ChildOBSConfig struct {
+// ChildCLBConfig struct to manage child entry
+type ChildCLBConfig struct {
 	Executable     string
 	Name           string
 	Directory      string
@@ -29,7 +29,7 @@ type ChildOBSConfig struct {
 	HTTPPort       int
 }
 
-func (c ChildOBSConfig) configCommand() *exec.Cmd {
+func (c ChildCLBConfig) configCommand() *exec.Cmd {
 
 	args := []string{
 		"config",
@@ -42,29 +42,29 @@ func (c ChildOBSConfig) configCommand() *exec.Cmd {
 		fmt.Sprintf("--keysDir=%s", c.Directory),
 		fmt.Sprintf("--logTo=%s", c.LogTo),
 		fmt.Sprintf("--logLevel=%s", c.LogLevel),
-		"--obsMode=OBS",
+		"--clbMode=CLB",
 	}
 
 	return exec.Command(c.Executable, args...)
 }
 
-func (c ChildOBSConfig) initDBCommand() *exec.Cmd {
+func (c ChildCLBConfig) initDBCommand() *exec.Cmd {
 	return c.getCommand(inidDBCommand)
 }
 
-func (c ChildOBSConfig) generateKeysCommand() *exec.Cmd {
+func (c ChildCLBConfig) generateKeysCommand() *exec.Cmd {
 	return c.getCommand(genKeysCommand)
 }
 
-func (c ChildOBSConfig) startCommand() *exec.Cmd {
+func (c ChildCLBConfig) startCommand() *exec.Cmd {
 	return c.getCommand(startCommand)
 }
 
-func (c ChildOBSConfig) configPath() string {
+func (c ChildCLBConfig) configPath() string {
 	return filepath.Join(c.Directory, c.ConfigFileName)
 }
 
-func (c ChildOBSConfig) getCommand(commandName string) *exec.Cmd {
+func (c ChildCLBConfig) getCommand(commandName string) *exec.Cmd {
 	args := []string{
 		commandName,
 		fmt.Sprintf("--config=%s", c.configPath()),

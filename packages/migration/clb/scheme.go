@@ -3,16 +3,16 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package obs
+package clb
 
 import (
 	"strings"
 )
 
-// GetOBSScript returns script to create ecosystem
-func GetOBSScript() string {
+// GetCLBScript returns script to create ecosystem
+func GetCLBScript() string {
 	scripts := []string{
-		schemaOBS,
+		schemaCLB,
 		blocksDataSQL,
 		contractsDataSQL,
 		menuDataSQL,
@@ -30,7 +30,7 @@ func GetOBSScript() string {
 }
 
 // SchemaEcosystem contains SQL queries for creating ecosystem
-var schemaOBS = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
+var schemaCLB = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
 		"id" bigint  NOT NULL DEFAULT '0',
 		"pub" bytea  NOT NULL DEFAULT '',
 		"amount" decimal(30) NOT NULL DEFAULT '0' CHECK (amount >= 0),

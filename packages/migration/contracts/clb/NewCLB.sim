@@ -1,0 +1,36 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewCLB {
+		data {
+			CLBName string
+			DBUser string
+			DBPassword string
+			CLBAPIPort int
+		}
+	
+		conditions {
+            if Size($CLBName) == 0 {
+                warning "CLBName was not received"
+            }
+            if Contains($CLBName, " ") {
+                error "CLBName can not contain spaces"
+            }
+            if Size($DBUser) == 0 {
+                warning "DBUser was not received"
+            }
+            if Size($DBPassword) == 0 {
+                warning "DBPassword was not received"
+            }
+            if $CLBAPIPort <= 0  {
+                warning "CLB API PORT not received"
+            }
+            
+		}
+	
+		action {
+            $CLBName = ToLower($CLBName)
+            $DBUser = ToLower($DBUser)
+            CreateCLB($CLBName, $DBUser, $DBPassword, $CLBAPIPort)
+            $result = "CLB " + $CLBName + " created"
+		}
+}

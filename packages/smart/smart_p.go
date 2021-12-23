@@ -432,7 +432,7 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 	if err := LoadContract(sc.DbTransaction, id); err != nil {
 		return 0, err
 	}
-	if !sc.OBS {
+	if !sc.CLB {
 		if err := SysRollback(sc, SysRollData{Type: "NewEcosystem", ID: id}); err != nil {
 			return 0, err
 		}
@@ -599,8 +599,8 @@ func CheckSignature(sc *SmartContract, i *map[string]interface{}, name string) e
 
 // DBSelectMetrics returns list of metrics by name and time interval
 func DBSelectMetrics(sc *SmartContract, metric, timeInterval, aggregateFunc string) ([]interface{}, error) {
-	if conf.Config.IsSupportingOBS() {
-		return nil, ErrNotImplementedOnOBS
+	if conf.Config.IsSupportingCLB() {
+		return nil, ErrNotImplementedOnCLB
 	}
 
 	timeBlock := time.Unix(sc.TxSmart.Time, 0).Format(`2006-01-02 15:04:05`)
@@ -614,7 +614,7 @@ func DBSelectMetrics(sc *SmartContract, metric, timeInterval, aggregateFunc stri
 // DBCollectMetrics returns actual values of all metrics
 // This function used to further store these values
 func DBCollectMetrics(sc *SmartContract) []interface{} {
-	if conf.Config.IsSupportingOBS() {
+	if conf.Config.IsSupportingCLB() {
 		return nil
 	}
 

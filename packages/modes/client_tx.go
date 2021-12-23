@@ -34,10 +34,10 @@ func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key i
 	return
 }
 
-type ObsTxPreprocessor struct{}
+type ClbTxPreprocessor struct{}
 
 /*
-func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, le *log.Entry) (string, error) {
+func (p ClbTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, le *log.Entry) (string, error) {
 
 	tx, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txData), true)
 	if err != nil {
@@ -58,7 +58,7 @@ func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 		return "", err
 	}
 
-	res, _, err := tx.CallOBSContract()
+	res, _, err := tx.CallCLBContract()
 	if err != nil {
 		le.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("on execution contract")
 		return "", err
@@ -72,13 +72,13 @@ func (p ObsTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 	return string(converter.BinToHex(tx.TxHash)), nil
 }*/
 
-func (p ObsTxPreprocessor) ProcessClientTxBatches(txData [][]byte, key int64, le *log.Entry) ([]string, error) {
+func (p ClbTxPreprocessor) ProcessClientTxBatches(txData [][]byte, key int64, le *log.Entry) ([]string, error) {
 	return nil, nil
 }
 
 func GetClientTxPreprocessor() types.ClientTxPreprocessor {
-	if conf.Config.IsSupportingOBS() {
-		return ObsTxPreprocessor{}
+	if conf.Config.IsSupportingCLB() {
+		return ClbTxPreprocessor{}
 	}
 
 	return blockchainTxPreprocessor{}
@@ -97,11 +97,11 @@ func (runner BlockchainSCRunner) RunContract(data, hash []byte, keyID, tnow int6
 	return nil
 }
 
-// OBSSCRunner implementls SmartContractRunner for obs mode
-type OBSSCRunner struct{}
+// CLBSCRunner implementls SmartContractRunner for clb mode
+type CLBSCRunner struct{}
 
-// RunContract runs smart contract on obs mode
-func (runner OBSSCRunner) RunContract(data, hash []byte, keyID, tnow int64, le *log.Entry) error {
+// RunContract runs smart contract on clb mode
+func (runner CLBSCRunner) RunContract(data, hash []byte, keyID, tnow int64, le *log.Entry) error {
 	proc := GetClientTxPreprocessor()
 	_, err := proc.ProcessClientTxBatches([][]byte{data}, keyID, le)
 	if err != nil {
@@ -114,9 +114,9 @@ func (runner OBSSCRunner) RunContract(data, hash []byte, keyID, tnow int64, le *
 
 // GetSmartContractRunner returns mode boundede implementation of SmartContractRunner
 func GetSmartContractRunner() types.SmartContractRunner {
-	if !conf.Config.IsSupportingOBS() {
+	if !conf.Config.IsSupportingCLB() {
 		return BlockchainSCRunner{}
 	}
 
-	return OBSSCRunner{}
+	return CLBSCRunner{}
 }

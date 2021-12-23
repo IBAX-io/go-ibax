@@ -34,7 +34,7 @@ type authResult struct {
 
 type contractResult struct {
 	Hash string `json:"hash"`
-	// These fields are used for OBS
+	// These fields are used for CLB
 	Message struct {
 		Type  string `json:"type,omitempty"`
 		Error string `json:"error,omitempty"`
@@ -78,7 +78,7 @@ func NodeContract(Name string) (result contractResult, err error) {
 		return
 	}
 	auth = logret.Token
-	form = url.Values{`obs`: {`true`}}
+	form = url.Values{`clb`: {`true`}}
 	err = sendAPIRequest(`POST`, `node/`+Name, &form, &result, auth)
 	if err != nil {
 		return

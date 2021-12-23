@@ -26,9 +26,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
+	"github.com/IBAX-io/go-ibax/packages/clbmanager"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
-	"github.com/IBAX-io/go-ibax/packages/obsmanager"
 	"github.com/IBAX-io/go-ibax/packages/scheduler"
 	"github.com/IBAX-io/go-ibax/packages/scheduler/contract"
 	"github.com/IBAX-io/go-ibax/packages/script"
@@ -48,7 +48,7 @@ const (
 )
 
 var (
-	ErrNotImplementedOnOBS = errors.New("Contract not implemented on OBS")
+	ErrNotImplementedOnCLB = errors.New("Contract not implemented on CLB")
 )
 
 type ThrowError struct {
@@ -150,8 +150,8 @@ var (
 		"EditEcosysName":   {},
 		"UpdateNodesBan":   {},
 		"UpdateCron":       {},
-		"CreateOBS":        {},
-		"DeleteOBS":        {},
+		"CreateCLB":        {},
+		"DeleteCLB":        {},
 		"DelColumn":        {},
 		"DelTable":         {},
 	}
@@ -299,27 +299,23 @@ func EmbedFuncs(vt script.VMType) map[string]interface{} {
 		"CreateView":       CreateView,
 	}
 	switch vt {
-	case script.VMTypeOBS:
+	case script.VMTypeCLB:
 		f["HTTPRequest"] = HTTPRequest
-		f["GetMapKeys"] = GetMapKeys
-		f["SortedKeys"] = SortedKeys
 		f["Date"] = Date
 		f["HTTPPostJSON"] = HTTPPostJSON
 		f["ValidateCron"] = ValidateCron
 		f["UpdateCron"] = UpdateCron
-	case script.VMTypeOBSMaster:
+	case script.VMTypeCLBMaster:
 		f["HTTPRequest"] = HTTPRequest
-		f["GetMapKeys"] = GetMapKeys
-		f["SortedKeys"] = SortedKeys
 		f["Date"] = Date
 		f["HTTPPostJSON"] = HTTPPostJSON
 		f["ValidateCron"] = ValidateCron
 		f["UpdateCron"] = UpdateCron
-		f["CreateOBS"] = CreateOBS
-		f["DeleteOBS"] = DeleteOBS
-		f["StartOBS"] = StartOBS
-		f["StopOBSProcess"] = StopOBSProcess
-		f["GetOBSList"] = GetOBSList
+		f["CreateCLB"] = CreateCLB
+		f["DeleteCLB"] = DeleteCLB
+		f["StartCLB"] = StartCLB
+		f["StopCLBProcess"] = StopCLBProcess
+		f["GetCLBList"] = GetCLBList
 	case script.VMTypeSmart:
 		f["GetBlock"] = GetBlock
 	}
@@ -490,7 +486,7 @@ func UpdateContract(sc *SmartContract, id int64, value, conditions string, recip
 	}
 
 	if len(pars) > 0 {
-		if !sc.OBS {
+		if !sc.CLB {
 			if err := SysRollback(sc, SysRollData{Type: "EditContract", ID: id}); err != nil {
 				return err
 			}
@@ -538,7 +534,7 @@ func CreateContract(sc *SmartContract, name, value, conditions string, tokenEcos
 	if err = FlushContract(sc, root, id); err != nil {
 		return 0, err
 	}
-	if !sc.OBS {
+	if !sc.CLB {
 		err = SysRollback(sc, SysRollData{Type: "NewContract", Data: value})
 		if err != nil {
 			return 0, err
@@ -635,7 +631,7 @@ func CreateView(sc *SmartContract, vname, columns, where string, applicationID i
 	if err != nil {
 		return logErrorDB(err, "insert table info")
 	}
-	if !sc.OBS {
+	if !sc.CLB {
 		if err = syspar.SysTableColType(sc.DbTransaction); err != nil {
 			return logErrorDB(err, "updating sys table col type")
 		}
@@ -856,7 +852,7 @@ func CreateTable(sc *SmartContract, name, columns, permissions string, applicati
 	if err != nil {
 		return logErrorDB(err, "insert table info")
 	}
-	if !sc.OBS {
+	if !sc.CLB {
 		if err = syspar.SysTableColType(sc.DbTransaction); err != nil {
 			return logErrorDB(err, "updating sys table col type")
 		}
@@ -1507,7 +1503,7 @@ func CreateColumn(sc *SmartContract, tableName, name, colType, permissions strin
 	if err != nil {
 		return err
 	}
-	if !sc.OBS {
+	if !sc.CLB {
 		if err := syspar.SysTableColType(sc.DbTransaction); err != nil {
 			return err
 		}
@@ -1710,8 +1706,8 @@ func UpdateCron(sc *SmartContract, id int64) error {
 }
 
 func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
-	if conf.Config.IsSupportingOBS() {
-		return ErrNotImplementedOnOBS
+	if conf.Config.IsSupportingCLB() {
+		return ErrNotImplementedOnCLB
 	}
 
 	now := time.Unix(timestamp, 0)
@@ -1887,29 +1883,29 @@ func BytesToString(src []byte) string {
 	return string(src)
 }
 
-// CreateOBS allow create new OBS throught obsmanager
-func CreateOBS(sc *SmartContract, name, dbUser, dbPassword string, port int64) error {
-	return obsmanager.Manager.CreateOBS(name, dbUser, dbPassword, int(port))
+// CreateCLB allow create new CLB throught clbmanager
+func CreateCLB(sc *SmartContract, name, dbUser, dbPassword string, port int64) error {
+	return clbmanager.Manager.CreateCLB(name, dbUser, dbPassword, int(port))
 }
 
-// DeleteOBS delete obs
-func DeleteOBS(sc *SmartContract, name string) error {
-	return obsmanager.Manager.DeleteOBS(name)
+// DeleteCLB delete clb
+func DeleteCLB(sc *SmartContract, name string) error {
+	return clbmanager.Manager.DeleteCLB(name)
 }
 
-// StartOBS run OBS process
-func StartOBS(sc *SmartContract, name string) error {
-	return obsmanager.Manager.StartOBS(name)
+// StartCLB run CLB process
+func StartCLB(sc *SmartContract, name string) error {
+	return clbmanager.Manager.StartCLB(name)
 }
 
-// StopOBSProcess stops OBS process
-func StopOBSProcess(sc *SmartContract, name string) error {
-	return obsmanager.Manager.StopOBS(name)
+// StopCLBProcess stops CLB process
+func StopCLBProcess(sc *SmartContract, name string) error {
+	return clbmanager.Manager.StopCLB(name)
 }
 
-// GetOBSList returns list OBS process with statuses
-func GetOBSList(sc *SmartContract) map[string]string {
-	list, _ := obsmanager.Manager.ListProcessWithPorts()
+// GetCLBList returns list CLB process with statuses
+func GetCLBList(sc *SmartContract) map[string]string {
+	list, _ := clbmanager.Manager.ListProcessWithPorts()
 	return list
 }
 
@@ -2218,7 +2214,7 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 	if err != nil {
 		return err
 	}
-	if !sc.OBS {
+	if !sc.CLB {
 		if err = syspar.SysTableColType(sc.DbTransaction); err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating sys table col type")
 			return err
@@ -2276,7 +2272,7 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 	if err = model.DropTable(sc.DbTransaction, tblname); err != nil {
 		return
 	}
-	if !sc.OBS {
+	if !sc.CLB {
 		var (
 			out []byte
 		)

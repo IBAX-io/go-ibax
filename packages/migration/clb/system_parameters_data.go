@@ -3,7 +3,7 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package obs
+package clb
 
 var systemParametersDataSQL = `
 INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES 

@@ -8,11 +8,11 @@ import (
 	"context"
 
 	"github.com/IBAX-io/go-ibax/packages/block"
+	"github.com/IBAX-io/go-ibax/packages/clbmanager"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/daemons"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpserver"
-	"github.com/IBAX-io/go-ibax/packages/obsmanager"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -22,9 +22,9 @@ import (
 )
 
 func GetDaemonLoader() types.DaemonFactory {
-	if conf.Config.IsSupportingOBS() {
-		return OBSDaemonFactory{
-			logger: log.WithFields(log.Fields{"loader": "obs_daemon_loader"}),
+	if conf.Config.IsSupportingCLB() {
+		return CLBDaemonFactory{
+			logger: log.WithFields(log.Fields{"loader": "clb_daemon_loader"}),
 		}
 	}
 
@@ -165,13 +165,13 @@ func (SNDaemonFactory) GetDaemonsList() []string {
 	}
 }
 
-// OBSDaemonFactory allows load obs daemons
-type OBSDaemonFactory struct {
+// CLBDaemonFactory allows load clb daemons
+type CLBDaemonFactory struct {
 	logger *log.Entry
 }
 
-// Load loads obs daemons
-func (l OBSDaemonFactory) Load(ctx context.Context) error {
+// Load loads clb daemons
+func (l CLBDaemonFactory) Load(ctx context.Context) error {
 	if err := syspar.SysUpdate(nil); err != nil {
 		l.logger.Errorf("can't read system parameters: %s", utils.ErrInfo(err))
 		return err
@@ -195,11 +195,11 @@ func (l OBSDaemonFactory) Load(ctx context.Context) error {
 		log.Errorf("can't start tcp servers, stop")
 		return err
 	}
-	obsmanager.InitOBSManager()
+	clbmanager.InitCLBManager()
 	return nil
 }
 
-func (OBSDaemonFactory) GetDaemonsList() []string {
+func (CLBDaemonFactory) GetDaemonsList() []string {
 	return []string{
 		"Scheduler",
 	}

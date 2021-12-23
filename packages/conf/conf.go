@@ -196,7 +196,7 @@ func LoadConfigToVar(path string, v *GlobalConfig) error {
 
 // GetConfigFromPath read config from path and returns GlobalConfig struct
 func GetConfigFromPath(path string) (*GlobalConfig, error) {
-	log.WithFields(log.Fields{"path": path}).Info("Loading obs config")
+	log.WithFields(log.Fields{"path": path}).Info("Loading clb config")
 
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {

@@ -142,8 +142,8 @@ const (
 	// DefaultTempDirName is default name of temporary directory
 	DefaultTempDirName = "ibax-temp"
 
-	// DefaultOBS allways is 1
-	DefaultOBS = 1
+	// DefaultCLB allways is 1
+	DefaultCLB = 1
 
 	// MoneyLength is the maximum number of digits in money value
 	MoneyLength = 30
@@ -166,7 +166,7 @@ const (
 	// StatusMainPage is a status for Main Page
 	StatusMainPage = `2`
 
-	NoneOBS     = "none"
+	NoneCLB     = "none"
 	DBFindLimit = 10000
 )
 

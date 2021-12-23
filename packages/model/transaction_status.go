@@ -57,7 +57,7 @@ func SetTransactionStatusBlockMsg(transaction *DbTransaction, newBlockID int64, 
 	if len(msg) > 255 {
 		msg = msg[:255]
 	}
-	if !conf.Config.IsOBSMaster() {
+	if !conf.Config.IsCLBMaster() {
 		updBlockMsg = append(updBlockMsg, updateBlockMsg{Msg: msg, Hash: transactionHash})
 		return nil
 	}

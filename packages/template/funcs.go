@@ -77,7 +77,7 @@ func init() {
 	funcs[`ArrayToSource`] = tplFunc{arraytosourceTag, defaultTag, `arraytosource`, `Source,Data,Prefix`}
 	funcs[`LangRes`] = tplFunc{langresTag, defaultTag, `langres`, `Name,Lang`}
 	funcs[`MenuGroup`] = tplFunc{menugroupTag, defaultTag, `menugroup`, `Title,Body,Icon`}
-	funcs[`MenuItem`] = tplFunc{defaultTag, defaultTag, `menuitem`, `Title,Page,PageParams,Icon,Obs`}
+	funcs[`MenuItem`] = tplFunc{defaultTag, defaultTag, `menuitem`, `Title,Page,PageParams,Icon,Clb`}
 	funcs[`Money`] = tplFunc{moneyTag, defaultTag, `money`, `Exp,Digit`}
 	funcs[`Range`] = tplFunc{rangeTag, defaultTag, `range`, `Source,From,To,Step`}
 	funcs[`SetTitle`] = tplFunc{defaultTag, defaultTag, `settitle`, `Title`}

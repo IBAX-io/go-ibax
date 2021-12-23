@@ -19,7 +19,7 @@ func RegisterRoutes() http.Handler {
 	}
 
 	r := api.NewRouter(m)
-	if !conf.Config.IsSupportingOBS() {
+	if !conf.Config.IsSupportingCLB() {
 		m.SetBlockchainRoutes(r)
 	}
 	if conf.IpfsEnabled() {
@@ -29,7 +29,7 @@ func RegisterRoutes() http.Handler {
 		m.SetSubNodeRoutes(r)
 	}
 
-	if conf.Config.IsSupportingOBS() {
+	if conf.Config.IsSupportingCLB() {
 	}
 
 	return r.GetAPI()

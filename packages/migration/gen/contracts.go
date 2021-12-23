@@ -26,19 +26,24 @@ const (
 var (
 	scenarios = []scenario{
 		{
-			[]string{"./contracts/ecosystem"},
-			"./contracts_data.go",
-			"contractsDataSQL", "{{.Ecosystem}}", "{{.Owner}}",
+			Source:    []string{"./contracts/ecosystem"},
+			Dest:      "./contracts_data.go",
+			Variable:  "contractsDataSQL",
+			Ecosystem: "{{.Ecosystem}}",
+			Owner:     "{{.Owner}}",
 		},
 		{
-			[]string{"./contracts/first_ecosystem"},
-			"./first_ecosys_contracts_data.go",
-			"firstEcosystemContractsSQL", "1", "{{.Owner}}",
+			Source:    []string{"./contracts/first_ecosystem"},
+			Dest:      "./first_ecosys_contracts_data.go",
+			Variable:  "firstEcosystemContractsSQL",
+			Ecosystem: "1",
+			Owner:     "{{.Owner}}",
 		},
 		{
-			[]string{"./contracts/common", "./contracts/first_ecosystem", "./contracts/obs"},
-			"./obs/obs_data_contracts.go",
-			"contractsDataSQL", "%[1]d", "",
+			Source:    []string{"./contracts/common", "./contracts/first_ecosystem", "./contracts/clb"},
+			Dest:      "./clb/clb_data_contracts.go",
+			Variable:  "contractsDataSQL",
+			Ecosystem: "%[1]d",
 		},
 	}
 

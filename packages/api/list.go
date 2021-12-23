@@ -67,7 +67,7 @@ func (f *SumWhereForm) Validate(r *http.Request) error {
 
 func checkAccess(tableName, columns string, client *Client) (table string, cols string, err error) {
 	sc := smart.SmartContract{
-		OBS: conf.Config.IsSupportingOBS(),
+		CLB: conf.Config.IsSupportingCLB(),
 		VM:  script.GetVM(),
 		TxSmart: &types.SmartContract{
 			Header: &types.Header{

@@ -11,7 +11,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/IBAX-io/go-ibax/packages/migration"
-	"github.com/IBAX-io/go-ibax/packages/migration/obs"
+	"github.com/IBAX-io/go-ibax/packages/migration/clb"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -58,25 +58,25 @@ func ExecSchemaEcosystem(db *DbTransaction, id int, wallet int64, name string, f
 func ExecSubSchema() error {
 	if conf.Config.IsSubNode() {
 		if err := migration.InitMigrate(&MigrationHistory{}); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on executing obs script")
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on executing clb script")
 			return err
 		}
 	}
 	return nil
 }
 
-// ExecOBSSchema is executing schema for off blockchainService
-func ExecOBSSchema(id int, wallet int64) error {
+// ExecCLBSchema is executing schema for off blockchainService
+func ExecCLBSchema(id int, wallet int64) error {
 
-	if conf.Config.IsSupportingOBS() {
+	if conf.Config.IsSupportingCLB() {
 		if err := migration.InitMigrate(&MigrationHistory{}); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on executing obs script")
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on executing clb script")
 			return err
 		}
 
-		query := fmt.Sprintf(obs.GetOBSScript(), id, wallet, converter.AddressToString(wallet))
+		query := fmt.Sprintf(clb.GetCLBScript(), id, wallet, converter.AddressToString(wallet))
 		if err := DBConn.Exec(query).Error; err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on executing obs script")
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on executing clb script")
 			return err
 		}
 
@@ -123,7 +123,7 @@ func ExecSchema() error {
 
 // UpdateSchema run update migrations
 func UpdateSchema() error {
-	if !conf.Config.IsOBSMaster() {
+	if !conf.Config.IsCLBMaster() {
 		b := &Block{}
 		if found, err := b.GetMaxBlock(); !found {
 			return err

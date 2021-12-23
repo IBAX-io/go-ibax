@@ -2,7 +2,7 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package obsmanager
+package clbmanager
 
 import (
 	"errors"
@@ -34,23 +34,23 @@ const (
 	dropDBRoleTemplate = `DROP ROLE IF EXISTS %s`
 	commandTemplate    = `%s start --config=%s`
 
-	alreadyExistsErrorTemplate = `obs '%s' already exists`
+	alreadyExistsErrorTemplate = `clb '%s' already exists`
 )
 
 var (
-	errWrongMode        = errors.New("node must be running as OBSMaster")
-	errIncorrectOBSName = errors.New("the name cannot begit with a number and must contain alphabetical symbols and numbers")
+	errWrongMode        = errors.New("node must be running as CLBMaster")
+	errIncorrectCLBName = errors.New("the name cannot begit with a number and must contain alphabetical symbols and numbers")
 )
 
-// OBSManager struct
-type OBSManager struct {
+// CLBManager struct
+type CLBManager struct {
 	processes        *process.Manager
 	execPath         string
 	childConfigsPath string
 }
 
 var (
-	Manager *OBSManager
+	Manager *CLBManager
 )
 
 func prepareWorkDir() (string, error) {
@@ -66,11 +66,11 @@ func prepareWorkDir() (string, error) {
 	return childConfigsPath, nil
 }
 
-// CreateOBS creates one instance of OBS
-func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) error {
-	if err := checkOBSName(name); err != nil {
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on check OBS name")
-		return errIncorrectOBSName
+// CreateCLB creates one instance of CLB
+func (mgr *CLBManager) CreateCLB(name, dbUser, dbPassword string, port int) error {
+	if err := checkCLBName(name); err != nil {
+		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Error("on check CLB name")
+		return errIncorrectCLBName
 	}
 
 	var err error
@@ -86,7 +86,7 @@ func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) erro
 		}
 	}()
 
-	config := ChildOBSConfig{
+	config := ChildCLBConfig{
 		Executable:     mgr.execPath,
 		Name:           name,
 		Directory:      path.Join(mgr.childConfigsPath, name),
@@ -99,12 +99,12 @@ func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) erro
 	}
 
 	if mgr.processes == nil {
-		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("creating new OBS")
+		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("creating new CLB")
 		return errWrongMode
 	}
 
-	if err = mgr.createOBSDB(name, dbUser, dbPassword); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on creating OBS DB")
+	if err = mgr.createCLBDB(name, dbUser, dbPassword); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on creating CLB DB")
 		return fmt.Errorf(alreadyExistsErrorTemplate, name)
 	}
 
@@ -115,17 +115,17 @@ func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) erro
 	dirPath := path.Join(mgr.childConfigsPath, name)
 	if directoryExists(dirPath) {
 		err = fmt.Errorf(alreadyExistsErrorTemplate, name)
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err, "dirPath": dirPath}).Error("on check directory")
+		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err, "dirPath": dirPath}).Error("on check directory")
 		return err
 	}
 
-	if err = mgr.initOBSDir(name); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "DirName": name, "error": err}).Error("on init OBS dir")
+	if err = mgr.initCLBDir(name); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "DirName": name, "error": err}).Error("on init CLB dir")
 		return err
 	}
 
 	cancelChain = append(cancelChain, func() {
-		dropOBSDir(mgr.childConfigsPath, name)
+		dropCLBDir(mgr.childConfigsPath, name)
 	})
 
 	cmd := config.configCommand()
@@ -150,7 +150,7 @@ func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) erro
 	log.Infoln(command)
 	section := ini.NewSection(procConfEntry.Name)
 	section.Add("command", command)
-	proc := process.NewProcess("obsMaster", procConfEntry)
+	proc := process.NewProcess("clbMaster", procConfEntry)
 
 	mgr.processes.Add(name, proc)
 	mgr.processes.Find(name).Start(true)
@@ -158,9 +158,9 @@ func (mgr *OBSManager) CreateOBS(name, dbUser, dbPassword string, port int) erro
 }
 
 // ListProcess returns list of process names with state of process
-func (mgr *OBSManager) ListProcess() (map[string]string, error) {
+func (mgr *CLBManager) ListProcess() (map[string]string, error) {
 	if mgr.processes == nil {
-		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("get OBS list")
+		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("get CLB list")
 		return nil, errWrongMode
 	}
 
@@ -173,7 +173,7 @@ func (mgr *OBSManager) ListProcess() (map[string]string, error) {
 	return list, nil
 }
 
-func (mgr *OBSManager) ListProcessWithPorts() (map[string]string, error) {
+func (mgr *CLBManager) ListProcessWithPorts() (map[string]string, error) {
 	list, err := mgr.ListProcess()
 	if err != nil {
 		return list, err
@@ -183,7 +183,7 @@ func (mgr *OBSManager) ListProcessWithPorts() (map[string]string, error) {
 		path := path.Join(mgr.childConfigsPath, name, consts.DefaultConfigFile)
 		c := &conf.GlobalConfig{}
 		if err := conf.LoadConfigToVar(path, c); err != nil {
-			log.WithFields(log.Fields{"type": "dbError", "error": err, "path": path}).Warn("on loading child OBS config")
+			log.WithFields(log.Fields{"type": "dbError", "error": err, "path": path}).Warn("on loading child CLB config")
 			continue
 		}
 
@@ -193,44 +193,44 @@ func (mgr *OBSManager) ListProcessWithPorts() (map[string]string, error) {
 	return list, err
 }
 
-// DeleteOBS stop OBS process and remove OBS folder
-func (mgr *OBSManager) DeleteOBS(name string) error {
+// DeleteCLB stop CLB process and remove CLB folder
+func (mgr *CLBManager) DeleteCLB(name string) error {
 
 	if mgr.processes == nil {
-		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("deleting OBS")
+		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("deleting CLB")
 		return errWrongMode
 	}
 
-	mgr.StopOBS(name)
+	mgr.StopCLB(name)
 	mgr.processes.Remove(name)
-	obsDir := path.Join(mgr.childConfigsPath, name)
-	obsConfigPath := filepath.Join(obsDir, consts.DefaultConfigFile)
-	obsConfig, err := conf.GetConfigFromPath(obsConfigPath)
+	clbDir := path.Join(mgr.childConfigsPath, name)
+	clbConfigPath := filepath.Join(clbDir, consts.DefaultConfigFile)
+	clbConfig, err := conf.GetConfigFromPath(clbConfigPath)
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Errorf("Getting config from path %s", obsConfigPath)
-		return fmt.Errorf(`OBS '%s' is not exists`, name)
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Errorf("Getting config from path %s", clbConfigPath)
+		return fmt.Errorf(`CLB '%s' is not exists`, name)
 	}
 
 	time.Sleep(1 * time.Second)
-	if err := dropDb(obsConfig.DB.Name, obsConfig.DB.User); err != nil {
+	if err := dropDb(clbConfig.DB.Name, clbConfig.DB.User); err != nil {
 		return err
 	}
 
-	return os.RemoveAll(obsDir)
+	return os.RemoveAll(clbDir)
 }
 
-// StartOBS find process and then start him
-func (mgr *OBSManager) StartOBS(name string) error {
+// StartCLB find process and then start him
+func (mgr *CLBManager) StartCLB(name string) error {
 
 	if mgr.processes == nil {
-		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("starting OBS")
+		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("starting CLB")
 		return errWrongMode
 	}
 
 	proc := mgr.processes.Find(name)
 	if proc == nil {
-		err := fmt.Errorf(`OBS '%s' is not exists`, name)
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on find OBS process")
+		err := fmt.Errorf(`CLB '%s' is not exists`, name)
+		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Error("on find CLB process")
 		return err
 	}
 
@@ -239,27 +239,27 @@ func (mgr *OBSManager) StartOBS(name string) error {
 		state == process.Exited ||
 		state == process.Fatal {
 		proc.Start(true)
-		log.WithFields(log.Fields{"obs_name": name}).Info("OBS started")
+		log.WithFields(log.Fields{"clb_name": name}).Info("CLB started")
 		return nil
 	}
 
-	err := fmt.Errorf("OBS '%s' is %s", name, state)
-	log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on starting OBS")
+	err := fmt.Errorf("CLB '%s' is %s", name, state)
+	log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Error("on starting CLB")
 	return err
 }
 
-// StopOBS find process with definded name and then stop him
-func (mgr *OBSManager) StopOBS(name string) error {
+// StopCLB find process with definded name and then stop him
+func (mgr *CLBManager) StopCLB(name string) error {
 
 	if mgr.processes == nil {
-		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("on stopping OBS process")
+		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("on stopping CLB process")
 		return errWrongMode
 	}
 
 	proc := mgr.processes.Find(name)
 	if proc == nil {
-		err := fmt.Errorf(`OBS '%s' is not exists`, name)
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on find OBS process")
+		err := fmt.Errorf(`CLB '%s' is not exists`, name)
+		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Error("on find CLB process")
 		return err
 	}
 
@@ -267,27 +267,27 @@ func (mgr *OBSManager) StopOBS(name string) error {
 	if state == process.Running ||
 		state == process.Starting {
 		proc.Stop(true)
-		log.WithFields(log.Fields{"obs_name": name}).Info("OBS is stoped")
+		log.WithFields(log.Fields{"clb_name": name}).Info("CLB is stoped")
 		return nil
 	}
 
-	err := fmt.Errorf("OBS '%s' is %s", name, state)
-	log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Error("on stoping OBS")
+	err := fmt.Errorf("CLB '%s' is %s", name, state)
+	log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Error("on stoping CLB")
 	return err
 }
 
-func (mgr *OBSManager) createOBSDB(obsName, login, pass string) error {
+func (mgr *CLBManager) createCLBDB(clbName, login, pass string) error {
 
 	if err := model.DBConn.Exec(fmt.Sprintf(createRoleTemplate, login, pass)).Error; err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating OBS DB User")
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB DB User")
 		return err
 	}
 
-	if err := model.DBConn.Exec(fmt.Sprintf(createDBTemplate, obsName, login)).Error; err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating OBS DB")
+	if err := model.DBConn.Exec(fmt.Sprintf(createDBTemplate, clbName, login)).Error; err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB DB")
 
 		if err := model.GetDB(nil).Exec(fmt.Sprintf(dropDBRoleTemplate, login)).Error; err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "role": login}).Error("on deleting obs role")
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "role": login}).Error("on deleting clb role")
 			return err
 		}
 		return err
@@ -296,12 +296,12 @@ func (mgr *OBSManager) createOBSDB(obsName, login, pass string) error {
 	return nil
 }
 
-func (mgr *OBSManager) initOBSDir(obsName string) error {
+func (mgr *CLBManager) initCLBDir(clbName string) error {
 
-	obsDirName := path.Join(mgr.childConfigsPath, obsName)
-	if _, err := os.Stat(obsDirName); os.IsNotExist(err) {
-		if err := os.Mkdir(obsDirName, 0700); err != nil {
-			log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("creating OBS directory")
+	clbDirName := path.Join(mgr.childConfigsPath, clbName)
+	if _, err := os.Stat(clbDirName); os.IsNotExist(err) {
+		if err := os.Mkdir(clbDirName, 0700); err != nil {
+			log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("creating CLB directory")
 			return err
 		}
 	}
@@ -309,22 +309,22 @@ func (mgr *OBSManager) initOBSDir(obsName string) error {
 	return nil
 }
 
-func InitOBSManager() {
-	if !conf.Config.IsOBSMaster() {
+func InitCLBManager() {
+	if !conf.Config.IsCLBMaster() {
 		return
 	}
 
 	execPath, err := os.Executable()
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Fatal("on determine executable path")
+		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Fatal("on determine executable path")
 	}
 
 	childConfigsPath, err := prepareWorkDir()
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.OBSManagerError, "error": err}).Fatal("on prepare child configs folder")
+		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Fatal("on prepare child configs folder")
 	}
 
-	Manager = &OBSManager{
+	Manager = &CLBManager{
 		processes:        process.NewManager(),
 		execPath:         execPath,
 		childConfigsPath: childConfigsPath,
@@ -332,7 +332,7 @@ func InitOBSManager() {
 
 	list, err := os.ReadDir(childConfigsPath)
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "path": childConfigsPath}).Fatal("on read child OBS directory")
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "path": childConfigsPath}).Fatal("on read child CLB directory")
 	}
 
 	for _, item := range list {
@@ -348,7 +348,7 @@ func InitOBSManager() {
 			section.Add("autostart", "true")
 			section.Add("autorestart", "true")
 
-			proc := process.NewProcess("obsMaster", confEntry)
+			proc := process.NewProcess("clbMaster", confEntry)
 			Manager.processes.Add(item.Name(), proc)
 			proc.Start(true)
 		}
@@ -357,18 +357,18 @@ func InitOBSManager() {
 
 func dropDb(name, role string) error {
 	if err := model.DropDatabase(name); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "db_name": name}).Error("Deleting obs db")
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "db_name": name}).Error("Deleting clb db")
 		return err
 	}
 
 	if err := model.GetDB(nil).Exec(fmt.Sprintf(dropDBRoleTemplate, role)).Error; err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "role": role}).Error("on deleting obs role")
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "role": role}).Error("on deleting clb role")
 	}
 	return nil
 }
 
-func dropOBSDir(configsPath, obsName string) error {
-	path := path.Join(configsPath, obsName)
+func dropCLBDir(configsPath, clbName string) error {
+	path := path.Join(configsPath, clbName)
 	if directoryExists(path) {
 		os.RemoveAll(path)
 	}
@@ -387,7 +387,7 @@ func directoryExists(path string) bool {
 	return true
 }
 
-func checkOBSName(name string) error {
+func checkCLBName(name string) error {
 
 	name = strings.ToLower(name)
 
@@ -403,7 +403,7 @@ func checkOBSName(name string) error {
 	return nil
 }
 
-func (mgr *OBSManager) configByName(name string) (*conf.GlobalConfig, error) {
+func (mgr *CLBManager) configByName(name string) (*conf.GlobalConfig, error) {
 	path := path.Join(mgr.childConfigsPath)
 	c := &conf.GlobalConfig{}
 	err := conf.LoadConfigToVar(path, c)

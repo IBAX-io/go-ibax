@@ -501,12 +501,12 @@ func InitDB(cfg conf.DBConfig) error {
 		return err
 	}
 
-	if err := ExecOBSSchema(consts.DefaultOBS, conf.Config.KeyID); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating OBS schema")
+	if err := ExecCLBSchema(consts.DefaultCLB, conf.Config.KeyID); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB schema")
 		return err
 	}
 	if err := ExecSubSchema(); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating OBS schema")
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB schema")
 		return err
 	}
 

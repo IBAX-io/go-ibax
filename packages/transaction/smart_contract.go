@@ -49,7 +49,7 @@ func (s *SmartContractTransaction) Init(t *Transaction) error {
 	s.DbTransaction = t.DbTransaction
 	s.TxSize = int64(len(s.Payload))
 	s.VM = script.GetVM()
-	s.OBS = false
+	s.CLB = false
 	s.Rollback = true
 	s.SysUpdate = false
 	s.RollBackTx = make([]*model.RollbackTx, 0)

@@ -1,0 +1,16 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract StopCLB {
+		data {
+			CLBName string
+		}
+	
+		conditions {
+		}
+	
+		action {
+			$CLBName = ToLower($CLBName)
+			StopCLBProcess($CLBName)
+			$result = "CLB " + $CLBName + " stopped"
+		}
+}

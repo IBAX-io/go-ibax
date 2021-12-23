@@ -25,7 +25,7 @@ func BlockTime(sc *SmartContract) string {
 	if sc.BlockData != nil {
 		blockTime = sc.BlockData.Time
 	}
-	if sc.OBS {
+	if sc.CLB {
 		blockTime = time.Now().Unix()
 	}
 	return Date(dateTimeFormat, blockTime)

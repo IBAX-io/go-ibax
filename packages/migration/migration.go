@@ -122,7 +122,7 @@ func InitMigrate(db database) error {
 	if conf.Config.IsSubNode() {
 		//mig = append(mig, migrationsSub)
 	}
-	if conf.Config.IsSupportingOBS() {
+	if conf.Config.IsSupportingCLB() {
 		//mig = append(mig, migrationsCLB)
 	}
 	return runMigrations(db, mig)

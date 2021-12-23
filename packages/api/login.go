@@ -70,7 +70,7 @@ type loginResult struct {
 	NotifyKey   string        `json:"notify_key,omitempty"`
 	IsNode      bool          `json:"isnode,omitempty"`
 	IsOwner     bool          `json:"isowner,omitempty"`
-	IsOBS       bool          `json:"obs,omitempty"`
+	IsCLB       bool          `json:"clb,omitempty"`
 	Timestamp   string        `json:"timestamp,omitempty"`
 	Roles       []rolesResult `json:"roles,omitempty"`
 }
@@ -193,7 +193,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if !conf.Config.IsSupportingOBS() {
+			if !conf.Config.IsSupportingCLB() {
 				gt := 3 * syspar.GetMaxBlockGenerationTime()
 				his := &model.History{}
 				for i := 0; i < 2; i++ {
@@ -284,7 +284,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		KeyID:       converter.Int64ToStr(wallet),
 		IsOwner:     founder == wallet,
 		IsNode:      conf.Config.KeyID == wallet,
-		IsOBS:       conf.Config.IsSupportingOBS(),
+		IsCLB:       conf.Config.IsSupportingCLB(),
 	}
 
 	claims := JWTClaims{
@@ -381,7 +381,7 @@ func checkRoleFromParam(role, ecosystemID int64, account string) (int64, error) 
 }
 
 func allowCreateUser(c *Client) bool {
-	if conf.Config.IsSupportingOBS() {
+	if conf.Config.IsSupportingCLB() {
 		return true
 	}
 
