@@ -7,15 +7,15 @@ package modes
 import (
 	"context"
 
-	"github.com/IBAX-io/go-ibax/packages/types"
-
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/daemons"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpserver"
+	"github.com/IBAX-io/go-ibax/packages/obsmanager"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -195,7 +195,7 @@ func (l OBSDaemonFactory) Load(ctx context.Context) error {
 		log.Errorf("can't start tcp servers, stop")
 		return err
 	}
-
+	obsmanager.InitOBSManager()
 	return nil
 }
 

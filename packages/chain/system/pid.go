@@ -6,9 +6,13 @@
 package system
 
 import (
+	"encoding/json"
+	"fmt"
+	"github.com/IBAX-io/go-ibax/packages/converter"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -18,9 +22,15 @@ import (
 
 // CreatePidFile creats pid file
 func CreatePidFile() error {
+	killOldPid()
 	pid := os.Getpid()
-	data := []byte(strconv.Itoa(pid))
-	return os.WriteFile(conf.Config.GetPidPath(), data, 0644)
+	pidAndVer, err := json.Marshal(map[string]string{"pid": converter.IntToStr(pid), "version": consts.VERSION})
+	if err != nil {
+		log.WithFields(log.Fields{"pid": pid, "error": err, "type": consts.JSONMarshallError}).Error("marshalling pid to json")
+		return err
+	}
+
+	return os.WriteFile(conf.Config.GetPidPath(), pidAndVer, 0644)
 }
 
 // RemovePidFile removes pid file
@@ -46,4 +56,32 @@ func ReadPidFile() (int, error) {
 		log.WithFields(log.Fields{"data": data, "error": err, "type": consts.ConversionError}).Error("pid file data to int")
 	}
 	return pid, err
+}
+
+func killOldPid() {
+	pidPath := conf.Config.GetPidPath()
+	if _, err := os.Stat(pidPath); err == nil {
+		dat, err := os.ReadFile(pidPath)
+		if err != nil {
+			log.WithFields(log.Fields{"path": pidPath, "error": err, "type": consts.IOError}).Error("reading pid file")
+		}
+		var pidMap map[string]string
+		err = json.Unmarshal(dat, &pidMap)
+		if err != nil {
+			log.WithFields(log.Fields{"data": dat, "error": err, "type": consts.JSONUnmarshallError}).Error("unmarshalling pid map")
+		}
+		log.WithFields(log.Fields{"path": conf.Config.DirPathConf.DataDir + pidMap["pid"]}).Debug("old pid path")
+
+		KillPid(pidMap["pid"])
+		if fmt.Sprintf("%s", err) != "null" {
+			// give 15 sec to end the previous process
+			for i := 0; i < 5; i++ {
+				if _, err := os.Stat(conf.Config.GetPidPath()); err == nil {
+					time.Sleep(time.Second)
+				} else {
+					break
+				}
+			}
+		}
+	}
 }

@@ -8,7 +8,6 @@ package chain
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"net/http"
@@ -18,55 +17,107 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/api"
 	"github.com/IBAX-io/go-ibax/packages/chain/daemonsctl"
+	"github.com/IBAX-io/go-ibax/packages/chain/system"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/daemons"
 	logtools "github.com/IBAX-io/go-ibax/packages/log"
 	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/modes"
 	"github.com/IBAX-io/go-ibax/packages/network/httpserver"
-	"github.com/IBAX-io/go-ibax/packages/obsmanager"
 	"github.com/IBAX-io/go-ibax/packages/publisher"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/statsd"
 	"github.com/IBAX-io/go-ibax/packages/utils"
-
 	log "github.com/sirupsen/logrus"
 )
+
+// Start starts the main code of the program
+func Start() {
+	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			log.WithFields(log.Fields{"panic": r, "type": consts.PanicRecoveredError}).Error("recovered panic")
+			panic(r)
+		}
+	}()
+	exitErr := func(code int) {
+		system.RemovePidFile()
+		model.GormClose()
+		statsd.Close()
+		os.Exit(code)
+	}
+	f := utils.LockOrDie(conf.Config.DirPathConf.LockFilePath)
+	defer f.Unlock()
+	if err := utils.MakeDirectory(conf.Config.DirPathConf.TempDir); err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.DirPathConf.TempDir}).Error("can't create temporary directory")
+		exitErr(1)
+	}
+
+	// save the current pid and version
+	if err := system.CreatePidFile(); err != nil {
+		log.Errorf("can't create pid: %s", err)
+		exitErr(1)
+	}
+	defer system.RemovePidFile()
+
+	log.WithFields(log.Fields{"work_dir": conf.Config.DirPathConf.DataDir, "version": consts.Version()}).Info("started with")
+
+	if err = initLogs(); err != nil {
+		log.Errorf("logs init failed: %v\n", utils.ErrInfo(err))
+		exitErr(1)
+	}
+
+	if conf.Config.FuncBench {
+		log.Warning("Warning! Access checking is disabled in some built-in functions")
+	}
+
+	publisher.InitCentrifugo(conf.Config.Centrifugo)
+	initStatsd()
+
+	rand.Seed(time.Now().UTC().UnixNano())
+	smart.InitVM()
+	if err := syspar.ReadNodeKeys(); err != nil {
+		log.Errorf("can't read node keys: %s", err)
+		exitErr(1)
+	}
+
+	if err = model.GormInit(conf.Config.DB); err != nil {
+		log.WithFields(log.Fields{
+			"db_user": conf.Config.DB.User, "db_password": conf.Config.DB.Password, "db_name": conf.Config.DB.Name, "type": consts.DBError,
+		}).Error("can't init gorm")
+		exitErr(1)
+	}
+
+	if model.DBConn != nil {
+		if err := model.UpdateSchema(); err != nil {
+			log.WithFields(log.Fields{"error": err}).Error("on running update migrations")
+			exitErr(1)
+		}
+
+		ctx, cancel := context.WithCancel(context.Background())
+		utils.CancelFunc = cancel
+		utils.ReturnCh = make(chan string)
+
+		// The installation process is already finished (where user has specified DB and where wallet has been restarted)
+		err := daemonsctl.RunAllDaemons(ctx)
+		log.Info("Daemons started")
+		if err != nil {
+			exitErr(1)
+		}
+	}
+
+	daemons.WaitForSignals()
+
+	initRoutes(conf.Config.HTTP.Str())
+
+	select {}
+}
 
 func initStatsd() {
 	if err := statsd.Init(conf.Config.StatsD); err != nil {
 		log.WithFields(log.Fields{"type": consts.StatsdError, "error": err}).Fatal("cannot initialize statsd")
-	}
-}
-
-func killOld() {
-	pidPath := conf.Config.GetPidPath()
-	if _, err := os.Stat(pidPath); err == nil {
-		dat, err := os.ReadFile(pidPath)
-		if err != nil {
-			log.WithFields(log.Fields{"path": pidPath, "error": err, "type": consts.IOError}).Error("reading pid file")
-		}
-		var pidMap map[string]string
-		err = json.Unmarshal(dat, &pidMap)
-		if err != nil {
-			log.WithFields(log.Fields{"data": dat, "error": err, "type": consts.JSONUnmarshallError}).Error("unmarshalling pid map")
-		}
-		log.WithFields(log.Fields{"path": conf.Config.DirPathConf.DataDir + pidMap["pid"]}).Debug("old pid path")
-
-		KillPid(pidMap["pid"])
-		if fmt.Sprintf("%s", err) != "null" {
-			// give 15 sec to end the previous process
-			for i := 0; i < 5; i++ {
-				if _, err := os.Stat(conf.Config.GetPidPath()); err == nil {
-					time.Sleep(time.Second)
-				} else {
-					break
-				}
-			}
-		}
 	}
 }
 
@@ -123,21 +174,6 @@ func initLogs() error {
 	return nil
 }
 
-func savePid() error {
-	pid := os.Getpid()
-	PidAndVer, err := json.Marshal(map[string]string{"pid": converter.IntToStr(pid), "version": consts.VERSION})
-	if err != nil {
-		log.WithFields(log.Fields{"pid": pid, "error": err, "type": consts.JSONMarshallError}).Error("marshalling pid to json")
-		return err
-	}
-
-	return os.WriteFile(conf.Config.GetPidPath(), PidAndVer, 0644)
-}
-
-func delPidFile() {
-	os.Remove(conf.Config.GetPidPath())
-}
-
 func initRoutes(listenHost string) {
 	handler := modes.RegisterRoutes()
 	handler = api.WithCors(handler)
@@ -175,98 +211,4 @@ func initRoutes(listenHost string) {
 	}
 
 	httpListener(listenHost, handler)
-}
-
-// Start starts the main code of the program
-func Start() {
-	var err error
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.WithFields(log.Fields{"panic": r, "type": consts.PanicRecoveredError}).Error("recovered panic")
-			panic(r)
-		}
-	}()
-
-	Exit := func(code int) {
-		delPidFile()
-		model.GormClose()
-		statsd.Close()
-		os.Exit(code)
-	}
-
-	initGorm := func(dbCfg conf.DBConfig) {
-		err = model.GormInit(dbCfg)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"db_user": dbCfg.User, "db_password": dbCfg.Password, "db_name": dbCfg.Name, "type": consts.DBError,
-			}).Error("can't init gorm")
-			Exit(1)
-		}
-	}
-
-	//log.WithFields(log.Fields{"mode": conf.Config.RunNodeMode}).Info("Node running mode")
-	if conf.Config.FuncBench {
-		log.Warning("Warning! Access checking is disabled in some built-in functions")
-	}
-
-	f := utils.LockOrDie(conf.Config.DirPathConf.LockFilePath)
-	defer f.Unlock()
-	if err := utils.MakeDirectory(conf.Config.DirPathConf.TempDir); err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.IOError, "dir": conf.Config.DirPathConf.TempDir}).Error("can't create temporary directory")
-		Exit(1)
-	}
-
-	initGorm(conf.Config.DB)
-	log.WithFields(log.Fields{"work_dir": conf.Config.DirPathConf.DataDir, "version": consts.Version()}).Info("started with")
-
-	killOld()
-
-	publisher.InitCentrifugo(conf.Config.Centrifugo)
-	initStatsd()
-
-	err = initLogs()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "logs init failed: %v\n", utils.ErrInfo(err))
-		Exit(1)
-	}
-
-	rand.Seed(time.Now().UTC().UnixNano())
-
-	// save the current pid and version
-	if err := savePid(); err != nil {
-		log.Errorf("can't create pid: %s", err)
-		Exit(1)
-	}
-	defer delPidFile()
-
-	smart.InitVM()
-	if err := syspar.ReadNodeKeys(); err != nil {
-		log.Errorf("can't read node keys: %s", err)
-		Exit(1)
-	}
-	if model.DBConn != nil {
-		if err := model.UpdateSchema(); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("on running update migrations")
-			os.Exit(1)
-		}
-
-		ctx, cancel := context.WithCancel(context.Background())
-		utils.CancelFunc = cancel
-		utils.ReturnCh = make(chan string)
-
-		// The installation process is already finished (where user has specified DB and where wallet has been restarted)
-		err := daemonsctl.RunAllDaemons(ctx)
-		log.Info("Daemons started")
-		if err != nil {
-			Exit(1)
-		}
-
-		obsmanager.InitOBSManager()
-	}
-	daemons.WaitForSignals()
-
-	initRoutes(conf.Config.HTTP.Str())
-
-	select {}
 }
