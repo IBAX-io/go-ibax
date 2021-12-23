@@ -11,23 +11,23 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	ErrLastBlock = errors.New("Block is not the last")
+	ErrLastBlock = errors.New("block is not the last")
 )
 
-// BlockRollback is blocking rollback
+// RollbackBlock is blocking rollback
 func RollbackBlock(data []byte) error {
 	bl, err := block.UnmarshallBlock(bytes.NewBuffer(data), true)
 	if err != nil {
 		return err
 	}
 
-	b := &model.Block{}
+	b := &sqldb.BlockChain{}
 	if _, err = b.GetMaxBlock(); err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func RollbackBlock(data []byte) error {
 		return ErrLastBlock
 	}
 
-	dbTransaction, err := model.StartTransaction()
+	dbTransaction, err := sqldb.StartTransaction()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting transaction")
 		return err
@@ -54,7 +54,7 @@ func RollbackBlock(data []byte) error {
 		return err
 	}
 
-	b = &model.Block{}
+	b = &sqldb.BlockChain{}
 	if _, err = b.Get(bl.Header.BlockID - 1); err != nil {
 		dbTransaction.Rollback()
 		return err
@@ -66,7 +66,7 @@ func RollbackBlock(data []byte) error {
 		return err
 	}
 
-	ib := &model.InfoBlock{
+	ib := &sqldb.InfoBlock{
 		Hash:           b.Hash,
 		RollbacksHash:  b.RollbacksHash,
 		BlockID:        b.ID,
@@ -84,32 +84,32 @@ func RollbackBlock(data []byte) error {
 	return dbTransaction.Commit()
 }
 
-func rollbackBlock(dbTransaction *model.DbTransaction, block *block.Block) error {
+func rollbackBlock(dbTransaction *sqldb.DbTransaction, block *block.Block) error {
 	// rollback transactions in reverse order
 	logger := block.GetLogger()
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
 		t := block.Transactions[i]
 		t.DbTransaction = dbTransaction
 
-		_, err := model.MarkTransactionUnusedAndUnverified(dbTransaction, t.TxHash())
+		_, err := sqldb.MarkTransactionUnusedAndUnverified(dbTransaction, t.TxHash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting transaction")
 			return err
 		}
-		_, err = model.DeleteLogTransactionsByHash(dbTransaction, t.TxHash())
+		_, err = sqldb.DeleteLogTransactionsByHash(dbTransaction, t.TxHash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting log transactions by hash")
 			return err
 		}
 
-		ts := &model.TransactionStatus{}
+		ts := &sqldb.TransactionStatus{}
 		err = ts.UpdateBlockID(dbTransaction, 0, t.TxHash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating block id in transaction status")
 			return err
 		}
 
-		_, err = model.DeleteQueueTxByHash(dbTransaction, t.TxHash())
+		_, err = sqldb.DeleteQueueTxByHash(dbTransaction, t.TxHash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transacion from queue by hash")
 			return err

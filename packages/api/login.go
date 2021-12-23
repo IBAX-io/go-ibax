@@ -19,10 +19,10 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/publisher"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/golang-jwt/jwt/v4"
@@ -88,7 +88,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		err                 error
 		isExistPub          bool
 		form                = new(loginForm)
-		spfounder, spfm     model.StateParameter
+		spfounder, spfm     sqldb.StateParameter
 	)
 	if uid, err = getUID(r); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
@@ -116,7 +116,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		wallet = crypto.Address(form.PublicKey.Bytes())
 	}
 
-	account := &model.Key{}
+	account := &sqldb.Key{}
 	account.SetTablePrefix(client.EcosystemID)
 	isAccount, err := account.Get(nil, wallet)
 	if err != nil {
@@ -195,7 +195,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 			if !conf.Config.IsSupportingCLB() {
 				gt := 3 * syspar.GetMaxBlockGenerationTime()
-				his := &model.History{}
+				his := &sqldb.History{}
 				for i := 0; i < 2; i++ {
 					found, err := his.Get(txHash)
 					if err != nil {
@@ -311,7 +311,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ra := &model.RolesParticipants{}
+	ra := &sqldb.RolesParticipants{}
 	roles, err := ra.SetTablePrefix(client.EcosystemID).GetActiveMemberRoles(account.AccountID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting roles")
@@ -355,7 +355,7 @@ func getUID(r *http.Request) (string, error) {
 
 func checkRoleFromParam(role, ecosystemID int64, account string) (int64, error) {
 	if role > 0 {
-		ok, err := model.MemberHasRole(nil, role, ecosystemID, account)
+		ok, err := sqldb.MemberHasRole(nil, role, ecosystemID, account)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"type":      consts.DBError,

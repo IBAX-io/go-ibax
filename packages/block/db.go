@@ -19,14 +19,14 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	log "github.com/sirupsen/logrus"
 )
 
 // upsertInfoBlock updates info_block table
-func (b *Block) upsertInfoBlock(dbTransaction *model.DbTransaction, block *model.Block) error {
-	ib := &model.InfoBlock{
+func (b *Block) upsertInfoBlock(dbTransaction *sqldb.DbTransaction, block *sqldb.BlockChain) error {
+	ib := &sqldb.InfoBlock{
 		Hash:          block.Hash,
 		BlockID:       block.ID,
 		Time:          block.Time,
@@ -53,8 +53,8 @@ func (b *Block) upsertInfoBlock(dbTransaction *model.DbTransaction, block *model
 	return nil
 }
 
-func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, error) {
-	r := &model.RollbackTx{}
+func GetRollbacksHash(transaction *sqldb.DbTransaction, blockID int64) ([]byte, error) {
+	r := &sqldb.RollbackTx{}
 	list, err := r.GetBlockRollbackTransactions(transaction, blockID)
 	if err != nil {
 		return nil, err
@@ -73,9 +73,9 @@ func GetRollbacksHash(transaction *model.DbTransaction, blockID int64) ([]byte, 
 }
 
 // InsertIntoBlockchain inserts a block into the blockchain
-func (b *Block) InsertIntoBlockchain(dbTx *model.DbTransaction) error {
+func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 	blockID := b.Header.BlockID
-	bl := &model.Block{}
+	bl := &sqldb.BlockChain{}
 	err := bl.DeleteById(dbTx, blockID)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
@@ -87,7 +87,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *model.DbTransaction) error {
 		return err
 	}
 
-	blockchain := &model.Block{
+	blockchain := &sqldb.BlockChain{
 		ID:            blockID,
 		Hash:          crypto.DoubleHash([]byte(b.Header.ForSha(b.PrevHeader, b.MrklRoot))),
 		Data:          b.BinData,
@@ -132,7 +132,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *model.DbTransaction) error {
 // GetBlockDataFromBlockChain is retrieving block data from blockchain
 func GetBlockDataFromBlockChain(blockID int64) (*types.BlockData, error) {
 	BlockData := new(types.BlockData)
-	block := &model.Block{}
+	block := &sqldb.BlockChain{}
 	_, err := block.Get(blockID)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting block by ID")
@@ -152,7 +152,7 @@ func GetBlockDataFromBlockChain(blockID int64) (*types.BlockData, error) {
 
 // GetDataFromFirstBlock returns data of first block
 func GetDataFromFirstBlock() (data *types.FirstBlock, ok bool) {
-	block := &model.Block{}
+	block := &sqldb.BlockChain{}
 	isFound, err := block.Get(1)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting record of first block")

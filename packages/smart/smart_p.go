@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"strings"
 
-	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
+	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -20,8 +20,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
 	"github.com/IBAX-io/go-ibax/packages/language"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/IBAX-io/go-ibax/packages/utils/metric"
@@ -84,7 +84,7 @@ func UpdateSysParam(sc *SmartContract, name, value, conditions string) (int64, e
 		fields []string
 		values []interface{}
 	)
-	par := &model.SystemParameter{}
+	par := &sqldb.SystemParameter{}
 	found, err := par.Get(name)
 	if err != nil {
 		return 0, logErrorDB(err, "system parameter get")
@@ -382,7 +382,7 @@ func GetContractById(sc *SmartContract, id int64) string {
 func EvalCondition(sc *SmartContract, table, name, condfield string) error {
 	tableName := converter.ParseTable(table, sc.TxSmart.EcosystemID)
 	query := `SELECT ` + converter.EscapeName(condfield) + ` FROM "` + tableName + `" WHERE name = ? and ecosystem = ?`
-	conditions, err := model.Single(sc.DbTransaction, query, name, sc.TxSmart.EcosystemID).String()
+	conditions, err := sqldb.Single(sc.DbTransaction, query, name, sc.TxSmart.EcosystemID).String()
 	if err != nil {
 		return logErrorDB(err, "executing single query")
 	}
@@ -403,7 +403,7 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 		return 0, err
 	}
 
-	var sp model.StateParameter
+	var sp sqldb.StateParameter
 	sp.SetTablePrefix(`1`)
 	found, err := sp.Get(sc.DbTransaction, `founder_account`)
 	if err != nil {
@@ -414,17 +414,17 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 		return 0, logErrorShort(errFounderAccount, consts.NotFound)
 	}
 
-	id, err := model.GetNextID(sc.DbTransaction, "1_ecosystems")
+	id, err := sqldb.GetNextID(sc.DbTransaction, "1_ecosystems")
 	if err != nil {
 		return 0, logErrorDB(err, "generating next ecosystem id")
 	}
 
-	appID, err := model.GetNextID(sc.DbTransaction, "1_applications")
+	appID, err := sqldb.GetNextID(sc.DbTransaction, "1_applications")
 	if err != nil {
 		return 0, logErrorDB(err, "generating next application id")
 	}
 
-	if err = model.ExecSchemaEcosystem(sc.DbTransaction, int(id), wallet, name, converter.StrToInt64(sp.Value), appID); err != nil {
+	if err = sqldb.ExecSchemaEcosystem(sc.DbTransaction, int(id), wallet, name, converter.StrToInt64(sp.Value), appID); err != nil {
 		return 0, logErrorDB(err, "executing ecosystem schema")
 	}
 
@@ -559,7 +559,7 @@ func UnbndWallet(sc *SmartContract, tblid int64, state int64) error {
 // CheckSignature checks the additional signatures for the contract
 func CheckSignature(sc *SmartContract, i *map[string]interface{}, name string) error {
 	state, name := converter.ParseName(name)
-	sn := model.Signature{}
+	sn := sqldb.Signature{}
 	sn.SetTablePrefix(converter.Int64ToStr(int64(state)))
 	_, err := sn.Get(name)
 	if err != nil {
@@ -604,7 +604,7 @@ func DBSelectMetrics(sc *SmartContract, metric, timeInterval, aggregateFunc stri
 	}
 
 	timeBlock := time.Unix(sc.TxSmart.Time, 0).Format(`2006-01-02 15:04:05`)
-	result, err := model.GetMetricValues(metric, timeInterval, aggregateFunc, timeBlock)
+	result, err := sqldb.GetMetricValues(metric, timeInterval, aggregateFunc, timeBlock)
 	if err != nil {
 		return nil, logErrorDB(err, "get values of metric")
 	}
@@ -696,7 +696,7 @@ func DBCount(sc *SmartContract, tableName string, inWhere *types.Map) (count int
 	if err != nil {
 		return 0, err
 	}
-	err = model.GetDB(sc.DbTransaction).Table(tblname).Where(where).Count(&count).Error
+	err = sqldb.GetDB(sc.DbTransaction).Table(tblname).Where(where).Count(&count).Error
 	return
 }
 

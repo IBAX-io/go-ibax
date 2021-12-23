@@ -14,7 +14,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"errors"
 
@@ -29,7 +29,7 @@ type maxBlockResult struct {
 func getMaxBlockHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
-	block := &model.Block{}
+	block := &sqldb.BlockChain{}
 	found, err := block.GetMaxBlock()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting max block")
@@ -60,7 +60,7 @@ func getBlockInfoHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 
 	blockID := converter.StrToInt64(params["id"])
-	block := model.Block{}
+	block := sqldb.BlockChain{}
 	found, err := block.Get(blockID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block")
@@ -117,7 +117,7 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	logger := getLogger(r)
 
-	blocks, err := model.GetBlockchain(form.BlockID, form.BlockID+form.Count, model.OrderASC)
+	blocks, err := sqldb.GetBlockchain(form.BlockID, form.BlockID+form.Count, sqldb.OrderASC)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting blocks range")
 		errorResponse(w, err)
@@ -157,7 +157,7 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 			txInfoCollection = append(txInfoCollection, txInfo)
 
-			logger.WithFields(log.Fields{"block_id": blockModel.ID, "tx hash": txInfo.Hash, "contract_name": txInfo.ContractName, "key_id": txInfo.KeyID, "params": txInfoCollection}).Debug("Block Transactions Information")
+			logger.WithFields(log.Fields{"block_id": blockModel.ID, "tx hash": txInfo.Hash, "contract_name": txInfo.ContractName, "key_id": txInfo.KeyID, "params": txInfoCollection}).Debug("BlockChain Transactions Information")
 		}
 
 		result[blockModel.ID] = txInfoCollection
@@ -219,7 +219,7 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	logger := getLogger(r)
 
-	blocks, err := model.GetBlockchain(form.BlockID, form.BlockID+form.Count, model.OrderASC)
+	blocks, err := sqldb.GetBlockchain(form.BlockID, form.BlockID+form.Count, sqldb.OrderASC)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting blocks range")
 		errorResponse(w, err)
@@ -257,7 +257,7 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 			txDetailedInfoCollection = append(txDetailedInfoCollection, txDetailedInfo)
 
-			logger.WithFields(log.Fields{"block_id": blockModel.ID, "tx hash": txDetailedInfo.Hash, "contract_name": txDetailedInfo.ContractName, "key_id": txDetailedInfo.KeyID, "time": txDetailedInfo.Time, "type": txDetailedInfo.Type, "params": txDetailedInfoCollection}).Debug("Block Transactions Information")
+			logger.WithFields(log.Fields{"block_id": blockModel.ID, "tx hash": txDetailedInfo.Hash, "contract_name": txDetailedInfo.ContractName, "key_id": txDetailedInfo.KeyID, "time": txDetailedInfo.Time, "type": txDetailedInfo.Type, "params": txDetailedInfoCollection}).Debug("BlockChain Transactions Information")
 		}
 
 		header := BlockHeaderInfo{

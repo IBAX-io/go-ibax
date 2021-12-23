@@ -14,7 +14,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
+	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 
 	"github.com/IBAX-io/go-ibax/packages/common"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -28,8 +28,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	"github.com/shopspring/decimal"
@@ -78,14 +78,14 @@ type SmartContract struct {
 	TxSize        int64
 	Size          common.StorageSize
 	PublicKeys    [][]byte
-	DbTransaction *model.DbTransaction
+	DbTransaction *sqldb.DbTransaction
 	Rand          *rand.Rand
 	FlushRollback []*FlushInfo
 	Notifications types.Notifications
 	GenBlock      bool
 	TimeLimit     int64
-	Key           *model.Key
-	RollBackTx    []*model.RollbackTx
+	Key           *sqldb.Key
+	RollBackTx    []*sqldb.RollbackTx
 	multiPays     multiPays
 	taxes         bool
 	Penalty       bool
@@ -248,7 +248,7 @@ func PrefixName(table string) (prefix, name string) {
 func (sc *SmartContract) IsCustomTable(table string) (isCustom bool, err error) {
 	prefix, name := PrefixName(table)
 	if len(prefix) > 0 {
-		tables := &model.Table{}
+		tables := &sqldb.Table{}
 		tables.SetTablePrefix(prefix)
 		found, err := tables.Get(sc.DbTransaction, name)
 		if err != nil {
@@ -287,7 +287,7 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 	}
 
 	prefix, name := PrefixName(table)
-	tables := &model.Table{}
+	tables := &sqldb.Table{}
 	tables.SetTablePrefix(prefix)
 	tablePermission, err = tables.GetPermissions(sc.DbTransaction, name, "")
 	if err != nil {
@@ -343,7 +343,7 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 		return nil
 	}
 	prefix, name := PrefixName(table)
-	tables := &model.Table{}
+	tables := &sqldb.Table{}
 	tables.SetTablePrefix(prefix)
 	found, err := tables.Get(sc.DbTransaction, name)
 	if err != nil {
@@ -461,7 +461,7 @@ func (sc *SmartContract) CheckAccess(tableName, columns string, ecosystem int64)
 
 // AccessRights checks the access right by executing the condition value
 func (sc *SmartContract) AccessRights(condition string, iscondition bool) error {
-	sp := &model.StateParameter{}
+	sp := &sqldb.StateParameter{}
 	prefix := converter.Int64ToStr(sc.TxSmart.EcosystemID)
 
 	sp.SetTablePrefix(prefix)
@@ -559,7 +559,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 		return ``, err
 	}
 
-	sc.Key = &model.Key{}
+	sc.Key = &sqldb.Key{}
 	if err = sc.checkTxSign(); err != nil {
 		return retError(err)
 	}

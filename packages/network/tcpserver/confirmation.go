@@ -6,8 +6,8 @@ package tcpserver
 
 import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -16,7 +16,7 @@ import (
 // The request is sent by 'confirmations' daemon
 func Confirmation(r *network.ConfirmRequest) (*network.ConfirmResponse, error) {
 	resp := &network.ConfirmResponse{}
-	block := &model.Block{}
+	block := &sqldb.BlockChain{}
 	found, err := block.Get(int64(r.BlockID))
 	if err != nil || !found {
 		hash := [32]byte{}

@@ -24,8 +24,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/rollback"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
@@ -61,7 +61,7 @@ func blocksCollection(ctx context.Context, d *daemon) (err error) {
 		return err
 	}
 
-	infoBlock := &model.InfoBlock{}
+	infoBlock := &sqldb.InfoBlock{}
 	found, err := infoBlock.Get()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting cur blockID")
@@ -90,7 +90,7 @@ func blocksCollection(ctx context.Context, d *daemon) (err error) {
 // UpdateChain load from host all blocks from our last block to maxBlockID
 func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) error {
 	// get current block id from our blockchain
-	curBlock := &model.InfoBlock{}
+	curBlock := &sqldb.InfoBlock{}
 	if _, err := curBlock.Get(); err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting info block")
 		return err
@@ -115,7 +115,7 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 			return err
 		}
 
-		curBlock := &model.InfoBlock{}
+		curBlock := &sqldb.InfoBlock{}
 		if _, err = curBlock.Get(); err != nil {
 			d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting info block")
 			return err
@@ -235,7 +235,7 @@ func ReplaceBlocksFromHost(ctx context.Context, host string, blockID, replaceCou
 	transaction.CleanCache()
 
 	// mark all transaction as unverified
-	_, err = model.MarkVerifiedAndNotUsedTransactionsUnverified()
+	_, err = sqldb.MarkVerifiedAndNotUsedTransactionsUnverified()
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -251,7 +251,7 @@ func ReplaceBlocksFromHost(ctx context.Context, host string, blockID, replaceCou
 
 	// we have the slice of blocks for applying
 	// first of all we should rollback old blocks
-	b := &model.Block{}
+	b := &sqldb.BlockChain{}
 	myRollbackBlocks, err := b.GetBlocksFrom(blockID-1, "desc", 0)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("getting rollback blocks from blockID")
@@ -333,7 +333,7 @@ func getBlocks(ctx context.Context, host string, blockID, minCount int64) ([]*bl
 }
 
 func processBlocks(blocks []*block.Block) error {
-	dbTransaction, err := model.StartTransaction()
+	dbTransaction, err := sqldb.StartTransaction()
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("starting transaction")
 		return utils.ErrInfo(err)

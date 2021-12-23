@@ -13,8 +13,8 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
 var updatingEndWhilePaused = make(chan struct{})
@@ -77,14 +77,14 @@ func NodeDoneUpdatingBlockchain() {
 }
 
 func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant bool, err error) {
-	curBlock := &model.InfoBlock{}
+	curBlock := &sqldb.InfoBlock{}
 	_, err = curBlock.Get()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "err": err}).Error("retrieving info block from db")
 		return false, errors.Wrapf(err, "retrieving info block from db")
 	}
 	var (
-		tx = &model.Transaction{}
+		tx = &sqldb.Transaction{}
 		r  bool
 	)
 	r, err = tx.GetStopNetwork()

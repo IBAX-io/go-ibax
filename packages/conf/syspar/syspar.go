@@ -21,7 +21,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"time"
 
@@ -136,9 +136,9 @@ func GetNodePrivKey() []byte {
 }
 
 // SysUpdate reloads/updates values of system parameters
-func SysUpdate(dbTransaction *model.DbTransaction) error {
+func SysUpdate(dbTransaction *sqldb.DbTransaction) error {
 	var err error
-	systemParameters, err := model.GetAllSystemParameters(dbTransaction)
+	systemParameters, err := sqldb.GetAllSystemParameters(dbTransaction)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all system parameters")
 		return err
@@ -270,8 +270,8 @@ func GetNumberOfNodes() int64 {
 	return int64(len(nodesByPosition))
 }
 
-func GetNumberOfNodesFromDB(transaction *model.DbTransaction) int64 {
-	sp := &model.SystemParameter{}
+func GetNumberOfNodesFromDB(transaction *sqldb.DbTransaction) int64 {
+	sp := &sqldb.SystemParameter{}
 	sp.GetTransaction(transaction, HonorNodes)
 	var honorNodes []map[string]interface{}
 	if len(sp.Value) > 0 {
@@ -571,11 +571,11 @@ func GetPriceExec(s string) (price int64, ok bool) {
 }
 
 // SysTableColType reloads/updates values of all ecosystem table column data type
-func SysTableColType(dbTransaction *model.DbTransaction) error {
+func SysTableColType(dbTransaction *sqldb.DbTransaction) error {
 	var err error
 	mutex.RLock()
 	defer mutex.RUnlock()
-	cacheTableColType, err = model.GetAllTransaction(dbTransaction, `
+	cacheTableColType, err = sqldb.GetAllTransaction(dbTransaction, `
 		SELECT table_name,column_name,data_type,character_maximum_length
 		FROM information_schema.columns Where table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name ~ '[\d]' AND data_type = 'bytea' ORDER BY ordinal_position ASC;`, -1)
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -30,7 +30,7 @@ func getContractsHandler(w http.ResponseWriter, r *http.Request) {
 	client := getClient(r)
 	logger := getLogger(r)
 
-	contract := &model.Contract{}
+	contract := &sqldb.Contract{}
 	contract.EcosystemID = client.EcosystemID
 
 	count, err := contract.CountByEcosystem()

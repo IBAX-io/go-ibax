@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
 // Contract contains the information about the contract.
@@ -27,7 +27,7 @@ func (c *Contract) Info() *script.ContractInfo {
 
 // LoadContracts reads and compiles contracts from smart_contracts tables
 func LoadContracts() error {
-	contract := &model.Contract{}
+	contract := &sqldb.Contract{}
 	count, err := contract.Count(nil)
 	if err != nil {
 		return logErrorDB(err, "getting count of contracts")
@@ -49,9 +49,9 @@ func LoadContracts() error {
 }
 
 // LoadContract reads and compiles contract of new state
-func LoadContract(transaction *model.DbTransaction, ecosystem int64) (err error) {
+func LoadContract(transaction *sqldb.DbTransaction, ecosystem int64) (err error) {
 
-	contract := &model.Contract{}
+	contract := &sqldb.Contract{}
 
 	defer script.ExternOff()
 	list, err := contract.GetFromEcosystem(transaction, ecosystem)
@@ -120,7 +120,7 @@ func (contract *Contract) GetFunc(name string) *script.Block {
 	return nil
 }
 
-func loadContractList(list []model.Contract) error {
+func loadContractList(list []sqldb.Contract) error {
 	if script.GetVM().ShiftContract == 0 {
 		script.LoadSysFuncs(script.GetVM(), 1)
 		script.GetVM().ShiftContract = int64(len(script.GetVM().Children) - 1)

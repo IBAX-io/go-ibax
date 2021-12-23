@@ -4,7 +4,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/api"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
@@ -22,7 +22,7 @@ type BCEcosystemGetter struct {
 }
 
 func (ng BCEcosystemGetter) GetEcosystemName(id int64) (string, error) {
-	ecosystem := &model.Ecosystem{}
+	ecosystem := &sqldb.Ecosystem{}
 	found, err := ecosystem.Get(nil, id)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting ecosystem from db")
@@ -38,7 +38,7 @@ func (ng BCEcosystemGetter) GetEcosystemName(id int64) (string, error) {
 }
 
 func (g BCEcosystemGetter) GetEcosystemLookup() ([]int64, []string, error) {
-	return model.GetAllSystemStatesIDs()
+	return sqldb.GetAllSystemStatesIDs()
 }
 
 func (v BCEcosystemGetter) ValidateId(formEcosysID, clientEcosysID int64, le *log.Entry) (int64, error) {
@@ -46,7 +46,7 @@ func (v BCEcosystemGetter) ValidateId(formEcosysID, clientEcosysID int64, le *lo
 		return clientEcosysID, nil
 	}
 
-	count, err := model.GetNextID(nil, "1_ecosystems")
+	count, err := sqldb.GetNextID(nil, "1_ecosystems")
 	if err != nil {
 		le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting next id of ecosystems")
 		return 0, err

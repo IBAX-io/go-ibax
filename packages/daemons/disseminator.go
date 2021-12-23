@@ -14,7 +14,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -51,7 +51,7 @@ func Disseminator(ctx context.Context, d *daemon) error {
 
 func sendTransactions(ctx context.Context, logger *log.Entry) error {
 	// get unsent transactions
-	trs, err := model.GetAllUnsentTransactions(syspar.GetMaxTxCount())
+	trs, err := sqldb.GetAllUnsentTransactions(syspar.GetMaxTxCount())
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unsent transactions")
 		return err
@@ -75,7 +75,7 @@ func sendTransactions(ctx context.Context, logger *log.Entry) error {
 		for _, tr := range *trs {
 			hashArr = append(hashArr, tr.Hash)
 		}
-		if err := model.MarkTransactionSentBatches(hashArr); err != nil {
+		if err := sqldb.MarkTransactionSentBatches(hashArr); err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marking transaction sent")
 			return err
 		}
@@ -85,13 +85,13 @@ func sendTransactions(ctx context.Context, logger *log.Entry) error {
 
 // send block and transactions hashes
 func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.Entry) error {
-	block, err := model.BlockGetUnsent()
+	block, err := sqldb.BlockGetUnsent()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting unsent blocks")
 		return err
 	}
 
-	trs, err := model.GetAllUnsentTransactions(syspar.GetMaxTxCount())
+	trs, err := sqldb.GetAllUnsentTransactions(syspar.GetMaxTxCount())
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting unsent transactions")
 		return err
@@ -133,7 +133,7 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 		for _, tr := range *trs {
 			hashArr = append(hashArr, tr.Hash)
 		}
-		if err := model.MarkTransactionSentBatches(hashArr); err != nil {
+		if err := sqldb.MarkTransactionSentBatches(hashArr); err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marking transaction sent")
 			return err
 		}

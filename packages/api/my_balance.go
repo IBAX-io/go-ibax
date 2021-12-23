@@ -10,7 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -38,7 +38,7 @@ func (m Mode) getMyBalanceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	key := &model.Key{}
+	key := &sqldb.Key{}
 	key.SetTablePrefix(form.EcosystemID)
 	_, err := key.Get(nil, keyID)
 	if err != nil {

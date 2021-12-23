@@ -24,7 +24,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	uuid "github.com/satori/go.uuid"
 
@@ -313,9 +313,9 @@ func GetHostPort(h string) string {
 	return fmt.Sprintf("%s:%d", h, consts.DEFAULT_TCP_PORT)
 }
 
-func BuildBlockTimeCalculator(transaction *model.DbTransaction) (BlockTimeCalculator, error) {
+func BuildBlockTimeCalculator(transaction *sqldb.DbTransaction) (BlockTimeCalculator, error) {
 	var btc BlockTimeCalculator
-	firstBlock := model.Block{}
+	firstBlock := sqldb.BlockChain{}
 	found, err := firstBlock.Get(1)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting first block")

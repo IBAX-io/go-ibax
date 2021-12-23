@@ -13,9 +13,9 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
 const (
@@ -46,8 +46,8 @@ func CreateContract(contractName string, keyID int64, params map[string]interfac
 	if err == nil {
 		rtx := &Transaction{}
 		if err = rtx.Unmarshall(bytes.NewBuffer(txData)); err == nil {
-			//err = model.SendTx(rtx, sc.KeyID)
-			err = model.SendTxBatches([]*model.RawTx{rtx.SetRawTx()})
+			//err = sqldb.SendTx(rtx, sc.KeyID)
+			err = sqldb.SendTxBatches([]*sqldb.RawTx{rtx.SetRawTx()})
 		}
 	}
 	return err

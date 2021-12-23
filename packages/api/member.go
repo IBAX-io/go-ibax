@@ -11,7 +11,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -24,7 +24,7 @@ func getAvatarHandler(w http.ResponseWriter, r *http.Request) {
 	account := params["account"]
 	ecosystemID := converter.StrToInt64(params["ecosystem"])
 
-	member := &model.Member{}
+	member := &sqldb.Member{}
 	member.SetTablePrefix(converter.Int64ToStr(ecosystemID))
 
 	found, err := member.Get(account)
@@ -49,7 +49,7 @@ func getAvatarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bin := &model.Binary{}
+	bin := &sqldb.Binary{}
 	bin.SetTablePrefix(converter.Int64ToStr(ecosystemID))
 	found, err = bin.GetByID(*member.ImageID)
 	if err != nil {
@@ -83,7 +83,7 @@ func getMemberHandler(w http.ResponseWriter, r *http.Request) {
 	account := params["account"]
 	ecosystemID := converter.StrToInt64(params["ecosystem"])
 
-	member := &model.Member{}
+	member := &sqldb.Member{}
 	member.SetTablePrefix(converter.Int64ToStr(ecosystemID))
 
 	_, err := member.Get(account)

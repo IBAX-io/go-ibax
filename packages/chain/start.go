@@ -23,12 +23,12 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/daemons"
 	logtools "github.com/IBAX-io/go-ibax/packages/log"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/modes"
 	"github.com/IBAX-io/go-ibax/packages/network/httpserver"
 	"github.com/IBAX-io/go-ibax/packages/publisher"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/statsd"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
 )
@@ -44,7 +44,7 @@ func Start() {
 	}()
 	exitErr := func(code int) {
 		system.RemovePidFile()
-		model.GormClose()
+		sqldb.GormClose()
 		statsd.Close()
 		os.Exit(code)
 	}
@@ -83,15 +83,15 @@ func Start() {
 		exitErr(1)
 	}
 
-	if err = model.GormInit(conf.Config.DB); err != nil {
+	if err = sqldb.GormInit(conf.Config.DB); err != nil {
 		log.WithFields(log.Fields{
 			"db_user": conf.Config.DB.User, "db_password": conf.Config.DB.Password, "db_name": conf.Config.DB.Name, "type": consts.DBError,
 		}).Error("can't init gorm")
 		exitErr(1)
 	}
 
-	if model.DBConn != nil {
-		if err := model.UpdateSchema(); err != nil {
+	if sqldb.DBConn != nil {
+		if err := sqldb.UpdateSchema(); err != nil {
 			log.WithFields(log.Fields{"error": err}).Error("on running update migrations")
 			exitErr(1)
 		}

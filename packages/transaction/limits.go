@@ -15,8 +15,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -214,7 +214,7 @@ func (bl *txUserEcosysLimit) check(t *Transaction, mode LimitMode) error {
 		}
 	} else {
 		limit := syspar.GetMaxBlockUserTx()
-		sp := &model.StateParameter{}
+		sp := &sqldb.StateParameter{}
 		sp.SetTablePrefix(converter.Int64ToStr(ecosystemID))
 		found, err := sp.Get(t.DbTransaction, `max_tx_block_per_user`)
 		if err != nil {

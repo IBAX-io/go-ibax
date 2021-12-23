@@ -14,8 +14,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -28,7 +28,7 @@ const (
 // FirstBlockParser is parser wrapper
 type FirstBlockTransaction struct {
 	Logger        *log.Entry
-	DbTransaction *model.DbTransaction
+	DbTransaction *sqldb.DbTransaction
 	Data          types.FirstBlock
 	TxHash        []byte
 	Payload       []byte // transaction binary data
@@ -52,7 +52,7 @@ func (f *FirstBlockTransaction) Action(t *Transaction) error {
 	data := f.Data
 	keyID := crypto.Address(data.PublicKey)
 	nodeKeyID := crypto.Address(data.NodePublicKey)
-	err := model.ExecSchemaEcosystem(nil, firstEcosystemID, keyID, ``, keyID, firstAppID)
+	err := sqldb.ExecSchemaEcosystem(nil, firstEcosystemID, keyID, ``, keyID, firstAppID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing ecosystem schema")
 		return err
@@ -60,19 +60,19 @@ func (f *FirstBlockTransaction) Action(t *Transaction) error {
 
 	amount := decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()
 
-	taxes := &model.SystemParameter{Name: `taxes_wallet`}
+	taxes := &sqldb.SystemParameter{Name: `taxes_wallet`}
 	if err = taxes.SaveArray([][]string{{"1", converter.Int64ToStr(keyID)}}); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("saving taxes_wallet array")
 		return err
 	}
 
-	err = model.GetDB(t.DbTransaction).Exec(`update "1_system_parameters" SET value = ? where name = 'test'`, strconv.FormatInt(data.Test, 10)).Error
+	err = sqldb.GetDB(t.DbTransaction).Exec(`update "1_system_parameters" SET value = ? where name = 'test'`, strconv.FormatInt(data.Test, 10)).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating test parameter")
 		return err
 	}
 
-	err = model.GetDB(t.DbTransaction).Exec(`Update "1_system_parameters" SET value = ? where name = 'private_blockchain'`, strconv.FormatUint(data.PrivateBlockchain, 10)).Error
+	err = sqldb.GetDB(t.DbTransaction).Exec(`Update "1_system_parameters" SET value = ? where name = 'private_blockchain'`, strconv.FormatUint(data.PrivateBlockchain, 10)).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating private_blockchain")
 		return err
@@ -83,28 +83,28 @@ func (f *FirstBlockTransaction) Action(t *Transaction) error {
 		return err
 	}
 
-	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_keys" (id,account,pub,amount) values(?,?,?,?),(?,?,?,?)`,
+	err = sqldb.GetDB(t.DbTransaction).Exec(`insert into "1_keys" (id,account,pub,amount) values(?,?,?,?),(?,?,?,?)`,
 		keyID, converter.AddressToString(keyID), data.PublicKey, amount, nodeKeyID, converter.AddressToString(nodeKeyID), data.NodePublicKey, 0).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting key")
 		return err
 	}
-	id, err := model.GetNextID(t.DbTransaction, "1_pages")
+	id, err := sqldb.GetNextID(t.DbTransaction, "1_pages")
 	if err != nil {
 		return err
 	}
-	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_pages" (id,name,menu,value,conditions) values(?, 'default_page',
+	err = sqldb.GetDB(t.DbTransaction).Exec(`insert into "1_pages" (id,name,menu,value,conditions) values(?, 'default_page',
 		  'default_menu', ?, 'ContractConditions("@1DeveloperCondition")')`,
 		id, syspar.SysString(`default_ecosystem_page`)).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting default page")
 		return err
 	}
-	id, err = model.GetNextID(t.DbTransaction, "1_menu")
+	id, err = sqldb.GetNextID(t.DbTransaction, "1_menu")
 	if err != nil {
 		return err
 	}
-	err = model.GetDB(t.DbTransaction).Exec(`insert into "1_menu" (id,name,value,title,conditions) values(?, 'default_menu', ?, ?, 'ContractAccess("@1EditMenu")')`,
+	err = sqldb.GetDB(t.DbTransaction).Exec(`insert into "1_menu" (id,name,value,title,conditions) values(?, 'default_menu', ?, ?, 'ContractAccess("@1EditMenu")')`,
 		id, syspar.SysString(`default_ecosystem_menu`), `default`).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting default menu")

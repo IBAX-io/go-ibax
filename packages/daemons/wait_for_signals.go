@@ -14,7 +14,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -71,8 +71,8 @@ func WaitForSignals() {
 					log.Debug("Daemons killed")
 				}
 
-				if model.DBConn != nil {
-					err := model.GormClose()
+				if sqldb.DBConn != nil {
+					err := sqldb.GormClose()
 					if err != nil {
 						log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("closing gorm")
 					}

@@ -11,7 +11,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -31,7 +31,7 @@ func InitialLoad(logger *log.Entry) error {
 			return err
 		}
 
-		if err := model.UpdateSchema(); err != nil {
+		if err := sqldb.UpdateSchema(); err != nil {
 			return err
 		}
 	}
@@ -78,7 +78,7 @@ func firstLoad(logger *log.Entry) error {
 }
 
 func needLoad(logger *log.Entry) (bool, error) {
-	infoBlock := &model.InfoBlock{}
+	infoBlock := &sqldb.InfoBlock{}
 	_, err := infoBlock.Get()
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("getting info block")

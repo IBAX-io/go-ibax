@@ -22,8 +22,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
@@ -66,7 +66,7 @@ func (b *Block) IsGenesis() bool {
 // PlaySafe is inserting block safely
 func (b *Block) PlaySafe() error {
 	logger := b.GetLogger()
-	dbTransaction, err := model.StartTransaction()
+	dbTransaction, err := sqldb.StartTransaction()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting db transaction")
 		return err
@@ -172,9 +172,9 @@ func (b *Block) limitMode() transaction.LimitMode {
 	return transaction.GetLetParsing()
 }
 
-func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
+func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 	var (
-		playTxs model.AfterTxs
+		playTxs sqldb.AfterTxs
 	)
 	logger := b.GetLogger()
 	limits := transaction.NewLimits(b.limitMode())
@@ -184,7 +184,7 @@ func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
 		if b.GenBlock {
 			b.Transactions = processedTx
 		}
-		if err := model.AfterPlayTxs(dbTransaction, b.Header.BlockID, playTxs, logger); err != nil {
+		if err := sqldb.AfterPlayTxs(dbTransaction, b.Header.BlockID, playTxs, logger); err != nil {
 			batchErr = err
 			return
 		}
@@ -249,7 +249,7 @@ func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
 			b.SysUpdate = true
 			t.SysUpdate = false
 		}
-		if err := model.SetTransactionStatusBlockMsg(t.DbTransaction, t.BlockData.BlockID, t.TxResult, t.TxHash()); err != nil {
+		if err := sqldb.SetTransactionStatusBlockMsg(t.DbTransaction, t.BlockData.BlockID, t.TxResult, t.TxHash()); err != nil {
 			t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash()}).Error("updating transaction status block id")
 			return err
 		}
@@ -257,7 +257,7 @@ func (b *Block) Play(dbTransaction *model.DbTransaction) (batchErr error) {
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
 		playTxs.UsedTx = append(playTxs.UsedTx, t.TxHash())
-		playTxs.Lts = append(playTxs.Lts, &model.LogTransaction{Block: b.Header.BlockID, Hash: t.TxHash()})
+		playTxs.Lts = append(playTxs.Lts, &sqldb.LogTransaction{Block: b.Header.BlockID, Hash: t.TxHash()})
 		playTxs.Rts = append(playTxs.Rts, t.RollBackTx...)
 		processedTx = append(processedTx, t)
 	}

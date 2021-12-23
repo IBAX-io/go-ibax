@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
-func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*model.QueueTx) error {
+func ProcessQueueTransactionBatches(dbTransaction *sqldb.DbTransaction, qs []*sqldb.QueueTx) error {
 	var (
 		checkTime = time.Now().Unix()
-		hashes    model.ArrHashes
-		trxs      []*model.Transaction
+		hashes    sqldb.ArrHashes
+		trxs      []*sqldb.Transaction
 		err       error
 	)
 	type badTxStruct struct {
@@ -20,7 +20,7 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 		keyID int64
 	}
 
-	processBadTx := func(dbTx *model.DbTransaction) chan badTxStruct {
+	processBadTx := func(dbTx *sqldb.DbTransaction) chan badTxStruct {
 		ch := make(chan badTxStruct)
 
 		go func() {
@@ -53,7 +53,7 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 			txBadChan <- badTxStruct{hash: tx.TxHash(), msg: err.Error(), keyID: tx.TxKeyID()}
 			continue
 		}
-		newTx := &model.Transaction{
+		newTx := &sqldb.Transaction{
 			Hash:     tx.TxHash(),
 			Data:     tx.FullData,
 			Type:     int8(tx.TxType()),
@@ -69,13 +69,13 @@ func ProcessQueueTransactionBatches(dbTransaction *model.DbTransaction, qs []*mo
 	}
 
 	if len(trxs) > 0 {
-		errTx := model.CreateTransactionBatches(dbTransaction, trxs)
+		errTx := sqldb.CreateTransactionBatches(dbTransaction, trxs)
 		if errTx != nil {
 			return errTx
 		}
 	}
 	if len(hashes) > 0 {
-		errQTx := model.DeleteQueueTxs(dbTransaction, hashes)
+		errQTx := sqldb.DeleteQueueTxs(dbTransaction, hashes)
 		if errQTx != nil {
 			return errQTx
 		}

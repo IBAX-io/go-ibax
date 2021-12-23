@@ -13,9 +13,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -41,7 +41,7 @@ func Confirmations(ctx context.Context, d *daemon) error {
 	var startBlockID int64
 
 	// check last blocks, but not more than 5
-	confirmations := &model.Confirmation{}
+	confirmations := &sqldb.Confirmation{}
 	_, err := confirmations.GetGoodBlock(consts.MIN_CONFIRMED_NODES)
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting good block")
@@ -49,7 +49,7 @@ func Confirmations(ctx context.Context, d *daemon) error {
 	}
 
 	ConfirmedBlockID := confirmations.BlockID
-	infoBlock := &model.InfoBlock{}
+	infoBlock := &sqldb.InfoBlock{}
 	_, err = infoBlock.Get()
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")
@@ -80,7 +80,7 @@ func confirmationsBlocks(ctx context.Context, d *daemon, lastBlockID, startBlock
 			return err
 		}
 
-		block := model.Block{}
+		block := sqldb.BlockChain{}
 		_, err := block.Get(blockID)
 		if err != nil {
 			d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block by ID")
@@ -122,7 +122,7 @@ func confirmationsBlocks(ctx context.Context, d *daemon, lastBlockID, startBlock
 				st0++
 			}
 		}
-		confirmation := &model.Confirmation{}
+		confirmation := &sqldb.Confirmation{}
 		confirmation.GetConfirmation(blockID)
 		confirmation.BlockID = blockID
 		confirmation.Good = int32(st1)

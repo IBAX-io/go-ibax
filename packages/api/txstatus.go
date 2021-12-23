@@ -12,7 +12,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -38,7 +38,7 @@ func getTxStatus(r *http.Request, hash string) (*txstatusResult, error) {
 		logger.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("decoding tx hash from hex")
 		return nil, errHashWrong
 	}
-	ts := &model.TransactionStatus{}
+	ts := &sqldb.TransactionStatus{}
 	found, err := ts.Get([]byte(converter.HexToBin(hash)))
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("getting transaction status by hash")

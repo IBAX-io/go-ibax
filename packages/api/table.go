@@ -12,7 +12,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -42,7 +42,7 @@ func getTableHandler(w http.ResponseWriter, r *http.Request) {
 	client := getClient(r)
 	prefix := client.Prefix()
 
-	table := &model.Table{}
+	table := &sqldb.Table{}
 	table.SetTablePrefix(prefix)
 
 	_, err := table.Get(nil, strings.ToLower(params["name"]))
@@ -67,7 +67,7 @@ func getTableHandler(w http.ResponseWriter, r *http.Request) {
 
 	columns := make([]columnInfo, 0)
 	for key, value := range columnsMap {
-		colType, err := model.GetColumnType(prefix+`_`+params["name"], key)
+		colType, err := sqldb.GetColumnType(prefix+`_`+params["name"], key)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column type from db")
 			errorResponse(w, err)

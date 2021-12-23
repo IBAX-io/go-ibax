@@ -12,15 +12,15 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
 
 type appContentResult struct {
-	Blocks    []model.BlockInterface `json:"blocks"`
-	Pages     []model.Page           `json:"pages"`
-	Contracts []model.Contract       `json:"contracts"`
+	Blocks    []sqldb.BlockInterface `json:"blocks"`
+	Pages     []sqldb.Page           `json:"pages"`
+	Contracts []sqldb.Contract       `json:"contracts"`
 }
 
 func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,9 +38,9 @@ func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	params := mux.Vars(r)
 
-	bi := &model.BlockInterface{}
-	p := &model.Page{}
-	c := &model.Contract{}
+	bi := &sqldb.BlockInterface{}
+	p := &sqldb.Page{}
+	c := &sqldb.Contract{}
 	appID := converter.StrToInt64(params["appID"])
 	ecosystemID := converter.StrToInt64(form.EcosystemPrefix)
 

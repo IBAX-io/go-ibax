@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 
 	log "github.com/sirupsen/logrus"
@@ -24,7 +24,7 @@ func WaitDB(ctx context.Context) error {
 	// There is could be the situation when installation is not over yet.
 	// Database could be created but tables are not inserted yet
 
-	if model.DBConn != nil && CheckDB() {
+	if sqldb.DBConn != nil && CheckDB() {
 		return nil
 	}
 
@@ -33,7 +33,7 @@ func WaitDB(ctx context.Context) error {
 	for {
 		select {
 		case <-tick.C:
-			if model.DBConn != nil && CheckDB() {
+			if sqldb.DBConn != nil && CheckDB() {
 				return nil
 			}
 		case <-ctx.Done():
@@ -44,14 +44,14 @@ func WaitDB(ctx context.Context) error {
 
 // CheckDB check if installation complete or not
 func CheckDB() bool {
-	install := &model.Install{}
+	install := &sqldb.Install{}
 
 	err := install.Get()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting install")
 	}
 
-	if install.Progress == model.ProgressComplete {
+	if install.Progress == sqldb.ProgressComplete {
 		return true
 	}
 

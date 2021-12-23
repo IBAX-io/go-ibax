@@ -70,7 +70,7 @@ func (t *Transaction) Check(checkTime int64) error {
 //	t.CLB = false
 //	t.Rollback = true
 //	t.SysUpdate = false
-//	t.RollBackTx = make([]*model.RollbackTx, 0)
+//	t.RollBackTx = make([]*sqldb.RollbackTx, 0)
 //	if t.GenBlock {
 //		t.TimeLimit = syspar.GetMaxBlockGenerationTime()
 //	}

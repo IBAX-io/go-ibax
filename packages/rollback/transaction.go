@@ -13,13 +13,13 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func rollbackUpdatedRow(tx map[string]string, where string, dbTransaction *model.DbTransaction, logger *log.Entry) error {
+func rollbackUpdatedRow(tx map[string]string, where string, dbTransaction *sqldb.DbTransaction, logger *log.Entry) error {
 	var rollbackInfo map[string]string
 	if err := json.Unmarshal([]byte(tx["data"]), &rollbackInfo); err != nil {
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollback.Data from json")
@@ -36,23 +36,23 @@ func rollbackUpdatedRow(tx map[string]string, where string, dbTransaction *model
 		}
 	}
 	addSQLUpdate = addSQLUpdate[0 : len(addSQLUpdate)-1]
-	if err := model.Update(dbTransaction, tx["table_name"], addSQLUpdate, where); err != nil {
+	if err := sqldb.Update(dbTransaction, tx["table_name"], addSQLUpdate, where); err != nil {
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err, "rollback_id": tx["id"], "block_id": tx["block_id"], "update": addSQLUpdate, "where": where}).Error("updating table for rollback ")
 		return err
 	}
 	return nil
 }
 
-func rollbackInsertedRow(tx map[string]string, where string, dbTransaction *model.DbTransaction, logger *log.Entry) error {
-	if err := model.Delete(dbTransaction, tx["table_name"], where); err != nil {
+func rollbackInsertedRow(tx map[string]string, where string, dbTransaction *sqldb.DbTransaction, logger *log.Entry) error {
+	if err := sqldb.Delete(dbTransaction, tx["table_name"], where); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "rollback_id": tx["id"], "table": tx["table_name"], "where": where}).Error("deleting from table for rollback")
 		return err
 	}
 	return nil
 }
 
-func rollbackTransaction(txHash []byte, dbTransaction *model.DbTransaction, logger *log.Entry) error {
-	rollbackTx := &model.RollbackTx{}
+func rollbackTransaction(txHash []byte, dbTransaction *sqldb.DbTransaction, logger *log.Entry) error {
+	rollbackTx := &sqldb.RollbackTx{}
 	txs, err := rollbackTx.GetRollbackTransactions(dbTransaction, txHash)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting rollback transactions")
@@ -147,7 +147,7 @@ func rollbackTransaction(txHash []byte, dbTransaction *model.DbTransaction, logg
 			}
 		}
 	}
-	txForDelete := &model.RollbackTx{TxHash: txHash}
+	txForDelete := &sqldb.RollbackTx{TxHash: txHash}
 	err = txForDelete.DeleteByHash(dbTransaction)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting rollback transaction by hash")

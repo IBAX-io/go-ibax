@@ -16,8 +16,8 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -35,14 +35,14 @@ type DelayedTx struct {
 }
 
 // RunForDelayBlockID creates the transactions that need to be run for blockID
-func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*model.Transaction, error) {
+func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*sqldb.Transaction, error) {
 
-	contracts, err := model.GetAllDelayedContractsForBlockID(blockID)
+	contracts, err := sqldb.GetAllDelayedContractsForBlockID(blockID)
 	if err != nil {
 		dtx.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting delayed contracts for block")
 		return nil, err
 	}
-	txList := make([]*model.Transaction, 0, len(contracts))
+	txList := make([]*sqldb.Transaction, 0, len(contracts))
 	for _, c := range contracts {
 		params := make(map[string]interface{})
 		params["Id"] = c.ID
@@ -57,7 +57,7 @@ func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*model.Transaction, e
 	return txList, nil
 }
 
-func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]interface{}) (*model.Transaction, error) {
+func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]interface{}) (*sqldb.Transaction, error) {
 	vm := script.GetVM()
 	contract := smart.VMGetContract(vm, callDelayedContract, uint32(firstEcosystemID))
 	info := contract.Info()

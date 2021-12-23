@@ -13,9 +13,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/template"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
@@ -101,7 +101,7 @@ func getListHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-	q := model.GetTableQuery(params["name"], client.EcosystemID)
+	q := sqldb.GetTableQuery(params["name"], client.EcosystemID)
 
 	if len(form.Columns) > 0 {
 		q = q.Select("id," + form.Columns)
@@ -122,7 +122,7 @@ func getListHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result.List, err = model.GetResult(rows)
+	result.List, err = sqldb.GetResult(rows)
 	if err != nil {
 		errorResponse(w, err)
 		return
@@ -151,7 +151,7 @@ func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-	q := model.GetTableQuery(params["name"], client.EcosystemID)
+	q := sqldb.GetTableQuery(params["name"], client.EcosystemID)
 
 	if len(form.Columns) > 0 {
 		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
@@ -202,7 +202,7 @@ func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, err)
 			return
 		}
-		result.List, err = model.GetResult(rows)
+		result.List, err = sqldb.GetResult(rows)
 		if err != nil {
 			errorResponse(w, err)
 			return
@@ -214,7 +214,7 @@ func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, err)
 			return
 		}
-		result.List, err = model.GetResult(rows)
+		result.List, err = sqldb.GetResult(rows)
 		if err != nil {
 			errorResponse(w, err)
 			return
@@ -244,8 +244,8 @@ func getnodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-	//q := model.GetTableQuery(params["name"], client.EcosystemID)
-	q := model.GetTableListQuery(params["name"], client.EcosystemID)
+	//q := sqldb.GetTableQuery(params["name"], client.EcosystemID)
+	q := sqldb.GetTableListQuery(params["name"], client.EcosystemID)
 	if len(form.Columns) > 0 {
 		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
 	}
@@ -295,7 +295,7 @@ func getnodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, err)
 			return
 		}
-		result.List, err = model.GetNodeResult(rows)
+		result.List, err = sqldb.GetNodeResult(rows)
 		if err != nil {
 			errorResponse(w, err)
 			return
@@ -307,7 +307,7 @@ func getnodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, err)
 			return
 		}
-		result.List, err = model.GetNodeResult(rows)
+		result.List, err = sqldb.GetNodeResult(rows)
 		if err != nil {
 			errorResponse(w, err)
 			return
@@ -338,7 +338,7 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-	//q := model.GetTableQuery(params["name"], client.EcosystemID)
+	//q := sqldb.GetTableQuery(params["name"], client.EcosystemID)
 	//
 	//if len(form.Columns) > 0 {
 	//	q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
@@ -373,7 +373,7 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 		//q = q.Where(where)
 	}
 
-	count, err := model.GetSumColumnCount(table, form.Column, where)
+	count, err := sqldb.GetSumColumnCount(table, form.Column, where)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
 		errorResponse(w, err)
@@ -382,7 +382,7 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 
 	result := new(sumResult)
 	if count > 0 {
-		sum, err := model.GetSumColumn(table, form.Column, where)
+		sum, err := sqldb.GetSumColumn(table, form.Column, where)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
 			errorResponse(w, errTableNotFound.Errorf(table))

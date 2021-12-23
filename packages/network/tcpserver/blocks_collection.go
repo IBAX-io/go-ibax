@@ -8,8 +8,8 @@ import (
 	"net"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -17,9 +17,9 @@ import (
 // BlockCollection writes the body of the specified block
 // blocksCollection and queue_parser_blocks daemons send the request through p.GetBlocks()
 func BlockCollection(request *network.GetBodiesRequest, w net.Conn) error {
-	block := &model.Block{}
+	block := &sqldb.BlockChain{}
 
-	var blocks []model.Block
+	var blocks []sqldb.BlockChain
 	var err error
 	if request.ReverseOrder {
 		blocks, err = block.GetReverseBlockchain(int64(request.BlockID), network.BlocksPerRequest)
@@ -55,7 +55,7 @@ func BlockCollection(request *network.GetBodiesRequest, w net.Conn) error {
 	return nil
 }
 
-func lenOfBlockData(blocks []model.Block) int64 {
+func lenOfBlockData(blocks []sqldb.BlockChain) int64 {
 	var length int64
 	for i := 0; i < len(blocks); i++ {
 		length += int64(len(blocks[i].Data))

@@ -11,7 +11,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/chain/system"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -21,18 +21,18 @@ import (
 func WaitStopTime() {
 	var first bool
 	for {
-		if model.DBConn == nil {
+		if sqldb.DBConn == nil {
 			time.Sleep(time.Second * 3)
 			continue
 		}
 		if !first {
-			err := model.Delete(nil, "stop_daemons", "")
+			err := sqldb.Delete(nil, "stop_daemons", "")
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting from stop daemons")
 			}
 			first = true
 		}
-		dExists, err := model.Single(nil, `SELECT stop_time FROM stop_daemons`).Int64()
+		dExists, err := sqldb.Single(nil, `SELECT stop_time FROM stop_daemons`).Int64()
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting stop_time from StopDaemons")
 		}
@@ -43,7 +43,7 @@ func WaitStopTime() {
 				log.WithFields(log.Fields{"daemon_name": name}).Debug("daemon stopped")
 			}
 
-			err := model.GormClose()
+			err := sqldb.GormClose()
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("gorm close")
 			}

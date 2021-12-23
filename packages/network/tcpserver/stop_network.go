@@ -15,8 +15,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto"
@@ -82,12 +82,12 @@ func processStopNetwork(b []byte) ([]byte, error) {
 	}
 
 	hash := crypto.DoubleHash(data)
-	tx := &model.Transaction{
+	tx := &sqldb.Transaction{
 		Hash:     hash,
 		Data:     data,
 		Type:     types.StopNetworkTxType,
 		KeyID:    conf.Config.KeyID,
-		HighRate: model.TransactionRateStopNetwork,
+		HighRate: sqldb.TransactionRateStopNetwork,
 		Time:     tnow,
 	}
 	if err = tx.Create(nil); err != nil {

@@ -13,9 +13,9 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
@@ -124,7 +124,7 @@ func resieveTxBodies(con io.Reader) ([]byte, error) {
 }
 
 func processBlock(buf *bytes.Buffer, honorNodeID int64) error {
-	infoBlock := &model.InfoBlock{}
+	infoBlock := &sqldb.InfoBlock{}
 	found, err := infoBlock.Get()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting cur block ID")
@@ -143,7 +143,7 @@ func processBlock(buf *bytes.Buffer, honorNodeID int64) error {
 	blockHash := buf.Next(consts.HashSize)
 	log.Debug("blockHash %x", blockHash)
 
-	qb := &model.QueueBlock{}
+	qb := &sqldb.QueueBlock{}
 	found, err = qb.GetQueueBlockByHash(blockHash)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting QueueBlock")
@@ -151,7 +151,7 @@ func processBlock(buf *bytes.Buffer, honorNodeID int64) error {
 	}
 	// we accept only new blocks
 	if !found && newBlockID >= infoBlock.BlockID {
-		queueBlock := &model.QueueBlock{Hash: blockHash, HonorNodeID: honorNodeID, BlockID: newBlockID}
+		queueBlock := &sqldb.QueueBlock{Hash: blockHash, HonorNodeID: honorNodeID, BlockID: newBlockID}
 		err = queueBlock.Create()
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Creating QueueBlock")
@@ -174,7 +174,7 @@ func getUnknownTransactions(buf *bytes.Buffer) ([]byte, error) {
 	for _, hash := range hashes {
 		// check if we have such a transaction
 		// check log_transaction
-		exists, err := model.GetLogTransactionsCount(hash)
+		exists, err := sqldb.GetLogTransactionsCount(hash)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "txHash": hash}).Error("Getting log tx count")
 			return nil, utils.ErrInfo(err)
@@ -184,7 +184,7 @@ func getUnknownTransactions(buf *bytes.Buffer) ([]byte, error) {
 			continue
 		}
 
-		exists, err = model.GetTransactionsCount(hash)
+		exists, err = sqldb.GetTransactionsCount(hash)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "txHash": hash}).Error("Getting tx count")
 			return nil, utils.ErrInfo(err)
@@ -195,7 +195,7 @@ func getUnknownTransactions(buf *bytes.Buffer) ([]byte, error) {
 		}
 
 		// check transaction queue
-		exists, err = model.GetQueuedTransactionsCount(hash)
+		exists, err = sqldb.GetQueuedTransactionsCount(hash)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting queue_tx count")
 			return nil, utils.ErrInfo(err)
@@ -226,7 +226,7 @@ func readHashes(buf *bytes.Buffer) ([][]byte, error) {
 }
 
 func saveNewTransactions(binaryTxs []byte) error {
-	var queueTxs []*model.QueueTx
+	var queueTxs []*sqldb.QueueTx
 	log.WithFields(log.Fields{"binaryTxs": binaryTxs}).Debug("trying to save binary txs")
 
 	for len(binaryTxs) > 0 {
@@ -256,9 +256,9 @@ func saveNewTransactions(binaryTxs []byte) error {
 			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("unmarshalling transaction")
 			return err
 		}
-		queueTxs = append(queueTxs, &model.QueueTx{Hash: rtx.TxHash(), Data: txBinData, Expedite: rtx.TxExpedite(), Time: rtx.TxTime(), FromGate: 1})
+		queueTxs = append(queueTxs, &sqldb.QueueTx{Hash: rtx.TxHash(), Data: txBinData, Expedite: rtx.TxExpedite(), Time: rtx.TxTime(), FromGate: 1})
 	}
-	if err := model.GetDB(nil).Clauses(clause.OnConflict{DoNothing: true}).Create(&queueTxs).Error; err != nil {
+	if err := sqldb.GetDB(nil).Clauses(clause.OnConflict{DoNothing: true}).Create(&queueTxs).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("error creating QueueTx")
 		return err
 	}

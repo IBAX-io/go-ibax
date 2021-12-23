@@ -11,8 +11,8 @@ import (
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 )
@@ -39,7 +39,7 @@ func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, err
 	if err != nil {
 		return nil, errHashWrong
 	}
-	ltx := &model.LogTransaction{Hash: hash}
+	ltx := &sqldb.LogTransaction{Hash: hash}
 	found, err := ltx.GetByHash(hash)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, err
 		return &status, nil
 	}
 	status.BlockID = converter.Int64ToStr(ltx.Block)
-	var confirm model.Confirmation
+	var confirm sqldb.Confirmation
 	found, err = confirm.GetConfirmation(ltx.Block)
 	if err != nil {
 		return nil, err

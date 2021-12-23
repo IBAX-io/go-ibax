@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -155,7 +155,7 @@ func Ntp_Work(ctx context.Context) {
 					count++
 				}
 				if count > 10 {
-					var sp model.SystemParameter
+					var sp sqldb.SystemParameter
 					count, err := sp.GetNumberOfHonorNodes()
 					if err != nil {
 						log.WithFields(log.Fields{"Ntp_Work GetNumberOfHonorNodes  err": err.Error()}).Error("GetNumberOfHonorNodes")

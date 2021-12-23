@@ -10,8 +10,8 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -33,7 +33,7 @@ func SysRollback(sc *SmartContract, data SysRollData) error {
 	if err != nil {
 		return err
 	}
-	rollbackSys := &model.RollbackTx{
+	rollbackSys := &sqldb.RollbackTx{
 		BlockID:   sc.BlockData.BlockID,
 		TxHash:    sc.TxHash,
 		NameTable: SysName,
@@ -50,8 +50,8 @@ func SysRollback(sc *SmartContract, data SysRollData) error {
 }
 
 // SysRollbackTable is rolling back table
-func SysRollbackTable(DbTransaction *model.DbTransaction, sysData SysRollData) error {
-	err := model.DropTable(DbTransaction, sysData.TableName)
+func SysRollbackTable(DbTransaction *sqldb.DbTransaction, sysData SysRollData) error {
+	err := sqldb.DropTable(DbTransaction, sysData.TableName)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("dropping table")
 		return err
@@ -60,8 +60,8 @@ func SysRollbackTable(DbTransaction *model.DbTransaction, sysData SysRollData) e
 }
 
 // SysRollbackView is rolling back table
-func SysRollbackView(DbTransaction *model.DbTransaction, sysData SysRollData) error {
-	err := model.DropView(DbTransaction, sysData.TableName)
+func SysRollbackView(DbTransaction *sqldb.DbTransaction, sysData SysRollData) error {
+	err := sqldb.DropView(DbTransaction, sysData.TableName)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("dropping view")
 		return err
@@ -70,8 +70,8 @@ func SysRollbackView(DbTransaction *model.DbTransaction, sysData SysRollData) er
 }
 
 // SysRollbackColumn is rolling back column
-func SysRollbackColumn(DbTransaction *model.DbTransaction, sysData SysRollData) error {
-	return model.AlterTableDropColumn(DbTransaction, sysData.TableName, sysData.Data)
+func SysRollbackColumn(DbTransaction *sqldb.DbTransaction, sysData SysRollData) error {
+	return sqldb.AlterTableDropColumn(DbTransaction, sysData.TableName, sysData.Data)
 }
 
 // SysRollbackContract performs rollback for the contract
@@ -136,10 +136,10 @@ func SysSetContractWallet(tblid, state int64, wallet int64) error {
 }
 
 // SysRollbackEditContract rollbacks the contract
-func SysRollbackEditContract(transaction *model.DbTransaction, sysData SysRollData,
+func SysRollbackEditContract(transaction *sqldb.DbTransaction, sysData SysRollData,
 	EcosystemID string) error {
 
-	fields, err := model.GetOneRowTransaction(transaction, `select * from "1_contracts" where id=?`,
+	fields, err := sqldb.GetOneRowTransaction(transaction, `select * from "1_contracts" where id=?`,
 		sysData.ID).String()
 	if err != nil {
 		return err
@@ -184,11 +184,11 @@ func SysRollbackEditContract(transaction *model.DbTransaction, sysData SysRollDa
 }
 
 // SysRollbackEcosystem is rolling back ecosystem
-func SysRollbackEcosystem(DbTransaction *model.DbTransaction, sysData SysRollData) error {
+func SysRollbackEcosystem(DbTransaction *sqldb.DbTransaction, sysData SysRollData) error {
 	tables := make([]string, 0)
 	for table := range converter.FirstEcosystemTables {
 		tables = append(tables, table)
-		err := model.Delete(DbTransaction, `1_`+table, fmt.Sprintf(`where ecosystem='%d'`, sysData.ID))
+		err := sqldb.Delete(DbTransaction, `1_`+table, fmt.Sprintf(`where ecosystem='%d'`, sysData.ID))
 		if err != nil {
 			return err
 		}
@@ -196,7 +196,7 @@ func SysRollbackEcosystem(DbTransaction *model.DbTransaction, sysData SysRollDat
 	if sysData.ID == 1 {
 		tables = append(tables, `node_ban_logs`, `bad_blocks`, `system_parameters`, `ecosystems`)
 		for _, name := range tables {
-			err := model.DropTable(DbTransaction, fmt.Sprintf("%d_%s", sysData.ID, name))
+			err := sqldb.DropTable(DbTransaction, fmt.Sprintf("%d_%s", sysData.ID, name))
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("dropping table")
 				return err
@@ -230,7 +230,7 @@ func SysRollbackDeactivate(sysData SysRollData) error {
 }
 
 // SysRollbackDeleteColumn is rolling back delete column
-func SysRollbackDeleteColumn(DbTransaction *model.DbTransaction, sysData SysRollData) error {
+func SysRollbackDeleteColumn(DbTransaction *sqldb.DbTransaction, sysData SysRollData) error {
 	var (
 		data map[string]string
 	)
@@ -242,7 +242,7 @@ func SysRollbackDeleteColumn(DbTransaction *model.DbTransaction, sysData SysRoll
 	if err != nil {
 		return err
 	}
-	err = model.AlterTableAddColumn(DbTransaction, sysData.TableName, data["name"], sqlColType)
+	err = sqldb.AlterTableAddColumn(DbTransaction, sysData.TableName, data["name"], sqlColType)
 	if err != nil {
 		return logErrorDB(err, "adding column to the table")
 	}
@@ -250,7 +250,7 @@ func SysRollbackDeleteColumn(DbTransaction *model.DbTransaction, sysData SysRoll
 }
 
 // SysRollbackDeleteTable is rolling back delete table
-func SysRollbackDeleteTable(DbTransaction *model.DbTransaction, sysData SysRollData) error {
+func SysRollbackDeleteTable(DbTransaction *sqldb.DbTransaction, sysData SysRollData) error {
 	var (
 		data    TableInfo
 		colsSQL string
@@ -262,7 +262,7 @@ func SysRollbackDeleteTable(DbTransaction *model.DbTransaction, sysData SysRollD
 	for key, item := range data.Columns {
 		colsSQL += `"` + key + `" ` + typeToPSQL[item] + " ,\n"
 	}
-	err = model.CreateTable(DbTransaction, sysData.TableName, strings.TrimRight(colsSQL, ",\n"))
+	err = sqldb.CreateTable(DbTransaction, sysData.TableName, strings.TrimRight(colsSQL, ",\n"))
 	if err != nil {
 		return logErrorDB(err, "creating tables")
 	}

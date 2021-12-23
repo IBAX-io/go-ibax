@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 )
@@ -27,7 +27,7 @@ func getTxRecord(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, hashStr := range hashList {
 
-		if result, err := model.GetTxRecord(nil, hashStr); err == nil {
+		if result, err := sqldb.GetTxRecord(nil, hashStr); err == nil {
 			resultList = append(resultList, result)
 		}
 	}

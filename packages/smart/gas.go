@@ -10,8 +10,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -20,7 +20,7 @@ import (
 type multiPays []struct {
 	toID, fromID                          int64
 	fuelRate, storageFuel, newElementFuel decimal.Decimal
-	payWallet                             model.Key
+	payWallet                             sqldb.Key
 	tokenEco                              int64
 }
 
@@ -37,7 +37,7 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 			money = money.Add(pay.newElementFuel)
 		} else {
 			comment = "(error)" + comment
-			ts := model.TransactionStatus{}
+			ts := sqldb.TransactionStatus{}
 			if err := ts.UpdatePenalty(sc.DbTransaction, sc.TxHash); err != nil {
 				return err
 			}
@@ -60,9 +60,9 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	return nil
 }
 
-func (sc *SmartContract) accountBalance(db *model.DbTransaction, fid, tid int64, eco int64) (fb, tb decimal.Decimal, err error) {
+func (sc *SmartContract) accountBalance(db *sqldb.DbTransaction, fid, tid int64, eco int64) (fb, tb decimal.Decimal, err error) {
 	if fid == tid {
-		toKey := &model.Key{}
+		toKey := &sqldb.Key{}
 		_, err = toKey.SetTablePrefix(eco).GetTr(db, tid)
 		if err != nil {
 			sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": tid}).Error("get key balance")
@@ -74,14 +74,14 @@ func (sc *SmartContract) accountBalance(db *model.DbTransaction, fid, tid int64,
 		return
 	}
 
-	fromKey := &model.Key{}
+	fromKey := &sqldb.Key{}
 	_, err = fromKey.SetTablePrefix(eco).GetTr(db, fid)
 	if err != nil {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": tid}).Error("get key balance")
 		return
 	}
 	fb, _ = decimal.NewFromString(fromKey.Amount)
-	toKey := &model.Key{}
+	toKey := &sqldb.Key{}
 	_, err = toKey.SetTablePrefix(eco).GetTr(db, tid)
 	if err != nil {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": tid}).Error("get key balance")
@@ -92,7 +92,7 @@ func (sc *SmartContract) accountBalance(db *model.DbTransaction, fid, tid int64,
 }
 
 func (sc *SmartContract) payTaxes(toID string, sum decimal.Decimal, t, eco int64, fromIDStr, comment string) error {
-	walletTable := model.KeyTableName(consts.DefaultTokenEcosystem)
+	walletTable := sqldb.KeyTableName(consts.DefaultTokenEcosystem)
 
 	if _, _, err := sc.updateWhere(
 		[]string{"+amount"}, []interface{}{sum}, walletTable,
@@ -159,7 +159,7 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 		toID                                  int64
 		fromID                                int64
 		fuelRate, storageFuel, newElementFuel decimal.Decimal
-		payWallet                             model.Key
+		payWallet                             sqldb.Key
 		tokenEco                              int64
 	}
 	cntrctOwnerInfo := sc.TxContract.Block.Info.(*script.ContractInfo).Owner
@@ -186,7 +186,7 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 				return err
 			}
 			follow, _ := decimal.NewFromString(syspar.GetFuelRate(consts.DefaultTokenEcosystem))
-			followFuel := &model.StateParameter{}
+			followFuel := &sqldb.StateParameter{}
 			if foundFollowFuel, _ := followFuel.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID)).Get(sc.DbTransaction, "follow_fuel"); foundFollowFuel && len(followFuel.Value) > 0 {
 				times, _ := decimal.NewFromString(followFuel.Value)
 				if times.LessThanOrEqual(zero) {
@@ -215,12 +215,12 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 		}
 		if _, ok := syspar.IsTaxesWallet(eco); !ok {
 			var taxesPub []byte
-			err = model.GetDB(sc.DbTransaction).Select("pub").Model(&model.Key{}).Where("id = ? AND ecosystem = 1", syspar.GetTaxesWallet(1)).Row().Scan(&taxesPub)
+			err = sqldb.GetDB(sc.DbTransaction).Select("pub").Model(&sqldb.Key{}).Where("id = ? AND ecosystem = 1", syspar.GetTaxesWallet(1)).Row().Scan(&taxesPub)
 			if err != nil {
 				return err
 			}
 			id := PubToID(fmt.Sprintf("%x", taxesPub))
-			key := &model.Key{}
+			key := &sqldb.Key{}
 			found, err := key.SetTablePrefix(eco).Get(sc.DbTransaction, id)
 			if err != nil {
 				return err
@@ -253,7 +253,7 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 				return err
 			}
 		}
-		key := &model.Key{}
+		key := &sqldb.Key{}
 		var found bool
 		if found, err = key.SetTablePrefix(eco).Get(sc.DbTransaction, pay.toID); err != nil || !found {
 			if err != nil {
@@ -271,7 +271,7 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 		}
 		if sc.TxSmart.EcosystemID != consts.DefaultTokenEcosystem {
 			if eco != consts.DefaultTokenEcosystem {
-				ew := &model.StateParameter{}
+				ew := &sqldb.StateParameter{}
 				if foundEcosystemWallet, _ := ew.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID)).Get(sc.DbTransaction, "ecosystem_wallet"); foundEcosystemWallet && len(ew.Value) > 0 {
 					ecosystemWallet := AddressToID(ew.Value)
 					if ecosystemWallet != 0 {
@@ -360,7 +360,7 @@ func (sc *SmartContract) appendTokens(nums ...int64) error {
 		if _, ok := sc.TxSmart.TokenEcosystems[num]; ok {
 			continue
 		}
-		ecosystems := model.Ecosystem{}
+		ecosystems := sqldb.Ecosystem{}
 		_, err := ecosystems.Get(sc.DbTransaction, num)
 		if err != nil {
 			return err

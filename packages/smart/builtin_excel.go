@@ -9,7 +9,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	xl "github.com/360EntSecGroup-Skylar/excelize"
 	log "github.com/sirupsen/logrus"
@@ -52,7 +52,7 @@ func GetRowsCountXLSX(sc *SmartContract, binaryID, sheetNum int64) (int64, error
 }
 
 func excelBookFromStoredBinary(sc *SmartContract, binaryID int64) (*xl.File, error) {
-	bin := &model.Binary{}
+	bin := &sqldb.Binary{}
 	bin.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
 	found, err := bin.GetByID(binaryID)
 	if err != nil {

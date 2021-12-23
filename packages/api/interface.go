@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -21,15 +21,15 @@ type componentModel interface {
 }
 
 func getPageRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &model.Page{})
+	getInterfaceRow(w, r, &sqldb.Page{})
 }
 
 func getMenuRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &model.Menu{})
+	getInterfaceRow(w, r, &sqldb.Menu{})
 }
 
 func getBlockInterfaceRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &model.BlockInterface{})
+	getInterfaceRow(w, r, &sqldb.BlockInterface{})
 }
 
 func getInterfaceRow(w http.ResponseWriter, r *http.Request, c componentModel) {

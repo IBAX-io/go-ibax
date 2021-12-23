@@ -10,8 +10,8 @@ import (
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/shopspring/decimal"
 )
@@ -66,10 +66,10 @@ func getWalletHistory(w http.ResponseWriter, r *http.Request) {
 		if claims, ok := token.Claims.(*JWTClaims); ok {
 			keyId := claims.KeyID
 			var (
-				histories       []model.History
+				histories       []sqldb.History
 				walletHistories []WalletHistory
 			)
-			histories, err = model.GetWalletRecordHistory(nil, keyId, form.SearchType, form.Limit, form.Page)
+			histories, err = sqldb.GetWalletRecordHistory(nil, keyId, form.SearchType, form.Limit, form.Page)
 			if err == nil {
 				if len(histories) > 0 {
 					for _, history := range histories {

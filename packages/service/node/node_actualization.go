@@ -14,8 +14,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
 // DefaultBlockchainGap is default value for the number of lagging blocks
@@ -63,7 +63,7 @@ func (n *NodeActualizer) Run(ctx context.Context) {
 }
 
 func (n *NodeActualizer) checkBlockchainActuality(ctx context.Context) (bool, error) {
-	curBlock := &model.InfoBlock{}
+	curBlock := &sqldb.InfoBlock{}
 	_, err := curBlock.Get()
 	if err != nil {
 		return false, errors.Wrapf(err, "retrieving info block")
@@ -84,7 +84,7 @@ func (n *NodeActualizer) checkBlockchainActuality(ctx context.Context) (bool, er
 		return false, nil
 	}
 
-	foreignBlock := &model.Block{}
+	foreignBlock := &sqldb.BlockChain{}
 	_, err = foreignBlock.GetMaxForeignBlock(conf.Config.KeyID)
 	if err != nil {
 		return false, errors.Wrapf(err, "retrieving last foreign block")

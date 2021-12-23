@@ -12,26 +12,26 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/scheduler"
 	"github.com/IBAX-io/go-ibax/packages/scheduler/contract"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func loadContractTasks() error {
-	stateIDs, _, err := model.GetAllSystemStatesIDs()
+	stateIDs, _, err := sqldb.GetAllSystemStatesIDs()
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("get all system states ids")
 		return err
 	}
 
 	for _, stateID := range stateIDs {
-		if !model.IsTable(fmt.Sprintf("%d_cron", stateID)) {
+		if !sqldb.IsTable(fmt.Sprintf("%d_cron", stateID)) {
 			return nil
 		}
 
-		c := model.Cron{}
+		c := sqldb.Cron{}
 		c.SetTablePrefix(fmt.Sprintf("%d", stateID))
 		tasks, err := c.GetAllCronTasks()
 		if err != nil {

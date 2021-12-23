@@ -27,11 +27,11 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
 	"github.com/IBAX-io/go-ibax/packages/clbmanager"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/scheduler"
 	"github.com/IBAX-io/go-ibax/packages/scheduler/contract"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto"
@@ -94,7 +94,7 @@ type TxInfo struct {
 
 type TableInfo struct {
 	Columns map[string]string
-	Table   *model.Table
+	Table   *sqldb.Table
 }
 
 type FlushInfo struct {
@@ -371,7 +371,7 @@ func ContractAccess(sc *SmartContract, names ...interface{}) bool {
 
 // RoleAccess checks whether the name of the role matches one of the names listed in the parameters.
 func RoleAccess(sc *SmartContract, ids ...interface{}) (bool, error) {
-	rolesList, err := model.GetMemberRoles(sc.DbTransaction, sc.TxSmart.EcosystemID, sc.Key.AccountID)
+	rolesList, err := sqldb.GetMemberRoles(sc.DbTransaction, sc.TxSmart.EcosystemID, sc.Key.AccountID)
 	if err != nil {
 		return false, err
 	}
@@ -608,7 +608,7 @@ func CreateView(sc *SmartContract, vname, columns, where string, applicationID i
 	)
 
 	viewName = qb.GetTableName(sc.TxSmart.EcosystemID, vname)
-	var check = model.Namer{}
+	var check = sqldb.Namer{}
 	if check.HasExists(sc.DbTransaction, viewName) {
 		return fmt.Errorf(eTableExists, vname)
 	}
@@ -621,7 +621,7 @@ func CreateView(sc *SmartContract, vname, columns, where string, applicationID i
 	if err != nil {
 		return err
 	}
-	if err = model.CreateView(sc.DbTransaction, viewName, tables, wheres, colSQLs); err != nil {
+	if err = sqldb.CreateView(sc.DbTransaction, viewName, tables, wheres, colSQLs); err != nil {
 		return logErrorDB(err, "creating view table")
 	}
 	prefix, name := PrefixName(viewName)
@@ -665,7 +665,7 @@ func parseViewColumnSql(sc *SmartContract, columns string) (colsSQL string, colo
 		var c ViewColSch
 		tableName := converter.ParseTable(icol.Table, sc.TxSmart.EcosystemID)
 		if !has[tableName] {
-			if !model.HasTableOrView(sc.DbTransaction, tableName) {
+			if !sqldb.HasTableOrView(sc.DbTransaction, tableName) {
 				err = fmt.Errorf(eTableNotFound, tableName)
 				return
 			}
@@ -745,7 +745,7 @@ func parseViewWhereSql(sc *SmartContract, columns string) (tabsSQL, whsSQL strin
 	for i, icol := range cols {
 		tableName1 := converter.ParseTable(icol.TableOne, sc.TxSmart.EcosystemID)
 		if !has[tableName1] {
-			if !model.HasTableOrView(sc.DbTransaction, tableName1) {
+			if !sqldb.HasTableOrView(sc.DbTransaction, tableName1) {
 				err = fmt.Errorf(eTableNotFound, tableName1)
 				return
 			}
@@ -754,7 +754,7 @@ func parseViewWhereSql(sc *SmartContract, columns string) (tabsSQL, whsSQL strin
 		tableArr = append(tableArr, tableName1)
 		tableName2 := converter.ParseTable(icol.TableTwo, sc.TxSmart.EcosystemID)
 		if !has[tableName2] {
-			if !model.HasTableOrView(sc.DbTransaction, tableName2) {
+			if !sqldb.HasTableOrView(sc.DbTransaction, tableName2) {
 				err = fmt.Errorf(eTableNotFound, tableName2)
 				return
 			}
@@ -823,7 +823,7 @@ func CreateTable(sc *SmartContract, name, columns, permissions string, applicati
 	}
 
 	tableName := qb.GetTableName(sc.TxSmart.EcosystemID, name)
-	if model.IsTable(tableName) {
+	if sqldb.IsTable(tableName) {
 		return fmt.Errorf(eTableExists, name)
 	}
 
@@ -832,7 +832,7 @@ func CreateTable(sc *SmartContract, name, columns, permissions string, applicati
 		return err
 	}
 
-	if err = model.CreateTable(sc.DbTransaction, tableName, strings.TrimRight(colsSQL, ",\n")); err != nil {
+	if err = sqldb.CreateTable(sc.DbTransaction, tableName, strings.TrimRight(colsSQL, ",\n")); err != nil {
 		return logErrorDB(err, "creating tables")
 	}
 
@@ -894,7 +894,7 @@ func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64
 	}
 	var ind int
 	var lastID string
-	if ind, err = model.NumIndexes(tblname); err != nil {
+	if ind, err = sqldb.NumIndexes(tblname); err != nil {
 		err = logErrorDB(err, "num indexes")
 		return
 	}
@@ -977,7 +977,7 @@ func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64
 	if err = sc.AccessColumns(tblname, &columns, false); err != nil {
 		return 0, nil, err
 	}
-	q := model.GetDB(sc.DbTransaction).Table(tblname).Select(PrepareColumns(columns)).Where(where)
+	q := sqldb.GetDB(sc.DbTransaction).Table(tblname).Select(PrepareColumns(columns)).Where(where)
 
 	if len(group) != 0 {
 		q = q.Group(group)
@@ -1069,7 +1069,7 @@ func DBUpdate(sc *SmartContract, tblname string, id int64, values *types.Map) (q
 
 // EcosysParam returns the value of the specified parameter for the ecosystem
 func EcosysParam(sc *SmartContract, name string) string {
-	sp := &model.StateParameter{}
+	sp := &sqldb.StateParameter{}
 	sp.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
 	_, err := sp.Get(nil, name)
 	if err != nil {
@@ -1080,7 +1080,7 @@ func EcosysParam(sc *SmartContract, name string) string {
 
 // AppParam returns the value of the specified app parameter for the ecosystem
 func AppParam(sc *SmartContract, app int64, name string, ecosystem int64) (string, error) {
-	ap := &model.AppParam{}
+	ap := &sqldb.AppParam{}
 	ap.SetTablePrefix(converter.Int64ToStr(ecosystem))
 	_, err := ap.Get(sc.DbTransaction, app, name)
 	if err != nil {
@@ -1189,7 +1189,7 @@ func PermTable(sc *SmartContract, name, permissions string) error {
 	}
 
 	name = converter.EscapeSQL(strings.ToLower(name))
-	tbl := &model.Table{}
+	tbl := &sqldb.Table{}
 	tbl.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
 	found, err := tbl.Get(sc.DbTransaction, name)
 	if err != nil {
@@ -1270,7 +1270,7 @@ func TableConditions(sc *SmartContract, name, columns, permissions string) (err 
 
 	prefix := converter.Int64ToStr(sc.TxSmart.EcosystemID)
 
-	t := &model.Table{}
+	t := &sqldb.Table{}
 	t.SetTablePrefix(prefix)
 	exists, err := t.Get(sc.DbTransaction, name)
 	if err != nil {
@@ -1338,7 +1338,7 @@ func ColumnCondition(sc *SmartContract, tableName, name, coltype, permissions st
 	}
 
 	isExist := accessContracts(sc, nEditColumn)
-	tEx := &model.Table{}
+	tEx := &sqldb.Table{}
 	prefix := converter.Int64ToStr(sc.TxSmart.EcosystemID)
 	tEx.SetTablePrefix(prefix)
 
@@ -1373,7 +1373,7 @@ func ColumnCondition(sc *SmartContract, tableName, name, coltype, permissions st
 	if isExist {
 		return nil
 	}
-	count, err := model.GetColumnCount(tblName)
+	count, err := sqldb.GetColumnCount(tblName)
 	if err != nil {
 		return logErrorDB(err, "counting table columns")
 	}
@@ -1398,7 +1398,7 @@ func AllowChangeCondition(sc *SmartContract, tblname string) error {
 
 // RowConditions checks conditions for table row by id
 func RowConditions(sc *SmartContract, tblname string, id int64, conditionOnly bool) error {
-	condition, err := model.GetRowConditionsByTableNameAndID(sc.DbTransaction,
+	condition, err := sqldb.GetRowConditionsByTableNameAndID(sc.DbTransaction,
 		qb.GetTableName(sc.TxSmart.EcosystemID, tblname), id)
 	if err != nil {
 		return logErrorDB(err, "executing row condition query")
@@ -1473,7 +1473,7 @@ func CreateColumn(sc *SmartContract, tableName, name, colType, permissions strin
 		return
 	}
 
-	err = model.AlterTableAddColumn(sc.DbTransaction, tblname, name, sqlColType)
+	err = sqldb.AlterTableAddColumn(sc.DbTransaction, tblname, name, sqlColType)
 	if err != nil {
 		return logErrorDB(err, "adding column to the table")
 	}
@@ -1483,7 +1483,7 @@ func CreateColumn(sc *SmartContract, tableName, name, colType, permissions strin
 		Columns string
 	}
 	temp := &cols{}
-	err = model.GetDB(sc.DbTransaction).Table(`1_tables`).Where("name = ? and ecosystem = ?",
+	err = sqldb.GetDB(sc.DbTransaction).Table(`1_tables`).Where("name = ? and ecosystem = ?",
 		strings.ToLower(tableName), sc.TxSmart.EcosystemID).Select("id,columns").Find(temp).Error
 
 	if err != nil {
@@ -1524,7 +1524,7 @@ func PermColumn(sc *SmartContract, tableName, name, permissions string) error {
 		Columns string
 	}
 	temp := &cols{}
-	err := model.GetDB(sc.DbTransaction).Table(tables).Where("name = ?", tableName).Select("columns").Find(temp).Error
+	err := sqldb.GetDB(sc.DbTransaction).Table(tables).Where("name = ?", tableName).Select("columns").Find(temp).Error
 	if err != nil {
 		return logErrorDB(err, "querying columns by table name")
 	}
@@ -1683,7 +1683,7 @@ func ValidateCron(cronSpec string) (err error) {
 }
 
 func UpdateCron(sc *SmartContract, id int64) error {
-	cronTask := &model.Cron{}
+	cronTask := &sqldb.Cron{}
 	cronTask.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
 
 	ok, err := cronTask.Get(id)
@@ -1712,7 +1712,7 @@ func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
 
 	now := time.Unix(timestamp, 0)
 
-	badBlocks := &model.BadBlocks{}
+	badBlocks := &sqldb.BadBlocks{}
 	banRequests, err := badBlocks.GetNeedToBanNodes(now, syspar.GetIncorrectBlocksPerDay())
 	if err != nil {
 		logError(err, consts.DBError, "get nodes need to be banned")
@@ -1775,7 +1775,7 @@ func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
 					"@1notifications",
 					types.LoadMap(map[string]interface{}{
 						"recipient->member_id": nodeKeyID,
-						"notification->type":   model.NotificationTypeSingle,
+						"notification->type":   sqldb.NotificationTypeSingle,
 						"notification->header": nodeBanNotificationHeader,
 						"notification->body":   banMessage,
 					}))
@@ -1808,7 +1808,7 @@ func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
 }
 
 func GetBlock(blockID int64) (*types.Map, error) {
-	block := model.Block{}
+	block := sqldb.BlockChain{}
 	ok, err := block.Get(blockID)
 	if err != nil {
 		return nil, logErrorDB(err, "getting block")
@@ -1859,7 +1859,7 @@ func Hash(data interface{}) (string, error) {
 
 // GetColumnType returns the type of the column
 func GetColumnType(sc *SmartContract, tableName, columnName string) (string, error) {
-	return model.GetColumnType(qb.GetTableName(sc.TxSmart.EcosystemID, tableName), columnName)
+	return sqldb.GetColumnType(qb.GetTableName(sc.TxSmart.EcosystemID, tableName), columnName)
 }
 
 // GetType returns the name of the type of the value
@@ -1909,10 +1909,10 @@ func GetCLBList(sc *SmartContract) map[string]string {
 	return list
 }
 
-func GetHistoryRaw(transaction *model.DbTransaction, ecosystem int64, tableName string,
+func GetHistoryRaw(transaction *sqldb.DbTransaction, ecosystem int64, tableName string,
 	id, idRollback int64) ([]interface{}, error) {
 	table := fmt.Sprintf(`%d_%s`, ecosystem, tableName)
-	rows, err := model.GetDB(transaction).Table(table).Where("id=?", id).Rows()
+	rows, err := sqldb.GetDB(transaction).Table(table).Where("id=?", id).Rows()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get current values")
 		return nil, err
@@ -1948,7 +1948,7 @@ func GetHistoryRaw(transaction *model.DbTransaction, ecosystem int64, tableName 
 		curVal.Set(columns[i], value)
 	}
 	var rollbackList []interface{}
-	rollbackTx := &model.RollbackTx{}
+	rollbackTx := &sqldb.RollbackTx{}
 	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(converter.Int64ToStr(id),
 		table, historyLimit)
 	if err != nil {
@@ -1960,7 +1960,7 @@ func GetHistoryRaw(transaction *model.DbTransaction, ecosystem int64, tableName 
 			prev := rollbackList[len(rollbackList)-1].(*types.Map)
 			prev.Set(`block_id`, converter.Int64ToStr(tx.BlockID))
 			prev.Set(`id`, converter.Int64ToStr(tx.ID))
-			block := model.Block{}
+			block := sqldb.BlockChain{}
 			if ok, err := block.Get(tx.BlockID); ok {
 				prev.Set(`block_time`, time.Unix(block.Time, 0).Format(`2006-01-02 15:04:05`))
 			} else if err != nil {
@@ -2064,7 +2064,7 @@ func UpdateRolesNotifications(sc *SmartContract, ecosystemID int64, roles ...int
 
 func TransactionData(blockId int64, hash []byte) (data *TxInfo, err error) {
 	var (
-		blockOwner      model.Block
+		blockOwner      sqldb.BlockChain
 		found           bool
 		transactionSize int
 	)
@@ -2137,7 +2137,7 @@ func TransactionInfo(txHash string) (string, error) {
 	if err != nil {
 		return ``, err
 	}
-	ltx := &model.LogTransaction{Hash: hash}
+	ltx := &sqldb.LogTransaction{Hash: hash}
 	found, err := ltx.GetByHash(hash)
 	if err != nil {
 		return ``, err
@@ -2161,7 +2161,7 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 	name = converter.EscapeSQL(strings.ToLower(name))
 	tblname := qb.GetTableName(sc.TxSmart.EcosystemID, strings.ToLower(tableName))
 
-	t := model.Table{}
+	t := sqldb.Table{}
 	prefix := converter.Int64ToStr(sc.TxSmart.EcosystemID)
 	t.SetTablePrefix(prefix)
 	TableName := tblname
@@ -2180,14 +2180,14 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 		log.WithFields(log.Fields{"type": consts.NotFound, "error": err}).Error("not found table info")
 		return fmt.Errorf(eTableNotFound, tblname)
 	}
-	count, err = model.GetRecordsCountTx(sc.DbTransaction, tblname, ``)
+	count, err = sqldb.GetRecordsCountTx(sc.DbTransaction, tblname, ``)
 	if err != nil {
 		return
 	}
 	if count > 0 {
 		return fmt.Errorf(eTableNotEmpty, tblname)
 	}
-	colType, err := model.GetColumnType(tblname, name)
+	colType, err := sqldb.GetColumnType(tblname, name)
 	if err != nil {
 		return err
 	}
@@ -2206,7 +2206,7 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 	if err != nil {
 		return
 	}
-	if err = model.AlterTableDropColumn(sc.DbTransaction, tblname, name); err != nil {
+	if err = sqldb.AlterTableDropColumn(sc.DbTransaction, tblname, name); err != nil {
 		return
 	}
 	_, _, err = sc.update([]string{`columns`}, []interface{}{string(permout)},
@@ -2237,7 +2237,7 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 	)
 	tblname := qb.GetTableName(sc.TxSmart.EcosystemID, strings.ToLower(tableName))
 
-	t := model.Table{}
+	t := sqldb.Table{}
 	prefix := converter.Int64ToStr(sc.TxSmart.EcosystemID)
 	t.SetTablePrefix(prefix)
 	TableName := tblname
@@ -2257,7 +2257,7 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 		return fmt.Errorf(eTableNotFound, tblname)
 	}
 
-	count, err = model.GetRecordsCountTx(sc.DbTransaction, tblname, ``)
+	count, err = sqldb.GetRecordsCountTx(sc.DbTransaction, tblname, ``)
 	if err != nil {
 		return
 	}
@@ -2269,14 +2269,14 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 		return err
 	}
 
-	if err = model.DropTable(sc.DbTransaction, tblname); err != nil {
+	if err = sqldb.DropTable(sc.DbTransaction, tblname); err != nil {
 		return
 	}
 	if !sc.CLB {
 		var (
 			out []byte
 		)
-		cols, err := model.GetAllColumnTypes(tblname)
+		cols, err := sqldb.GetAllColumnTypes(tblname)
 		if err != nil {
 			return err
 		}
@@ -2285,7 +2285,7 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 			if item["column_name"] == `id` {
 				continue
 			}
-			tinfo.Columns[item["column_name"]] = model.DataTypeToColumnType(item["data_type"])
+			tinfo.Columns[item["column_name"]] = sqldb.DataTypeToColumnType(item["data_type"])
 		}
 		out, err = marshalJSON(tinfo, `marshalling table info`)
 		if err != nil {
@@ -2313,7 +2313,7 @@ func FormatMoney(sc *SmartContract, exp string, digit int64) (string, error) {
 	if digit != 0 {
 		cents = digit
 	} else {
-		sp := &model.StateParameter{}
+		sp := &sqldb.StateParameter{}
 		sp.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
 		_, err := sp.Get(sc.DbTransaction, `money_digit`)
 		if err != nil {
@@ -2365,13 +2365,13 @@ func SendExternalTransaction(sc *SmartContract, uid, url, externalContract strin
 			`result_contract`, `tx_time`},
 		FieldValues: []interface{}{out, uid, url, externalContract,
 			resultContract, sc.TxSmart.Time},
-		KeyTableChkr: model.KeyTableChecker{},
+		KeyTableChkr: sqldb.KeyTableChecker{},
 	}
-	insertQuery, err = sqlBuilder.GetSQLInsertQuery(model.NextIDGetter{Tx: sc.DbTransaction})
+	insertQuery, err = sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
 	if err != nil {
 		return
 	}
-	return model.GetDB(sc.DbTransaction).Exec(insertQuery).Error
+	return sqldb.GetDB(sc.DbTransaction).Exec(insertQuery).Error
 }
 
 func IsHonorNodeKey(id int64) bool {

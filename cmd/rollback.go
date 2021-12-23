@@ -8,9 +8,9 @@ package cmd
 import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/rollback"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -28,7 +28,7 @@ var rollbackCmd = &cobra.Command{
 		f := utils.LockOrDie(conf.Config.DirPathConf.LockFilePath)
 		defer f.Unlock()
 
-		if err := model.GormInit(conf.Config.DB); err != nil {
+		if err := sqldb.GormInit(conf.Config.DB); err != nil {
 			log.WithError(err).Fatal("init db")
 			return
 		}

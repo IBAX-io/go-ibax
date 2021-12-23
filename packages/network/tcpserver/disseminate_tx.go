@@ -16,8 +16,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
@@ -35,7 +35,7 @@ func DisseminateTxs(rw io.ReadWriter) error {
 	if err != nil {
 		return err
 	}
-	var rtxs []*model.RawTx
+	var rtxs []*sqldb.RawTx
 	for _, tran := range txs {
 		if int64(len(tran)) > syspar.GetMaxTxSize() {
 			log.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_tx_size": syspar.GetMaxTxSize(), "current_size": len(tran)}).Error("transaction size exceeds max size")
@@ -54,7 +54,7 @@ func DisseminateTxs(rw io.ReadWriter) error {
 		rtxs = append(rtxs, rtx.SetRawTx())
 	}
 
-	err = model.SendTxBatches(rtxs)
+	err = sqldb.SendTxBatches(rtxs)
 	if err != nil {
 		return err
 	}
@@ -91,13 +91,13 @@ func DisseminateTxs(rw io.ReadWriter) error {
 //		return nil, err
 //	}
 //
-//	_, err = model.DeleteQueueTxByHash(nil, tx.Hash())
+//	_, err = sqldb.DeleteQueueTxByHash(nil, tx.Hash())
 //	if err != nil {
 //		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "hash": tx.Hash()}).Error("Deleting queue_tx with hash")
 //		return nil, utils.ErrInfo(err)
 //	}
 //
-//	queueTx := &model.QueueTx{Hash: tx.Hash(), Data: decryptedBinData, FromGate: 0}
+//	queueTx := &sqldb.QueueTx{Hash: tx.Hash(), Data: decryptedBinData, FromGate: 0}
 //	err = queueTx.Create()
 //	if err != nil {
 //		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Creating queue_tx")

@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/schema"
 
@@ -76,7 +76,7 @@ func errorResponse(w http.ResponseWriter, err error, code ...int) {
 	jsonResponse(w, et)
 }
 
-func JsonCodeResponse(w http.ResponseWriter, ct *model.Response) {
+func JsonCodeResponse(w http.ResponseWriter, ct *sqldb.Response) {
 	jsonResponse(w, ct)
 }
 

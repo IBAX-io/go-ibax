@@ -10,7 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -29,7 +29,7 @@ func (m Mode) GetAppParamHandler(w http.ResponseWriter, r *http.Request) {
 
 	params := mux.Vars(r)
 
-	ap := &model.AppParam{}
+	ap := &sqldb.AppParam{}
 	ap.SetTablePrefix(form.EcosystemPrefix)
 	name := params["name"]
 	found, err := ap.Get(nil, converter.StrToInt64(params["appID"]), name)

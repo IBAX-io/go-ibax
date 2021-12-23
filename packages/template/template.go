@@ -19,8 +19,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/language"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -728,7 +728,7 @@ func Template2JSON(input string, timeout *bool, vars *map[string]string) []byte 
 				NetworkID:   conf.Config.LocalConf.NetworkID,
 			},
 		},
-		Key: &model.Key{
+		Key: &sqldb.Key{
 			ID:        keyID,
 			AccountID: accountID,
 		},

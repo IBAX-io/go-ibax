@@ -17,7 +17,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/network"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -45,7 +45,7 @@ func sendRawTransacitionsToHost(host string, packet []byte) error {
 	return nil
 }
 
-func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []model.Transaction) error {
+func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []sqldb.Transaction) error {
 	if len(hosts) == 0 || len(txes) == 0 {
 		return nil
 	}
@@ -82,7 +82,7 @@ func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []model.Tr
 	return nil
 }
 
-func SendFullBlockToAll(ctx context.Context, hosts []string, block *model.InfoBlock, txes []model.Transaction, nodeID int64) error {
+func SendFullBlockToAll(ctx context.Context, hosts []string, block *sqldb.InfoBlock, txes []sqldb.Transaction, nodeID int64) error {
 	if len(hosts) == 0 {
 		return nil
 	}
@@ -170,7 +170,7 @@ func sendFullBlockRequest(con net.Conn, data []byte) (response []byte, err error
 	return resieveRequiredTransactions(con)
 }
 
-func MarshalTxPacket(txes []model.Transaction) ([]byte, error) {
+func MarshalTxPacket(txes []sqldb.Transaction) ([]byte, error) {
 	dat := make([][]byte, 0)
 	for _, tr := range txes {
 		dat = append(dat, tr.Data)
@@ -178,7 +178,7 @@ func MarshalTxPacket(txes []model.Transaction) ([]byte, error) {
 	return json.Marshal(dat)
 }
 
-//func prepareTxPacket(txes []model.Transaction) []byte {
+//func prepareTxPacket(txes []sqldb.Transaction) []byte {
 //	// form packet to send
 //	var buf bytes.Buffer
 //	for _, tr := range txes {
@@ -188,7 +188,7 @@ func MarshalTxPacket(txes []model.Transaction) ([]byte, error) {
 //	return buf.Bytes()
 //}
 
-func prepareFullBlockRequest(block *model.InfoBlock, trs []model.Transaction, nodeID int64) []byte {
+func prepareFullBlockRequest(block *sqldb.InfoBlock, trs []sqldb.Transaction, nodeID int64) []byte {
 	var noBlockFlag byte
 	if block == nil {
 		noBlockFlag = 1

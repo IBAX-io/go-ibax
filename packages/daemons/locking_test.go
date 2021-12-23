@@ -14,7 +14,7 @@ import (
 
 	"context"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
 func createTables(t *testing.T, db *sql.DB) {
@@ -51,7 +51,7 @@ func TestWait(t *testing.T) {
 		t.Errorf("should be error")
 	}
 
-	install := &model.Install{}
+	install := &sqldb.Install{}
 	install.Progress = "complete"
 	err = install.Create()
 	if err != nil {

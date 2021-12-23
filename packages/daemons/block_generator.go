@@ -16,9 +16,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
@@ -79,7 +79,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	//	return nil
 	//}
 
-	//var cf model.Confirmation
+	//var cf sqldb.Confirmation
 	//cfg, err := cf.CheckAllowGenBlock()
 	//if err != nil {
 	//	d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Debug("confirmation block not allow")
@@ -98,7 +98,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	}
 
 	done := time.After(endTime.Sub(st))
-	prevBlock := &model.InfoBlock{}
+	prevBlock := &sqldb.InfoBlock{}
 	_, err = prevBlock.Get()
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting previous block")
@@ -158,13 +158,13 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		log.WithFields(log.Fields{"error": err}).Error("on inserting new block")
 		return err
 	}
-	log.WithFields(log.Fields{"Block": header.String(), "type": consts.SyncProcess}).Debug("Generated block ID")
+	log.WithFields(log.Fields{"block": header.String(), "type": consts.SyncProcess}).Debug("Generated block ID")
 
 	//go notificator.CheckTokenMovementLimits(nil, conf.Config.TokenMovement, header.BlockID)
 	return nil
 }
 
-func generateNextBlock(blockHeader *types.BlockData, trs []*model.Transaction, key string, prevBlock *types.BlockData) ([]byte, error) {
+func generateNextBlock(blockHeader *types.BlockData, trs []*sqldb.Transaction, key string, prevBlock *types.BlockData) ([]byte, error) {
 	trData := make([][]byte, 0, len(trs))
 	for _, tr := range trs {
 		trData = append(trData, tr.Data)
@@ -173,7 +173,7 @@ func generateNextBlock(blockHeader *types.BlockData, trs []*model.Transaction, k
 	return block.MarshallBlock(blockHeader, trData, prevBlock, key)
 }
 
-func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-chan time.Time, st int64) ([]*model.Transaction, error) {
+func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-chan time.Time, st int64) ([]*sqldb.Transaction, error) {
 	//p := new(transaction.Transaction)
 
 	//verify transactions
@@ -182,7 +182,7 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 	//	return nil, err
 	//}
 
-	trs, err := model.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount())
+	trs, err := sqldb.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount())
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unused transactions")
 		return nil, err
@@ -196,7 +196,7 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 		keyID int64
 	}
 
-	processBadTx := func(dbTx *model.DbTransaction) chan badTxStruct {
+	processBadTx := func(dbTx *sqldb.DbTransaction) chan badTxStruct {
 		ch := make(chan badTxStruct)
 
 		go func() {
@@ -216,7 +216,7 @@ func processTransactions(logger *log.Entry, txs []*model.Transaction, done <-cha
 	}()
 
 	// Checks preprocessing count limits
-	txList := make([]*model.Transaction, 0, len(trs))
+	txList := make([]*sqldb.Transaction, 0, len(trs))
 	txs = append(txs, trs...)
 	for i, txItem := range txs {
 		select {

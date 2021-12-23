@@ -10,7 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -30,7 +30,7 @@ func (m Mode) getEcosystemParamHandler(w http.ResponseWriter, r *http.Request) {
 
 	params := mux.Vars(r)
 
-	sp := &model.StateParameter{}
+	sp := &sqldb.StateParameter{}
 	sp.SetTablePrefix(form.EcosystemPrefix)
 	name := params["name"]
 
@@ -56,7 +56,7 @@ func getEcosystemNameHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	ecosystemID := converter.StrToInt64(r.FormValue("id"))
-	ecosystems := model.Ecosystem{}
+	ecosystems := sqldb.Ecosystem{}
 	found, err := ecosystems.Get(nil, ecosystemID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting ecosystem name")

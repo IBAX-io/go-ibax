@@ -9,7 +9,7 @@ import (
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -23,7 +23,7 @@ func getSystemParamsHandler(w http.ResponseWriter, r *http.Request) {
 
 	logger := getLogger(r)
 
-	list, err := model.GetAllSystemParameters(nil)
+	list, err := sqldb.GetAllSystemParameters(nil)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all system parameters")
 	}

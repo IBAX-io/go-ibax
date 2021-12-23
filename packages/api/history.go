@@ -10,7 +10,7 @@ import (
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -28,7 +28,7 @@ func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	client := getClient(r)
 
 	table := client.Prefix() + "_" + params["name"]
-	rollbackTx := &model.RollbackTx{}
+	rollbackTx := &sqldb.RollbackTx{}
 	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(params["id"], table, rollbackHistoryLimit)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("rollback history")

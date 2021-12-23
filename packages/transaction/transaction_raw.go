@@ -16,7 +16,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -124,8 +124,8 @@ func (rtx *Transaction) Processing(txData []byte) error {
 	return nil
 }
 
-func (rtx *Transaction) SetRawTx() *model.RawTx {
-	return &model.RawTx{
+func (rtx *Transaction) SetRawTx() *sqldb.RawTx {
+	return &sqldb.RawTx{
 		Hash:     rtx.TxHash(),
 		Time:     rtx.TxTime(),
 		TxType:   rtx.TxType(),

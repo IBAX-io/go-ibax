@@ -14,15 +14,15 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
 
 // KillPid kills the process with the specified pid
 func KillPid(pid string) error {
-	if model.DBConn != nil {
-		sd := &model.StopDaemon{StopTime: time.Now().Unix()}
+	if sqldb.DBConn != nil {
+		sd := &sqldb.StopDaemon{StopTime: time.Now().Unix()}
 		err := sd.Create()
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Error creating StopDaemon")

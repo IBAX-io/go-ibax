@@ -18,7 +18,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/template"
 
 	"github.com/gorilla/mux"
@@ -81,7 +81,7 @@ func initVars(r *http.Request) *map[string]string {
 			vars["isMobile"] = "0"
 		}
 		if len(vars["ecosystem_id"]) != 0 {
-			ecosystems := model.Ecosystem{}
+			ecosystems := sqldb.Ecosystem{}
 			if found, _ := ecosystems.Get(nil, converter.StrToInt64(vars["ecosystem_id"])); found {
 				vars["ecosystem_name"] = ecosystems.Name
 			}
@@ -109,13 +109,13 @@ func parseEcosystem(in string) (string, string) {
 	return converter.Int64ToStr(ecosystem), name
 }
 
-func pageValue(r *http.Request) (*model.Page, string, error) {
+func pageValue(r *http.Request) (*sqldb.Page, string, error) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 	client := getClient(r)
 
 	var ecosystem string
-	page := &model.Page{}
+	page := &sqldb.Page{}
 	name := params["name"]
 	if strings.HasPrefix(name, `@`) {
 		ecosystem, name = parseEcosystem(name)
@@ -151,7 +151,7 @@ func getPage(r *http.Request) (result *contentResult, err error) {
 	logger := getLogger(r)
 
 	client := getClient(r)
-	menu := &model.Menu{}
+	menu := &sqldb.Menu{}
 	menu.SetTablePrefix(client.Prefix())
 	_, err = menu.Get(page.Menu)
 	if err != nil {
@@ -246,7 +246,7 @@ func getMenuHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	var ecosystem string
-	menu := &model.Menu{}
+	menu := &sqldb.Menu{}
 	name := params["name"]
 	if strings.HasPrefix(name, `@`) {
 		ecosystem, name = parseEcosystem(name)

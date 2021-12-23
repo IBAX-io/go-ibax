@@ -10,7 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -42,7 +42,7 @@ func getRowHandler(w http.ResponseWriter, r *http.Request) {
 	client := getClient(r)
 	logger := getLogger(r)
 
-	q := model.GetDB(nil).Limit(1)
+	q := sqldb.GetDB(nil).Limit(1)
 
 	var (
 		err   error
@@ -74,7 +74,7 @@ func getRowHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := model.GetResult(rows)
+	result, err := sqldb.GetResult(rows)
 	if err != nil {
 		errorResponse(w, err)
 		return

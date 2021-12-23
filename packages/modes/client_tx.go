@@ -11,7 +11,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
@@ -21,7 +21,7 @@ var ErrDiffKey = errors.New("Different keys")
 type blockchainTxPreprocessor struct{}
 
 func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key int64, le *log.Entry) (retTx []string, err error) {
-	var rtxs []*model.RawTx
+	var rtxs []*sqldb.RawTx
 	for _, txData := range txDatas {
 		rtx := &transaction.Transaction{}
 		if err = rtx.Processing(txData); err != nil {
@@ -30,7 +30,7 @@ func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key i
 		rtxs = append(rtxs, rtx.SetRawTx())
 		retTx = append(retTx, rtx.HashStr())
 	}
-	err = model.SendTxBatches(rtxs)
+	err = sqldb.SendTxBatches(rtxs)
 	return
 }
 
@@ -45,7 +45,7 @@ func (p ClbTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 		return "", err
 	}
 
-	ts := &model.TransactionStatus{
+	ts := &sqldb.TransactionStatus{
 		BlockID:  1,
 		Hash:     tx.TxHash,
 		Time:     time.Now().Unix(),
@@ -64,7 +64,7 @@ func (p ClbTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 		return "", err
 	}
 
-	if err := model.SetTransactionStatusBlockMsg(nil, 1, res, tx.TxHash); err != nil {
+	if err := sqldb.SetTransactionStatusBlockMsg(nil, 1, res, tx.TxHash); err != nil {
 		le.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": tx.TxHash}).Error("updating transaction status block id")
 		return "", err
 	}

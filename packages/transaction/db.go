@@ -13,7 +13,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -29,7 +29,7 @@ var (
 
 // InsertInLogTx is inserting tx in log
 //func InsertInLogTx(t *Transaction, blockID int64) error {
-//	ltx := &model.LogTransaction{Hash: t.TxHash, Block: blockID}
+//	ltx := &sqldb.LogTransaction{Hash: t.TxHash, Block: blockID}
 //	if err := ltx.Create(t.DbTransaction); err != nil {
 //		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("insert logged transaction")
 //		return utils.ErrInfo(err)
@@ -40,7 +40,7 @@ var (
 // CheckLogTx checks if this transaction exists
 // And it would have successfully passed a frontal test
 func CheckLogTx(txHash []byte, logger *log.Entry) error {
-	logTx := &model.LogTransaction{}
+	logTx := &sqldb.LogTransaction{}
 	found, err := logTx.GetByHash(txHash)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting log transaction by hash")
@@ -54,20 +54,20 @@ func CheckLogTx(txHash []byte, logger *log.Entry) error {
 }
 
 // DeleteQueueTx deletes a transaction from the queue
-func DeleteQueueTx(dbTransaction *model.DbTransaction, hash []byte) error {
-	delQueueTx := &model.QueueTx{Hash: hash}
+func DeleteQueueTx(dbTransaction *sqldb.DbTransaction, hash []byte) error {
+	delQueueTx := &sqldb.QueueTx{Hash: hash}
 	err := delQueueTx.DeleteTx(dbTransaction)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("deleting transaction from queue")
 		return err
 	}
 	// Because we process transactions with verified=0 in queue_parser_tx, after processing we need to delete them
-	err = model.DeleteTransactionByHash(dbTransaction, hash)
+	err = sqldb.DeleteTransactionByHash(dbTransaction, hash)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("deleting transaction if unused")
 		return err
 	}
-	//err = model.DeleteTransactionsAttemptsByHash(dbTransaction, hash)
+	//err = sqldb.DeleteTransactionsAttemptsByHash(dbTransaction, hash)
 	//if err != nil {
 	//	log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("deleting DeleteTransactionsAttemptsByHash")
 	//	return err
@@ -75,7 +75,7 @@ func DeleteQueueTx(dbTransaction *model.DbTransaction, hash []byte) error {
 	return nil
 }
 
-func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText string) error {
+func MarkTransactionBad(dbTransaction *sqldb.DbTransaction, hash []byte, errText string) error {
 	if hash == nil {
 		return nil
 	}
@@ -84,24 +84,24 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 	}
 	log.WithFields(log.Fields{"type": consts.BadTxError, "tx_hash": hash, "error": errText}).Debug("tx marked as bad")
 
-	return model.NewDbTransaction(model.DBConn).Connection().Transaction(func(tx *gorm.DB) error {
+	return sqldb.NewDbTransaction(sqldb.DBConn).Connection().Transaction(func(tx *gorm.DB) error {
 		// looks like there is not hash in queue_tx in this moment
-		qtx := &model.QueueTx{}
-		_, err := qtx.GetByHash(model.NewDbTransaction(tx), hash)
+		qtx := &sqldb.QueueTx{}
+		_, err := qtx.GetByHash(sqldb.NewDbTransaction(tx), hash)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("getting tx by hash from queue")
 			return err
 		}
 
 		if qtx.FromGate == 0 {
-			m := &model.TransactionStatus{}
-			err = m.SetError(model.NewDbTransaction(tx), errText, hash)
+			m := &sqldb.TransactionStatus{}
+			err = m.SetError(sqldb.NewDbTransaction(tx), errText, hash)
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("setting transaction status error")
 				return err
 			}
 		}
-		err = DeleteQueueTx(model.NewDbTransaction(tx), hash)
+		err = DeleteQueueTx(sqldb.NewDbTransaction(tx), hash)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("deleting transaction from queue")
 			return err
@@ -111,7 +111,7 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 }
 
 // ProcessQueueTransaction writes transactions into the queue
-//func ProcessQueueTransaction(dbTransaction *model.DbTransaction, hash, binaryTx []byte, myTx bool) error {
+//func ProcessQueueTransaction(dbTransaction *sqldb.DbTransaction, hash, binaryTx []byte, myTx bool) error {
 //	t, err := UnmarshallTransaction(bytes.NewBuffer(binaryTx), true)
 //	if err != nil {
 //		return err
@@ -129,14 +129,14 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //		return errors.New(errStr)
 //	}
 //	var found bool
-//	tx := &model.Transaction{}
+//	tx := &sqldb.Transaction{}
 //	found, err = tx.Get(hash)
 //	if err != nil {
 //		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction by hash")
 //		return utils.ErrInfo(err)
 //	}
 //	if found {
-//		err = model.DeleteTransactionByHash(dbTransaction, hash)
+//		err = sqldb.DeleteTransactionByHash(dbTransaction, hash)
 //		if err != nil {
 //			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transaction by hash")
 //			return utils.ErrInfo(err)
@@ -150,7 +150,7 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //			return utils.ErrInfo(err)
 //		}
 //	}
-//	newTx := &model.Transaction{
+//	newTx := &sqldb.Transaction{
 //		Hash:     hash,
 //		Data:     binaryTx,
 //		Type:     int8(t.TxType),
@@ -165,7 +165,7 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //		return utils.ErrInfo(err)
 //	}
 //
-//	delQueueTx := &model.QueueTx{Hash: hash}
+//	delQueueTx := &sqldb.QueueTx{Hash: hash}
 //	if err = delQueueTx.DeleteTx(dbTransaction); err != nil {
 //		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transaction from queue")
 //		return utils.ErrInfo(err)
@@ -175,8 +175,8 @@ func MarkTransactionBad(dbTransaction *model.DbTransaction, hash []byte, errText
 //}
 
 // ProcessTransactionsQueue parses new transactions
-func ProcessTransactionsQueue(dbTransaction *model.DbTransaction) error {
-	all, err := model.GetAllUnverifiedAndUnusedTransactions(dbTransaction, syspar.GetMaxTxCount())
+func ProcessTransactionsQueue(dbTransaction *sqldb.DbTransaction) error {
+	all, err := sqldb.GetAllUnverifiedAndUnusedTransactions(dbTransaction, syspar.GetMaxTxCount())
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unverified and unused transactions")
 		return err
@@ -193,8 +193,8 @@ func ProcessTransactionsQueue(dbTransaction *model.DbTransaction) error {
 }
 
 // AllTxParser parses new transactions
-func ProcessTransactionsAttempt(dbTransaction *model.DbTransaction) error {
-	all, err := model.FindTxAttemptCount(dbTransaction, consts.MaxTXAttempt)
+func ProcessTransactionsAttempt(dbTransaction *sqldb.DbTransaction) error {
+	all, err := sqldb.FindTxAttemptCount(dbTransaction, consts.MaxTXAttempt)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all  transactions attempt > consts.MaxTXAttempt")
 		return err

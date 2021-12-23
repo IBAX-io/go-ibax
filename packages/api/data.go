@@ -15,7 +15,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 
@@ -45,7 +45,7 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	table, column := params["table"], params["column"]
 
-	data, err := model.GetColumnByID(table, column, params["id"])
+	data, err := sqldb.GetColumnByID(table, column, params["id"])
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting data from table")
 		errorResponse(w, errNotFound)
@@ -68,7 +68,7 @@ func getBinaryHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	logger := getLogger(r)
 
-	bin := model.Binary{}
+	bin := sqldb.Binary{}
 	found, err := bin.GetByID(converter.StrToInt64(params["id"]))
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Errorf("getting binary by id")

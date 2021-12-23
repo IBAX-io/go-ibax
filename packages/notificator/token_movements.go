@@ -15,7 +15,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -53,10 +53,10 @@ func sendEmail(conf conf.TokenMovementConfig, message string) error {
 }
 
 // CheckTokenMovementLimits check all limits
-func CheckTokenMovementLimits(tx *model.DbTransaction, conf conf.TokenMovementConfig, blockID int64) {
+func CheckTokenMovementLimits(tx *sqldb.DbTransaction, conf conf.TokenMovementConfig, blockID int64) {
 	var messages []string
 	if needCheck(networkPerDayEvent) {
-		amount, err := model.GetExcessCommonTokenMovementPerDay(tx)
+		amount, err := sqldb.GetExcessCommonTokenMovementPerDay(tx)
 
 		if err != nil {
 
@@ -69,7 +69,7 @@ func CheckTokenMovementLimits(tx *model.DbTransaction, conf conf.TokenMovementCo
 	}
 
 	if needCheck(fromToDayLimitEvent) {
-		transfers, err := model.GetExcessFromToTokenMovementPerDay(tx)
+		transfers, err := sqldb.GetExcessFromToTokenMovementPerDay(tx)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("check from to token movement")
 		} else {
@@ -83,7 +83,7 @@ func CheckTokenMovementLimits(tx *model.DbTransaction, conf conf.TokenMovementCo
 		}
 	}
 
-	excesses, err := model.GetExcessTokenMovementQtyPerBlock(tx, blockID)
+	excesses, err := sqldb.GetExcessTokenMovementQtyPerBlock(tx, blockID)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("check token movement per block")
 	} else {

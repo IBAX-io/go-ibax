@@ -10,7 +10,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
@@ -20,10 +20,10 @@ type Transaction struct {
 	Notifications  types.Notifications
 	GenBlock       bool
 	SysUpdate      bool
-	RollBackTx     []*model.RollbackTx
+	RollBackTx     []*sqldb.RollbackTx
 	BlockData      *types.BlockData
 	PreBlockData   *types.BlockData
-	DbTransaction  *model.DbTransaction
+	DbTransaction  *sqldb.DbTransaction
 	Rand           *rand.Rand
 	TxCheckLimits  *Limits
 	TxResult       string

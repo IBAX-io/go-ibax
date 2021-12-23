@@ -24,7 +24,7 @@ func QueueParserTx(ctx context.Context, d *daemon) error {
 	DBLock()
 	defer DBUnlock()
 	//
-	//infoBlock := &model.InfoBlock{}
+	//infoBlock := &sqldb.InfoBlock{}
 	//_, err := infoBlock.Get()
 	//if err != nil {
 	//	d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")

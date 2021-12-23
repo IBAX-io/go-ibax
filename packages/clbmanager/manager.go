@@ -17,7 +17,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/ochinchina/go-ini"
 	pConf "github.com/ochinchina/supervisord/config"
 	"github.com/ochinchina/supervisord/process"
@@ -278,15 +278,15 @@ func (mgr *CLBManager) StopCLB(name string) error {
 
 func (mgr *CLBManager) createCLBDB(clbName, login, pass string) error {
 
-	if err := model.DBConn.Exec(fmt.Sprintf(createRoleTemplate, login, pass)).Error; err != nil {
+	if err := sqldb.DBConn.Exec(fmt.Sprintf(createRoleTemplate, login, pass)).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB DB User")
 		return err
 	}
 
-	if err := model.DBConn.Exec(fmt.Sprintf(createDBTemplate, clbName, login)).Error; err != nil {
+	if err := sqldb.DBConn.Exec(fmt.Sprintf(createDBTemplate, clbName, login)).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB DB")
 
-		if err := model.GetDB(nil).Exec(fmt.Sprintf(dropDBRoleTemplate, login)).Error; err != nil {
+		if err := sqldb.GetDB(nil).Exec(fmt.Sprintf(dropDBRoleTemplate, login)).Error; err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "role": login}).Error("on deleting clb role")
 			return err
 		}
@@ -356,12 +356,12 @@ func InitCLBManager() {
 }
 
 func dropDb(name, role string) error {
-	if err := model.DropDatabase(name); err != nil {
+	if err := sqldb.DropDatabase(name); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "db_name": name}).Error("Deleting clb db")
 		return err
 	}
 
-	if err := model.GetDB(nil).Exec(fmt.Sprintf(dropDBRoleTemplate, role)).Error; err != nil {
+	if err := sqldb.GetDB(nil).Exec(fmt.Sprintf(dropDBRoleTemplate, role)).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "role": role}).Error("on deleting clb role")
 	}
 	return nil

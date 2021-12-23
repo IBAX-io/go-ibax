@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -47,13 +47,13 @@ func (f *rowsInfo) Validate(r *http.Request) error {
 func getOpenDatabaseInfoHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	sqlQuery := "SELECT current_user,CURRENT_CATALOG,VERSION (),pg_size_pretty(pg_database_size (CURRENT_CATALOG)),pg_postmaster_start_time() FROM pg_user LIMIT 1"
-	rows, err := model.GetDB(nil).Raw(sqlQuery).Rows()
+	rows, err := sqldb.GetDB(nil).Raw(sqlQuery).Rows()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("GetDatabaseInfo rows failed")
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
-	list, err := model.GetResult(rows)
+	list, err := sqldb.GetResult(rows)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("GetDatabaseInfo result failed")
 		errorResponse(w, err, http.StatusBadRequest)
@@ -77,7 +77,7 @@ func getOpenTablesInfoHandler(w http.ResponseWriter, r *http.Request) {
 	if form.Order == "" {
 		form.Order = "tablename asc"
 	}
-	q := model.GetDB(nil)
+	q := sqldb.GetDB(nil)
 	ns := "%" + form.Table_name + "%"
 	if err := q.Table("pg_tables").Where("schemaname='public' and tablename like ?", ns).Count(&result.Count).Error; err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getOpenTables row from table")
@@ -91,7 +91,7 @@ func getOpenTablesInfoHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
-	result.List, err = model.GetResult(rows)
+	result.List, err = sqldb.GetResult(rows)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getOpenTables getResult")
 		errorResponse(w, err, http.StatusBadRequest)
@@ -113,13 +113,13 @@ func getOpenColumnsInfoHandler(w http.ResponseWriter, r *http.Request) {
 	order := "ordinal_position ASC"
 
 	sqlQuery := fmt.Sprintf("SELECT column_name,data_type,column_default FROM information_schema.columns WHERE table_name='%s' ORDER BY %s", form.Table_name, order)
-	rows, err := model.GetDB(nil).Raw(sqlQuery).Rows()
+	rows, err := sqldb.GetDB(nil).Raw(sqlQuery).Rows()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": sqlQuery}).Error("get colums info failed")
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
-	result.List, err = model.GetResult(rows)
+	result.List, err = sqldb.GetResult(rows)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get open Cloumns result info failed")
 		errorResponse(w, err, http.StatusBadRequest)
@@ -147,7 +147,7 @@ func getOpenRowsInfoHandler(w http.ResponseWriter, r *http.Request) {
 }
 func GetRowsInfo(tableName, order string, page, limit int, where string) (*listResult, error) {
 	result := &listResult{}
-	num, err := model.GetNodeRows(tableName)
+	num, err := sqldb.GetNodeRows(tableName)
 	if err != nil {
 		return result, err
 	}
@@ -184,12 +184,12 @@ func GetRowsInfo(tableName, order string, page, limit int, where string) (*listR
 	} else {
 		sqlQuest = fmt.Sprintf(`select * from "%s" where %s order by %s offset %d limit %d`, tableName, where, execOrder, (page-1)*limit, limit)
 	}
-	rows, err := model.GetDB(nil).Raw(sqlQuest).Rows()
+	rows, err := sqldb.GetDB(nil).Raw(sqlQuest).Rows()
 	if err != nil {
 		return result, fmt.Errorf("getRows raw err:%s in query %s", err, sqlQuest)
 	}
 
-	result.List, err = model.GetRowsInfo(rows, sqlQuest)
+	result.List, err = sqldb.GetRowsInfo(rows, sqlQuest)
 	if err != nil {
 		return nil, err
 	}

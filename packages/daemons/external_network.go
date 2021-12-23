@@ -19,7 +19,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/crypto"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 
 	log "github.com/sirupsen/logrus"
@@ -74,13 +74,13 @@ func SendExternalTransaction() error {
 		hash    string
 	)
 
-	toWait := map[string][]model.ExternalBlockchain{}
+	toWait := map[string][]sqldb.ExternalBlockchain{}
 	incAttempt := func(id int64) {
-		if err = model.IncExternalAttempt(id); err != nil {
+		if err = sqldb.IncExternalAttempt(id); err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("IncAttempt")
 		}
 	}
-	sendResult := func(item model.ExternalBlockchain, block, errCode int64, resText string) {
+	sendResult := func(item sqldb.ExternalBlockchain, block, errCode int64, resText string) {
 		defer func() {
 			delList = append(delList, item.Id)
 		}()
@@ -97,7 +97,7 @@ func SendExternalTransaction() error {
 			log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("CreateContract")
 		}
 	}
-	list, err := model.GetExternalList()
+	list, err := sqldb.GetExternalList()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("GetExternalList")
 		return err
@@ -143,7 +143,7 @@ func SendExternalTransaction() error {
 				if err != nil {
 					log.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("DecodeHex")
 					incAttempt(item.Id)
-				} else if err = model.HashExternalTx(item.Id, bHash); err != nil {
+				} else if err = sqldb.HashExternalTx(item.Id, bHash); err != nil {
 					log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("HashExternal")
 				}
 			}
@@ -179,7 +179,7 @@ func SendExternalTransaction() error {
 		}
 	}
 	if len(delList) > 0 {
-		if err = model.DelExternalList(delList); err != nil {
+		if err = sqldb.DelExternalList(delList); err != nil {
 			return err
 		}
 	}

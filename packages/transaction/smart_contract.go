@@ -20,7 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/shopspring/decimal"
@@ -52,7 +52,7 @@ func (s *SmartContractTransaction) Init(t *Transaction) error {
 	s.CLB = false
 	s.Rollback = true
 	s.SysUpdate = false
-	s.RollBackTx = make([]*model.RollbackTx, 0)
+	s.RollBackTx = make([]*sqldb.RollbackTx, 0)
 	if s.GenBlock {
 		s.TimeLimit = syspar.GetMaxBlockGenerationTime()
 	}

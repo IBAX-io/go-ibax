@@ -10,7 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -39,7 +39,7 @@ func (m Mode) getEcosystemParamsHandler(w http.ResponseWriter, r *http.Request) 
 
 	logger := getLogger(r)
 
-	sp := &model.StateParameter{}
+	sp := &sqldb.StateParameter{}
 	sp.SetTablePrefix(form.EcosystemPrefix)
 	list, err := sp.GetAllStateParameters()
 	if err != nil {

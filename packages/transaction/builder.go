@@ -10,7 +10,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/vmihailenco/msgpack/v5"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/IBAX-io/go-ibax/packages/crypto"
 	log "github.com/sirupsen/logrus"
@@ -53,12 +53,12 @@ func NewTransaction(smartTx types.SmartContract, privateKey []byte) (data, hash 
 
 // CreateTransaction creates transaction
 func CreateTransaction(data, hash []byte, keyID, tnow int64) error {
-	tx := &model.Transaction{
+	tx := &sqldb.Transaction{
 		Hash:     hash,
 		Data:     data[:],
 		Type:     types.SmartContractTxType,
 		KeyID:    keyID,
-		HighRate: model.TransactionRateOnBlock,
+		HighRate: sqldb.TransactionRateOnBlock,
 		Time:     tnow,
 	}
 	if err := tx.Create(nil); err != nil {
@@ -69,15 +69,15 @@ func CreateTransaction(data, hash []byte, keyID, tnow int64) error {
 }
 
 // CreateDelayTransactionHighRate creates transaction
-func CreateDelayTransactionHighRate(data, hash []byte, keyID, highRate int64) *model.Transaction {
+func CreateDelayTransactionHighRate(data, hash []byte, keyID, highRate int64) *sqldb.Transaction {
 
 	t := int8(highRate)
-	tx := &model.Transaction{
+	tx := &sqldb.Transaction{
 		Hash:     hash,
 		Data:     data[:],
 		Type:     getTxTxType(t),
 		KeyID:    keyID,
-		HighRate: model.GetTxRateByTxType(t),
+		HighRate: sqldb.GetTxRateByTxType(t),
 	}
 	return tx
 }

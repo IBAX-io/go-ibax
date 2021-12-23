@@ -15,13 +15,13 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	log "github.com/sirupsen/logrus"
 )
 
 // ToBlockID rollbacks blocks till blockID
-func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.Entry) error {
-	_, err := model.MarkVerifiedAndNotUsedTransactionsUnverified()
+func ToBlockID(blockID int64, dbTransaction *sqldb.DbTransaction, logger *log.Entry) error {
+	_, err := sqldb.MarkVerifiedAndNotUsedTransactionsUnverified()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marking verified and not used transactions unverified")
 		return err
@@ -29,7 +29,7 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 
 	// roll back our blocks
 	for {
-		block := &model.Block{}
+		block := &sqldb.BlockChain{}
 		blocks, err := block.GetBlocks(blockID, syspar.GetMaxTxCount())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting blocks")
@@ -48,7 +48,7 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 		}
 		blocks = blocks[:0]
 	}
-	block := &model.Block{}
+	block := &sqldb.BlockChain{}
 	_, err = block.Get(blockID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block")
@@ -60,7 +60,7 @@ func ToBlockID(blockID int64, dbTransaction *model.DbTransaction, logger *log.En
 		return err
 	}
 
-	ib := &model.InfoBlock{
+	ib := &sqldb.InfoBlock{
 		Hash:           block.Hash,
 		BlockID:        header.BlockID,
 		Time:           header.Time,

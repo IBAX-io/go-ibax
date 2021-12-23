@@ -8,7 +8,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 )
@@ -78,7 +78,7 @@ func (btc *BlockTimeCounter) BlockForTimeExists(t time.Time, nodePosition int) (
 		return false, err
 	}
 
-	b := &model.Block{}
+	b := &sqldb.BlockChain{}
 	blocks, err := b.GetNodeBlocksAtTime(startInterval, endInterval, int64(nodePosition))
 	if err != nil {
 		return false, err

@@ -13,7 +13,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -22,7 +22,7 @@ import (
 func Monitoring(w http.ResponseWriter, r *http.Request) {
 	var buf bytes.Buffer
 
-	infoBlock := &model.InfoBlock{}
+	infoBlock := &sqldb.InfoBlock{}
 	_, err := infoBlock.Get()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")
@@ -37,7 +37,7 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 	addKey(&buf, "info_block_node_position", infoBlock.NodePosition)
 	addKey(&buf, "honor_nodes_count", syspar.GetNumberOfNodes())
 
-	block := &model.Block{}
+	block := &sqldb.BlockChain{}
 	_, err = block.GetMaxBlock()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting max block")
@@ -51,7 +51,7 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 	addKey(&buf, "last_block_state", block)
 	addKey(&buf, "last_block_transactions", block.Tx)
 
-	trCount, err := model.GetTransactionCountAll()
+	trCount, err := sqldb.GetTransactionCountAll()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction count all")
 		logError(w, fmt.Errorf("can't get transactions count: %s", err))

@@ -20,12 +20,12 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/language"
-	"github.com/IBAX-io/go-ibax/packages/model"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
-	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
+	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -366,7 +366,7 @@ func ecosysparTag(par parFunc) string {
 	if len((*par.Pars)[`Ecosystem`]) != 0 {
 		ecosystem = macro((*par.Pars)[`Ecosystem`], par.Workspace.Vars)
 	}
-	sp := &model.StateParameter{}
+	sp := &sqldb.StateParameter{}
 	sp.SetTablePrefix(ecosystem)
 	parameterName := macro((*par.Pars)[`Name`], par.Workspace.Vars)
 	_, err := sp.Get(nil, parameterName)
@@ -392,7 +392,7 @@ func appparTag(par parFunc) string {
 	if len((*par.Pars)[`Ecosystem`]) != 0 {
 		ecosystem = macro((*par.Pars)[`Ecosystem`], par.Workspace.Vars)
 	}
-	ap := &model.AppParam{}
+	ap := &sqldb.AppParam{}
 	ap.SetTablePrefix(ecosystem)
 	_, err := ap.Get(nil, converter.StrToInt64(macro((*par.Pars)[`App`], par.Workspace.Vars)),
 		macro((*par.Pars)[`Name`], par.Workspace.Vars))
@@ -691,7 +691,7 @@ func dbfindTag(par parFunc) string {
 	}
 	order = ` order by ` + order
 
-	rows, err := model.GetAllColumnTypes(tblname)
+	rows, err := sqldb.GetAllColumnTypes(tblname)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column types from db")
 		return err.Error()
@@ -750,7 +750,7 @@ func dbfindTag(par parFunc) string {
 	}
 	if par.Node.Attr[`countvar`] != nil {
 		var count int64
-		err = model.GetDB(nil).Table(tblname).Where(where).Count(&count).Error
+		err = sqldb.GetDB(nil).Table(tblname).Where(where).Count(&count).Error
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("selecting count from table in DBFind")
 		}
@@ -762,7 +762,7 @@ func dbfindTag(par parFunc) string {
 	if len(where) > 0 {
 		where = ` where ` + where
 	}
-	list, err := model.GetAll(`select `+strings.Join(queryColumns, `, `)+` from "`+tblname+`"`+
+	list, err := sqldb.GetAll(`select `+strings.Join(queryColumns, `, `)+` from "`+tblname+`"`+
 		where+order+offset, limit)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all from db")
@@ -990,7 +990,7 @@ func hideTag(par parFunc) string {
 
 func includeTag(par parFunc) string {
 	if len((*par.Pars)[`Name`]) >= 0 && len(getVar(par.Workspace, `_include`)) < 5 {
-		bi := &model.BlockInterface{}
+		bi := &sqldb.BlockInterface{}
 		name := macro((*par.Pars)[`Name`], par.Workspace.Vars)
 		ecosystem, tblname := converter.ParseName(name)
 		prefix := getVar(par.Workspace, `ecosystem_id`)
@@ -1404,7 +1404,7 @@ func binaryTag(par parFunc) string {
 	} else {
 		ecosystemID = getVar(par.Workspace, `ecosystem_id`)
 	}
-	binary := &model.Binary{}
+	binary := &sqldb.Binary{}
 	binary.SetTablePrefix(ecosystemID)
 
 	var (
@@ -1439,7 +1439,7 @@ func columntypeTag(par parFunc) string {
 		tableName := macro((*par.Pars)[`Table`], par.Workspace.Vars)
 		columnName := macro((*par.Pars)[`Column`], par.Workspace.Vars)
 		tblname := qb.GetTableName(par.Workspace.SmartContract.TxSmart.EcosystemID, tableName)
-		colType, err := model.GetColumnType(tblname, columnName)
+		colType, err := sqldb.GetColumnType(tblname, columnName)
 		if err == nil {
 			return colType
 		}
@@ -1464,7 +1464,7 @@ func getHistoryTag(par parFunc) string {
 		return err.Error()
 	}
 
-	colsList, err := model.GetAllColumnTypes(getVar(par.Workspace, `ecosystem_id`) + "_" + table)
+	colsList, err := sqldb.GetAllColumnTypes(getVar(par.Workspace, `ecosystem_id`) + "_" + table)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column types from db")
 		return err.Error()

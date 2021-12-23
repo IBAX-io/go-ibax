@@ -14,7 +14,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -75,8 +75,8 @@ func UpdateLang(state int, name, value string) error {
 }
 
 // loadLang download the language sources from database for the state
-func loadLang(transaction *model.DbTransaction, state int) error {
-	language := &model.Language{}
+func loadLang(transaction *sqldb.DbTransaction, state int) error {
+	language := &sqldb.Language{}
 	prefix := strconv.FormatInt(int64(state), 10)
 
 	languages, err := language.GetAll(transaction, prefix)
@@ -111,7 +111,7 @@ func loadLang(transaction *model.DbTransaction, state int) error {
 
 // LangText looks for the specified word through language sources and returns the meaning of the source
 // if it is found. Search goes according to the languages specified in 'accept'
-func LangText(transaction *model.DbTransaction, in string, state int, accept string) (string, bool) {
+func LangText(transaction *sqldb.DbTransaction, in string, state int, accept string) (string, bool) {
 	if strings.IndexByte(in, ' ') >= 0 || state == 0 {
 		return in, false
 	}

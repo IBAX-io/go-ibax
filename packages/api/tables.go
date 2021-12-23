@@ -10,7 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -36,7 +36,7 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	prefix := client.Prefix()
 
-	table := &model.Table{}
+	table := &sqldb.Table{}
 	table.SetTablePrefix(prefix)
 
 	count, err := table.Count()
@@ -46,14 +46,14 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := model.GetDB(nil).Table(table.TableName()).Where("ecosystem = ?", client.EcosystemID).Offset(form.Offset).Limit(form.Limit).Rows()
+	rows, err := sqldb.GetDB(nil).Table(table.TableName()).Where("ecosystem = ?", client.EcosystemID).Offset(form.Offset).Limit(form.Limit).Rows()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
 		errorResponse(w, err)
 		return
 	}
 
-	list, err := model.GetResult(rows)
+	list, err := sqldb.GetResult(rows)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting names from tables")
 		errorResponse(w, err)
@@ -65,7 +65,7 @@ func getTablesHandler(w http.ResponseWriter, r *http.Request) {
 		List:  make([]tableInfo, len(list)),
 	}
 	for i, item := range list {
-		err = model.GetTableQuery(item["name"], client.EcosystemID).Count(&count).Error
+		err = sqldb.GetTableQuery(item["name"], client.EcosystemID).Count(&count).Error
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting count from table")
 			errorResponse(w, err)

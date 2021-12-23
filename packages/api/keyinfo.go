@@ -11,7 +11,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -62,7 +62,7 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 	)
 
 	for i, ecosystemID := range ids {
-		key := &model.Key{}
+		key := &sqldb.Key{}
 		key.SetTablePrefix(ecosystemID)
 		found, err = key.Get(nil, keyID)
 		if err != nil {
@@ -82,7 +82,7 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 			Ecosystem: converter.Int64ToStr(ecosystemID),
 			Name:      names[i],
 		}
-		ra := &model.RolesParticipants{}
+		ra := &sqldb.RolesParticipants{}
 		roles, err := ra.SetTablePrefix(ecosystemID).GetActiveMemberRoles(key.AccountID)
 		if err != nil {
 			errorResponse(w, err)
@@ -125,8 +125,8 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (m Mode) getNotifications(ecosystemID int64, key *model.Key) ([]notifyInfo, error) {
-	notif, err := model.GetNotificationsCount(ecosystemID, []string{key.AccountID})
+func (m Mode) getNotifications(ecosystemID int64, key *sqldb.Key) ([]notifyInfo, error) {
+	notif, err := sqldb.GetNotificationsCount(ecosystemID, []string{key.AccountID})
 	if err != nil {
 		return nil, err
 	}

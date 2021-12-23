@@ -11,7 +11,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/language"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -47,7 +47,7 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	table := "1_sections"
-	q := model.GetDB(nil).Table(table).Where("ecosystem = ? AND status > 0", client.EcosystemID).Order("id ASC")
+	q := sqldb.GetDB(nil).Table(table).Where("ecosystem = ? AND status > 0", client.EcosystemID).Order("id ASC")
 
 	result := new(listResult)
 	err := q.Count(&result.Count).Error
@@ -64,7 +64,7 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result.List, err = model.GetResult(rows)
+	result.List, err = sqldb.GetResult(rows)
 	if err != nil {
 		errorResponse(w, err)
 		return
@@ -91,7 +91,7 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if item["status"] == consts.StatusMainPage {
-			roles := &model.Role{}
+			roles := &sqldb.Role{}
 			roles.SetTablePrefix(1)
 			role, err := roles.Get(nil, client.RoleID)
 

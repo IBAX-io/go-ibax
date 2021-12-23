@@ -8,7 +8,7 @@ package utils
 //import (
 //	"time"
 //
-//	"github.com/IBAX-io/go-ibax/packages/model"
+//	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 //
 //	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 //)
@@ -37,7 +37,7 @@ package utils
 //func (btc *BlockTimeCounter) BlockForTimeExists(t time.Time, nodePosition int) (bool, error) {
 //	startInterval, endInterval := btc.RangesByTime(t)
 //
-//	b := &model.Block{}
+//	b := &sqldb.Block{}
 //	blocks, err := b.GetNodeBlocksAtTime(startInterval, endInterval, int64(nodePosition))
 //	if err != nil {
 //		return false, err

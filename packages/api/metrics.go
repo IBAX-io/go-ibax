@@ -16,7 +16,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -57,7 +57,7 @@ type banMetric struct {
 }
 
 func blocksCountHandler(w http.ResponseWriter, r *http.Request) {
-	b := &model.Block{}
+	b := &sqldb.BlockChain{}
 	logger := getLogger(r)
 
 	found, err := b.GetMaxBlock()
@@ -77,7 +77,7 @@ func blocksCountHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func blocksCountByNodeHandler(w http.ResponseWriter, r *http.Request) {
-	b := &model.Block{}
+	b := &sqldb.BlockChain{}
 	logger := getLogger(r)
 	params := mux.Vars(r)
 	Node := converter.StrToInt64(params["node"])
@@ -94,7 +94,7 @@ func blocksCountByNodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := model.GetBlockCountByNode(Node)
+	c, err := sqldb.GetBlockCountByNode(Node)
 	if err != nil {
 		logger := getLogger(r)
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting block count by node")
@@ -108,7 +108,7 @@ func blocksCountByNodeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func txCountHandler(w http.ResponseWriter, r *http.Request) {
-	c, err := model.GetTxCount()
+	c, err := sqldb.GetTxCount()
 	if err != nil {
 		logger := getLogger(r)
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting tx count")
@@ -132,7 +132,7 @@ func (m Mode) ecosysCountHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func keysCountHandler(w http.ResponseWriter, r *http.Request) {
-	cnt, err := model.GetKeysCount()
+	cnt, err := sqldb.GetKeysCount()
 	if err != nil {
 		logger := getLogger(r)
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting keys count")

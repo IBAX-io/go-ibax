@@ -9,17 +9,17 @@ import (
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/model"
-	"github.com/IBAX-io/go-ibax/packages/model/querycost"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb/querycost"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
-	qb "github.com/IBAX-io/go-ibax/packages/model/queryBuilder"
+	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) error {
-	rollbackTx := &model.RollbackTx{
+	rollbackTx := &sqldb.RollbackTx{
 		BlockID:   sc.BlockData.BlockID,
 		TxHash:    sc.TxHash,
 		NameTable: table,
@@ -58,7 +58,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		FieldValues:  ivalues,
 		Where:        inWhere,
 		TxEcoID:      sc.TxSmart.EcosystemID,
-		KeyTableChkr: model.KeyTableChecker{},
+		KeyTableChkr: sqldb.KeyTableChecker{},
 	}
 
 	queryCoster := querycost.GetQueryCoster(querycost.FormulaQueryCosterType)
@@ -75,7 +75,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 			return 0, "", err
 		}
 
-		logData, err = model.GetOneRowTransaction(sc.DbTransaction, selectQuery).String()
+		logData, err = sqldb.GetOneRowTransaction(sc.DbTransaction, selectQuery).String()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": selectQuery}).Error("getting one row transaction")
 			return 0, "", err
@@ -121,7 +121,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 			cost += updateCost
 		}
 
-		err = model.Update(sc.DbTransaction, sqlBuilder.Table, updateExpr, whereExpr)
+		err = sqldb.Update(sc.DbTransaction, sqlBuilder.Table, updateExpr, whereExpr)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Error("getting update query")
 			return 0, "", err
@@ -129,7 +129,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		sqlBuilder.SetTableID(logData[`id`])
 	} else {
 
-		insertQuery, err := sqlBuilder.GetSQLInsertQuery(model.NextIDGetter{Tx: sc.DbTransaction})
+		insertQuery, err := sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
 		if err != nil {
 			logger.WithFields(log.Fields{"error": err}).Error("on build insert query")
 			return 0, "", err
@@ -142,7 +142,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 		}
 
 		cost += insertCost
-		err = model.GetDB(sc.DbTransaction).Exec(insertQuery).Error
+		err = sqldb.GetDB(sc.DbTransaction).Exec(insertQuery).Error
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
 			return 0, "", err

@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/IBAX-io/go-ibax/packages/model"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
 func TestBalance(t *testing.T) {
@@ -44,7 +44,7 @@ func TestAssignBalance(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	var ret model.Response
+	var ret sqldb.Response
 	err := sendGet(`assignbalance/`+gAddress, nil, &ret)
 	if err != nil {
 		t.Error(err)
