@@ -75,7 +75,7 @@ open:
 	})
 	//DBConn, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		if strings.Contains(err.Error(), fmt.Sprintf("database \"%s\" does not exist", conf.Name)) {
+		if strings.Contains(err.Error(), "SQLSTATE 3D000") {
 			err := createDatabase(fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable TimeZone=UTC", conf.Host, conf.Port, conf.User, conf.Password), conf.Name)
 			if err != nil {
 				return err
