@@ -13,7 +13,7 @@ import (
 func GetCLBScript() string {
 	scripts := []string{
 		schemaCLB,
-		blocksDataSQL,
+		snippetsDataSQL,
 		contractsDataSQL,
 		menuDataSQL,
 		pagesDataSQL,

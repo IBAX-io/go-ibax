@@ -18,9 +18,9 @@ import (
 )
 
 type appContentResult struct {
-	Blocks    []sqldb.BlockInterface `json:"blocks"`
-	Pages     []sqldb.Page           `json:"pages"`
-	Contracts []sqldb.Contract       `json:"contracts"`
+	Snippets  []sqldb.Snippet  `json:"snippets"`
+	Pages     []sqldb.Page     `json:"pages"`
+	Contracts []sqldb.Contract `json:"contracts"`
 }
 
 func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,13 +38,13 @@ func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	params := mux.Vars(r)
 
-	bi := &sqldb.BlockInterface{}
+	sni := &sqldb.Snippet{}
 	p := &sqldb.Page{}
 	c := &sqldb.Contract{}
 	appID := converter.StrToInt64(params["appID"])
 	ecosystemID := converter.StrToInt64(form.EcosystemPrefix)
 
-	blocks, err := bi.GetByApp(appID, ecosystemID)
+	snippets, err := sni.GetByApp(appID, ecosystemID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting block interfaces by appID")
 		errorResponse(w, err)
@@ -66,7 +66,7 @@ func (m Mode) getAppContentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResponse(w, &appContentResult{
-		Blocks:    blocks,
+		Snippets:  snippets,
 		Pages:     pages,
 		Contracts: contracts,
 	})

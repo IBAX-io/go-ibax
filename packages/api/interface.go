@@ -28,8 +28,8 @@ func getMenuRowHandler(w http.ResponseWriter, r *http.Request) {
 	getInterfaceRow(w, r, &sqldb.Menu{})
 }
 
-func getBlockInterfaceRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &sqldb.BlockInterface{})
+func getSnippetRowHandler(w http.ResponseWriter, r *http.Request) {
+	getInterfaceRow(w, r, &sqldb.Snippet{})
 }
 
 func getInterfaceRow(w http.ResponseWriter, r *http.Request, c componentModel) {

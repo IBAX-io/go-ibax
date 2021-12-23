@@ -36,7 +36,7 @@ contract ImportUpload {
             item = arrData[i]
             if item["Type"] == "pages" {
                 pages_arr = Append(pages_arr, item["Name"])
-            } elif item["Type"] == "blocks" {
+            } elif item["Type"] == "snippets" {
                 blocks_arr = Append(blocks_arr, item["Name"])
             } elif item["Type"] == "menu" {
                 menu_arr = Append(menu_arr, item["Name"])
@@ -55,7 +55,7 @@ contract ImportUpload {
         inf["app_name"] = input["name"]
         inf["pages"] = Join(pages_arr, ", ")
         inf["pages_count"] = Len(pages_arr)
-        inf["blocks"] = Join(blocks_arr, ", ")
+        inf["snippets"] = Join(blocks_arr, ", ")
         inf["blocks_count"] = Len(blocks_arr)
         inf["menu"] = Join(menu_arr, ", ")
         inf["menu_count"] = Len(menu_arr)

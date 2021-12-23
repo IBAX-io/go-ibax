@@ -1,6 +1,6 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
-contract NewBlock {
+contract NewSnippet {
     data {
         ApplicationId int
         Name string
@@ -15,13 +15,13 @@ contract NewBlock {
             warning "Application id cannot equal 0"
         }
 
-        if DBFind("blocks").Columns("id").Where({name:$Name}).One("id") {
+        if DBFind("snippets").Columns("id").Where({name:$Name}).One("id") {
             warning Sprintf( "Block %s already exists", $Name)
         }
     }
 
     action {
-        DBInsert("blocks", {name: $Name, value: $Value, conditions: $Conditions,
+        DBInsert("snippets", {name: $Name, value: $Value, conditions: $Conditions,
               app_id: $ApplicationId})
     }
 }

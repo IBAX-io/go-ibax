@@ -21,8 +21,8 @@ func TestAppContent(t *testing.T) {
 		return
 	}
 
-	if len(ret.Blocks) == 0 {
-		t.Error("incorrect blocks count")
+	if len(ret.Snippets) == 0 {
+		t.Error("incorrect snippets count")
 	}
 
 	if len(ret.Contracts) == 0 {

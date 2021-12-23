@@ -81,7 +81,7 @@ var ContractPrices = map[string]string{
 	`@1NewPage`:        `price_create_page`,
 	`@1NewColumn`:      `price_create_column`,
 	`@1NewApplication`: `price_create_application`,
-	`@1NewBlock`:       `price_create_block`,
+	`@1NewSnippet`:     `price_create_snippet`,
 	`@1NewView`:        `price_create_view`,
 	`@1NewToken`:       `price_create_token`,
 	`@1NewAsset`:       `price_create_asset`,

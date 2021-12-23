@@ -990,7 +990,7 @@ func hideTag(par parFunc) string {
 
 func includeTag(par parFunc) string {
 	if len((*par.Pars)[`Name`]) >= 0 && len(getVar(par.Workspace, `_include`)) < 5 {
-		bi := &sqldb.BlockInterface{}
+		bi := &sqldb.Snippet{}
 		name := macro((*par.Pars)[`Name`], par.Workspace.Vars)
 		ecosystem, tblname := converter.ParseName(name)
 		prefix := getVar(par.Workspace, `ecosystem_id`)
@@ -1001,11 +1001,11 @@ func includeTag(par parFunc) string {
 		bi.SetTablePrefix(prefix)
 		found, err := bi.Get(name)
 		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block by name")
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting snippet by name")
 			return err.Error()
 		}
 		if !found {
-			log.WithFields(log.Fields{"type": consts.NotFound, "name": (*par.Pars)[`Name`]}).Error("include block not found")
+			log.WithFields(log.Fields{"type": consts.NotFound, "name": (*par.Pars)[`Name`]}).Error("include snippet not found")
 			return fmt.Sprintf("Inlcude %s has not been found", (*par.Pars)[`Name`])
 		}
 		if len(bi.Value) > 0 {

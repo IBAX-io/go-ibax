@@ -131,37 +131,6 @@ VALUES
     }
 }
 ', '1', 'ContractConditions("MainCondition")', '1', '1'),
-	(next_id('1_contracts'), 'EditBlock', 'contract EditBlock {
-    data {
-        Id int
-        Value string "optional"
-        Conditions string "optional"
-    }
-    func onlyConditions() bool {
-        return $Conditions && !$Value
-    }
-
-    conditions {
-        RowConditions("blocks", $Id, onlyConditions())
-        if $Conditions {
-            ValidateCondition($Conditions, $ecosystem_id)
-        }
-    }
-
-    action {
-        var pars map
-        if $Value {
-            pars["value"] = $Value
-        }
-        if $Conditions {
-            pars["conditions"] = $Conditions
-        }
-        if pars {
-            DBUpdate("blocks", $Id, pars)
-        }
-    }
-}
-', '1', 'ContractConditions("MainCondition")', '1', '1'),
 	(next_id('1_contracts'), 'EditColumn', 'contract EditColumn {
     data {
         TableName string
@@ -320,6 +289,37 @@ VALUES
     }
 }
 ', '1', 'ContractConditions("MainCondition")', '1', '1'),
+	(next_id('1_contracts'), 'EditSnippet', 'contract EditSnippet {
+    data {
+        Id int
+        Value string "optional"
+        Conditions string "optional"
+    }
+    func onlyConditions() bool {
+        return $Conditions && !$Value
+    }
+
+    conditions {
+        RowConditions("snippets", $Id, onlyConditions())
+        if $Conditions {
+            ValidateCondition($Conditions, $ecosystem_id)
+        }
+    }
+
+    action {
+        var pars map
+        if $Value {
+            pars["value"] = $Value
+        }
+        if $Conditions {
+            pars["conditions"] = $Conditions
+        }
+        if pars {
+            DBUpdate("snippets", $Id, pars)
+        }
+    }
+}
+', '1', 'ContractConditions("MainCondition")', '1', '1'),
 	(next_id('1_contracts'), 'EditTable', 'contract EditTable {
     data {
         Name string
@@ -387,14 +387,14 @@ VALUES
     action {
         var editors, creators map
         editors["pages"] = "EditPage"
-        editors["blocks"] = "EditBlock"
+        editors["snippets"] = "EditSnippet"
         editors["menu"] = "EditMenu"
         editors["app_params"] = "EditAppParam"
         editors["languages"] = "EditLang"
         editors["contracts"] = "EditContract"
         editors["tables"] = "" // nothing
         creators["pages"] = "NewPage"
-        creators["blocks"] = "NewBlock"
+        creators["snippets"] = "NewSnippet"
         creators["menu"] = "NewMenu"
         creators["app_params"] = "NewAppParam"
         creators["languages"] = "NewLang"
@@ -491,7 +491,7 @@ VALUES
             item = arrData[i]
             if item["Type"] == "pages" {
                 pages_arr = Append(pages_arr, item["Name"])
-            } elif item["Type"] == "blocks" {
+            } elif item["Type"] == "snippets" {
                 blocks_arr = Append(blocks_arr, item["Name"])
             } elif item["Type"] == "menu" {
                 menu_arr = Append(menu_arr, item["Name"])
@@ -510,7 +510,7 @@ VALUES
         inf["app_name"] = input["name"]
         inf["pages"] = Join(pages_arr, ", ")
         inf["pages_count"] = Len(pages_arr)
-        inf["blocks"] = Join(blocks_arr, ", ")
+        inf["snippets"] = Join(blocks_arr, ", ")
         inf["blocks_count"] = Len(blocks_arr)
         inf["menu"] = Join(menu_arr, ", ")
         inf["menu_count"] = Len(menu_arr)
@@ -625,32 +625,6 @@ VALUES
         DBInsert("@1bad_blocks", {producer_node_id: $ProducerNodeID,consumer_node_id: $ConsumerNodeID,
             block_id: $BlockID, "timestamp block_time": $Timestamp, reason: $Reason})
 	}
-}
-', '1', 'ContractConditions("MainCondition")', '1', '1'),
-	(next_id('1_contracts'), 'NewBlock', 'contract NewBlock {
-    data {
-        ApplicationId int
-        Name string
-        Value string
-        Conditions string
-    }
-
-    conditions {
-        ValidateCondition($Conditions, $ecosystem_id)
-
-        if $ApplicationId == 0 {
-            warning "Application id cannot equal 0"
-        }
-
-        if DBFind("blocks").Columns("id").Where({name:$Name}).One("id") {
-            warning Sprintf( "Block %s already exists", $Name)
-        }
-    }
-
-    action {
-        DBInsert("blocks", {name: $Name, value: $Value, conditions: $Conditions,
-              app_id: $ApplicationId})
-    }
 }
 ', '1', 'ContractConditions("MainCondition")', '1', '1'),
 	(next_id('1_contracts'), 'NewContract', 'contract NewContract {
@@ -800,6 +774,32 @@ VALUES
     }
     func price() int {
         return SysParamInt("page_price")
+    }
+}
+', '1', 'ContractConditions("MainCondition")', '1', '1'),
+	(next_id('1_contracts'), 'NewSnippet', 'contract NewSnippet {
+    data {
+        ApplicationId int
+        Name string
+        Value string
+        Conditions string
+    }
+
+    conditions {
+        ValidateCondition($Conditions, $ecosystem_id)
+
+        if $ApplicationId == 0 {
+            warning "Application id cannot equal 0"
+        }
+
+        if DBFind("snippets").Columns("id").Where({name:$Name}).One("id") {
+            warning Sprintf( "Block %s already exists", $Name)
+        }
+    }
+
+    action {
+        DBInsert("snippets", {name: $Name, value: $Value, conditions: $Conditions,
+              app_id: $ApplicationId})
     }
 }
 ', '1', 'ContractConditions("MainCondition")', '1', '1'),

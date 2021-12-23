@@ -20,14 +20,14 @@ contract Import {
     action {
         var editors, creators map
         editors["pages"] = "EditPage"
-        editors["blocks"] = "EditBlock"
+        editors["snippets"] = "EditSnippet"
         editors["menu"] = "EditMenu"
         editors["app_params"] = "EditAppParam"
         editors["languages"] = "EditLang"
         editors["contracts"] = "EditContract"
         editors["tables"] = "" // nothing
         creators["pages"] = "NewPage"
-        creators["blocks"] = "NewBlock"
+        creators["snippets"] = "NewSnippet"
         creators["menu"] = "NewMenu"
         creators["app_params"] = "NewAppParam"
         creators["languages"] = "NewLang"

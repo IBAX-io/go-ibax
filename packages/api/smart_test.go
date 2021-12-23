@@ -295,14 +295,14 @@ func TestPage(t *testing.T) {
 
 	form = url.Values{"Name": {name}, "Value": {value}, "ApplicationId": {`1`},
 		"Conditions": {`ContractConditions("MainCondition")`}}
-	assert.NoError(t, postTx(`NewBlock`, &form))
+	assert.NoError(t, postTx(`NewSnippet`, &form))
 
-	err = postTx(`NewBlock`, &form)
+	err = postTx(`NewSnippet`, &form)
 	assert.EqualError(t, err, fmt.Sprintf(`{"type":"warning","error":"Block %s already exists"}`, name))
 
 	form = url.Values{"Id": {`1`}, "Name": {name}, "Value": {value},
 		"Conditions": {`ContractConditions("MainCondition")`}}
-	assert.NoError(t, postTx(`EditBlock`, &form))
+	assert.NoError(t, postTx(`EditSnippet`, &form))
 
 	form = url.Values{"Id": {`1`}, "Value": {value + `Span(Test)`},
 		"Menu": {menu}, "Conditions": {`ContractConditions("MainCondition")`}}
@@ -624,15 +624,15 @@ func TestPartitialEdit(t *testing.T) {
 	assert.Equal(t, value, ret.Value["value"])
 	assert.Equal(t, conditions, ret.Value["conditions"])
 
-	form = url.Values{"Name": {name}, "Value": {`Span(Block)`},
+	form = url.Values{"Name": {name}, "Value": {`Span(Snippet)`},
 		"ApplicationId": {"1"}, "Conditions": {`ContractConditions("MainCondition")`}}
-	assert.NoError(t, postTx(`NewBlock`, &form))
-	assert.NoError(t, sendGet(`list/blocks`, nil, &retList))
+	assert.NoError(t, postTx(`NewSnippet`, &form))
+	assert.NoError(t, sendGet(`list/snippets`, nil, &retList))
 	idItem = strconv.FormatInt(retList.Count, 10)
 	value = `Span(Updated block)`
-	assert.NoError(t, postTx(`EditBlock`, &url.Values{"Id": {idItem}, "Value": {value}}))
-	assert.NoError(t, postTx(`EditBlock`, &url.Values{"Id": {idItem}, "Conditions": {conditions}}))
-	assert.NoError(t, sendGet(`row/blocks/`+idItem, nil, &ret))
+	assert.NoError(t, postTx(`EditSnippet`, &url.Values{"Id": {idItem}, "Value": {value}}))
+	assert.NoError(t, postTx(`EditSnippet`, &url.Values{"Id": {idItem}, "Conditions": {conditions}}))
+	assert.NoError(t, sendGet(`row/snippets/`+idItem, nil, &ret))
 	assert.Equal(t, value, ret.Value["value"])
 	assert.Equal(t, conditions, ret.Value["conditions"])
 }

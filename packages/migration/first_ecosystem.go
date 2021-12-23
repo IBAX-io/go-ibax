@@ -96,7 +96,7 @@ var sqlFirstEcosystemCommon = `
 		t.Column("ecosystem", "bigint", {"default": "1"})
 	{{footer "primary" "unique(ecosystem, name)" "index(ecosystem, name)"}}
 
-	{{head "1_blocks"}}
+	{{head "1_snippets"}}
 		t.Column("id", "bigint", {"default": "0"})
 		t.Column("name", "string", {"default": "", "size":255})
 		t.Column("value", "text", {"default": ""})

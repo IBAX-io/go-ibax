@@ -160,7 +160,7 @@ var (
 		"pages":      "changing_page",
 		"menu":       "changing_menu",
 		"contracts":  "changing_contracts",
-		"blocks":     "changing_blocks",
+		"snippets":   "changing_snippets",
 		"languages":  "changing_language",
 		"tables":     "changing_tables",
 		"parameters": "changing_parameters",

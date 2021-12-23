@@ -23,7 +23,7 @@ func TestGetInterfaceRow(t *testing.T) {
 	}{
 		{"interface/page/", "NewPage", []string{"Name", "Value", "Menu", "Conditions"}},
 		{"interface/menu/", "NewMenu", []string{"Name", "Value", "Title", "Conditions"}},
-		{"interface/block/", "NewBlock", []string{"Name", "Value", "Conditions"}},
+		{"interface/snippet/", "NewSnippet", []string{"Name", "Value", "Conditions"}},
 	}
 
 	checkEqualAttrs := func(form url.Values, result map[string]interface{}, equalKeys []string) {

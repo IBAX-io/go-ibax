@@ -114,7 +114,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
         }',
         'ContractConditions("@1AdminCondition")', '{{.Ecosystem}}'
     ),
-    (next_id('1_tables'), 'blocks',
+    (next_id('1_tables'), 'snippets',
         '{
             "insert": "ContractConditions(\"DeveloperCondition\")",
             "update": "ContractConditions(\"DeveloperCondition\")",
@@ -122,8 +122,8 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
         }',
         '{
             "name": "false",
-            "value": "ContractAccess(\"@1EditBlock\")",
-            "conditions": "ContractAccess(\"@1EditBlock\")",
+            "value": "ContractAccess(\"@1EditSnippet\")",
+            "conditions": "ContractAccess(\"@1EditSnippet\")",
             "permissions": "ContractConditions(\"@1AdminCondition\")",
             "app_id": "ContractAccess(\"@1ItemChangeAppId\")",
             "ecosystem": "false"

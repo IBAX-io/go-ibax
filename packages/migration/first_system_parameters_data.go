@@ -20,7 +20,7 @@ INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_system_parameters'),'price_create_contract', '1', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_menu', '1', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_page', '1', 'ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'),'price_create_block', '1', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_create_snippet', '1', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_view', '1', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_application', '1', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_token', '5000', 'ContractAccess("@1UpdateSysParam")'),

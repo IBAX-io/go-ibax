@@ -6,11 +6,9 @@
 package api
 
 import (
-	"net/http"
-
 	"github.com/IBAX-io/go-ibax/packages/consts"
-
 	"github.com/IBAX-io/go-ibax/packages/service/node"
+	"net/http"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -63,7 +61,7 @@ func (m Mode) SetCommonRoutes(r Router) {
 	api.HandleFunc("/row/{name}/{column}/{id}", authRequire(getRowHandler)).Methods("GET")
 	api.HandleFunc("/interface/page/{name}", authRequire(getPageRowHandler)).Methods("GET")
 	api.HandleFunc("/interface/menu/{name}", authRequire(getMenuRowHandler)).Methods("GET")
-	api.HandleFunc("/interface/block/{name}", authRequire(getBlockInterfaceRowHandler)).Methods("GET")
+	api.HandleFunc("/interface/snippet/{name}", authRequire(getSnippetRowHandler)).Methods("GET")
 	api.HandleFunc("/table/{name}", authRequire(getTableHandler)).Methods("GET")
 	api.HandleFunc("/tables", authRequire(getTablesHandler)).Methods("GET")
 	api.HandleFunc("/version", getVersionHandler).Methods("GET")
