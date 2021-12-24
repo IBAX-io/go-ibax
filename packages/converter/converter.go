@@ -1036,7 +1036,7 @@ func Round(num float64) int64 {
 
 // RoundWithPrecision rounds float64 value
 func RoundWithPrecision(num float64, precision int) float64 {
-	num += consts.ROUND_FIX
+	num += consts.RoundFix
 	output := math.Pow(10, float64(precision))
 	return float64(Round(num*output)) / output
 }

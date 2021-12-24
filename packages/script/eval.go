@@ -5,11 +5,10 @@
 package script
 
 import (
-	log "github.com/sirupsen/logrus"
-
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
+	log "github.com/sirupsen/logrus"
 )
 
 type evalCode struct {

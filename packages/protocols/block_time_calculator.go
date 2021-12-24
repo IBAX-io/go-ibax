@@ -2,17 +2,21 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package utils
+package protocols
 
 import (
 	"time"
 
-	"github.com/pkg/errors"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 // BlockTimeCalculator calculating block generation time
 type BlockTimeCalculator struct {
-	clock         Clock
+	clock         utils.Clock
 	blocksCounter intervalBlocksCounter
 
 	firstBlockTime      time.Time
@@ -29,12 +33,9 @@ type blockGenerationState struct {
 	nodePosition int64
 }
 
-var TimeError = errors.New("current time before first block")
-var DuplicateBlockError = errors.New("block with that time interval already exists in db")
-
 func NewBlockTimeCalculator(firstBlockTime time.Time, generationTime, blocksGap time.Duration, nodesCount int64) BlockTimeCalculator {
 	return BlockTimeCalculator{
-		clock:         &ClockWrapper{},
+		clock:         &utils.ClockWrapper{},
 		blocksCounter: &blocksCounter{},
 
 		firstBlockTime:      firstBlockTime,
@@ -80,7 +81,7 @@ func (btc *BlockTimeCalculator) ValidateBlock(nodePosition int64, at time.Time) 
 	return bgs.nodePosition == nodePosition, nil
 }
 
-func (btc *BlockTimeCalculator) SetClock(clock Clock) *BlockTimeCalculator {
+func (btc *BlockTimeCalculator) SetClock(clock utils.Clock) *BlockTimeCalculator {
 	btc.clock = clock
 	return btc
 }
@@ -115,4 +116,29 @@ func (btc *BlockTimeCalculator) countBlockTime(blockTime time.Time) (blockGenera
 			curNodeIndex = (curNodeIndex + 1) % btc.nodesCount
 		}
 	}
+}
+
+func BuildBlockTimeCalculator(transaction *sqldb.DbTransaction) (BlockTimeCalculator, error) {
+	var btc BlockTimeCalculator
+	firstBlock := sqldb.BlockChain{}
+	found, err := firstBlock.Get(1)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting first block")
+		return btc, err
+	}
+
+	if !found {
+		log.WithFields(log.Fields{"type": consts.NotFound, "error": err}).Error("first block not found")
+		return btc, err
+	}
+
+	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
+	blocksGapDuration := time.Second * time.Duration(syspar.GetGapsBetweenBlocks())
+
+	btc = NewBlockTimeCalculator(time.Unix(firstBlock.Time, 0),
+		blockGenerationDuration,
+		blocksGapDuration,
+		syspar.GetNumberOfNodesFromDB(transaction),
+	)
+	return btc, nil
 }

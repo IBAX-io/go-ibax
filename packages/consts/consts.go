@@ -20,48 +20,35 @@ const BvIncludeRollbackHash = 3
 // BlockVersion is block version
 const BlockVersion = BvIncludeRollbackHash
 
-// DEFAULT_TCP_PORT used when port number missed in host addr
-const DEFAULT_TCP_PORT = 7078
+// DefaultTcpPort used when port number missed in host addr
+const DefaultTcpPort = 7078
 
 // FounderAmount is the starting amount of founder
-//const FounderAmount = 5250000
 const FounderAmount = 5250000
 
 // MoneyDigits is numbers of digits for tokens 1000000000000
 const MoneyDigits = 12
 
-// WAIT_CONFIRMED_NODES is used in confirmations
-const WAIT_CONFIRMED_NODES = 10
+// WaitConfirmedNodes is used in confirmations
+const WaitConfirmedNodes = 10
 
-// MIN_CONFIRMED_NODES The number of nodes which should have the same block as we have for regarding this block belongs to the major part of DC-net. For get_confirmed_block_id()
-const MIN_CONFIRMED_NODES = 0
+// MinConfirmedNodes The number of nodes which should have the same block as we have for regarding this block belongs to the major part of DC-net. For get_confirmed_block_id()
+const MinConfirmedNodes = 0
 
-// DOWNLOAD_CHAIN_TRY_COUNT is number of attempt
-const DOWNLOAD_CHAIN_TRY_COUNT = 10
+// MaxTxForw How fast could the time of transaction pass
+const MaxTxForw = 600
 
-// MAX_TX_FORW How fast could the time of transaction pass
-const MAX_TX_FORW = 600
+// MaxTxBack transaction may wander in the net for a day and then get into a block
+const MaxTxBack = 86400
 
-// MAX_TX_BACK transaction may wander in the net for a day and then get into a block
-const MAX_TX_BACK = 86400
+// RoundFix is rounding constant
+const RoundFix = 0.00000000001
 
-// ERROR_TIME is error time
-const ERROR_TIME = 1
+// ReadTimeout is timeout for TCP
+const ReadTimeout = 20
 
-// ROUND_FIX is rounding constant
-const ROUND_FIX = 0.00000000001
-
-// READ_TIMEOUT is timeout for TCP
-const READ_TIMEOUT = 20
-
-// WRITE_TIMEOUT is timeout for TCP
-const WRITE_TIMEOUT = 20
-
-// DATA_TYPE_MAX_BLOCK_ID is block id max datatype
-const DATA_TYPE_MAX_BLOCK_ID = 10
-
-// DATA_TYPE_BLOCK_BODY is body block datatype
-const DATA_TYPE_BLOCK_BODY = 7
+// WriteTimeout is timeout for TCP
+const WriteTimeout = 20
 
 // AddressLength is length of address
 const AddressLength = 20
@@ -149,8 +136,6 @@ const (
 	MoneyLength = 30
 
 	DefaultTokenEcosystem = 1
-
-	HTTPServerMaxBodySize = 1 << 20
 
 	// ShiftContractID is the offset of tx identifiers
 	ShiftContractID = 5000

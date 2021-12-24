@@ -20,17 +20,13 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-
-	uuid "github.com/satori/go.uuid"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/theckman/go-flock"
 )
@@ -310,32 +306,7 @@ func GetHostPort(h string) string {
 	if strings.Contains(h, ":") {
 		return h
 	}
-	return fmt.Sprintf("%s:%d", h, consts.DEFAULT_TCP_PORT)
-}
-
-func BuildBlockTimeCalculator(transaction *sqldb.DbTransaction) (BlockTimeCalculator, error) {
-	var btc BlockTimeCalculator
-	firstBlock := sqldb.BlockChain{}
-	found, err := firstBlock.Get(1)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting first block")
-		return btc, err
-	}
-
-	if !found {
-		log.WithFields(log.Fields{"type": consts.NotFound, "error": err}).Error("first block not found")
-		return btc, err
-	}
-
-	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
-	blocksGapDuration := time.Second * time.Duration(syspar.GetGapsBetweenBlocks())
-
-	btc = NewBlockTimeCalculator(time.Unix(firstBlock.Time, 0),
-		blockGenerationDuration,
-		blocksGapDuration,
-		syspar.GetNumberOfNodesFromDB(transaction),
-	)
-	return btc, nil
+	return fmt.Sprintf("%s:%d", h, consts.DefaultTcpPort)
 }
 
 func CreateDirIfNotExists(dir string, mode os.FileMode) error {

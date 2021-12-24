@@ -11,18 +11,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/service/node"
-
-	"github.com/IBAX-io/go-ibax/packages/script"
-
-	"github.com/IBAX-io/go-ibax/packages/notificator"
-
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/common/random"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/notificator"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
+	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -178,7 +176,7 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 	)
 	logger := b.GetLogger()
 	limits := transaction.NewLimits(b.limitMode())
-	rand := utils.NewRand(b.Header.Time)
+	rand := random.NewRand(b.Header.Time)
 	processedTx := make([]*transaction.Transaction, 0, len(b.Transactions))
 	defer func() {
 		if b.GenBlock {

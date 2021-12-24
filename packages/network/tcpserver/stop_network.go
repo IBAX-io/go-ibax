@@ -6,20 +6,19 @@ package tcpserver
 
 import (
 	"errors"
+
 	"net"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/types"
-
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/x509"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-	"github.com/IBAX-io/go-ibax/packages/utils"
-
-	"github.com/IBAX-io/go-ibax/packages/crypto"
+	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -42,7 +41,7 @@ func StopNetwork(req *network.StopNetworkRequest, w net.Conn) error {
 }
 
 func processStopNetwork(b []byte) ([]byte, error) {
-	cert, err := utils.ParseCert(b)
+	cert, err := x509.ParseCert(b)
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.ParseError}).Error("parsing cert")
 		return nil, err

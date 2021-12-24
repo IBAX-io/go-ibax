@@ -38,7 +38,7 @@ func newConnection(addr string) (net.Conn, error) {
 		return nil, wrongAddressError
 	}
 
-	host, err := NormalizeHostAddress(addr, consts.DEFAULT_TCP_PORT)
+	host, err := NormalizeHostAddress(addr, consts.DefaultTcpPort)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.NetworkError, "host": addr, "error": err}).Error("on normalize host address")
 		return nil, err
@@ -50,7 +50,7 @@ func newConnection(addr string) (net.Conn, error) {
 		return nil, err
 	}
 
-	conn.SetReadDeadline(time.Now().Add(consts.READ_TIMEOUT * time.Second))
-	conn.SetWriteDeadline(time.Now().Add(consts.WRITE_TIMEOUT * time.Second))
+	conn.SetReadDeadline(time.Now().Add(consts.ReadTimeout * time.Second))
+	conn.SetWriteDeadline(time.Now().Add(consts.WriteTimeout * time.Second))
 	return conn, nil
 }

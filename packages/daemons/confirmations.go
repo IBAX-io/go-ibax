@@ -42,7 +42,7 @@ func Confirmations(ctx context.Context, d *daemon) error {
 
 	// check last blocks, but not more than 5
 	confirmations := &sqldb.Confirmation{}
-	_, err := confirmations.GetGoodBlock(consts.MIN_CONFIRMED_NODES)
+	_, err := confirmations.GetGoodBlock(consts.MinConfirmedNodes)
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting good block")
 		return err
@@ -101,7 +101,7 @@ func confirmationsBlocks(ctx context.Context, d *daemon, lastBlockID, startBlock
 
 		ch := make(chan string)
 		for i := 0; i < len(hosts); i++ {
-			host, err := tcpclient.NormalizeHostAddress(hosts[i], consts.DEFAULT_TCP_PORT)
+			host, err := tcpclient.NormalizeHostAddress(hosts[i], consts.DefaultTcpPort)
 			if err != nil {
 				d.logger.WithFields(log.Fields{"host": hosts[i], "type": consts.ParseError, "error": err}).Error("wrong host address")
 				continue
@@ -133,7 +133,7 @@ func confirmationsBlocks(ctx context.Context, d *daemon, lastBlockID, startBlock
 			return err
 		}
 
-		if blockID > startBlockID && st1 >= consts.MIN_CONFIRMED_NODES {
+		if blockID > startBlockID && st1 >= consts.MinConfirmedNodes {
 			break
 		}
 	}
@@ -150,7 +150,7 @@ func IsReachable(host string, blockID int64, ch0 chan string, logger *log.Entry)
 	select {
 	case reachable := <-ch:
 		ch0 <- reachable
-	case <-time.After(consts.WAIT_CONFIRMED_NODES * time.Second):
+	case <-time.After(consts.WaitConfirmedNodes * time.Second):
 		ch0 <- "0"
 	}
 }

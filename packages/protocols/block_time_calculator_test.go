@@ -2,9 +2,10 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package utils
+package protocols
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/utils"
 	"testing"
 	"time"
 
@@ -18,7 +19,7 @@ func TestBlockTimeCalculator_TimeToGenerate(t *testing.T) {
 		blockGenTime   time.Duration
 		blocksGap      time.Duration
 		nodesCount     int64
-		clock          Clock
+		clock          utils.Clock
 		blocksCounter  intervalBlocksCounter
 		nodePosition   int64
 
@@ -28,8 +29,8 @@ func TestBlockTimeCalculator_TimeToGenerate(t *testing.T) {
 		{
 			firstBlockTime: time.Unix(1, 0),
 
-			clock: func() Clock {
-				mc := &MockClock{}
+			clock: func() utils.Clock {
+				mc := &utils.MockClock{}
 				mc.On("Now").Return(time.Unix(0, 0))
 				return mc
 			}(),
@@ -44,8 +45,8 @@ func TestBlockTimeCalculator_TimeToGenerate(t *testing.T) {
 			nodesCount:     3,
 			nodePosition:   2,
 
-			clock: func() Clock {
-				mc := &MockClock{}
+			clock: func() utils.Clock {
+				mc := &utils.MockClock{}
 				mc.On("Now").Return(time.Unix(16, 0))
 				return mc
 			}(),
@@ -70,8 +71,8 @@ func TestBlockTimeCalculator_TimeToGenerate(t *testing.T) {
 			nodesCount:     3,
 			nodePosition:   2,
 
-			clock: func() Clock {
-				mc := &MockClock{}
+			clock: func() utils.Clock {
+				mc := &utils.MockClock{}
 				mc.On("Now").Return(time.Unix(16, 0))
 				return mc
 			}(),

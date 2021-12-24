@@ -39,8 +39,8 @@ func (t *Transaction) Check(checkTime int64) error {
 
 	logger := log.WithFields(log.Fields{"tx_hash": hex.EncodeToString(t.TxHash()), "tx_time": t.TxTime(), "check_time": checkTime, "type": consts.ParameterExceeded})
 	if t.TxTime() > checkTime {
-		if t.TxTime()-consts.MAX_TX_FORW > checkTime {
-			logger.WithFields(log.Fields{"tx_max_forw": consts.MAX_TX_FORW}).Errorf("time in the tx cannot be more than %d seconds of block time ", consts.MAX_TX_FORW)
+		if t.TxTime()-consts.MaxTxForw > checkTime {
+			logger.WithFields(log.Fields{"tx_max_forw": consts.MaxTxForw}).Errorf("time in the tx cannot be more than %d seconds of block time ", consts.MaxTxForw)
 			return ErrNotComeTime
 		}
 		logger.Error("time in the tx cannot be more than of block time ")
@@ -48,8 +48,8 @@ func (t *Transaction) Check(checkTime int64) error {
 	}
 
 	if t.TxType() != types.StopNetworkTxType {
-		if t.TxTime() < checkTime-consts.MAX_TX_BACK {
-			logger.WithFields(log.Fields{"tx_max_back": consts.MAX_TX_BACK, "tx_type": t.TxType()}).Errorf("time in the tx cannot be less then %d seconds of block time", consts.MAX_TX_BACK)
+		if t.TxTime() < checkTime-consts.MaxTxBack {
+			logger.WithFields(log.Fields{"tx_max_back": consts.MaxTxBack, "tx_type": t.TxType()}).Errorf("time in the tx cannot be less then %d seconds of block time", consts.MaxTxBack)
 			return ErrExpiredTime
 		}
 	}

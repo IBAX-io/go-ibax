@@ -5,7 +5,8 @@
 
 ## The Most Powerful Infrastructure for Applications on Decentralized/Centralized Ecosystems
 
-A  powerful blockchain system platform with a new system framework and a simplified programming language, it is including smart contract, database table and interface.
+A powerful blockchain system platform with a new system framework and a simplified programming language, it is including
+smart contract, database table and interface.
 
 ### Build from Source
 
@@ -13,7 +14,8 @@ A  powerful blockchain system platform with a new system framework and a simplif
 
 The build process for go-ibax requires Go 1.17 or higher. If you don't have it: [Download Go 1.17+](https://go.dev).
 
-You'll need to add Go's bin directories to your `$PATH` environment variable e.g., by adding these lines to your `/etc/profile` (for a system-wide installation) or `$HOME/.profile`:
+You'll need to add Go's bin directories to your `$PATH` environment variable e.g., by adding these lines to
+your `/etc/profile` (for a system-wide installation) or `$HOME/.profile`:
 
 ```
 export PATH=$PATH:/usr/local/go/bin
@@ -45,7 +47,8 @@ $    go-ibax config
 $    go-ibax generateKeys
 ```
 
-3. Genereate the first block. If you are creating your own blockchain network. you must use the `--test=true` option. Otherwise you will not be able to create new accounts.
+3. Genereate the first block. If you are creating your own blockchain network. you must use the `--test=true` option.
+   Otherwise you will not be able to create new accounts.
 
 ```bash
 $    go-ibax generateFirstBlock \

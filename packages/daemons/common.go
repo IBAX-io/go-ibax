@@ -132,7 +132,7 @@ func getHostPort(h string) string {
 	if strings.Contains(h, ":") {
 		return h
 	}
-	return fmt.Sprintf("%s:%d", h, consts.DEFAULT_TCP_PORT)
+	return fmt.Sprintf("%s:%d", h, consts.DefaultTcpPort)
 }
 
 //ntp

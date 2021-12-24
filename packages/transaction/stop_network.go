@@ -8,16 +8,13 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-
-	"github.com/shopspring/decimal"
-
-	"github.com/IBAX-io/go-ibax/packages/types"
-
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/x509"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/utils"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -30,7 +27,7 @@ var (
 type StopNetworkTransaction struct {
 	Logger  *log.Entry
 	Data    types.StopNetwork
-	Cert    *utils.Cert
+	Cert    *x509.Cert
 	TxHash  []byte
 	Payload []byte // transaction binary data
 }
@@ -57,7 +54,7 @@ func (s *StopNetworkTransaction) Validate() error {
 
 func (s *StopNetworkTransaction) validate() error {
 	data := s.Data
-	cert, err := utils.ParseCert(data.StopNetworkCert)
+	cert, err := x509.ParseCert(data.StopNetworkCert)
 	if err != nil {
 		return err
 	}

@@ -2,13 +2,12 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package utils
+package random
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"math/rand"
 	"time"
-
-	"github.com/IBAX-io/go-ibax/packages/crypto"
 )
 
 type Rand struct {

@@ -30,7 +30,7 @@ message Http {
   // A list of HTTP configuration rules that apply to individual API methods.
   //
   // **NOTE:** All service configuration rules follow "last one wins" order.
-  repeated HttpRule rules                           = 1;
+  repeated HttpRule rules = 1;
 
   // When set to true, URL path parameters will be fully URI-decoded except in
   // cases of single segment matches in reserved expansion, where "%2F" will be
@@ -314,7 +314,7 @@ message HttpRule {
   // Selects a method to which this rule applies.
   //
   // Refer to [selector][google.api.DocumentationRule.selector] for syntax details.
-  string            selector            = 1;
+  string            selector = 1;
 
   // Determines the URL pattern is matched by this rules. This pattern can be
   // used with any of the {get|put|post|delete|patch} methods. A custom method
@@ -322,19 +322,19 @@ message HttpRule {
   oneof pattern {
     // Maps to HTTP GET. Used for listing and getting information about
     // resources.
-    string            get    = 2;
+    string            get = 2;
 
     // Maps to HTTP PUT. Used for replacing a resource.
-    string            put    = 3;
+    string            put = 3;
 
     // Maps to HTTP POST. Used for creating a resource or performing an action.
-    string            post   = 4;
+    string            post = 4;
 
     // Maps to HTTP DELETE. Used for deleting a resource.
     string            delete = 5;
 
     // Maps to HTTP PATCH. Used for updating a resource.
-    string            patch  = 6;
+    string            patch = 6;
 
     // The custom pattern is used for specifying an HTTP method that is not
     // included in the `pattern` field, such as HEAD, or "*" to leave the
@@ -349,7 +349,7 @@ message HttpRule {
   //
   // NOTE: the referred field must be present at the top-level of the request
   // message type.
-  string            body                = 7;
+  string            body = 7;
 
   // Optional. The name of the response field whose value is mapped to the HTTP
   // response body. When omitted, the entire response message will be used
@@ -357,7 +357,7 @@ message HttpRule {
   //
   // NOTE: The referred field must be present at the top-level of the response
   // message type.
-  string            response_body       = 12;
+  string            response_body = 12;
 
   // Additional HTTP bindings for the selector. Nested bindings must
   // not contain an `additional_bindings` field themselves (that is,

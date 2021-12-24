@@ -10,8 +10,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/IBAX-io/go-ibax/packages/crypto"
-
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
