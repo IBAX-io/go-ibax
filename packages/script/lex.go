@@ -253,8 +253,8 @@ func lexParser(input []rune) (Lexems, error) {
 				name := string(input[lexOff:right])
 				if name != `else` && name != `elif` {
 					for i := 0; i < ifbuf[len(ifbuf)-1].count; i++ {
-						lexems = append(lexems, &Lexem{lexSys | (uint32('}') << 8), 0,
-							uint32('}'), uint16(line), lexOff - offline + 1})
+						lexems = append(lexems, &Lexem{Type: lexSys | (uint32('}') << 8),
+							Value: uint32('}'), Line: uint16(line), Column: lexOff - offline + 1})
 					}
 					ifbuf = ifbuf[:len(ifbuf)-1]
 				} else {
@@ -328,9 +328,9 @@ func lexParser(input []rune) (Lexems, error) {
 						value = keyID
 					case keyElif:
 						if len(ifbuf) > 0 {
-							lexems = append(lexems, &Lexem{lexKeyword | (keyElse << 8), 0,
-								uint32(keyElse), uint16(line), lexOff - offline + 1},
-								&Lexem{lexSys | ('{' << 8), 0, uint32('{'), uint16(line), lexOff - offline + 1})
+							lexems = append(lexems, &Lexem{Type: lexKeyword | (keyElse << 8),
+								Value: uint32(keyElse), Line: uint16(line), Column: lexOff - offline + 1},
+								&Lexem{Type: lexSys | ('{' << 8), Value: uint32('{'), Line: uint16(line), Column: lexOff - offline + 1})
 							lexID = lexKeyword | (keyIf << 8)
 							value = uint32(keyIf)
 							ifbuf[len(ifbuf)-1].count++
@@ -339,8 +339,8 @@ func lexParser(input []rune) (Lexems, error) {
 						if len(lexems) > 0 {
 							lexf := *lexems[len(lexems)-1]
 							if lexf.Type&0xff != lexKeyword || lexf.Value.(uint32) != keyFunc {
-								lexems = append(lexems, &Lexem{lexKeyword | (keyFunc << 8), 0,
-									keyFunc, uint16(line), lexOff - offline + 1})
+								lexems = append(lexems, &Lexem{Type: lexKeyword | (keyFunc << 8),
+									Value: keyFunc, Line: uint16(line), Column: lexOff - offline + 1})
 							}
 						}
 						value = name
@@ -366,7 +366,7 @@ func lexParser(input []rune) (Lexems, error) {
 				}
 			}
 			if lexID != lexComment {
-				lexems = append(lexems, &Lexem{lexID, ext, value, uint16(line), lexOff - offline + 1})
+				lexems = append(lexems, &Lexem{Type: lexID, Ext: ext, Value: value, Line: uint16(line), Column: lexOff - offline + 1})
 			}
 		}
 		if (flags & lexfPush) != 0 {
