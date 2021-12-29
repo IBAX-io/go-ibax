@@ -6,7 +6,6 @@ package script
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -17,7 +16,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
-
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -109,13 +108,12 @@ type RunTime struct {
 
 // NewRunTime creates a new RunTime for the virtual machine
 func NewRunTime(vm *VM, cost int64) *RunTime {
-	rt := RunTime{
+	return &RunTime{
 		stack:   make([]interface{}, 0, 1024),
 		vm:      vm,
 		cost:    cost,
 		memVars: make(map[interface{}]int64),
 	}
-	return &rt
 }
 
 func isSysVar(name string) bool {
@@ -158,7 +156,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 	} else {
 		count = in
 	}
-	if obj.Type == ObjFunc {
+	if obj.Type == ObjectType_Func {
 		var imap map[string][]interface{}
 		if obj.Value.(*Block).Info.(*FuncInfo).Names != nil {
 			if rt.stack[size-1] != nil {
@@ -557,9 +555,9 @@ func isSelfAssignment(dest, value interface{}) bool {
 // RunCode executes Block
 func (rt *RunTime) RunCode(block *Block) (status int, err error) {
 	top := make([]interface{}, 8)
-	rt.blocks = append(rt.blocks, &blockStack{block, len(rt.vars)})
+	rt.blocks = append(rt.blocks, &blockStack{Block: block, Offset: len(rt.vars)})
 	var namemap map[string][]interface{}
-	if block.Type == ObjFunc && block.Info.(*FuncInfo).Names != nil {
+	if block.Type == ObjectType_Func && block.Info.(*FuncInfo).Names != nil {
 		if rt.stack[len(rt.stack)-1] != nil {
 			namemap = rt.stack[len(rt.stack)-1].(map[string][]interface{})
 		}
@@ -570,7 +568,7 @@ func (rt *RunTime) RunCode(block *Block) (status int, err error) {
 	for vkey, vpar := range block.Vars {
 		rt.cost--
 		var value interface{}
-		if block.Type == ObjFunc && vkey < len(block.Info.(*FuncInfo).Params) {
+		if block.Type == ObjectType_Func && vkey < len(block.Info.(*FuncInfo).Params) {
 			value = rt.stack[start-len(block.Info.(*FuncInfo).Params)+vkey]
 		} else {
 			value = reflect.New(vpar).Elem().Interface()
@@ -595,7 +593,7 @@ func (rt *RunTime) RunCode(block *Block) (status int, err error) {
 			}
 		}
 	}
-	if block.Type == ObjFunc {
+	if block.Type == ObjectType_Func {
 		start -= len(block.Info.(*FuncInfo).Params)
 	}
 	var (
@@ -675,7 +673,7 @@ main:
 			count := len(assign)
 			for ivar, item := range assign {
 				if item.Owner == nil {
-					if (*item).Obj.Type == ObjExtend {
+					if (*item).Obj.Type == ObjectType_Extend {
 						if isSysVar((*item).Obj.Value.(string)) {
 							err = fmt.Errorf(eSysVar, (*item).Obj.Value.(string))
 							rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "error": err}).Error("modifying system variable")
@@ -735,7 +733,7 @@ main:
 			rt.stack = rt.stack[:mapoff+1]
 			continue
 		case cmdCallVari, cmdCall:
-			if cmd.Value.(*ObjInfo).Type == ObjExtFunc {
+			if cmd.Value.(*ObjInfo).Type == ObjectType_ExtFunc {
 				finfo := cmd.Value.(*ObjInfo).Value.(ExtFuncInfo)
 				if rt.vm.ExtCost != nil {
 					cost := rt.vm.ExtCost(finfo.Name)
@@ -1274,7 +1272,7 @@ main:
 	last := rt.blocks[len(rt.blocks)-1]
 	rt.blocks = rt.blocks[:len(rt.blocks)-1]
 	if status == statusReturn {
-		if last.Block.Type == ObjFunc {
+		if last.Block.Type == ObjectType_Func {
 			for count := len(last.Block.Info.(*FuncInfo).Results); count > 0; count-- {
 				rt.stack[start] = rt.stack[len(rt.stack)-count]
 				start++

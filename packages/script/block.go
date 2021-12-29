@@ -14,7 +14,7 @@ type ByteCodes []*ByteCode
 // Block contains all information about compiled block {...} and its children
 type Block struct {
 	Objects  map[string]*ObjInfo
-	Type     int
+	Type     ObjectType
 	Owner    *OwnerInfo
 	Info     interface{}
 	Parent   *Block
@@ -41,7 +41,7 @@ type OwnerInfo struct {
 
 // ObjInfo is the common object type
 type ObjInfo struct {
-	Type  int
+	Type  ObjectType
 	Value interface{}
 }
 
@@ -79,7 +79,7 @@ func (b *Block) Extend(ext *ExtendData) {
 			for i := 0; i < fobj.NumOut(); i++ {
 				data.Results[i] = fobj.Out(i)
 			}
-			b.Objects[key] = &ObjInfo{Type: ObjExtFunc, Value: data}
+			b.Objects[key] = &ObjInfo{Type: ObjectType_ExtFunc, Value: data}
 		}
 	}
 }
@@ -103,7 +103,7 @@ func (block *Block) getObjByName(name string) (ret *ObjInfo) {
 		if i == len(names)-1 {
 			return
 		}
-		if ret.Type != ObjContract && ret.Type != ObjFunc {
+		if ret.Type != ObjectType_Contract && ret.Type != ObjectType_Func {
 			return nil
 		}
 		block = ret.Value.(*Block)
@@ -123,14 +123,14 @@ func (block *Block) parentContractCost() int64 {
 }
 
 func (block *Block) isParentContract() bool {
-	if block.Parent != nil && block.Parent.Type == ObjContract {
+	if block.Parent != nil && block.Parent.Type == ObjectType_Contract {
 		return true
 	}
 	return false
 }
 
 func (ret *ObjInfo) getInParams() int {
-	if ret.Type == ObjExtFunc {
+	if ret.Type == ObjectType_ExtFunc {
 		return len(ret.Value.(ExtFuncInfo).Params)
 	}
 	return len(ret.Value.(*Block).Info.(*FuncInfo).Params)

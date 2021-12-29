@@ -10,6 +10,7 @@ require (
 	github.com/centrifugal/gocent v2.2.0+incompatible
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/gobuffalo/fizz v1.14.0
+	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt/v4 v4.2.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
@@ -53,7 +54,6 @@ require (
 	github.com/gobuffalo/validate/v3 v3.3.1 // indirect
 	github.com/gofrs/flock v0.7.1 // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gorilla/css v1.0.0 // indirect

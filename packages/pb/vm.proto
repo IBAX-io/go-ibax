@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option go_package = "github.com/IBAX-io/go-ibax/packages/script";
+
+package script;
+
+// VMType is virtual machine type
+enum VMType {
+  // VMType_INVALID is invalid type
+  INVALID = 0;
+  // VMType_Smart is smart vm type
+  Smart = 1;
+  // VMType_CLB is clb vm type
+  CLB = 2;
+  // VMType_CLBMaster is CLBMaster type
+  CLBMaster = 33;
+}
+
+// ObjectType Types of the compiled objects
+enum ObjectType{
+  // ObjUnknown is an unknown object.
+  Unknown = 0;
+  // ObjectType_Contract is a contract object.
+  Contract = 1;
+  // ObjectType_Func is a function object. myfunc()
+  Func = 2;
+  // ObjectType_ExtFunc is an extended build in function object. $myfunc()
+  ExtFunc = 3;
+  // ObjectType_Var is a variable. myvar
+  Var = 4;
+  // ObjectType_Extend is an extended variable. $myvar
+  Extend = 5;
+}

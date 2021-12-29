@@ -130,12 +130,12 @@ func InitVM() {
 
 func defineVMType() script.VMType {
 	if conf.Config.IsCLB() {
-		return script.VMTypeCLB
+		return script.VMType_CLB
 	}
 	if conf.Config.IsCLBMaster() {
-		return script.VMTypeCLBMaster
+		return script.VMType_CLBMaster
 	}
-	return script.VMTypeSmart
+	return script.VMType_Smart
 }
 
 // GetLogger is returning logger
@@ -162,7 +162,7 @@ func GetAllContracts() (string, error) {
 // ActivateContract sets Active status of the contract in script.GetVM()
 func ActivateContract(tblid, state int64, active bool) {
 	for i, item := range script.GetVM().Block.Children {
-		if item != nil && item.Type == script.ObjContract {
+		if item != nil && item.Type == script.ObjectType_Contract {
 			cinfo := item.Info.(*script.ContractInfo)
 			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
 				script.GetVM().Children[i].Info.(*script.ContractInfo).Owner.Active = active
@@ -177,7 +177,7 @@ func SetContractWallet(sc *SmartContract, tblid, state int64, wallet int64) erro
 		return err
 	}
 	for i, item := range script.GetVM().Block.Children {
-		if item != nil && item.Type == script.ObjContract {
+		if item != nil && item.Type == script.ObjectType_Contract {
 			cinfo := item.Info.(*script.ContractInfo)
 			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
 				script.GetVM().Children[i].Info.(*script.ContractInfo).Owner.WalletID = wallet

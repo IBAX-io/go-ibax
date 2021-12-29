@@ -71,7 +71,7 @@ func VMGetContract(vm *script.VM, name string, state uint32) *Contract {
 	name = script.StateName(state, name)
 	obj, ok := vm.Objects[name]
 
-	if ok && obj.Type == script.ObjContract {
+	if ok && obj.Type == script.ObjectType_Contract {
 		return &Contract{Name: name, Block: obj.Value.(*script.Block)}
 	}
 	return nil
@@ -87,7 +87,7 @@ func VMGetContractByID(vm *script.VM, id int32) *Contract {
 	if len(vm.Children) <= int(idcont) {
 		return nil
 	}
-	if vm.Children[idcont] == nil || vm.Children[idcont].Type != script.ObjContract {
+	if vm.Children[idcont] == nil || vm.Children[idcont].Type != script.ObjectType_Contract {
 		return nil
 	}
 	if tableID > 0 && vm.Children[idcont].Info.(*script.ContractInfo).Owner.TableID != tableID {
@@ -114,7 +114,7 @@ func GetContractByID(id int32) *Contract {
 
 // GetFunc returns the block of the specified function in the contract
 func (contract *Contract) GetFunc(name string) *script.Block {
-	if block, ok := (*contract).Block.Objects[name]; ok && block.Type == script.ObjFunc {
+	if block, ok := (*contract).Block.Objects[name]; ok && block.Type == script.ObjectType_Func {
 		return block.Value.(*script.Block)
 	}
 	return nil

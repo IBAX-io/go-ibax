@@ -15,38 +15,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// VMType is virtual machine type
-type VMType int
-
 const (
-	// Types of the compiled objects
-
-	// ObjUnknown is an unknown object. It means something wrong.
-	ObjUnknown = iota
-	// ObjContract is a contract object.
-	ObjContract
-	// ObjFunc is a function object. myfunc()
-	ObjFunc
-	// ObjExtFunc is an extended function object. $myfunc()
-	ObjExtFunc
-	// ObjVar is a variable. myvar
-	ObjVar
-	// ObjExtend is an extended variable. $myvar
-	ObjExtend
-
 	// CostCall is the cost of the function calling
 	CostCall = 50
 	// CostContract is the cost of the contract calling
 	CostContract = 100
 	// CostExtend is the cost of the extend function calling
 	CostExtend = 10
-
-	// VMTypeSmart is smart vm type
-	VMTypeSmart VMType = 1
-	// VMTypeCLB is clb vm type
-	VMTypeCLB VMType = 2
-	// VMTypeCLBMaster is CLBMaster type
-	VMTypeCLBMaster VMType = 3
 
 	TagFile      = "file"
 	TagAddress   = "address"
@@ -190,7 +165,7 @@ func (vm *VM) Call(name string, params []interface{}, extend *map[string]interfa
 		return nil, fmt.Errorf(`unknown function %s`, name)
 	}
 	switch obj.Type {
-	case ObjFunc:
+	case ObjectType_Func:
 		var cost int64
 		if v, ok := (*extend)[`txcost`]; ok {
 			cost = v.(int64)
@@ -200,7 +175,7 @@ func (vm *VM) Call(name string, params []interface{}, extend *map[string]interfa
 		rt := NewRunTime(vm, cost)
 		ret, err = rt.Run(obj.Value.(*Block), params, extend)
 		(*extend)[`txcost`] = rt.Cost()
-	case ObjExtFunc:
+	case ObjectType_ExtFunc:
 		finfo := obj.Value.(ExtFuncInfo)
 		foo := reflect.ValueOf(finfo.Func)
 		var result []reflect.Value

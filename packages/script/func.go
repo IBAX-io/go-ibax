@@ -93,8 +93,8 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 	prevparent := (*rt.extend)[`parent`]
 	parent := ``
 	for i := len(rt.blocks) - 1; i >= 0; i-- {
-		if rt.blocks[i].Block.Type == ObjFunc && rt.blocks[i].Block.Parent != nil &&
-			rt.blocks[i].Block.Parent.Type == ObjContract {
+		if rt.blocks[i].Block.Type == ObjectType_Func && rt.blocks[i].Block.Parent != nil &&
+			rt.blocks[i].Block.Parent.Type == ObjectType_Contract {
 			parent = rt.blocks[i].Block.Parent.Info.(*ContractInfo).Name
 			fid, fname := converter.ParseName(parent)
 			cid, _ := converter.ParseName(name)
@@ -137,7 +137,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 		}
 	}
 	for _, method := range []string{`conditions`, `action`} {
-		if block, ok := (*cblock).Objects[method]; ok && block.Type == ObjFunc {
+		if block, ok := (*cblock).Objects[method]; ok && block.Type == ObjectType_Func {
 			rtemp := NewRunTime(rt.vm, rt.cost)
 			(*rt.extend)[`parent`] = parent
 			_, err = rtemp.Run(block.Value.(*Block), nil, rt.extend)

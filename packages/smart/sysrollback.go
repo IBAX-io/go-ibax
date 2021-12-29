@@ -108,12 +108,12 @@ func SysRollbackNewContract(sysData SysRollData, EcosystemID string) error {
 func SysFlushContract(iroot interface{}, id int64, active bool) error {
 	root := iroot.(*script.Block)
 	if id != 0 {
-		if len(root.Children) != 1 || root.Children[0].Type != script.ObjContract {
+		if len(root.Children) != 1 || root.Children[0].Type != script.ObjectType_Contract {
 			return fmt.Errorf(`only one contract must be in the record`)
 		}
 	}
 	for i, item := range root.Children {
-		if item.Type == script.ObjContract {
+		if item.Type == script.ObjectType_Contract {
 			root.Children[i].Info.(*script.ContractInfo).Owner.TableID = id
 			root.Children[i].Info.(*script.ContractInfo).Owner.Active = active
 		}
@@ -125,7 +125,7 @@ func SysFlushContract(iroot interface{}, id int64, active bool) error {
 // SysSetContractWallet changes WalletID of the contract in smartVM
 func SysSetContractWallet(tblid, state int64, wallet int64) error {
 	for i, item := range script.GetVM().Block.Children {
-		if item != nil && item.Type == script.ObjContract {
+		if item != nil && item.Type == script.ObjectType_Contract {
 			cinfo := item.Info.(*script.ContractInfo)
 			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
 				script.GetVM().Children[i].Info.(*script.ContractInfo).Owner.WalletID = wallet
@@ -147,7 +147,7 @@ func SysRollbackEditContract(transaction *sqldb.DbTransaction, sysData SysRollDa
 	if len(fields["value"]) > 0 {
 		var owner *script.OwnerInfo
 		for i, item := range script.GetVM().Block.Children {
-			if item != nil && item.Type == script.ObjContract {
+			if item != nil && item.Type == script.ObjectType_Contract {
 				cinfo := item.Info.(*script.ContractInfo)
 				if cinfo.Owner.TableID == sysData.ID &&
 					cinfo.Owner.StateID == uint32(converter.StrToInt64(EcosystemID)) {
@@ -204,7 +204,7 @@ func SysRollbackEcosystem(DbTransaction *sqldb.DbTransaction, sysData SysRollDat
 		}
 	} else {
 		vm := script.GetVM()
-		for vm.Children[len(vm.Children)-1].Type == script.ObjContract {
+		for vm.Children[len(vm.Children)-1].Type == script.ObjectType_Contract {
 			cinfo := vm.Children[len(vm.Children)-1].Info.(*script.ContractInfo)
 			if int64(cinfo.Owner.StateID) != sysData.ID {
 				break

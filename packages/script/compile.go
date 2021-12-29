@@ -396,7 +396,7 @@ func fCmdError(buf *[]*Block, state int, lexem *Lexem) error {
 
 func fFparam(buf *[]*Block, state int, lexem *Lexem) error {
 	block := (*buf)[len(*buf)-1]
-	if block.Type == ObjFunc && (state == stateFParam || state == stateFParamTYPE) {
+	if block.Type == ObjectType_Func && (state == stateFParam || state == stateFParamTYPE) {
 		fblock := block.Info.(*FuncInfo)
 		if fblock.Names == nil {
 			fblock.Params = append(fblock.Params, reflect.TypeOf(nil))
@@ -415,14 +415,14 @@ func fFparam(buf *[]*Block, state int, lexem *Lexem) error {
 	if block.Objects == nil {
 		block.Objects = make(map[string]*ObjInfo)
 	}
-	block.Objects[lexem.Value.(string)] = &ObjInfo{Type: ObjVar, Value: len(block.Vars)}
+	block.Objects[lexem.Value.(string)] = &ObjInfo{Type: ObjectType_Var, Value: len(block.Vars)}
 	block.Vars = append(block.Vars, reflect.TypeOf(nil))
 	return nil
 }
 
 func fFtype(buf *[]*Block, state int, lexem *Lexem) error {
 	block := (*buf)[len(*buf)-1]
-	if block.Type == ObjFunc && state == stateFParam {
+	if block.Type == ObjectType_Func && state == stateFParam {
 		fblock := block.Info.(*FuncInfo)
 		if fblock.Names == nil {
 			for pkey, param := range fblock.Params {
@@ -549,10 +549,10 @@ func fAssignVar(buf *[]*Block, state int, lexem *Lexem) error {
 			lexem.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexem.Value.(string)}).Error("modifying system variable")
 			return fmt.Errorf(eSysVar, lexem.Value.(string))
 		}
-		ivar = VarInfo{Obj: &ObjInfo{Type: ObjExtend, Value: lexem.Value.(string)}, Owner: nil}
+		ivar = VarInfo{Obj: &ObjInfo{Type: ObjectType_Extend, Value: lexem.Value.(string)}, Owner: nil}
 	} else {
 		objInfo, tobj := findVar(lexem.Value.(string), buf)
-		if objInfo == nil || objInfo.Type != ObjVar {
+		if objInfo == nil || objInfo.Type != ObjectType_Var {
 			logger := lexem.GetLogger()
 			logger.WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexem.Value.(string)}).Error("unknown variable")
 			return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
@@ -581,7 +581,7 @@ func fAssign(buf *[]*Block, state int, lexem *Lexem) error {
 func fTx(buf *[]*Block, state int, lexem *Lexem) error {
 	contract := (*buf)[len(*buf)-1]
 	logger := lexem.GetLogger()
-	if contract.Type != ObjContract {
+	if contract.Type != ObjectType_Contract {
 		logger.WithFields(log.Fields{"type": consts.ParseError, "contract_type": contract.Type, "lex_value": lexem.Value}).Error("data can only be in contract")
 		return fmt.Errorf(`data can only be in contract`)
 	}
@@ -591,7 +591,7 @@ func fTx(buf *[]*Block, state int, lexem *Lexem) error {
 
 func fSettings(buf *[]*Block, state int, lexem *Lexem) error {
 	contract := (*buf)[len(*buf)-1]
-	if contract.Type != ObjContract {
+	if contract.Type != ObjectType_Contract {
 		logger := lexem.GetLogger()
 		logger.WithFields(log.Fields{"type": consts.ParseError, "contract_type": contract.Type, "lex_value": lexem.Value}).Error("data can only be in contract")
 		return fmt.Errorf(`data can only be in contract`)
@@ -708,19 +708,19 @@ func StateName(state uint32, name string) string {
 }
 
 func fNameBlock(buf *[]*Block, state int, lexem *Lexem) error {
-	var itype int
+	var itype ObjectType
 
 	prev := (*buf)[len(*buf)-2]
 	fblock := (*buf)[len(*buf)-1]
 	name := lexem.Value.(string)
 	switch state {
 	case stateBlock:
-		itype = ObjContract
+		itype = ObjectType_Contract
 		name = StateName((*buf)[0].Info.(uint32), name)
 		fblock.Info = &ContractInfo{ID: uint32(len(prev.Children) - 1), Name: name,
 			Owner: (*buf)[0].Owner}
 	default:
-		itype = ObjFunc
+		itype = ObjectType_Func
 		fblock.Info = &FuncInfo{}
 	}
 	fblock.Type = itype
@@ -826,9 +826,9 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
 		return nil, fError(&blockstack, errMustRCurly, lexems[len(lexems)-1])
 	}
 	for _, item := range root.Objects {
-		if item.Type == ObjContract {
+		if item.Type == ObjectType_Contract {
 			if cond, ok := item.Value.(*Block).Objects[`conditions`]; ok {
-				if cond.Type == ObjFunc && cond.Value.(*Block).Info.(*FuncInfo).CanWrite {
+				if cond.Type == ObjectType_Func && cond.Value.(*Block).Info.(*FuncInfo).CanWrite {
 					return nil, errCondWrite
 				}
 			}
@@ -843,9 +843,9 @@ func (vm *VM) FlushBlock(root *Block) {
 	for key, item := range root.Objects {
 		if cur, ok := vm.Objects[key]; ok {
 			switch item.Type {
-			case ObjContract:
+			case ObjectType_Contract:
 				root.Objects[key].Value.(*Block).Info.(*ContractInfo).ID = cur.Value.(*Block).Info.(*ContractInfo).ID + flushMark
-			case ObjFunc:
+			case ObjectType_Func:
 				root.Objects[key].Value.(*Block).Info.(*FuncInfo).ID = cur.Value.(*Block).Info.(*FuncInfo).ID + flushMark
 				vm.Objects[key].Value = root.Objects[key].Value
 			}
@@ -854,7 +854,7 @@ func (vm *VM) FlushBlock(root *Block) {
 	}
 	for _, item := range root.Children {
 		switch item.Type {
-		case ObjContract:
+		case ObjectType_Contract:
 			if item.Info.(*ContractInfo).ID > flushMark {
 				item.Info.(*ContractInfo).ID -= flushMark
 				vm.Children[item.Info.(*ContractInfo).ID] = item
@@ -863,7 +863,7 @@ func (vm *VM) FlushBlock(root *Block) {
 			}
 			item.Parent = &vm.Block
 			item.Info.(*ContractInfo).ID += uint32(shift)
-		case ObjFunc:
+		case ObjectType_Func:
 			if item.Info.(*FuncInfo).ID > flushMark {
 				item.Info.(*FuncInfo).ID -= flushMark
 				vm.Children[item.Info.(*FuncInfo).ID] = item
@@ -946,7 +946,7 @@ func (vm *VM) getInitValue(lexems *Lexems, ind *int, block *[]*Block) (value map
 		if objInfo == nil {
 			err = fmt.Errorf(eUnknownIdent, lexem.Value.(string))
 		} else {
-			value = mapItem{Type: mapVar, Value: &VarInfo{objInfo, tobj}}
+			value = mapItem{Type: mapVar, Value: &VarInfo{Obj: objInfo, Owner: tobj}}
 		}
 	case lexNumber, lexString:
 		value = mapItem{Type: mapConst, Value: lexem.Value}
@@ -1081,10 +1081,10 @@ main:
 func setWritable(block *[]*Block) {
 	for i := len(*block) - 1; i >= 0; i-- {
 		blockItem := (*block)[i]
-		if blockItem.Type == ObjFunc {
+		if blockItem.Type == ObjectType_Func {
 			blockItem.Info.(*FuncInfo).CanWrite = true
 		}
-		if blockItem.Type == ObjContract {
+		if blockItem.Type == ObjectType_Contract {
 			blockItem.Info.(*ContractInfo).CanWrite = true
 		}
 	}
@@ -1189,11 +1189,11 @@ main:
 				var tail *ByteCode
 				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdCall || prev.Cmd == cmdCallVari {
 					objInfo := prev.Value.(*ObjInfo)
-					if (objInfo.Type == ObjFunc && objInfo.Value.(*Block).Info.(*FuncInfo).CanWrite) ||
-						(objInfo.Type == ObjExtFunc && objInfo.Value.(ExtFuncInfo).CanWrite) {
+					if (objInfo.Type == ObjectType_Func && objInfo.Value.(*Block).Info.(*FuncInfo).CanWrite) ||
+						(objInfo.Type == ObjectType_ExtFunc && objInfo.Value.(ExtFuncInfo).CanWrite) {
 						setWritable(block)
 					}
-					if objInfo.Type == ObjFunc && objInfo.Value.(*Block).Info.(*FuncInfo).Names != nil {
+					if objInfo.Type == ObjectType_Func && objInfo.Value.(*Block).Info.(*FuncInfo).Names != nil {
 						if len(bytecode) == 0 || bytecode[len(bytecode)-1].Cmd != cmdFuncName {
 							bytecode = append(bytecode, &ByteCode{Cmd: cmdPush, Line: lexem.Line})
 						}
@@ -1207,7 +1207,7 @@ main:
 
 								if i < len(*lexems)-5 && (*lexems)[i+3].Type == isLPar {
 									objInfo, _ := vm.findObj((*lexems)[i+2].Value.(string), block)
-									if objInfo != nil && objInfo.Type == ObjFunc || objInfo.Type == ObjExtFunc {
+									if objInfo != nil && objInfo.Type == ObjectType_Func || objInfo.Type == ObjectType_ExtFunc {
 										tail = &ByteCode{Cmd: uint16(cmdCall), Line: lexem.Line, Value: objInfo}
 									}
 								}
@@ -1231,7 +1231,7 @@ main:
 					}
 					count := parcount[len(parcount)-1]
 					parcount = parcount[:len(parcount)-1]
-					if prev.Value.(*ObjInfo).Type == ObjExtFunc {
+					if prev.Value.(*ObjInfo).Type == ObjectType_ExtFunc {
 						var errtext string
 						extinfo := prev.Value.(*ObjInfo).Value.(ExtFuncInfo)
 						wantlen := len(extinfo.Params)
@@ -1368,14 +1368,14 @@ main:
 						objContract *Block
 					)
 					if vm.Extern && objInfo == nil {
-						objInfo = &ObjInfo{Type: ObjContract}
+						objInfo = &ObjInfo{Type: ObjectType_Contract}
 					}
-					if objInfo == nil || (objInfo.Type != ObjExtFunc && objInfo.Type != ObjFunc &&
-						objInfo.Type != ObjContract) {
+					if objInfo == nil || (objInfo.Type != ObjectType_ExtFunc && objInfo.Type != ObjectType_Func &&
+						objInfo.Type != ObjectType_Contract) {
 						logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("unknown function")
 						return fmt.Errorf(`unknown function %s`, lexem.Value.(string))
 					}
-					if objInfo.Type == ObjContract {
+					if objInfo.Type == ObjectType_Contract {
 						if objInfo.Value != nil {
 							objContract = objInfo.Value.(*Block)
 						}
@@ -1383,8 +1383,8 @@ main:
 						isContract = true
 					}
 					cmdCall := uint16(cmdCall)
-					if (objInfo.Type == ObjExtFunc && objInfo.Value.(ExtFuncInfo).Variadic) ||
-						(objInfo.Type == ObjFunc && objInfo.Value.(*Block).Info.(*FuncInfo).Variadic) {
+					if (objInfo.Type == ObjectType_ExtFunc && objInfo.Value.(ExtFuncInfo).Variadic) ||
+						(objInfo.Type == ObjectType_Func && objInfo.Value.(*Block).Info.(*FuncInfo).Variadic) {
 						cmdCall = cmdCallVari
 					}
 					count := 0
@@ -1396,7 +1396,7 @@ main:
 						name := StateName((*block)[0].Info.(uint32), lexem.Value.(string))
 						for j := len(*block) - 1; j >= 0; j-- {
 							topblock := (*block)[j]
-							if topblock.Type == ObjContract {
+							if topblock.Type == ObjectType_Contract {
 								if name == topblock.Info.(*ContractInfo).Name {
 									return errRecursion
 								}
@@ -1426,7 +1426,7 @@ main:
 					call = true
 				}
 				if (*lexems)[i+1].Type == isLBrack {
-					if objInfo == nil || objInfo.Type != ObjVar {
+					if objInfo == nil || objInfo.Type != ObjectType_Var {
 						logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("unknown variable")
 						return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
 					}
@@ -1435,7 +1435,7 @@ main:
 				}
 			}
 			if !call {
-				if objInfo.Type != ObjVar {
+				if objInfo.Type != ObjectType_Var {
 					return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
 				}
 				cmd = &ByteCode{Cmd: cmdVar, Line: lexem.Line, Value: &VarInfo{Obj: objInfo, Owner: tobj}}

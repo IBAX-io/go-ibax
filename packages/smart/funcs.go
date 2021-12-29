@@ -298,13 +298,13 @@ func EmbedFuncs(vt script.VMType) map[string]interface{} {
 		"CreateView":       CreateView,
 	}
 	switch vt {
-	case script.VMTypeCLB:
+	case script.VMType_CLB:
 		f["HTTPRequest"] = HTTPRequest
 		f["Date"] = Date
 		f["HTTPPostJSON"] = HTTPPostJSON
 		f["ValidateCron"] = ValidateCron
 		f["UpdateCron"] = UpdateCron
-	case script.VMTypeCLBMaster:
+	case script.VMType_CLBMaster:
 		f["HTTPRequest"] = HTTPRequest
 		f["Date"] = Date
 		f["HTTPPostJSON"] = HTTPPostJSON
@@ -315,7 +315,7 @@ func EmbedFuncs(vt script.VMType) map[string]interface{} {
 		f["StartCLB"] = StartCLB
 		f["StopCLBProcess"] = StopCLBProcess
 		f["GetCLBList"] = GetCLBList
-	case script.VMTypeSmart:
+	case script.VMType_Smart:
 		f["GetBlock"] = GetBlock
 	}
 	return f
@@ -1122,12 +1122,12 @@ func FlushContract(sc *SmartContract, iroot interface{}, id int64) error {
 	}
 	root := iroot.(*script.Block)
 	if id != 0 {
-		if len(root.Children) != 1 || root.Children[0].Type != script.ObjContract {
+		if len(root.Children) != 1 || root.Children[0].Type != script.ObjectType_Contract {
 			return errOneContract
 		}
 	}
 	for i, item := range root.Children {
-		if item.Type == script.ObjContract {
+		if item.Type == script.ObjectType_Contract {
 			root.Children[i].Info.(*script.ContractInfo).Owner.TableID = id
 		}
 	}
@@ -1135,9 +1135,9 @@ func FlushContract(sc *SmartContract, iroot interface{}, id int64) error {
 		if cur, ok := sc.VM.Objects[key]; ok {
 			var id uint32
 			switch item.Type {
-			case script.ObjContract:
+			case script.ObjectType_Contract:
 				id = cur.Value.(*script.Block).Info.(*script.ContractInfo).ID
-			case script.ObjFunc:
+			case script.ObjectType_Func:
 				id = cur.Value.(*script.Block).Info.(*script.FuncInfo).ID
 			}
 			sc.FlushRollback = append(sc.FlushRollback, &FlushInfo{
