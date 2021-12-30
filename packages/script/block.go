@@ -8,8 +8,39 @@ import (
 // Blocks is a slice of blocks
 type Blocks []*Block
 
+func (bs *Blocks) push(x interface{}) {
+	*bs = append(*bs, x.(*Block))
+}
+
+func (bs *Blocks) peek() *Block {
+	bsLen := len(*bs)
+	if bsLen == 0 {
+		return nil
+	}
+	return (*bs)[bsLen-1]
+}
+
+func (bs *Blocks) get(idx int) *Block {
+	if idx >= 0 && len(*bs) > 0 && len(*bs) > idx {
+		return (*bs)[idx]
+	}
+	return nil
+}
+
 // ByteCodes is the slice of ByteCode items
 type ByteCodes []*ByteCode
+
+func (bs *ByteCodes) push(x interface{}) {
+	*bs = append(*bs, x.(*ByteCode))
+}
+
+func (bs *ByteCodes) peek() *ByteCode {
+	bsLen := len(*bs)
+	if bsLen == 0 {
+		return nil
+	}
+	return (*bs)[bsLen-1]
+}
 
 // Block contains all information about compiled block {...} and its children
 type Block struct {
