@@ -30,6 +30,10 @@ type ByteCode struct {
 	Value interface{}
 }
 
+func newByteCode(cmd uint16, line uint16, value interface{}) *ByteCode {
+	return &ByteCode{Cmd: cmd, Line: line, Value: value}
+}
+
 // OwnerInfo storing info about owner
 type OwnerInfo struct {
 	StateID  uint32 `json:"state"`

@@ -368,7 +368,6 @@ func fError(buf *[]*Block, state int, lexem *Lexem) error {
 		`must be '='`,              // errAssign
 		`must be number or string`, // errStrNum
 	}
-	fmt.Printf("%s %x %v [Ln:%d Col:%d]\r\n", errors[state], lexem.Type, lexem.Value, lexem.Line, lexem.Column)
 	logger := lexem.GetLogger()
 	if lexem.Type == lexNewLine {
 		logger.WithFields(log.Fields{"error": errors[state], "lex_value": lexem.Value, "type": consts.ParseError}).Error("unexpected new line")
@@ -385,12 +384,12 @@ func fFuncResult(buf *[]*Block, state int, lexem *Lexem) error {
 }
 
 func fReturn(buf *[]*Block, state int, lexem *Lexem) error {
-	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, &ByteCode{Cmd: cmdReturn, Line: lexem.Line, Value: 0})
+	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, newByteCode(cmdReturn, lexem.Line, 0))
 	return nil
 }
 
 func fCmdError(buf *[]*Block, state int, lexem *Lexem) error {
-	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, &ByteCode{Cmd: cmdError, Line: lexem.Line, Value: lexem.Value})
+	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, newByteCode(cmdError, lexem.Line, lexem.Value))
 	return nil
 }
 
@@ -514,27 +513,23 @@ func fFNameParam(buf *[]*Block, state int, lexem *Lexem) error {
 }
 
 func fIf(buf *[]*Block, state int, lexem *Lexem) error {
-	(*(*buf)[len(*buf)-2]).Code = append((*(*buf)[len(*buf)-2]).Code, &ByteCode{Cmd: cmdIf,
-		Line: lexem.Line, Value: (*buf)[len(*buf)-1]})
+	(*(*buf)[len(*buf)-2]).Code = append((*(*buf)[len(*buf)-2]).Code, newByteCode(cmdIf, lexem.Line, (*buf)[len(*buf)-1]))
 	return nil
 }
 
 func fWhile(buf *[]*Block, state int, lexem *Lexem) error {
-	(*(*buf)[len(*buf)-2]).Code = append((*(*buf)[len(*buf)-2]).Code, &ByteCode{Cmd: cmdWhile,
-		Line: lexem.Line, Value: (*buf)[len(*buf)-1]})
-	(*(*buf)[len(*buf)-2]).Code = append((*(*buf)[len(*buf)-2]).Code, &ByteCode{Cmd: cmdContinue,
-		Line: lexem.Line, Value: 0})
+	(*(*buf)[len(*buf)-2]).Code = append((*(*buf)[len(*buf)-2]).Code, newByteCode(cmdWhile, lexem.Line, (*buf)[len(*buf)-1]))
+	(*(*buf)[len(*buf)-2]).Code = append((*(*buf)[len(*buf)-2]).Code, newByteCode(cmdContinue, lexem.Line, 0))
 	return nil
 }
 
 func fContinue(buf *[]*Block, state int, lexem *Lexem) error {
-	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, &ByteCode{Cmd: cmdContinue,
-		Line: lexem.Line, Value: 0})
+	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, newByteCode(cmdContinue, lexem.Line, 0))
 	return nil
 }
 
 func fBreak(buf *[]*Block, state int, lexem *Lexem) error {
-	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, &ByteCode{Cmd: cmdBreak, Line: lexem.Line, Value: 0})
+	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, newByteCode(cmdBreak, lexem.Line, 0))
 	return nil
 }
 
@@ -566,15 +561,15 @@ func fAssignVar(buf *[]*Block, state int, lexem *Lexem) error {
 	}
 	prev = append(prev, &ivar)
 	if len(prev) == 1 {
-		(*(*buf)[len(*buf)-1]).Code = append((*block).Code, &ByteCode{Cmd: cmdAssignVar, Line: lexem.Line, Value: prev})
+		(*(*buf)[len(*buf)-1]).Code = append((*block).Code, newByteCode(cmdAssignVar, lexem.Line, prev))
 	} else {
-		(*(*buf)[len(*buf)-1]).Code[len(block.Code)-1] = &ByteCode{Cmd: cmdAssignVar, Line: lexem.Line, Value: prev}
+		(*(*buf)[len(*buf)-1]).Code[len(block.Code)-1] = newByteCode(cmdAssignVar, lexem.Line, prev)
 	}
 	return nil
 }
 
 func fAssign(buf *[]*Block, state int, lexem *Lexem) error {
-	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, &ByteCode{Cmd: cmdAssign, Line: lexem.Line, Value: 0})
+	(*(*buf)[len(*buf)-1]).Code = append((*(*buf)[len(*buf)-1]).Code, newByteCode(cmdAssign, lexem.Line, 0))
 	return nil
 }
 
@@ -693,7 +688,7 @@ func fElse(buf *[]*Block, state int, lexem *Lexem) error {
 		logger.WithFields(log.Fields{"type": consts.ParseError}).Error("there is not if before")
 		return fmt.Errorf(`there is not if before %v [Ln:%d Col:%d]`, lexem.Type, lexem.Line, lexem.Column)
 	}
-	(*(*buf)[len(*buf)-2]).Code = append(code, &ByteCode{Cmd: cmdElse, Line: lexem.Line, Value: (*buf)[len(*buf)-1]})
+	(*(*buf)[len(*buf)-2]).Code = append(code, newByteCode(cmdElse, lexem.Line, (*buf)[len(*buf)-1]))
 	return nil
 }
 
@@ -770,7 +765,7 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
 		}
 		if nextState == stateEval {
 			if newState.NewState&stateLabel > 0 {
-				(*blockstack[len(blockstack)-1]).Code = append((*blockstack[len(blockstack)-1]).Code, &ByteCode{Cmd: cmdLabel, Line: lexem.Line, Value: 0})
+				(*blockstack[len(blockstack)-1]).Code = append((*blockstack[len(blockstack)-1]).Code, newByteCode(cmdLabel, lexem.Line, 0))
 			}
 			curlen := len((*blockstack[len(blockstack)-1]).Code)
 			if err := vm.compileEval(&lexems, &i, &blockstack); err != nil {
@@ -804,7 +799,7 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
 				if len(prev.Code) > 0 && (*prev).Code[len((*prev).Code)-1].Cmd == cmdContinue {
 					(*prev).Code = (*prev).Code[:len((*prev).Code)-1]
 					prev = blockstack[len(blockstack)-1]
-					(*prev).Code = append((*prev).Code, &ByteCode{Cmd: cmdContinue, Line: lexem.Line, Value: 0})
+					(*prev).Code = append((*prev).Code, newByteCode(cmdContinue, lexem.Line, 0))
 				}
 			}
 			blockstack = blockstack[:len(blockstack)-1]
@@ -1115,7 +1110,7 @@ main:
 				if err != nil {
 					return err
 				}
-				bytecode = append(bytecode, &ByteCode{Cmd: cmdMapInit, Line: lexem.Line, Value: pMap})
+				bytecode = append(bytecode, newByteCode(cmdMapInit, lexem.Line, pMap))
 				continue
 			}
 			if lexem.Type == isLBrack {
@@ -1123,7 +1118,7 @@ main:
 				if err != nil {
 					return err
 				}
-				bytecode = append(bytecode, &ByteCode{Cmd: cmdArrayInit, Line: lexem.Line, Value: pArray})
+				bytecode = append(bytecode, newByteCode(cmdArrayInit, lexem.Line, pArray))
 				continue
 			}
 		}
@@ -1147,9 +1142,9 @@ main:
 			}
 			break main
 		case isLPar:
-			buffer = append(buffer, &ByteCode{Cmd: cmdSys, Line: lexem.Line, Value: uint16(0xff)})
+			buffer = append(buffer, newByteCode(cmdSys, lexem.Line, uint16(0xff)))
 		case isLBrack:
-			buffer = append(buffer, &ByteCode{Cmd: cmdSys, Line: lexem.Line, Value: uint16(0xff)})
+			buffer = append(buffer, newByteCode(cmdSys, lexem.Line, uint16(0xff)))
 		case isComma:
 			if len(parcount) > 0 {
 				parcount[len(parcount)-1]++
@@ -1195,7 +1190,7 @@ main:
 					}
 					if objInfo.Type == ObjectType_Func && objInfo.Value.(*Block).Info.(*FuncInfo).Names != nil {
 						if len(bytecode) == 0 || bytecode[len(bytecode)-1].Cmd != cmdFuncName {
-							bytecode = append(bytecode, &ByteCode{Cmd: cmdPush, Line: lexem.Line})
+							bytecode = append(bytecode, newByteCode(cmdPush, lexem.Line, nil))
 						}
 						if i < len(*lexems)-4 && (*lexems)[i+1].Type == isDot {
 							if (*lexems)[i+2].Type != lexIdent {
@@ -1208,7 +1203,7 @@ main:
 								if i < len(*lexems)-5 && (*lexems)[i+3].Type == isLPar {
 									objInfo, _ := vm.findObj((*lexems)[i+2].Value.(string), block)
 									if objInfo != nil && objInfo.Type == ObjectType_Func || objInfo.Type == ObjectType_ExtFunc {
-										tail = &ByteCode{Cmd: uint16(cmdCall), Line: lexem.Line, Value: objInfo}
+										tail = newByteCode(uint16(cmdCall), lexem.Line, objInfo)
 									}
 								}
 								if tail == nil {
@@ -1217,8 +1212,7 @@ main:
 								}
 							}
 							if tail == nil {
-								buffer = append(buffer, &ByteCode{Cmd: cmdFuncName, Line: lexem.Line,
-									Value: FuncNameCmd{Name: (*lexems)[i+2].Value.(string)}})
+								buffer = append(buffer, newByteCode(cmdFuncName, lexem.Line, FuncNameCmd{Name: (*lexems)[i+2].Value.(string)}))
 								count := 0
 								if (*lexems)[i+3].Type != isRPar {
 									count++
@@ -1247,7 +1241,7 @@ main:
 						}
 					}
 					if prev.Cmd == cmdCallVari {
-						bytecode = append(bytecode, &ByteCode{Cmd: cmdPush, Line: lexem.Line, Value: count})
+						bytecode = append(bytecode, newByteCode(cmdPush, lexem.Line, count))
 					}
 					buffer = buffer[:len(buffer)-1]
 					bytecode = append(bytecode, prev)
@@ -1303,7 +1297,8 @@ main:
 				} else if prevLex == lexOper && oper.Priority != cmdUnary {
 					return errOper
 				}
-				byteOper := &ByteCode{Cmd: oper.Cmd, Line: lexem.Line, Value: oper.Priority}
+				byteOper := newByteCode(oper.Cmd, lexem.Line, oper.Priority)
+
 				for {
 					if len(buffer) == 0 {
 						buffer = append(buffer, byteOper)
@@ -1333,7 +1328,7 @@ main:
 			}
 		case lexNumber, lexString:
 			noMap = true
-			cmd = &ByteCode{Cmd: cmdPush, Line: lexem.Line, Value: lexem.Value}
+			cmd = newByteCode(cmdPush, lexem.Line, lexem.Value)
 		case lexExtend:
 			noMap = true
 			if i < len(*lexems)-2 {
@@ -1343,15 +1338,14 @@ main:
 						count++
 					}
 					parcount = append(parcount, count)
-					buffer = append(buffer, &ByteCode{Cmd: cmdCallExtend, Line: lexem.Line, Value: lexem.Value.(string)})
+					buffer = append(buffer, newByteCode(cmdCallExtend, lexem.Line, lexem.Value.(string)))
 					call = true
 				}
 			}
 			if !call {
-				cmd = &ByteCode{Cmd: cmdExtend, Line: lexem.Line, Value: lexem.Value.(string)}
+				cmd = newByteCode(cmdExtend, lexem.Line, lexem.Value.(string))
 				if i < len(*lexems)-1 && (*lexems)[i+1].Type == isLBrack {
-					buffer = append(buffer, &ByteCode{Cmd: cmdIndex, Line: lexem.Line,
-						Value: &IndexInfo{Extend: lexem.Value.(string)}})
+					buffer = append(buffer, newByteCode(cmdIndex, lexem.Line, &IndexInfo{Extend: lexem.Value.(string)}))
 				}
 			}
 		case lexIdent:
@@ -1391,7 +1385,7 @@ main:
 					if (*lexems)[i+2].Type != isRPar {
 						count++
 					}
-					buffer = append(buffer, &ByteCode{Cmd: cmdCall, Line: lexem.Line, Value: objInfo})
+					buffer = append(buffer, newByteCode(cmdCall, lexem.Line, objInfo))
 					if isContract {
 						name := StateName((*block)[0].Info.(uint32), lexem.Value.(string))
 						for j := len(*block) - 1; j >= 0; j-- {
@@ -1409,18 +1403,17 @@ main:
 						if objContract != nil && objContract.Info.(*ContractInfo).CanWrite {
 							setWritable(block)
 						}
-						bytecode = append(bytecode, &ByteCode{Cmd: cmdPush, Line: lexem.Line, Value: name})
+						bytecode = append(bytecode, newByteCode(cmdPush, lexem.Line, name))
 						if count == 0 {
 							count = 2
-							bytecode = append(bytecode, &ByteCode{Cmd: cmdPush, Line: lexem.Line, Value: ""})
-							bytecode = append(bytecode, &ByteCode{Cmd: cmdPush, Line: lexem.Line, Value: ""})
+							bytecode = append(bytecode, newByteCode(cmdPush, lexem.Line, ""))
+							bytecode = append(bytecode, newByteCode(cmdPush, lexem.Line, ""))
 						}
 						count++
 					}
 					if lexem.Value.(string) == `CallContract` {
 						count++
-						bytecode = append(bytecode, &ByteCode{Cmd: cmdPush, Line: lexem.Line,
-							Value: (*block)[0].Info.(uint32)})
+						bytecode = append(bytecode, newByteCode(cmdPush, lexem.Line, (*block)[0].Info.(uint32)))
 					}
 					parcount = append(parcount, count)
 					call = true
@@ -1430,15 +1423,14 @@ main:
 						logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("unknown variable")
 						return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
 					}
-					buffer = append(buffer, &ByteCode{Cmd: cmdIndex, Line: lexem.Line,
-						Value: &IndexInfo{VarOffset: objInfo.Value.(int), Owner: tobj}})
+					buffer = append(buffer, newByteCode(cmdIndex, lexem.Line, &IndexInfo{VarOffset: objInfo.Value.(int), Owner: tobj}))
 				}
 			}
 			if !call {
 				if objInfo.Type != ObjectType_Var {
 					return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
 				}
-				cmd = &ByteCode{Cmd: cmdVar, Line: lexem.Line, Value: &VarInfo{Obj: objInfo, Owner: tobj}}
+				cmd = newByteCode(cmdVar, lexem.Line, &VarInfo{Obj: objInfo, Owner: tobj})
 			}
 		}
 		if lexem.Type != lexNewLine {
@@ -1446,7 +1438,7 @@ main:
 		}
 		if lexem.Type&0xff == lexKeyword {
 			if lexem.Value.(uint32) == keyTail {
-				cmd = &ByteCode{Cmd: cmdUnwrapArr, Line: lexem.Line, Value: 0}
+				cmd = newByteCode(cmdUnwrapArr, lexem.Line, 0)
 			}
 		}
 		if cmd != nil {
@@ -1465,7 +1457,7 @@ main:
 		bytecode = append(bytecode, buffer[i])
 	}
 	if setIndex {
-		bytecode = append(bytecode, &ByteCode{Cmd: cmdSetIndex, Value: indexInfo})
+		bytecode = append(bytecode, newByteCode(cmdSetIndex, 0, indexInfo))
 	}
 	curBlock.Code = append(curBlock.Code, bytecode...)
 	return nil

@@ -151,16 +151,16 @@ var (
 	// list of available types
 	// The list of types which save the corresponding 'reflect' type
 	typesMap = map[string]typeInfo{
-		`bool`:    {DtBool, reflect.TypeOf(true)},
-		`bytes`:   {DtBytes, reflect.TypeOf([]byte{})},
-		`int`:     {DtInt, reflect.TypeOf(int64(0))},
-		`address`: {DtAddress, reflect.TypeOf(int64(0))},
-		`array`:   {DtArray, reflect.TypeOf([]interface{}{})},
-		`map`:     {DtMap, reflect.TypeOf(&types.Map{})},
-		`money`:   {DtMoney, reflect.TypeOf(decimal.New(0, 0))},
-		`float`:   {DtFloat, reflect.TypeOf(float64(0.0))},
-		`string`:  {DtString, reflect.TypeOf(``)},
-		`file`:    {DtFile, reflect.TypeOf(&types.Map{})},
+		`bool`:    {Original: DtBool, Type: reflect.TypeOf(true)},
+		`bytes`:   {Original: DtBytes, Type: reflect.TypeOf([]byte{})},
+		`int`:     {Original: DtInt, Type: reflect.TypeOf(int64(0))},
+		`address`: {Original: DtAddress, Type: reflect.TypeOf(int64(0))},
+		`array`:   {Original: DtArray, Type: reflect.TypeOf([]interface{}{})},
+		`map`:     {Original: DtMap, Type: reflect.TypeOf(&types.Map{})},
+		`money`:   {Original: DtMoney, Type: reflect.TypeOf(decimal.New(0, 0))},
+		`float`:   {Original: DtFloat, Type: reflect.TypeOf(0.0)},
+		`string`:  {Original: DtString, Type: reflect.TypeOf(``)},
+		`file`:    {Original: DtFile, Type: reflect.TypeOf(&types.Map{})},
 	}
 )
 
@@ -174,7 +174,7 @@ type Lexem struct {
 }
 
 // GetLogger returns logger
-func (l Lexem) GetLogger() *log.Entry {
+func (l *Lexem) GetLogger() *log.Entry {
 	return log.WithFields(log.Fields{"lex_type": l.Type, "lex_line": l.Line, "lex_column": l.Column})
 }
 
