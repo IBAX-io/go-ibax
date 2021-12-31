@@ -1273,7 +1273,16 @@ main:
 	rt.blocks = rt.blocks[:len(rt.blocks)-1]
 	if status == statusReturn {
 		if last.Block.Type == ObjectType_Func {
-			for count := len(last.Block.Info.(*FuncInfo).Results); count > 0; count-- {
+			lastResults := last.Block.Info.(*FuncInfo).Results
+			if len(lastResults) > len(rt.stack) {
+				var keyNames []string
+				for i := 0; i < len(lastResults); i++ {
+					keyNames = append(keyNames, lastResults[i].String())
+				}
+				err = fmt.Errorf("not enough arguments to return, need [%s]", strings.Join(keyNames, "|"))
+				return
+			}
+			for count := len(lastResults); count > 0; count-- {
 				rt.stack[start] = rt.stack[len(rt.stack)-count]
 				start++
 			}
