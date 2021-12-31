@@ -97,8 +97,8 @@ type TableInfo struct {
 }
 
 type FlushInfo struct {
-	ID   uint32        // id
-	Prev *script.Block // previous item, nil if the new item has been appended
+	ID   uint32            // id
+	Prev *script.CodeBlock // previous item, nil if the new item has been appended
 	Info *script.ObjInfo
 	Name string // the name
 }
@@ -1120,7 +1120,7 @@ func FlushContract(sc *SmartContract, iroot interface{}, id int64) error {
 	if err := validateAccess(sc, "FlushContract"); err != nil {
 		return err
 	}
-	root := iroot.(*script.Block)
+	root := iroot.(*script.CodeBlock)
 	if id != 0 {
 		if len(root.Children) != 1 || root.Children[0].Type != script.ObjectType_Contract {
 			return errOneContract
@@ -1136,9 +1136,9 @@ func FlushContract(sc *SmartContract, iroot interface{}, id int64) error {
 			var id uint32
 			switch item.Type {
 			case script.ObjectType_Contract:
-				id = cur.Value.(*script.Block).Info.(*script.ContractInfo).ID
+				id = cur.Value.(*script.CodeBlock).Info.(*script.ContractInfo).ID
 			case script.ObjectType_Func:
-				id = cur.Value.(*script.Block).Info.(*script.FuncInfo).ID
+				id = cur.Value.(*script.CodeBlock).Info.(*script.FuncInfo).ID
 			}
 			sc.FlushRollback = append(sc.FlushRollback, &FlushInfo{
 				ID:   id,

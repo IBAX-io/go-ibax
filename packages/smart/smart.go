@@ -161,7 +161,7 @@ func GetAllContracts() (string, error) {
 
 // ActivateContract sets Active status of the contract in script.GetVM()
 func ActivateContract(tblid, state int64, active bool) {
-	for i, item := range script.GetVM().Block.Children {
+	for i, item := range script.GetVM().CodeBlock.Children {
 		if item != nil && item.Type == script.ObjectType_Contract {
 			cinfo := item.Info.(*script.ContractInfo)
 			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
@@ -176,7 +176,7 @@ func SetContractWallet(sc *SmartContract, tblid, state int64, wallet int64) erro
 	if err := validateAccess(sc, "SetContractWallet"); err != nil {
 		return err
 	}
-	for i, item := range script.GetVM().Block.Children {
+	for i, item := range script.GetVM().CodeBlock.Children {
 		if item != nil && item.Type == script.ObjectType_Contract {
 			cinfo := item.Info.(*script.ContractInfo)
 			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
@@ -587,7 +587,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 	methods := []string{`conditions`, `action`}
 	var (
 		estimate decimal.Decimal
-		cfuncs   []*script.Block
+		cfuncs   []*script.CodeBlock
 	)
 	for i := 0; i < len(methods); i++ {
 		cfunc := sc.TxContract.GetFunc(methods[i])

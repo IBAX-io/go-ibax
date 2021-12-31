@@ -5,14 +5,50 @@ import (
 	"strings"
 )
 
-// Blocks is a slice of blocks
-type Blocks []*Block
+/* Byte code could be described as a tree where functions and contracts are on the top level and
+nesting goes further according to nesting of bracketed. Tree nodes are structures of
+'CodeBlock' type. For instance,
+ func a {
+	 if b {
+		 while d {
 
-func (bs *Blocks) push(x interface{}) {
-	*bs = append(*bs, x.(*Block))
+		 }
+	 }
+	 if c {
+	 }
+ }
+ will be compiled into CodeBlock(a) which will have two child blocks CodeBlock (b) and CodeBlock (c) that
+ are responsible for executing bytecode inside if. CodeBlock (b) will have a child CodeBlock (d) with
+ a cycle.
+*/
+
+// CodeBlock contains all information about compiled block {...} and its children
+type CodeBlock struct {
+	Objects  map[string]*ObjInfo
+	Type     ObjectType
+	Owner    *OwnerInfo
+	Info     interface{}
+	Parent   *CodeBlock
+	Vars     []reflect.Type
+	Code     ByteCodes
+	Children CodeBlocks
 }
 
-func (bs *Blocks) peek() *Block {
+// ByteCode stores a command and an additional parameter.
+type ByteCode struct {
+	Cmd   uint16
+	Line  uint16
+	Value interface{}
+}
+
+// CodeBlocks is a slice of blocks
+type CodeBlocks []*CodeBlock
+
+func (bs *CodeBlocks) push(x interface{}) {
+	*bs = append(*bs, x.(*CodeBlock))
+}
+
+func (bs *CodeBlocks) peek() *CodeBlock {
 	bsLen := len(*bs)
 	if bsLen == 0 {
 		return nil
@@ -20,7 +56,7 @@ func (bs *Blocks) peek() *Block {
 	return (*bs)[bsLen-1]
 }
 
-func (bs *Blocks) get(idx int) *Block {
+func (bs *CodeBlocks) get(idx int) *CodeBlock {
 	if idx >= 0 && len(*bs) > 0 && len(*bs) > idx {
 		return (*bs)[idx]
 	}
@@ -42,25 +78,6 @@ func (bs *ByteCodes) peek() *ByteCode {
 	return (*bs)[bsLen-1]
 }
 
-// Block contains all information about compiled block {...} and its children
-type Block struct {
-	Objects  map[string]*ObjInfo
-	Type     ObjectType
-	Owner    *OwnerInfo
-	Info     interface{}
-	Parent   *Block
-	Vars     []reflect.Type
-	Code     ByteCodes
-	Children Blocks
-}
-
-// ByteCode stores a command and an additional parameter.
-type ByteCode struct {
-	Cmd   uint16
-	Line  uint16
-	Value interface{}
-}
-
 func newByteCode(cmd uint16, line uint16, value interface{}) *ByteCode {
 	return &ByteCode{Cmd: cmd, Line: line, Value: value}
 }
@@ -80,18 +97,18 @@ type ObjInfo struct {
 	Value interface{}
 }
 
-func NewBlock() *Block {
-	b := &Block{
+func NewCodeBlock() *CodeBlock {
+	b := &CodeBlock{
 		Objects: make(map[string]*ObjInfo),
 		// Reserved 256 indexes for system purposes
-		Children: make(Blocks, 256, 1024),
+		Children: make(CodeBlocks, 256, 1024),
 	}
 	b.Extend(NewExtendData())
 	return b
 }
 
 // Extend sets the extended variables and functions
-func (b *Block) Extend(ext *ExtendData) {
+func (b *CodeBlock) Extend(ext *ExtendData) {
 	for key, item := range ext.Objects {
 		fobj := reflect.ValueOf(item).Type()
 		switch fobj.Kind() {
@@ -119,7 +136,7 @@ func (b *Block) Extend(ext *ExtendData) {
 	}
 }
 
-func (b *Block) getObjByNameExt(name string, state uint32) (ret *ObjInfo) {
+func (b *CodeBlock) getObjByNameExt(name string, state uint32) (ret *ObjInfo) {
 	sname := StateName(state, name)
 	if ret = b.getObjByName(name); ret == nil && len(sname) > 0 {
 		ret = b.getObjByName(sname)
@@ -127,7 +144,7 @@ func (b *Block) getObjByNameExt(name string, state uint32) (ret *ObjInfo) {
 	return
 }
 
-func (block *Block) getObjByName(name string) (ret *ObjInfo) {
+func (block *CodeBlock) getObjByName(name string) (ret *ObjInfo) {
 	var ok bool
 	names := strings.Split(name, `.`)
 	for i, name := range names {
@@ -141,11 +158,11 @@ func (block *Block) getObjByName(name string) (ret *ObjInfo) {
 		if ret.Type != ObjectType_Contract && ret.Type != ObjectType_Func {
 			return nil
 		}
-		block = ret.Value.(*Block)
+		block = ret.Value.(*CodeBlock)
 	}
 	return
 }
-func (block *Block) parentContractCost() int64 {
+func (block *CodeBlock) parentContractCost() int64 {
 	var cost int64
 	if parent, ok := block.Parent.Info.(*ContractInfo); ok {
 		cost += int64(len(block.Parent.Objects) * CostCall)
@@ -157,16 +174,27 @@ func (block *Block) parentContractCost() int64 {
 	return cost
 }
 
-func (block *Block) isParentContract() bool {
+func (block *CodeBlock) isParentContract() bool {
 	if block.Parent != nil && block.Parent.Type == ObjectType_Contract {
 		return true
 	}
 	return false
 }
 
+func setWritable(block *CodeBlocks) {
+	for i := len(*block) - 1; i >= 0; i-- {
+		blockItem := (*block)[i]
+		if blockItem.Type == ObjectType_Func {
+			blockItem.Info.(*FuncInfo).CanWrite = true
+		}
+		if blockItem.Type == ObjectType_Contract {
+			blockItem.Info.(*ContractInfo).CanWrite = true
+		}
+	}
+}
 func (ret *ObjInfo) getInParams() int {
 	if ret.Type == ObjectType_ExtFunc {
 		return len(ret.Value.(ExtFuncInfo).Params)
 	}
-	return len(ret.Value.(*Block).Info.(*FuncInfo).Params)
+	return len(ret.Value.(*CodeBlock).Info.(*FuncInfo).Params)
 }

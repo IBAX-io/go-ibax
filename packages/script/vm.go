@@ -70,7 +70,7 @@ func vmCompile(vm *VM, src string, owner *OwnerInfo) error {
 }
 
 // VMCompileBlock is compiling block
-func VMCompileBlock(vm *VM, src string, owner *OwnerInfo) (*Block, error) {
+func VMCompileBlock(vm *VM, src string, owner *OwnerInfo) (*CodeBlock, error) {
 	return vm.CompileBlock([]rune(src), owner)
 }
 
@@ -122,11 +122,11 @@ func VMEvalIf(vm *VM, src string, state uint32, extend *map[string]interface{}) 
 	return vm.EvalIf(src, state, extend)
 }
 
-func VMFlushBlock(vm *VM, root *Block) {
+func VMFlushBlock(vm *VM, root *CodeBlock) {
 	vm.FlushBlock(root)
 }
 
-func VMRun(vm *VM, block *Block, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
+func VMRun(vm *VM, block *CodeBlock, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
 	var cost int64
 	if ecost, ok := (*extend)[`txcost`]; ok {
 		cost = ecost.(int64)
@@ -171,7 +171,7 @@ func Compile(src string, owner *OwnerInfo) error {
 }
 
 // CompileBlock calls CompileBlock for smartVM
-func CompileBlock(src string, owner *OwnerInfo) (*Block, error) {
+func CompileBlock(src string, owner *OwnerInfo) (*CodeBlock, error) {
 	return VMCompileBlock(smartVM, src, owner)
 }
 
@@ -186,7 +186,7 @@ func EvalIf(src string, state uint32, extend *map[string]interface{}) (bool, err
 }
 
 // FlushBlock calls FlushBlock for smartVM
-func FlushBlock(root *Block) {
+func FlushBlock(root *CodeBlock) {
 	VMFlushBlock(smartVM, root)
 }
 
@@ -199,8 +199,8 @@ func FuncCallsDB(funcCallsDB map[string]struct{}) {
 	vmFuncCallsDB(smartVM, funcCallsDB)
 }
 
-// Run executes Block in smartVM
-func Run(block *Block, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
+// Run executes CodeBlock in smartVM
+func Run(block *CodeBlock, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
 	return VMRun(smartVM, block, params, extend)
 }
 

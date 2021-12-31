@@ -42,7 +42,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 		return nil, fmt.Errorf(eUnknownContract, name)
 	}
 	logger := log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError})
-	cblock := contract.Value.(*Block)
+	cblock := contract.Value.(*CodeBlock)
 	parnames := make(map[string]bool)
 	pars := strings.Split(txs, `,`)
 	if len(pars) != len(params) {
@@ -140,7 +140,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 		if block, ok := (*cblock).Objects[method]; ok && block.Type == ObjectType_Func {
 			rtemp := NewRunTime(rt.vm, rt.cost)
 			(*rt.extend)[`parent`] = parent
-			_, err = rtemp.Run(block.Value.(*Block), nil, rt.extend)
+			_, err = rtemp.Run(block.Value.(*CodeBlock), nil, rt.extend)
 			rt.cost = rtemp.cost
 			if err != nil {
 				logger.WithFields(log.Fields{"error": err, "method_name": method, "type": consts.ContractError}).Error("executing contract method")
@@ -187,7 +187,7 @@ func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (inte
 	logger := log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError})
 	names := make([]string, 0)
 	vals := make([]interface{}, 0)
-	cblock := contract.Value.(*Block)
+	cblock := contract.Value.(*CodeBlock)
 	if cblock.Info.(*ContractInfo).Tx != nil {
 		for _, tx := range *cblock.Info.(*ContractInfo).Tx {
 			val, ok := params.Get(tx.Name)
@@ -215,7 +215,7 @@ func GetSettings(rt *RunTime, cntname, name string) (interface{}, error) {
 		log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError}).Error("unknown contract")
 		return nil, fmt.Errorf(`unknown contract %s`, cntname)
 	}
-	cblock := contract.Value.(*Block)
+	cblock := contract.Value.(*CodeBlock)
 	if cblock.Info.(*ContractInfo).Settings != nil {
 		if val, ok := cblock.Info.(*ContractInfo).Settings[name]; ok {
 			return val, nil

@@ -79,7 +79,7 @@ type VMError struct {
 }
 
 type blockStack struct {
-	Block  *Block
+	Block  *CodeBlock
 	Offset int
 }
 
@@ -158,7 +158,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 	}
 	if obj.Type == ObjectType_Func {
 		var imap map[string][]interface{}
-		if obj.Value.(*Block).Info.(*FuncInfo).Names != nil {
+		if obj.Value.(*CodeBlock).Info.(*FuncInfo).Names != nil {
 			if rt.stack[size-1] != nil {
 				imap = rt.stack[size-1].(map[string][]interface{})
 			}
@@ -178,7 +178,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 			rt.stack = rt.stack[:shift]
 			rt.stack = append(rt.stack, pars)
 		}
-		finfo := obj.Value.(*Block).Info.(*FuncInfo)
+		finfo := obj.Value.(*CodeBlock).Info.(*FuncInfo)
 		if len(rt.stack) < len(finfo.Params) {
 			log.WithFields(log.Fields{"type": consts.VMError}).Error(errWrongCountPars.Error())
 			return errWrongCountPars
@@ -192,10 +192,10 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 				}
 			}
 		}
-		if obj.Value.(*Block).Info.(*FuncInfo).Names != nil {
+		if obj.Value.(*CodeBlock).Info.(*FuncInfo).Names != nil {
 			rt.stack = append(rt.stack, imap)
 		}
-		_, err = rt.RunCode(obj.Value.(*Block))
+		_, err = rt.RunCode(obj.Value.(*CodeBlock))
 	} else {
 		finfo := obj.Value.(ExtFuncInfo)
 		foo := reflect.ValueOf(finfo.Func)
@@ -552,8 +552,8 @@ func isSelfAssignment(dest, value interface{}) bool {
 	return false
 }
 
-// RunCode executes Block
-func (rt *RunTime) RunCode(block *Block) (status int, err error) {
+// RunCode executes CodeBlock
+func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	top := make([]interface{}, 8)
 	rt.blocks = append(rt.blocks, &blockStack{Block: block, Offset: len(rt.vars)})
 	var namemap map[string][]interface{}
@@ -638,17 +638,17 @@ main:
 			rt.stack = append(rt.stack, cmd.Value.(string))
 		case cmdIf:
 			if valueToBool(rt.stack[len(rt.stack)-1]) {
-				status, err = rt.RunCode(cmd.Value.(*Block))
+				status, err = rt.RunCode(cmd.Value.(*CodeBlock))
 			}
 		case cmdElse:
 			if !valueToBool(rt.stack[len(rt.stack)-1]) {
-				status, err = rt.RunCode(cmd.Value.(*Block))
+				status, err = rt.RunCode(cmd.Value.(*CodeBlock))
 			}
 		case cmdWhile:
 			val := rt.stack[len(rt.stack)-1]
 			rt.stack = rt.stack[:len(rt.stack)-1]
 			if valueToBool(val) {
-				status, err = rt.RunCode(cmd.Value.(*Block))
+				status, err = rt.RunCode(cmd.Value.(*CodeBlock))
 				newci := labels[len(labels)-1]
 				labels = labels[:len(labels)-1]
 				if status == statusContinue {
@@ -1324,8 +1324,8 @@ main:
 	return
 }
 
-// Run executes Block with the specified parameters and extended variables and functions
-func (rt *RunTime) Run(block *Block, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
+// Run executes CodeBlock with the specified parameters and extended variables and functions
+func (rt *RunTime) Run(block *CodeBlock, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			//rt.vm.logger.WithFields(log.Fields{"type": consts.PanicRecoveredError, "error_info": r, "stack": string(debug.Stack())}).Error("runtime panic error")

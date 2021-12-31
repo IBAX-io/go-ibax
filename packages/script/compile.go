@@ -6,7 +6,6 @@ package script
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -24,16 +23,10 @@ type operPrior struct {
 
 // State contains a new state and a handle function
 type compileState struct {
-	NewState int // a new state
-	Func     int // a handle function
+	NewState   stateTypes  // a new state
+	FuncFlag   int         // a handle flag
+	FuncHandle compileFunc // a handle function
 }
-
-type stateLine map[int]compileState
-
-// The list of compile states
-type compileStates []stateLine
-
-type compileFunc func(*Blocks, int, *Lexem) error
 
 const (
 	mapConst = iota
@@ -57,62 +50,6 @@ type mapItem struct {
 // it was implemented in lexical analysis. The difference lays in that we do not convert the list of
 // states and transitions to the intermediate array.
 
-/* Byte code could be described as a tree where functions and contracts are on the top level and
-nesting goes further according to nesting of bracketed brackets. Tree nodes are structures of
-'Block' type. For instance,
- func a {
-	 if b {
-		 while d {
-
-		 }
-	 }
-	 if c {
-	 }
- }
- will be compiled into Block(a) which will have two child blocks Block (b) and Block (c) that
- are responsible for executing bytecode inside if. Block (b) will have a child Block (d) with
- a cycle.
-*/
-
-const (
-	// The list of state types
-	stateRoot = iota
-	stateBody
-	stateBlock
-	stateContract
-	stateFunc
-	stateFParams
-	stateFParam
-	stateFParamTYPE
-	stateFTail
-	stateFResult
-	stateFDot
-	stateVar
-	stateVarType
-	stateAssignEval
-	stateAssign
-	stateTX
-	stateSettings
-	stateConsts
-	stateConstsAssign
-	stateConstsValue
-	stateFields
-	stateEval
-
-	// The list of state flags
-	statePush     = 0x0100
-	statePop      = 0x0200
-	stateStay     = 0x0400
-	stateToBlock  = 0x0800
-	stateToBody   = 0x1000
-	stateFork     = 0x2000
-	stateToFork   = 0x4000
-	stateLabel    = 0x8000
-	stateMustEval = 0x010000
-
-	flushMark = 0x100000
-)
-
 const (
 	// Errors of compilation
 	//	errNoError    = iota
@@ -125,41 +62,6 @@ const (
 	errVarType               // must be type
 	errAssign                // must be '='
 	errStrNum                // must be number or string
-)
-
-const (
-	// This is a list of identifiers for functions that will generate a bytecode for
-	// the corresponding cases
-	// Indexes of handle functions funcs = CompileFunc[]
-	//	cfNothing = iota
-	cfError = iota + 1
-	cfNameBlock
-	cfFResult
-	cfReturn
-	cfIf
-	cfElse
-	cfFParam
-	cfFType
-	cfFTail
-	cfFNameParam
-	cfAssignVar
-	cfAssign
-	cfTX
-	cfSettings
-	cfConstName
-	cfConstValue
-	cfField
-	cfFieldType
-	cfFieldTag
-	cfFields
-	cfFieldComma
-	cfFieldLine
-	cfWhile
-	cfContinue
-	cfBreak
-	cfCmdError
-
-	//	cfEval
 )
 
 var (
@@ -182,513 +84,7 @@ var (
 		isLPar:     {Cmd: cmdSys, Priority: 0xff},
 		isRPar:     {Cmd: cmdSys, Priority: 0},
 	}
-	// The array of functions corresponding to the constants cf...
-	funcs = []compileFunc{nil,
-		fError,
-		fNameBlock,
-		fFuncResult,
-		fReturn,
-		fIf,
-		fElse,
-		fFparam,
-		fFtype,
-		fFtail,
-		fFNameParam,
-		fAssignVar,
-		fAssign,
-		fTx,
-		fSettings,
-		fConstName,
-		fConstValue,
-		fField,
-		fFieldType,
-		fFieldTag,
-		fFields,
-		fFieldComma,
-		fFieldLine,
-		fWhile,
-		fContinue,
-		fBreak,
-		fCmdError,
-	}
-
-	// 'states' describes a finite machine with states on the base of which a bytecode will be generated
-	states = compileStates{
-		{ // stateRoot
-			lexNewLine:                      {NewState: stateRoot, Func: 0},
-			lexKeyword | (keyContract << 8): {NewState: stateContract | statePush, Func: 0},
-			lexKeyword | (keyFunc << 8):     {NewState: stateFunc | statePush, Func: 0},
-			0:                               {NewState: errUnknownCmd, Func: cfError},
-		},
-		{ // stateBody
-			lexNewLine:                      {NewState: stateBody, Func: 0},
-			lexKeyword | (keyFunc << 8):     {NewState: stateFunc | statePush, Func: 0},
-			lexKeyword | (keyReturn << 8):   {NewState: stateEval, Func: cfReturn},
-			lexKeyword | (keyContinue << 8): {NewState: stateBody, Func: cfContinue},
-			lexKeyword | (keyBreak << 8):    {NewState: stateBody, Func: cfBreak},
-			lexKeyword | (keyIf << 8):       {NewState: stateEval | statePush | stateToBlock | stateMustEval, Func: cfIf},
-			lexKeyword | (keyWhile << 8):    {NewState: stateEval | statePush | stateToBlock | stateLabel | stateMustEval, Func: cfWhile},
-			lexKeyword | (keyElse << 8):     {NewState: stateBlock | statePush, Func: cfElse},
-			lexKeyword | (keyVar << 8):      {NewState: stateVar, Func: 0},
-			lexKeyword | (keyTX << 8):       {NewState: stateTX, Func: cfTX},
-			lexKeyword | (keySettings << 8): {NewState: stateSettings, Func: cfSettings},
-			lexKeyword | (keyError << 8):    {NewState: stateEval, Func: cfCmdError},
-			lexKeyword | (keyWarning << 8):  {NewState: stateEval, Func: cfCmdError},
-			lexKeyword | (keyInfo << 8):     {NewState: stateEval, Func: cfCmdError},
-			lexIdent:                        {NewState: stateAssignEval | stateFork, Func: 0},
-			lexExtend:                       {NewState: stateAssignEval | stateFork, Func: 0},
-			isRCurly:                        {NewState: statePop, Func: 0},
-			0:                               {NewState: errMustRCurly, Func: cfError},
-		},
-		{ // stateBlock
-			lexNewLine: {NewState: stateBlock, Func: 0},
-			isLCurly:   {NewState: stateBody, Func: 0},
-			0:          {NewState: errMustLCurly, Func: cfError},
-		},
-		{ // stateContract
-			lexNewLine: {NewState: stateContract, Func: 0},
-			lexIdent:   {NewState: stateBlock, Func: cfNameBlock},
-			0:          {NewState: errMustName, Func: cfError},
-		},
-		{ // stateFunc
-			lexNewLine: {NewState: stateFunc, Func: 0},
-			lexIdent:   {NewState: stateFParams, Func: cfNameBlock},
-			0:          {NewState: errMustName, Func: cfError},
-		},
-		{ // stateFParams
-			lexNewLine: {NewState: stateFParams, Func: 0},
-			isLPar:     {NewState: stateFParam, Func: 0},
-			0:          {NewState: stateFResult | stateStay, Func: 0},
-		},
-		{ // stateFParam
-			lexNewLine: {NewState: stateFParam, Func: 0},
-			lexIdent:   {NewState: stateFParamTYPE, Func: cfFParam},
-			// lexType:  {NewState: stateFParam, Func: cfFType},
-			isComma: {NewState: stateFParam, Func: 0},
-			isRPar:  {NewState: stateFResult, Func: 0},
-			0:       {NewState: errParams, Func: cfError},
-		},
-		{ // stateFParamTYPE
-			lexIdent:                    {NewState: stateFParamTYPE, Func: cfFParam},
-			lexType:                     {NewState: stateFParam, Func: cfFType},
-			lexKeyword | (keyTail << 8): {NewState: stateFTail, Func: cfFTail},
-			isComma:                     {NewState: stateFParamTYPE, Func: 0},
-			//			isRPar:  {NewState: stateFResult, Func: 0},
-			0: {NewState: errVarType, Func: cfError},
-		},
-		{ // stateFTail
-			lexNewLine: {NewState: stateFTail, Func: 0},
-			isRPar:     {NewState: stateFResult, Func: 0},
-			0:          {NewState: errParams, Func: cfError},
-		},
-		{ // stateFResult
-			lexNewLine: {NewState: stateFResult, Func: 0},
-			isDot:      {NewState: stateFDot, Func: 0},
-			lexType:    {NewState: stateFResult, Func: cfFResult},
-			isComma:    {NewState: stateFResult, Func: 0},
-			0:          {NewState: stateBlock | stateStay, Func: 0},
-		},
-		{ // stateFDot
-			lexNewLine: {NewState: stateFDot, Func: 0},
-			lexIdent:   {NewState: stateFParams, Func: cfFNameParam},
-			0:          {NewState: errMustName, Func: cfError},
-		},
-		{ // stateVar
-			lexNewLine: {NewState: stateBody, Func: 0},
-			lexIdent:   {NewState: stateVarType, Func: cfFParam},
-			isRCurly:   {NewState: stateBody | stateStay, Func: 0},
-			isComma:    {NewState: stateVar, Func: 0},
-			0:          {NewState: errVars, Func: cfError},
-		},
-		{ // stateVarType
-			lexIdent: {NewState: stateVarType, Func: cfFParam},
-			lexType:  {NewState: stateVar, Func: cfFType},
-			isComma:  {NewState: stateVarType, Func: 0},
-			0:        {NewState: errVarType, Func: cfError},
-		},
-		{ // stateAssignEval
-			isLPar:   {NewState: stateEval | stateToFork | stateToBody, Func: 0},
-			isLBrack: {NewState: stateEval | stateToFork | stateToBody, Func: 0},
-			0:        {NewState: stateAssign | stateToFork | stateStay, Func: 0},
-		},
-		{ // stateAssign
-			isComma:   {NewState: stateAssign, Func: 0},
-			lexIdent:  {NewState: stateAssign, Func: cfAssignVar},
-			lexExtend: {NewState: stateAssign, Func: cfAssignVar},
-			isEq:      {NewState: stateEval | stateToBody, Func: cfAssign},
-			0:         {NewState: errAssign, Func: cfError},
-		},
-		{ // stateTX
-			lexNewLine: {NewState: stateTX, Func: 0},
-			isLCurly:   {NewState: stateFields, Func: 0},
-			0:          {NewState: errMustLCurly, Func: cfError},
-		},
-		{ // stateSettings
-			lexNewLine: {NewState: stateSettings, Func: 0},
-			isLCurly:   {NewState: stateConsts, Func: 0},
-			0:          {NewState: errMustLCurly, Func: cfError},
-		},
-		{ // stateConsts
-			lexNewLine: {NewState: stateConsts, Func: 0},
-			isComma:    {NewState: stateConsts, Func: 0},
-			lexIdent:   {NewState: stateConstsAssign, Func: cfConstName},
-			isRCurly:   {NewState: stateToBody, Func: 0},
-			0:          {NewState: errMustRCurly, Func: cfError},
-		},
-		{ // stateConstsAssign
-			isEq: {NewState: stateConstsValue, Func: 0},
-			0:    {NewState: errAssign, Func: cfError},
-		},
-		{ // stateConstsValue
-			lexString: {NewState: stateConsts, Func: cfConstValue},
-			lexNumber: {NewState: stateConsts, Func: cfConstValue},
-			0:         {NewState: errStrNum, Func: cfError},
-		},
-		{ // stateFields
-			lexNewLine: {NewState: stateFields, Func: cfFieldLine},
-			isComma:    {NewState: stateFields, Func: cfFieldComma},
-			lexIdent:   {NewState: stateFields, Func: cfField},
-			lexType:    {NewState: stateFields, Func: cfFieldType},
-			lexString:  {NewState: stateFields, Func: cfFieldTag},
-			isRCurly:   {NewState: stateToBody, Func: cfFields},
-			0:          {NewState: errMustRCurly, Func: cfError},
-		},
-	}
 )
-
-func fError(buf *Blocks, state int, lexem *Lexem) error {
-	errors := []string{`no error`,
-		`unknown command`,          // errUnknownCmd
-		`must be the name`,         // errMustName
-		`must be '{'`,              // errMustLCurly
-		`must be '}'`,              // errMustRCurly
-		`wrong parameters`,         // errParams
-		`wrong variables`,          // errVars
-		`must be type`,             // errVarType
-		`must be '='`,              // errAssign
-		`must be number or string`, // errStrNum
-	}
-	logger := lexem.GetLogger()
-	if lexem.Type == lexNewLine {
-		logger.WithFields(log.Fields{"error": errors[state], "lex_value": lexem.Value, "type": consts.ParseError}).Error("unexpected new line")
-		return fmt.Errorf(`%s (unexpected new line) [Ln:%d]`, errors[state], lexem.Line-1)
-	}
-	logger.WithFields(log.Fields{"error": errors[state], "lex_value": lexem.Value, "type": consts.ParseError}).Error("parsing error")
-	return fmt.Errorf(`%s %x %v [Ln:%d Col:%d]`, errors[state], lexem.Type, lexem.Value, lexem.Line, lexem.Column)
-}
-
-func fFuncResult(buf *Blocks, state int, lexem *Lexem) error {
-	fblock := buf.peek().Info.(*FuncInfo)
-	(*fblock).Results = append((*fblock).Results, lexem.Value.(reflect.Type))
-	return nil
-}
-
-func fReturn(buf *Blocks, state int, lexem *Lexem) error {
-	buf.peek().Code.push(newByteCode(cmdReturn, lexem.Line, 0))
-	return nil
-}
-
-func fCmdError(buf *Blocks, state int, lexem *Lexem) error {
-	buf.peek().Code.push(newByteCode(cmdError, lexem.Line, lexem.Value))
-	return nil
-}
-
-func fFparam(buf *Blocks, state int, lexem *Lexem) error {
-	block := buf.peek()
-	if block.Type == ObjectType_Func && (state == stateFParam || state == stateFParamTYPE) {
-		fblock := block.Info.(*FuncInfo)
-		if fblock.Names == nil {
-			fblock.Params = append(fblock.Params, reflect.TypeOf(nil))
-		} else {
-			for key := range *fblock.Names {
-				if key[0] == '_' {
-					name := key[1:]
-					params := append((*fblock.Names)[name].Params, reflect.TypeOf(nil))
-					offset := append((*fblock.Names)[name].Offset, len(block.Vars))
-					(*fblock.Names)[name] = FuncName{Params: params, Offset: offset}
-					break
-				}
-			}
-		}
-	}
-	if block.Objects == nil {
-		block.Objects = make(map[string]*ObjInfo)
-	}
-	block.Objects[lexem.Value.(string)] = &ObjInfo{Type: ObjectType_Var, Value: len(block.Vars)}
-	block.Vars = append(block.Vars, reflect.TypeOf(nil))
-	return nil
-}
-
-func fFtype(buf *Blocks, state int, lexem *Lexem) error {
-	block := buf.peek()
-	if block.Type == ObjectType_Func && state == stateFParam {
-		fblock := block.Info.(*FuncInfo)
-		if fblock.Names == nil {
-			for pkey, param := range fblock.Params {
-				if param == reflect.TypeOf(nil) {
-					fblock.Params[pkey] = lexem.Value.(reflect.Type)
-				}
-			}
-		} else {
-			for key := range *fblock.Names {
-				if key[0] == '_' {
-					for pkey, param := range (*fblock.Names)[key[1:]].Params {
-						if param == reflect.TypeOf(nil) {
-							(*fblock.Names)[key[1:]].Params[pkey] = lexem.Value.(reflect.Type)
-						}
-					}
-					break
-				}
-			}
-		}
-	}
-	for vkey, ivar := range block.Vars {
-		if ivar == reflect.TypeOf(nil) {
-			block.Vars[vkey] = lexem.Value.(reflect.Type)
-		}
-	}
-	return nil
-}
-
-func fFtail(buf *Blocks, state int, lexem *Lexem) error {
-	var used bool
-	block := buf.peek()
-
-	fblock := block.Info.(*FuncInfo)
-	if fblock.Names == nil {
-		for pkey, param := range fblock.Params {
-			if param == reflect.TypeOf(nil) {
-				if used {
-					return fmt.Errorf(`... parameter must be one`)
-				}
-				fblock.Params[pkey] = reflect.TypeOf([]interface{}{})
-				used = true
-			}
-		}
-		block.Info.(*FuncInfo).Variadic = true
-	} else {
-		for key := range *fblock.Names {
-			if key[0] == '_' {
-				name := key[1:]
-				for pkey, param := range (*fblock.Names)[name].Params {
-					if param == reflect.TypeOf(nil) {
-						if used {
-							return fmt.Errorf(`... parameter must be one`)
-						}
-						(*fblock.Names)[name].Params[pkey] = reflect.TypeOf([]interface{}{})
-						used = true
-					}
-				}
-				offset := append((*fblock.Names)[name].Offset, len(block.Vars))
-				(*fblock.Names)[name] = FuncName{Params: (*fblock.Names)[name].Params,
-					Offset: offset, Variadic: true}
-				break
-			}
-		}
-	}
-	for vkey, ivar := range block.Vars {
-		if ivar == reflect.TypeOf(nil) {
-			block.Vars[vkey] = reflect.TypeOf([]interface{}{})
-		}
-	}
-	return nil
-}
-
-func fFNameParam(buf *Blocks, state int, lexem *Lexem) error {
-	block := buf.peek()
-
-	fblock := block.Info.(*FuncInfo)
-	if fblock.Names == nil {
-		names := make(map[string]FuncName)
-		fblock.Names = &names
-	}
-	for key := range *fblock.Names {
-		if key[0] == '_' {
-			delete(*fblock.Names, key)
-		}
-	}
-	(*fblock.Names)[`_`+lexem.Value.(string)] = FuncName{}
-
-	return nil
-}
-
-func fIf(buf *Blocks, state int, lexem *Lexem) error {
-	buf.get(len(*buf) - 2).Code.push(newByteCode(cmdIf, lexem.Line, buf.peek()))
-	return nil
-}
-
-func fWhile(buf *Blocks, state int, lexem *Lexem) error {
-	buf.get(len(*buf) - 2).Code.push(newByteCode(cmdWhile, lexem.Line, buf.peek()))
-	buf.get(len(*buf) - 2).Code.push(newByteCode(cmdContinue, lexem.Line, 0))
-	return nil
-}
-
-func fContinue(buf *Blocks, state int, lexem *Lexem) error {
-	buf.peek().Code.push(newByteCode(cmdContinue, lexem.Line, 0))
-	return nil
-}
-
-func fBreak(buf *Blocks, state int, lexem *Lexem) error {
-	buf.peek().Code.push(newByteCode(cmdBreak, lexem.Line, 0))
-	return nil
-}
-
-func fAssignVar(buf *Blocks, state int, lexem *Lexem) error {
-	block := buf.peek()
-	var (
-		prev []*VarInfo
-		ivar VarInfo
-	)
-	if lexem.Type == lexExtend {
-		if isSysVar(lexem.Value.(string)) {
-			lexem.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexem.Value.(string)}).Error("modifying system variable")
-			return fmt.Errorf(eSysVar, lexem.Value.(string))
-		}
-		ivar = VarInfo{Obj: &ObjInfo{Type: ObjectType_Extend, Value: lexem.Value.(string)}, Owner: nil}
-	} else {
-		objInfo, tobj := findVar(lexem.Value.(string), buf)
-		if objInfo == nil || objInfo.Type != ObjectType_Var {
-			logger := lexem.GetLogger()
-			logger.WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexem.Value.(string)}).Error("unknown variable")
-			return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
-		}
-		ivar = VarInfo{Obj: objInfo, Owner: tobj}
-	}
-	if len(block.Code) > 0 {
-		if block.Code[len(block.Code)-1].Cmd == cmdAssignVar {
-			prev = block.Code[len(block.Code)-1].Value.([]*VarInfo)
-		}
-	}
-	prev = append(prev, &ivar)
-	if len(prev) == 1 {
-		block.Code.push(newByteCode(cmdAssignVar, lexem.Line, prev))
-	} else {
-		block.Code[len(block.Code)-1] = newByteCode(cmdAssignVar, lexem.Line, prev)
-	}
-	return nil
-}
-
-func fAssign(buf *Blocks, state int, lexem *Lexem) error {
-	buf.peek().Code.push(newByteCode(cmdAssign, lexem.Line, 0))
-	return nil
-}
-
-func fTx(buf *Blocks, state int, lexem *Lexem) error {
-	contract := buf.peek()
-	logger := lexem.GetLogger()
-	if contract.Type != ObjectType_Contract {
-		logger.WithFields(log.Fields{"type": consts.ParseError, "contract_type": contract.Type, "lex_value": lexem.Value}).Error("data can only be in contract")
-		return fmt.Errorf(`data can only be in contract`)
-	}
-	(*contract).Info.(*ContractInfo).Tx = new([]*FieldInfo)
-	return nil
-}
-
-func fSettings(buf *Blocks, state int, lexem *Lexem) error {
-	contract := buf.peek()
-	if contract.Type != ObjectType_Contract {
-		logger := lexem.GetLogger()
-		logger.WithFields(log.Fields{"type": consts.ParseError, "contract_type": contract.Type, "lex_value": lexem.Value}).Error("data can only be in contract")
-		return fmt.Errorf(`data can only be in contract`)
-	}
-	(*contract).Info.(*ContractInfo).Settings = make(map[string]interface{})
-	return nil
-}
-
-func fConstName(buf *Blocks, state int, lexem *Lexem) error {
-	sets := buf.peek().Info.(*ContractInfo).Settings
-	sets[lexem.Value.(string)] = nil
-	return nil
-}
-
-func fConstValue(buf *Blocks, state int, lexem *Lexem) error {
-	sets := buf.peek().Info.(*ContractInfo).Settings
-	for key, val := range sets {
-		if val == nil {
-			sets[key] = lexem.Value
-			break
-		}
-	}
-	return nil
-}
-
-func fField(buf *Blocks, state int, lexem *Lexem) error {
-	tx := buf.peek().Info.(*ContractInfo).Tx
-	if len(*tx) > 0 && (*tx)[len(*tx)-1].Type == reflect.TypeOf(nil) &&
-		(*tx)[len(*tx)-1].Tags != `_` {
-		return fmt.Errorf(eDataType, lexem.Line, lexem.Column)
-	}
-	*tx = append(*tx, &FieldInfo{Name: lexem.Value.(string), Type: reflect.TypeOf(nil)})
-	return nil
-}
-
-func fFields(buf *Blocks, state int, lexem *Lexem) error {
-	tx := buf.peek().Info.(*ContractInfo).Tx
-	if len(*tx) > 0 && (*tx)[len(*tx)-1].Type == nil {
-		return fmt.Errorf(eDataType, lexem.Line, lexem.Column)
-	}
-	return nil
-}
-
-func fFieldComma(buf *Blocks, state int, lexem *Lexem) error {
-	tx := buf.peek().Info.(*ContractInfo).Tx
-	if len(*tx) == 0 || (*tx)[len(*tx)-1].Type != nil {
-		return fmt.Errorf(eDataName, lexem.Line, lexem.Column)
-	}
-	(*tx)[len(*tx)-1].Tags = `_`
-	return nil
-}
-
-func fFieldLine(buf *Blocks, state int, lexem *Lexem) error {
-	tx := buf.peek().Info.(*ContractInfo).Tx
-	if len(*tx) > 0 && (*tx)[len(*tx)-1].Type == nil {
-		return fmt.Errorf(eDataType, lexem.Line, lexem.Column)
-	}
-	for i, field := range *tx {
-		if field.Tags == `_` {
-			(*tx)[i].Tags = ``
-		}
-	}
-	return nil
-}
-
-func fFieldType(buf *Blocks, state int, lexem *Lexem) error {
-	tx := buf.peek().Info.(*ContractInfo).Tx
-	if len(*tx) == 0 || (*tx)[len(*tx)-1].Type != nil {
-		return fmt.Errorf(eDataName, lexem.Line, lexem.Column)
-	}
-	for i, field := range *tx {
-		if field.Type == reflect.TypeOf(nil) {
-			(*tx)[i].Type = lexem.Value.(reflect.Type)
-			(*tx)[i].Original = lexem.Ext
-		}
-	}
-	return nil
-}
-
-func fFieldTag(buf *Blocks, state int, lexem *Lexem) error {
-	tx := buf.peek().Info.(*ContractInfo).Tx
-	if len(*tx) == 0 || (*tx)[len(*tx)-1].Type == nil || len((*tx)[len(*tx)-1].Tags) != 0 {
-		return fmt.Errorf(eDataTag, lexem.Line, lexem.Column)
-	}
-	for i := len(*tx) - 1; i >= 0; i-- {
-		if i == len(*tx)-1 || (*tx)[i].Tags == `_` {
-			(*tx)[i].Tags = lexem.Value.(string)
-			continue
-		}
-		break
-	}
-	return nil
-}
-
-func fElse(buf *Blocks, state int, lexem *Lexem) error {
-	code := buf.get(len(*buf) - 2).Code
-	if code.peek().Cmd != cmdIf {
-		return fmt.Errorf(`there is not if before %v [Ln:%d Col:%d]`, lexem.Type, lexem.Line, lexem.Column)
-	}
-	code.push(newByteCode(cmdElse, lexem.Line, buf.peek()))
-	return nil
-}
 
 // StateName checks the name of the contract and modifies it to @[state]name if it is necessary.
 func StateName(state uint32, name string) string {
@@ -700,30 +96,9 @@ func StateName(state uint32, name string) string {
 	return name
 }
 
-func fNameBlock(buf *Blocks, state int, lexem *Lexem) error {
-	var itype ObjectType
-
-	prev := (*buf)[len(*buf)-2]
-	fblock := buf.peek()
-	name := lexem.Value.(string)
-	switch state {
-	case stateBlock:
-		itype = ObjectType_Contract
-		name = StateName((*buf)[0].Info.(uint32), name)
-		fblock.Info = &ContractInfo{ID: uint32(len(prev.Children) - 1), Name: name,
-			Owner: (*buf)[0].Owner}
-	default:
-		itype = ObjectType_Func
-		fblock.Info = &FuncInfo{}
-	}
-	fblock.Type = itype
-	prev.Objects[name] = &ObjInfo{Type: itype, Value: fblock}
-	return nil
-}
-
-// CompileBlock compile the source code into the Block structure with a byte-code
-func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
-	root := &Block{Info: owner.StateID, Owner: owner}
+// CompileBlock compile the source code into the CodeBlock structure with a byte-code
+func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
+	root := &CodeBlock{Info: owner.StateID, Owner: owner}
 	lexems, err := lexParser(input)
 	if err != nil {
 		return nil, err
@@ -731,9 +106,9 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
 	if len(lexems) == 0 {
 		return root, nil
 	}
-	curState := 0
-	stack := make([]int, 0, 64)
-	blockstack := make(Blocks, 1, 64)
+	curState := stateTypes(0)
+	stack := make([]stateTypes, 0, 64)
+	blockstack := make(CodeBlocks, 1, 64)
 	blockstack[0] = root
 	fork := 0
 
@@ -781,7 +156,7 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
 			if top.Objects == nil {
 				top.Objects = make(map[string]*ObjInfo)
 			}
-			block := &Block{Parent: top}
+			block := &CodeBlock{Parent: top}
 			top.Children.push(block)
 			blockstack.push(block)
 		}
@@ -808,8 +183,8 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
 		if (newState.NewState & stateToBody) > 0 {
 			nextState = stateBody
 		}
-		if newState.Func > 0 {
-			if err := funcs[newState.Func](&blockstack, nextState, lexem); err != nil {
+		if newState.FuncFlag > 0 {
+			if err := funcHandles[newState.FuncFlag](&blockstack, nextState, lexem); err != nil {
 				return nil, err
 			}
 		}
@@ -820,8 +195,8 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
 	}
 	for _, item := range root.Objects {
 		if item.Type == ObjectType_Contract {
-			if cond, ok := item.Value.(*Block).Objects[`conditions`]; ok {
-				if cond.Type == ObjectType_Func && cond.Value.(*Block).Info.(*FuncInfo).CanWrite {
+			if cond, ok := item.Value.(*CodeBlock).Objects[`conditions`]; ok {
+				if cond.Type == ObjectType_Func && cond.Value.(*CodeBlock).Info.(*FuncInfo).CanWrite {
 					return nil, errCondWrite
 				}
 			}
@@ -830,16 +205,16 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*Block, error) {
 	return root, nil
 }
 
-// FlushBlock loads the compiled Block into the virtual machine
-func (vm *VM) FlushBlock(root *Block) {
+// FlushBlock loads the compiled CodeBlock into the virtual machine
+func (vm *VM) FlushBlock(root *CodeBlock) {
 	shift := len(vm.Children)
 	for key, item := range root.Objects {
 		if cur, ok := vm.Objects[key]; ok {
 			switch item.Type {
 			case ObjectType_Contract:
-				root.Objects[key].Value.(*Block).Info.(*ContractInfo).ID = cur.Value.(*Block).Info.(*ContractInfo).ID + flushMark
+				root.Objects[key].Value.(*CodeBlock).Info.(*ContractInfo).ID = cur.Value.(*CodeBlock).Info.(*ContractInfo).ID + flushMark
 			case ObjectType_Func:
-				root.Objects[key].Value.(*Block).Info.(*FuncInfo).ID = cur.Value.(*Block).Info.(*FuncInfo).ID + flushMark
+				root.Objects[key].Value.(*CodeBlock).Info.(*FuncInfo).ID = cur.Value.(*CodeBlock).Info.(*FuncInfo).ID + flushMark
 				vm.Objects[key].Value = root.Objects[key].Value
 			}
 		}
@@ -854,7 +229,7 @@ func (vm *VM) FlushBlock(root *Block) {
 				shift--
 				continue
 			}
-			item.Parent = &vm.Block
+			item.Parent = vm.CodeBlock
 			item.Info.(*ContractInfo).ID += uint32(shift)
 		case ObjectType_Func:
 			if item.Info.(*FuncInfo).ID > flushMark {
@@ -863,7 +238,7 @@ func (vm *VM) FlushBlock(root *Block) {
 				shift--
 				continue
 			}
-			item.Parent = &vm.Block
+			item.Parent = vm.CodeBlock
 			item.Info.(*FuncInfo).ID += uint32(shift)
 		}
 		vm.Children = append(vm.Children, item)
@@ -885,7 +260,7 @@ func (vm *VM) Compile(input []rune, owner *OwnerInfo) error {
 	return err
 }
 
-func findVar(name string, block *Blocks) (ret *ObjInfo, owner *Block) {
+func findVar(name string, block *CodeBlocks) (ret *ObjInfo, owner *CodeBlock) {
 	var ok bool
 	i := len(*block) - 1
 	for ; i >= 0; i-- {
@@ -897,7 +272,7 @@ func findVar(name string, block *Blocks) (ret *ObjInfo, owner *Block) {
 	return nil, nil
 }
 
-func (vm *VM) findObj(name string, block *Blocks) (ret *ObjInfo, owner *Block) {
+func (vm *VM) findObj(name string, block *CodeBlocks) (ret *ObjInfo, owner *CodeBlock) {
 	sname := StateName((*block)[0].Info.(uint32), name)
 	ret, owner = findVar(name, block)
 	if ret != nil {
@@ -913,7 +288,7 @@ func (vm *VM) findObj(name string, block *Blocks) (ret *ObjInfo, owner *Block) {
 	return
 }
 
-func (vm *VM) getInitValue(lexems *Lexems, ind *int, block *Blocks) (value mapItem, err error) {
+func (vm *VM) getInitValue(lexems *Lexems, ind *int, block *CodeBlocks) (value mapItem, err error) {
 	var (
 		subArr []mapItem
 		subMap *types.Map
@@ -950,7 +325,7 @@ func (vm *VM) getInitValue(lexems *Lexems, ind *int, block *Blocks) (value mapIt
 	return
 }
 
-func (vm *VM) getInitMap(lexems *Lexems, ind *int, block *Blocks, oneItem bool) (*types.Map, error) {
+func (vm *VM) getInitMap(lexems *Lexems, ind *int, block *CodeBlocks, oneItem bool) (*types.Map, error) {
 	var next int
 	if !oneItem {
 		next = 1
@@ -1025,7 +400,7 @@ main:
 	return ret, nil
 }
 
-func (vm *VM) getInitArray(lexems *Lexems, ind *int, block *Blocks) ([]mapItem, error) {
+func (vm *VM) getInitArray(lexems *Lexems, ind *int, block *CodeBlocks) ([]mapItem, error) {
 	i := *ind + 1
 	ret := make([]mapItem, 0)
 	state := mustValue
@@ -1071,20 +446,8 @@ main:
 	return ret, nil
 }
 
-func setWritable(block *Blocks) {
-	for i := len(*block) - 1; i >= 0; i-- {
-		blockItem := (*block)[i]
-		if blockItem.Type == ObjectType_Func {
-			blockItem.Info.(*FuncInfo).CanWrite = true
-		}
-		if blockItem.Type == ObjectType_Contract {
-			blockItem.Info.(*ContractInfo).CanWrite = true
-		}
-	}
-}
-
 // This function is responsible for the compilation of expressions
-func (vm *VM) compileEval(lexems *Lexems, ind *int, block *Blocks) error {
+func (vm *VM) compileEval(lexems *Lexems, ind *int, block *CodeBlocks) error {
 	var indexInfo *IndexInfo
 
 	i := *ind
@@ -1182,11 +545,11 @@ main:
 				var tail *ByteCode
 				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdCall || prev.Cmd == cmdCallVari {
 					objInfo := prev.Value.(*ObjInfo)
-					if (objInfo.Type == ObjectType_Func && objInfo.Value.(*Block).Info.(*FuncInfo).CanWrite) ||
+					if (objInfo.Type == ObjectType_Func && objInfo.Value.(*CodeBlock).Info.(*FuncInfo).CanWrite) ||
 						(objInfo.Type == ObjectType_ExtFunc && objInfo.Value.(ExtFuncInfo).CanWrite) {
 						setWritable(block)
 					}
-					if objInfo.Type == ObjectType_Func && objInfo.Value.(*Block).Info.(*FuncInfo).Names != nil {
+					if objInfo.Type == ObjectType_Func && objInfo.Value.(*CodeBlock).Info.(*FuncInfo).Names != nil {
 						if len(bytecode) == 0 || bytecode[len(bytecode)-1].Cmd != cmdFuncName {
 							bytecode.push(newByteCode(cmdPush, lexem.Line, nil))
 						}
@@ -1195,7 +558,7 @@ main:
 								log.WithFields(log.Fields{"type": consts.ParseError}).Error("must be the name of the tail")
 								return fmt.Errorf(`must be the name of the tail`)
 							}
-							names := prev.Value.(*ObjInfo).Value.(*Block).Info.(*FuncInfo).Names
+							names := prev.Value.(*ObjInfo).Value.(*CodeBlock).Info.(*FuncInfo).Names
 							if _, ok := (*names)[(*lexems)[i+2].Value.(string)]; !ok {
 
 								if i < len(*lexems)-5 && (*lexems)[i+3].Type == isLPar {
@@ -1357,7 +720,7 @@ main:
 				if (*lexems)[i+1].Type == isLPar {
 					var (
 						isContract  bool
-						objContract *Block
+						objContract *CodeBlock
 					)
 					if vm.Extern && objInfo == nil {
 						objInfo = &ObjInfo{Type: ObjectType_Contract}
@@ -1369,14 +732,14 @@ main:
 					}
 					if objInfo.Type == ObjectType_Contract {
 						if objInfo.Value != nil {
-							objContract = objInfo.Value.(*Block)
+							objContract = objInfo.Value.(*CodeBlock)
 						}
 						objInfo, tobj = vm.findObj(`ExecContract`, block)
 						isContract = true
 					}
 					cmdCall := uint16(cmdCall)
 					if (objInfo.Type == ObjectType_ExtFunc && objInfo.Value.(ExtFuncInfo).Variadic) ||
-						(objInfo.Type == ObjectType_Func && objInfo.Value.(*Block).Info.(*FuncInfo).Variadic) {
+						(objInfo.Type == ObjectType_Func && objInfo.Value.(*CodeBlock).Info.(*FuncInfo).Variadic) {
 						cmdCall = cmdCallVari
 					}
 					count := 0

@@ -106,7 +106,7 @@ func SysRollbackNewContract(sysData SysRollData, EcosystemID string) error {
 
 // SysFlushContract is flushing contract
 func SysFlushContract(iroot interface{}, id int64, active bool) error {
-	root := iroot.(*script.Block)
+	root := iroot.(*script.CodeBlock)
 	if id != 0 {
 		if len(root.Children) != 1 || root.Children[0].Type != script.ObjectType_Contract {
 			return fmt.Errorf(`only one contract must be in the record`)
@@ -124,7 +124,7 @@ func SysFlushContract(iroot interface{}, id int64, active bool) error {
 
 // SysSetContractWallet changes WalletID of the contract in smartVM
 func SysSetContractWallet(tblid, state int64, wallet int64) error {
-	for i, item := range script.GetVM().Block.Children {
+	for i, item := range script.GetVM().CodeBlock.Children {
 		if item != nil && item.Type == script.ObjectType_Contract {
 			cinfo := item.Info.(*script.ContractInfo)
 			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
@@ -146,7 +146,7 @@ func SysRollbackEditContract(transaction *sqldb.DbTransaction, sysData SysRollDa
 	}
 	if len(fields["value"]) > 0 {
 		var owner *script.OwnerInfo
-		for i, item := range script.GetVM().Block.Children {
+		for i, item := range script.GetVM().CodeBlock.Children {
 			if item != nil && item.Type == script.ObjectType_Contract {
 				cinfo := item.Info.(*script.ContractInfo)
 				if cinfo.Owner.TableID == sysData.ID &&

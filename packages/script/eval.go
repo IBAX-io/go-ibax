@@ -13,7 +13,7 @@ import (
 
 type evalCode struct {
 	Source string
-	Code   *Block
+	Code   *CodeBlock
 }
 
 var (

@@ -18,7 +18,7 @@ type Contract struct {
 	TableAccounts string
 	StackCont     []interface{} // Stack of called contracts
 	Extend        *map[string]interface{}
-	Block         *script.Block
+	Block         *script.CodeBlock
 }
 
 func (c *Contract) Info() *script.ContractInfo {
@@ -72,7 +72,7 @@ func VMGetContract(vm *script.VM, name string, state uint32) *Contract {
 	obj, ok := vm.Objects[name]
 
 	if ok && obj.Type == script.ObjectType_Contract {
-		return &Contract{Name: name, Block: obj.Value.(*script.Block)}
+		return &Contract{Name: name, Block: obj.Value.(*script.CodeBlock)}
 	}
 	return nil
 }
@@ -113,9 +113,9 @@ func GetContractByID(id int32) *Contract {
 }
 
 // GetFunc returns the block of the specified function in the contract
-func (contract *Contract) GetFunc(name string) *script.Block {
+func (contract *Contract) GetFunc(name string) *script.CodeBlock {
 	if block, ok := (*contract).Block.Objects[name]; ok && block.Type == script.ObjectType_Func {
-		return block.Value.(*script.Block)
+		return block.Value.(*script.CodeBlock)
 	}
 	return nil
 }

@@ -17,10 +17,10 @@ import (
 type TestVM struct {
 	Input  string
 	Func   string
-	Output string
+	Output interface{}
 }
 
-func (block *Block) String() (ret string) {
+func (block *CodeBlock) String() (ret string) {
 	if (*block).Objects != nil {
 		ret = fmt.Sprintf("Objects: %v\n", (*block).Objects)
 	}
@@ -706,7 +706,7 @@ func TestVMCompile(t *testing.T) {
 				},
 			}); err == nil {
 				if out[0].(string) != item.Output {
-					t.Error(`error vm ` + out[0].(string) + `!=` + item.Output)
+					t.Error(fmt.Errorf("err want to %v, but out %v\n", item.Output, out[0]))
 					break
 				}
 			} else if err.Error() != item.Output {
