@@ -424,10 +424,9 @@ func fFieldTag(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 }
 
 func fElse(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	code := buf.get(len(*buf) - 2).Code
-	if code.peek().Cmd != cmdIf {
+	if buf.get(len(*buf)-2).Code.peek().Cmd != cmdIf {
 		return fmt.Errorf(`there is not if before %v [Ln:%d Col:%d]`, lexem.Type, lexem.Line, lexem.Column)
 	}
-	code.push(newByteCode(cmdElse, lexem.Line, buf.peek()))
+	buf.get(len(*buf) - 2).Code.push(newByteCode(cmdElse, lexem.Line, buf.peek()))
 	return nil
 }
