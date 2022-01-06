@@ -20,7 +20,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/publisher"
-	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
@@ -170,7 +169,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 			contract := smart.GetContract("NewUser", 1)
 			sc := types.SmartContract{
 				Header: &types.Header{
-					ID:          int(contract.Block.Info.(*script.ContractInfo).ID),
+					ID:          int(contract.Info().ID),
 					Time:        time.Now().Unix(),
 					EcosystemID: 1,
 					KeyID:       conf.Config.KeyID,

@@ -22,7 +22,7 @@ type Contract struct {
 }
 
 func (c *Contract) Info() *script.ContractInfo {
-	return c.Block.Info.(*script.ContractInfo)
+	return c.Block.Info.ContractInfo()
 }
 
 // LoadContracts reads and compiles contracts from smart_contracts tables
@@ -72,7 +72,7 @@ func VMGetContract(vm *script.VM, name string, state uint32) *Contract {
 	obj, ok := vm.Objects[name]
 
 	if ok && obj.Type == script.ObjectType_Contract {
-		return &Contract{Name: name, Block: obj.Value.(*script.CodeBlock)}
+		return &Contract{Name: name, Block: obj.Value.CodeBlock()}
 	}
 	return nil
 }
@@ -90,10 +90,10 @@ func VMGetContractByID(vm *script.VM, id int32) *Contract {
 	if vm.Children[idcont] == nil || vm.Children[idcont].Type != script.ObjectType_Contract {
 		return nil
 	}
-	if tableID > 0 && vm.Children[idcont].Info.(*script.ContractInfo).Owner.TableID != tableID {
+	if tableID > 0 && vm.Children[idcont].Info.ContractInfo().Owner.TableID != tableID {
 		return nil
 	}
-	return &Contract{Name: vm.Children[idcont].Info.(*script.ContractInfo).Name,
+	return &Contract{Name: vm.Children[idcont].Info.ContractInfo().Name,
 		Block: vm.Children[idcont]}
 }
 
@@ -115,7 +115,7 @@ func GetContractByID(id int32) *Contract {
 // GetFunc returns the block of the specified function in the contract
 func (contract *Contract) GetFunc(name string) *script.CodeBlock {
 	if block, ok := (*contract).Block.Objects[name]; ok && block.Type == script.ObjectType_Func {
-		return block.Value.(*script.CodeBlock)
+		return block.Value.CodeBlock()
 	}
 	return nil
 }
@@ -147,12 +147,12 @@ func loadContractList(list []sqldb.Contract) error {
 
 func vmGetUsedContracts(vm *script.VM, name string, state uint32, full bool) []string {
 	contract := VMGetContract(vm, name, state)
-	if contract == nil || contract.Block.Info.(*script.ContractInfo).Used == nil {
+	if contract == nil || contract.Info().Used == nil {
 		return nil
 	}
 	ret := make([]string, 0)
 	used := make(map[string]bool)
-	for key := range contract.Block.Info.(*script.ContractInfo).Used {
+	for key := range contract.Info().Used {
 		ret = append(ret, key)
 		used[key] = true
 		if full {

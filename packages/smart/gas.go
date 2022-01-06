@@ -162,7 +162,7 @@ func (sc *SmartContract) prepareMultiPay() (err error) {
 		payWallet                             sqldb.Key
 		tokenEco                              int64
 	}
-	cntrctOwnerInfo := sc.TxContract.Block.Info.(*script.ContractInfo).Owner
+	cntrctOwnerInfo := sc.TxContract.Info().Owner
 	err = sc.appendTokens(cntrctOwnerInfo.TokenID, sc.TxSmart.EcosystemID)
 	if err != nil {
 		return

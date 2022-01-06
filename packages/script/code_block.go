@@ -27,11 +27,22 @@ type CodeBlock struct {
 	Objects  map[string]*ObjInfo
 	Type     ObjectType
 	Owner    *OwnerInfo
-	Info     interface{}
+	Info     *codeBlockInfo
 	Parent   *CodeBlock
 	Vars     []reflect.Type
 	Code     ByteCodes
 	Children CodeBlocks
+}
+
+type codeBlockInfo struct{ i interface{} }
+
+func newCodeBlockInfo(i interface{}) *codeBlockInfo  { return &codeBlockInfo{i: i} }
+func (i *codeBlockInfo) FuncInfo() *FuncInfo         { return i.i.(*FuncInfo) }
+func (i *codeBlockInfo) Uint32() uint32              { return i.i.(uint32) }
+func (i *codeBlockInfo) ContractInfo() *ContractInfo { return i.i.(*ContractInfo) }
+func (i *codeBlockInfo) IsContractInfo() (*ContractInfo, bool) {
+	v, ok := i.i.(*ContractInfo)
+	return v, ok
 }
 
 // ByteCode stores a command and an additional parameter.
@@ -94,8 +105,16 @@ type OwnerInfo struct {
 // ObjInfo is the common object type
 type ObjInfo struct {
 	Type  ObjectType
-	Value interface{}
+	Value *objInfoValue
 }
+
+type objInfoValue struct{ v interface{} }
+
+func newObjInfoValue(v interface{}) *objInfoValue { return &objInfoValue{v: v} }
+func (i *objInfoValue) CodeBlock() *CodeBlock     { return i.v.(*CodeBlock) }
+func (i *objInfoValue) ExtFuncInfo() *ExtFuncInfo { return i.v.(*ExtFuncInfo) }
+func (i *objInfoValue) Int() int                  { return i.v.(int) }
+func (i *objInfoValue) String() string            { return i.v.(string) }
 
 func NewCodeBlock() *CodeBlock {
 	b := &CodeBlock{
@@ -114,7 +133,7 @@ func (b *CodeBlock) Extend(ext *ExtendData) {
 		switch fobj.Kind() {
 		case reflect.Func:
 			_, canWrite := ext.WriteFuncs[key]
-			data := ExtFuncInfo{
+			data := &ExtFuncInfo{
 				Name:     key,
 				Params:   make([]reflect.Type, fobj.NumIn()),
 				Results:  make([]reflect.Type, fobj.NumOut()),
@@ -131,7 +150,7 @@ func (b *CodeBlock) Extend(ext *ExtendData) {
 			for i := 0; i < fobj.NumOut(); i++ {
 				data.Results[i] = fobj.Out(i)
 			}
-			b.Objects[key] = &ObjInfo{Type: ObjectType_ExtFunc, Value: data}
+			b.Objects[key] = &ObjInfo{Type: ObjectType_ExtFunc, Value: newObjInfoValue(data)}
 		}
 	}
 }
@@ -158,13 +177,14 @@ func (block *CodeBlock) getObjByName(name string) (ret *ObjInfo) {
 		if ret.Type != ObjectType_Contract && ret.Type != ObjectType_Func {
 			return nil
 		}
-		block = ret.Value.(*CodeBlock)
+		block = ret.Value.CodeBlock()
 	}
 	return
 }
+
 func (block *CodeBlock) parentContractCost() int64 {
 	var cost int64
-	if parent, ok := block.Parent.Info.(*ContractInfo); ok {
+	if parent, ok := block.Parent.Info.IsContractInfo(); ok {
 		cost += int64(len(block.Parent.Objects) * CostCall)
 		cost += int64(len(parent.Settings) * CostCall)
 		if parent.Tx != nil {
@@ -185,16 +205,16 @@ func setWritable(block *CodeBlocks) {
 	for i := len(*block) - 1; i >= 0; i-- {
 		blockItem := (*block)[i]
 		if blockItem.Type == ObjectType_Func {
-			blockItem.Info.(*FuncInfo).CanWrite = true
+			blockItem.Info.FuncInfo().CanWrite = true
 		}
 		if blockItem.Type == ObjectType_Contract {
-			blockItem.Info.(*ContractInfo).CanWrite = true
+			blockItem.Info.ContractInfo().CanWrite = true
 		}
 	}
 }
 func (ret *ObjInfo) getInParams() int {
 	if ret.Type == ObjectType_ExtFunc {
-		return len(ret.Value.(ExtFuncInfo).Params)
+		return len(ret.Value.ExtFuncInfo().Params)
 	}
-	return len(ret.Value.(*CodeBlock).Info.(*FuncInfo).Params)
+	return len(ret.Value.CodeBlock().Info.FuncInfo().Params)
 }

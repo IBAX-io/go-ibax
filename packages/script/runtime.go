@@ -158,7 +158,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 	}
 	if obj.Type == ObjectType_Func {
 		var imap map[string][]interface{}
-		if obj.Value.(*CodeBlock).Info.(*FuncInfo).Names != nil {
+		if obj.Value.CodeBlock().Info.FuncInfo().Names != nil {
 			if rt.stack[size-1] != nil {
 				imap = rt.stack[size-1].(map[string][]interface{})
 			}
@@ -178,7 +178,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 			rt.stack = rt.stack[:shift]
 			rt.stack = append(rt.stack, pars)
 		}
-		finfo := obj.Value.(*CodeBlock).Info.(*FuncInfo)
+		finfo := obj.Value.CodeBlock().Info.FuncInfo()
 		if len(rt.stack) < len(finfo.Params) {
 			log.WithFields(log.Fields{"type": consts.VMError}).Error(errWrongCountPars.Error())
 			return errWrongCountPars
@@ -192,12 +192,12 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 				}
 			}
 		}
-		if obj.Value.(*CodeBlock).Info.(*FuncInfo).Names != nil {
+		if obj.Value.CodeBlock().Info.FuncInfo().Names != nil {
 			rt.stack = append(rt.stack, imap)
 		}
-		_, err = rt.RunCode(obj.Value.(*CodeBlock))
+		_, err = rt.RunCode(obj.Value.CodeBlock())
 	} else {
-		finfo := obj.Value.(ExtFuncInfo)
+		finfo := obj.Value.ExtFuncInfo()
 		foo := reflect.ValueOf(finfo.Func)
 		var result []reflect.Value
 		pars := make([]reflect.Value, in)
@@ -269,7 +269,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 			}
 			if finfo.Results[i].String() == `error` {
 				if iret.Interface() != nil {
-					rt.errInfo = ErrInfo{finfo.Name, 0}
+					rt.errInfo = ErrInfo{Name: finfo.Name}
 					return iret.Interface().(error)
 				}
 			} else {
@@ -485,7 +485,7 @@ func (rt *RunTime) getResultValue(item mapItem) (value interface{}, err error) {
 		var i int
 		for i = len(rt.blocks) - 1; i >= 0; i-- {
 			if ivar.Owner == rt.blocks[i].Block {
-				value = rt.vars[rt.blocks[i].Offset+ivar.Obj.Value.(int)]
+				value = rt.vars[rt.blocks[i].Offset+ivar.Obj.Value.Int()]
 				break
 			}
 		}
@@ -557,12 +557,12 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	var cmd *ByteCode
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New(r.(string))
+			err = errors.New(fmt.Sprintf(`%v`, r))
 		}
 		if err != nil && !strings.HasPrefix(err.Error(), `{`) {
 			var curContract, line string
 			if block.isParentContract() {
-				stack := block.Parent.Info.(*ContractInfo)
+				stack := block.Parent.Info.ContractInfo()
 				curContract = stack.Name
 			}
 			if stack, ok := (*rt.extend)["stack"].([]interface{}); ok {
@@ -596,7 +596,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	top := make([]interface{}, 8)
 	rt.blocks = append(rt.blocks, &blockStack{Block: block, Offset: len(rt.vars)})
 	var namemap map[string][]interface{}
-	if block.Type == ObjectType_Func && block.Info.(*FuncInfo).Names != nil {
+	if block.Type == ObjectType_Func && block.Info.FuncInfo().Names != nil {
 		if rt.stack[len(rt.stack)-1] != nil {
 			namemap = rt.stack[len(rt.stack)-1].(map[string][]interface{})
 		}
@@ -607,8 +607,8 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	for vkey, vpar := range block.Vars {
 		rt.cost--
 		var value interface{}
-		if block.Type == ObjectType_Func && vkey < len(block.Info.(*FuncInfo).Params) {
-			value = rt.stack[start-len(block.Info.(*FuncInfo).Params)+vkey]
+		if block.Type == ObjectType_Func && vkey < len(block.Info.FuncInfo().Params) {
+			value = rt.stack[start-len(block.Info.FuncInfo().Params)+vkey]
 		} else {
 			value = reflect.New(vpar).Elem().Interface()
 			if vpar == reflect.TypeOf(&types.Map{}) {
@@ -621,7 +621,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	}
 	if namemap != nil {
 		for key, item := range namemap {
-			params := (*block.Info.(*FuncInfo).Names)[key]
+			params := (*block.Info.FuncInfo().Names)[key]
 			for i, value := range item {
 				if params.Variadic && i >= len(params.Params)-1 {
 					off := varoff + params.Offset[len(params.Params)-1]
@@ -633,7 +633,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 		}
 	}
 	if block.Type == ObjectType_Func {
-		start -= len(block.Info.(*FuncInfo).Params)
+		start -= len(block.Info.FuncInfo().Params)
 	}
 	var (
 		assign []*VarInfo
@@ -712,19 +712,19 @@ main:
 			for ivar, item := range assign {
 				if item.Owner == nil {
 					if (*item).Obj.Type == ObjectType_Extend {
-						if isSysVar((*item).Obj.Value.(string)) {
-							err = fmt.Errorf(eSysVar, (*item).Obj.Value.(string))
+						if isSysVar((*item).Obj.Value.String()) {
+							err = fmt.Errorf(eSysVar, (*item).Obj.Value.String())
 							rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "error": err}).Error("modifying system variable")
 							break main
 						}
-						rt.setExtendVar((*item).Obj.Value.(string), rt.stack[len(rt.stack)-count+ivar])
+						rt.setExtendVar((*item).Obj.Value.String(), rt.stack[len(rt.stack)-count+ivar])
 					}
 				} else {
 					var i int
 					for i = len(rt.blocks) - 1; i >= 0; i-- {
 						if item.Owner == rt.blocks[i].Block {
-							k := rt.blocks[i].Offset + item.Obj.Value.(int)
-							switch rt.blocks[i].Block.Vars[item.Obj.Value.(int)].String() {
+							k := rt.blocks[i].Offset + item.Obj.Value.Int()
+							switch rt.blocks[i].Block.Vars[item.Obj.Value.Int()].String() {
 							case Decimal:
 								var v decimal.Decimal
 								v, err = ValueToDecimal(rt.stack[len(rt.stack)-count+ivar])
@@ -772,7 +772,7 @@ main:
 			continue
 		case cmdCallVari, cmdCall:
 			if cmd.Value.(*ObjInfo).Type == ObjectType_ExtFunc {
-				finfo := cmd.Value.(*ObjInfo).Value.(ExtFuncInfo)
+				finfo := cmd.Value.(*ObjInfo).Value.ExtFuncInfo()
 				if rt.vm.ExtCost != nil {
 					cost := rt.vm.ExtCost(finfo.Name)
 					if cost > rt.cost {
@@ -793,7 +793,7 @@ main:
 			var i int
 			for i = len(rt.blocks) - 1; i >= 0; i-- {
 				if ivar.Owner == rt.blocks[i].Block {
-					rt.stack = append(rt.stack, rt.vars[rt.blocks[i].Offset+ivar.Obj.Value.(int)])
+					rt.stack = append(rt.stack, rt.vars[rt.blocks[i].Offset+ivar.Obj.Value.Int()])
 					break
 				}
 			}
@@ -938,7 +938,6 @@ main:
 			}
 		case cmdNot:
 			rt.stack[size-1] = !valueToBool(top[0])
-
 		case cmdAdd:
 			switch top[1].(type) {
 			case string:
@@ -1310,7 +1309,7 @@ main:
 	rt.blocks = rt.blocks[:len(rt.blocks)-1]
 	if status == statusReturn {
 		if last.Block.Type == ObjectType_Func {
-			lastResults := last.Block.Info.(*FuncInfo).Results
+			lastResults := last.Block.Info.FuncInfo().Results
 			if len(lastResults) > len(rt.stack) {
 				var keyNames []string
 				for i := 0; i < len(lastResults); i++ {
@@ -1344,7 +1343,7 @@ func (rt *RunTime) Run(block *CodeBlock, params []interface{}, extend *map[strin
 			err = fmt.Errorf(`runtime panic error,%v`, r)
 		}
 	}()
-	info := block.Info.(*FuncInfo)
+	info := block.Info.FuncInfo()
 	rt.extend = extend
 	var (
 		genBlock bool

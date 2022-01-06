@@ -347,7 +347,7 @@ func GetContractByName(sc *SmartContract, name string) int64 {
 	if contract == nil {
 		return 0
 	}
-	info := (*contract).Block.Info.(*script.ContractInfo)
+	info := contract.Info()
 	if info == nil {
 		return 0
 	}

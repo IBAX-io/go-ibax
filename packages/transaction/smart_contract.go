@@ -128,7 +128,7 @@ func (s *SmartContractTransaction) parseFromContract(fillData bool) error {
 
 	s.TxContract = contract
 	s.TxData = make(map[string]interface{})
-	txInfo := contract.Block.Info.(*script.ContractInfo).Tx
+	txInfo := contract.Info().Tx
 
 	if txInfo != nil {
 		if fillData {

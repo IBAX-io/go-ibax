@@ -13,7 +13,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
@@ -34,7 +33,7 @@ func CreateContract(contractName string, keyID int64, params map[string]interfac
 	}
 	sc := types.SmartContract{
 		Header: &types.Header{
-			ID:          int(contract.Block.Info.(*script.ContractInfo).ID),
+			ID:          int(contract.Info().ID),
 			Time:        time.Now().Unix(),
 			EcosystemID: ecosysID,
 			KeyID:       keyID,

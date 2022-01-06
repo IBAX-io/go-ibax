@@ -1128,7 +1128,7 @@ func FlushContract(sc *SmartContract, iroot interface{}, id int64) error {
 	}
 	for i, item := range root.Children {
 		if item.Type == script.ObjectType_Contract {
-			root.Children[i].Info.(*script.ContractInfo).Owner.TableID = id
+			root.Children[i].Info.ContractInfo().Owner.TableID = id
 		}
 	}
 	for key, item := range root.Objects {
@@ -1136,9 +1136,9 @@ func FlushContract(sc *SmartContract, iroot interface{}, id int64) error {
 			var id uint32
 			switch item.Type {
 			case script.ObjectType_Contract:
-				id = cur.Value.(*script.CodeBlock).Info.(*script.ContractInfo).ID
+				id = cur.Value.CodeBlock().Info.ContractInfo().ID
 			case script.ObjectType_Func:
-				id = cur.Value.(*script.CodeBlock).Info.(*script.FuncInfo).ID
+				id = cur.Value.CodeBlock().Info.FuncInfo().ID
 			}
 			sc.FlushRollback = append(sc.FlushRollback, &FlushInfo{
 				ID:   id,
@@ -2120,7 +2120,7 @@ func TransactionData(blockId int64, hash []byte) (data *TxInfo, err error) {
 				return
 			}
 			data.Contract = contract.Name
-			txInfo := contract.Block.Info.(*script.ContractInfo).Tx
+			txInfo := contract.Info().Tx
 			if txInfo != nil {
 				data.Params = smartTx.Params
 			}
