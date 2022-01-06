@@ -554,6 +554,45 @@ func isSelfAssignment(dest, value interface{}) bool {
 
 // RunCode executes CodeBlock
 func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
+	var cmd *ByteCode
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New(r.(string))
+		}
+		if err != nil && !strings.HasPrefix(err.Error(), `{`) {
+			var curContract, line string
+			if block.isParentContract() {
+				stack := block.Parent.Info.(*ContractInfo)
+				curContract = stack.Name
+			}
+			if stack, ok := (*rt.extend)["stack"].([]interface{}); ok {
+				curContract = stack[len(stack)-1].(string)
+			}
+
+			line = "]"
+			if cmd != nil {
+				line = fmt.Sprintf(":%d]", cmd.Line)
+			}
+
+			if len(rt.errInfo.Name) > 0 && rt.errInfo.Name != `ExecContract` {
+				err = fmt.Errorf("%s [%s %s%s", err, rt.errInfo.Name, curContract, line)
+				rt.errInfo.Name = ``
+			} else {
+				out := err.Error()
+				if strings.HasSuffix(out, `]`) {
+					prev := strings.LastIndexByte(out, ' ')
+					if strings.HasPrefix(out[prev+1:], curContract+`:`) {
+						out = out[:prev+1]
+					} else {
+						out = out[:len(out)-1] + ` `
+					}
+				} else {
+					out += ` [`
+				}
+				err = fmt.Errorf(`%s%s%s`, out, curContract, line)
+			}
+		}
+	}()
 	top := make([]interface{}, 8)
 	rt.blocks = append(rt.blocks, &blockStack{Block: block, Offset: len(rt.vars)})
 	var namemap map[string][]interface{}
@@ -600,7 +639,6 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 		assign []*VarInfo
 		tmpInt int64
 		tmpDec decimal.Decimal
-		cmd    *ByteCode
 	)
 	labels := make([]int, 0)
 main:
@@ -750,7 +788,6 @@ main:
 				rt.cost -= CostCall
 			}
 			err = rt.callFunc(cmd.Cmd, cmd.Value.(*ObjInfo))
-
 		case cmdVar:
 			ivar := cmd.Value.(*VarInfo)
 			var i int
@@ -1295,40 +1332,6 @@ main:
 	if rt.cost <= 0 {
 		rt.vm.logger.WithFields(log.Fields{"type": consts.VMError}).Warn("runtime cost limit overflow")
 		err = fmt.Errorf(`runtime cost limit overflow`)
-	}
-	if err != nil && !strings.HasPrefix(err.Error(), `{`) {
-		var curContract, line string
-		if block.isParentContract() {
-			stack := block.Parent.Info.(*ContractInfo)
-			curContract = stack.Name
-		}
-		if stack, ok := (*rt.extend)["stack"].([]interface{}); ok {
-			curContract = stack[len(stack)-1].(string)
-		}
-
-		line = "]"
-		if cmd != nil {
-			line = fmt.Sprintf(":%d]", cmd.Line)
-		}
-
-		if len(rt.errInfo.Name) > 0 && rt.errInfo.Name != `ExecContract` {
-			err = fmt.Errorf("%s [%s %s%s", err, rt.errInfo.Name, curContract, line)
-			rt.errInfo.Name = ``
-		} else {
-			out := err.Error()
-			if strings.HasSuffix(out, `]`) {
-				prev := strings.LastIndexByte(out, ' ')
-				if strings.HasPrefix(out[prev+1:], curContract+`:`) {
-					out = out[:prev+1]
-				} else {
-					out = out[:len(out)-1] + ` `
-				}
-			} else {
-				out += ` [`
-			}
-			err = fmt.Errorf(`%s%s%s`, out, curContract, line)
-		}
-		//rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "error": err}).Error("error in vm")
 	}
 	return
 }

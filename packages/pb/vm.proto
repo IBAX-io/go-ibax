@@ -13,7 +13,7 @@ enum VMType {
   // VMType_CLB is clb vm type
   CLB = 2;
   // VMType_CLBMaster is CLBMaster type
-  CLBMaster = 33;
+  CLBMaster = 3;
 }
 
 // ObjectType Types of the compiled objects
