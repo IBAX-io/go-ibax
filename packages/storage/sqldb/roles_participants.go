@@ -72,7 +72,7 @@ func GetMemberRoles(tx *DbTransaction, ecosys int64, account string) (roles []in
 	query := `SELECT role->>'id' as "id" 
 		FROM "1_roles_participants"
 		WHERE ecosystem = ? and deleted = '0' and member->>'account' = ?`
-	list, err := GetAllTransaction(tx, query, -1, ecosys, account)
+	list, err := tx.GetAllTransaction(query, -1, ecosys, account)
 	if err != nil {
 		return
 	}
@@ -91,7 +91,7 @@ func GetRoleMembers(tx *DbTransaction, ecosys int64, roles []int64) (members []s
 	query := `SELECT member->>'account' as "id" 
 		FROM "1_roles_participants" 
 		WHERE role->>'id' in (?) group by 1`
-	list, err := GetAllTransaction(tx, query, -1, rolesList)
+	list, err := tx.GetAllTransaction(query, -1, rolesList)
 	if err != nil {
 		return
 	}

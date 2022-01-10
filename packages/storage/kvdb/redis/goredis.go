@@ -1,4 +1,4 @@
-package sqldb
+package redis
 
 import (
 	"errors"

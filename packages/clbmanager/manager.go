@@ -356,7 +356,7 @@ func InitCLBManager() {
 }
 
 func dropDb(name, role string) error {
-	if err := sqldb.DropDatabase(name); err != nil {
+	if err := sqldb.NewDbTransaction(nil).DropDatabase(name); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "db_name": name}).Error("Deleting clb db")
 		return err
 	}

@@ -5,9 +5,10 @@
 package protocols
 
 import (
-	"github.com/IBAX-io/go-ibax/packages/utils"
 	"testing"
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

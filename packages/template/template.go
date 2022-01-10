@@ -732,7 +732,9 @@ func Template2JSON(input string, timeout *bool, vars *map[string]string) []byte 
 			ID:        keyID,
 			AccountID: accountID,
 		},
+		DbTransaction: sqldb.NewDbTransaction(sqldb.DBConn),
 	}
+
 	toVars := mapToVar(*vars)
 	process(input, &root, &Workspace{Vars: toVars, Timeout: timeout, SmartContract: &sc})
 	if root.Children == nil || *timeout {

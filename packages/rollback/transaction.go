@@ -36,7 +36,7 @@ func rollbackUpdatedRow(tx map[string]string, where string, dbTransaction *sqldb
 		}
 	}
 	addSQLUpdate = addSQLUpdate[0 : len(addSQLUpdate)-1]
-	if err := sqldb.Update(dbTransaction, tx["table_name"], addSQLUpdate, where); err != nil {
+	if err := dbTransaction.Update(tx["table_name"], addSQLUpdate, where); err != nil {
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err, "rollback_id": tx["id"], "block_id": tx["block_id"], "update": addSQLUpdate, "where": where}).Error("updating table for rollback ")
 		return err
 	}
@@ -44,7 +44,7 @@ func rollbackUpdatedRow(tx map[string]string, where string, dbTransaction *sqldb
 }
 
 func rollbackInsertedRow(tx map[string]string, where string, dbTransaction *sqldb.DbTransaction, logger *log.Entry) error {
-	if err := sqldb.Delete(dbTransaction, tx["table_name"], where); err != nil {
+	if err := dbTransaction.Delete(tx["table_name"], where); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "rollback_id": tx["id"], "table": tx["table_name"], "where": where}).Error("deleting from table for rollback")
 		return err
 	}

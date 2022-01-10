@@ -174,17 +174,17 @@ func (t *Table) GetAll(prefix string) ([]Table, error) {
 // }
 
 // GetRowConditionsByTableNameAndID returns value of `conditions` field for table row by id
-func GetRowConditionsByTableNameAndID(transaction *DbTransaction, tblname string, id int64) (string, error) {
+func (dbTx *DbTransaction) GetRowConditionsByTableNameAndID(tblname string, id int64) (string, error) {
 	sql := `SELECT conditions FROM "` + tblname + `" WHERE id = ? LIMIT 1`
-	return Single(transaction, sql, id).String()
+	return dbTx.Single(sql, id).String()
 }
 
 func GetTableQuery(table string, ecosystemID int64) *gorm.DB {
 	if converter.FirstEcosystemTables[table] {
-		return DBConn.Table("1_"+table).Where("ecosystem = ?", ecosystemID)
+		return GetDB(nil).Table("1_"+table).Where("ecosystem = ?", ecosystemID)
 	}
 
-	return DBConn.Table(converter.ParseTable(table, ecosystemID))
+	return GetDB(nil).Table(converter.ParseTable(table, ecosystemID))
 }
 
 func GetTableListQuery(table string, ecosystemID int64) *gorm.DB {
@@ -192,5 +192,5 @@ func GetTableListQuery(table string, ecosystemID int64) *gorm.DB {
 		return DBConn.Table("1_" + table)
 	}
 
-	return DBConn.Table(converter.ParseTable(table, ecosystemID))
+	return GetDB(nil).Table(converter.ParseTable(table, ecosystemID))
 }

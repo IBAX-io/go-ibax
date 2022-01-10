@@ -3,7 +3,7 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package sqldb
+package redis
 
 import (
 	"github.com/vmihailenco/msgpack/v5"

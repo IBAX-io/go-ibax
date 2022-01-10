@@ -255,7 +255,7 @@ func GetNodePositionByPublicKey(publicKey []byte) (int64, error) {
 		}
 	}
 
-	return 0, fmt.Errorf("Incorrect public key")
+	return 0, fmt.Errorf("incorrect public key")
 }
 
 // GetCountOfActiveNodes is count of nodes with stopped = false
@@ -573,7 +573,7 @@ func SysTableColType(dbTransaction *sqldb.DbTransaction) error {
 	var err error
 	mutex.RLock()
 	defer mutex.RUnlock()
-	cacheTableColType, err = sqldb.GetAllTransaction(dbTransaction, `
+	cacheTableColType, err = dbTransaction.GetAllTransaction(`
 		SELECT table_name,column_name,data_type,character_maximum_length
 		FROM information_schema.columns Where table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name ~ '[\d]' AND data_type = 'bytea' ORDER BY ordinal_position ASC;`, -1)
 	if err != nil {

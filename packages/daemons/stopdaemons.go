@@ -26,13 +26,13 @@ func WaitStopTime() {
 			continue
 		}
 		if !first {
-			err := sqldb.Delete(nil, "stop_daemons", "")
+			err := sqldb.NewDbTransaction(nil).Delete("stop_daemons", "")
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting from stop daemons")
 			}
 			first = true
 		}
-		dExists, err := sqldb.Single(nil, `SELECT stop_time FROM stop_daemons`).Int64()
+		dExists, err := sqldb.NewDbTransaction(nil).Single(`SELECT stop_time FROM stop_daemons`).Int64()
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting stop_time from StopDaemons")
 		}

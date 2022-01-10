@@ -88,7 +88,7 @@ func (f *FirstBlockTransaction) Action(t *Transaction) error {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting key")
 		return err
 	}
-	id, err := sqldb.GetNextID(t.DbTransaction, "1_pages")
+	id, err := t.DbTransaction.GetNextID("1_pages")
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ func (f *FirstBlockTransaction) Action(t *Transaction) error {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting default page")
 		return err
 	}
-	id, err = sqldb.GetNextID(t.DbTransaction, "1_menu")
+	id, err = t.DbTransaction.GetNextID("1_menu")
 	if err != nil {
 		return err
 	}

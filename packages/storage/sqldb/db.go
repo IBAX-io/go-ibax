@@ -16,6 +16,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/storage/kvdb/redis"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -30,7 +31,7 @@ var (
 	ErrRecordNotFound = gorm.ErrRecordNotFound
 
 	// ErrDBConn database connection error
-	ErrDBConn = errors.New("Database connection error")
+	ErrDBConn = errors.New("database connection error")
 )
 var notAutoIncrement = map[string]bool{
 	"1_keys": true,
@@ -51,13 +52,65 @@ type NextIDGetter struct {
 }
 
 func (g NextIDGetter) GetNextID(tableName string) (int64, error) {
-	return GetNextID(g.Tx, tableName)
+	return g.Tx.GetNextID(tableName)
 }
 func isFound(db *gorm.DB) (bool, error) {
 	if errors.Is(db.Error, ErrRecordNotFound) {
 		return false, nil
 	}
 	return true, db.Error
+}
+
+// InitDB drop all tables and exec db schema
+func InitDB(cfg conf.DBConfig) error {
+	err := GormInit(cfg)
+	if err != nil || DBConn == nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("initializing DB")
+		return ErrDBConn
+	}
+	if err = NewDbTransaction(DBConn).DropTables(); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("dropping all tables")
+		return err
+	}
+
+	if conf.Config.Redis.Enable {
+		err = redis.RedisInit(conf.Config.Redis)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"host": conf.Config.Redis.Host, "port": conf.Config.Redis.Port, "db_password": conf.Config.Redis.Password, "db_name": conf.Config.Redis.DbName, "type": consts.DBError,
+			}).Error("can't init redis")
+			return err
+		}
+
+		var rd redis.RedisParams
+		err := rd.Cleardb()
+		if err != nil {
+			return err
+		}
+
+	}
+
+	if err = ExecSchema(); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing db schema")
+		return err
+	}
+
+	install := &Install{Progress: ProgressComplete}
+	if err = install.Create(); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating install")
+		return err
+	}
+
+	if err := ExecCLBSchema(consts.DefaultCLB, conf.Config.KeyID); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB schema")
+		return err
+	}
+	if err := ExecSubSchema(); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB schema")
+		return err
+	}
+
+	return nil
 }
 
 // GormInit is initializes Gorm connection
@@ -213,8 +266,8 @@ func GetDB(tr *DbTransaction) *gorm.DB {
 }
 
 // DropTables is dropping all of the tables
-func DropTables() error {
-	return DBConn.Exec(`
+func (dbTx *DbTransaction) DropTables() error {
+	return GetDB(dbTx).Exec(`
 	DO $$ DECLARE
 	    r RECORD;
 	BEGIN
@@ -226,8 +279,8 @@ func DropTables() error {
 }
 
 // GetRecordsCountTx is counting all records of table in transaction
-func GetRecordsCountTx(db *DbTransaction, tableName, where string) (count int64, err error) {
-	dbQuery := GetDB(db).Table(tableName)
+func (dbTx *DbTransaction) GetRecordsCountTx(tableName, where string) (count int64, err error) {
+	dbQuery := GetDB(dbTx).Table(tableName)
 	if len(where) > 0 {
 		dbQuery = dbQuery.Where(where)
 	}
@@ -244,19 +297,19 @@ func GetRecordsCountTx(db *DbTransaction, tableName, where string) (count int64,
 }
 
 // Update is updating table rows
-func Update(transaction *DbTransaction, tblname, set, where string) error {
-	return GetDB(transaction).Exec(`UPDATE "` + strings.Trim(tblname, `"`) + `" SET ` + set + " " + where).Error
+func (dbTx *DbTransaction) Update(tblname, set, where string) error {
+	return GetDB(dbTx).Exec(`UPDATE "` + strings.Trim(tblname, `"`) + `" SET ` + set + " " + where).Error
 }
 
 // Delete is deleting table rows
-func Delete(transaction *DbTransaction, tblname, where string) error {
-	return GetDB(transaction).Exec(`DELETE FROM "` + tblname + `" ` + where).Error
+func (dbTx *DbTransaction) Delete(tblname, where string) error {
+	return GetDB(dbTx).Exec(`DELETE FROM "` + tblname + `" ` + where).Error
 }
 
 // GetColumnCount is counting rows in table
-func GetColumnCount(tableName string) (int64, error) {
+func (dbTx *DbTransaction) GetColumnCount(tableName string) (int64, error) {
 	var count int64
-	err := DBConn.Raw("SELECT count(*) FROM information_schema.columns WHERE table_name=?", tableName).Row().Scan(&count)
+	err := GetDB(dbTx).Raw("SELECT count(*) FROM information_schema.columns WHERE table_name=?", tableName).Row().Scan(&count)
 	if err == gorm.ErrRecordNotFound {
 		return 0, nil
 	}
@@ -268,30 +321,30 @@ func GetColumnCount(tableName string) (int64, error) {
 }
 
 // AlterTableAddColumn is adding column to table
-func AlterTableAddColumn(transaction *DbTransaction, tableName, columnName, columnType string) error {
-	return GetDB(transaction).Exec(`ALTER TABLE "` + tableName + `" ADD COLUMN "` + columnName + `" ` + columnType).Error
+func (dbTx *DbTransaction) AlterTableAddColumn(tableName, columnName, columnType string) error {
+	return GetDB(dbTx).Exec(`ALTER TABLE "` + tableName + `" ADD COLUMN "` + columnName + `" ` + columnType).Error
 }
 
 // AlterTableDropColumn is dropping column from table
-func AlterTableDropColumn(transaction *DbTransaction, tableName, columnName string) error {
-	return GetDB(transaction).Exec(`ALTER TABLE "` + tableName + `" DROP COLUMN "` + columnName + `"`).Error
+func (dbTx *DbTransaction) AlterTableDropColumn(tableName, columnName string) error {
+	return GetDB(dbTx).Exec(`ALTER TABLE "` + tableName + `" DROP COLUMN "` + columnName + `"`).Error
 }
 
 // CreateIndex is creating index on table column
-func CreateIndex(transaction *DbTransaction, indexName, tableName, onColumn string) error {
-	return GetDB(transaction).Exec(`CREATE INDEX "` + indexName + `_index" ON "` + tableName + `" (` + onColumn + `)`).Error
+func (dbTx *DbTransaction) CreateIndex(indexName, tableName, onColumn string) error {
+	return GetDB(dbTx).Exec(`CREATE INDEX "` + indexName + `_index" ON "` + tableName + `" (` + onColumn + `)`).Error
 }
 
 // GetColumnDataTypeCharMaxLength is returns max length of table column
-func GetColumnDataTypeCharMaxLength(tableName, columnName string) (map[string]string, error) {
-	return GetOneRow(`select data_type,character_maximum_length from
+func (dbTx *DbTransaction) GetColumnDataTypeCharMaxLength(tableName, columnName string) (map[string]string, error) {
+	return dbTx.GetOneRow(`select data_type,character_maximum_length from
 			 information_schema.columns where table_name = ? AND column_name = ?`,
 		tableName, columnName).String()
 }
 
 // GetAllColumnTypes returns column types for table
-func GetAllColumnTypes(tblname string) ([]map[string]string, error) {
-	return GetAll(`SELECT column_name, data_type
+func (dbTx *DbTransaction) GetAllColumnTypes(tblname string) ([]map[string]string, error) {
+	return dbTx.GetAll(`SELECT column_name, data_type
 		FROM information_schema.columns
 		WHERE table_name = ?
 		ORDER BY ordinal_position ASC`, -1, tblname)
@@ -321,8 +374,8 @@ func DataTypeToColumnType(dataType string) string {
 }
 
 // GetColumnType is returns type of column
-func GetColumnType(tblname, column string) (itype string, err error) {
-	coltype, err := GetColumnDataTypeCharMaxLength(tblname, column)
+func (dbTx *DbTransaction) GetColumnType(tblname, column string) (itype string, err error) {
+	coltype, err := dbTx.GetColumnDataTypeCharMaxLength(tblname, column)
 	if err != nil {
 		return
 	}
@@ -333,14 +386,14 @@ func GetColumnType(tblname, column string) (itype string, err error) {
 }
 
 // DropTable is dropping table
-func DropTable(transaction *DbTransaction, tableName string) error {
-	return GetDB(transaction).Migrator().DropTable(tableName)
+func (dbTx *DbTransaction) DropTable(tableName string) error {
+	return GetDB(dbTx).Migrator().DropTable(tableName)
 }
 
 // NumIndexes is counting table indexes
-func NumIndexes(tblname string) (int, error) {
+func (dbTx *DbTransaction) NumIndexes(tblname string) (int, error) {
 	var indexes int64
-	err := DBConn.Raw(fmt.Sprintf(`select count( i.relname) from pg_class t, pg_class i, pg_index ix, pg_attribute a
+	err := GetDB(dbTx).Raw(fmt.Sprintf(`select count( i.relname) from pg_class t, pg_class i, pg_index ix, pg_attribute a
 	 where t.oid = ix.indrelid and i.oid = ix.indexrelid and a.attrelid = t.oid and a.attnum = ANY(ix.indkey)
          and t.relkind = 'r'  and t.relname = '%s'`, tblname)).Row().Scan(&indexes)
 	if err == gorm.ErrRecordNotFound {
@@ -353,47 +406,18 @@ func NumIndexes(tblname string) (int, error) {
 }
 
 // IsIndex returns is table column is an index
-func IsIndex(tblname, column string) (bool, error) {
-	row, err := GetOneRow(`select t.relname as table_name, i.relname as index_name, a.attname as column_name
+func (dbTx *DbTransaction) IsIndex(tblname, column string) (bool, error) {
+	row, err := dbTx.GetOneRow(`select t.relname as table_name, i.relname as index_name, a.attname as column_name
 	 from pg_class t, pg_class i, pg_index ix, pg_attribute a 
 	 where t.oid = ix.indrelid and i.oid = ix.indexrelid and a.attrelid = t.oid and a.attnum = ANY(ix.indkey)
 		 and t.relkind = 'r'  and t.relname = ?  and a.attname = ?`, tblname, column).String()
 	return len(row) > 0 && row[`column_name`] == column, err
 }
 
-// ListResult is a structure for the list result
-type ListResult struct {
-	result []string
-	err    error
-}
-
-// String return the slice of strings
-func (r *ListResult) String() ([]string, error) {
-	if r.err != nil {
-		return r.result, r.err
-	}
-	return r.result, nil
-}
-
-// GetList returns the result of the query as ListResult variable
-func GetList(query string, args ...interface{}) *ListResult {
-	var result []string
-	all, err := GetAll(query, -1, args...)
-	if err != nil {
-		return &ListResult{result, err}
-	}
-	for _, v := range all {
-		for _, v2 := range v {
-			result = append(result, v2)
-		}
-	}
-	return &ListResult{result, nil}
-}
-
 // GetNextID returns next ID of table
-func GetNextID(transaction *DbTransaction, table string) (int64, error) {
+func (dbTx *DbTransaction) GetNextID(table string) (int64, error) {
 	var id int64
-	rows, err := GetDB(transaction).Raw(`select id from "` + table + `" order by id desc limit 1`).Rows()
+	rows, err := GetDB(dbTx).Raw(`select id from "` + table + `" order by id desc limit 1`).Rows()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("selecting next id from table")
 		return 0, err
@@ -405,9 +429,9 @@ func GetNextID(transaction *DbTransaction, table string) (int64, error) {
 }
 
 // IsTable returns is table exists
-func IsTable(tblname string) bool {
+func (dbTx *DbTransaction) IsTable(tblname string) bool {
 	var name string
-	err := DBConn.Table("information_schema.tables").
+	err := GetDB(dbTx).Table("information_schema.tables").
 		Where("table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name=?", tblname).
 		Select("table_name").Row().Scan(&name)
 	if err != nil {
@@ -417,13 +441,62 @@ func IsTable(tblname string) bool {
 	return name == tblname
 }
 
-func HasTableOrView(tr *DbTransaction, names string) bool {
+func (dbTx *DbTransaction) HasTableOrView(names string) bool {
 	var name string
-	DBConn.Table("information_schema.tables").
+	GetDB(dbTx).Table("information_schema.tables").
 		Where("table_type IN ('BASE TABLE', 'VIEW') AND table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name=?", names).
 		Select("table_name").Row().Scan(&name)
 
 	return name == names
+}
+
+// GetColumnByID returns the value of the column from the table by id
+func GetColumnByID(table, column, id string) (result string, err error) {
+	err = GetDB(nil).Table(table).Select(column).Where(`id=?`, id).Row().Scan(&result)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column by id")
+	}
+	return
+}
+
+// DropDatabase kill all process and drop database
+func (dbTx *DbTransaction) DropDatabase(name string) error {
+	query := `SELECT
+	pg_terminate_backend (pg_stat_activity.pid)
+   FROM
+	pg_stat_activity
+   WHERE
+	pg_stat_activity.datname = ?`
+
+	if err := GetDB(dbTx).Exec(query, name).Error; err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "dbname": name}).Error("on kill db process")
+		return err
+	}
+
+	if err := GetDB(dbTx).Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", name)).Error; err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "dbname": name}).Error("on drop db")
+		return err
+	}
+
+	return nil
+}
+
+// GetSumColumn returns the value of the column from the table by id
+func (dbTx *DbTransaction) GetSumColumn(table, column, where string) (result string, err error) {
+	err = GetDB(dbTx).Table(table).Select("sum(" + column + ")").Where(where).Row().Scan(&result)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("sum column")
+	}
+	return
+}
+
+//GetSumColumnCount returns the value of the column from the table by id
+func (dbTx *DbTransaction) GetSumColumnCount(table, column, where string) (result int, err error) {
+	err = GetDB(dbTx).Table(table).Select("count(*)").Where(where).Row().Scan(&result)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("sum column")
+	}
+	return
 }
 
 type Namer struct {
@@ -449,106 +522,4 @@ func (v Namer) HasExists(tr *DbTransaction, names string) bool {
 		Where(fmt.Sprintf("table_type %s AND table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name='%s'", typs, names)).
 		Select("table_name").Row().Scan(&name)
 	return name == names
-}
-
-// GetColumnByID returns the value of the column from the table by id
-func GetColumnByID(table, column, id string) (result string, err error) {
-	err = DBConn.Table(table).Select(column).Where(`id=?`, id).Row().Scan(&result)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column by id")
-	}
-	return
-}
-
-// InitDB drop all tables and exec db schema
-func InitDB(cfg conf.DBConfig) error {
-
-	err := GormInit(cfg)
-	if err != nil || DBConn == nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("initializing DB")
-		return ErrDBConn
-	}
-	if err = DropTables(); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("dropping all tables")
-		return err
-	}
-
-	if conf.Config.Redis.Enable {
-		err = RedisInit(conf.Config.Redis)
-		if err != nil {
-			log.WithFields(log.Fields{
-				"host": conf.Config.Redis.Host, "port": conf.Config.Redis.Port, "db_password": conf.Config.Redis.Password, "db_name": conf.Config.Redis.DbName, "type": consts.DBError,
-			}).Error("can't init redis")
-			return err
-		}
-
-		var rd RedisParams
-		err := rd.Cleardb()
-		if err != nil {
-			return err
-		}
-
-	}
-
-	if err = ExecSchema(); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing db schema")
-		return err
-	}
-
-	install := &Install{Progress: ProgressComplete}
-	if err = install.Create(); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating install")
-		return err
-	}
-
-	if err := ExecCLBSchema(consts.DefaultCLB, conf.Config.KeyID); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB schema")
-		return err
-	}
-	if err := ExecSubSchema(); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB schema")
-		return err
-	}
-
-	return nil
-}
-
-// DropDatabase kill all process and drop database
-func DropDatabase(name string) error {
-	query := `SELECT
-	pg_terminate_backend (pg_stat_activity.pid)
-   FROM
-	pg_stat_activity
-   WHERE
-	pg_stat_activity.datname = ?`
-
-	if err := DBConn.Exec(query, name).Error; err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "dbname": name}).Error("on kill db process")
-		return err
-	}
-
-	if err := DBConn.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", name)).Error; err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "dbname": name}).Error("on drop db")
-		return err
-	}
-
-	return nil
-}
-
-// GetColumnByID returns the value of the column from the table by id
-func GetSumColumn(table, column, where string) (result string, err error) {
-	err = DBConn.Table(table).Select("sum(" + column + ")").Where(where).Row().Scan(&result)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("sum column")
-	}
-	return
-}
-
-//GetColumnByID returns the value of the column from the table by id
-func GetSumColumnCount(table, column, where string) (result int, err error) {
-	err = DBConn.Table(table).Select("count(*)").Where(where).Row().Scan(&result)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("sum column")
-	}
-	return
 }

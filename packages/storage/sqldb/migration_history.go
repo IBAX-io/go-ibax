@@ -25,7 +25,7 @@ func (mh *MigrationHistory) TableName() string {
 
 // CurrentVersion returns current version of database migrations
 func (mh *MigrationHistory) CurrentVersion() (string, error) {
-	if !IsTable(mh.TableName()) {
+	if !NewDbTransaction(DBConn).IsTable(mh.TableName()) {
 		return noVersion, nil
 	}
 

@@ -46,7 +46,7 @@ func (v BCEcosystemGetter) ValidateId(formEcosysID, clientEcosysID int64, le *lo
 		return clientEcosysID, nil
 	}
 
-	count, err := sqldb.GetNextID(nil, "1_ecosystems")
+	count, err := sqldb.NewDbTransaction(nil).GetNextID("1_ecosystems")
 	if err != nil {
 		le.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting next id of ecosystems")
 		return 0, err

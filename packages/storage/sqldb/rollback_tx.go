@@ -24,7 +24,7 @@ func (*RollbackTx) TableName() string {
 
 // GetRollbackTransactions is returns rollback transactions
 func (rt *RollbackTx) GetRollbackTransactions(dbTransaction *DbTransaction, transactionHash []byte) ([]map[string]string, error) {
-	return GetAllTx(dbTransaction, "SELECT * from rollback_tx WHERE tx_hash = ? ORDER BY ID DESC", -1, transactionHash)
+	return dbTransaction.GetAllTx("SELECT * from rollback_tx WHERE tx_hash = ? ORDER BY ID DESC", -1, transactionHash)
 }
 
 // GetBlockRollbackTransactions returns records of rollback by blockID
@@ -60,7 +60,7 @@ func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
 	}
 	rollbackSys := &RollbackTx{}
 	var err error
-	if rollbackSys.ID, err = GetNextID(&DbTransaction{conn: dbTx}, rollbackSys.TableName()); err != nil {
+	if rollbackSys.ID, err = NewDbTransaction(dbTx).GetNextID(rollbackSys.TableName()); err != nil {
 		return err
 	}
 	for i := 1; i < len(rts)+1; i++ {

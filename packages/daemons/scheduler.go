@@ -27,7 +27,7 @@ func loadContractTasks() error {
 	}
 
 	for _, stateID := range stateIDs {
-		if !sqldb.IsTable(fmt.Sprintf("%d_cron", stateID)) {
+		if !sqldb.NewDbTransaction(nil).IsTable(fmt.Sprintf("%d_cron", stateID)) {
 			return nil
 		}
 

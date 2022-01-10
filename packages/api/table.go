@@ -67,7 +67,7 @@ func getTableHandler(w http.ResponseWriter, r *http.Request) {
 
 	columns := make([]columnInfo, 0)
 	for key, value := range columnsMap {
-		colType, err := sqldb.GetColumnType(prefix+`_`+params["name"], key)
+		colType, err := sqldb.NewDbTransaction(nil).GetColumnType(prefix+`_`+params["name"], key)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column type from db")
 			errorResponse(w, err)

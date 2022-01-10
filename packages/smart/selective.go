@@ -75,7 +75,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 			return 0, "", err
 		}
 
-		logData, err = sqldb.GetOneRowTransaction(sc.DbTransaction, selectQuery).String()
+		logData, err = sc.DbTransaction.GetOneRowTransaction(selectQuery).String()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": selectQuery}).Error("getting one row transaction")
 			return 0, "", err
@@ -121,7 +121,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 			cost += updateCost
 		}
 
-		err = sqldb.Update(sc.DbTransaction, sqlBuilder.Table, updateExpr, whereExpr)
+		err = sc.DbTransaction.Update(sqlBuilder.Table, updateExpr, whereExpr)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Error("getting update query")
 			return 0, "", err

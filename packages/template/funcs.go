@@ -690,8 +690,7 @@ func dbfindTag(par parFunc) string {
 		return err.Error()
 	}
 	order = ` order by ` + order
-
-	rows, err := sqldb.GetAllColumnTypes(tblname)
+	rows, err := sc.DbTransaction.GetAllColumnTypes(tblname)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column types from db")
 		return err.Error()
@@ -762,7 +761,7 @@ func dbfindTag(par parFunc) string {
 	if len(where) > 0 {
 		where = ` where ` + where
 	}
-	list, err := sqldb.GetAll(`select `+strings.Join(queryColumns, `, `)+` from "`+tblname+`"`+
+	list, err := sc.DbTransaction.GetAll(`select `+strings.Join(queryColumns, `, `)+` from "`+tblname+`"`+
 		where+order+offset, limit)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all from db")
@@ -1439,7 +1438,7 @@ func columntypeTag(par parFunc) string {
 		tableName := macro((*par.Pars)[`Table`], par.Workspace.Vars)
 		columnName := macro((*par.Pars)[`Column`], par.Workspace.Vars)
 		tblname := qb.GetTableName(par.Workspace.SmartContract.TxSmart.EcosystemID, tableName)
-		colType, err := sqldb.GetColumnType(tblname, columnName)
+		colType, err := par.Workspace.SmartContract.DbTransaction.GetColumnType(tblname, columnName)
 		if err == nil {
 			return colType
 		}
@@ -1464,7 +1463,7 @@ func getHistoryTag(par parFunc) string {
 		return err.Error()
 	}
 
-	colsList, err := sqldb.GetAllColumnTypes(getVar(par.Workspace, `ecosystem_id`) + "_" + table)
+	colsList, err := par.Workspace.SmartContract.DbTransaction.GetAllColumnTypes(getVar(par.Workspace, `ecosystem_id`) + "_" + table)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column types from db")
 		return err.Error()

@@ -379,7 +379,7 @@ func GetContractById(sc *SmartContract, id int64) string {
 func EvalCondition(sc *SmartContract, table, name, condfield string) error {
 	tableName := converter.ParseTable(table, sc.TxSmart.EcosystemID)
 	query := `SELECT ` + converter.EscapeName(condfield) + ` FROM "` + tableName + `" WHERE name = ? and ecosystem = ?`
-	conditions, err := sqldb.Single(sc.DbTransaction, query, name, sc.TxSmart.EcosystemID).String()
+	conditions, err := sc.DbTransaction.Single(query, name, sc.TxSmart.EcosystemID).String()
 	if err != nil {
 		return logErrorDB(err, "executing single query")
 	}
@@ -411,12 +411,12 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 		return 0, logErrorShort(errFounderAccount, consts.NotFound)
 	}
 
-	id, err := sqldb.GetNextID(sc.DbTransaction, "1_ecosystems")
+	id, err := sc.DbTransaction.GetNextID("1_ecosystems")
 	if err != nil {
 		return 0, logErrorDB(err, "generating next ecosystem id")
 	}
 
-	appID, err := sqldb.GetNextID(sc.DbTransaction, "1_applications")
+	appID, err := sc.DbTransaction.GetNextID("1_applications")
 	if err != nil {
 		return 0, logErrorDB(err, "generating next application id")
 	}

@@ -34,7 +34,7 @@ func (sys *Ecosystem) TableName() string {
 
 // GetAllSystemStatesIDs is retrieving all ecosystems ids
 func GetAllSystemStatesIDs() ([]int64, []string, error) {
-	if !IsTable(ecosysTable) {
+	if !NewDbTransaction(DBConn).IsTable(ecosysTable) {
 		return nil, nil, nil
 	}
 

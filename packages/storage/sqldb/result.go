@@ -20,9 +20,9 @@ type SingleResult struct {
 }
 
 // Single is retrieving single result
-func Single(transaction *DbTransaction, query string, args ...interface{}) *SingleResult {
+func (dbTx *DbTransaction) Single(query string, args ...interface{}) *SingleResult {
 	var result []byte
-	err := GetDB(transaction).Raw(query, args...).Row().Scan(&result)
+	err := GetDB(dbTx).Raw(query, args...).Row().Scan(&result)
 	switch {
 	case err == sql.ErrNoRows:
 		return &SingleResult{[]byte(""), nil}
@@ -135,8 +135,8 @@ func (r *OneRow) Int() (map[string]int, error) {
 }
 
 // GetAllTransaction is retrieve all query result rows
-func GetAllTransaction(transaction *DbTransaction, query string, countRows int, args ...interface{}) ([]map[string]string, error) {
-	request := GetDB(transaction).Raw(query, args...)
+func (dbTx *DbTransaction) GetAllTransaction(query string, countRows int, args ...interface{}) ([]map[string]string, error) {
+	request := GetDB(dbTx).Raw(query, args...)
 	if countRows > 0 {
 		request = request.Limit(countRows)
 	}
@@ -150,6 +150,85 @@ func GetAllTransaction(transaction *DbTransaction, query string, countRows int, 
 		return nil, fmt.Errorf("%s in query %s %s", err, query, args)
 	}
 	return result, nil
+}
+
+// GetAll returns all transaction
+func (dbTx *DbTransaction) GetAll(query string, countRows int, args ...interface{}) ([]map[string]string, error) {
+	return dbTx.GetAllTransaction(query, countRows, args)
+}
+
+// GetAllTx returns all tx's
+func (dbTx *DbTransaction) GetAllTx(query string, countRows int, args ...interface{}) ([]map[string]string, error) {
+	return dbTx.GetAllTransaction(query, countRows, args)
+}
+
+// GetOneRowTransaction returns one row from transactions
+func (dbTx *DbTransaction) GetOneRowTransaction(query string, args ...interface{}) *OneRow {
+	result := make(map[string]string)
+	all, err := dbTx.GetAllTransaction(query, 1, args...)
+	if err != nil {
+		return &OneRow{result, fmt.Errorf("%s in query %s %s", err, query, args)}
+	}
+	if len(all) == 0 {
+		return &OneRow{result, nil}
+	}
+	return &OneRow{all[0], nil}
+}
+
+// GetOneRow returns one row
+func (dbTx *DbTransaction) GetOneRow(query string, args ...interface{}) *OneRow {
+	return dbTx.GetOneRowTransaction(query, args...)
+}
+
+func (dbTx *DbTransaction) GetRows(tableName, columns string, offset, limit int) ([]map[string]string, error) {
+	query := GetDB(dbTx).Table(tableName).Order("id").Offset(offset).Limit(limit)
+	if len(columns) > 0 {
+		columns = "id," + columns
+		query = query.Select(columns)
+	}
+	rows, err := query.Rows()
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return getResult(rows, -1)
+}
+
+func GetResult(rows *sql.Rows) ([]map[string]string, error) {
+	return getResult(rows, -1)
+}
+
+func GetNodeResult(rows *sql.Rows) ([]map[string]string, error) {
+	return getnodeResult(rows, -1)
+}
+
+// ListResult is a structure for the list result
+type ListResult struct {
+	result []string
+	err    error
+}
+
+// String return the slice of strings
+func (r *ListResult) String() ([]string, error) {
+	if r.err != nil {
+		return r.result, r.err
+	}
+	return r.result, nil
+}
+
+// GetList returns the result of the query as ListResult variable
+func (dbTx *DbTransaction) GetList(query string, args ...interface{}) *ListResult {
+	var result []string
+	all, err := dbTx.GetAll(query, -1, args...)
+	if err != nil {
+		return &ListResult{result, err}
+	}
+	for _, v := range all {
+		for _, v2 := range v {
+			result = append(result, v2)
+		}
+	}
+	return &ListResult{result, nil}
 }
 
 func getResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
@@ -266,54 +345,4 @@ func getnodeResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
 		return nil, err
 	}
 	return result, nil
-}
-
-// GetAll returns all transaction
-func GetAll(query string, countRows int, args ...interface{}) ([]map[string]string, error) {
-	return GetAllTransaction(nil, query, countRows, args)
-}
-
-// GetAllTx returns all tx's
-func GetAllTx(transaction *DbTransaction, query string, countRows int, args ...interface{}) ([]map[string]string, error) {
-	return GetAllTransaction(transaction, query, countRows, args)
-}
-
-// GetOneRowTransaction returns one row from transactions
-func GetOneRowTransaction(transaction *DbTransaction, query string, args ...interface{}) *OneRow {
-	result := make(map[string]string)
-	all, err := GetAllTransaction(transaction, query, 1, args...)
-	if err != nil {
-		return &OneRow{result, fmt.Errorf("%s in query %s %s", err, query, args)}
-	}
-	if len(all) == 0 {
-		return &OneRow{result, nil}
-	}
-	return &OneRow{all[0], nil}
-}
-
-// GetOneRow returns one row
-func GetOneRow(query string, args ...interface{}) *OneRow {
-	return GetOneRowTransaction(nil, query, args...)
-}
-
-func GetRows(tableName, columns string, offset, limit int) ([]map[string]string, error) {
-	query := DBConn.Table(tableName).Order("id").Offset(offset).Limit(limit)
-	if len(columns) > 0 {
-		columns = "id," + columns
-		query = query.Select(columns)
-	}
-	rows, err := query.Rows()
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	return getResult(rows, -1)
-}
-
-func GetResult(rows *sql.Rows) ([]map[string]string, error) {
-	return getResult(rows, -1)
-}
-
-func GetNodeResult(rows *sql.Rows) ([]map[string]string, error) {
-	return getnodeResult(rows, -1)
 }

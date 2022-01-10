@@ -373,7 +373,7 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 		//q = q.Where(where)
 	}
 
-	count, err := sqldb.GetSumColumnCount(table, form.Column, where)
+	count, err := sqldb.NewDbTransaction(nil).GetSumColumnCount(table, form.Column, where)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
 		errorResponse(w, err)
@@ -382,7 +382,7 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 
 	result := new(sumResult)
 	if count > 0 {
-		sum, err := sqldb.GetSumColumn(table, form.Column, where)
+		sum, err := sqldb.NewDbTransaction(nil).GetSumColumn(table, form.Column, where)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
 			errorResponse(w, errTableNotFound.Errorf(table))

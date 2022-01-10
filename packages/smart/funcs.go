@@ -664,7 +664,7 @@ func parseViewColumnSql(sc *SmartContract, columns string) (colsSQL string, colo
 		var c ViewColSch
 		tableName := converter.ParseTable(icol.Table, sc.TxSmart.EcosystemID)
 		if !has[tableName] {
-			if !sqldb.HasTableOrView(sc.DbTransaction, tableName) {
+			if !sc.DbTransaction.HasTableOrView(tableName) {
 				err = fmt.Errorf(eTableNotFound, tableName)
 				return
 			}
@@ -744,7 +744,7 @@ func parseViewWhereSql(sc *SmartContract, columns string) (tabsSQL, whsSQL strin
 	for i, icol := range cols {
 		tableName1 := converter.ParseTable(icol.TableOne, sc.TxSmart.EcosystemID)
 		if !has[tableName1] {
-			if !sqldb.HasTableOrView(sc.DbTransaction, tableName1) {
+			if !sc.DbTransaction.HasTableOrView(tableName1) {
 				err = fmt.Errorf(eTableNotFound, tableName1)
 				return
 			}
@@ -753,7 +753,7 @@ func parseViewWhereSql(sc *SmartContract, columns string) (tabsSQL, whsSQL strin
 		tableArr = append(tableArr, tableName1)
 		tableName2 := converter.ParseTable(icol.TableTwo, sc.TxSmart.EcosystemID)
 		if !has[tableName2] {
-			if !sqldb.HasTableOrView(sc.DbTransaction, tableName2) {
+			if !sc.DbTransaction.HasTableOrView(tableName2) {
 				err = fmt.Errorf(eTableNotFound, tableName2)
 				return
 			}
@@ -822,7 +822,7 @@ func CreateTable(sc *SmartContract, name, columns, permissions string, applicati
 	}
 
 	tableName := qb.GetTableName(sc.TxSmart.EcosystemID, name)
-	if sqldb.IsTable(tableName) {
+	if sc.DbTransaction.IsTable(tableName) {
 		return fmt.Errorf(eTableExists, name)
 	}
 
@@ -893,7 +893,7 @@ func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64
 	}
 	var ind int
 	var lastID string
-	if ind, err = sqldb.NumIndexes(tblname); err != nil {
+	if ind, err = sc.DbTransaction.NumIndexes(tblname); err != nil {
 		err = logErrorDB(err, "num indexes")
 		return
 	}
@@ -1372,7 +1372,7 @@ func ColumnCondition(sc *SmartContract, tableName, name, coltype, permissions st
 	if isExist {
 		return nil
 	}
-	count, err := sqldb.GetColumnCount(tblName)
+	count, err := sc.DbTransaction.GetColumnCount(tblName)
 	if err != nil {
 		return logErrorDB(err, "counting table columns")
 	}
@@ -1397,7 +1397,7 @@ func AllowChangeCondition(sc *SmartContract, tblname string) error {
 
 // RowConditions checks conditions for table row by id
 func RowConditions(sc *SmartContract, tblname string, id int64, conditionOnly bool) error {
-	condition, err := sqldb.GetRowConditionsByTableNameAndID(sc.DbTransaction,
+	condition, err := sc.DbTransaction.GetRowConditionsByTableNameAndID(
 		qb.GetTableName(sc.TxSmart.EcosystemID, tblname), id)
 	if err != nil {
 		return logErrorDB(err, "executing row condition query")
@@ -1472,7 +1472,7 @@ func CreateColumn(sc *SmartContract, tableName, name, colType, permissions strin
 		return
 	}
 
-	err = sqldb.AlterTableAddColumn(sc.DbTransaction, tblname, name, sqlColType)
+	err = sc.DbTransaction.AlterTableAddColumn(tblname, name, sqlColType)
 	if err != nil {
 		return logErrorDB(err, "adding column to the table")
 	}
@@ -1858,7 +1858,7 @@ func Hash(data interface{}) (string, error) {
 
 // GetColumnType returns the type of the column
 func GetColumnType(sc *SmartContract, tableName, columnName string) (string, error) {
-	return sqldb.GetColumnType(qb.GetTableName(sc.TxSmart.EcosystemID, tableName), columnName)
+	return sc.DbTransaction.GetColumnType(qb.GetTableName(sc.TxSmart.EcosystemID, tableName), columnName)
 }
 
 // GetType returns the name of the type of the value
@@ -2179,14 +2179,14 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 		log.WithFields(log.Fields{"type": consts.NotFound, "error": err}).Error("not found table info")
 		return fmt.Errorf(eTableNotFound, tblname)
 	}
-	count, err = sqldb.GetRecordsCountTx(sc.DbTransaction, tblname, ``)
+	count, err = sc.DbTransaction.GetRecordsCountTx(tblname, ``)
 	if err != nil {
 		return
 	}
 	if count > 0 {
 		return fmt.Errorf(eTableNotEmpty, tblname)
 	}
-	colType, err := sqldb.GetColumnType(tblname, name)
+	colType, err := sc.DbTransaction.GetColumnType(tblname, name)
 	if err != nil {
 		return err
 	}
@@ -2205,7 +2205,7 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 	if err != nil {
 		return
 	}
-	if err = sqldb.AlterTableDropColumn(sc.DbTransaction, tblname, name); err != nil {
+	if err = sc.DbTransaction.AlterTableDropColumn(tblname, name); err != nil {
 		return
 	}
 	_, _, err = sc.update([]string{`columns`}, []interface{}{string(permout)},
@@ -2256,7 +2256,7 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 		return fmt.Errorf(eTableNotFound, tblname)
 	}
 
-	count, err = sqldb.GetRecordsCountTx(sc.DbTransaction, tblname, ``)
+	count, err = sc.DbTransaction.GetRecordsCountTx(tblname, ``)
 	if err != nil {
 		return
 	}
@@ -2268,14 +2268,14 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 		return err
 	}
 
-	if err = sqldb.DropTable(sc.DbTransaction, tblname); err != nil {
+	if err = sc.DbTransaction.DropTable(tblname); err != nil {
 		return
 	}
 	if !sc.CLB {
 		var (
 			out []byte
 		)
-		cols, err := sqldb.GetAllColumnTypes(tblname)
+		cols, err := sc.DbTransaction.GetAllColumnTypes(tblname)
 		if err != nil {
 			return err
 		}
