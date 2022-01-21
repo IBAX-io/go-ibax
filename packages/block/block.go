@@ -76,7 +76,7 @@ func (b *Block) PlaySafe() error {
 		dbTransaction.Rollback()
 		if b.GenBlock && len(b.Transactions) == 0 {
 			if err == transaction.ErrLimitStop {
-				err = transaction.ErrLimitTime
+				err = script.ErrVMTimeLimit
 			}
 			if inputTx[0].IsSmartContract() {
 				transaction.BadTxForBan(inputTx[0].TxKeyID())
@@ -222,7 +222,7 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 					break
 				}
 				if strings.Contains(err.Error(), script.ErrVMTimeLimit.Error()) {
-					err = transaction.ErrLimitTime
+					err = script.ErrVMTimeLimit
 				}
 			}
 			if t.IsSmartContract() {

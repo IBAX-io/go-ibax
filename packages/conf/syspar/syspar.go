@@ -71,8 +71,8 @@ const (
 	LocalNodeBanTime = `local_node_ban_time`
 	// TaxesSize is the value of the taxes
 	TaxesSize = `taxes_size`
-	// PriceTxSizeWallet is the size of a user's resource in the database
-	PriceTxSizeWallet = `price_tx_size_wallet`
+	// PriceTxSize is the size of a user's resource in the database
+	PriceTxSize = `price_tx_size`
 	// PriceCreateRate is new element rate, include table、contract、column、ecosystem、page、menu
 	PriceCreateRate = `price_create_rate`
 	// Test equals true or 1 if we have a test blockchain
@@ -356,7 +356,8 @@ func GetFuelRate(ecosystem int64) string {
 	return fuels[1]
 }
 
-func IsFuelRate(ecosystem int64) (string, bool) {
+// HasFuelRate is returns fuels exist
+func HasFuelRate(ecosystem int64) (string, bool) {
 	mutex.RLock()
 	defer mutex.RUnlock()
 	if ret, ok := fuels[ecosystem]; ok {
@@ -375,8 +376,8 @@ func GetTaxesWallet(ecosystem int64) string {
 	return wallets[1]
 }
 
-// IsTaxesWallet is returns taxes exist
-func IsTaxesWallet(ecosystem int64) (string, bool) {
+// HasTaxesWallet is returns taxes exist
+func HasTaxesWallet(ecosystem int64) (string, bool) {
 	mutex.RLock()
 	defer mutex.RUnlock()
 	if ret, ok := wallets[ecosystem]; ok {

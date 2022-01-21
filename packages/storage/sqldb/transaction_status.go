@@ -92,5 +92,5 @@ func (ts *TransactionStatus) SetError(transaction *DbTransaction, errorText stri
 
 // UpdatePenalty is updating penalty
 func (ts *TransactionStatus) UpdatePenalty(transaction *DbTransaction, transactionHash []byte) error {
-	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("penalty", 1).Error
+	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ? AND penalty = 0", transactionHash).Update("penalty", 1).Error
 }

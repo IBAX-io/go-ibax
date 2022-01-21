@@ -139,7 +139,7 @@ func defineVMType() script.VMType {
 }
 
 // GetLogger is returning logger
-func (sc SmartContract) GetLogger() *log.Entry {
+func (sc *SmartContract) GetLogger() *log.Entry {
 	var name string
 	if sc.TxContract != nil {
 		name = sc.TxContract.Name
@@ -596,14 +596,16 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 		}
 		if needPayment {
 			for _, pay := range sc.multiPays {
-				wltAmount, _ := decimal.NewFromString(pay.payWallet.Amount)
-				estimateCost := converter.StrToInt64(converter.IntToStr(len(cfunc.Vars) + len(cfunc.Code)))
-				estimate = estimate.Add(decimal.New(estimateCost*2, 0).Mul(pay.fuelRate))
-				if wltAmount.Cmp(estimate) < 0 {
-					return retError(errCurrentBalance)
+				for i := 0; i < len(pay.fromIDInfos); i++ {
+					frominfo := pay.fromIDInfos[i]
+					wltAmount, _ := decimal.NewFromString(frominfo.payWallet.Amount)
+					estimateCost := converter.StrToInt64(converter.IntToStr(len(cfunc.Vars) + len(cfunc.Code)))
+					estimate = estimate.Add(decimal.New(estimateCost*2, 0).Mul(frominfo.fuelRate))
+					if wltAmount.Cmp(estimate) < 0 {
+						return retError(errCurrentBalance)
+					}
 				}
 			}
-
 		}
 		cfuncs = append(cfuncs, cfunc)
 	}

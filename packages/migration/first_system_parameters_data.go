@@ -42,7 +42,7 @@ INSERT INTO "1_system_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_system_parameters'),'incorrect_blocks_per_day','10','ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'node_ban_time','86400000','ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'node_ban_time_local','1800000','ContractAccess("@1UpdateSysParam")'),
-	(next_id('1_system_parameters'),'price_tx_size_wallet', '15', 'ContractAccess("@1UpdateSysParam")'),
+	(next_id('1_system_parameters'),'price_tx_size', '15', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'price_create_rate', '1000000', 'ContractAccess("@1UpdateSysParam")'),
 	(next_id('1_system_parameters'),'test','false','false'),
 	(next_id('1_system_parameters'),'price_tx_data', '10', 'ContractAccess("@1UpdateSysParam")'),

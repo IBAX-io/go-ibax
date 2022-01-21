@@ -13,6 +13,16 @@ import (
 
 const ecosysTable = "1_ecosystems"
 
+const (
+	FeeModeType     = "fee_mode_type"
+	FeeModeVmCost   = "fee_mode_vmcost"
+	FeeModeStorage  = "fee_mode_storage"
+	FeeModeElement  = "fee_mode_element"
+	FeeModeExpedite = "fee_mode_expedite"
+
+	MultiFee = "multi_fee"
+)
+
 // Ecosystem is model
 type Ecosystem struct {
 	ID             int64 `gorm:"primary_key;not null"`
@@ -67,7 +77,7 @@ func (sys *Ecosystem) IsOpenMultiFee() bool {
 	if len(sys.Info) > 0 {
 		var info map[string]interface{}
 		json.Unmarshal([]byte(sys.Info), &info)
-		if v, ok := info["multi_fee"]; ok {
+		if v, ok := info[MultiFee]; ok {
 			multi, _ := strconv.Atoi(fmt.Sprint(v))
 			if multi == 1 {
 				return true
@@ -75,4 +85,39 @@ func (sys *Ecosystem) IsOpenMultiFee() bool {
 		}
 	}
 	return false
+}
+
+// FeeMode is get ecosystem fee mode
+func (sys *Ecosystem) FeeMode() map[string]int {
+	if !sys.IsOpenMultiFee() {
+		return nil
+	}
+	if len(sys.TokenTitle) <= 0 {
+		return nil
+	}
+	if len(sys.Info) > 0 {
+		var (
+			info    map[string]interface{}
+			feeMode map[string]int
+		)
+		json.Unmarshal([]byte(sys.Info), &info)
+		for k, v := range info {
+			switch k {
+			case FeeModeType:
+				fm, _ := strconv.Atoi(fmt.Sprint(v))
+				if fm == 2 {
+					feeMode[k] = fm
+					switch k {
+					case FeeModeVmCost, FeeModeStorage, FeeModeElement, FeeModeExpedite:
+						fm, _ := strconv.Atoi(fmt.Sprint(v))
+						if fm >= 0 {
+							feeMode[k] = fm
+						}
+					}
+				}
+			}
+		}
+		return feeMode
+	}
+	return nil
 }

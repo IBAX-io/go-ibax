@@ -114,7 +114,7 @@ func UpdateSysParam(sc *SmartContract, name, value, conditions string) (int64, e
 			ok = ival > 0 && ival < 1000
 		case syspar.TaxesSize,
 			syspar.PriceCreateRate,
-			syspar.PriceTxSizeWallet,
+			syspar.PriceTxSize,
 			syspar.BlockReward:
 			ok = ival >= 0
 		case syspar.MaxBlockSize,
