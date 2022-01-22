@@ -307,6 +307,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) (fromIDInfos []*fromIDInfo,
 	var from = &fromIDInfo{
 		payWallet:   &sqldb.Key{},
 		fuelRate:    fuelRate,
+		vmCostFee:   new(fuelCategory),
 		storageFee:  new(fuelCategory),
 		elementFee:  new(fuelCategory),
 		expediteFee: new(fuelCategory),
