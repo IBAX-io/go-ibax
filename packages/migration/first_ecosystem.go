@@ -13,7 +13,7 @@ var sqlFirstEcosystemSchema = `
 		t.Column("info", "jsonb", {"null": true})
 		t.Column("is_valued", "bigint", {"default": "0"})
 		t.Column("emission_amount", "jsonb", {"null": true})
-		t.Column("token_title", "string", {"null": true, "size":255})
+		t.Column("token_symbol", "string", {"null": true, "size":255})
 		t.Column("token_name", "string", {"null": true, "size":255})
 		t.Column("type_emission", "bigint", {"default": "0"})
 		t.Column("type_withdraw", "bigint", {"default": "0"})

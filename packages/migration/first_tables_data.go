@@ -37,7 +37,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "info": "ContractAccess(\"@1EcManageInfo\")",
             "is_valued": "ContractAccess(\"@1VotingVesAccept\")",
             "emission_amount": "ContractAccess(\"@1NewToken\",\"@1TeBurn\")",
-            "token_title": "ContractAccess(\"@1NewToken\")",
+            "token_symbol": "ContractAccess(\"@1NewToken\")",
             "token_name": "ContractAccess(\"@1NewToken\")",
             "type_emission": "ContractAccess(\"@1NewToken\",\"@1TeChange\")",
             "type_withdraw": "ContractAccess(\"@1NewToken\",\"@1TeChange\")"

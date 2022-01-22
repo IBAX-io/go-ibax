@@ -29,7 +29,7 @@ type Ecosystem struct {
 	Name           string
 	IsValued       bool
 	EmissionAmount string `gorm:"type:jsonb"`
-	TokenTitle     string
+	TokenSymbol    string
 	TokenName      string
 	TypeEmission   int64
 	TypeWithdraw   int64
@@ -92,7 +92,7 @@ func (sys *Ecosystem) FeeMode() map[string]int {
 	if !sys.IsOpenMultiFee() {
 		return nil
 	}
-	if len(sys.TokenTitle) <= 0 {
+	if len(sys.TokenSymbol) <= 0 {
 		return nil
 	}
 	if len(sys.Info) > 0 {

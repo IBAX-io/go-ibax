@@ -396,7 +396,7 @@ func (sc *SmartContract) appendTokens(nums ...int64) error {
 		if !ecosystems.IsOpenMultiFee() {
 			continue
 		}
-		if len(ecosystems.TokenTitle) <= 0 {
+		if len(ecosystems.TokenSymbol) <= 0 {
 			continue
 		}
 		sc.TxSmart.TokenEcosystems[num] = nil
