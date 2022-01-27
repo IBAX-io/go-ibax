@@ -1,0 +1,2 @@
+$    go-ibax generateFirstBlock \
+        --test=true
