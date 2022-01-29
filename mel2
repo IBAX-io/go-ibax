@@ -1,0 +1,4 @@
+$ export GOPROXY=https://athens.azurefd.net
+$ GO111MODULE=on go mod tidy -v
+
+$ go build
