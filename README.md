@@ -47,7 +47,7 @@ $    go-ibax config
 $    go-ibax generateKeys
 ```
 
-3. Genereate the first block. If you are creating your own blockchain network. you must use the `--test=true` option.
+3. Generate the first block. If you are creating your own blockchain network. you must use the `--test=true` option.
    Otherwise you will not be able to create new accounts.
 
 ```bash
