@@ -1910,7 +1910,7 @@ func GetCLBList(sc *SmartContract) map[string]string {
 
 func GetHistoryRaw(transaction *sqldb.DbTransaction, ecosystem int64, tableName string,
 	id, idRollback int64) ([]interface{}, error) {
-	table := fmt.Sprintf(`%d_%s`, ecosystem, tableName)
+	table := qb.GetTableName(ecosystem, tableName)
 	rows, err := sqldb.GetDB(transaction).Table(table).Where("id=?", id).Rows()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get current values")
