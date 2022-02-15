@@ -164,6 +164,7 @@ var sqlFirstEcosystemCommon = `
 		t.Column("sender_balance", "decimal(30)", {"default": "0"})
 		t.Column("recipient_balance", "decimal(30)", {"default": "0"})
 		t.Column("amount", "decimal(30)", {"default": "0"})
+		t.Column("value_detail", "jsonb", {"null": true})
 		t.Column("comment", "text", {"default": ""})
 		t.Column("block_id", "bigint", {"default": "0"})
 		t.Column("txhash", "bytea", {"default": ""})

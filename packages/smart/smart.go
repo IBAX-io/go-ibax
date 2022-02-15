@@ -596,14 +596,11 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 		}
 		if needPayment {
 			for _, pay := range sc.multiPays {
-				for i := 0; i < len(pay.fromIDInfos); i++ {
-					frominfo := pay.fromIDInfos[i]
-					wltAmount, _ := decimal.NewFromString(frominfo.payWallet.Amount)
-					estimateCost := converter.StrToInt64(converter.IntToStr(len(cfunc.Vars) + len(cfunc.Code)))
-					estimate = estimate.Add(decimal.New(estimateCost*2, 0).Mul(frominfo.fuelRate))
-					if wltAmount.Cmp(estimate) < 0 {
-						return retError(errCurrentBalance)
-					}
+				wltAmount, _ := decimal.NewFromString(pay.payWallet.Amount)
+				estimateCost := converter.StrToInt64(converter.IntToStr(len(cfunc.Vars) + len(cfunc.Code)))
+				estimate = estimate.Add(decimal.New(estimateCost*2, 0).Mul(pay.fuelRate))
+				if wltAmount.Cmp(estimate) < 0 {
+					return retError(errCurrentBalance)
 				}
 			}
 		}

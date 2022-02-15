@@ -98,7 +98,7 @@ func (sys *Ecosystem) FeeMode() map[string]int {
 	if len(sys.Info) > 0 {
 		var (
 			info    map[string]interface{}
-			feeMode map[string]int
+			feeMode = make(map[string]int)
 		)
 		json.Unmarshal([]byte(sys.Info), &info)
 		for k, v := range info {
@@ -107,12 +107,18 @@ func (sys *Ecosystem) FeeMode() map[string]int {
 				fm, _ := strconv.Atoi(fmt.Sprint(v))
 				if fm == 2 {
 					feeMode[k] = fm
-					switch k {
-					case FeeModeVmCost, FeeModeStorage, FeeModeElement, FeeModeExpedite:
-						fm, _ := strconv.Atoi(fmt.Sprint(v))
-						if fm >= 0 {
-							feeMode[k] = fm
-						}
+				}
+				break
+			}
+		}
+
+		for k, v := range info {
+			switch k {
+			case FeeModeVmCost, FeeModeStorage, FeeModeElement, FeeModeExpedite:
+				if _, ok := feeMode[FeeModeType]; ok {
+					fm, _ := strconv.Atoi(fmt.Sprint(v))
+					if fm > 0 {
+						feeMode[k] = fm
 					}
 				}
 			}

@@ -55,6 +55,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "sender_balance": "false",
             "recipient_balance": "false",
             "amount":  "false",
+            "value_detail":  "false",
             "comment": "false",
             "block_id":  "false",
             "txhash": "false",
