@@ -373,6 +373,10 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 		colname := converter.Sanitize(col, `->`)
 		if strings.Contains(colname, `->`) {
 			colname = colname[:strings.Index(colname, `->`)]
+		} else if _, ok := cols[colname]; "id" != colname && !ok {
+			err = fmt.Errorf(eColumnNotExist, colname)
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Errorf("getting column")
+			return err
 		}
 		colList[i] = colname
 	}
