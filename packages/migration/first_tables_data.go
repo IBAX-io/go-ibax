@@ -11,7 +11,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
         '{
             "insert": "ContractAccess(\"@1NewDelayedContract\")",
             "update": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
+            "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
             "contract": "ContractAccess(\"@1EditDelayedContract\")",
@@ -24,13 +24,13 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "deleted": "ContractAccess(\"@1EditDelayedContract\")",
             "conditions": "ContractAccess(\"@1EditDelayedContract\")"
         }',
-        'ContractConditions("@1AdminCondition")'
+        'ContractConditions("@1MainCondition")'
     ),
     (next_id('1_tables'), 'ecosystems',
         '{
             "insert": "ContractAccess(\"@1NewEcosystem\")",
             "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1NewToken\",\"@1TeChange\",\"@1TeBurn\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
+            "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
             "name": "ContractAccess(\"@1EditEcosystemName\")",
@@ -42,26 +42,26 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "type_emission": "ContractAccess(\"@1NewToken\",\"@1TeChange\")",
             "type_withdraw": "ContractAccess(\"@1NewToken\",\"@1TeChange\")"
         }',
-        'ContractConditions("@1AdminCondition")'
+        'ContractConditions("@1MainCondition")'
     ),
     (next_id('1_tables'), 'system_parameters',
         '{
             "insert": "false",
             "update": "ContractAccess(\"@1UpdateSysParam\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
+            "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
             "value": "ContractAccess(\"@1UpdateSysParam\")",
             "name": "false",
             "conditions": "ContractAccess(\"@1UpdateSysParam\")"
         }',
-        'ContractConditions("@1AdminCondition")'
+        'ContractConditions("@1MainCondition")'
     ),
     (next_id('1_tables'), 'bad_blocks',
         '{
             "insert": "ContractAccess(\"@1NewBadBlock\")",
             "update": "ContractAccess(\"@1NewBadBlock\", \"@1CheckNodesBan\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
+            "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
             "block_id": "ContractAccess(\"@1CheckNodesBan\")",
@@ -71,13 +71,13 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "reason": "ContractAccess(\"@1CheckNodesBan\")",
             "deleted": "ContractAccess(\"@1CheckNodesBan\")"
         }',
-        'ContractConditions("@1AdminCondition")'
+        'ContractConditions("@1MainCondition")'
     ),
     (next_id('1_tables'), 'node_ban_logs',
         '{
             "insert": "ContractAccess(\"@1CheckNodesBan\")",
             "update": "ContractAccess(\"@1CheckNodesBan\")",
-            "new_column": "ContractConditions(\"@1AdminCondition\")"
+            "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
             "node_id": "ContractAccess(\"@1CheckNodesBan\")",
@@ -85,7 +85,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "ban_time": "ContractAccess(\"@1CheckNodesBan\")",
             "reason": "ContractAccess(\"@1CheckNodesBan\")"
         }',
-        'ContractConditions("@1AdminCondition")'
+        'ContractConditions("@1MainCondition")'
     ),
     (next_id('1_tables'), 'time_zones',
         '{
@@ -97,6 +97,6 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "name": "false",
             "offset": "false"
         }',
-        'ContractConditions("@1AdminCondition")'
+        'ContractConditions("@1MainCondition")'
     );
 `

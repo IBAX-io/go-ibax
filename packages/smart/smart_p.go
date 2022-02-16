@@ -438,7 +438,7 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 	sc.FullAccess = true
 
 	if _, _, err = DBInsert(sc, "@1parameters", types.LoadMap(map[string]interface{}{
-		"name": "ecosystem_wallet", "value": "0", "conditions": `ContractConditions("AdminCondition")`,
+		"name": "ecosystem_wallet", "value": "0", "conditions": `ContractConditions("MainCondition")`,
 		"ecosystem": idStr,
 	})); err != nil {
 		return 0, logErrorDB(err, "inserting system parameter")

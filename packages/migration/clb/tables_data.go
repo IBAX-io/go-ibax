@@ -23,7 +23,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
 		"multi": "ContractConditions(\"MainCondition\")",
 		"account": "false",
 		"ecosystem": "false",
-		"multi": "ContractConditions(\"@1AdminCondition\")"
+		"multi": "ContractConditions(\"@1MainCondition\")"
 	}', 
 	'ContractAccess("@1EditTable")'),
 	(next_id('1_tables'), 'history', 

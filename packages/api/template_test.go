@@ -115,18 +115,17 @@ var forTest = tplList{
 		`[{"tag":"text","text":"unexpected comma"}]`},
 	{`SetVar(w_filter, ` + "`" + `"id": {"$lt": "2"}` + "`" + `)SetVar(w, {#w_filter# #w_search#})
 		  DBFind("contracts", src).Columns("id,name").Where(#w#)Table(src)`,
-		`[{"tag":"dbfind","attr":{"columns":["id","name"],"data":[["1","AdminCondition"]],"name":"contracts","source":"src","types":["text","text"],"where":"{"id": {"$lt": "2"} }"}},{"tag":"table","attr":{"source":"src"}}]`},
+		`[{"tag":"dbfind","attr":{"columns":["id","name"],"data":[["1","MainCondition"]],"name":"contracts","source":"src","types":["text","text"],"where":"{"id": {"$lt": "2"} }"}},{"tag":"table","attr":{"source":"src"}}]`},
 	{`DBFind("contracts", src).Columns("id,name").Where({"id": {"$lt": "2"} })`,
-		`[{"tag":"dbfind","attr":{"columns":["id","name"],"data":[["1","AdminCondition"]],"name":"contracts","source":"src","types":["text","text"],"where":"{"id": {"$lt": "2"} }"}}]`},
+		`[{"tag":"dbfind","attr":{"columns":["id","name"],"data":[["1","MainCondition"]],"name":"contracts","source":"src","types":["text","text"],"where":"{"id": {"$lt": "2"} }"}}]`},
 	{`SetVar(where, {"$or": ["name": #poa#,"valueN": #poa#]})
 		DBFind(contracts, src).Columns("id").Where(#where#)`, `[{"tag":"text","text":"pq: column "valuen" does not exist in query select "id" from "1_contracts" where ("name" = '' or "valuen" = '') order by id [[]]"}]`},
 	{`DBFind("@1roles_participants", src).Where({"ecosystem": #ecosystem_id#, "role->id": {"$in": []}, "member->member_id": #key_id#, "deleted": 0})`, `[{"tag":"dbfind","attr":{"columns":["id","role","member","appointed","date_created","date_deleted","deleted","ecosystem"],"data":[],"name":"@1roles_participants","source":"src","types":[],"where":"{"ecosystem": 1, "role-\u003eid": {"$in": []}, "member-\u003emember_id": 2665397054248150876, "deleted": 0}"}}]`},
 	{`DBFind("@1roles_participants").Where({"ecosystem": #ecosystem_id#, "role->id": {"$in": []}, "member->member_id": #key_id#, "deleted": 0}).Vars(v)`, `[{"tag":"dbfind","attr":{"columns":["id","role","member","appointed","date_created","date_deleted","deleted","ecosystem"],"data":[],"name":"@1roles_participants","types":[],"where":"{"ecosystem": 1, "role-\u003eid": {"$in": []}, "member-\u003emember_id": 2665397054248150876, "deleted": 0}"}}]`},
-	{`DBFind(@1pages).Where({{id:{$neq:5}}, {id:2}, id:{$neq:6}, $or:[id:6, {id:1}, {id:2}, id:3]}).Columns("id,name").Order(id)`, `[{"tag":"dbfind","attr":{"columns":["id","name"],"data":[["1","admin_index"],["2","developer_index"],["3","notifications"]],"name":"@1pages","order":"id","types":["text","text"],"where":"{{id:{$neq:5}}, {id:2}, id:{$neq:6}, $or:[id:6, {id:1}, {id:2}, id:3]}"}}]`},
+	{`DBFind(@1pages).Where({{id:{$neq:5}}, {id:2}, id:{$neq:6}, $or:[id:6, {id:1}, {id:2}, id:3]}).Columns("id,name").Order(id)`, `[{"tag":"dbfind","attr":{"columns":["id","name"],"data":[["1","developer_index"],["3","notifications"]],"name":"@1pages","order":"id","types":["text","text"],"where":"{{id:{$neq:5}}, {id:2}, id:{$neq:6}, $or:[id:6, {id:1}, {id:2}, id:3]}"}}]`},
 	{`DBFind(@1pages).Where({id:[{$neq:5},{$neq:4}, 2], name:{$neq: Edit}}).Columns("id,name")`,
 		`[{"tag":"dbfind","attr":{"columns":["id","name"],"data":[["2","developer_index"]],"name":"@1pages","types":["text","text"],"where":"{id:[{$neq:5},{$neq:4}, 2], name:{$neq: Edit}}"}}]`},
 	{`DBFind(@1pages).Where({id:3, name: {$neq:EditPage}, $or:[id:1, {id:5}, id:{$neq:2}, id:4]}).Columns("id,name")`, `[{"tag":"dbfind","attr":{"columns":["id","name"],"data":[["3","notifications"]],"name":"@1pages","types":["text","text"],"where":"{id:3, name: {$neq:EditPage}, $or:[id:1, {id:5}, id:{$neq:2}, id:4]}"}}]`},
-	{`DBFind(@1pages).Where({id:1}).Columns("id,name")`, `[{"tag":"dbfind","attr":{"columns":["id","name"],"data":[["1","admin_index"]],"name":"@1pages","types":["text","text"],"where":"{id:1}"}}]`},
 	{`DBFind(keys).Where("id='#key_id#'").Columns("amount").Vars(amount)`, `[{"tag":"text","text":"Where has wrong format"}]`},
 	{`SetVar(val, 123456789)Money(#val#)`, `[{"tag":"text","text":"0.000000000123456789"}]`},
 	{`SetVar(coltype, GetColumnType(members, member_name))Div(){#coltype#GetColumnType(none,none)GetColumnType()}`, `[{"tag":"div","children":[{"tag":"text","text":"varchar"}]}]`},
@@ -186,8 +185,6 @@ var forTest = tplList{
 		`[{"tag":"data","attr":{"columns":["id","name"],"data":[["1",""]],"source":"mygender","types":["text","text"]}}]`},
 	{`EcosysParam(new_table)`,
 		`[{"tag":"text","text":"ContractConditions("MainCondition")"}]`},
-	{`DBFind(pages,mypage).Columns([id, name, menu]).Order(id).Vars(my)Strong(#my_menu#)`,
-		`[{"tag":"dbfind","attr":{"columns":["id","name","menu"],"data":[["1","admin_index","admin_menu"]],"name":"pages","order":"id","source":"mypage","types":["text","text","text"]}},{"tag":"strong","children":[{"tag":"text","text":"admin_menu"}]}]`},
 	{`SetVar(varZero, 0) If(#varZero#>0) { the varZero should be hidden }
 		SetVar(varNotZero, 1) If(#varNotZero#>0) { the varNotZero should be visible }
 		If(#varUndefined#>0) { the varUndefined should be hidden }`,
