@@ -94,7 +94,7 @@ type RunTime struct {
 	stack     []interface{}
 	blocks    []*blockStack
 	vars      []interface{}
-	extend    *map[string]interface{}
+	extend    map[string]interface{}
 	vm        *VM
 	cost      int64
 	err       error
@@ -206,12 +206,12 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 			stack Stacker
 			ok    bool
 		)
-		if stack, ok = (*rt.extend)["sc"].(Stacker); ok {
+		if stack, ok = rt.extend["sc"].(Stacker); ok {
 			if err := stack.AppendStack(finfo.Name); err != nil {
 				return err
 			}
 		}
-		(*rt.extend)[`rt`] = rt
+		rt.extend[`rt`] = rt
 		auto := 0
 		for k := 0; k < in; k++ {
 			if len(finfo.Auto[k]) > 0 {
@@ -227,7 +227,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		i := count
 		for ; i > limit; i-- {
 			if len(finfo.Auto[count-i]) > 0 {
-				pars[count-i] = reflect.ValueOf((*rt.extend)[finfo.Auto[count-i]])
+				pars[count-i] = reflect.ValueOf(rt.extend[finfo.Auto[count-i]])
 				auto--
 			} else {
 				pars[count-i] = reflect.ValueOf(rt.stack[size-i+auto])
@@ -285,7 +285,7 @@ func (rt *RunTime) extendFunc(name string) error {
 		ok bool
 		f  interface{}
 	)
-	if f, ok = (*rt.extend)[name]; !ok || reflect.ValueOf(f).Kind().String() != `func` {
+	if f, ok = rt.extend[name]; !ok || reflect.ValueOf(f).Kind().String() != `func` {
 		return fmt.Errorf(`unknown function %s`, name)
 	}
 	size := len(rt.stack)
@@ -350,12 +350,12 @@ func calcMem(v interface{}) (mem int64) {
 }
 
 func (rt *RunTime) setExtendVar(k string, v interface{}) {
-	(*rt.extend)[k] = v
+	rt.extend[k] = v
 	rt.recalcMemExtendVar(k)
 }
 
 func (rt *RunTime) recalcMemExtendVar(k string) {
-	mem := calcMem((*rt.extend)[k])
+	mem := calcMem(rt.extend[k])
 	rt.mem += mem - rt.memVars[k]
 	rt.memVars[k] = mem
 }
@@ -479,7 +479,7 @@ func (rt *RunTime) getResultValue(item mapItem) (value interface{}, err error) {
 	case mapConst:
 		value = item.Value
 	case mapExtend:
-		value = (*rt.extend)[item.Value.(string)]
+		value = rt.extend[item.Value.(string)]
 	case mapVar:
 		ivar := item.Value.(*VarInfo)
 		var i int
@@ -565,7 +565,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 				stack := block.Parent.Info.ContractInfo()
 				curContract = stack.Name
 			}
-			if stack, ok := (*rt.extend)["stack"].([]interface{}); ok {
+			if stack, ok := rt.extend["stack"].([]interface{}); ok {
 				curContract = stack[len(stack)-1].(string)
 			}
 
@@ -803,7 +803,7 @@ main:
 				break main
 			}
 		case cmdExtend, cmdCallExtend:
-			if val, ok := (*rt.extend)[cmd.Value.(string)]; ok {
+			if val, ok := rt.extend[cmd.Value.(string)]; ok {
 				rt.cost -= CostExtend
 				if cmd.Cmd == cmdCallExtend {
 					err = rt.extendFunc(cmd.Value.(string))
@@ -903,7 +903,7 @@ main:
 						slice = append(slice, make([]interface{}, int(ind)-len(slice)+1)...)
 						indexInfo := cmd.Value.(*IndexInfo)
 						if indexInfo.Owner == nil { // Extend variable $varname
-							(*rt.extend)[indexInfo.Extend] = slice
+							rt.extend[indexInfo.Extend] = slice
 						} else {
 							rt.vars[indexKey] = slice
 						}
@@ -1336,7 +1336,7 @@ main:
 }
 
 // Run executes CodeBlock with the specified parameters and extended variables and functions
-func (rt *RunTime) Run(block *CodeBlock, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
+func (rt *RunTime) Run(block *CodeBlock, params []interface{}, extend map[string]interface{}) (ret []interface{}, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			//rt.vm.logger.WithFields(log.Fields{"type": consts.PanicRecoveredError, "error_info": r, "stack": string(debug.Stack())}).Error("runtime panic error")
@@ -1349,14 +1349,14 @@ func (rt *RunTime) Run(block *CodeBlock, params []interface{}, extend *map[strin
 		genBlock bool
 		timer    *time.Timer
 	)
-	if gen, ok := (*extend)[`gen_block`]; ok {
+	if gen, ok := extend[`gen_block`]; ok {
 		genBlock = gen.(bool)
 	}
 	timeOver := func() {
 		rt.timeLimit = true
 	}
 	if genBlock {
-		timer = time.AfterFunc(time.Millisecond*time.Duration((*extend)[`time_limit`].(int64)), timeOver)
+		timer = time.AfterFunc(time.Millisecond*time.Duration(extend[`time_limit`].(int64)), timeOver)
 	}
 	if _, err = rt.RunCode(block); err == nil {
 		off := len(rt.stack) - len(info.Results)

@@ -153,9 +153,9 @@ func getNameByObj(obj *ObjInfo) (name string) {
 }
 
 // Call executes the name object with the specified params and extended variables and functions
-func (vm *VM) Call(name string, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
+func (vm *VM) Call(name string, params []interface{}, extend map[string]interface{}) (ret []interface{}, err error) {
 	var obj *ObjInfo
-	if state, ok := (*extend)[`rt_state`]; ok {
+	if state, ok := extend[`rt_state`]; ok {
 		obj = vm.getObjByNameExt(name, state.(uint32))
 	} else {
 		obj = vm.getObjByName(name)
@@ -167,14 +167,14 @@ func (vm *VM) Call(name string, params []interface{}, extend *map[string]interfa
 	switch obj.Type {
 	case ObjectType_Func:
 		var cost int64
-		if v, ok := (*extend)[`txcost`]; ok {
+		if v, ok := extend[`txcost`]; ok {
 			cost = v.(int64)
 		} else {
 			cost = syspar.GetMaxCost()
 		}
 		rt := NewRunTime(vm, cost)
 		ret, err = rt.Run(obj.Value.CodeBlock(), params, extend)
-		(*extend)[`txcost`] = rt.Cost()
+		extend[`txcost`] = rt.Cost()
 	case ObjectType_ExtFunc:
 		finfo := obj.Value.ExtFuncInfo()
 		foo := reflect.ValueOf(finfo.Func)

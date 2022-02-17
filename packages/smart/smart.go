@@ -96,7 +96,7 @@ func (sc *SmartContract) AppendStack(fn string) error {
 			}
 		}
 		cont.StackCont = append(cont.StackCont, fn)
-		(*sc.TxContract.Extend)["stack"] = cont.StackCont
+		sc.TxContract.Extend["stack"] = cont.StackCont
 	}
 	return nil
 }
@@ -106,7 +106,7 @@ func (sc *SmartContract) PopStack(fn string) {
 		cont := sc.TxContract
 		if len(cont.StackCont) > 0 {
 			cont.StackCont = cont.StackCont[:len(cont.StackCont)-1]
-			(*sc.TxContract.Extend)["stack"] = cont.StackCont
+			sc.TxContract.Extend["stack"] = cont.StackCont
 		}
 	}
 }
@@ -187,7 +187,7 @@ func SetContractWallet(sc *SmartContract, tblid, state int64, wallet int64) erro
 	return nil
 }
 
-func (sc *SmartContract) getExtend() *map[string]interface{} {
+func (sc *SmartContract) getExtend() map[string]interface{} {
 	var block, blockTime, blockKeyID, blockNodePosition int64
 	var perBlockHash string
 	if sc.BlockData != nil {
@@ -228,7 +228,7 @@ func (sc *SmartContract) getExtend() *map[string]interface{} {
 		extend[key] = val
 	}
 
-	return &extend
+	return extend
 }
 
 func PrefixName(table string) (prefix, name string) {
@@ -579,7 +579,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 	}
 	sc.VM = script.GetVM()
 
-	ctrctExtend := *sc.TxContract.Extend
+	ctrctExtend := sc.TxContract.Extend
 	before := ctrctExtend[`txcost`].(int64)
 	txSizeFuel := syspar.GetSizeFuel() * sc.TxSize / 1024
 	ctrctExtend[`txcost`] = ctrctExtend[`txcost`].(int64) - txSizeFuel

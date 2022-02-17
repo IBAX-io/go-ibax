@@ -854,7 +854,7 @@ func dbfindTag(par parFunc) string {
 			result[i] = reflect.ValueOf(row).Interface()
 		}
 		fltResult, err := script.VMEvalIf(sc.VM, perm[`filter`], uint32(sc.TxSmart.EcosystemID),
-			&map[string]interface{}{
+			map[string]interface{}{
 				`data`:         result,
 				`ecosystem_id`: sc.TxSmart.EcosystemID,
 				`key_id`:       sc.TxSmart.KeyID, `sc`: sc,

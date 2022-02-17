@@ -2,13 +2,14 @@ package script
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
-	"reflect"
-	"strings"
 )
 
 // ExtendData is used for the definition of the extended functions and variables
@@ -52,20 +53,20 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 	for _, ipar := range pars {
 		parnames[ipar] = true
 	}
-	if _, ok := (*rt.extend)[`loop_`+name]; ok {
+	if _, ok := rt.extend[`loop_`+name]; ok {
 		logger.WithFields(log.Fields{"type": consts.ContractError, "contract_name": name}).Error("there is loop in contract")
 		return nil, fmt.Errorf(eContractLoop, name)
 	}
-	(*rt.extend)[`loop_`+name] = true
-	defer delete(*rt.extend, `loop_`+name)
+	rt.extend[`loop_`+name] = true
+	defer delete(rt.extend, `loop_`+name)
 
 	prevExtend := make(map[string]interface{})
-	for key, item := range *rt.extend {
+	for key, item := range rt.extend {
 		if isSysVar(key) {
 			continue
 		}
 		prevExtend[key] = item
-		delete(*rt.extend, key)
+		delete(rt.extend, key)
 	}
 
 	var isSignature bool
@@ -76,7 +77,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 					logger.WithFields(log.Fields{"transaction_name": tx.Name, "type": consts.ContractError}).Error("transaction not defined")
 					return ``, fmt.Errorf(eUndefinedParam, tx.Name)
 				}
-				(*rt.extend)[tx.Name] = reflect.New(tx.Type).Elem().Interface()
+				rt.extend[tx.Name] = reflect.New(tx.Type).Elem().Interface()
 			}
 			if tx.Name == `Signature` {
 				isSignature = true
@@ -84,13 +85,13 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 		}
 	}
 	for i, ipar := range pars {
-		(*rt.extend)[ipar] = params[i]
+		rt.extend[ipar] = params[i]
 	}
-	prevthis := (*rt.extend)[`this_contract`]
+	prevthis := rt.extend[`this_contract`]
 	_, nameContract := converter.ParseName(name)
-	(*rt.extend)[`this_contract`] = nameContract
+	rt.extend[`this_contract`] = nameContract
 
-	prevparent := (*rt.extend)[`parent`]
+	prevparent := rt.extend[`parent`]
 	parent := ``
 	for i := len(rt.blocks) - 1; i >= 0; i-- {
 		if rt.blocks[i].Block.Type == ObjectType_Func && rt.blocks[i].Block.Parent != nil &&
@@ -123,15 +124,15 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 		stack Stacker
 		err   error
 	)
-	if stack, ok = (*rt.extend)["sc"].(Stacker); ok {
+	if stack, ok = rt.extend["sc"].(Stacker); ok {
 		if err := stack.AppendStack(name); err != nil {
 			return nil, err
 		}
 	}
-	if (*rt.extend)[`sc`] != nil && isSignature {
+	if rt.extend[`sc`] != nil && isSignature {
 		obj := rt.vm.Objects[`check_signature`]
 		finfo := obj.Value.ExtFuncInfo()
-		if err := finfo.Func.(func(*map[string]interface{}, string) error)(rt.extend, name); err != nil {
+		if err := finfo.Func.(func(map[string]interface{}, string) error)(rt.extend, name); err != nil {
 			logger.WithFields(log.Fields{"error": err, "func_name": finfo.Name, "type": consts.ContractError}).Error("executing exended function")
 			return nil, err
 		}
@@ -139,7 +140,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 	for _, method := range []string{`conditions`, `action`} {
 		if block, ok := (*cblock).Objects[method]; ok && block.Type == ObjectType_Func {
 			rtemp := NewRunTime(rt.vm, rt.cost)
-			(*rt.extend)[`parent`] = parent
+			rt.extend[`parent`] = parent
 			_, err = rtemp.Run(block.Value.CodeBlock(), nil, rt.extend)
 			rt.cost = rtemp.cost
 			if err != nil {
@@ -154,19 +155,19 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 	if err != nil {
 		return nil, err
 	}
-	(*rt.extend)[`parent`] = prevparent
-	(*rt.extend)[`this_contract`] = prevthis
+	rt.extend[`parent`] = prevparent
+	rt.extend[`this_contract`] = prevthis
 
-	result := (*rt.extend)[`result`]
-	for key := range *rt.extend {
+	result := rt.extend[`result`]
+	for key := range rt.extend {
 		if isSysVar(key) {
 			continue
 		}
-		delete(*rt.extend, key)
+		delete(rt.extend, key)
 	}
 
 	for key, item := range prevExtend {
-		(*rt.extend)[key] = item
+		rt.extend[key] = item
 	}
 
 	return result, nil

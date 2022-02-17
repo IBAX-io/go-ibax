@@ -554,7 +554,7 @@ func UnbndWallet(sc *SmartContract, tblid int64, state int64) error {
 }
 
 // CheckSignature checks the additional signatures for the contract
-func CheckSignature(sc *SmartContract, i *map[string]interface{}, name string) error {
+func CheckSignature(sc *SmartContract, i map[string]interface{}, name string) error {
 	state, name := converter.ParseName(name)
 	sn := sqldb.Signature{}
 	sn.SetTablePrefix(converter.Int64ToStr(int64(state)))
@@ -565,7 +565,7 @@ func CheckSignature(sc *SmartContract, i *map[string]interface{}, name string) e
 	if len(sn.Value) == 0 {
 		return nil
 	}
-	hexsign, err := hex.DecodeString((*i)[`Signature`].(string))
+	hexsign, err := hex.DecodeString(i[`Signature`].(string))
 	if len(hexsign) == 0 || err != nil {
 		return logError(errWrongSignature, consts.ConversionError, "converting signature to hex")
 	}
@@ -574,10 +574,10 @@ func CheckSignature(sc *SmartContract, i *map[string]interface{}, name string) e
 	if err = unmarshalJSON([]byte(sn.Value), &sign, `unmarshalling sign`); err != nil {
 		return err
 	}
-	wallet := (*i)[`key_id`].(int64)
-	forsign := fmt.Sprintf(`%d,%d`, uint64((*i)[`time`].(int64)), uint64(wallet))
+	wallet := i[`key_id`].(int64)
+	forsign := fmt.Sprintf(`%d,%d`, uint64(i[`time`].(int64)), uint64(wallet))
 	for _, isign := range sign.Params {
-		val := (*i)[isign.Param]
+		val := i[isign.Param]
 		if val == nil {
 			val = ``
 		}

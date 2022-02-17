@@ -17,7 +17,7 @@ type Contract struct {
 	Rate          float64 // money rate
 	TableAccounts string
 	StackCont     []interface{} // Stack of called contracts
-	Extend        *map[string]interface{}
+	Extend        map[string]interface{}
 	Block         *script.CodeBlock
 }
 

@@ -118,7 +118,7 @@ func getContractList(src string) (list []string) {
 	return
 }
 
-func VMEvalIf(vm *VM, src string, state uint32, extend *map[string]interface{}) (bool, error) {
+func VMEvalIf(vm *VM, src string, state uint32, extend map[string]interface{}) (bool, error) {
 	return vm.EvalIf(src, state, extend)
 }
 
@@ -126,9 +126,9 @@ func VMFlushBlock(vm *VM, root *CodeBlock) {
 	vm.FlushBlock(root)
 }
 
-func VMRun(vm *VM, block *CodeBlock, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
+func VMRun(vm *VM, block *CodeBlock, params []interface{}, extend map[string]interface{}) (ret []interface{}, err error) {
 	var cost int64
-	if ecost, ok := (*extend)[`txcost`]; ok {
+	if ecost, ok := extend[`txcost`]; ok {
 		cost = ecost.(int64)
 	} else {
 		cost = syspar.GetMaxCost()
@@ -138,9 +138,9 @@ func VMRun(vm *VM, block *CodeBlock, params []interface{}, extend *map[string]in
 		rt.cost -= block.parentContractCost()
 	}
 	ret, err = rt.Run(block, params, extend)
-	(*extend)[`txcost`] = rt.Cost()
+	extend[`txcost`] = rt.Cost()
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.VMError, "error": err, "original_contract": (*extend)[`original_contract`], "this_contract": (*extend)[`this_contract`], "ecosystem_id": (*extend)[`ecosystem_id`]}).Error("running block in smart vm")
+		log.WithFields(log.Fields{"type": consts.VMError, "error": err, "original_contract": extend[`original_contract`], "this_contract": extend[`this_contract`], "ecosystem_id": extend[`ecosystem_id`]}).Error("running block in smart vm")
 		return nil, err
 	}
 	return
@@ -181,7 +181,7 @@ func CompileEval(src string, prefix uint32) error {
 }
 
 // EvalIf calls EvalIf for smartVM
-func EvalIf(src string, state uint32, extend *map[string]interface{}) (bool, error) {
+func EvalIf(src string, state uint32, extend map[string]interface{}) (bool, error) {
 	return VMEvalIf(smartVM, src, state, extend)
 }
 
@@ -200,7 +200,7 @@ func FuncCallsDB(funcCallsDB map[string]struct{}) {
 }
 
 // Run executes CodeBlock in smartVM
-func Run(block *CodeBlock, params []interface{}, extend *map[string]interface{}) (ret []interface{}, err error) {
+func Run(block *CodeBlock, params []interface{}, extend map[string]interface{}) (ret []interface{}, err error) {
 	return VMRun(smartVM, block, params, extend)
 }
 

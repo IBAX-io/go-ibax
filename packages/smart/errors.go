@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	eContractLoop       = `There is loop in %s contract`
+	eContractLoop       = `there is loop in %s contract`
 	eContractExist      = `contract %s already exists`
 	eLatin              = `Name %s must only contain latin, digit and '_', '-' characters`
 	eAccessContract     = `%s can only be called with condition: %s`
