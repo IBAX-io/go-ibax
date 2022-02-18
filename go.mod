@@ -5,7 +5,6 @@ go 1.17
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
 	github.com/BurntSushi/toml v0.4.1
-	github.com/blackjack/syslog v0.0.0-20130922064354-4ea3f32c1eb1
 	github.com/cactus/go-statsd-client/v5 v5.0.0
 	github.com/centrifugal/gocent v2.2.0+incompatible
 	github.com/go-redis/redis v6.15.9+incompatible
