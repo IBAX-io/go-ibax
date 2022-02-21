@@ -34,7 +34,7 @@ var FirstEcosystemTables = map[string]bool{
 	`keys`:               true,
 	`menu`:               true,
 	`pages`:              true,
-	`blocks`:             true,
+	`snippets`:           true,
 	`languages`:          true,
 	`contracts`:          true,
 	`tables`:             true,
