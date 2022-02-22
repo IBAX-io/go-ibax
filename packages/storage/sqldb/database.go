@@ -2,7 +2,6 @@ package sqldb
 
 import (
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -20,18 +19,14 @@ func GetNodeRows(tableName string) (int64, error) {
 	return count, nil
 }
 
-func GetRowsInfo(rows *sql.Rows, sqlQuest string) ([]map[string]string, error) {
-	var result []map[string]string
+func GetRowsInfo(rows *sql.Rows, sqlQuest string) ([]map[string]interface{}, error) {
+	var result []map[string]interface{}
 	defer rows.Close()
 	columns, err := rows.Columns()
 	if err != nil {
 		return result, fmt.Errorf("getrows Columns err:%s in query %s", err, sqlQuest)
 	}
-	columntypes, err1 := rows.ColumnTypes()
-	if err1 != nil {
-		return result, fmt.Errorf("getRows ColumnTypes err:%s in query %s", err1, sqlQuest)
-	}
-	values := make([][]byte /*sql.RawBytes*/, len(columns))
+	values := make([]interface{} /*sql.RawBytes*/, len(columns))
 	scanArgs := make([]interface{}, len(values))
 	for i := range values {
 		scanArgs[i] = &values[i]
@@ -41,18 +36,14 @@ func GetRowsInfo(rows *sql.Rows, sqlQuest string) ([]map[string]string, error) {
 		if err != nil {
 			return result, fmt.Errorf("getRows scan err:%s in query %s", err, sqlQuest)
 		}
-		var value string
-		rez := make(map[string]string)
+		var value interface{}
+		rez := make(map[string]interface{})
 		for i, col := range values {
 			// Here we can check if the value is nil (NULL value)
 			if col == nil {
 				value = "NULL"
 			} else {
-				if columntypes[i].DatabaseTypeName() == "BYTEA" {
-					value = hex.EncodeToString(col)
-				} else {
-					value = string(col)
-				}
+				value = col
 			}
 			rez[columns[i]] = value
 		}

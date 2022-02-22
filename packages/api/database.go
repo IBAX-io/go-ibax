@@ -25,9 +25,14 @@ type rowsInfo struct {
 	tableInfoForm
 }
 
+type RowsListResult struct {
+	Count int64                    `json:"count"`
+	List  []map[string]interface{} `json:"list"`
+}
+
 func (f *tableInfoForm) Validate(r *http.Request) error {
 	if f.Page < 1 || f.Limit < 1 {
-		return errors.New("limit or page is unvalid")
+		return errors.New("limit or page is invalid")
 	}
 	return nil
 }
@@ -39,7 +44,7 @@ func (f *columnsInfo) Validate(r *http.Request) error {
 }
 func (f *rowsInfo) Validate(r *http.Request) error {
 	if f.Page < 1 || f.Limit < 1 {
-		return errors.New("limit or page is unvalid")
+		return errors.New("limit or page is invalid")
 	}
 	return nil
 }
@@ -145,8 +150,8 @@ func getOpenRowsInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse(w, result)
 }
-func GetRowsInfo(tableName, order string, page, limit int, where string) (*listResult, error) {
-	result := &listResult{}
+func GetRowsInfo(tableName, order string, page, limit int, where string) (*RowsListResult, error) {
+	result := &RowsListResult{}
 	num, err := sqldb.GetNodeRows(tableName)
 	if err != nil {
 		return result, err
@@ -166,7 +171,6 @@ func GetRowsInfo(tableName, order string, page, limit int, where string) (*listR
 	primaryOrder["queue_tx"] = "hash " + defaultorder
 	primaryOrder["stop_daemons"] = "stop_time " + defaultorder
 	primaryOrder["transactions"] = "hash " + defaultorder
-	//primaryOrder["transactions_attempts"] = "hash " + defaultorder
 	primaryOrder["transactions_status"] = "hash " + defaultorder
 	execOrder := order
 	if v, ok := primaryOrder[tableName]; ok {

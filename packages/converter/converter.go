@@ -337,8 +337,8 @@ func BinUnmarshalBuff(buf *bytes.Buffer, v interface{}) error {
 		if err != nil {
 			return err
 		}
-		if buf.Len() < int(val) {
-			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "data_length": buf.Len(), "length": int(val)}).Error("bin unmarshalling string")
+		if buf.Len() < val {
+			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "data_length": buf.Len(), "length": val}).Error("bin unmarshalling string")
 			return fmt.Errorf(`input slice is short`)
 		}
 		t.SetString(string(buf.Next(val)))
@@ -354,11 +354,11 @@ func BinUnmarshalBuff(buf *bytes.Buffer, v interface{}) error {
 		if err != nil {
 			return err
 		}
-		if buf.Len() < int(val) {
-			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "data_length": buf.Len(), "length": int(val)}).Error("bin unmarshalling slice")
+		if buf.Len() < val {
+			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "data_length": buf.Len(), "length": val}).Error("bin unmarshalling slice")
 			return fmt.Errorf(`input slice is short`)
 		}
-		t.SetBytes(buf.Next(int(val)))
+		t.SetBytes(buf.Next(val))
 
 	default:
 		log.WithFields(log.Fields{"type": consts.UnmarshallingError, "value_type": t.Kind()}).Error("BinUnmrashal unsupported type")
@@ -500,9 +500,9 @@ func EscapeName(name string) string {
 
 // Float2Bytes converts float64 to []byte
 func float2Bytes(float float64) []byte {
-	bytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(bytes, math.Float64bits(float))
-	return bytes
+	ret := make([]byte, 8)
+	binary.LittleEndian.PutUint64(ret, math.Float64bits(float))
+	return ret
 }
 
 // Bytes2Float converts []byte to float64
@@ -693,14 +693,14 @@ func BytesShiftReverse(str *[]byte, v interface{}) []byte {
 
 // StrToInt64 converts string to int64
 func StrToInt64(s string) int64 {
-	int64, _ := strconv.ParseInt(s, 10, 64)
-	return int64
+	ret, _ := strconv.ParseInt(s, 10, 64)
+	return ret
 }
 
 // BytesToInt64 converts []bytes to int64
 func BytesToInt64(s []byte) int64 {
-	int64, _ := strconv.ParseInt(string(s), 10, 64)
-	return int64
+	ret, _ := strconv.ParseInt(string(s), 10, 64)
+	return ret
 }
 
 // StrToUint64 converts string to the unsinged int64
@@ -741,17 +741,17 @@ func BytesToInt(s []byte) int {
 // StrToMoney rounds money string to float64
 func StrToMoney(str string) float64 {
 	ind := strings.Index(str, ".")
-	var new string
+	var newStr string
 	if ind != -1 {
 		end := 2
 		if len(str[ind+1:]) > 1 {
 			end = 3
 		}
-		new = str[:ind] + "." + str[ind+1:ind+end]
+		newStr = str[:ind] + "." + str[ind+1:ind+end]
 	} else {
-		new = str
+		newStr = str
 	}
-	return StrToFloat64(new)
+	return StrToFloat64(newStr)
 }
 
 // AddressToString converts int64 address to chain address as XXXX-...-XXXX.
