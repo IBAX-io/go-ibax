@@ -2,6 +2,7 @@ package redis
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 
@@ -27,7 +28,7 @@ func RedisInit(conf conf.RedisConfig) error {
 	GRedisIsactive = false
 
 	Gclient0 = redis.NewClient(&redis.Options{
-		Addr:     conf.Str(),
+		Addr:    fmt.Sprintf("%s:%d", conf.Host, conf.Port),
 		Password: conf.Password, // no password set
 		DB:       conf.DbName,   // use default DB
 	})
@@ -37,7 +38,7 @@ func RedisInit(conf conf.RedisConfig) error {
 	}
 
 	Gclient1 = redis.NewClient(&redis.Options{
-		Addr:     conf.Str(),
+		Addr:     fmt.Sprintf("%s:%d", conf.Host, conf.Port),
 		Password: conf.Password, // no password set
 		DB:       1,             // use default DB
 	})

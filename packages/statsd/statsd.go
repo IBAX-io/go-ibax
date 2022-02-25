@@ -5,6 +5,7 @@
 package statsd
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -22,7 +23,7 @@ var Client statsd.Statter
 func Init(conf conf.StatsDConfig) error {
 	var err error
 	config := &statsd.ClientConfig{
-		Address:     conf.Str(),
+		Address:     fmt.Sprintf("%s:%d", conf.Host, conf.Port),
 		Prefix:      conf.Name,
 		UseBuffered: false,
 	}
