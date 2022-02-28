@@ -89,18 +89,19 @@ const (
 )
 
 var (
-	cache             = map[string]string{}
-	nodes             = make(map[string]*HonorNode)
-	nodesByPosition   = make([]*HonorNode, 0)
-	fuels             = make(map[int64]string)
-	wallets           = make(map[int64]string)
-	mutex             = &sync.RWMutex{}
-	firstBlockData    *types.FirstBlock
-	errFirstBlockData = errors.New("failed to get data of the first block")
-	errNodeDisabled   = errors.New("node is disabled")
-	nodePubKey        []byte
-	nodePrivKey       []byte
-	cacheTableColType = make([]map[string]string, 0)
+	cache               = map[string]string{}
+	nodes               = make(map[string]*HonorNode)
+	nodesByPosition     = make([]*HonorNode, 0)
+	fuels               = make(map[int64]string)
+	wallets             = make(map[int64]string)
+	mutex               = &sync.RWMutex{}
+	firstBlockData      *types.FirstBlock
+	firstBlockTimestamp int64
+	errFirstBlockData   = errors.New("failed to get data of the first block")
+	errNodeDisabled     = errors.New("node is disabled")
+	nodePubKey          []byte
+	nodePrivKey         []byte
+	cacheTableColType   = make([]map[string]string, 0)
 )
 
 func ReadNodeKeys() (err error) {
@@ -513,6 +514,12 @@ func HasSys(name string) bool {
 	return ok
 }
 
+func SetFirstBlockTimestamp(data int64) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	firstBlockTimestamp = data
+}
+
 // SetFirstBlockData sets data of first block to global variable
 func SetFirstBlockData(data *types.FirstBlock) {
 	mutex.Lock()
@@ -529,6 +536,13 @@ func SetFirstBlockData(data *types.FirstBlock) {
 			Stopped:   false,
 		}}
 	}
+}
+
+func GetFirstBlockTimestamp() int64 {
+	mutex.RLock()
+	defer mutex.RUnlock()
+
+	return firstBlockTimestamp
 }
 
 // GetFirstBlockData gets data of first block from global variable

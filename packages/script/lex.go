@@ -157,7 +157,7 @@ var (
 		`address`: {Original: DtAddress, Type: reflect.TypeOf(int64(0))},
 		`array`:   {Original: DtArray, Type: reflect.TypeOf([]interface{}{})},
 		`map`:     {Original: DtMap, Type: reflect.TypeOf(&types.Map{})},
-		`money`:   {Original: DtMoney, Type: reflect.TypeOf(decimal.New(0, 0))},
+		`money`:   {Original: DtMoney, Type: reflect.TypeOf(decimal.Zero)},
 		`float`:   {Original: DtFloat, Type: reflect.TypeOf(0.0)},
 		`string`:  {Original: DtString, Type: reflect.TypeOf(``)},
 		`file`:    {Original: DtFile, Type: reflect.TypeOf(&types.Map{})},

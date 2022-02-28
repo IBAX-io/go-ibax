@@ -141,7 +141,7 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 		txInfoCollection := make([]TxInfo, 0, len(blck.Transactions))
 		for _, tx := range blck.Transactions {
 			txInfo := TxInfo{
-				Hash: tx.TxHash(),
+				Hash: tx.Hash(),
 			}
 
 			if tx.IsSmartContract() {
@@ -152,7 +152,7 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 			if blck.IsGenesis() {
 				txInfo.KeyID = blck.Header.KeyID
 			} else {
-				txInfo.KeyID = tx.TxKeyID()
+				txInfo.KeyID = tx.KeyID()
 			}
 
 			txInfoCollection = append(txInfoCollection, txInfo)
@@ -243,11 +243,11 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 		txDetailedInfoCollection := make([]TxDetailedInfo, 0, len(blck.Transactions))
 		for _, tx := range blck.Transactions {
 			txDetailedInfo := TxDetailedInfo{
-				Hash:  tx.TxHash(),
-				KeyID: tx.TxKeyID(),
-				Time:  tx.TxTime(),
-				Type:  tx.TxType(),
-				Size:  common.StorageSize(len(tx.TxPayload())).TerminalString(),
+				Hash:  tx.Hash(),
+				KeyID: tx.KeyID(),
+				Time:  tx.Timestamp(),
+				Type:  tx.Type(),
+				Size:  common.StorageSize(len(tx.Payload())).TerminalString(),
 			}
 
 			if tx.IsSmartContract() {

@@ -21,7 +21,7 @@ import (
 func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) error {
 	rollbackTx := &sqldb.RollbackTx{
 		BlockID:   sc.BlockData.BlockID,
-		TxHash:    sc.TxHash,
+		TxHash:    sc.Hash,
 		NameTable: table,
 		TableID:   tableID,
 		Data:      rollbackInfoStr,

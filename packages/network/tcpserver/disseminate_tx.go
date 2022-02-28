@@ -5,6 +5,7 @@
 package tcpserver
 
 import (
+	"bytes"
 	crand "crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -48,7 +49,7 @@ func DisseminateTxs(rw io.ReadWriter) error {
 		}
 
 		rtx := &transaction.Transaction{}
-		if err = rtx.Processing(tran); err != nil {
+		if err = rtx.Unmarshall(bytes.NewBuffer(tran)); err != nil {
 			return err
 		}
 		rtxs = append(rtxs, rtx.SetRawTx())

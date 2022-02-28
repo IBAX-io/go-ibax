@@ -131,7 +131,7 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]interface{}) (
 			if v.(decimal.Decimal).LessThan(decimal.New(1, 0)) ||
 				v.(decimal.Decimal).
 					Mod(decimal.New(1, 0)).
-					GreaterThan(decimal.New(0, 0)) {
+					GreaterThan(decimal.Zero) {
 				err = fmt.Errorf("inconsistent with the smallest reference unit and its integer multiples")
 				break
 			}

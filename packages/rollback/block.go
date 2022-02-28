@@ -91,33 +91,33 @@ func rollbackBlock(dbTransaction *sqldb.DbTransaction, block *block.Block) error
 		t := block.Transactions[i]
 		t.DbTransaction = dbTransaction
 
-		_, err := sqldb.MarkTransactionUnusedAndUnverified(dbTransaction, t.TxHash())
+		_, err := sqldb.MarkTransactionUnusedAndUnverified(dbTransaction, t.Hash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting transaction")
 			return err
 		}
-		_, err = sqldb.DeleteLogTransactionsByHash(dbTransaction, t.TxHash())
+		_, err = sqldb.DeleteLogTransactionsByHash(dbTransaction, t.Hash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting log transactions by hash")
 			return err
 		}
 
 		ts := &sqldb.TransactionStatus{}
-		err = ts.UpdateBlockID(dbTransaction, 0, t.TxHash())
+		err = ts.UpdateBlockID(dbTransaction, 0, t.Hash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating block id in transaction status")
 			return err
 		}
 
-		_, err = sqldb.DeleteQueueTxByHash(dbTransaction, t.TxHash())
+		_, err = sqldb.DeleteQueueTxByHash(dbTransaction, t.Hash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transacion from queue by hash")
 			return err
 		}
 
 		switch t.Inner.(type) {
-		case *transaction.SmartContractTransaction:
-			if err = rollbackTransaction(t.TxHash(), t.DbTransaction, logger); err != nil {
+		case *transaction.SmartTransactionParser:
+			if err = rollbackTransaction(t.Hash(), t.DbTransaction, logger); err != nil {
 				return err
 			}
 		}

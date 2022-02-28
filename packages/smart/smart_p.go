@@ -600,7 +600,7 @@ func DBSelectMetrics(sc *SmartContract, metric, timeInterval, aggregateFunc stri
 		return nil, ErrNotImplementedOnCLB
 	}
 
-	timeBlock := time.Unix(sc.TxSmart.Time, 0).Format(`2006-01-02 15:04:05`)
+	timeBlock := time.Unix(sc.Timestamp, 0).Format(`2006-01-02 15:04:05`)
 	result, err := sqldb.GetMetricValues(metric, timeInterval, aggregateFunc, timeBlock)
 	if err != nil {
 		return nil, logErrorDB(err, "get values of metric")
@@ -619,7 +619,7 @@ func DBCollectMetrics(sc *SmartContract) []interface{} {
 		metric.CollectMetricDataForEcosystemTables,
 		metric.CollectMetricDataForEcosystemTx,
 	)
-	return c.Values(sc.TxSmart.Time)
+	return c.Values(sc.Timestamp)
 }
 
 // JSONDecode converts json string to object

@@ -123,7 +123,7 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 		} else {
 			comment = "(error)" + comment
 			ts := sqldb.TransactionStatus{}
-			if err := ts.UpdatePenalty(sc.DbTransaction, sc.TxHash); err != nil {
+			if err := ts.UpdatePenalty(sc.DbTransaction, sc.Hash); err != nil {
 				return err
 			}
 		}
@@ -209,7 +209,7 @@ func (sc *SmartContract) payTaxes(pay *paymentInfo, sum decimal.Decimal, t int64
 		"amount":            sum,
 		"comment":           comment,
 		"block_id":          sc.BlockData.BlockID,
-		"txhash":            sc.TxHash,
+		"txhash":            sc.Hash,
 		"ecosystem":         pay.tokenEco,
 		"type":              t,
 		"created_at":        sc.BlockData.Time,
@@ -445,7 +445,7 @@ func (sc *SmartContract) fuelRate(eco int64) (decimal.Decimal, error) {
 	var (
 		fuelRate decimal.Decimal
 		err      error
-		zero     = decimal.New(0, 0)
+		zero     = decimal.Zero
 	)
 	if _, ok := syspar.HasFuelRate(eco); !ok {
 		fuels := make([][]string, 0)
@@ -492,7 +492,7 @@ func (sc *SmartContract) elementFee(eco int64, fuelRate decimal.Decimal) (decima
 	var (
 		elementFee decimal.Decimal
 		err        error
-		zero       = decimal.New(0, 0)
+		zero       = decimal.Zero
 	)
 	if priceName, ok := script.ContractPrices[sc.TxContract.Name]; ok && eco == consts.DefaultTokenEcosystem {
 		newElementPrices := decimal.NewFromInt(SysParamInt(priceName)).
@@ -516,7 +516,7 @@ func (sc *SmartContract) elementFee(eco int64, fuelRate decimal.Decimal) (decima
 func (sc *SmartContract) storageFee(fuelRate decimal.Decimal) decimal.Decimal {
 	var (
 		storageFee decimal.Decimal
-		zero       = decimal.New(0, 0)
+		zero       = decimal.Zero
 	)
 	storageFee = decimal.NewFromInt(syspar.SysInt64(syspar.PriceTxSize)).
 		Mul(decimal.NewFromInt(syspar.SysInt64(syspar.PriceCreateRate))).
@@ -564,7 +564,7 @@ func (sc *SmartContract) taxesWallet(eco int64) (err error) {
 }
 
 func (sc *SmartContract) expediteFee() (decimal.Decimal, error) {
-	zero := decimal.New(0, 0)
+	zero := decimal.Zero
 	if len(sc.TxSmart.Expedite) > 0 {
 		expedite, _ := decimal.NewFromString(sc.TxSmart.Expedite)
 		if expedite.LessThan(zero) {

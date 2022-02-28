@@ -12,7 +12,7 @@ import (
 func (t *Transaction) GetLogger() *log.Entry {
 	var logger *log.Entry
 	if t.Inner != nil {
-		logger = log.WithFields(log.Fields{"tx_type": t.TxType(), "tx_time": t.TxTime(), "tx_wallet_id": t.TxKeyID()})
+		logger = log.WithFields(log.Fields{"tx_type": t.Type(), "tx_time": t.Timestamp(), "tx_wallet_id": t.KeyID()})
 	}
 	if t.BlockData != nil {
 		logger = logger.WithFields(log.Fields{"block_id": t.BlockData.BlockID, "block_time": t.BlockData.Time, "block_wallet_id": t.BlockData.KeyID, "block_state_id": t.BlockData.EcosystemID, "block_hash": t.BlockData.Hash, "block_version": t.BlockData.Version})
@@ -33,13 +33,13 @@ func (t *Transaction) Play() (err error) {
 }
 
 func (t *Transaction) Check(checkTime int64) error {
-	if t.TxKeyID() == 0 {
+	if t.KeyID() == 0 {
 		return ErrEmptyKey
 	}
 
-	logger := log.WithFields(log.Fields{"tx_hash": hex.EncodeToString(t.TxHash()), "tx_time": t.TxTime(), "check_time": checkTime, "type": consts.ParameterExceeded})
-	if t.TxTime() > checkTime {
-		if t.TxTime()-consts.MaxTxForw > checkTime {
+	logger := log.WithFields(log.Fields{"tx_hash": hex.EncodeToString(t.Hash()), "tx_time": t.Timestamp(), "check_time": checkTime, "type": consts.ParameterExceeded})
+	if t.Timestamp() > checkTime {
+		if t.Timestamp()-consts.MaxTxForw > checkTime {
 			logger.WithFields(log.Fields{"tx_max_forw": consts.MaxTxForw}).Errorf("time in the tx cannot be more than %d seconds of block time ", consts.MaxTxForw)
 			return ErrNotComeTime
 		}
@@ -47,13 +47,13 @@ func (t *Transaction) Check(checkTime int64) error {
 		return ErrEarlyTime
 	}
 
-	if t.TxType() != types.StopNetworkTxType {
-		if t.TxTime() < checkTime-consts.MaxTxBack {
-			logger.WithFields(log.Fields{"tx_max_back": consts.MaxTxBack, "tx_type": t.TxType()}).Errorf("time in the tx cannot be less then %d seconds of block time", consts.MaxTxBack)
+	if t.Type() != types.StopNetworkTxType {
+		if t.Timestamp() < checkTime-consts.MaxTxBack {
+			logger.WithFields(log.Fields{"tx_max_back": consts.MaxTxBack, "tx_type": t.Type()}).Errorf("time in the tx cannot be less then %d seconds of block time", consts.MaxTxBack)
 			return ErrExpiredTime
 		}
 	}
-	err := CheckLogTx(t.TxHash(), logger)
+	err := CheckLogTx(t.Hash(), logger)
 	if err != nil {
 		return err
 	}

@@ -100,8 +100,8 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 		bufTransaction := bytes.NewBuffer(blockBuffer.Next(transactionSize))
 		t, err := transaction.UnmarshallTransaction(bufTransaction, fillData)
 		if err != nil {
-			if t != nil && t.TxHash() != nil {
-				transaction.MarkTransactionBad(t.DbTransaction, t.TxHash(), err.Error())
+			if t != nil && t.Hash() != nil {
+				transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
 			}
 			return nil, fmt.Errorf("parse transaction error(%s)", err)
 		}

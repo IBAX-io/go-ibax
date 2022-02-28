@@ -166,7 +166,7 @@ func (bl *txUserLimit) check(t *Transaction, mode LimitMode) error {
 		count int
 		ok    bool
 	)
-	keyID := t.TxKeyID()
+	keyID := t.KeyID()
 	if count, ok = bl.TxUsers[keyID]; ok {
 		if count+1 > bl.Limit && mode == letPreprocess {
 			return ErrLimitSkip
@@ -194,11 +194,11 @@ func (bl *txUserEcosysLimit) init() {
 }
 
 func (bl *txUserEcosysLimit) check(t *Transaction, mode LimitMode) error {
-	keyID := t.TxKeyID()
-	if t.TxType() == types.SmartContractTxType {
+	keyID := t.KeyID()
+	if t.Type() == types.SmartContractTxType {
 		return nil
 	}
-	ecosystemID := t.Inner.(*SmartContractTransaction).TxSmart.EcosystemID
+	ecosystemID := t.Inner.(*SmartTransactionParser).TxSmart.EcosystemID
 	if val, ok := bl.TxEcosys[ecosystemID]; ok {
 		if user, ok := val.TxUsers[keyID]; ok {
 			if user+1 > val.Limit && mode == letPreprocess {
@@ -269,10 +269,10 @@ func (bl *txMaxFuel) init() {
 }
 
 func (bl *txMaxFuel) check(t *Transaction, mode LimitMode) error {
-	if t.TxType() == types.SmartContractTxType {
+	if t.Type() == types.SmartContractTxType {
 		return nil
 	}
-	fuel := t.Inner.(*SmartContractTransaction).TxFuel
+	fuel := t.Inner.(*SmartTransactionParser).TxFuel
 	if fuel > bl.LimitTx {
 		return limitError(`txMaxFuel`, `Max fuel of tx %d > %d`, fuel, bl.LimitTx)
 	}

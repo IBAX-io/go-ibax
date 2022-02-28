@@ -62,10 +62,9 @@ func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]int
 	contract := smart.VMGetContract(vm, callDelayedContract, uint32(firstEcosystemID))
 	info := contract.Info()
 
-	smartTx := types.SmartContract{
+	smartTx := types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(info.ID),
-			Time:        dtx.time,
 			EcosystemID: firstEcosystemID,
 			KeyID:       keyID,
 			NetworkID:   conf.Config.LocalConf.NetworkID,

@@ -167,10 +167,9 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 			nodePrivateKey := syspar.GetNodePrivKey()
 
 			contract := smart.GetContract("NewUser", 1)
-			sc := types.SmartContract{
+			sc := types.SmartTransaction{
 				Header: &types.Header{
 					ID:          int(contract.Info().ID),
-					Time:        time.Now().Unix(),
 					EcosystemID: 1,
 					KeyID:       conf.Config.KeyID,
 					NetworkID:   conf.Config.LocalConf.NetworkID,
@@ -181,13 +180,15 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 				},
 			}
 
-			txData, txHash, err := transaction.NewInternalTransaction(sc, nodePrivateKey)
+			stp := new(transaction.SmartTransactionParser)
+			txData, err := stp.BinMarshal(&sc, nodePrivateKey, true)
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("Building transaction")
 				errorResponse(w, err)
 				return
 			}
-			if err := m.ContractRunner.RunContract(txData, txHash, sc.KeyID, sc.Time, logger); err != nil {
+
+			if err := m.ContractRunner.RunContract(txData, stp.Hash, sc.KeyID, stp.Timestamp, logger); err != nil {
 				errorResponse(w, err)
 				return
 			}
@@ -196,7 +197,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 				gt := 3 * syspar.GetMaxBlockGenerationTime()
 				his := &sqldb.History{}
 				for i := 0; i < 2; i++ {
-					found, err := his.Get(txHash)
+					found, err := his.Get(stp.Hash)
 					if err != nil {
 						errorResponse(w, err)
 						return

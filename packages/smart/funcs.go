@@ -2110,7 +2110,7 @@ func TransactionData(blockId int64, hash []byte) (data *TxInfo, err error) {
 
 		txHash = crypto.DoubleHash(txData)
 		if bytes.Equal(txHash, hash) {
-			smartTx := types.SmartContract{}
+			smartTx := types.SmartTransaction{}
 			if err = msgpack.Unmarshal(txData, &smartTx); err != nil {
 				return
 			}
@@ -2363,7 +2363,7 @@ func SendExternalTransaction(sc *SmartContract, uid, url, externalContract strin
 		Fields: []string{`value`, `uid`, `url`, `external_contract`,
 			`result_contract`, `tx_time`},
 		FieldValues: []interface{}{out, uid, url, externalContract,
-			resultContract, sc.TxSmart.Time},
+			resultContract, sc.Timestamp},
 		KeyTableChkr: sqldb.KeyTableChecker{},
 	}
 	insertQuery, err = sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})

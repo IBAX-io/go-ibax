@@ -5,7 +5,9 @@
 package modes
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 
@@ -24,11 +26,11 @@ func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key i
 	var rtxs []*sqldb.RawTx
 	for _, txData := range txDatas {
 		rtx := &transaction.Transaction{}
-		if err = rtx.Processing(txData); err != nil {
+		if err = rtx.Unmarshall(bytes.NewBuffer(txData)); err != nil {
 			return nil, err
 		}
 		rtxs = append(rtxs, rtx.SetRawTx())
-		retTx = append(retTx, rtx.HashStr())
+		retTx = append(retTx, fmt.Sprintf("%x", rtx.Hash()))
 	}
 	err = sqldb.SendTxBatches(rtxs)
 	return

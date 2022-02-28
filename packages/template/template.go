@@ -721,7 +721,7 @@ func Template2JSON(input string, timeout *bool, vars *map[string]string) []byte 
 	sc := smart.SmartContract{
 		CLB: isclb,
 		VM:  script.GetVM(),
-		TxSmart: &types.SmartContract{
+		TxSmart: &types.SmartTransaction{
 			Header: &types.Header{
 				EcosystemID: converter.StrToInt64((*vars)[`ecosystem_id`]),
 				KeyID:       keyID,

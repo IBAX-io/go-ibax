@@ -44,22 +44,22 @@ func ProcessQueueTransactionBatches(dbTransaction *sqldb.DbTransaction, qs []*sq
 		tx, err = UnmarshallTransaction(bytes.NewBuffer(qs[i].Data), true)
 		if err != nil {
 			if tx != nil {
-				txBadChan <- badTxStruct{hash: tx.TxHash(), msg: err.Error(), keyID: tx.TxKeyID()}
+				txBadChan <- badTxStruct{hash: tx.Hash(), msg: err.Error(), keyID: tx.KeyID()}
 			}
 			continue
 		}
 		err = tx.Check(checkTime)
 		if err != nil {
-			txBadChan <- badTxStruct{hash: tx.TxHash(), msg: err.Error(), keyID: tx.TxKeyID()}
+			txBadChan <- badTxStruct{hash: tx.Hash(), msg: err.Error(), keyID: tx.KeyID()}
 			continue
 		}
 		newTx := &sqldb.Transaction{
-			Hash:     tx.TxHash(),
+			Hash:     tx.Hash(),
 			Data:     tx.FullData,
-			Type:     int8(tx.TxType()),
-			KeyID:    tx.TxKeyID(),
-			Expedite: tx.TxExpedite(),
-			Time:     tx.TxTime(),
+			Type:     int8(tx.Type()),
+			KeyID:    tx.KeyID(),
+			Expedite: tx.Expedite(),
+			Time:     tx.Timestamp(),
 			Verified: 1,
 			Used:     0,
 			Sent:     0,

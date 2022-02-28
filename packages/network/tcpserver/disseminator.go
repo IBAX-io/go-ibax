@@ -256,7 +256,7 @@ func saveNewTransactions(binaryTxs []byte) error {
 			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("unmarshalling transaction")
 			return err
 		}
-		queueTxs = append(queueTxs, &sqldb.QueueTx{Hash: rtx.TxHash(), Data: txBinData, Expedite: rtx.TxExpedite(), Time: rtx.TxTime(), FromGate: 1})
+		queueTxs = append(queueTxs, &sqldb.QueueTx{Hash: rtx.Hash(), Data: txBinData, Expedite: rtx.Expedite(), Time: rtx.Timestamp(), FromGate: 1})
 	}
 	if err := sqldb.GetDB(nil).Clauses(clause.OnConflict{DoNothing: true}).Create(&queueTxs).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("error creating QueueTx")

@@ -858,7 +858,7 @@ func dbfindTag(par parFunc) string {
 				`data`:         result,
 				`ecosystem_id`: sc.TxSmart.EcosystemID,
 				`key_id`:       sc.TxSmart.KeyID, `sc`: sc,
-				`block_time`: 0, `time`: sc.TxSmart.Time})
+				`block_time`: 0, `time`: sc.Timestamp})
 		if err != nil || !fltResult {
 			return `Access denied`
 		}

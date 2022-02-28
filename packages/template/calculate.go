@@ -188,7 +188,7 @@ func calcExp(tokens []token, resType int, prec string) string {
 						return errDiv.Error()
 					}
 				case expMoney:
-					if stack[top].(decimal.Decimal).Cmp(decimal.New(0, 0)) == 0 {
+					if stack[top].(decimal.Decimal).Cmp(decimal.Zero) == 0 {
 						return errDiv.Error()
 					}
 				}

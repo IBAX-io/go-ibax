@@ -7,6 +7,11 @@ package transaction
 import (
 	"bytes"
 	"strconv"
+	"time"
+
+	"github.com/pkg/errors"
+
+	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -25,28 +30,30 @@ const (
 )
 
 // FirstBlockParser is parser wrapper
-type FirstBlockTransaction struct {
+type FirstBlockParser struct {
 	Logger        *log.Entry
 	DbTransaction *sqldb.DbTransaction
-	Data          types.FirstBlock
+	Data          *types.FirstBlock
+	Timestamp     int64
 	TxHash        []byte
 	Payload       []byte // transaction binary data
 }
 
-func (f *FirstBlockTransaction) txType() byte                { return types.FirstBlockTxType }
-func (f *FirstBlockTransaction) txHash() []byte              { return f.TxHash }
-func (f *FirstBlockTransaction) txPayload() []byte           { return f.Payload }
-func (f *FirstBlockTransaction) txTime() int64               { return int64(f.Data.Time) }
-func (f *FirstBlockTransaction) txKeyID() int64              { return f.Data.KeyID }
-func (f *FirstBlockTransaction) txExpedite() decimal.Decimal { return decimal.Decimal{} }
+func (f *FirstBlockParser) txType() byte                { return f.Data.TxType() }
+func (f *FirstBlockParser) txHash() []byte              { return f.TxHash }
+func (f *FirstBlockParser) txPayload() []byte           { return f.Payload }
+func (f *FirstBlockParser) txTime() int64               { return f.Timestamp }
+func (f *FirstBlockParser) txKeyID() int64              { return f.Data.KeyID }
+func (f *FirstBlockParser) txExpedite() decimal.Decimal { return decimal.Decimal{} }
+func (s *FirstBlockParser) setTimestamp()               { s.Timestamp = time.Now().Unix() }
 
-func (f *FirstBlockTransaction) Init(*Transaction) error { return nil }
+func (f *FirstBlockParser) Init(*Transaction) error { return nil }
 
-func (f *FirstBlockTransaction) Validate() error {
+func (f *FirstBlockParser) Validate() error {
 	return nil
 }
 
-func (f *FirstBlockTransaction) Action(t *Transaction) error {
+func (f *FirstBlockParser) Action(t *Transaction) error {
 	logger := f.Logger
 	data := f.Data
 	keyID := crypto.Address(data.PublicKey)
@@ -116,20 +123,38 @@ func (f *FirstBlockTransaction) Action(t *Transaction) error {
 	if err := syspar.SysTableColType(t.DbTransaction); err != nil {
 		return err
 	}
-	syspar.SetFirstBlockData(&data)
+	syspar.SetFirstBlockData(data)
+	syspar.SetFirstBlockTimestamp(f.Timestamp)
 	return nil
 }
 
-func (f *FirstBlockTransaction) TxRollback() error {
+func (f *FirstBlockParser) TxRollback() error {
 	return nil
 }
 
-func (f *FirstBlockTransaction) Unmarshal(buffer *bytes.Buffer) error {
+func (s *FirstBlockParser) BinMarshal(data *types.FirstBlock) ([]byte, error) {
+	s.setTimestamp()
+	s.Data = data
+	var buf []byte
+	var err error
+	buf, err = msgpack.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	s.Payload = buf
+	s.TxHash = crypto.DoubleHash(s.Payload)
+	buf, err = msgpack.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	buf = append([]byte{s.txType()}, buf...)
+	return buf, nil
+}
+
+func (f *FirstBlockParser) Unmarshal(buffer *bytes.Buffer) error {
 	buffer.UnreadByte()
-	f.Payload = buffer.Bytes()
-	f.TxHash = crypto.DoubleHash(f.Payload)
-	if err := converter.BinUnmarshal(&f.Payload, &f.Data); err != nil {
-		return err
+	if err := msgpack.Unmarshal(buffer.Bytes()[1:], f); err != nil {
+		return errors.Wrap(err, "first block Unmarshal err")
 	}
 	return nil
 }

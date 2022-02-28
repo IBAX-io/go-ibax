@@ -18,16 +18,15 @@ var ErrBlockSize = errors.New("Bad block size")
 
 //BlockData is a structure of the block's header
 type BlockData struct {
-	BlockID           int64
-	Time              int64
-	EcosystemID       int64
-	KeyID             int64
-	NodePosition      int64
-	Sign              []byte
-	Hash              []byte
-	RollbacksHash     []byte
-	Version           int
-	PrivateBlockchain bool
+	BlockID       int64
+	Time          int64
+	EcosystemID   int64
+	KeyID         int64
+	NodePosition  int64
+	Sign          []byte
+	Hash          []byte
+	RollbacksHash []byte
+	Version       int
 }
 
 func (b BlockData) String() string {

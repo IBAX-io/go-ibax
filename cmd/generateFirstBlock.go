@@ -7,20 +7,17 @@ package cmd
 
 import (
 	"os"
-	"time"
-
-	"github.com/spf13/cobra"
-
 	"path/filepath"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
-
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
 var stopNetworkBundleFilepath string
@@ -87,7 +84,6 @@ func genesisBlock() ([]byte, error) {
 		log.Warn("the fullchain of certificates for a network stopping is not specified")
 	}
 
-	var tx []byte
 	var test int64
 	var pb uint64
 	if testBlockchain == true {
@@ -96,25 +92,19 @@ func genesisBlock() ([]byte, error) {
 	if privateBlockchain == true {
 		pb = 1
 	}
-	_, err := converter.BinMarshal(&tx,
-		&types.FirstBlock{
-			TxHeader: types.TxHeader{
-				Type:  types.FirstBlockTxType,
-				Time:  uint32(now),
-				KeyID: conf.Config.KeyID,
-			},
-			PublicKey:             decodeKeyFile(consts.PublicKeyFilename),
-			NodePublicKey:         decodeKeyFile(consts.NodePublicKeyFilename),
-			StopNetworkCertBundle: stopNetworkCert,
-			Test:                  test,
-			PrivateBlockchain:     pb,
-		},
-	)
 
+	fbp := new(transaction.FirstBlockParser)
+	tx, err := fbp.BinMarshal(&types.FirstBlock{
+		KeyID:                 conf.Config.KeyID,
+		PublicKey:             decodeKeyFile(consts.PublicKeyFilename),
+		NodePublicKey:         decodeKeyFile(consts.NodePublicKeyFilename),
+		StopNetworkCertBundle: stopNetworkCert,
+		Test:                  test,
+		PrivateBlockchain:     pb,
+	})
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block body bin marshalling")
 	}
-
 	return block.MarshallBlock(header, [][]byte{tx}, &types.BlockData{
 		Hash:          []byte(`0`),
 		RollbacksHash: []byte(`0`),

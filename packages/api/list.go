@@ -69,7 +69,7 @@ func checkAccess(tableName, columns string, client *Client) (table string, cols 
 	sc := smart.SmartContract{
 		CLB: conf.Config.IsSupportingCLB(),
 		VM:  script.GetVM(),
-		TxSmart: &types.SmartContract{
+		TxSmart: &types.SmartTransaction{
 			Header: &types.Header{
 				EcosystemID: client.EcosystemID,
 				KeyID:       client.KeyID,

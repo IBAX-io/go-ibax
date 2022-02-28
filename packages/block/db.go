@@ -173,12 +173,13 @@ func GetDataFromFirstBlock() (data *types.FirstBlock, ok bool) {
 	}
 
 	t := pb.Transactions[0]
-	tx, ok := t.Inner.(*transaction.FirstBlockTransaction)
+	tx, ok := t.Inner.(*transaction.FirstBlockParser)
 	if !ok {
 		log.WithFields(log.Fields{"type": consts.ParserError}).Error("getting data of first block")
 		return
 	}
-	data = &tx.Data
+	data = tx.Data
+	syspar.SetFirstBlockTimestamp(tx.Timestamp)
 	syspar.SysUpdate(nil)
 	return
 }

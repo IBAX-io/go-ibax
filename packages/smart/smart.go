@@ -57,7 +57,7 @@ type SmartContract struct {
 	FullAccess    bool
 	SysUpdate     bool
 	VM            *script.VM
-	TxSmart       *types.SmartContract
+	TxSmart       *types.SmartTransaction
 	TxData        map[string]interface{}
 	TxContract    *Contract
 	TxFuel        int64           // The fuel of executing contract
@@ -67,8 +67,9 @@ type SmartContract struct {
 	BlockData     *types.BlockData
 	PreBlockData  *types.BlockData
 	Loop          map[string]bool
-	TxHash        []byte
+	Hash          []byte
 	Payload       []byte
+	Timestamp     int64
 	TxSignature   []byte
 	TxSize        int64
 	Size          common.StorageSize
@@ -144,7 +145,7 @@ func (sc *SmartContract) GetLogger() *log.Entry {
 	if sc.TxContract != nil {
 		name = sc.TxContract.Name
 	}
-	return log.WithFields(log.Fields{"tx": fmt.Sprintf("%x", sc.TxHash), "clb": sc.CLB, "name": name, "tx_eco": sc.TxSmart.EcosystemID})
+	return log.WithFields(log.Fields{"tx": fmt.Sprintf("%x", sc.Hash), "clb": sc.CLB, "name": name, "tx_eco": sc.TxSmart.EcosystemID})
 }
 
 func GetAllContracts() (string, error) {
@@ -202,7 +203,7 @@ func (sc *SmartContract) getExtend() map[string]interface{} {
 	head := sc.TxSmart
 	extend := map[string]interface{}{
 		`type`:                head.ID,
-		`time`:                head.Time,
+		`time`:                sc.Timestamp,
 		`ecosystem_id`:        head.EcosystemID,
 		`node_position`:       blockNodePosition,
 		`block`:               block,
@@ -211,7 +212,7 @@ func (sc *SmartContract) getExtend() map[string]interface{} {
 		`block_key_id`:        blockKeyID,
 		`parent`:              ``,
 		`txcost`:              sc.GetContractLimit(),
-		`txhash`:              sc.TxHash,
+		`txhash`:              sc.Hash,
 		`result`:              ``,
 		`sc`:                  sc,
 		`contract`:            sc.TxContract,
@@ -693,7 +694,7 @@ func (sc *SmartContract) checkTxSign() error {
 
 	var CheckSignResult bool
 
-	CheckSignResult, err = utils.CheckSign(sc.PublicKeys, sc.TxHash, sc.TxSignature, false)
+	CheckSignResult, err = utils.CheckSign(sc.PublicKeys, sc.Hash, sc.TxSignature, false)
 	if err != nil {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("checking tx data sign")
 		return err

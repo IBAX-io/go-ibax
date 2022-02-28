@@ -7,15 +7,15 @@ package tcpserver
 import (
 	"errors"
 
+	"github.com/IBAX-io/go-ibax/packages/transaction"
+
 	"net"
-	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/x509"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -64,17 +64,11 @@ func processStopNetwork(b []byte) ([]byte, error) {
 	}
 
 	var data []byte
-	tnow := time.Now().Unix()
-	_, err = converter.BinMarshal(&data,
-		&types.StopNetwork{
-			TxHeader: types.TxHeader{
-				Type:  types.StopNetworkTxType,
-				Time:  uint32(tnow),
-				KeyID: conf.Config.KeyID,
-			},
-			StopNetworkCert: b,
-		},
-	)
+	snp := new(transaction.StopNetworkParser)
+	data, err = snp.BinMarshal(&types.StopNetwork{
+		KeyID:           conf.Config.KeyID,
+		StopNetworkCert: b,
+	})
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.MarshallingError}).Error("binary marshaling")
 		return nil, err
@@ -87,7 +81,7 @@ func processStopNetwork(b []byte) ([]byte, error) {
 		Type:     types.StopNetworkTxType,
 		KeyID:    conf.Config.KeyID,
 		HighRate: sqldb.TransactionRateStopNetwork,
-		Time:     tnow,
+		Time:     snp.Timestamp,
 	}
 	if err = tx.Create(nil); err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("inserting tx to database")

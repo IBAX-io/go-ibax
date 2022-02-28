@@ -7,7 +7,6 @@ package transaction
 import (
 	"bytes"
 	"fmt"
-	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/types"
 
@@ -31,10 +30,9 @@ func CreateContract(contractName string, keyID int64, params map[string]interfac
 	if contract == nil {
 		return fmt.Errorf(errUnknownContract, contractName)
 	}
-	sc := types.SmartContract{
+	sc := types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(contract.Info().ID),
-			Time:        time.Now().Unix(),
 			EcosystemID: ecosysID,
 			KeyID:       keyID,
 			NetworkID:   conf.Config.LocalConf.NetworkID,

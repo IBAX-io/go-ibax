@@ -408,7 +408,7 @@ func valueToBool(v interface{}) bool {
 		return val != nil && val.Size() > 0
 	default:
 		dec, _ := decimal.NewFromString(fmt.Sprintf(`%v`, val))
-		return dec.Cmp(decimal.New(0, 0)) != 0
+		return dec.Cmp(decimal.Zero) != 0
 	}
 	return false
 }
@@ -1127,7 +1127,7 @@ main:
 			default:
 				if reflect.TypeOf(top[1]).String() == Decimal &&
 					reflect.TypeOf(top[0]).String() == Decimal {
-					if top[0].(decimal.Decimal).Cmp(decimal.New(0, 0)) == 0 {
+					if top[0].(decimal.Decimal).Cmp(decimal.Zero) == 0 {
 						err = errDivZero
 						break main
 					}

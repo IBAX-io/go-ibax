@@ -33,7 +33,7 @@ func (tc *transactionCache) Set(t *Transaction) {
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
-	tc.cache[fmt.Sprintf("%x", t.TxHash())] = t
+	tc.cache[fmt.Sprintf("%x", t.Hash())] = t
 }
 
 func (tc *transactionCache) Clean() {

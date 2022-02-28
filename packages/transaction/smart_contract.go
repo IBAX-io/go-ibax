@@ -5,8 +5,12 @@
 package transaction
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
 
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -23,21 +27,24 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/utils"
 )
 
-type SmartContractTransaction struct {
+type SmartTransactionParser struct {
 	*smart.SmartContract
 }
 
-func (s *SmartContractTransaction) txType() byte      { return types.SmartContractTxType }
-func (s *SmartContractTransaction) txHash() []byte    { return s.TxHash }
-func (s *SmartContractTransaction) txPayload() []byte { return s.Payload }
-func (s *SmartContractTransaction) txTime() int64     { return s.TxSmart.Time }
-func (s *SmartContractTransaction) txKeyID() int64    { return s.TxSmart.KeyID }
-func (s *SmartContractTransaction) txExpedite() decimal.Decimal {
+func (s *SmartTransactionParser) txType() byte      { return s.TxSmart.TxType() }
+func (s *SmartTransactionParser) txHash() []byte    { return s.Hash }
+func (s *SmartTransactionParser) txPayload() []byte { return s.Payload }
+func (s *SmartTransactionParser) txTime() int64     { return s.Timestamp }
+func (s *SmartTransactionParser) txKeyID() int64    { return s.TxSmart.KeyID }
+func (s *SmartTransactionParser) txExpedite() decimal.Decimal {
 	dec, _ := decimal.NewFromString(s.TxSmart.Expedite)
 	return dec
 }
+func (s *SmartTransactionParser) setTimestamp() {
+	s.Timestamp = time.Now().Unix()
+}
 
-func (s *SmartContractTransaction) Init(t *Transaction) error {
+func (s *SmartTransactionParser) Init(t *Transaction) error {
 	s.Rand = t.Rand
 	s.GenBlock = t.GenBlock
 	s.BlockData = t.BlockData
@@ -56,11 +63,11 @@ func (s *SmartContractTransaction) Init(t *Transaction) error {
 	return nil
 }
 
-func (s *SmartContractTransaction) Validate() error {
+func (s *SmartTransactionParser) Validate() error {
 	txSmart := s.TxSmart
 	if len(txSmart.Expedite) > 0 {
 		expedite, _ := decimal.NewFromString(txSmart.Expedite)
-		if expedite.LessThan(decimal.New(0, 0)) {
+		if expedite.LessThan(decimal.Zero) {
 			return fmt.Errorf("expedite fee %s must be greater than 0", expedite)
 		}
 	}
@@ -70,7 +77,7 @@ func (s *SmartContractTransaction) Validate() error {
 
 	var publicKeys [][]byte
 	publicKeys = append(publicKeys, crypto.CutPub(s.TxSmart.PublicKey))
-	_, err := utils.CheckSign(publicKeys, s.TxHash, s.TxSignature, false)
+	_, err := utils.CheckSign(publicKeys, s.Hash, s.TxSignature, false)
 	if err != nil {
 		return err
 	}
@@ -78,7 +85,7 @@ func (s *SmartContractTransaction) Validate() error {
 	return nil
 }
 
-func (s *SmartContractTransaction) Action(t *Transaction) (err error) {
+func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
 	t.TxResult, err = s.CallContract(t.SqlDbSavePoint)
 	t.RollBackTx = s.RollBackTx
 	t.SysUpdate = s.SysUpdate
@@ -105,11 +112,55 @@ func (s *SmartContractTransaction) Action(t *Transaction) (err error) {
 	return
 }
 
-func (s *SmartContractTransaction) TxRollback() error {
+func (s *SmartTransactionParser) TxRollback() error {
 	return nil
 }
 
-func (s *SmartContractTransaction) parseFromContract(fillData bool) error {
+func (s *SmartTransactionParser) BinMarshal(smartTx *types.SmartTransaction, privateKey []byte, internal bool) ([]byte, error) {
+	var (
+		publicKey, signature []byte
+		err                  error
+	)
+	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
+	}
+	smartTx.PublicKey = publicKey
+	if internal {
+		smartTx.SignedBy = crypto.Address(publicKey)
+	}
+	s.setTimestamp()
+	s.TxSmart = smartTx
+	var buf []byte
+	buf, err = msgpack.Marshal(smartTx)
+	if err != nil {
+		return nil, err
+	}
+	s.Payload = buf
+	s.Hash = crypto.DoubleHash(s.Payload)
+	signature, err = crypto.Sign(privateKey, s.Hash)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by node private key")
+		return nil, err
+	}
+	s.TxSignature = converter.EncodeLengthPlusData(signature)
+	buf, err = msgpack.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+
+	buf = append([]byte{s.txType()}, buf...)
+	return buf, nil
+}
+
+func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer) error {
+	buffer.UnreadByte()
+	if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *SmartTransactionParser) parseFromContract(fillData bool) error {
 	var err error
 	if err := msgpack.Unmarshal(s.Payload, &s.TxSmart); err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on unmarshalling to sc")

@@ -79,9 +79,9 @@ func (b *Block) PlaySafe() error {
 				err = script.ErrVMTimeLimit
 			}
 			if inputTx[0].IsSmartContract() {
-				transaction.BadTxForBan(inputTx[0].TxKeyID())
+				transaction.BadTxForBan(inputTx[0].KeyID())
 			}
-			if err := transaction.MarkTransactionBad(dbTransaction, inputTx[0].TxHash(), err.Error()); err != nil {
+			if err := transaction.MarkTransactionBad(dbTransaction, inputTx[0].Hash(), err.Error()); err != nil {
 				return err
 			}
 		}
@@ -191,7 +191,7 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 	for curTx, t := range b.Transactions {
 		err := dbTransaction.Savepoint(consts.SetSavePointMarkBlock(curTx))
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash()}).Error("using savepoint")
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
 		}
 
@@ -201,7 +201,7 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 		t.PreBlockData = b.PrevHeader
 		t.GenBlock = b.GenBlock
 		t.SqlDbSavePoint = curTx
-		t.Rand = rand.BytesSeed(t.TxHash())
+		t.Rand = rand.BytesSeed(t.Hash())
 		err = t.Play()
 		if err != nil {
 			if err == transaction.ErrNetworkStopping {
@@ -211,7 +211,7 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 			}
 			errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(curTx))
 			if errRoll != nil {
-				t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash()}).Error("rolling back to previous savepoint")
+				t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("rolling back to previous savepoint")
 				return errRoll
 			}
 			if b.GenBlock {
@@ -226,9 +226,9 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 				}
 			}
 			if t.IsSmartContract() {
-				transaction.BadTxForBan(t.TxKeyID())
+				transaction.BadTxForBan(t.KeyID())
 			}
-			_ = transaction.MarkTransactionBad(t.DbTransaction, t.TxHash(), err.Error())
+			_ = transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
 			if t.SysUpdate {
 				if err := syspar.SysUpdate(t.DbTransaction); err != nil {
 					log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
@@ -247,15 +247,15 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 			b.SysUpdate = true
 			t.SysUpdate = false
 		}
-		if err := sqldb.SetTransactionStatusBlockMsg(t.DbTransaction, t.BlockData.BlockID, t.TxResult, t.TxHash()); err != nil {
-			t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.TxHash()}).Error("updating transaction status block id")
+		if err := sqldb.SetTransactionStatusBlockMsg(t.DbTransaction, t.BlockData.BlockID, t.TxResult, t.Hash()); err != nil {
+			t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("updating transaction status block id")
 			return err
 		}
 		if t.Notifications.Size() > 0 {
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
-		playTxs.UsedTx = append(playTxs.UsedTx, t.TxHash())
-		playTxs.Lts = append(playTxs.Lts, &sqldb.LogTransaction{Block: b.Header.BlockID, Hash: t.TxHash()})
+		playTxs.UsedTx = append(playTxs.UsedTx, t.Hash())
+		playTxs.Lts = append(playTxs.Lts, &sqldb.LogTransaction{Block: b.Header.BlockID, Hash: t.Hash()})
 		playTxs.Rts = append(playTxs.Rts, t.RollBackTx...)
 		processedTx = append(processedTx, t)
 	}
@@ -299,7 +299,7 @@ func (b *Block) Check() error {
 	txCounter := make(map[int64]int)
 	txHashes := make(map[string]struct{})
 	for i, t := range b.Transactions {
-		hexHash := string(converter.BinToHex(t.TxHash()))
+		hexHash := string(converter.BinToHex(t.Hash()))
 		// check for duplicate transactions
 		if _, ok := txHashes[hexHash]; ok {
 			logger.WithFields(log.Fields{"tx_hash": hexHash, "type": consts.DuplicateObject}).Warning("duplicate transaction")
@@ -308,14 +308,14 @@ func (b *Block) Check() error {
 		txHashes[hexHash] = struct{}{}
 
 		// check for max transaction per user in one block
-		txCounter[t.TxKeyID()]++
-		if txCounter[t.TxKeyID()] > syspar.GetMaxBlockUserTx() {
+		txCounter[t.KeyID()]++
+		if txCounter[t.KeyID()] > syspar.GetMaxBlockUserTx() {
 			return utils.WithBan(utils.ErrInfo(fmt.Errorf("max_block_user_transactions")))
 		}
 
 		err := t.Check(b.Header.Time)
 		if err != nil {
-			transaction.MarkTransactionBad(t.DbTransaction, t.TxHash(), err.Error())
+			transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
 			delete(txHashes, hexHash)
 			b.Transactions = append(b.Transactions[:i], b.Transactions[i+1:]...)
 			return errors.Wrap(err, "check transaction")

@@ -231,13 +231,13 @@ func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-cha
 			tr, err := transaction.UnmarshallTransaction(bufTransaction, true)
 			if err != nil {
 				if tr != nil {
-					txBadChan <- badTxStruct{hash: tr.TxHash(), msg: err.Error(), keyID: tr.TxKeyID()}
+					txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
 				}
 				continue
 			}
 
 			if err := tr.Check(st); err != nil {
-				txBadChan <- badTxStruct{hash: tr.TxHash(), msg: err.Error(), keyID: tr.TxKeyID()}
+				txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
 				continue
 			}
 
@@ -247,7 +247,7 @@ func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-cha
 					break
 				} else if err != nil {
 					if err != transaction.ErrLimitSkip {
-						txBadChan <- badTxStruct{hash: tr.TxHash(), msg: err.Error(), keyID: tr.TxKeyID()}
+						txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
 					}
 					continue
 				}

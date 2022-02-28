@@ -192,10 +192,9 @@ func CheckSign(publicKeys [][]byte, forSign []byte, signs []byte, nodeKeyOrLogin
 			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("decoding signs length")
 			return false, err
 		}
-		if length == 0 {
-			return false, ErrInfoFmt("DecodeLength len(signs) == 0")
+		if length > 0 {
+			signsSlice = append(signsSlice, converter.BytesShift(&signs, length))
 		}
-		signsSlice = append(signsSlice, converter.BytesShift(&signs, length))
 
 		if len(publicKeys) != len(signsSlice) {
 			log.WithFields(log.Fields{"public_keys_length": len(publicKeys), "signs_length": len(signsSlice), "type": consts.SizeDoesNotMatch}).Error("public keys and signs slices lengths does not match")

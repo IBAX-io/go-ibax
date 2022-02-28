@@ -384,10 +384,9 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 		return
 	}
 
-	data, hash, err := transaction.NewTransaction(types.SmartContract{
+	data, hash, err := transaction.NewTransaction(types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(contract.ID),
-			Time:        time.Now().Unix(),
 			EcosystemID: 1,
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
@@ -476,19 +475,17 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 		return
 	}
 	arrData := make(map[string][]byte)
+
 	for i := 0; i < 1; i++ {
 		conname := crypto.RandSeq(10)
-		tnow := time.Now().Unix()
-		params["Value"] = fmt.Sprintf(`contract rnd%v%d%d  { action { }}`, conname, i, tnow)
 		params["ApplicationId"] = int64(1)
 		params["Conditions"] = "1"
 		//params["TokenEcosystem"] = int64(2)
+		params["Value"] = fmt.Sprintf(`contract rnd%v%d  { action { }}`, conname, i)
 		expedite := strconv.Itoa(1)
-
-		data, txhash, _ := transaction.NewTransaction(types.SmartContract{
+		data, txhash, _ := transaction.NewTransaction(types.SmartTransaction{
 			Header: &types.Header{
 				ID:          int(contract.ID),
-				Time:        tnow,
 				EcosystemID: 1,
 				KeyID:       crypto.Address(publicKey),
 				NetworkID:   conf.Config.LocalConf.NetworkID,
@@ -497,7 +494,7 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 			Expedite: expedite,
 		}, privateKey)
 		arrData[fmt.Sprintf("%x", txhash)] = data
-		//fmt.Println(fmt.Sprintf("%x", txhash))
+		fmt.Println(fmt.Sprintf("%x", txhash))
 	}
 	ret := &sendTxResult{}
 	err = sendMultipart("sendTx", arrData, &ret)
@@ -585,10 +582,9 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 		return
 	}
 
-	data, _, err := transaction.NewTransaction(types.SmartContract{
+	data, _, err := transaction.NewTransaction(types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(contract.ID),
-			Time:        time.Now().Unix(),
 			EcosystemID: 1,
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
@@ -675,10 +671,9 @@ func postTxResult2(name string, form getter) (id int64, msg string, err error) {
 		return
 	}
 
-	data, _, err := transaction.NewTransaction(types.SmartContract{
+	data, _, err := transaction.NewTransaction(types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(contract.ID),
-			Time:        time.Now().Unix(),
 			EcosystemID: 2,
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.LocalConf.NetworkID,

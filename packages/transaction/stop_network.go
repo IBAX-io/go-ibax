@@ -7,12 +7,14 @@ package transaction
 import (
 	"bytes"
 	"errors"
+	"time"
+
+	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/x509"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -24,26 +26,28 @@ var (
 	ErrNetworkStopping = errors.New("network is stopping")
 )
 
-type StopNetworkTransaction struct {
-	Logger  *log.Entry
-	Data    types.StopNetwork
-	Cert    *x509.Cert
-	TxHash  []byte
-	Payload []byte // transaction binary data
+type StopNetworkParser struct {
+	Logger    *log.Entry
+	Data      *types.StopNetwork
+	Cert      *x509.Cert
+	Timestamp int64
+	TxHash    []byte
+	Payload   []byte // transaction binary data
 }
 
-func (s *StopNetworkTransaction) txType() byte                { return types.StopNetworkTxType }
-func (s *StopNetworkTransaction) txHash() []byte              { return s.TxHash }
-func (s *StopNetworkTransaction) txPayload() []byte           { return s.Payload }
-func (s *StopNetworkTransaction) txTime() int64               { return int64(s.Data.Time) }
-func (s *StopNetworkTransaction) txKeyID() int64              { return s.Data.KeyID }
-func (s *StopNetworkTransaction) txExpedite() decimal.Decimal { return decimal.Decimal{} }
+func (s *StopNetworkParser) txType() byte                { return s.Data.TxType() }
+func (s *StopNetworkParser) txHash() []byte              { return s.TxHash }
+func (s *StopNetworkParser) txPayload() []byte           { return s.Payload }
+func (s *StopNetworkParser) txTime() int64               { return s.Timestamp }
+func (s *StopNetworkParser) txKeyID() int64              { return s.Data.KeyID }
+func (s *StopNetworkParser) txExpedite() decimal.Decimal { return decimal.Decimal{} }
+func (s *StopNetworkParser) setTimestamp()               { s.Timestamp = time.Now().Unix() }
 
-func (s *StopNetworkTransaction) Init(*Transaction) error {
+func (s *StopNetworkParser) Init(*Transaction) error {
 	return nil
 }
 
-func (s *StopNetworkTransaction) Validate() error {
+func (s *StopNetworkParser) Validate() error {
 	if err := s.validate(); err != nil {
 		s.Logger.WithError(err).Error("validating tx")
 		return err
@@ -52,7 +56,7 @@ func (s *StopNetworkTransaction) Validate() error {
 	return nil
 }
 
-func (s *StopNetworkTransaction) validate() error {
+func (s *StopNetworkParser) validate() error {
 	data := s.Data
 	cert, err := x509.ParseCert(data.StopNetworkCert)
 	if err != nil {
@@ -72,7 +76,7 @@ func (s *StopNetworkTransaction) validate() error {
 	return nil
 }
 
-func (s *StopNetworkTransaction) Action(t *Transaction) error {
+func (s *StopNetworkParser) Action(t *Transaction) error {
 	// Allow execute transaction, if the certificate was used
 	if s.Cert.EqualBytes(consts.UsedStopNetworkCerts...) {
 		return nil
@@ -85,15 +89,50 @@ func (s *StopNetworkTransaction) Action(t *Transaction) error {
 	return ErrNetworkStopping
 }
 
-func (s *StopNetworkTransaction) TxRollback() error {
+func (s *StopNetworkParser) TxRollback() error {
 	return nil
 }
 
-func (s *StopNetworkTransaction) Unmarshal(buffer *bytes.Buffer) error {
-	buffer.UnreadByte()
-	s.Payload = buffer.Bytes()
+func (s *StopNetworkParser) BinMarshal(data *types.StopNetwork) ([]byte, error) {
+	s.setTimestamp()
+	s.Data = data
+	var (
+		buf    []byte
+		fbdata *types.FirstBlock
+		err    error
+	)
+	buf, err = msgpack.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	s.Payload = buf
 	s.TxHash = crypto.DoubleHash(s.Payload)
-	if err := converter.BinUnmarshal(&s.Payload, &s.Data); err != nil {
+	cert, err := x509.ParseCert(data.StopNetworkCert)
+	if err != nil {
+		return nil, err
+	}
+
+	fbdata, err = syspar.GetFirstBlockData()
+	if err != nil {
+		return nil, err
+	}
+
+	if err = cert.Validate(fbdata.StopNetworkCertBundle); err != nil {
+		return nil, err
+	}
+
+	s.Cert = cert
+	buf, err = msgpack.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	buf = append([]byte{s.txType()}, buf...)
+	return buf, nil
+}
+
+func (s *StopNetworkParser) Unmarshal(buffer *bytes.Buffer) error {
+	buffer.UnreadByte()
+	if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
 		return err
 	}
 	return nil

@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"math/rand"
 
+	"github.com/vmihailenco/msgpack/v5"
+
 	"github.com/shopspring/decimal"
 
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -50,20 +52,24 @@ type TransactionInfoer interface {
 	txExpedite() decimal.Decimal
 }
 
-func (t *Transaction) TxType() byte                { return t.Inner.txType() }
-func (t *Transaction) TxHash() []byte              { return t.Inner.txHash() }
-func (t *Transaction) TxPayload() []byte           { return t.Inner.txPayload() }
-func (t *Transaction) TxTime() int64               { return t.Inner.txTime() }
-func (t *Transaction) TxKeyID() int64              { return t.Inner.txKeyID() }
-func (t *Transaction) TxExpedite() decimal.Decimal { return t.Inner.txExpedite() }
+func (t *Transaction) Type() byte                { return t.Inner.txType() }
+func (t *Transaction) Hash() []byte              { return t.Inner.txHash() }
+func (t *Transaction) Payload() []byte           { return t.Inner.txPayload() }
+func (t *Transaction) Timestamp() int64          { return t.Inner.txTime() }
+func (t *Transaction) KeyID() int64              { return t.Inner.txKeyID() }
+func (t *Transaction) Expedite() decimal.Decimal { return t.Inner.txExpedite() }
 
 func (t *Transaction) IsSmartContract() bool {
-	_, ok := t.Inner.(*SmartContractTransaction)
+	_, ok := t.Inner.(*SmartTransactionParser)
 	return ok
 }
 
-func (t *Transaction) SmartContract() *SmartContractTransaction {
-	return t.Inner.(*SmartContractTransaction)
+func (t *Transaction) SmartContract() *SmartTransactionParser {
+	return t.Inner.(*SmartTransactionParser)
+}
+
+func (t Transaction) MarshallTransaction() ([]byte, error) {
+	return msgpack.Marshal(t)
 }
 
 // UnmarshallTransaction is unmarshalling transaction
@@ -72,7 +78,5 @@ func UnmarshallTransaction(buffer *bytes.Buffer, fillData bool) (*Transaction, e
 	if err := tx.Unmarshall(buffer); err != nil {
 		return nil, err
 	}
-	txCache.Set(tx)
-
 	return tx, nil
 }
