@@ -23,7 +23,7 @@ var (
 		t.Column("ecosystem_id", "int", {"default": "0"})
 		t.Column("key_id", "bigint", {"default": "0"})
 		t.Column("node_position", "bigint", {"default": "0"})
-		t.Column("time", "int", {"default": "0"})
+		t.Column("time", "bigint", {"default": "0"})
 		t.Column("tx", "int", {"default": "0"})
 	{{footer "primary" "index(node_position, time)"}}
 
@@ -31,7 +31,7 @@ var (
 		t.Column("block_id", "bigint", {"default": "0"})
 		t.Column("good", "int", {"default": "0"})
 		t.Column("bad", "int", {"default": "0"})
-		t.Column("time", "int", {"default": "0"})
+		t.Column("time", "bigint", {"default": "0"})
 	{{footer "primary(block_id)"}}
 
 	{{head "info_block"}}
@@ -41,7 +41,7 @@ var (
 		t.Column("node_position", "int", {"default": "0"})
 		t.Column("ecosystem_id", "bigint", {"default": "0"})
 		t.Column("key_id", "bigint", {"default": "0"})
-		t.Column("time", "int", {"default": "0"})
+		t.Column("time", "bigint", {"default": "0"})
 		t.Column("current_version", "string", {"default": "0.0.1", "size": 50})
 		t.Column("sent", "smallint", {"default": "0"})
 	{{footer "index(sent)"}}
@@ -66,7 +66,7 @@ var (
 		t.Column("data", "bytea", {"default": ""})
 		t.Column("from_gate", "int", {"default": "0"})
 		t.Column("expedite", "decimal(30)", {"default_raw": "'0' CHECK (expedite >= 0)"})
-		t.Column("time", "int", {"default": "0"})
+		t.Column("time", "bigint", {"default": "0"})
 	{{footer "primary(hash)"}}
 
 	{{headseq "rollback_tx"}}
@@ -88,7 +88,7 @@ var (
 		t.Column("used", "smallint", {"default": "0"})
 		t.Column("high_rate", "smallint", {"default": "0"})
 		t.Column("expedite", "decimal(30)", {"default_raw": "'0' CHECK (expedite >= 0)"})
-		t.Column("time", "int", {"default": "0"})
+		t.Column("time", "bigint", {"default": "0"})
 		t.Column("type", "smallint", {"default": "0"})
 		t.Column("key_id", "bigint", {"default": "0"})
 		t.Column("sent", "smallint", {"default": "0"})
@@ -97,7 +97,7 @@ var (
 
 	{{head "transactions_status"}}
 		t.Column("hash", "bytea", {"default": ""})
-		t.Column("time", "int", {"default": "0"})
+		t.Column("time", "bigint", {"default": "0"})
 		t.Column("type", "int", {"default": "0"})
 		t.Column("ecosystem", "int", {"default": "1"})
 		t.Column("wallet_id", "bigint", {"default": "0"})

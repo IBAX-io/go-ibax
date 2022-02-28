@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"encoding/hex"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -36,19 +37,18 @@ func (t *Transaction) Check(checkTime int64) error {
 	if t.KeyID() == 0 {
 		return ErrEmptyKey
 	}
-
 	logger := log.WithFields(log.Fields{"tx_hash": hex.EncodeToString(t.Hash()), "tx_time": t.Timestamp(), "check_time": checkTime, "type": consts.ParameterExceeded})
-	if t.Timestamp() > checkTime {
-		if t.Timestamp()-consts.MaxTxForw > checkTime {
-			logger.WithFields(log.Fields{"tx_max_forw": consts.MaxTxForw}).Errorf("time in the tx cannot be more than %d seconds of block time ", consts.MaxTxForw)
-			return ErrNotComeTime
-		}
+	if time.UnixMilli(t.Timestamp()).Unix() > checkTime {
+		//if time.UnixMilli(t.Timestamp()).Unix()-consts.MaxTxForw > checkTime {
+		//	logger.WithFields(log.Fields{"tx_max_forw": consts.MaxTxForw}).Errorf("time in the tx cannot be more than %d seconds of block time ", consts.MaxTxForw)
+		//	return ErrNotComeTime
+		//}
 		logger.Error("time in the tx cannot be more than of block time ")
 		return ErrEarlyTime
 	}
 
 	if t.Type() != types.StopNetworkTxType {
-		if t.Timestamp() < checkTime-consts.MaxTxBack {
+		if time.UnixMilli(t.Timestamp()).Unix() < checkTime-consts.MaxTxBack {
 			logger.WithFields(log.Fields{"tx_max_back": consts.MaxTxBack, "tx_type": t.Type()}).Errorf("time in the tx cannot be less then %d seconds of block time", consts.MaxTxBack)
 			return ErrExpiredTime
 		}

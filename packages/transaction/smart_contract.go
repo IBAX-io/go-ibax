@@ -41,7 +41,7 @@ func (s *SmartTransactionParser) txExpedite() decimal.Decimal {
 	return dec
 }
 func (s *SmartTransactionParser) setTimestamp() {
-	s.Timestamp = time.Now().Unix()
+	s.Timestamp = time.Now().UnixMilli()
 }
 
 func (s *SmartTransactionParser) Init(t *Transaction) error {

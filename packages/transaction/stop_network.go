@@ -41,7 +41,7 @@ func (s *StopNetworkParser) txPayload() []byte           { return s.Payload }
 func (s *StopNetworkParser) txTime() int64               { return s.Timestamp }
 func (s *StopNetworkParser) txKeyID() int64              { return s.Data.KeyID }
 func (s *StopNetworkParser) txExpedite() decimal.Decimal { return decimal.Decimal{} }
-func (s *StopNetworkParser) setTimestamp()               { s.Timestamp = time.Now().Unix() }
+func (s *StopNetworkParser) setTimestamp()               { s.Timestamp = time.Now().UnixMilli() }
 
 func (s *StopNetworkParser) Init(*Transaction) error {
 	return nil

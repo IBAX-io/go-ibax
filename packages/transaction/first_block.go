@@ -45,7 +45,7 @@ func (f *FirstBlockParser) txPayload() []byte           { return f.Payload }
 func (f *FirstBlockParser) txTime() int64               { return f.Timestamp }
 func (f *FirstBlockParser) txKeyID() int64              { return f.Data.KeyID }
 func (f *FirstBlockParser) txExpedite() decimal.Decimal { return decimal.Decimal{} }
-func (s *FirstBlockParser) setTimestamp()               { s.Timestamp = time.Now().Unix() }
+func (s *FirstBlockParser) setTimestamp()               { s.Timestamp = time.Now().UnixMilli() }
 
 func (f *FirstBlockParser) Init(*Transaction) error { return nil }
 

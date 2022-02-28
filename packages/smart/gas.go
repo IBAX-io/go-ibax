@@ -212,7 +212,7 @@ func (sc *SmartContract) payTaxes(pay *paymentInfo, sum decimal.Decimal, t int64
 		"txhash":            sc.Hash,
 		"ecosystem":         pay.tokenEco,
 		"type":              t,
-		"created_at":        sc.BlockData.Time,
+		"created_at":        sc.Timestamp,
 	})
 	if t == 1 {
 		detail := types.NewMap()
