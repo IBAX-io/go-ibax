@@ -124,7 +124,7 @@ func (f *FirstBlockParser) Action(t *Transaction) error {
 		return err
 	}
 	syspar.SetFirstBlockData(data)
-	syspar.SetFirstBlockTimestamp(f.Timestamp)
+	syspar.SetFirstBlockTimestamp(time.UnixMilli(f.Timestamp).Unix())
 	return nil
 }
 

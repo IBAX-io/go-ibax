@@ -10,21 +10,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/converter"
-
-	"github.com/pkg/errors"
-	"github.com/shopspring/decimal"
-	log "github.com/sirupsen/logrus"
-	"github.com/vmihailenco/msgpack/v5"
-
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
+	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
+	log "github.com/sirupsen/logrus"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type SmartTransactionParser struct {
@@ -116,33 +114,34 @@ func (s *SmartTransactionParser) TxRollback() error {
 	return nil
 }
 
+func (s *SmartTransactionParser) setSig(privateKey []byte) error {
+	signature, err := crypto.Sign(privateKey, s.Hash)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by node private key")
+		return err
+	}
+	s.TxSignature = converter.EncodeLengthPlusData(signature)
+	return nil
+}
+
 func (s *SmartTransactionParser) BinMarshal(smartTx *types.SmartTransaction, privateKey []byte, internal bool) ([]byte, error) {
 	var (
-		publicKey, signature []byte
-		err                  error
+		buf []byte
+		err error
 	)
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
-	}
-	smartTx.PublicKey = publicKey
-	if internal {
-		smartTx.SignedBy = crypto.Address(publicKey)
+	if buf, err = smartTx.WithPrivateMarshal(privateKey, internal); err != nil {
+		return nil, err
 	}
 	s.setTimestamp()
 	s.TxSmart = smartTx
-	var buf []byte
-	buf, err = msgpack.Marshal(smartTx)
-	if err != nil {
-		return nil, err
-	}
 	s.Payload = buf
 	s.Hash = crypto.DoubleHash(s.Payload)
-	signature, err = crypto.Sign(privateKey, s.Hash)
+
+	err = s.setSig(privateKey)
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by node private key")
 		return nil, err
 	}
-	s.TxSignature = converter.EncodeLengthPlusData(signature)
+
 	buf, err = msgpack.Marshal(s)
 	if err != nil {
 		return nil, err
@@ -152,10 +151,20 @@ func (s *SmartTransactionParser) BinMarshal(smartTx *types.SmartTransaction, pri
 	return buf, nil
 }
 
-func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer) error {
-	buffer.UnreadByte()
-	if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
-		return err
+func (s *SmartTransactionParser) Unmarshal(txT byte, buffer *bytes.Buffer) error {
+	if txT == types.SmartContractTxType {
+		buffer.UnreadByte()
+		if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
+			return err
+		}
+	}
+	if txT == byte(128) {
+		if err := converter.BinUnmarshalBuff(buffer, &s.Payload); err != nil {
+			return err
+		}
+		s.setTimestamp()
+		s.Hash = crypto.DoubleHash(s.Payload)
+		s.TxSignature = buffer.Bytes()
 	}
 	return nil
 }

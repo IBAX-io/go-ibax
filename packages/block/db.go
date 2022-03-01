@@ -179,7 +179,7 @@ func GetDataFromFirstBlock() (data *types.FirstBlock, ok bool) {
 		return
 	}
 	data = tx.Data
-	syspar.SetFirstBlockTimestamp(tx.Timestamp)
+	syspar.SetFirstBlockTimestamp(time.UnixMilli(tx.Timestamp).Unix())
 	syspar.SysUpdate(nil)
 	return
 }

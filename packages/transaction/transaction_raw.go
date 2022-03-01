@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/IBAX-io/go-ibax/packages/smart"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -29,10 +31,11 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer) error {
 	var inner TransactionCaller
 	switch txT {
 	case types.SmartContractTxType, byte(128):
-		itx := new(SmartTransactionParser)
+		itx := &SmartTransactionParser{
+			SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
+		}
 		inner = itx
-		if err = itx.Unmarshal(buffer); err != nil {
-			//if err = converter.BinUnmarshalBuff(buffer, &sc.Payload); err != nil {
+		if err = itx.Unmarshal(txT, buffer); err != nil {
 			return err
 		}
 		if t, ok := txCache.Get(string(itx.Hash)); ok {
@@ -83,13 +86,6 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer) error {
 	rtx.Inner = inner
 	txCache.Set(rtx)
 
-	return nil
-}
-
-func (rtx *Transaction) Processing(txData []byte) error {
-	if err := rtx.Unmarshall(bytes.NewBuffer(txData)); err != nil {
-		return err
-	}
 	return nil
 }
 

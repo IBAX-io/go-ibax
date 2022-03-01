@@ -135,7 +135,7 @@ func NewBlockTimeCounter() *BlockTimeCounter {
 	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
 	blocksGapDuration := time.Second * time.Duration(syspar.GetGapsBetweenBlocks())
 	btc := BlockTimeCounter{
-		start:       time.UnixMilli(syspar.GetFirstBlockTimestamp()),
+		start:       time.Unix(syspar.GetFirstBlockTimestamp(), 0),
 		duration:    blockGenerationDuration + blocksGapDuration,
 		numberNodes: int(syspar.GetCountOfActiveNodes()),
 	}
