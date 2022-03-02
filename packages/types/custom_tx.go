@@ -24,6 +24,7 @@ const (
 // FirstBlock is the header of first block transaction
 type FirstBlock struct {
 	KeyID                 int64
+	Time                  int64
 	PublicKey             []byte
 	NodePublicKey         []byte
 	StopNetworkCertBundle []byte
@@ -35,6 +36,7 @@ func (t *FirstBlock) TxType() byte { return FirstBlockTxType }
 
 type StopNetwork struct {
 	KeyID           int64
+	Time            int64
 	StopNetworkCert []byte
 }
 

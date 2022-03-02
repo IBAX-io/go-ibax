@@ -6,6 +6,7 @@ package tcpserver
 
 import (
 	"errors"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 
@@ -67,6 +68,7 @@ func processStopNetwork(b []byte) ([]byte, error) {
 	snp := new(transaction.StopNetworkParser)
 	data, err = snp.BinMarshal(&types.StopNetwork{
 		KeyID:           conf.Config.KeyID,
+		Time:            time.Now().Unix(),
 		StopNetworkCert: b,
 	})
 	if err != nil {

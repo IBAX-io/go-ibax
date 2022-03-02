@@ -96,6 +96,7 @@ func genesisBlock() ([]byte, error) {
 	fbp := new(transaction.FirstBlockParser)
 	tx, err := fbp.BinMarshal(&types.FirstBlock{
 		KeyID:                 conf.Config.KeyID,
+		Time:                  now,
 		PublicKey:             decodeKeyFile(consts.PublicKeyFilename),
 		NodePublicKey:         decodeKeyFile(consts.NodePublicKeyFilename),
 		StopNetworkCertBundle: stopNetworkCert,

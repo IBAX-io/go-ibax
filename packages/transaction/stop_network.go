@@ -101,7 +101,7 @@ func (s *StopNetworkParser) BinMarshal(data *types.StopNetwork) ([]byte, error) 
 		fbdata *types.FirstBlock
 		err    error
 	)
-	buf, err = msgpack.Marshal(s)
+	buf, err = msgpack.Marshal(data)
 	if err != nil {
 		return nil, err
 	}

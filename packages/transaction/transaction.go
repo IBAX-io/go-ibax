@@ -8,13 +8,9 @@ import (
 	"bytes"
 	"math/rand"
 
-	"github.com/vmihailenco/msgpack/v5"
-
-	"github.com/shopspring/decimal"
-
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-
 	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/shopspring/decimal"
 )
 
 // Transaction is a structure for parsing transactions
@@ -66,10 +62,6 @@ func (t *Transaction) IsSmartContract() bool {
 
 func (t *Transaction) SmartContract() *SmartTransactionParser {
 	return t.Inner.(*SmartTransactionParser)
-}
-
-func (t Transaction) MarshallTransaction() ([]byte, error) {
-	return msgpack.Marshal(t)
 }
 
 // UnmarshallTransaction is unmarshalling transaction

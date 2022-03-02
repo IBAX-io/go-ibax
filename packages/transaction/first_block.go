@@ -137,7 +137,7 @@ func (s *FirstBlockParser) BinMarshal(data *types.FirstBlock) ([]byte, error) {
 	s.Data = data
 	var buf []byte
 	var err error
-	buf, err = msgpack.Marshal(s)
+	buf, err = msgpack.Marshal(data)
 	if err != nil {
 		return nil, err
 	}
