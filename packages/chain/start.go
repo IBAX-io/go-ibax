@@ -32,7 +32,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
-	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
 )
 
 // Start starts the main code of the program
@@ -136,7 +135,7 @@ func initLogs() error {
 	case "syslog":
 		facility := conf.Config.Log.Syslog.Facility
 		tag := conf.Config.Log.Syslog.Tag
-		sysLogHook, err := lSyslog.NewSyslogHook("", "", logtools.SyslogFacilityPriority[facility], tag)
+		sysLogHook, err := logtools.NewSyslogHook(facility, tag)
 		if err != nil {
 			log.WithError(err).Error("Unable to connect to local syslog daemon")
 		} else {

@@ -7,7 +7,11 @@
 
 package log
 
-import "log/syslog"
+import (
+	"log/syslog"
+
+	lSyslog "github.com/sirupsen/logrus/hooks/syslog"
+)
 
 var SyslogFacilityPriority map[string]syslog.Priority
 
@@ -34,4 +38,8 @@ func init() {
 		"local6":   syslog.LOG_LOCAL6,
 		"local7":   syslog.LOG_LOCAL7,
 	}
+}
+
+func NewSyslogHook(priority string, tag string) (*lSyslog.SyslogHook, error) {
+	return lSyslog.NewSyslogHook("", "", SyslogFacilityPriority[priority], tag)
 }
