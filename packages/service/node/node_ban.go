@@ -161,7 +161,7 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 	}
 
 	stp := new(transaction.SmartTransactionParser)
-	txData, err := stp.BinMarshal(&sc, syspar.GetNodePrivKey(), true)
+	txData, err := stp.BinMarshalWithPrivate(&sc, syspar.GetNodePrivKey(), true)
 	if err != nil {
 		return err
 	}

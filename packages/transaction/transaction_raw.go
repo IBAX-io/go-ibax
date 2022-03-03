@@ -8,12 +8,14 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/IBAX-io/go-ibax/packages/smart"
-
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer) error {
@@ -30,37 +32,43 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer) error {
 
 	var inner TransactionCaller
 	switch txT {
-	case types.SmartContractTxType, byte(128):
+	case types.SmartContractTxType:
 		itx := &SmartTransactionParser{
 			SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 		}
 		inner = itx
-		if err = itx.Unmarshal(txT, buffer); err != nil {
+		if err = itx.Unmarshal(buffer); err != nil {
 			return err
 		}
-		if t, ok := txCache.Get(string(itx.Hash)); ok {
-			rtx = t
-			return nil
+	case byte(128): //reset unmarshal client buf
+		itx := &SmartTransactionParser{
+			SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 		}
-
-		if err = itx.parseFromContract(true); err != nil {
+		inner = itx
+		if err := converter.BinUnmarshalBuff(buffer, &itx.Payload); err != nil {
+			return err
+		}
+		itx.Hash = crypto.DoubleHash(itx.Payload)
+		itx.TxSignature = buffer.Bytes()
+		if err := msgpack.Unmarshal(itx.Payload, &itx.TxSmart); err != nil {
 			return err
 		}
 
+		var newbuf []byte
+		newbuf, err = itx.Marshal()
+		if err != nil {
+			return err
+		}
+		if err = itx.Unmarshal(bytes.NewBuffer(newbuf)); err != nil {
+			return err
+		}
+
+		rtx.FullData = newbuf
 	case types.FirstBlockTxType:
 		var itx FirstBlockParser
 		inner = &itx
 		if err := itx.Unmarshal(buffer); err != nil {
 			log.WithFields(log.Fields{"error": err, "type": consts.UnmarshallingError, "tx_type": itx.txType()}).Error("getting parser for tx type")
-			return err
-		}
-
-		if t, ok := txCache.Get(string(itx.TxHash)); ok {
-			rtx = t
-			return nil
-		}
-		err = itx.Validate()
-		if err != nil {
 			return err
 		}
 	case types.StopNetworkTxType:
@@ -71,21 +79,15 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer) error {
 			log.WithFields(log.Fields{"error": err, "type": consts.UnmarshallingError, "tx_type": rtx.Type()}).Error("getting parser for tx type")
 			return err
 		}
-		if t, ok := txCache.Get(fmt.Sprintf("%x", itx.TxHash)); ok {
-			rtx = t
-			return nil
-		}
-		err = itx.Validate()
-		if err != nil {
-			return err
-		}
 	default:
 		return fmt.Errorf("unsupported tx type %d", txT)
 	}
-
 	rtx.Inner = inner
+	if cache, ok := txCache.Get(fmt.Sprintf("%x", rtx.Hash())); ok {
+		rtx = cache
+		return nil
+	}
 	txCache.Set(rtx)
-
 	return nil
 }
 

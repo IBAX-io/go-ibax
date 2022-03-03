@@ -7,7 +7,6 @@ package transaction
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -62,24 +61,13 @@ func (s *SmartTransactionParser) Init(t *Transaction) error {
 }
 
 func (s *SmartTransactionParser) Validate() error {
-	txSmart := s.TxSmart
-	if len(txSmart.Expedite) > 0 {
-		expedite, _ := decimal.NewFromString(txSmart.Expedite)
-		if expedite.LessThan(decimal.Zero) {
-			return fmt.Errorf("expedite fee %s must be greater than 0", expedite)
-		}
+	if err := s.TxSmart.Validate(); err != nil {
+		return err
 	}
-	if len(strings.TrimSpace(txSmart.Lang)) > 2 {
-		return fmt.Errorf(`localization size is greater than 2`)
-	}
-
-	var publicKeys [][]byte
-	publicKeys = append(publicKeys, crypto.CutPub(s.TxSmart.PublicKey))
-	_, err := utils.CheckSign(publicKeys, s.Hash, s.TxSignature, false)
+	_, err := utils.CheckSign([][]byte{crypto.CutPub(s.TxSmart.PublicKey)}, s.Hash, s.TxSignature, false)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -114,6 +102,19 @@ func (s *SmartTransactionParser) TxRollback() error {
 	return nil
 }
 
+func (s *SmartTransactionParser) Marshal() ([]byte, error) {
+	s.setTimestamp()
+	if err := s.Validate(); err != nil {
+		return nil, err
+	}
+	buf, err := msgpack.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	buf = append([]byte{s.txType()}, buf...)
+	return buf, nil
+}
+
 func (s *SmartTransactionParser) setSig(privateKey []byte) error {
 	signature, err := crypto.Sign(privateKey, s.Hash)
 	if err != nil {
@@ -124,61 +125,41 @@ func (s *SmartTransactionParser) setSig(privateKey []byte) error {
 	return nil
 }
 
-func (s *SmartTransactionParser) BinMarshal(smartTx *types.SmartTransaction, privateKey []byte, internal bool) ([]byte, error) {
+func (s *SmartTransactionParser) BinMarshalWithPrivate(smartTx *types.SmartTransaction, privateKey []byte, internal bool) ([]byte, error) {
 	var (
 		buf []byte
 		err error
 	)
-	if buf, err = smartTx.WithPrivateMarshal(privateKey, internal); err != nil {
+	if err = smartTx.WithPrivate(privateKey, internal); err != nil {
 		return nil, err
 	}
-	s.setTimestamp()
 	s.TxSmart = smartTx
+	buf, err = s.TxSmart.Marshal()
+	if err != nil {
+		return nil, err
+	}
 	s.Payload = buf
 	s.Hash = crypto.DoubleHash(s.Payload)
-
 	err = s.setSig(privateKey)
 	if err != nil {
 		return nil, err
 	}
-
-	buf, err = msgpack.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-
-	buf = append([]byte{s.txType()}, buf...)
-	return buf, nil
+	return s.Marshal()
 }
 
-func (s *SmartTransactionParser) Unmarshal(txT byte, buffer *bytes.Buffer) error {
-	if txT == types.SmartContractTxType {
-		buffer.UnreadByte()
-		if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
-			return err
-		}
+func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer) error {
+	buffer.UnreadByte()
+	if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
+		return err
 	}
-	if txT == byte(128) {
-		if err := converter.BinUnmarshalBuff(buffer, &s.Payload); err != nil {
-			return err
-		}
-		s.setTimestamp()
-		s.Hash = crypto.DoubleHash(s.Payload)
-		s.TxSignature = buffer.Bytes()
+	if err := s.parseFromContract(true); err != nil {
+		return err
 	}
 	return nil
 }
 
 func (s *SmartTransactionParser) parseFromContract(fillData bool) error {
 	var err error
-	if err := msgpack.Unmarshal(s.Payload, &s.TxSmart); err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on unmarshalling to sc")
-		return err
-	}
-	err = s.Validate()
-	if err != nil {
-		return err
-	}
 	smartTx := s.TxSmart
 	contract := smart.GetContractByID(int32(smartTx.ID))
 	if contract == nil {

@@ -20,7 +20,7 @@ func newTransaction(smartTx types.SmartTransaction, privateKey []byte, internal 
 	stp := &SmartTransactionParser{
 		SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 	}
-	data, err = stp.BinMarshal(&smartTx, privateKey, internal)
+	data, err = stp.BinMarshalWithPrivate(&smartTx, privateKey, internal)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Error("marshalling smart contract to msgpack")
 		return

@@ -6,10 +6,12 @@ package types
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack/v5"
 )
@@ -66,25 +68,53 @@ type SmartTransaction struct {
 
 func (s *SmartTransaction) TxType() byte { return SmartContractTxType }
 
-func (s *SmartTransaction) WithPrivateMarshal(privateKey []byte, internal bool) ([]byte, error) {
+func (s *SmartTransaction) WithPrivate(privateKey []byte, internal bool) error {
 	var (
 		publicKey []byte
 		err       error
 	)
 	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
-		return nil, err
+		return err
 	}
 	s.PublicKey = publicKey
 	if internal {
 		s.SignedBy = crypto.Address(publicKey)
 	}
 	if s.NetworkID != conf.Config.LocalConf.NetworkID {
-		return nil, fmt.Errorf("error networkid invalid")
+		return fmt.Errorf("error networkid invalid")
 	}
-	return msgpack.Marshal(s)
+	return nil
 }
 
 func (s *SmartTransaction) Unmarshal(buffer []byte) error {
 	return msgpack.Unmarshal(buffer, s)
+}
+
+func (s *SmartTransaction) Marshal() ([]byte, error) {
+	return msgpack.Marshal(s)
+}
+
+func (t SmartTransaction) Hash() ([]byte, error) {
+	b, err := t.Marshal()
+	if err != nil {
+		return nil, err
+	}
+	return crypto.DoubleHash(b), nil
+}
+
+func (txSmart *SmartTransaction) Validate() error {
+	if len(txSmart.Expedite) > 0 {
+		expedite, _ := decimal.NewFromString(txSmart.Expedite)
+		if expedite.LessThan(decimal.Zero) {
+			return fmt.Errorf("expedite fee %s must be greater than 0", expedite)
+		}
+	}
+	if len(strings.TrimSpace(txSmart.Lang)) > 2 {
+		return fmt.Errorf(`localization size is greater than 2`)
+	}
+	if txSmart.NetworkID != conf.Config.LocalConf.NetworkID {
+		return fmt.Errorf("error networkid invalid")
+	}
+	return nil
 }

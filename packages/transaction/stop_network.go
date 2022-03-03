@@ -97,9 +97,8 @@ func (s *StopNetworkParser) BinMarshal(data *types.StopNetwork) ([]byte, error) 
 	s.setTimestamp()
 	s.Data = data
 	var (
-		buf    []byte
-		fbdata *types.FirstBlock
-		err    error
+		buf []byte
+		err error
 	)
 	buf, err = msgpack.Marshal(data)
 	if err != nil {
@@ -107,21 +106,11 @@ func (s *StopNetworkParser) BinMarshal(data *types.StopNetwork) ([]byte, error) 
 	}
 	s.Payload = buf
 	s.TxHash = crypto.DoubleHash(s.Payload)
-	cert, err := x509.ParseCert(data.StopNetworkCert)
+
+	err = s.validate()
 	if err != nil {
 		return nil, err
 	}
-
-	fbdata, err = syspar.GetFirstBlockData()
-	if err != nil {
-		return nil, err
-	}
-
-	if err = cert.Validate(fbdata.StopNetworkCertBundle); err != nil {
-		return nil, err
-	}
-
-	s.Cert = cert
 	buf, err = msgpack.Marshal(s)
 	if err != nil {
 		return nil, err

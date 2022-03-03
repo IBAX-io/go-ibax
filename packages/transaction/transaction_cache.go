@@ -32,7 +32,6 @@ func (tc *transactionCache) Get(hash string) (t *Transaction, ok bool) {
 func (tc *transactionCache) Set(t *Transaction) {
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
-
 	tc.cache[fmt.Sprintf("%x", t.Hash())] = t
 }
 

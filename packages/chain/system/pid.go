@@ -8,7 +8,6 @@ package system
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/IBAX-io/go-ibax/packages/converter"
 	"os"
 	"strconv"
 	"strings"
@@ -16,6 +15,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -24,7 +24,10 @@ import (
 func CreatePidFile() error {
 	killOldPid()
 	pid := os.Getpid()
-	pidAndVer, err := json.Marshal(map[string]string{"pid": converter.IntToStr(pid), "version": consts.VERSION})
+	pidAndVer, err := json.Marshal(map[string]string{
+		"pid":     converter.IntToStr(pid),
+		"version": consts.Version(),
+	})
 	if err != nil {
 		log.WithFields(log.Fields{"pid": pid, "error": err, "type": consts.JSONMarshallError}).Error("marshalling pid to json")
 		return err
