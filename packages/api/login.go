@@ -180,7 +180,9 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 				},
 			}
 
-			stp := new(transaction.SmartTransactionParser)
+			stp := &transaction.SmartTransactionParser{
+				SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
+			}
 			txData, err := stp.BinMarshalWithPrivate(&sc, nodePrivateKey, true)
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("Building transaction")
