@@ -171,6 +171,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 				Header: &types.Header{
 					ID:          int(contract.Info().ID),
 					EcosystemID: 1,
+					Time:        time.Now().Unix(),
 					KeyID:       conf.Config.KeyID,
 					NetworkID:   conf.Config.LocalConf.NetworkID,
 				},

@@ -252,11 +252,17 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 	if publicKey, err = crypto.PrivateToPublic(connect.PrivateKey); err != nil {
 		return
 	}
+	txTime := time.Now().Unix()
+
+	if newTime := form.Get("txtime"); len(newTime) > 0 {
+		txTime = converter.StrToInt64(newTime)
+	}
 
 	data, txhash, err := transaction.NewTransaction(types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(contract.ID),
 			EcosystemID: 1,
+			Time:        txTime,
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},

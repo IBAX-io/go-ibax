@@ -388,6 +388,7 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 		Header: &types.Header{
 			ID:          int(contract.ID),
 			EcosystemID: 1,
+			Time:        time.Now().Unix(),
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
@@ -486,6 +487,7 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 		data, txhash, _ := transaction.NewTransaction(types.SmartTransaction{
 			Header: &types.Header{
 				ID:          int(contract.ID),
+				Time:        time.Now().Unix(),
 				EcosystemID: 1,
 				KeyID:       crypto.Address(publicKey),
 				NetworkID:   conf.Config.LocalConf.NetworkID,
@@ -586,6 +588,7 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 		Header: &types.Header{
 			ID:          int(contract.ID),
 			EcosystemID: 1,
+			Time:        time.Now().Unix(),
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
@@ -675,6 +678,7 @@ func postTxResult2(name string, form getter) (id int64, msg string, err error) {
 		Header: &types.Header{
 			ID:          int(contract.ID),
 			EcosystemID: 2,
+			Time:        time.Now().Unix(),
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},

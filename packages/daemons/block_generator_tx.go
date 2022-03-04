@@ -67,6 +67,7 @@ func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]int
 			ID:          int(info.ID),
 			EcosystemID: firstEcosystemID,
 			KeyID:       keyID,
+			Time:        dtx.time,
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		SignedBy: smart.PubToID(dtx.publicKey),

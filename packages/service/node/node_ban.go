@@ -149,6 +149,7 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 		Header: &types.Header{
 			ID:          int(info.ID),
 			EcosystemID: 1,
+			Time:        time.Now().Unix(),
 			KeyID:       conf.Config.KeyID,
 		},
 		Params: map[string]interface{}{

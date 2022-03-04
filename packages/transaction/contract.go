@@ -7,6 +7,7 @@ package transaction
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/types"
 
@@ -35,6 +36,7 @@ func CreateContract(contractName string, keyID int64, params map[string]interfac
 			ID:          int(contract.Info().ID),
 			EcosystemID: ecosysID,
 			KeyID:       keyID,
+			Time:        time.Now().Unix(),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		Params: params,
