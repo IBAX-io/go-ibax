@@ -109,7 +109,32 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]interface{}) (
 				err = fmt.Errorf("invalid float type")
 				break
 			}
-		case script.DtInt, script.DtAddress:
+		case script.DtInt:
+			switch t := params[index].(type) {
+			case int:
+				v = int64(t)
+			case int8:
+				v = int64(t)
+			case int16:
+				v = int64(t)
+			case int32:
+				v = int64(t)
+			case int64:
+				v = t
+			case uint:
+				v = int64(t)
+			case uint8:
+				v = int64(t)
+			case uint16:
+				v = int64(t)
+			case uint32:
+				v = int64(t)
+			case uint64:
+				v = int64(t)
+			default:
+				err = fmt.Errorf("invalid int type")
+			}
+		case script.DtAddress:
 			switch t := params[index].(type) {
 			case int64:
 				v = t
