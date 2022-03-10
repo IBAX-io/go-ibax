@@ -148,7 +148,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		RollbacksHash: prevBlock.RollbacksHash,
 	}
 
-	blockBin, err := generateNextBlock(header, trs, NodePrivateKey, pb)
+	blockBin, err := generateNextBlock(header, pb, trs, NodePrivateKey)
 	if err != nil {
 		return err
 	}
@@ -164,13 +164,13 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	return nil
 }
 
-func generateNextBlock(blockHeader *types.BlockData, trs []*sqldb.Transaction, key string, prevBlock *types.BlockData) ([]byte, error) {
+func generateNextBlock(blockHeader, prevBlock *types.BlockData, trs []*sqldb.Transaction, key string) ([]byte, error) {
 	trData := make([][]byte, 0, len(trs))
 	for _, tr := range trs {
 		trData = append(trData, tr.Data)
 	}
 
-	return block.MarshallBlock(blockHeader, trData, prevBlock, key)
+	return block.MarshallBlock(blockHeader, prevBlock, trData, key)
 }
 
 func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-chan time.Time, st int64) ([]*sqldb.Transaction, error) {

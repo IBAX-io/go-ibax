@@ -21,7 +21,7 @@ import (
 )
 
 // MarshallBlock is marshalling block
-func MarshallBlock(header *types.BlockData, trData [][]byte, prev *types.BlockData, key string) ([]byte, error) {
+func MarshallBlock(header, prev *types.BlockData, trData [][]byte, key string) ([]byte, error) {
 	var mrklArray [][]byte
 	var blockDataTx []byte
 	var signed []byte

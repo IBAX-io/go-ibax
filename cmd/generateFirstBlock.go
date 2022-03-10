@@ -106,8 +106,8 @@ func genesisBlock() ([]byte, error) {
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block body bin marshalling")
 	}
-	return block.MarshallBlock(header, [][]byte{tx}, &types.BlockData{
+	return block.MarshallBlock(header, &types.BlockData{
 		Hash:          []byte(`0`),
 		RollbacksHash: []byte(`0`),
-	}, "")
+	}, [][]byte{tx}, "")
 }

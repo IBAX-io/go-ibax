@@ -40,7 +40,8 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "token_symbol": "ContractAccess(\"@1NewToken\")",
             "token_name": "ContractAccess(\"@1NewToken\")",
             "type_emission": "ContractAccess(\"@1NewToken\",\"@1TeChange\")",
-            "type_withdraw": "ContractAccess(\"@1NewToken\",\"@1TeChange\")"
+            "type_withdraw": "ContractAccess(\"@1NewToken\",\"@1TeChange\")",
+            "control_mode": "ContractConditions(\"@1MainCondition\")"
         }',
         'ContractConditions("@1MainCondition")'
     ),

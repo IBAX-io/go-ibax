@@ -30,7 +30,7 @@ func (DelayedContract) TableName() string {
 // GetAllDelayedContractsForBlockID returns contracts that want to execute for blockID
 func GetAllDelayedContractsForBlockID(blockID int64) ([]*DelayedContract, error) {
 	var contracts []*DelayedContract
-	if err := DBConn.Where("block_id <= ? AND ?%every_block = 0 AND deleted = ? AND (counter < \"1_delayed_contracts\".limit OR \"1_delayed_contracts\".limit = 0)",
+	if err := DBConn.Where(`block_id <= ? AND ?%every_block = 0 AND deleted = ? AND (counter < "1_delayed_contracts".limit OR "1_delayed_contracts".limit = 0)`,
 		blockID, blockID, availableDelayedContracts).Order("high_rate desc").Find(&contracts).Error; err != nil {
 		return nil, err
 	}

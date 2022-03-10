@@ -17,6 +17,7 @@ var sqlFirstEcosystemSchema = `
 		t.Column("token_name", "string", {"null": true, "size":255})
 		t.Column("type_emission", "bigint", {"default": "0"})
 		t.Column("type_withdraw", "bigint", {"default": "0"})
+		t.Column("control_mode", "bigint", {"default": "1"})
 	{{footer "primary"}}
 
 	{{head "1_system_parameters"}}

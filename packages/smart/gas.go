@@ -39,7 +39,7 @@ type (
 	paymentInfo struct {
 		tokenEco    int64
 		toID        int64
-		taxes       int64
+		taxesID     int64
 		fromID      int64
 		paymentType int
 		fuelRate    decimal.Decimal
@@ -47,7 +47,9 @@ type (
 		storageFee  *fuelCategory
 		elementFee  *fuelCategory
 		expediteFee *fuelCategory
+		tokenSymbol string
 		payWallet   *sqldb.Key
+		taxesSize   int64
 	}
 	multiPays []*paymentInfo
 )
@@ -56,8 +58,18 @@ func newFuelCategory(fuelType int, decimal decimal.Decimal, percentage int) *fue
 	return &fuelCategory{fuelType: fuelType, decimal: decimal, percentage: percentage}
 }
 
-func (f *fuelCategory) Detail() (string, int64) {
-	return f.CategoryString(), f.Fees().IntPart()
+func (f *fuelCategory) Detail() (string, interface{}) {
+	return f.CategoryString(), f.FeesInfo()
+}
+
+func (f *fuelCategory) FeesInfo() interface{} {
+	detail := types.NewMap()
+	detail.Set("decimal", f.decimal)
+	detail.Set("value", f.Fees())
+	detail.Set("percentage", f.percentage)
+	b, _ := JSONEncode(detail)
+	s, _ := JSONDecode(b)
+	return s
 }
 
 func (f *fuelCategory) Fees() decimal.Decimal {
@@ -77,6 +89,20 @@ func (f *fuelCategory) CategoryString() string {
 	default:
 		return "others_fee"
 	}
+}
+
+func (pay *paymentInfo) Detail() interface{} {
+	detail := types.NewMap()
+	detail.Set(pay.vmCostFee.Detail())
+	detail.Set(pay.storageFee.Detail())
+	detail.Set(pay.elementFee.Detail())
+	detail.Set(pay.expediteFee.Detail())
+	detail.Set("taxes_size", pay.taxesSize)
+	detail.Set("payment_type", pay.paymentType)
+	detail.Set("fuel_rate", pay.fuelRate)
+	b, _ := JSONEncode(detail)
+	s, _ := JSONDecode(b)
+	return s
 }
 
 func (f *paymentInfo) checkVerify(sc *SmartContract, eco int64) error {
@@ -131,8 +157,7 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 		if wltAmount.Cmp(money) < 0 {
 			return errTaxes
 		}
-		taxes := money.Mul(decimal.New(syspar.SysInt64(syspar.TaxesSize), 0)).Div(decimal.New(100, 0)).Floor()
-
+		taxes := money.Mul(decimal.New(pay.taxesSize, 0)).Div(decimal.New(100, 0)).Floor()
 		if err := sc.payTaxes(pay, money.Sub(taxes), 1, comment); err != nil {
 			return err
 		}
@@ -143,68 +168,62 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	return nil
 }
 
-func (sc *SmartContract) accountBalance(db *sqldb.DbTransaction, fid, tid int64, eco int64) (fb, tb decimal.Decimal, err error) {
-	if fid == tid {
-		toKey := &sqldb.Key{}
-		_, err = toKey.SetTablePrefix(eco).GetTr(db, tid)
-		if err != nil {
-			sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": tid}).Error("get key balance")
-			return
-		}
-		tb, _ = decimal.NewFromString(toKey.Amount)
-		fb = tb
-		toKey.SetTablePrefix(eco)
-		return
-	}
-
-	fromKey := &sqldb.Key{}
-	_, err = fromKey.SetTablePrefix(eco).GetTr(db, fid)
+func (sc *SmartContract) accountBalanceSingle(db *sqldb.DbTransaction, id, eco int64) (decimal.Decimal, error) {
+	key := &sqldb.Key{}
+	_, err := key.SetTablePrefix(eco).GetTr(db, id)
 	if err != nil {
-		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": tid}).Error("get key balance")
-		return
+		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": id}).Error("get key balance")
+		return decimal.Zero, err
 	}
-	fb, _ = decimal.NewFromString(fromKey.Amount)
-	toKey := &sqldb.Key{}
-	_, err = toKey.SetTablePrefix(eco).GetTr(db, tid)
-	if err != nil {
-		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": tid}).Error("get key balance")
-		return
-	}
-	tb, _ = decimal.NewFromString(toKey.Amount)
-	return
+	balance, _ := decimal.NewFromString(key.Amount)
+	return balance, nil
 }
 
 func (sc *SmartContract) payTaxes(pay *paymentInfo, sum decimal.Decimal, t int64, comment string) error {
+	var toID int64
+	if t == 1 {
+		toID = pay.toID
+	}
+	if t == 2 {
+		toID = pay.taxesID
+	}
 	if sum.IsZero() {
 		return nil
 	}
-	walletTable := sqldb.KeyTableName(consts.DefaultTokenEcosystem)
-
 	if _, _, err := sc.updateWhere(
-		[]string{"+amount"}, []interface{}{sum}, walletTable,
-		types.LoadMap(map[string]interface{}{
-			"id":        pay.toID,
-			"ecosystem": pay.tokenEco,
-		})); err != nil {
-		return err
-	}
-	if _, _, err := sc.updateWhere(
-		[]string{`-amount`}, []interface{}{sum}, walletTable,
+		[]string{`-amount`}, []interface{}{sum}, "1_keys",
 		types.LoadMap(map[string]interface{}{
 			`id`:        pay.fromID,
 			`ecosystem`: pay.tokenEco,
 		})); err != nil {
 		return errTaxes
 	}
-	fromIDBalance, toIDBalance, err := sc.accountBalance(sc.DbTransaction, pay.fromID, pay.toID, pay.tokenEco)
-	if err != nil {
+	if _, _, err := sc.updateWhere(
+		[]string{"+amount"}, []interface{}{sum}, "1_keys",
+		types.LoadMap(map[string]interface{}{
+			"id":        toID,
+			"ecosystem": pay.tokenEco,
+		})); err != nil {
 		return err
 	}
-	var values *types.Map
+	var (
+		values *types.Map
+		fromIDBalance,
+		toIDBalance decimal.Decimal
+		err error
+	)
+
+	if fromIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, pay.fromID, pay.tokenEco); err != nil {
+		return err
+	}
+
+	if toIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, toID, pay.tokenEco); err != nil {
+		return err
+	}
 	values = types.LoadMap(map[string]interface{}{
 		"sender_id":         pay.fromID,
-		"recipient_id":      pay.toID,
 		"sender_balance":    fromIDBalance,
+		"recipient_id":      toID,
 		"recipient_balance": toIDBalance,
 		"amount":            sum,
 		"comment":           comment,
@@ -215,13 +234,7 @@ func (sc *SmartContract) payTaxes(pay *paymentInfo, sum decimal.Decimal, t int64
 		"created_at":        sc.Timestamp,
 	})
 	if t == 1 {
-		detail := types.NewMap()
-		detail.Set(pay.vmCostFee.Detail())
-		detail.Set(pay.storageFee.Detail())
-		detail.Set(pay.elementFee.Detail())
-		detail.Set(pay.expediteFee.Detail())
-		b, _ := detail.MarshalJSON()
-		values.Set("value_detail", string(b))
+		values.Set("value_detail", pay.Detail())
 	}
 
 	_, _, err = sc.insert(values.Keys(), values.Values(), `1_history`)
@@ -307,16 +320,16 @@ func (sc *SmartContract) getChangeAddress(eco int64) (*paymentInfo, error) {
 		storageFee:  new(fuelCategory),
 		elementFee:  new(fuelCategory),
 		expediteFee: new(fuelCategory),
+		taxesSize:   syspar.SysInt64(syspar.TaxesSize),
 	}
 
 	if pay.fuelRate, err = sc.fuelRate(eco); err != nil {
 		return nil, err
 	}
-
 	if err := sc.taxesWallet(eco); err != nil {
 		return nil, err
 	}
-	pay.taxes = converter.StrToInt64(syspar.GetTaxesWallet(pay.tokenEco))
+	pay.taxesID = converter.StrToInt64(syspar.GetTaxesWallet(pay.tokenEco))
 	if elementFee, err = sc.elementFee(eco, pay.fuelRate); err != nil {
 		return nil, err
 	}
@@ -334,9 +347,10 @@ func (sc *SmartContract) getChangeAddress(eco int64) (*paymentInfo, error) {
 	}
 	feeMode := ecosystems.FeeMode()
 	if _, ok := feeMode[sqldb.FeeModeType]; ok {
-		pay.toID = pay.fromID
-		pay.fromID = sc.TxSmart.KeyID
-
+		if pay.paymentType != paymentContractCaller {
+			pay.toID = pay.fromID
+			pay.fromID = sc.TxSmart.KeyID
+		}
 		if v, ok := feeMode[sqldb.FeeModeVmCost]; ok {
 			pay.vmCostFee = newFuelCategory(vmCostFeeCategory, decimal.NewFromInt(0), v)
 		}

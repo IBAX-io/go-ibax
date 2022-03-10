@@ -128,7 +128,7 @@ func (b *Block) repeatMarshallBlock() error {
 		return err
 	}
 
-	newBlockData, err := MarshallBlock(&b.Header, trData, b.PrevHeader, NodePrivateKey)
+	newBlockData, err := MarshallBlock(&b.Header, b.PrevHeader, trData, NodePrivateKey)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marshalling new block")
 		return err
@@ -259,7 +259,6 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 		playTxs.Rts = append(playTxs.Rts, t.RollBackTx...)
 		processedTx = append(processedTx, t)
 	}
-
 	return nil
 }
 
