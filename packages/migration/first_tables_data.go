@@ -45,16 +45,16 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
         }',
         'ContractConditions("@1MainCondition")'
     ),
-    (next_id('1_tables'), 'system_parameters',
+    (next_id('1_tables'), 'platform_parameters',
         '{
             "insert": "false",
-            "update": "ContractAccess(\"@1UpdateSysParam\")",
+            "update": "ContractAccess(\"@1UpdatePlatformParam\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
-            "value": "ContractAccess(\"@1UpdateSysParam\")",
+            "value": "ContractAccess(\"@1UpdatePlatformParam\")",
             "name": "false",
-            "conditions": "ContractAccess(\"@1UpdateSysParam\")"
+            "conditions": "ContractAccess(\"@1UpdatePlatformParam\")"
         }',
         'ContractConditions("@1MainCondition")'
     ),

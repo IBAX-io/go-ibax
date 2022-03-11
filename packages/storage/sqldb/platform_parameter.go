@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 )
 
-// SystemParameter is model
-type SystemParameter struct {
+// PlatformParameter is model
+type PlatformParameter struct {
 	ID         int64  `gorm:"primary_key;not null;"`
 	Name       string `gorm:"not null;size:255"`
 	Value      string `gorm:"not null"`
@@ -17,48 +17,48 @@ type SystemParameter struct {
 }
 
 // TableName returns name of table
-func (sp SystemParameter) TableName() string {
-	return "1_system_parameters"
+func (sp PlatformParameter) TableName() string {
+	return "1_platform_parameters"
 }
 
 // Get is retrieving model from database
-func (sp *SystemParameter) Get(name string) (bool, error) {
+func (sp *PlatformParameter) Get(name string) (bool, error) {
 	return isFound(DBConn.Where("name = ?", name).First(sp))
 }
 
 // GetTransaction is retrieving model from database using transaction
-func (sp *SystemParameter) GetTransaction(transaction *DbTransaction, name string) (bool, error) {
+func (sp *PlatformParameter) GetTransaction(transaction *DbTransaction, name string) (bool, error) {
 	return isFound(GetDB(transaction).Where("name = ?", name).First(sp))
 }
 
 // GetJSONField returns fields as json
-func (sp *SystemParameter) GetJSONField(jsonField string, name string) (string, error) {
+func (sp *PlatformParameter) GetJSONField(jsonField string, name string) (string, error) {
 	var result string
-	err := DBConn.Table("1_system_parameters").Where("name = ?", name).Select(jsonField).Row().Scan(&result)
+	err := DBConn.Table("1_platform_parameters").Where("name = ?", name).Select(jsonField).Row().Scan(&result)
 	return result, err
 }
 
 // GetValueParameterByName returns value parameter by name
-func (sp *SystemParameter) GetValueParameterByName(name, value string) (*string, error) {
+func (sp *PlatformParameter) GetValueParameterByName(name, value string) (*string, error) {
 	var result *string
-	err := DBConn.Raw(`SELECT value->'`+value+`' FROM "1_system_parameters" WHERE name = ?`, name).Row().Scan(&result)
+	err := DBConn.Raw(`SELECT value->'`+value+`' FROM "1_platform_parameters" WHERE name = ?`, name).Row().Scan(&result)
 	if err != nil {
 		return nil, err
 	}
 	return result, nil
 }
 
-// GetAllSystemParameters returns all system parameters
-func GetAllSystemParameters(transaction *DbTransaction) ([]SystemParameter, error) {
-	parameters := new([]SystemParameter)
+// GetAllPlatformParameters returns all system parameters
+func GetAllPlatformParameters(transaction *DbTransaction) ([]PlatformParameter, error) {
+	parameters := new([]PlatformParameter)
 	if err := GetDB(transaction).Find(&parameters).Error; err != nil {
 		return nil, err
 	}
 	return *parameters, nil
 }
 
-// ToMap is converting SystemParameter to map
-func (sp *SystemParameter) ToMap() map[string]string {
+// ToMap is converting PlatformParameter to map
+func (sp *PlatformParameter) ToMap() map[string]string {
 	result := make(map[string]string, 0)
 	result["name"] = sp.Name
 	result["value"] = sp.Value
@@ -67,12 +67,12 @@ func (sp *SystemParameter) ToMap() map[string]string {
 }
 
 // Update is update model
-func (sp SystemParameter) Update(value string) error {
+func (sp PlatformParameter) Update(value string) error {
 	return DBConn.Model(sp).Where("name = ?", sp.Name).Update(`value`, value).Error
 }
 
 // SaveArray is saving array
-func (sp *SystemParameter) SaveArray(list [][]string) error {
+func (sp *PlatformParameter) SaveArray(list [][]string) error {
 	ret, err := json.Marshal(list)
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func (sp *SystemParameter) SaveArray(list [][]string) error {
 	return sp.Update(string(ret))
 }
 
-func (sp *SystemParameter) GetNumberOfHonorNodes() (int, error) {
+func (sp *PlatformParameter) GetNumberOfHonorNodes() (int, error) {
 	var hns []map[string]interface{}
 	f, err := sp.GetTransaction(nil, `honor_nodes`)
 	if err != nil {

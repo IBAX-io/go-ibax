@@ -1,0 +1,28 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NewParameter {
+    data {
+        Name string
+        Value string
+        Conditions string
+    }
+    func warnEmpty(name value string) {
+        if Size(value) == 0 {
+            warning Sprintf(LangRes("@1x_parameter_empty"),name)
+        }
+    }
+    conditions {
+        DeveloperCondition()
+
+        ValidateCondition($Conditions, $ecosystem_id)
+        $Name = TrimSpace($Name)
+        warnEmpty("Name",$Name)
+        if DBFind("@1parameters").Where({"name": $Name, "ecosystem": $ecosystem_id}).One("id") {
+            warning Sprintf(LangRes("@1template_parameter_exists"), $Name)
+        }
+    }
+
+    action {
+        DBInsert("@1parameters", {"name": $Name, "value": $Value, "conditions": $Conditions, "ecosystem": $ecosystem_id})
+    }
+}

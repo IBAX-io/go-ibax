@@ -30,7 +30,7 @@ func (c *Confirmation) Save() error {
 
 // GetGoodBlockLast returns last good block
 func (c *Confirmation) GetGoodBlockLast() (bool, error) {
-	var sp SystemParameter
+	var sp PlatformParameter
 	count, err := sp.GetNumberOfHonorNodes()
 	if err != nil {
 		return false, err
@@ -46,7 +46,7 @@ func (c *Confirmation) CheckAllowGenBlock() (bool, error) {
 		return false, err
 	}
 
-	var sp SystemParameter
+	var sp PlatformParameter
 	count, err := sp.GetNumberOfHonorNodes()
 	if err != nil {
 		return false, err

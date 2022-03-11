@@ -1038,7 +1038,7 @@ VALUES
 	}
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
-	(next_id('1_contracts'), 'UpdateSysParam', 'contract UpdateSysParam {
+	(next_id('1_contracts'), 'UpdatePlatformParam', 'contract UpdatePlatformParam {
      data {
         Name string
         Value string
@@ -1054,7 +1054,7 @@ VALUES
         params["Value"] = $Value
         CallContract($Name, params)
         
-        DBUpdateSysParam($Name, $Value, $Conditions)
+        DBUpdatePlatformParam($Name, $Value, $Conditions)
      }
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),

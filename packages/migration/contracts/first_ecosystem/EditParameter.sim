@@ -1,0 +1,57 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract EditParameter {
+    data {
+        Id int
+        Value string "optional"
+        Conditions string "optional"
+    }
+
+    func onlyConditions() bool {
+        return $Conditions && !$Value
+    }
+
+    conditions {
+        DeveloperCondition()
+
+        RowConditions("@1parameters", $Id, onlyConditions())
+        if $Conditions {
+            ValidateCondition($Conditions, $ecosystem_id)
+        }
+        if $Value {
+            $Name = DBFind("@1parameters").Where({"id": $Id, "ecosystem": $ecosystem_id}).One("name")
+            if $Name == "founder_account" {
+                var account string
+                account = IdToAddress(Int($Value))
+                if !DBFind("@1keys").Where({"account": account, "ecosystem": $ecosystem_id, "deleted": 0}).One("id") {
+                    warning Sprintf(LangRes("@1template_user_not_found"), $Value)
+                }
+            }
+            if $Name == "max_block_user_tx" || $Name == "money_digit" || $Name == "max_sum" || $Name == "min_page_validate_count" || $Name == "max_page_validate_count" {
+                if Size($Value) == 0 {
+                    warning LangRes("@1value_not_received")
+                }
+                if Int($Value) <= 0 {
+                    warning LangRes("@1value_must_greater_zero")
+                }
+            }
+        }
+    }
+
+    action {
+        var pars map
+        if $Value {
+            if $Value == `""` {
+                pars["value"] = ""
+            } else {
+                pars["value"] = $Value
+            }
+        }
+        if $Conditions {
+            pars["conditions"] = $Conditions
+        }
+        if pars {
+            DBUpdate("@1parameters", $Id, pars)
+        }
+    }
+}

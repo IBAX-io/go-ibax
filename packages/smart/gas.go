@@ -141,7 +141,8 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	sc.Penalty = errNeedPay
 	placeholder := `taxes for execution of %s contract`
 	comment := fmt.Sprintf(placeholder, sc.TxContract.Name)
-	for _, pay := range sc.multiPays {
+	for i := 0; i < len(sc.multiPays); i++ {
+		pay := sc.multiPays[i]
 		pay.vmCostFee = newFuelCategory(vmCostFeeCategory, sc.TxUsedCost.Mul(pay.fuelRate), pay.vmCostFee.percentage)
 		money := pay.vmCostFee.Fees().Add(pay.storageFee.Fees()).Add(pay.expediteFee.Fees())
 		if !errNeedPay {
@@ -485,7 +486,7 @@ func (sc *SmartContract) fuelRate(eco int64) (decimal.Decimal, error) {
 			return zero, err
 		}
 		sc.taxes = true
-		_, err = UpdateSysParam(sc, syspar.FuelRate, string(fuel), "")
+		_, err = UpdatePlatformParam(sc, syspar.FuelRate, string(fuel), "")
 		if err != nil {
 			return zero, err
 		}
@@ -569,7 +570,7 @@ func (sc *SmartContract) taxesWallet(eco int64) (err error) {
 			return err
 		}
 		sc.taxes = true
-		_, err = UpdateSysParam(sc, syspar.TaxesWallet, string(tax), "")
+		_, err = UpdatePlatformParam(sc, syspar.TaxesWallet, string(tax), "")
 		if err != nil {
 			return err
 		}

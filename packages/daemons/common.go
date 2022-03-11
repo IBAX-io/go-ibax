@@ -155,7 +155,7 @@ func Ntp_Work(ctx context.Context) {
 					count++
 				}
 				if count > 10 {
-					var sp sqldb.SystemParameter
+					var sp sqldb.PlatformParameter
 					count, err := sp.GetNumberOfHonorNodes()
 					if err != nil {
 						log.WithFields(log.Fields{"Ntp_Work GetNumberOfHonorNodes  err": err.Error()}).Error("GetNumberOfHonorNodes")

@@ -48,7 +48,7 @@ func TestMath(t *testing.T) {
 	//form := url.Values{`Value`: {`[{"api_address":"http://127.0.0.1:7079","public_key":"0498b18e551493a269b6f419d7784d26c8e3555638e80897c69997ef9f211e21d5d0b8adeeaab0e0e750e720ddf3048ec55d613ba5dee3fdfd4e7c17d346731e9b","tcp_address":"127.0.0.1:7078"},{"tcp_address":"127.0.0.1:2078","api_address":"http://127.0.0.1:2079","public_key":"04d750da3e19c5f7721a1dafd8663f2739dba23d81e01f0667730d217472a3bc9f93c6fbaade9c6b6387ece296c478d25559cb87ca3e58aa7ce627dd47ec902aea"},{"tcp_address":"127.0.0.1:3078","api_address":"http://127.0.0.1:3079","public_key":"04df303174dfbc79b1e3baa196103c284b6ca97c21848511af18a401fdd1b0fb29bfd8724f43b44062ff5f67a969409ab037ae674a1010602b1a7d25245b49738c"},{"tcp_address":"127.0.0.1:4078","api_address":"http://127.0.0.1:4079","public_key":"04cbe75c40a2ef1256483c5bb910745171258b341f981598a01876fc3711c243f8fab181d72ea7abb838ad3f27e8a03b54032e8ab34656d9503539a38b05151cfa"}]`}, "Name": {"honor_nodes"}, `Conditions`: {`true`}}
 	form := url.Values{`Value`: {`[{"api_address":"http://127.0.0.1:7079","public_key":"0498b18e551493a269b6f419d7784d26c8e3555638e80897c69997ef9f211e21d5d0b8adeeaab0e0e750e720ddf3048ec55d613ba5dee3fdfd4e7c17d346731e9b","tcp_address":"127.0.0.1:7078"},{"tcp_address":"127.0.0.1:2078","api_address":"http://127.0.0.1:2079","public_key":"04d750da3e19c5f7721a1dafd8663f2739dba23d81e01f0667730d217472a3bc9f93c6fbaade9c6b6387ece296c478d25559cb87ca3e58aa7ce627dd47ec902aea"}]`}, "Name": {"honor_nodes"}, `Conditions`: {`true`}}
 	//form := url.Values{`Value`: {`[{"api_address":"http://127.0.0.1:7079","public_key":"0498b18e551493a269b6f419d7784d26c8e3555638e80897c69997ef9f211e21d5d0b8adeeaab0e0e750e720ddf3048ec55d613ba5dee3fdfd4e7c17d346731e9b","tcp_address":"127.0.0.1:7078"},{"tcp_address":"127.0.0.1:2078","api_address":"http://127.0.0.1:2079","public_key":"04d750da3e19c5f7721a1dafd8663f2739dba23d81e01f0667730d217472a3bc9f93c6fbaade9c6b6387ece296c478d25559cb87ca3e58aa7ce627dd47ec902aea"},{"tcp_address":"127.0.0.1:3078","api_address":"http://127.0.0.1:3079","public_key":"04df303174dfbc79b1e3baa196103c284b6ca97c21848511af18a401fdd1b0fb29bfd8724f43b44062ff5f67a969409ab037ae674a1010602b1a7d25245b49738c"}]`}, "Name": {"honor_nodes"}, `Conditions`: {`true`}}
-	assert.NoError(t, postTx(`@1UpdateSysParam`, &form))
+	assert.NoError(t, postTx(`@1UpdatePlatformParam`, &form))
 }
 
 func TestArray(t *testing.T) {
@@ -179,7 +179,7 @@ func TestUpdate_HonorNodes(t *testing.T) {
 		return
 	}
 
-	err := postTx("UpdateSysParam", &url.Values{
+	err := postTx("UpdatePlatformParam", &url.Values{
 		"Name":  {"honor_nodes"},
 		"Value": {"[]"},
 	})

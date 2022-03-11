@@ -194,7 +194,7 @@ func SysRollbackEcosystem(dbTransaction *sqldb.DbTransaction, sysData SysRollDat
 		}
 	}
 	if sysData.ID == 1 {
-		tables = append(tables, `node_ban_logs`, `bad_blocks`, `system_parameters`, `ecosystems`)
+		tables = append(tables, `node_ban_logs`, `bad_blocks`, `platform_parameters`, `ecosystems`)
 		for _, name := range tables {
 			err := dbTransaction.DropTable(fmt.Sprintf("%d_%s", sysData.ID, name))
 			if err != nil {

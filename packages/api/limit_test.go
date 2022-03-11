@@ -46,7 +46,7 @@ func TestLimit(t *testing.T) {
 		conditions {
 		}
 		action {
-		   DBUpdateSysParam($Name, $Value, "") 
+		   DBUpdatePlatformParam($Name, $Value, "") 
 		}
 	}`}, `Conditions`: {`true`}}
 	assert.NoError(t, postTx(`NewContract`, &form))
@@ -86,7 +86,7 @@ func TestLimit(t *testing.T) {
 	sendList()
 	assert.NoError(t, checkList(10, 1))
 
-	var syspar ecosystemParamsResult
+	var syspar paramsResult
 	assert.NoError(t, sendGet(`systemparams?names=max_tx_block,max_tx_block_per_user`, nil, &syspar))
 
 	var maxusers, maxtx string

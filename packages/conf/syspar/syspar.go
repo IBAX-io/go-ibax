@@ -137,14 +137,14 @@ func GetNodePrivKey() []byte {
 // SysUpdate reloads/updates values of system parameters
 func SysUpdate(dbTransaction *sqldb.DbTransaction) error {
 	var err error
-	systemParameters, err := sqldb.GetAllSystemParameters(dbTransaction)
+	platformParameters, err := sqldb.GetAllPlatformParameters(dbTransaction)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all system parameters")
 		return err
 	}
 	mutex.Lock()
 	defer mutex.Unlock()
-	for _, param := range systemParameters {
+	for _, param := range platformParameters {
 		cache[param.Name] = param.Value
 	}
 	if len(cache[HonorNodes]) > 0 {
@@ -270,7 +270,7 @@ func GetNumberOfNodes() int64 {
 }
 
 func GetNumberOfNodesFromDB(transaction *sqldb.DbTransaction) int64 {
-	sp := &sqldb.SystemParameter{}
+	sp := &sqldb.PlatformParameter{}
 	sp.GetTransaction(transaction, HonorNodes)
 	var honorNodes []map[string]interface{}
 	if len(sp.Value) > 0 {

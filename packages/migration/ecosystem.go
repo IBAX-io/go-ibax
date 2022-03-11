@@ -185,7 +185,7 @@ func GetFirstEcosystemScript(wallet int64) (ret string, err error) {
 		firstEcosystemPagesDataSQL,
 		firstEcosystemBlocksDataSQL,
 		firstEcosystemDataSQL,
-		firstSystemParametersDataSQL,
+		platformParametersDataSQL,
 		firstTablesDataSQL,
 	}
 	ret += strings.Join(scripts, "\r\n")

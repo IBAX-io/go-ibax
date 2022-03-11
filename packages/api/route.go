@@ -6,9 +6,10 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
-	"net/http"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -102,7 +103,7 @@ func (m Mode) SetBlockchainRoutes(r Router) {
 	api.HandleFunc("/blocks", getBlocksTxInfoHandler).Methods("GET")
 	api.HandleFunc("/detailed_blocks", getBlocksDetailedInfoHandler).Methods("GET")
 	api.HandleFunc("/ecosystemparams", authRequire(m.getEcosystemParamsHandler)).Methods("GET")
-	api.HandleFunc("/systemparams", authRequire(getSystemParamsHandler)).Methods("GET")
+	api.HandleFunc("/systemparams", authRequire(getPlatformParamsHandler)).Methods("GET")
 	api.HandleFunc("/ecosystemparam/{name}", authRequire(m.getEcosystemParamHandler)).Methods("GET")
 	api.HandleFunc("/ecosystemname", getEcosystemNameHandler).Methods("GET")
 }

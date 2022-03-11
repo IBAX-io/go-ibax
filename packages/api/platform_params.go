@@ -9,29 +9,12 @@ import (
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-
 	log "github.com/sirupsen/logrus"
 )
 
-type paramResult struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Value      string `json:"value"`
-	Conditions string `json:"conditions"`
-}
-
-type ecosystemParamsResult struct {
-	List []paramResult `json:"list"`
-}
-
-func (m Mode) getEcosystemParamsHandler(w http.ResponseWriter, r *http.Request) {
-	form := &appParamsForm{
-		ecosystemForm: ecosystemForm{
-			Validator: m.EcosystemGetter,
-		},
-	}
+func getPlatformParamsHandler(w http.ResponseWriter, r *http.Request) {
+	form := &paramsForm{}
 	if err := parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
@@ -39,14 +22,12 @@ func (m Mode) getEcosystemParamsHandler(w http.ResponseWriter, r *http.Request) 
 
 	logger := getLogger(r)
 
-	sp := &sqldb.StateParameter{}
-	sp.SetTablePrefix(form.EcosystemPrefix)
-	list, err := sp.GetAllStateParameters()
+	list, err := sqldb.GetAllPlatformParameters(nil)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all state parameters")
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all system parameters")
 	}
 
-	result := &ecosystemParamsResult{
+	result := &paramsResult{
 		List: make([]paramResult, 0),
 	}
 
@@ -56,11 +37,15 @@ func (m Mode) getEcosystemParamsHandler(w http.ResponseWriter, r *http.Request) 
 			continue
 		}
 		result.List = append(result.List, paramResult{
-			ID:         converter.Int64ToStr(item.ID),
 			Name:       item.Name,
 			Value:      item.Value,
 			Conditions: item.Conditions,
 		})
+	}
+
+	if len(result.List) == 0 {
+		errorResponse(w, errParamNotFound.Errorf(form.Names), http.StatusBadRequest)
+		return
 	}
 
 	jsonResponse(w, result)

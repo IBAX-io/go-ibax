@@ -5,7 +5,7 @@
 
 package migration
 
-// SchemaFirstEcosystem contains SQL queries for creating first ecosystem
+// sqlFirstEcosystemSchema contains SQL queries for creating first ecosystem
 var sqlFirstEcosystemSchema = `
 	{{head "1_ecosystems"}}
 		t.Column("id", "bigint", {"default": "0"})
@@ -20,7 +20,7 @@ var sqlFirstEcosystemSchema = `
 		t.Column("control_mode", "bigint", {"default": "1"})
 	{{footer "primary"}}
 
-	{{head "1_system_parameters"}}
+	{{head "1_platform_parameters"}}
 		t.Column("id", "bigint", {"default": "0"})
 		t.Column("name", "string", {"default": "", "size":255})
 		t.Column("value", "text", {"default": ""})

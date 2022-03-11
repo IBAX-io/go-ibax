@@ -66,19 +66,19 @@ func (f *FirstBlockParser) Action(t *Transaction) error {
 
 	amount := decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()
 
-	taxes := &sqldb.SystemParameter{Name: `taxes_wallet`}
+	taxes := &sqldb.PlatformParameter{Name: `taxes_wallet`}
 	if err = taxes.SaveArray([][]string{{"1", converter.Int64ToStr(keyID)}}); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("saving taxes_wallet array")
 		return err
 	}
 
-	err = sqldb.GetDB(t.DbTransaction).Exec(`update "1_system_parameters" SET value = ? where name = 'test'`, strconv.FormatInt(data.Test, 10)).Error
+	err = sqldb.GetDB(t.DbTransaction).Exec(`update "1_platform_parameters" SET value = ? where name = 'test'`, strconv.FormatInt(data.Test, 10)).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating test parameter")
 		return err
 	}
 
-	err = sqldb.GetDB(t.DbTransaction).Exec(`Update "1_system_parameters" SET value = ? where name = 'private_blockchain'`, strconv.FormatUint(data.PrivateBlockchain, 10)).Error
+	err = sqldb.GetDB(t.DbTransaction).Exec(`Update "1_platform_parameters" SET value = ? where name = 'private_blockchain'`, strconv.FormatUint(data.PrivateBlockchain, 10)).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating private_blockchain")
 		return err

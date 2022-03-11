@@ -75,13 +75,13 @@ func getCost(name string) int64 {
 	return -1
 }
 
-// UpdateSysParam updates the system parameter
-func UpdateSysParam(sc *SmartContract, name, value, conditions string) (int64, error) {
+// UpdatePlatformParam updates the system parameter
+func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int64, error) {
 	var (
 		fields []string
 		values []interface{}
 	)
-	par := &sqldb.SystemParameter{}
+	par := &sqldb.PlatformParameter{}
 	found, err := par.Get(name)
 	if err != nil {
 		return 0, logErrorDB(err, "system parameter get")
@@ -175,7 +175,7 @@ func UpdateSysParam(sc *SmartContract, name, value, conditions string) (int64, e
 	if len(fields) == 0 {
 		return 0, logErrorShort(errEmpty, consts.EmptyObject)
 	}
-	_, _, err = sc.update(fields, values, "1_system_parameters", "id", par.ID)
+	_, _, err = sc.update(fields, values, "1_platform_parameters", "id", par.ID)
 	if err != nil {
 		return 0, err
 	}

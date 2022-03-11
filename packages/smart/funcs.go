@@ -126,33 +126,33 @@ type NotifyInfo struct {
 
 var (
 	funcCallsDBP = map[string]struct{}{
-		"DBInsert":         {},
-		"DBUpdate":         {},
-		"DBUpdateSysParam": {},
-		"DBUpdateExt":      {},
-		"DBSelect":         {},
+		"DBInsert":              {},
+		"DBUpdate":              {},
+		"DBUpdatePlatformParam": {},
+		"DBUpdateExt":           {},
+		"DBSelect":              {},
 	}
 	writeFuncs = map[string]struct{}{
-		"CreateColumn":     {},
-		"CreateTable":      {},
-		"DBInsert":         {},
-		"DBUpdate":         {},
-		"DBUpdateSysParam": {},
-		"DBUpdateExt":      {},
-		"CreateEcosystem":  {},
-		"CreateContract":   {},
-		"UpdateContract":   {},
-		"CreateLanguage":   {},
-		"EditLanguage":     {},
-		"BindWallet":       {},
-		"UnbindWallet":     {},
-		"EditEcosysName":   {},
-		"UpdateNodesBan":   {},
-		"UpdateCron":       {},
-		"CreateCLB":        {},
-		"DeleteCLB":        {},
-		"DelColumn":        {},
-		"DelTable":         {},
+		"CreateColumn":          {},
+		"CreateTable":           {},
+		"DBInsert":              {},
+		"DBUpdate":              {},
+		"DBUpdatePlatformParam": {},
+		"DBUpdateExt":           {},
+		"CreateEcosystem":       {},
+		"CreateContract":        {},
+		"UpdateContract":        {},
+		"CreateLanguage":        {},
+		"EditLanguage":          {},
+		"BindWallet":            {},
+		"UnbindWallet":          {},
+		"EditEcosysName":        {},
+		"UpdateNodesBan":        {},
+		"UpdateCron":            {},
+		"CreateCLB":             {},
+		"DeleteCLB":             {},
+		"DelColumn":             {},
+		"DelTable":              {},
 	}
 	// map for table name to parameter with conditions
 	tableParamConditions = map[string]string{
@@ -194,7 +194,7 @@ func EmbedFuncs(vt script.VMType) map[string]interface{} {
 		"DBInsert":                     DBInsert,
 		"DBSelect":                     DBSelect,
 		"DBUpdate":                     DBUpdate,
-		"DBUpdateSysParam":             UpdateSysParam,
+		"DBUpdatePlatformParam":        UpdatePlatformParam,
 		"DBUpdateExt":                  DBUpdateExt,
 		"EcosysParam":                  EcosysParam,
 		"AppParam":                     AppParam,
@@ -883,7 +883,7 @@ func mapToParams(values *types.Map) (params []string, val []interface{}, err err
 
 // DBInsert inserts a record into the specified database table
 func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64, ret int64, err error) {
-	if tblname == "system_parameters" {
+	if tblname == "platform_parameters" {
 		return 0, 0, fmt.Errorf("system parameters access denied")
 	}
 
@@ -1043,7 +1043,7 @@ func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64
 // DBUpdateExt updates the record in the specified table. You can specify 'where' query in params and then the values for this query
 func DBUpdateExt(sc *SmartContract, tblname string, where *types.Map,
 	values *types.Map) (qcost int64, err error) {
-	if tblname == "system_parameters" {
+	if tblname == "platform_parameters" {
 		return 0, fmt.Errorf("system parameters access denied")
 	}
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
@@ -1797,7 +1797,7 @@ func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
 			return err
 		}
 
-		_, err = UpdateSysParam(smartContract, syspar.HonorNodes, string(data), "")
+		_, err = UpdatePlatformParam(smartContract, syspar.HonorNodes, string(data), "")
 		if err != nil {
 			return logErrorDB(err, "updating honor nodes")
 		}

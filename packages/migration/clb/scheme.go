@@ -23,7 +23,7 @@ func GetCLBScript() string {
 		tablesDataSQL,
 		applicationsDataSQL,
 		keysDataSQL,
-		systemParametersDataSQL,
+		platformParametersDataSQL,
 	}
 
 	return strings.Join(scripts, "\r\n")
@@ -277,16 +277,16 @@ var schemaCLB = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
 		);
 		ALTER TABLE ONLY "%[1]d_buffer_data" ADD CONSTRAINT "%[1]d_buffer_data_pkey" PRIMARY KEY ("id");
 
-		DROP TABLE IF EXISTS "%[1]d_system_parameters";
-		CREATE TABLE "%[1]d_system_parameters" (
+		DROP TABLE IF EXISTS "%[1]d_platform_parameters";
+		CREATE TABLE "%[1]d_platform_parameters" (
 		"id" bigint NOT NULL DEFAULT '0',
 		"name" varchar(255)  NOT NULL DEFAULT '',
 		"value" text NOT NULL DEFAULT '',
 		"conditions" text  NOT NULL DEFAULT '',
 		"ecosystem" bigint NOT NULL DEFAULT '1'
 		);
-		ALTER TABLE ONLY "%[1]d_system_parameters" ADD CONSTRAINT "%[1]d_system_parameters_pkey" PRIMARY KEY (id);
-		CREATE INDEX "%[1]d_system_parameters_index_name" ON "%[1]d_system_parameters" (name);
+		ALTER TABLE ONLY "%[1]d_platform_parameters" ADD CONSTRAINT "%[1]d_platform_parameters_pkey" PRIMARY KEY (id);
+		CREATE INDEX "%[1]d_platform_parameters_index_name" ON "%[1]d_platform_parameters" (name);
 
 		DROP TABLE IF EXISTS "%[1]d_cron";
 	  CREATE TABLE "%[1]d_cron" (
