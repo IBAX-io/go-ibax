@@ -10,7 +10,6 @@ pb-install:
 
 # generate *.pb.go file
 pb-generate:
-	protoc -I=. \
-	--gogofaster_out=:../script \
- 	--gogofaster_opt=paths=source_relative  \
- 	./vm.proto
+	protoc -I=. --gogofaster_out=:../script --gogofaster_opt=paths=source_relative ./vm.proto
+	protoc -I=. --gogofaster_out=:../smart --gogofaster_opt=paths=source_relative ./gas.proto
+

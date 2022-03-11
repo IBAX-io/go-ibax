@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+option go_package = "github.com/IBAX-io/go-ibax/packages/smart";
+
+package smart;
+
+// VMType is virtual machine type
+enum PaymentType {
+  INVALID = 0;
+  ContractCaller = 1;
+  ContractBinder = 2;
+  EcosystemAddress = 3;
+}
