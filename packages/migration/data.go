@@ -53,6 +53,10 @@ var (
 	{{head "log_transactions"}}
 		t.Column("hash", "bytea", {"default": ""})
 		t.Column("block", "int", {"default": "0"})
+		t.Column("timestamp", "bigint", {"default": "0"})
+		t.Column("address", "bigint", {"default": "0"})
+		t.Column("ecosystem_id", "bigint", {"default": "0"})
+		t.Column("tx_data", "bytea", {"default": ""})
 	{{footer "primary(hash)"}}
 
 	{{head "queue_blocks"}}

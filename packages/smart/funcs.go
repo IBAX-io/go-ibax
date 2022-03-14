@@ -245,6 +245,7 @@ func EmbedFuncs(vt script.VMType) map[string]interface{} {
 		"DecodeBase64":             DecodeBase64,
 		"EncodeBase64":             EncodeBase64,
 		"Hash":                     Hash,
+		"DoubleHash":               crypto.DoubleHash,
 		"EditEcosysName":           EditEcosysName,
 		"GetColumnType":            GetColumnType,
 		"GetType":                  GetType,

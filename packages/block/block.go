@@ -255,7 +255,18 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
 		playTxs.UsedTx = append(playTxs.UsedTx, t.Hash())
-		playTxs.Lts = append(playTxs.Lts, &sqldb.LogTransaction{Block: b.Header.BlockID, Hash: t.Hash()})
+		var eco int64
+		if t.IsSmartContract() {
+			eco = t.SmartContract().TxSmart.EcosystemID
+		}
+		playTxs.Lts = append(playTxs.Lts, &sqldb.LogTransaction{
+			Block:       b.Header.BlockID,
+			Hash:        t.Hash(),
+			TxData:      t.FullData,
+			Timestamp:   t.Timestamp(),
+			Address:     t.KeyID(),
+			EcosystemID: eco,
+		})
 		playTxs.Rts = append(playTxs.Rts, t.RollBackTx...)
 		processedTx = append(processedTx, t)
 	}
