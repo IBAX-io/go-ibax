@@ -82,7 +82,7 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 		values []interface{}
 	)
 	par := &sqldb.PlatformParameter{}
-	found, err := par.Get(name)
+	found, err := par.Get(sc.DbTransaction, name)
 	if err != nil {
 		return 0, logErrorDB(err, "system parameter get")
 	}

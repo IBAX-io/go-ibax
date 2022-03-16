@@ -57,13 +57,12 @@ type Header struct {
 // SmartTransaction is storing smart contract data
 type SmartTransaction struct {
 	*Header
-	TokenEcosystems map[int64]interface{}
-	MaxSum          string
-	PayOver         string
-	Lang            string
-	Expedite        string
-	SignedBy        int64
-	Params          map[string]interface{}
+	MaxSum   string
+	PayOver  string
+	Lang     string
+	Expedite string
+	SignedBy int64
+	Params   map[string]interface{}
 }
 
 func (s *SmartTransaction) TxType() byte { return SmartContractTxType }

@@ -13,6 +13,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/gogo/protobuf/sortkeys"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -103,7 +105,10 @@ func (pay *paymentInfo) Detail() interface{} {
 func (f *paymentInfo) checkVerify(sc *SmartContract) error {
 	eco := f.tokenEco
 	if err := sc.hasExitKeyID(eco, f.toID); err != nil {
-		return err
+		return errors.Wrapf(err, fmt.Sprintf("to ID %d does not exist", f.toID))
+	}
+	if err := sc.hasExitKeyID(eco, f.taxesID); err != nil {
+		return errors.Wrapf(err, fmt.Sprintf("taxes ID %d does not exist", f.taxesID))
 	}
 	if found, err := f.payWallet.SetTablePrefix(eco).Get(sc.DbTransaction, f.fromID); err != nil || !found {
 		if !found {
@@ -328,14 +333,14 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*paymentInfo, error) {
 		taxesSize:   syspar.SysInt64(syspar.TaxesSize),
 	}
 
-	if pay.fuelRate, err = sc.fuelRate(eco); err != nil {
+	if pay.fuelRate, err = sc.fuelRate(pay.tokenEco); err != nil {
 		return nil, err
 	}
-	if err := sc.taxesWallet(eco); err != nil {
+	if err := sc.taxesWallet(pay.tokenEco); err != nil {
 		return nil, err
 	}
 	pay.taxesID = converter.StrToInt64(syspar.GetTaxesWallet(pay.tokenEco))
-	if elementFee, err = sc.elementFee(eco, pay.fuelRate); err != nil {
+	if elementFee, err = sc.elementFee(pay.tokenEco, pay.fuelRate); err != nil {
 		return nil, err
 	}
 
@@ -344,10 +349,10 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*paymentInfo, error) {
 	}
 
 	storageFee = sc.storageFee(pay.fuelRate)
-	pay.fromID, pay.paymentType = sc.getFromIdAndPayType(eco)
+	pay.fromID, pay.paymentType = sc.getFromIdAndPayType(pay.tokenEco)
 
 	ecosystems := &sqldb.Ecosystem{}
-	if _, err = ecosystems.Get(sc.DbTransaction, eco); err != nil {
+	if _, err = ecosystems.Get(sc.DbTransaction, pay.tokenEco); err != nil {
 		return nil, err
 	}
 	if pay.tokenEco == consts.DefaultTokenEcosystem {
@@ -425,7 +430,8 @@ func (sc *SmartContract) prepareMultiPay() error {
 		return err
 	}
 
-	for _, eco := range sc.getTokenEcos() {
+	for i := 0; i < len(sc.getTokenEcos()); i++ {
+		eco := sc.getTokenEcos()[i]
 		pays, err := sc.getChangeAddress(eco)
 		if err != nil {
 			return err
@@ -436,16 +442,17 @@ func (sc *SmartContract) prepareMultiPay() error {
 }
 
 func (sc *SmartContract) appendTokens(nums ...int64) error {
-	sc.TxSmart.TokenEcosystems = make(map[int64]interface{})
-	if len(sc.TxSmart.TokenEcosystems) == 0 {
-		sc.TxSmart.TokenEcosystems[consts.DefaultTokenEcosystem] = nil
+	sc.TokenEcosystems = make(map[int64]interface{})
+	if len(sc.TokenEcosystems) == 0 {
+		sc.TokenEcosystems[consts.DefaultTokenEcosystem] = nil
 	}
 
-	for _, num := range nums {
+	for i := 0; i < len(nums); i++ {
+		num := nums[i]
 		if num <= 1 {
 			continue
 		}
-		if _, ok := sc.TxSmart.TokenEcosystems[num]; ok {
+		if _, ok := sc.TokenEcosystems[num]; ok {
 			continue
 		}
 		ecosystems := &sqldb.Ecosystem{}
@@ -459,16 +466,17 @@ func (sc *SmartContract) appendTokens(nums ...int64) error {
 		if len(ecosystems.TokenSymbol) <= 0 {
 			continue
 		}
-		sc.TxSmart.TokenEcosystems[num] = nil
+		sc.TokenEcosystems[num] = nil
 	}
 	return nil
 }
 
 func (sc *SmartContract) getTokenEcos() []int64 {
 	var ecos []int64
-	for i := range sc.TxSmart.TokenEcosystems {
+	for i := range sc.TokenEcosystems {
 		ecos = append(ecos, i)
 	}
+	sortkeys.Int64s(ecos)
 	return ecos
 }
 

@@ -22,8 +22,8 @@ func (sp PlatformParameter) TableName() string {
 }
 
 // Get is retrieving model from database
-func (sp *PlatformParameter) Get(name string) (bool, error) {
-	return isFound(DBConn.Where("name = ?", name).First(sp))
+func (sp *PlatformParameter) Get(transaction *DbTransaction, name string) (bool, error) {
+	return isFound(GetDB(transaction).Where("name = ?", name).First(sp))
 }
 
 // GetTransaction is retrieving model from database using transaction

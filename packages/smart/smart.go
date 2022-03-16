@@ -52,39 +52,40 @@ var (
 
 // SmartContract is storing smart contract data
 type SmartContract struct {
-	CLB           bool
-	Rollback      bool
-	FullAccess    bool
-	SysUpdate     bool
-	VM            *script.VM
-	TxSmart       *types.SmartTransaction
-	TxData        map[string]interface{}
-	TxContract    *Contract
-	TxFuel        int64           // The fuel of executing contract
-	TxCost        int64           // Maximum cost of executing contract
-	TxUsedCost    decimal.Decimal // Used cost of CPU resources
-	TXBlockFuel   decimal.Decimal
-	BlockData     *types.BlockData
-	PreBlockData  *types.BlockData
-	Loop          map[string]bool
-	Hash          []byte
-	Payload       []byte
-	Timestamp     int64
-	TxSignature   []byte
-	TxSize        int64
-	Size          common.StorageSize
-	PublicKeys    [][]byte
-	DbTransaction *sqldb.DbTransaction
-	Rand          *rand.Rand
-	FlushRollback []*FlushInfo
-	Notifications types.Notifications
-	GenBlock      bool
-	TimeLimit     int64
-	Key           *sqldb.Key
-	RollBackTx    []*sqldb.RollbackTx
-	multiPays     multiPays
-	taxes         bool
-	Penalty       bool
+	CLB             bool
+	Rollback        bool
+	FullAccess      bool
+	SysUpdate       bool
+	VM              *script.VM
+	TxSmart         *types.SmartTransaction
+	TxData          map[string]interface{}
+	TxContract      *Contract
+	TxFuel          int64           // The fuel of executing contract
+	TxCost          int64           // Maximum cost of executing contract
+	TxUsedCost      decimal.Decimal // Used cost of CPU resources
+	TXBlockFuel     decimal.Decimal
+	BlockData       *types.BlockData
+	PreBlockData    *types.BlockData
+	Loop            map[string]bool
+	Hash            []byte
+	Payload         []byte
+	Timestamp       int64
+	TxSignature     []byte
+	TxSize          int64
+	Size            common.StorageSize
+	PublicKeys      [][]byte
+	DbTransaction   *sqldb.DbTransaction
+	Rand            *rand.Rand
+	FlushRollback   []*FlushInfo
+	Notifications   types.Notifications
+	GenBlock        bool
+	TimeLimit       int64
+	Key             *sqldb.Key
+	RollBackTx      []*sqldb.RollbackTx
+	multiPays       multiPays
+	taxes           bool
+	Penalty         bool
+	TokenEcosystems map[int64]interface{}
 }
 
 // AppendStack adds an element to the stack of contract call or removes the top element when name is empty
