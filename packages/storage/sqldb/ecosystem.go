@@ -14,12 +14,6 @@ import (
 const ecosysTable = "1_ecosystems"
 
 const (
-	FeeModeType     = "fee_mode_type"
-	FeeModeVmCost   = "fee_mode_vmcost"
-	FeeModeStorage  = "fee_mode_storage"
-	FeeModeElement  = "fee_mode_element"
-	FeeModeExpedite = "fee_mode_expedite"
-
 	MultiFee = "multi_fee"
 )
 
@@ -34,6 +28,20 @@ type Ecosystem struct {
 	TypeEmission   int64
 	TypeWithdraw   int64
 	Info           string `gorm:"type:jsonb"`
+	FeeModeInfo    string `json:"fee_mode_info" gorm:"type:jsonb"`
+}
+
+type FeeModeFlag struct {
+	Flag           int64
+	ConversionRate float64 `json:"conversion_rate"`
+}
+
+type FeeModeInfo struct {
+	MultiFee int64
+	VmCost   FeeModeFlag `json:"vmCost"`
+	Element  FeeModeFlag
+	Storage  FeeModeFlag
+	Expedite FeeModeFlag
 }
 
 // TableName returns name of table
@@ -74,9 +82,9 @@ func (sys *Ecosystem) Delete(transaction *DbTransaction) error {
 }
 
 func (sys *Ecosystem) IsOpenMultiFee() bool {
-	if len(sys.Info) > 0 {
+	if len(sys.FeeModeInfo) > 0 {
 		var info map[string]interface{}
-		json.Unmarshal([]byte(sys.Info), &info)
+		json.Unmarshal([]byte(sys.FeeModeInfo), &info)
 		if v, ok := info[MultiFee]; ok {
 			multi, _ := strconv.Atoi(fmt.Sprint(v))
 			if multi == 1 {
@@ -88,42 +96,14 @@ func (sys *Ecosystem) IsOpenMultiFee() bool {
 }
 
 // FeeMode is get ecosystem fee mode
-func (sys *Ecosystem) FeeMode() map[string]int {
+func (sys *Ecosystem) FeeMode() *FeeModeInfo {
 	if !sys.IsOpenMultiFee() {
 		return nil
 	}
 	if len(sys.TokenSymbol) <= 0 {
 		return nil
 	}
-	if len(sys.Info) > 0 {
-		var (
-			info    map[string]interface{}
-			feeMode = make(map[string]int)
-		)
-		json.Unmarshal([]byte(sys.Info), &info)
-		for k, v := range info {
-			switch k {
-			case FeeModeType:
-				fm, _ := strconv.Atoi(fmt.Sprint(v))
-				if fm == 2 {
-					feeMode[k] = fm
-				}
-				break
-			}
-		}
-
-		for k, v := range info {
-			switch k {
-			case FeeModeVmCost, FeeModeStorage, FeeModeElement, FeeModeExpedite:
-				if _, ok := feeMode[FeeModeType]; ok {
-					fm, _ := strconv.Atoi(fmt.Sprint(v))
-					if fm > 0 {
-						feeMode[k] = fm
-					}
-				}
-			}
-		}
-		return feeMode
-	}
-	return nil
+	var info = &FeeModeInfo{}
+	json.Unmarshal([]byte(sys.FeeModeInfo), info)
+	return info
 }

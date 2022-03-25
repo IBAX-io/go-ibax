@@ -29,12 +29,13 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     (next_id('1_tables'), 'ecosystems',
         '{
             "insert": "ContractAccess(\"@1NewEcosystem\")",
-            "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1NewToken\",\"@1TeChange\",\"@1TeBurn\")",
+            "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1EcoFeeModeManage\",\"@1NewToken\",\"@1TeChange\",\"@1TeBurn\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
             "name": "ContractAccess(\"@1EditEcosystemName\")",
             "info": "ContractAccess(\"@1EcManageInfo\")",
+            "fee_mode_info": "ContractAccess(\"@1EcoFeeModeManage\")",
             "is_valued": "ContractAccess(\"@1VotingVesAccept\")",
             "emission_amount": "ContractAccess(\"@1NewToken\",\"@1TeBurn\")",
             "token_symbol": "ContractAccess(\"@1NewToken\")",

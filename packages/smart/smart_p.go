@@ -629,7 +629,7 @@ func JSONDecode(input string) (ret interface{}, err error) {
 	return
 }
 
-// JSONEncodeIdent converts object to json string
+// JSONEncodeIndent converts object to json string
 func JSONEncodeIndent(input interface{}, indent string) (string, error) {
 	rv := reflect.ValueOf(input)
 	if rv.Kind() == reflect.Ptr {
@@ -654,7 +654,6 @@ func JSONEncodeIndent(input interface{}, indent string) (string, error) {
 	out = strings.Replace(out, `\u003c`, `<`, -1)
 	out = strings.Replace(out, `\u003e`, `>`, -1)
 	out = strings.Replace(out, `\u0026`, `&`, -1)
-
 	return out, nil
 }
 

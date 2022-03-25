@@ -19,40 +19,77 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type FuelType int32
+
 const (
-	vmCostFeeCategory = iota + 1
-	storageFeeCategory
-	elementFeeCategory
-	expediteFeeCategory
+	FuelType_unknown  FuelType = 0
+	FuelType_vmCost   FuelType = 1
+	FuelType_storage  FuelType = 2
+	FuelType_element  FuelType = 3
+	FuelType_expedite FuelType = 4
 )
+
+var FuelType_name = map[int32]string{
+	0: "unknown_fee",
+	1: "vmCost_fee",
+	2: "storage_fee",
+	3: "element_fee",
+	4: "expedite_fee",
+}
+
+func (x FuelType) String() string {
+	return EnumName(FuelType_name, int32(x))
+}
+
+func EnumName(m map[int32]string, v int32) string {
+	s, ok := m[v]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(v))
+}
 
 type (
 	fuelCategory struct {
-		fuelType   int
-		decimal    decimal.Decimal
-		percentage int
+		fuelType       FuelType
+		decimal        decimal.Decimal
+		ConversionRate float64
+		flag           DirectType
 	}
 	paymentInfo struct {
-		tokenEco    int64
-		toID        int64
-		taxesID     int64
-		fromID      int64
-		paymentType PaymentType
-		fuelRate    decimal.Decimal
-		vmCostFee   *fuelCategory
-		storageFee  *fuelCategory
-		elementFee  *fuelCategory
-		expediteFee *fuelCategory
-		tokenSymbol string
-		payWallet   *sqldb.Key
-		taxesSize   int64
-		indirect    bool
+		tokenEco       int64
+		toID           int64
+		taxesID        int64
+		fromID         int64
+		paymentType    PaymentType
+		fuelRate       decimal.Decimal
+		fuelCategories []*fuelCategory
+		tokenSymbol    string
+		payWallet      *sqldb.Key
+		taxesSize      int64
+		indirect       bool
 	}
 	multiPays []*paymentInfo
 )
 
-func newFuelCategory(fuelType int, decimal decimal.Decimal, percentage int) *fuelCategory {
-	return &fuelCategory{fuelType: fuelType, decimal: decimal, percentage: percentage}
+func newFuelCategory(fuelType FuelType, decimal decimal.Decimal, cr float64, flag DirectType) *fuelCategory {
+	f := new(fuelCategory)
+	f.writeFuelType(fuelType)
+	f.writeDecimal(decimal)
+	f.writeFlag(flag)
+	f.writeConversionRate(cr)
+	return f
+}
+
+func (f *fuelCategory) writeFuelType(fuelType FuelType)      { f.fuelType = fuelType }
+func (f *fuelCategory) writeDecimal(decimal decimal.Decimal) { f.decimal = decimal }
+func (f *fuelCategory) writeFlag(tf DirectType)              { f.flag = tf }
+func (f *fuelCategory) writeConversionRate(cr float64) {
+	if cr > 0 {
+		f.ConversionRate = cr
+		return
+	}
+	f.ConversionRate = 100
 }
 
 func (f *fuelCategory) Detail() (string, interface{}) {
@@ -63,37 +100,67 @@ func (f *fuelCategory) FeesInfo() interface{} {
 	detail := types.NewMap()
 	detail.Set("decimal", f.decimal)
 	detail.Set("value", f.Fees())
-	detail.Set("percentage", f.percentage)
+	detail.Set("conversion_rate", f.ConversionRate)
+	detail.Set("flag", f.flag)
 	b, _ := JSONEncode(detail)
 	s, _ := JSONDecode(b)
 	return s
 }
 
 func (f *fuelCategory) Fees() decimal.Decimal {
-	return f.decimal.Mul(decimal.NewFromInt(int64(f.percentage))).Div(decimal.NewFromInt(100)).Floor()
+	return f.decimal.Mul(decimal.NewFromFloat(f.ConversionRate)).Div(decimal.NewFromFloat(100)).Floor()
 }
 
 func (f *fuelCategory) CategoryString() string {
-	switch f.fuelType {
-	case vmCostFeeCategory:
-		return "vmCost_fee"
-	case storageFeeCategory:
-		return "storage_fee"
-	case elementFeeCategory:
-		return "element_fee"
-	case expediteFeeCategory:
-		return "expedite_fee"
-	default:
-		return "others_fee"
+	return f.fuelType.String()
+}
+
+func (pay *paymentInfo) PushFuelCategories(fes ...*fuelCategory) {
+	pay.fuelCategories = append(pay.fuelCategories, fes...)
+}
+
+func (pay *paymentInfo) SetDecimalByType(fuelType FuelType, decimal decimal.Decimal) {
+	for i, v := range pay.fuelCategories {
+		if v.fuelType == fuelType {
+			pay.fuelCategories[i].writeDecimal(decimal)
+			break
+		}
 	}
 }
 
+func (pay *paymentInfo) GetPayMoney(errNeedPay bool) decimal.Decimal {
+	var money decimal.Decimal
+	for i := 0; i < len(pay.fuelCategories); i++ {
+		f := pay.fuelCategories[i]
+		if errNeedPay && f.fuelType == FuelType_element {
+			continue
+		}
+		money = money.Add(f.Fees())
+	}
+	return money
+}
+
+func (pay *paymentInfo) GetEstimate() decimal.Decimal {
+	var money decimal.Decimal
+	for i := 0; i < len(pay.fuelCategories); i++ {
+		f := pay.fuelCategories[i]
+		if f.fuelType == FuelType_vmCost {
+			continue
+		}
+		money.Add(f.Fees())
+	}
+	return money
+}
+
+func (pay *paymentInfo) Copy() *paymentInfo {
+	cpy := &paymentInfo{}
+	return cpy
+}
 func (pay *paymentInfo) Detail() interface{} {
 	detail := types.NewMap()
-	detail.Set(pay.vmCostFee.Detail())
-	detail.Set(pay.storageFee.Detail())
-	detail.Set(pay.elementFee.Detail())
-	detail.Set(pay.expediteFee.Detail())
+	for i := 0; i < len(pay.fuelCategories); i++ {
+		detail.Set(pay.fuelCategories[i].Detail())
+	}
 	detail.Set("taxes_size", pay.taxesSize)
 	detail.Set("payment_type", pay.paymentType.String())
 	detail.Set("fuel_rate", pay.fuelRate)
@@ -102,7 +169,7 @@ func (pay *paymentInfo) Detail() interface{} {
 	return s
 }
 
-func (f *paymentInfo) checkVerify(sc *SmartContract) error {
+func (f *paymentInfo) checkVerify(sc *SmartContract, indirect bool) error {
 	eco := f.tokenEco
 	if err := sc.hasExitKeyID(eco, f.toID); err != nil {
 		return errors.Wrapf(err, fmt.Sprintf("to ID %d does not exist", f.toID))
@@ -118,17 +185,16 @@ func (f *paymentInfo) checkVerify(sc *SmartContract) error {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting wallet")
 		return err
 	}
+
 	if f.paymentType == PaymentType_ContractCaller &&
 		!bytes.Equal(sc.Key.PublicKey, f.payWallet.PublicKey) &&
 		!bytes.Equal(sc.TxSmart.PublicKey, f.payWallet.PublicKey) &&
-		sc.TxSmart.SignedBy == 0 {
+		sc.TxSmart.SignedBy == 0 &&
+		!indirect {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "error": errDiffKeys}).Error(errDiffKeys)
 		return errDiffKeys
 	}
-	var estimate decimal.Decimal
-	estimate = estimate.Add(f.elementFee.Fees()).
-		Add(f.storageFee.Fees()).
-		Add(f.expediteFee.Fees())
+	estimate := f.GetEstimate()
 	amount := f.payWallet.CapableAmount()
 	if amount.LessThan(estimate) {
 		difference, _ := FormatMoney(sc, estimate.Sub(amount).String(), consts.MoneyDigits)
@@ -136,6 +202,23 @@ func (f *paymentInfo) checkVerify(sc *SmartContract) error {
 		return fmt.Errorf(eEcoCurrentBalance, eco, difference)
 	}
 	return nil
+}
+
+func (sc *SmartContract) resetFromIDForNativePay(from int64) *paymentInfo {
+	origin := sc.multiPays[0]
+	cpy := &paymentInfo{
+		tokenEco:       origin.tokenEco,
+		toID:           origin.toID,
+		taxesID:        origin.taxesID,
+		fromID:         from,
+		paymentType:    origin.paymentType,
+		fuelRate:       origin.fuelRate,
+		fuelCategories: make([]*fuelCategory, 0),
+		tokenSymbol:    origin.tokenSymbol,
+		payWallet:      new(sqldb.Key),
+		taxesSize:      origin.taxesSize,
+	}
+	return cpy
 }
 
 func (sc *SmartContract) payContract(errNeedPay bool) error {
@@ -151,11 +234,8 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	}
 	for i := 0; i < len(sc.multiPays); i++ {
 		pay := sc.multiPays[i]
-		pay.vmCostFee = newFuelCategory(vmCostFeeCategory, sc.TxUsedCost.Mul(pay.fuelRate), pay.vmCostFee.percentage)
-		money := pay.vmCostFee.Fees().Add(pay.storageFee.Fees()).Add(pay.expediteFee.Fees())
-		if !errNeedPay {
-			money = money.Add(pay.elementFee.Fees())
-		}
+		pay.SetDecimalByType(FuelType_vmCost, sc.TxUsedCost.Mul(pay.fuelRate))
+		money := pay.GetPayMoney(errNeedPay)
 		wltAmount := pay.payWallet.CapableAmount()
 		if wltAmount.Cmp(money) < 0 {
 			return errTaxes
@@ -323,14 +403,11 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*paymentInfo, error) {
 	)
 
 	var pay = &paymentInfo{
-		tokenEco:    eco,
-		toID:        sc.BlockData.KeyID,
-		payWallet:   &sqldb.Key{},
-		vmCostFee:   new(fuelCategory),
-		storageFee:  new(fuelCategory),
-		elementFee:  new(fuelCategory),
-		expediteFee: new(fuelCategory),
-		taxesSize:   syspar.SysInt64(syspar.TaxesSize),
+		tokenEco:       eco,
+		toID:           sc.BlockData.KeyID,
+		payWallet:      &sqldb.Key{},
+		fuelCategories: make([]*fuelCategory, 0),
+		taxesSize:      syspar.SysInt64(syspar.TaxesSize),
 	}
 
 	if pay.fuelRate, err = sc.fuelRate(pay.tokenEco); err != nil {
@@ -361,62 +438,107 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*paymentInfo, error) {
 		pay.tokenSymbol = ecosystems.TokenSymbol
 	}
 	feeMode := ecosystems.FeeMode()
-	if _, ok := feeMode[sqldb.FeeModeType]; ok && pay.paymentType != PaymentType_ContractCaller {
+	if feeMode != nil &&
+		pay.tokenEco != consts.DefaultTokenEcosystem &&
+		pay.paymentType != PaymentType_ContractCaller &&
+		(feeMode.VmCost.Flag == 2 || feeMode.Element.Flag == 2 ||
+			feeMode.Storage.Flag == 2 || feeMode.Expedite.Flag == 2) {
+
+		v1 := feeMode.VmCost
+		vmCost := new(fuelCategory)
+		vmCost.writeFuelType(FuelType_vmCost)
+		vmCost.writeDecimal(decimal.NewFromInt(0))
+		vmCost.writeFlag(DirectType(v1.Flag))
+		vmCost.writeConversionRate(v1.ConversionRate)
+
+		v2 := feeMode.Storage
+		storage := new(fuelCategory)
+		storage.writeFuelType(FuelType_storage)
+		storage.writeDecimal(storageFee)
+		storage.writeFlag(DirectType(v2.Flag))
+		storage.writeConversionRate(v2.ConversionRate)
+
+		v3 := feeMode.Element
+		element := new(fuelCategory)
+		element.writeFuelType(FuelType_element)
+		element.writeDecimal(elementFee)
+		element.writeFlag(DirectType(v3.Flag))
+		element.writeConversionRate(v3.ConversionRate)
+
+		v4 := feeMode.Expedite
+		expedite := new(fuelCategory)
+		expedite.writeFuelType(FuelType_expedite)
+		expedite.writeDecimal(expediteFee)
+		expedite.writeFlag(DirectType(v4.Flag))
+		expedite.writeConversionRate(v4.ConversionRate)
+
 		indirectPay := &paymentInfo{
-			indirect:    true,
-			tokenEco:    pay.tokenEco,
-			tokenSymbol: pay.tokenSymbol,
-			toID:        pay.fromID,
-			fromID:      sc.TxSmart.KeyID,
-			paymentType: pay.paymentType,
-			fuelRate:    pay.fuelRate,
-			payWallet:   &sqldb.Key{},
+			indirect:       true,
+			tokenEco:       pay.tokenEco,
+			tokenSymbol:    pay.tokenSymbol,
+			toID:           pay.fromID,
+			fromID:         sc.TxSmart.KeyID,
+			paymentType:    pay.paymentType,
+			fuelRate:       pay.fuelRate,
+			fuelCategories: make([]*fuelCategory, 0),
+			payWallet:      &sqldb.Key{},
 		}
-		if pay.fuelRate, err = sc.fuelRate(1); err != nil {
-			return nil, err
-		}
-		pay.tokenEco = consts.DefaultTokenEcosystem
-		pay.tokenSymbol = "IBXC"
-		if v, ok := feeMode[sqldb.FeeModeVmCost]; ok {
-			indirectPay.vmCostFee = newFuelCategory(vmCostFeeCategory, decimal.NewFromInt(0), v)
+
+		cpy1 := sc.resetFromIDForNativePay(sc.TxSmart.KeyID)
+		cpy2 := sc.resetFromIDForNativePay(pay.fromID)
+		cpy2.paymentType = pay.paymentType
+		pay.fromID = sc.TxSmart.KeyID
+		pay.paymentType = PaymentType_ContractCaller
+
+		sc.multiPays = sc.multiPays[:0]
+		if vmCost.flag == 1 {
+			cpy1.PushFuelCategories(vmCost)
 		} else {
-			indirectPay.expediteFee = newFuelCategory(vmCostFeeCategory, decimal.NewFromInt(0), 100)
+			cpy2.PushFuelCategories(vmCost)
+			indirectPay.PushFuelCategories(vmCost)
 		}
-		if v, ok := feeMode[sqldb.FeeModeStorage]; ok {
-			indirectPay.storageFee = newFuelCategory(storageFeeCategory, storageFee, v)
+		if storage.flag == 1 {
+			cpy1.PushFuelCategories(storage)
 		} else {
-			indirectPay.expediteFee = newFuelCategory(storageFeeCategory, storageFee, 100)
+			cpy2.PushFuelCategories(storage)
+			indirectPay.PushFuelCategories(storage)
 		}
-		if v, ok := feeMode[sqldb.FeeModeElement]; ok {
-			indirectPay.elementFee = newFuelCategory(elementFeeCategory, elementFee, v)
+		if element.flag == 1 {
+			cpy1.PushFuelCategories(element)
 		} else {
-			indirectPay.expediteFee = newFuelCategory(elementFeeCategory, elementFee, 100)
+			cpy2.PushFuelCategories(element)
+			indirectPay.PushFuelCategories(element)
 		}
-		if v, ok := feeMode[sqldb.FeeModeExpedite]; ok {
-			indirectPay.expediteFee = newFuelCategory(expediteFeeCategory, expediteFee, v)
+		if expedite.flag == 1 {
+			cpy1.PushFuelCategories(expedite)
 		} else {
-			indirectPay.expediteFee = newFuelCategory(expediteFeeCategory, expediteFee, 100)
+			cpy2.PushFuelCategories(expedite)
+			indirectPay.PushFuelCategories(expedite)
 		}
-		if err = indirectPay.checkVerify(sc); err != nil {
+
+		if err = indirectPay.checkVerify(sc, false); err != nil {
 			return nil, err
 		}
 		pays = append(pays, indirectPay)
-	}
 
-	if pay.vmCostFee.fuelType == 0 {
-		pay.vmCostFee = newFuelCategory(vmCostFeeCategory, decimal.NewFromInt(0), 100)
-	}
-	if pay.storageFee.fuelType == 0 {
-		pay.storageFee = newFuelCategory(storageFeeCategory, storageFee, 100)
-	}
-	if pay.elementFee.fuelType == 0 {
-		pay.elementFee = newFuelCategory(elementFeeCategory, elementFee, 100)
-	}
-	if pay.expediteFee.fuelType == 0 {
-		pay.expediteFee = newFuelCategory(expediteFeeCategory, expediteFee, 100)
-	}
+		if err = cpy1.checkVerify(sc, false); err != nil {
+			return nil, err
+		}
+		pays = append(pays, cpy1)
 
-	if err = pay.checkVerify(sc); err != nil {
+		if err = cpy2.checkVerify(sc, true); err != nil {
+			return nil, err
+		}
+		pays = append(pays, cpy2)
+	}
+	pay.PushFuelCategories(
+		newFuelCategory(FuelType_vmCost, decimal.NewFromInt(0), 100, DirectType_direct),
+		newFuelCategory(FuelType_storage, storageFee, 100, DirectType_direct),
+		newFuelCategory(FuelType_element, elementFee, 100, DirectType_direct),
+		newFuelCategory(FuelType_expedite, expediteFee, 100, DirectType_direct),
+	)
+
+	if err = pay.checkVerify(sc, false); err != nil {
 		return nil, err
 	}
 	pays = append(pays, pay)

@@ -4,10 +4,23 @@ option go_package = "github.com/IBAX-io/go-ibax/packages/smart";
 
 package smart;
 
-// VMType is virtual machine type
 enum PaymentType {
   INVALID = 0;
   ContractCaller = 1;
   ContractBinder = 2;
   EcosystemAddress = 3;
+}
+
+//enum FuelType {
+//  unknown = 0;
+//  vmCost = 1;
+//  storage = 2;
+//  element = 3;
+//  expedite = 4;
+//}
+
+enum DirectType {
+  invalid = 0;
+  direct = 1;
+  indirect = 2;
 }
