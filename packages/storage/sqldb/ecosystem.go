@@ -32,16 +32,16 @@ type Ecosystem struct {
 }
 
 type FeeModeFlag struct {
-	Flag           int64
+	Flag           int64   `json:"flag"`
 	ConversionRate float64 `json:"conversion_rate"`
 }
 
 type FeeModeInfo struct {
-	MultiFee int64
+	MultiFee int64       `json:"multi_fee"`
 	VmCost   FeeModeFlag `json:"vmCost"`
-	Element  FeeModeFlag
-	Storage  FeeModeFlag
-	Expedite FeeModeFlag
+	Element  FeeModeFlag `json:"element"`
+	Storage  FeeModeFlag `json:"storage"`
+	Expedite FeeModeFlag `json:"expedite"`
 }
 
 // TableName returns name of table
