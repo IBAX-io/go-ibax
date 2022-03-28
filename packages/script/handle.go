@@ -2,9 +2,10 @@ package script
 
 import (
 	"fmt"
+	"reflect"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	log "github.com/sirupsen/logrus"
-	"reflect"
 )
 
 type compileFunc func(*CodeBlocks, stateTypes, *Lexem) error
@@ -286,7 +287,7 @@ func fAssignVar(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 			lexem.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexem.Value.(string)}).Error("modifying system variable")
 			return fmt.Errorf(eSysVar, lexem.Value.(string))
 		}
-		ivar = VarInfo{Obj: &ObjInfo{Type: ObjectType_Extend, Value: newObjInfoValue(lexem.Value.(string))}, Owner: nil}
+		ivar = VarInfo{Obj: &ObjInfo{Type: ObjectType_ExtVar, Value: newObjInfoValue(lexem.Value.(string))}, Owner: nil}
 	} else {
 		objInfo, tobj := findVar(lexem.Value.(string), buf)
 		if objInfo == nil || objInfo.Type != ObjectType_Var {

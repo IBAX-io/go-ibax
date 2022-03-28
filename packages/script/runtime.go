@@ -184,8 +184,16 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 			return errWrongCountPars
 		}
 		for i, v := range finfo.Params {
-			switch v.String() {
-			case `string`, `int64`:
+			switch v.Kind() {
+			case reflect.String, reflect.Int64:
+				if v.Kind() == reflect.Int64 {
+					rv := reflect.ValueOf(rt.stack[len(rt.stack)-in+i])
+					switch rv.Kind() {
+					case reflect.Float64:
+						val, _ := converter.ValueToInt(rt.stack[len(rt.stack)-in+i])
+						rt.stack[len(rt.stack)-in+i] = val
+					}
+				}
 				if reflect.TypeOf(rt.stack[len(rt.stack)-in+i]) != v {
 					log.WithFields(log.Fields{"type": consts.VMError}).Error(eTypeParam)
 					return fmt.Errorf(eTypeParam, i+1)
@@ -196,85 +204,86 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 			rt.stack = append(rt.stack, imap)
 		}
 		_, err = rt.RunCode(obj.Value.CodeBlock())
-	} else {
-		finfo := obj.Value.ExtFuncInfo()
-		foo := reflect.ValueOf(finfo.Func)
-		var result []reflect.Value
-		pars := make([]reflect.Value, in)
-		limit := 0
-		var (
-			stack Stacker
-			ok    bool
-		)
-		if stack, ok = rt.extend["sc"].(Stacker); ok {
-			if err := stack.AppendStack(finfo.Name); err != nil {
-				return err
-			}
+		return
+	}
+
+	var (
+		stack  Stacker
+		ok     bool
+		result []reflect.Value
+		limit  = 0
+		finfo  = obj.Value.ExtFuncInfo()
+		foo    = reflect.ValueOf(finfo.Func)
+		pars   = make([]reflect.Value, in)
+	)
+	if stack, ok = rt.extend["sc"].(Stacker); ok {
+		if err := stack.AppendStack(finfo.Name); err != nil {
+			return err
 		}
-		rt.extend[`rt`] = rt
-		auto := 0
-		for k := 0; k < in; k++ {
-			if len(finfo.Auto[k]) > 0 {
-				auto++
-			}
+	}
+	rt.extend[`rt`] = rt
+	auto := 0
+	for k := 0; k < in; k++ {
+		if len(finfo.Auto[k]) > 0 {
+			auto++
 		}
-		shift := size - count + auto
-		if finfo.Variadic {
-			shift = size - count
-			count += auto
-			limit = count - in + 1
-		}
-		i := count
-		for ; i > limit; i-- {
-			if len(finfo.Auto[count-i]) > 0 {
-				pars[count-i] = reflect.ValueOf(rt.extend[finfo.Auto[count-i]])
-				auto--
-			} else {
-				pars[count-i] = reflect.ValueOf(rt.stack[size-i+auto])
-			}
-			if !pars[count-i].IsValid() {
-				pars[count-i] = reflect.Zero(reflect.TypeOf(string(``)))
-			}
-		}
-		if i > 0 {
-			pars[in-1] = reflect.ValueOf(rt.stack[size-i : size])
-		}
-		if finfo.Name == `ExecContract` && (pars[2].Type().String() != `string` || !pars[3].IsValid()) {
-			return fmt.Errorf(`unknown function %v`, pars[1])
-		}
-		if finfo.Variadic {
-			result = foo.CallSlice(pars)
+	}
+	shift := size - count + auto
+	if finfo.Variadic {
+		shift = size - count
+		count += auto
+		limit = count - in + 1
+	}
+	i := count
+	for ; i > limit; i-- {
+		if len(finfo.Auto[count-i]) > 0 {
+			pars[count-i] = reflect.ValueOf(rt.extend[finfo.Auto[count-i]])
+			auto--
 		} else {
-			result = foo.Call(pars)
+			pars[count-i] = reflect.ValueOf(rt.stack[size-i+auto])
 		}
-		rt.stack = rt.stack[:shift]
-		if stack != nil {
-			stack.PopStack(finfo.Name)
+		if !pars[count-i].IsValid() {
+			pars[count-i] = reflect.Zero(reflect.TypeOf(``))
 		}
+	}
+	if i > 0 {
+		pars[in-1] = reflect.ValueOf(rt.stack[size-i : size])
+	}
+	if finfo.Name == `ExecContract` && (pars[2].Kind() != reflect.String || !pars[3].IsValid()) {
+		return fmt.Errorf(`unknown function %v`, pars[1])
+	}
+	if finfo.Variadic {
+		result = foo.CallSlice(pars)
+	} else {
+		result = foo.Call(pars)
+	}
+	rt.stack = rt.stack[:shift]
+	if stack != nil {
+		stack.PopStack(finfo.Name)
+	}
 
-		for i, iret := range result {
-			// first return value of every extend function that makes queries to DB is cost
-			if i == 0 && rt.vm.FuncCallsDB != nil {
-				if _, ok := rt.vm.FuncCallsDB[finfo.Name]; ok {
-					cost := iret.Int()
-					if cost > rt.cost {
-						rt.cost = 0
-						rt.vm.logger.WithFields(log.Fields{"type": consts.VMError}).Error("paid CPU resource is over")
-						return fmt.Errorf("paid CPU resource is over")
-					}
+	for i, iret := range result {
+		// first return value of every extend function that makes queries to DB is cost
+		if i == 0 && rt.vm.FuncCallsDB != nil {
+			if _, ok := rt.vm.FuncCallsDB[finfo.Name]; ok {
+				cost := iret.Int()
+				if cost > rt.cost {
+					rt.cost = 0
+					rt.vm.logger.WithFields(log.Fields{"type": consts.VMError}).Error("paid CPU resource is over")
+					return fmt.Errorf("paid CPU resource is over")
+				}
 
-					rt.cost -= cost
-					continue
-				}
+				rt.cost -= cost
+				continue
 			}
-			if finfo.Results[i].String() == `error` {
-				if iret.Interface() != nil {
-					rt.errInfo = ErrInfo{Name: finfo.Name}
-					return iret.Interface().(error)
-				}
-			} else {
-				rt.stack = append(rt.stack, iret.Interface())
+		}
+		if finfo.Results[i].String() == `error` {
+			if iret.Interface() != nil {
+				rt.errInfo = ErrInfo{Name: finfo.Name}
+				return iret.Interface().(error)
 			}
+		} else {
+			rt.stack = append(rt.stack, iret.Interface())
 		}
 	}
 	return
@@ -711,7 +720,7 @@ main:
 			count := len(assign)
 			for ivar, item := range assign {
 				if item.Owner == nil {
-					if (*item).Obj.Type == ObjectType_Extend {
+					if (*item).Obj.Type == ObjectType_ExtVar {
 						if isSysVar((*item).Obj.Value.String()) {
 							err = fmt.Errorf(eSysVar, (*item).Obj.Value.String())
 							rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "error": err}).Error("modifying system variable")

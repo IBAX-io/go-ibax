@@ -28,6 +28,6 @@ enum ObjectType{
   ExtFunc = 3;
   // ObjectType_Var is a variable. myvar
   Var = 4;
-  // ObjectType_Extend is an extended variable. $myvar
-  Extend = 5;
+  // ObjectType_ExtVar is an extended build in variable. $myvar
+  ExtVar = 5;
 }
