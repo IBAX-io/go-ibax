@@ -105,7 +105,7 @@ func SysRollbackNewContract(sysData SysRollData, EcosystemID string) error {
 }
 
 // SysFlushContract is flushing contract
-func SysFlushContract(iroot interface{}, id int64, active bool) error {
+func SysFlushContract(iroot any, id int64, active bool) error {
 	root := iroot.(*script.CodeBlock)
 	if id != 0 {
 		if len(root.Children) != 1 || root.Children[0].Type != script.ObjectType_Contract {

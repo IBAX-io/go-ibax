@@ -26,7 +26,7 @@ func TestGetInterfaceRow(t *testing.T) {
 		{"interface/snippet/", "NewSnippet", []string{"Name", "Value", "Conditions"}},
 	}
 
-	checkEqualAttrs := func(form url.Values, result map[string]interface{}, equalKeys []string) {
+	checkEqualAttrs := func(form url.Values, result map[string]any, equalKeys []string) {
 		for _, key := range equalKeys {
 			v := result[strings.ToLower(key)]
 			assert.EqualValues(t, form.Get(key), v)
@@ -47,7 +47,7 @@ func TestGetInterfaceRow(t *testing.T) {
 			"Conditions": {"true"},
 		}
 		assert.NoError(t, postTx(c.contract, &form))
-		result := map[string]interface{}{}
+		result := map[string]any{}
 		assert.NoError(t, sendGet(c.url+name, &url.Values{}, &result))
 		checkEqualAttrs(form, result, c.equalAttrs)
 	}

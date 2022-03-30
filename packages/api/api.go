@@ -48,7 +48,7 @@ func (c *Client) Prefix() string {
 	return converter.Int64ToStr(c.EcosystemID)
 }
 
-func jsonResponse(w http.ResponseWriter, v interface{}) {
+func jsonResponse(w http.ResponseWriter, v any) {
 	jsonResult, err := json.Marshal(v)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("marhsalling http response to json")

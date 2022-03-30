@@ -34,9 +34,9 @@ type CodeBlock struct {
 	Children CodeBlocks
 }
 
-type codeBlockInfo struct{ i interface{} }
+type codeBlockInfo struct{ i any }
 
-func newCodeBlockInfo(i interface{}) *codeBlockInfo  { return &codeBlockInfo{i: i} }
+func newCodeBlockInfo(i any) *codeBlockInfo          { return &codeBlockInfo{i: i} }
 func (i *codeBlockInfo) FuncInfo() *FuncInfo         { return i.i.(*FuncInfo) }
 func (i *codeBlockInfo) Uint32() uint32              { return i.i.(uint32) }
 func (i *codeBlockInfo) ContractInfo() *ContractInfo { return i.i.(*ContractInfo) }
@@ -49,13 +49,13 @@ func (i *codeBlockInfo) IsContractInfo() (*ContractInfo, bool) {
 type ByteCode struct {
 	Cmd   uint16
 	Line  uint16
-	Value interface{}
+	Value any
 }
 
 // CodeBlocks is a slice of blocks
 type CodeBlocks []*CodeBlock
 
-func (bs *CodeBlocks) push(x interface{}) {
+func (bs *CodeBlocks) push(x any) {
 	*bs = append(*bs, x.(*CodeBlock))
 }
 
@@ -77,7 +77,7 @@ func (bs *CodeBlocks) get(idx int) *CodeBlock {
 // ByteCodes is the slice of ByteCode items
 type ByteCodes []*ByteCode
 
-func (bs *ByteCodes) push(x interface{}) {
+func (bs *ByteCodes) push(x any) {
 	*bs = append(*bs, x.(*ByteCode))
 }
 
@@ -89,7 +89,7 @@ func (bs *ByteCodes) peek() *ByteCode {
 	return (*bs)[bsLen-1]
 }
 
-func newByteCode(cmd uint16, line uint16, value interface{}) *ByteCode {
+func newByteCode(cmd uint16, line uint16, value any) *ByteCode {
 	return &ByteCode{Cmd: cmd, Line: line, Value: value}
 }
 
@@ -108,9 +108,9 @@ type ObjInfo struct {
 	Value *objInfoValue
 }
 
-type objInfoValue struct{ v interface{} }
+type objInfoValue struct{ v any }
 
-func newObjInfoValue(v interface{}) *objInfoValue { return &objInfoValue{v: v} }
+func newObjInfoValue(v any) *objInfoValue         { return &objInfoValue{v: v} }
 func (i *objInfoValue) CodeBlock() *CodeBlock     { return i.v.(*CodeBlock) }
 func (i *objInfoValue) ExtFuncInfo() *ExtFuncInfo { return i.v.(*ExtFuncInfo) }
 func (i *objInfoValue) Int() int                  { return i.v.(int) }

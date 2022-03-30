@@ -91,10 +91,10 @@ type ErrInfo struct {
 
 // RunTime is needed for the execution of the byte-code
 type RunTime struct {
-	stack     []interface{}
+	stack     []any
 	blocks    []*blockStack
-	vars      []interface{}
-	extend    map[string]interface{}
+	vars      []any
+	extend    map[string]any
 	vm        *VM
 	cost      int64
 	err       error
@@ -102,17 +102,17 @@ type RunTime struct {
 	timeLimit bool
 	callDepth uint16
 	mem       int64
-	memVars   map[interface{}]int64
+	memVars   map[any]int64
 	errInfo   ErrInfo
 }
 
 // NewRunTime creates a new RunTime for the virtual machine
 func NewRunTime(vm *VM, cost int64) *RunTime {
 	return &RunTime{
-		stack:   make([]interface{}, 0, 1024),
+		stack:   make([]any, 0, 1024),
 		vm:      vm,
 		cost:    cost,
-		memVars: make(map[interface{}]int64),
+		memVars: make(map[any]int64),
 	}
 }
 
@@ -141,7 +141,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 	if rt.unwrap && cmd == cmdCallVari && size > 1 &&
 		reflect.TypeOf(rt.stack[size-2]).String() == `[]interface {}` {
 		count = rt.stack[size-1].(int)
-		arr := rt.stack[size-2].([]interface{})
+		arr := rt.stack[size-2].([]any)
 		rt.stack = rt.stack[:size-2]
 		for _, item := range arr {
 			rt.stack = append(rt.stack, item)
@@ -157,10 +157,10 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		count = in
 	}
 	if obj.Type == ObjectType_Func {
-		var imap map[string][]interface{}
+		var imap map[string][]any
 		if obj.Value.CodeBlock().Info.FuncInfo().Names != nil {
 			if rt.stack[size-1] != nil {
-				imap = rt.stack[size-1].(map[string][]interface{})
+				imap = rt.stack[size-1].(map[string][]any)
 			}
 			rt.stack = rt.stack[:size-1]
 		}
@@ -170,7 +170,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 				log.WithFields(log.Fields{"type": consts.VMError}).Error(errWrongCountPars.Error())
 				return errWrongCountPars
 			}
-			pars := make([]interface{}, parcount)
+			pars := make([]any, parcount)
 			shift := size - parcount
 			for i := parcount; i > 0; i-- {
 				pars[i-1] = rt.stack[size+i-parcount-1]
@@ -186,14 +186,6 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		for i, v := range finfo.Params {
 			switch v.Kind() {
 			case reflect.String, reflect.Int64:
-				if v.Kind() == reflect.Int64 {
-					rv := reflect.ValueOf(rt.stack[len(rt.stack)-in+i])
-					switch rv.Kind() {
-					case reflect.Float64:
-						val, _ := converter.ValueToInt(rt.stack[len(rt.stack)-in+i])
-						rt.stack[len(rt.stack)-in+i] = val
-					}
-				}
 				if reflect.TypeOf(rt.stack[len(rt.stack)-in+i]) != v {
 					log.WithFields(log.Fields{"type": consts.VMError}).Error(eTypeParam)
 					return fmt.Errorf(eTypeParam, i+1)
@@ -292,7 +284,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 func (rt *RunTime) extendFunc(name string) error {
 	var (
 		ok bool
-		f  interface{}
+		f  any
 	)
 	if f, ok = rt.extend[name]; !ok || reflect.ValueOf(f).Kind().String() != `func` {
 		return fmt.Errorf(`unknown function %s`, name)
@@ -320,7 +312,7 @@ func (rt *RunTime) extendFunc(name string) error {
 	return nil
 }
 
-func calcMem(v interface{}) (mem int64) {
+func calcMem(v any) (mem int64) {
 	rv := reflect.ValueOf(v)
 
 	switch rv.Kind() {
@@ -358,7 +350,7 @@ func calcMem(v interface{}) (mem int64) {
 	return
 }
 
-func (rt *RunTime) setExtendVar(k string, v interface{}) {
+func (rt *RunTime) setExtendVar(k string, v any) {
 	rt.extend[k] = v
 	rt.recalcMemExtendVar(k)
 }
@@ -369,14 +361,14 @@ func (rt *RunTime) recalcMemExtendVar(k string) {
 	rt.memVars[k] = mem
 }
 
-func (rt *RunTime) addVar(v interface{}) {
+func (rt *RunTime) addVar(v any) {
 	rt.vars = append(rt.vars, v)
 	mem := calcMem(v)
 	rt.memVars[len(rt.vars)-1] = mem
 	rt.mem += mem
 }
 
-func (rt *RunTime) setVar(k int, v interface{}) {
+func (rt *RunTime) setVar(k int, v any) {
 	rt.vars[k] = v
 	rt.recalcMemVar(k)
 }
@@ -387,7 +379,7 @@ func (rt *RunTime) recalcMemVar(k int) {
 	rt.memVars[k] = mem
 }
 
-func valueToBool(v interface{}) bool {
+func valueToBool(v any) bool {
 	switch val := v.(type) {
 	case int:
 		if val != 0 {
@@ -407,9 +399,9 @@ func valueToBool(v interface{}) bool {
 		return len(val) > 0
 	case []uint8:
 		return len(val) > 0
-	case []interface{}:
+	case []any:
 		return val != nil && len(val) > 0
-	case map[string]interface{}:
+	case map[string]any:
 		return val != nil && len(val) > 0
 	case map[string]string:
 		return val != nil && len(val) > 0
@@ -423,7 +415,7 @@ func valueToBool(v interface{}) bool {
 }
 
 // ValueToFloat converts interface (string, float64 or int64) to float64
-func ValueToFloat(v interface{}) (ret float64) {
+func ValueToFloat(v any) (ret float64) {
 	var err error
 	switch val := v.(type) {
 	case float64:
@@ -440,7 +432,7 @@ func ValueToFloat(v interface{}) (ret float64) {
 }
 
 // ValueToDecimal converts interface (string, float64, Decimal or int64) to Decimal
-func ValueToDecimal(v interface{}) (ret decimal.Decimal, err error) {
+func ValueToDecimal(v any) (ret decimal.Decimal, err error) {
 	switch val := v.(type) {
 	case float64:
 		ret = decimal.NewFromFloat(val).Floor()
@@ -470,7 +462,7 @@ func (rt *RunTime) Cost() int64 {
 }
 
 // SetVMError sets error of VM
-func SetVMError(eType string, eText interface{}) error {
+func SetVMError(eType string, eText any) error {
 	errText := fmt.Sprintf(`%v`, eText)
 	if len(errText) > MaxErrLen {
 		errText = errText[:MaxErrLen] + `...`
@@ -483,7 +475,7 @@ func SetVMError(eType string, eText interface{}) error {
 	return fmt.Errorf(string(out))
 }
 
-func (rt *RunTime) getResultValue(item mapItem) (value interface{}, err error) {
+func (rt *RunTime) getResultValue(item mapItem) (value any, err error) {
 	switch item.Type {
 	case mapConst:
 		value = item.Value
@@ -509,8 +501,8 @@ func (rt *RunTime) getResultValue(item mapItem) (value interface{}, err error) {
 	return
 }
 
-func (rt *RunTime) getResultArray(cmd []mapItem) ([]interface{}, error) {
-	initArr := make([]interface{}, 0)
+func (rt *RunTime) getResultArray(cmd []mapItem) ([]any, error) {
+	initArr := make([]any, 0)
 	for _, val := range cmd {
 		value, err := rt.getResultValue(val)
 		if err != nil {
@@ -534,8 +526,8 @@ func (rt *RunTime) getResultMap(cmd *types.Map) (*types.Map, error) {
 	return initMap, nil
 }
 
-func isSelfAssignment(dest, value interface{}) bool {
-	if _, ok := value.([]interface{}); !ok {
+func isSelfAssignment(dest, value any) bool {
+	if _, ok := value.([]any); !ok {
 		if _, ok = value.(*types.Map); !ok {
 			return false
 		}
@@ -544,7 +536,7 @@ func isSelfAssignment(dest, value interface{}) bool {
 		return true
 	}
 	switch v := value.(type) {
-	case []interface{}:
+	case []any:
 		for _, item := range v {
 
 			if isSelfAssignment(dest, item) {
@@ -574,7 +566,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 				stack := block.Parent.Info.ContractInfo()
 				curContract = stack.Name
 			}
-			if stack, ok := rt.extend["stack"].([]interface{}); ok {
+			if stack, ok := rt.extend["stack"].([]any); ok {
 				curContract = stack[len(stack)-1].(string)
 			}
 
@@ -602,12 +594,12 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 			}
 		}
 	}()
-	top := make([]interface{}, 8)
+	top := make([]any, 8)
 	rt.blocks = append(rt.blocks, &blockStack{Block: block, Offset: len(rt.vars)})
-	var namemap map[string][]interface{}
+	var namemap map[string][]any
 	if block.Type == ObjectType_Func && block.Info.FuncInfo().Names != nil {
 		if rt.stack[len(rt.stack)-1] != nil {
-			namemap = rt.stack[len(rt.stack)-1].(map[string][]interface{})
+			namemap = rt.stack[len(rt.stack)-1].(map[string][]any)
 		}
 		rt.stack = rt.stack[:len(rt.stack)-1]
 	}
@@ -615,15 +607,15 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	varoff := len(rt.vars)
 	for vkey, vpar := range block.Vars {
 		rt.cost--
-		var value interface{}
+		var value any
 		if block.Type == ObjectType_Func && vkey < len(block.Info.FuncInfo().Params) {
 			value = rt.stack[start-len(block.Info.FuncInfo().Params)+vkey]
 		} else {
 			value = reflect.New(vpar).Elem().Interface()
 			if vpar == reflect.TypeOf(&types.Map{}) {
 				value = types.NewMap()
-			} else if vpar == reflect.TypeOf([]interface{}{}) {
-				value = make([]interface{}, 0, len(rt.vars)+1)
+			} else if vpar == reflect.TypeOf([]any{}) {
+				value = make([]any, 0, len(rt.vars)+1)
 			}
 		}
 		rt.addVar(value)
@@ -634,7 +626,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 			for i, value := range item {
 				if params.Variadic && i >= len(params.Params)-1 {
 					off := varoff + params.Offset[len(params.Params)-1]
-					rt.setVar(off, append(rt.vars[off].([]interface{}), value))
+					rt.setVar(off, append(rt.vars[off].([]any), value))
 				} else {
 					rt.setVar(varoff+params.Offset[i], value)
 				}
@@ -668,7 +660,7 @@ main:
 		}
 
 		cmd = block.Code[ci]
-		var bin interface{}
+		var bin any
 		size := len(rt.stack)
 		if size < int(cmd.Cmd>>8) {
 			rt.vm.logger.WithFields(log.Fields{"type": consts.VMError}).Error("stack is empty")
@@ -763,20 +755,20 @@ main:
 			ifunc := cmd.Value.(FuncNameCmd)
 			mapoff := len(rt.stack) - 1 - ifunc.Count
 			if rt.stack[mapoff] == nil {
-				rt.stack[mapoff] = make(map[string][]interface{})
+				rt.stack[mapoff] = make(map[string][]any)
 			}
-			params := make([]interface{}, 0, ifunc.Count)
+			params := make([]any, 0, ifunc.Count)
 			for i := 0; i < ifunc.Count; i++ {
 				cur := rt.stack[mapoff+1+i]
 				if i == ifunc.Count-1 && rt.unwrap &&
 					reflect.TypeOf(cur).String() == `[]interface {}` {
-					params = append(params, cur.([]interface{})...)
+					params = append(params, cur.([]any)...)
 					rt.unwrap = false
 				} else {
 					params = append(params, cur)
 				}
 			}
-			rt.stack[mapoff].(map[string][]interface{})[ifunc.Name] = params
+			rt.stack[mapoff].(map[string][]any)[ifunc.Name] = params
 			rt.stack = rt.stack[:mapoff+1]
 			continue
 		case cmdCallVari, cmdCall:
@@ -903,13 +895,13 @@ main:
 				}
 				ind := rt.stack[size-2].(int64)
 				if strings.Contains(itype, Interface) {
-					slice := rt.stack[size-3].([]interface{})
+					slice := rt.stack[size-3].([]any)
 					if int(ind) >= len(slice) {
 						if ind > maxArrayIndex {
 							err = errMaxArrayIndex
 							break
 						}
-						slice = append(slice, make([]interface{}, int(ind)-len(slice)+1)...)
+						slice = append(slice, make([]any, int(ind)-len(slice)+1)...)
 						indexInfo := cmd.Value.(*IndexInfo)
 						if indexInfo.Owner == nil { // Extend variable $varname
 							rt.extend[indexInfo.Extend] = slice
@@ -1345,7 +1337,7 @@ main:
 }
 
 // Run executes CodeBlock with the specified parameters and extended variables and functions
-func (rt *RunTime) Run(block *CodeBlock, params []interface{}, extend map[string]interface{}) (ret []interface{}, err error) {
+func (rt *RunTime) Run(block *CodeBlock, params []any, extend map[string]any) (ret []any, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			//rt.vm.logger.WithFields(log.Fields{"type": consts.PanicRecoveredError, "error_info": r, "stack": string(debug.Stack())}).Error("runtime panic error")

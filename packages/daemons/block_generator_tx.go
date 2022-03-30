@@ -44,7 +44,7 @@ func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*sqldb.Transaction, e
 	}
 	txList := make([]*sqldb.Transaction, 0, len(contracts))
 	for _, c := range contracts {
-		params := make(map[string]interface{})
+		params := make(map[string]any)
 		params["Id"] = c.ID
 		tx, err := dtx.createDelayTx(c.KeyID, c.HighRate, params)
 		if err != nil {
@@ -57,7 +57,7 @@ func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*sqldb.Transaction, e
 	return txList, nil
 }
 
-func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]interface{}) (*sqldb.Transaction, error) {
+func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]any) (*sqldb.Transaction, error) {
 	vm := script.GetVM()
 	contract := smart.VMGetContract(vm, callDelayedContract, uint32(firstEcosystemID))
 	info := contract.Info()

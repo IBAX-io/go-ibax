@@ -86,7 +86,7 @@ func NodeContract(Name string) (result contractResult, err error) {
 	return
 }
 
-func sendAPIRequest(rtype, url string, form *url.Values, v interface{}, auth string) error {
+func sendAPIRequest(rtype, url string, form *url.Values, v any, auth string) error {
 	client := &http.Client{}
 	var ioform io.Reader
 	if form != nil {

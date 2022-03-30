@@ -71,7 +71,7 @@ func SendRawRequest(rtype, url, auth string, form *url.Values) ([]byte, error) {
 	return data, nil
 }
 
-func SendRequest(rtype, url, auth string, form *url.Values, v interface{}) error {
+func SendRequest(rtype, url, auth string, form *url.Values, v any) error {
 	data, err := SendRawRequest(rtype, url, auth, form)
 	if err != nil {
 		return err
@@ -80,15 +80,15 @@ func SendRequest(rtype, url, auth string, form *url.Values, v interface{}) error
 	return json.Unmarshal(data, v)
 }
 
-func (connect *Connect) SendGet(url string, form *url.Values, v interface{}) error {
+func (connect *Connect) SendGet(url string, form *url.Values, v any) error {
 	return SendRequest("GET", connect.Root+url, connect.Auth, form, v)
 }
 
-func (connect *Connect) SendPost(url string, form *url.Values, v interface{}) error {
+func (connect *Connect) SendPost(url string, form *url.Values, v any) error {
 	return SendRequest("POST", connect.Root+url, connect.Auth, form, v)
 }
 
-func (connect *Connect) SendMultipart(url string, files map[string][]byte, v interface{}) error {
+func (connect *Connect) SendMultipart(url string, files map[string][]byte, v any) error {
 	body := new(bytes.Buffer)
 	writer := multipart.NewWriter(body)
 
@@ -214,7 +214,7 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 	if err = connect.SendGet("contract/"+name, nil, &contract); err != nil {
 		return
 	}
-	params := make(map[string]interface{})
+	params := make(map[string]any)
 	for _, field := range contract.Fields {
 		name := field.Name
 		value := form.Get(name)
@@ -231,11 +231,11 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 		case "float":
 			params[name], err = strconv.ParseFloat(value, 64)
 		case "array":
-			var v interface{}
+			var v any
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "map":
-			var v map[string]interface{}
+			var v map[string]any
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "string", "money":

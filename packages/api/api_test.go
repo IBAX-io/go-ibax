@@ -86,7 +86,7 @@ func sendRawRequest(rtype, url string, form *url.Values) ([]byte, error) {
 	return data, nil
 }
 
-func sendRequest(rtype, url string, form *url.Values, v interface{}) error {
+func sendRequest(rtype, url string, form *url.Values, v any) error {
 	data, err := sendRawRequest(rtype, url, form)
 	if err != nil {
 		return err
@@ -95,11 +95,11 @@ func sendRequest(rtype, url string, form *url.Values, v interface{}) error {
 	return json.Unmarshal(data, v)
 }
 
-func sendGet(url string, form *url.Values, v interface{}) error {
+func sendGet(url string, form *url.Values, v any) error {
 	return sendRequest("GET", url, form, v)
 }
 
-func sendPost(url string, form *url.Values, v interface{}) error {
+func sendPost(url string, form *url.Values, v any) error {
 	return sendRequest("POST", url, form, v)
 }
 
@@ -317,7 +317,7 @@ type getter interface {
 	Get(string) string
 }
 
-type contractParams map[string]interface{}
+type contractParams map[string]any
 
 func (cp *contractParams) Get(key string) string {
 	if _, ok := (*cp)[key]; !ok {
@@ -326,7 +326,7 @@ func (cp *contractParams) Get(key string) string {
 	return fmt.Sprintf("%v", (*cp)[key])
 }
 
-func (cp *contractParams) GetRaw(key string) interface{} {
+func (cp *contractParams) GetRaw(key string) any {
 	return (*cp)[key]
 }
 
@@ -336,7 +336,7 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 		return
 	}
 
-	params := make(map[string]interface{})
+	params := make(map[string]any)
 	for _, field := range contract.Fields {
 		name := field.Name
 		value := form.Get(name)
@@ -353,11 +353,11 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 		case "float":
 			params[name], err = strconv.ParseFloat(value, 64)
 		case "array":
-			var v interface{}
+			var v any
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "map":
-			var v map[string]interface{}
+			var v map[string]any
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "string", "money":
@@ -428,7 +428,7 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 		return
 	}
 
-	params := make(map[string]interface{})
+	params := make(map[string]any)
 	for _, field := range contract.Fields {
 		name := field.Name
 		value := form.Get(name)
@@ -445,11 +445,11 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 		case "float":
 			params[name], err = strconv.ParseFloat(value, 64)
 		case "array":
-			var v interface{}
+			var v any
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "map":
-			var v map[string]interface{}
+			var v map[string]any
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "string", "money":
@@ -536,7 +536,7 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 		return
 	}
 
-	params := make(map[string]interface{})
+	params := make(map[string]any)
 	for _, field := range contract.Fields {
 		name := field.Name
 		value := form.Get(name)
@@ -553,11 +553,11 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 		case "float":
 			params[name], err = strconv.ParseFloat(value, 64)
 		case "array":
-			var v interface{}
+			var v any
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "map":
-			var v map[string]interface{}
+			var v map[string]any
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "string", "money":
@@ -626,7 +626,7 @@ func postTxResult2(name string, form getter) (id int64, msg string, err error) {
 		return
 	}
 
-	params := make(map[string]interface{})
+	params := make(map[string]any)
 	for _, field := range contract.Fields {
 		name := field.Name
 		value := form.Get(name)
@@ -643,11 +643,11 @@ func postTxResult2(name string, form getter) (id int64, msg string, err error) {
 		case "float":
 			params[name], err = strconv.ParseFloat(value, 64)
 		case "array":
-			var v interface{}
+			var v any
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "map":
-			var v map[string]interface{}
+			var v map[string]any
 			err = json.Unmarshal([]byte(value), &v)
 			params[name] = v
 		case "string", "money":
@@ -761,7 +761,7 @@ func TestGetAvatar(t *testing.T) {
 	assert.Equal(t, expectedMime, mime, "content type must be a '%s' but returns '%s'", expectedMime, mime)
 }
 
-func sendMultipart(url string, files map[string][]byte, v interface{}) error {
+func sendMultipart(url string, files map[string][]byte, v any) error {
 	body := new(bytes.Buffer)
 	writer := multipart.NewWriter(body)
 

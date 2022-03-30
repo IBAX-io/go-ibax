@@ -43,7 +43,7 @@ const (
 
 type mapItem struct {
 	Type  int
-	Value interface{}
+	Value any
 }
 
 // The compiler converts the sequence of lexemes into the bytecodes using a finite state machine the same as

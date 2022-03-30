@@ -71,16 +71,16 @@ func trimString(in []rune) string {
 	return out
 }
 
-func ParseObject(in []rune) (interface{}, int, error) {
+func ParseObject(in []rune) (any, int, error) {
 	var (
-		ret            interface{}
+		ret            any
 		key            string
 		mapMode, quote bool
 	)
 
 	length := len(in)
 	if in[0] == '[' {
-		ret = make([]interface{}, 0)
+		ret = make([]any, 0)
 	} else if in[0] == '{' {
 		ret = types.NewMap()
 		mapMode = true
@@ -89,7 +89,7 @@ func ParseObject(in []rune) (interface{}, int, error) {
 		if mapMode {
 			ret.(*types.Map).Set(key, "")
 		} else if len(key) > 0 {
-			ret = append(ret.([]interface{}), types.LoadMap(map[string]interface{}{key: ``}))
+			ret = append(ret.([]any), types.LoadMap(map[string]any{key: ``}))
 		}
 		key = ``
 	}
@@ -119,7 +119,7 @@ main:
 			if mapMode {
 				if len(key) == 0 {
 					switch v := par.(type) {
-					case map[string]interface{}:
+					case map[string]any:
 						for ikey, ival := range v {
 							ret.(*types.Map).Set(ikey, ival)
 						}
@@ -130,10 +130,10 @@ main:
 				}
 			} else {
 				if len(key) > 0 {
-					par = types.LoadMap(map[string]interface{}{key: par})
+					par = types.LoadMap(map[string]any{key: par})
 					key = ``
 				}
-				ret = append(ret.([]interface{}), par)
+				ret = append(ret.([]any), par)
 			}
 			i += off
 			start = i + 1
@@ -158,10 +158,10 @@ main:
 					key = ``
 				} else {
 					if len(key) > 0 {
-						ret = append(ret.([]interface{}), types.LoadMap(map[string]interface{}{key: val}))
+						ret = append(ret.([]any), types.LoadMap(map[string]any{key: val}))
 						key = ``
 					} else {
-						ret = append(ret.([]interface{}), val)
+						ret = append(ret.([]any), val)
 					}
 				}
 			}
@@ -180,10 +180,10 @@ main:
 				ret.(*types.Map).Set(key, last)
 			} else {
 				if len(key) > 0 {
-					ret = append(ret.([]interface{}), types.LoadMap(map[string]interface{}{key: last}))
+					ret = append(ret.([]any), types.LoadMap(map[string]any{key: last}))
 					key = ``
 				} else {
-					ret = append(ret.([]interface{}), last)
+					ret = append(ret.([]any), last)
 				}
 			}
 		} else if len(key) > 0 {
@@ -195,11 +195,11 @@ main:
 		if v.Size() == 0 {
 			ret = ``
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		if len(v) == 0 {
 			ret = ``
 		}
-	case []interface{}:
+	case []any:
 		if len(v) == 0 {
 			ret = ``
 		}

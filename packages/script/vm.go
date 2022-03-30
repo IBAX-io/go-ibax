@@ -118,7 +118,7 @@ func getContractList(src string) (list []string) {
 	return
 }
 
-func VMEvalIf(vm *VM, src string, state uint32, extend map[string]interface{}) (bool, error) {
+func VMEvalIf(vm *VM, src string, state uint32, extend map[string]any) (bool, error) {
 	return vm.EvalIf(src, state, extend)
 }
 
@@ -126,7 +126,7 @@ func VMFlushBlock(vm *VM, root *CodeBlock) {
 	vm.FlushBlock(root)
 }
 
-func VMRun(vm *VM, block *CodeBlock, params []interface{}, extend map[string]interface{}) (ret []interface{}, err error) {
+func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any) (ret []any, err error) {
 	var cost int64
 	if ecost, ok := extend[`txcost`]; ok {
 		cost = ecost.(int64)
@@ -181,7 +181,7 @@ func CompileEval(src string, prefix uint32) error {
 }
 
 // EvalIf calls EvalIf for smartVM
-func EvalIf(src string, state uint32, extend map[string]interface{}) (bool, error) {
+func EvalIf(src string, state uint32, extend map[string]any) (bool, error) {
 	return VMEvalIf(smartVM, src, state, extend)
 }
 
@@ -200,7 +200,7 @@ func FuncCallsDB(funcCallsDB map[string]struct{}) {
 }
 
 // Run executes CodeBlock in smartVM
-func Run(block *CodeBlock, params []interface{}, extend map[string]interface{}) (ret []interface{}, err error) {
+func Run(block *CodeBlock, params []any, extend map[string]any) (ret []any, err error) {
 	return VMRun(smartVM, block, params, extend)
 }
 

@@ -37,7 +37,7 @@ func (m *Param) UnmarshalJSON(data []byte) error {
 //
 //   request.Params = jsonrpc.MustParams("latest", true)
 //
-func MustParams(params ...interface{}) Params {
+func MustParams(params ...any) Params {
 	out, err := MakeParams(params...)
 	if err != nil {
 		panic(err)
@@ -54,7 +54,7 @@ func MustParams(params ...interface{}) Params {
 //
 //   params, err := jsonrpc.MakeParams(someComplexObject, "string", true)
 //
-func MakeParams(params ...interface{}) (Params, error) {
+func MakeParams(params ...any) (Params, error) {
 	if len(params) == 0 {
 		return nil, nil
 	}
@@ -83,7 +83,7 @@ func MakeParams(params ...interface{}) (Params, error) {
 //
 // IMPORTANT: While Go will compile with non-pointer receivers, the Unmarshal attempt will
 // *always* fail with an error.
-func (p Params) UnmarshalInto(receivers ...interface{}) error {
+func (p Params) UnmarshalInto(receivers ...any) error {
 	if p == nil {
 		return nil
 	}
@@ -108,7 +108,7 @@ func (p Params) UnmarshalInto(receivers ...interface{}) error {
 //
 // Example:
 //   err := request.Params.UnmarshalSingleParam(pos, &blockNum)
-func (p Params) UnmarshalSingleParam(pos int, receiver interface{}) error {
+func (p Params) UnmarshalSingleParam(pos int, receiver any) error {
 	if pos > (len(p) - 1) {
 		return errors.New("not enough parameters to decode position")
 	}

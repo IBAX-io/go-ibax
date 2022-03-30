@@ -16,8 +16,8 @@ type Contract struct {
 	TxGovAccount  int64   // state wallet
 	Rate          float64 // money rate
 	TableAccounts string
-	StackCont     []interface{} // Stack of called contracts
-	Extend        map[string]interface{}
+	StackCont     []any // Stack of called contracts
+	Extend        map[string]any
 	Block         *script.CodeBlock
 }
 

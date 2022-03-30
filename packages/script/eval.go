@@ -39,7 +39,7 @@ func (vm *VM) CompileEval(input string, state uint32) error {
 }
 
 // EvalIf runs the conditional expression. It compiles the source code before that if that's necessary.
-func (vm *VM) EvalIf(input string, state uint32, vars map[string]interface{}) (bool, error) {
+func (vm *VM) EvalIf(input string, state uint32, vars map[string]any) (bool, error) {
 	if len(input) == 0 {
 		return true, nil
 	}

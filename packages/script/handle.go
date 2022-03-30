@@ -204,7 +204,7 @@ func fFtail(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 				if used {
 					return fmt.Errorf(`... parameter must be one`)
 				}
-				fblock.Params[pkey] = reflect.TypeOf([]interface{}{})
+				fblock.Params[pkey] = reflect.TypeOf([]any{})
 				used = true
 			}
 		}
@@ -218,7 +218,7 @@ func fFtail(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 						if used {
 							return fmt.Errorf(`... parameter must be one`)
 						}
-						(*fblock.Names)[name].Params[pkey] = reflect.TypeOf([]interface{}{})
+						(*fblock.Names)[name].Params[pkey] = reflect.TypeOf([]any{})
 						used = true
 					}
 				}
@@ -231,7 +231,7 @@ func fFtail(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 	}
 	for vkey, ivar := range block.Vars {
 		if ivar == reflect.TypeOf(nil) {
-			block.Vars[vkey] = reflect.TypeOf([]interface{}{})
+			block.Vars[vkey] = reflect.TypeOf([]any{})
 		}
 	}
 	return nil
@@ -334,7 +334,7 @@ func fSettings(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 		logger.WithFields(log.Fields{"type": consts.ParseError, "contract_type": contract.Type, "lex_value": lexem.Value}).Error("data can only be in contract")
 		return fmt.Errorf(`data can only be in contract`)
 	}
-	(*contract).Info.ContractInfo().Settings = make(map[string]interface{})
+	(*contract).Info.ContractInfo().Settings = make(map[string]any)
 	return nil
 }
 

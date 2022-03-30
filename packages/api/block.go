@@ -85,10 +85,10 @@ func getBlockInfoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type TxInfo struct {
-	Hash         []byte                 `json:"hash"`
-	ContractName string                 `json:"contract_name"`
-	Params       map[string]interface{} `json:"params"`
-	KeyID        int64                  `json:"key_id"`
+	Hash         []byte         `json:"hash"`
+	ContractName string         `json:"contract_name"`
+	Params       map[string]any `json:"params"`
+	KeyID        int64          `json:"key_id"`
 }
 
 type blocksTxInfoForm struct {
@@ -167,13 +167,13 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 type TxDetailedInfo struct {
-	Hash         []byte                 `json:"hash"`
-	ContractName string                 `json:"contract_name"`
-	Params       map[string]interface{} `json:"params"`
-	KeyID        int64                  `json:"key_id"`
-	Time         int64                  `json:"time"`
-	Type         byte                   `json:"type"`
-	Size         string                 `json:"size"`
+	Hash         []byte         `json:"hash"`
+	ContractName string         `json:"contract_name"`
+	Params       map[string]any `json:"params"`
+	KeyID        int64          `json:"key_id"`
+	Time         int64          `json:"time"`
+	Type         byte           `json:"type"`
+	Size         string         `json:"size"`
 }
 
 type BlockHeaderInfo struct {

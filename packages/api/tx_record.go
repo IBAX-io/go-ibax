@@ -20,7 +20,7 @@ func getTxRecord(w http.ResponseWriter, r *http.Request) {
 
 	var (
 		hashList   []string
-		resultList []interface{}
+		resultList []any
 	)
 	if len(hashes) > 0 {
 		hashList = strings.Split(hashes, ",")

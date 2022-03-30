@@ -127,7 +127,7 @@ func (et errType) Error() string {
 	return et.Err
 }
 
-func (et errType) Errorf(v ...interface{}) errType {
+func (et errType) Errorf(v ...any) errType {
 	et.Message = fmt.Sprintf(et.Message, v...)
 	return et
 }

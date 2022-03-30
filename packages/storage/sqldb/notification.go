@@ -83,7 +83,7 @@ func GetNotificationsCount(ecosystemID int64, accounts []string) ([]Notification
 	return result, nil
 }
 
-func getNotificationCountFilter(users []int64, ecosystemID int64) (filter string, params []interface{}) {
+func getNotificationCountFilter(users []int64, ecosystemID int64) (filter string, params []any) {
 	filter = fmt.Sprintf(` WHERE closed = 0 and ecosystem = '%d' `, ecosystemID)
 
 	if len(users) > 0 {

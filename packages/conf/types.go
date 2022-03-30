@@ -9,9 +9,9 @@ type (
 
 	// DBConfig database connection parameters
 	DBConfig struct {
-		Name string
-		Host string
-		Port int
+		Name            string
+		Host            string
+		Port            int
 		User            string
 		Password        string
 		LockTimeout     int // lock_timeout in milliseconds
@@ -22,9 +22,9 @@ type (
 
 	//RedisConfig get redis information from config.yml
 	RedisConfig struct {
-		Enable bool
-		Host string
-		Port int
+		Enable   bool
+		Host     string
+		Port     int
 		Password string
 		DbName   int
 	}
@@ -59,8 +59,8 @@ type (
 
 	// TokenMovementConfig smtp config for token movement
 	TokenMovementConfig struct {
-		Host string
-		Port int
+		Host     string
+		Port     int
 		Username string
 		Password string
 		To       string

@@ -63,7 +63,7 @@ func SetTransactionStatusBlockMsg(transaction *DbTransaction, newBlockID int64, 
 	}
 
 	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Updates(
-		map[string]interface{}{"block_id": newBlockID, "error": msg}).Error
+		map[string]any{"block_id": newBlockID, "error": msg}).Error
 }
 
 func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64) error {

@@ -167,7 +167,7 @@ func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
 				errorResponse(w, errors.New(`Where has wrong format`))
 				return
 			}
-		case map[string]interface{}:
+		case map[string]any:
 			where, err = qb.GetWhere(types.LoadMap(v))
 			if err != nil {
 				errorResponse(w, err)
@@ -260,7 +260,7 @@ func getnodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 				errorResponse(w, errors.New(`Where has wrong format`))
 				return
 			}
-		case map[string]interface{}:
+		case map[string]any:
 			where, err = qb.GetWhere(types.LoadMap(v))
 			if err != nil {
 				errorResponse(w, err)
@@ -354,7 +354,7 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 				errorResponse(w, errors.New(`Where has wrong format`))
 				return
 			}
-		case map[string]interface{}:
+		case map[string]any:
 			where, err = qb.GetWhere(types.LoadMap(v))
 			if err != nil {
 				errorResponse(w, err)

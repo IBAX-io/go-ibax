@@ -31,11 +31,11 @@ const (
 )
 
 type node struct {
-	Tag      string                 `json:"tag"`
-	Attr     map[string]interface{} `json:"attr,omitempty"`
-	Text     string                 `json:"text,omitempty"`
-	Children []*node                `json:"children,omitempty"`
-	Tail     []*node                `json:"tail,omitempty"`
+	Tag      string         `json:"tag"`
+	Attr     map[string]any `json:"attr,omitempty"`
+	Text     string         `json:"text,omitempty"`
+	Children []*node        `json:"children,omitempty"`
+	Tail     []*node        `json:"tail,omitempty"`
 }
 
 // Source describes dbfind or data source
@@ -122,7 +122,7 @@ func setAttr(par parFunc, name string) {
 func setAllAttr(par parFunc) {
 	for key, v := range *par.Pars {
 		if key == `Params` || key == `PageParams` {
-			imap := make(map[string]interface{})
+			imap := make(map[string]any)
 			re := regexp.MustCompile(`(?is)(.*)\((.*)\)`)
 			parList := make([]string, 0, 10)
 			curPar := make([]rune, 0, 256)
@@ -161,7 +161,7 @@ func setAllAttr(par parFunc) {
 				parval = strings.TrimSpace(parval)
 				if len(parval) > 0 {
 					if off := strings.IndexByte(parval, '='); off == -1 {
-						imap[parval] = map[string]interface{}{
+						imap[parval] = map[string]any{
 							`type`: `text`, `text`: parval}
 					} else {
 						val := strings.TrimSpace(parval[off+1:])
@@ -170,10 +170,10 @@ func setAllAttr(par parFunc) {
 							for i, ilist := range plist {
 								plist[i] = strings.TrimSpace(ilist)
 							}
-							imap[strings.TrimSpace(parval[:off])] = map[string]interface{}{
+							imap[strings.TrimSpace(parval[:off])] = map[string]any{
 								`type`: ret[1], `params`: plist}
 						} else {
-							imap[strings.TrimSpace(parval[:off])] = map[string]interface{}{
+							imap[strings.TrimSpace(parval[:off])] = map[string]any{
 								`type`: `text`, `text`: val}
 						}
 					}
@@ -407,7 +407,7 @@ func callFunc(curFunc *tplFunc, owner *node, workspace *Workspace, params *[][]r
 	}
 	if len(curFunc.Tag) > 0 {
 		curNode.Tag = curFunc.Tag
-		curNode.Attr = make(map[string]interface{})
+		curNode.Attr = make(map[string]any)
 		if len(pars[`Body`]) > 0 && curFunc.Tag != `custom` {
 			if (curFunc.Tag != `if` && curFunc.Tag != `elseif`) || getVar(workspace, `_full`) == `1` {
 				process(pars[`Body`], &curNode, workspace)
@@ -432,12 +432,12 @@ func callFunc(curFunc *tplFunc, owner *node, workspace *Workspace, params *[][]r
 			if !strings.HasPrefix(key, `#`) {
 				parFunc.Node.Attr[key] = macro(attr, workspace.Vars)
 			}
-		case map[string]interface{}:
+		case map[string]any:
 			for parkey, parval := range attr {
 				switch parmap := parval.(type) {
-				case map[string]interface{}:
+				case map[string]any:
 					for textkey, textval := range parmap {
-						var result interface{}
+						var result any
 						switch val := textval.(type) {
 						case string:
 							result = macro(val, workspace.Vars)
@@ -448,7 +448,7 @@ func callFunc(curFunc *tplFunc, owner *node, workspace *Workspace, params *[][]r
 							result = val
 						}
 						if result != nil {
-							parFunc.Node.Attr[key].(map[string]interface{})[parkey].(map[string]interface{})[textkey] = result
+							parFunc.Node.Attr[key].(map[string]any)[parkey].(map[string]any)[textkey] = result
 						}
 					}
 				}

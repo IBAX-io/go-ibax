@@ -175,7 +175,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 					KeyID:       conf.Config.KeyID,
 					NetworkID:   conf.Config.LocalConf.NetworkID,
 				},
-				Params: map[string]interface{}{
+				Params: map[string]any{
 					"NewPubkey": hex.EncodeToString(publicKey),
 					"Ecosystem": client.EcosystemID,
 				},

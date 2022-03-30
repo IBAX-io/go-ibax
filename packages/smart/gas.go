@@ -92,11 +92,11 @@ func (f *fuelCategory) writeConversionRate(cr float64) {
 	f.ConversionRate = 100
 }
 
-func (f *fuelCategory) Detail() (string, interface{}) {
+func (f *fuelCategory) Detail() (string, any) {
 	return f.CategoryString(), f.FeesInfo()
 }
 
-func (f *fuelCategory) FeesInfo() interface{} {
+func (f *fuelCategory) FeesInfo() any {
 	detail := types.NewMap()
 	detail.Set("decimal", f.decimal)
 	detail.Set("value", f.Fees())
@@ -156,7 +156,7 @@ func (pay *paymentInfo) Copy() *paymentInfo {
 	cpy := &paymentInfo{}
 	return cpy
 }
-func (pay *paymentInfo) Detail() interface{} {
+func (pay *paymentInfo) Detail() any {
 	detail := types.NewMap()
 	for i := 0; i < len(pay.fuelCategories); i++ {
 		detail.Set(pay.fuelCategories[i].Detail())
@@ -280,16 +280,16 @@ func (sc *SmartContract) payTaxes(pay *paymentInfo, sum decimal.Decimal, t int64
 		return nil
 	}
 	if _, _, err := sc.updateWhere(
-		[]string{`-amount`}, []interface{}{sum}, "1_keys",
-		types.LoadMap(map[string]interface{}{
+		[]string{`-amount`}, []any{sum}, "1_keys",
+		types.LoadMap(map[string]any{
 			`id`:        pay.fromID,
 			`ecosystem`: pay.tokenEco,
 		})); err != nil {
 		return errTaxes
 	}
 	if _, _, err := sc.updateWhere(
-		[]string{"+amount"}, []interface{}{sum}, "1_keys",
-		types.LoadMap(map[string]interface{}{
+		[]string{"+amount"}, []any{sum}, "1_keys",
+		types.LoadMap(map[string]any{
 			"id":        toID,
 			"ecosystem": pay.tokenEco,
 		})); err != nil {
@@ -309,7 +309,7 @@ func (sc *SmartContract) payTaxes(pay *paymentInfo, sum decimal.Decimal, t int64
 	if toIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, toID, pay.tokenEco); err != nil {
 		return err
 	}
-	values = types.LoadMap(map[string]interface{}{
+	values = types.LoadMap(map[string]any{
 		"sender_id":         pay.fromID,
 		"sender_balance":    fromIDBalance,
 		"recipient_id":      toID,
@@ -349,7 +349,7 @@ func (sc *SmartContract) hasExitKeyID(eco, id int64) error {
 		return err
 	}
 	if !found {
-		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]interface{}{
+		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
 			"id":        id,
 			"account":   IDToAddress(id),
 			"amount":    0,
@@ -564,7 +564,7 @@ func (sc *SmartContract) prepareMultiPay() error {
 }
 
 func (sc *SmartContract) appendTokens(nums ...int64) error {
-	sc.TokenEcosystems = make(map[int64]interface{})
+	sc.TokenEcosystems = make(map[int64]any)
 	if len(sc.TokenEcosystems) == 0 {
 		sc.TokenEcosystems[consts.DefaultTokenEcosystem] = nil
 	}

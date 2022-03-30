@@ -19,15 +19,15 @@ func GetNodeRows(tableName string) (int64, error) {
 	return count, nil
 }
 
-func GetRowsInfo(rows *sql.Rows, sqlQuest string) ([]map[string]interface{}, error) {
-	var result []map[string]interface{}
+func GetRowsInfo(rows *sql.Rows, sqlQuest string) ([]map[string]any, error) {
+	var result []map[string]any
 	defer rows.Close()
 	columns, err := rows.Columns()
 	if err != nil {
 		return result, fmt.Errorf("getrows Columns err:%s in query %s", err, sqlQuest)
 	}
-	values := make([]interface{} /*sql.RawBytes*/, len(columns))
-	scanArgs := make([]interface{}, len(values))
+	values := make([]any, len(columns))
+	scanArgs := make([]any, len(values))
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
@@ -36,8 +36,8 @@ func GetRowsInfo(rows *sql.Rows, sqlQuest string) ([]map[string]interface{}, err
 		if err != nil {
 			return result, fmt.Errorf("getRows scan err:%s in query %s", err, sqlQuest)
 		}
-		var value interface{}
-		rez := make(map[string]interface{})
+		var value any
+		rez := make(map[string]any)
 		for i, col := range values {
 			// Here we can check if the value is nil (NULL value)
 			if col == nil {

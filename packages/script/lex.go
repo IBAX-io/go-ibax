@@ -155,7 +155,7 @@ var (
 		`bytes`:   {Original: DtBytes, Type: reflect.TypeOf([]byte{})},
 		`int`:     {Original: DtInt, Type: reflect.TypeOf(int64(0))},
 		`address`: {Original: DtAddress, Type: reflect.TypeOf(int64(0))},
-		`array`:   {Original: DtArray, Type: reflect.TypeOf([]interface{}{})},
+		`array`:   {Original: DtArray, Type: reflect.TypeOf([]any{})},
 		`map`:     {Original: DtMap, Type: reflect.TypeOf(&types.Map{})},
 		`money`:   {Original: DtMoney, Type: reflect.TypeOf(decimal.Zero)},
 		`float`:   {Original: DtFloat, Type: reflect.TypeOf(0.0)},
@@ -168,9 +168,9 @@ var (
 type Lexem struct {
 	Type   uint32 // Type of the lexem
 	Ext    uint32
-	Value  interface{} // Value of lexem
-	Line   uint16      // Line of the lexem
-	Column uint32      // Position inside the line
+	Value  any    // Value of lexem
+	Line   uint16 // Line of the lexem
+	Column uint32 // Position inside the line
 }
 
 // GetLogger returns logger
@@ -261,7 +261,7 @@ func lexParser(input []rune) (Lexems, error) {
 					ifbuf[len(ifbuf)-1].stop = false
 				}
 			}
-			var value interface{}
+			var value any
 			switch lexID {
 			case lexNewLine:
 				if input[lexOff] == rune(0x0a) {

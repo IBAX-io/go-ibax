@@ -36,7 +36,7 @@ type ExtFuncInfo struct {
 	Results  []reflect.Type
 	Auto     []string
 	Variadic bool
-	Func     interface{}
+	Func     any
 	CanWrite bool // If the function can update DB
 }
 
@@ -76,7 +76,7 @@ type ContractInfo struct {
 	Owner    *OwnerInfo
 	Used     map[string]bool // Called contracts
 	Tx       *[]*FieldInfo
-	Settings map[string]interface{}
+	Settings map[string]any
 	CanWrite bool // If the function can update DB
 }
 
@@ -153,7 +153,7 @@ func getNameByObj(obj *ObjInfo) (name string) {
 }
 
 // Call executes the name object with the specified params and extended variables and functions
-func (vm *VM) Call(name string, params []interface{}, extend map[string]interface{}) (ret []interface{}, err error) {
+func (vm *VM) Call(name string, params []any, extend map[string]any) (ret []any, err error) {
 	var obj *ObjInfo
 	if state, ok := extend[`rt_state`]; ok {
 		obj = vm.getObjByNameExt(name, state.(uint32))

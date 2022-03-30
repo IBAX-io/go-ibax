@@ -39,7 +39,7 @@ func (p *bytePool) Get(size int64) []byte {
 	}
 
 	pool := &sync.Pool{
-		New: func() interface{} { return make([]byte, power) },
+		New: func() any { return make([]byte, power) },
 	}
 
 	p.pools[power] = pool

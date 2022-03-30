@@ -33,8 +33,8 @@ import (
 
 // Composite represents a composite contract
 type Composite struct {
-	Name string      `json:"name"`
-	Data interface{} `json:"data,omitempty"`
+	Name string `json:"name"`
+	Data any    `json:"data,omitempty"`
 }
 
 // Action describes a button action
@@ -336,7 +336,7 @@ func paramToSource(par parFunc, val string) string {
 			converter.StrToInt(getVar(par.Workspace, `ecosystem_id`)), getVar(par.Workspace, `lang`))
 		data = append(data, []string{converter.IntToStr(key + 1), item})
 	}
-	node := node{Tag: `data`, Attr: map[string]interface{}{`columns`: &cols, `types`: &types,
+	node := node{Tag: `data`, Attr: map[string]any{`columns`: &cols, `types`: &types,
 		`data`: &data, `source`: (*par.Pars)[`Source`]}}
 	par.Owner.Children = append(par.Owner.Children, &node)
 
@@ -464,8 +464,8 @@ func actionTag(par parFunc) string {
 	var params map[string]string
 	if v, ok := par.Node.Attr["params"]; ok {
 		params = make(map[string]string)
-		for key, val := range v.(map[string]interface{}) {
-			if imap, ok := val.(map[string]interface{}); ok {
+		for key, val := range v.(map[string]any) {
+			if imap, ok := val.(map[string]any); ok {
 				params[key] = macro(fmt.Sprint(imap["text"]), par.Workspace.Vars)
 			} else {
 				params[key] = macro(fmt.Sprint(val), par.Workspace.Vars)
@@ -579,7 +579,7 @@ func dataTag(par parFunc) string {
 
 func dbfindTag(par parFunc) string {
 	var (
-		inColumns interface{}
+		inColumns any
 		columns   []string
 		state     int64
 		err       error
@@ -628,7 +628,7 @@ func dbfindTag(par parFunc) string {
 				} else {
 					return errWhere.Error()
 				}
-			case map[string]interface{}:
+			case map[string]any:
 				where, err = qb.GetWhere(types.LoadMap(v))
 				if err != nil {
 					return err.Error()
@@ -845,7 +845,7 @@ func dbfindTag(par parFunc) string {
 		data = append(data, row)
 	}
 	if perm != nil && len(perm[`filter`]) > 0 {
-		result := make([]interface{}, len(data))
+		result := make([]any, len(data))
 		for i, item := range data {
 			row := make(map[string]string)
 			for j, col := range columnNames {
@@ -854,7 +854,7 @@ func dbfindTag(par parFunc) string {
 			result[i] = reflect.ValueOf(row).Interface()
 		}
 		fltResult, err := script.VMEvalIf(sc.VM, perm[`filter`], uint32(sc.TxSmart.EcosystemID),
-			map[string]interface{}{
+			map[string]any{
 				`data`:         result,
 				`ecosystem_id`: sc.TxSmart.EcosystemID,
 				`key_id`:       sc.TxSmart.KeyID, `sc`: sc,
@@ -902,9 +902,9 @@ func errredirTag(par parFunc) string {
 		return ``
 	}
 	if par.Owner.Attr[`errredirect`] == nil {
-		par.Owner.Attr[`errredirect`] = make(map[string]map[string]interface{})
+		par.Owner.Attr[`errredirect`] = make(map[string]map[string]any)
 	}
-	par.Owner.Attr[`errredirect`].(map[string]map[string]interface{})[(*par.Pars)[`ErrorID`]] =
+	par.Owner.Attr[`errredirect`].(map[string]map[string]any)[(*par.Pars)[`ErrorID`]] =
 		par.Node.Attr
 	return ``
 }
@@ -1113,7 +1113,7 @@ func buttonTag(par parFunc) string {
 	if par.Node.Attr[`composites`] != nil {
 		composites := make([]Composite, 0)
 		for i, name := range par.Node.Attr[`composites`].([]string) {
-			var data interface{}
+			var data any
 			input := par.Node.Attr[`compositedata`].([]string)[i]
 			if len(input) > 0 {
 				if err := json.Unmarshal([]byte(input), &data); err != nil {
@@ -1285,7 +1285,7 @@ func jsontosourceTag(par parFunc) string {
 	data := make([][]string, 0, 16)
 	cols := []string{prefix + `key`, prefix + `value`}
 	types := []string{`text`, `text`}
-	var out map[string]interface{}
+	var out map[string]any
 	dataVal := macro((*par.Pars)[`Data`], par.Workspace.Vars)
 	if len(dataVal) > 0 {
 		json.Unmarshal([]byte(macro((*par.Pars)[`Data`], par.Workspace.Vars)), &out)
@@ -1296,7 +1296,7 @@ func jsontosourceTag(par parFunc) string {
 		}
 		var value string
 		switch v := item.(type) {
-		case map[string]interface{}:
+		case map[string]any:
 			var keys, values []string
 			for k := range v {
 				keys = append(keys, k)

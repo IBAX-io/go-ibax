@@ -21,7 +21,7 @@ const (
 	errUnknownContract = `Cannot find %s contract`
 )
 
-func CreateContract(contractName string, keyID int64, params map[string]interface{},
+func CreateContract(contractName string, keyID int64, params map[string]any,
 	privateKey []byte) error {
 	ecosysID, _ := converter.ParseName(contractName)
 	if ecosysID == 0 {

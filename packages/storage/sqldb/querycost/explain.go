@@ -19,7 +19,7 @@ import (
 )
 
 // explainQueryCost is counting query execution time
-func explainQueryCost(transaction *sqldb.DbTransaction, withAnalyze bool, query string, args ...interface{}) (int64, error) {
+func explainQueryCost(transaction *sqldb.DbTransaction, withAnalyze bool, query string, args ...any) (int64, error) {
 	var planStr string
 	explainTpl := "EXPLAIN (FORMAT JSON) %s"
 	if withAnalyze {
@@ -34,7 +34,7 @@ func explainQueryCost(transaction *sqldb.DbTransaction, withAnalyze bool, query 
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": query}).Error("error explaining query")
 		return 0, err
 	}
-	var queryPlan []map[string]interface{}
+	var queryPlan []map[string]any
 	dec := json.NewDecoder(strings.NewReader(planStr))
 	dec.UseNumber()
 	if err := dec.Decode(&queryPlan); err != nil {
@@ -46,14 +46,14 @@ func explainQueryCost(transaction *sqldb.DbTransaction, withAnalyze bool, query 
 		return 0, errors.New("Query plan is empty")
 	}
 	firstNode := queryPlan[0]
-	var plan interface{}
+	var plan any
 	var ok bool
 	if plan, ok = firstNode["Plan"]; !ok {
 		log.Error("No Plan key in result")
 		return 0, errors.New("No Plan key in result")
 	}
 
-	planMap, ok := plan.(map[string]interface{})
+	planMap, ok := plan.(map[string]any)
 	if !ok {
 		log.Error("Plan is not map[string]interface{}")
 		return 0, errors.New("Plan is not map[string]interface{}")

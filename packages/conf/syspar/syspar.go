@@ -272,7 +272,7 @@ func GetNumberOfNodes() int64 {
 func GetNumberOfNodesFromDB(transaction *sqldb.DbTransaction) int64 {
 	sp := &sqldb.PlatformParameter{}
 	sp.GetTransaction(transaction, HonorNodes)
-	var honorNodes []map[string]interface{}
+	var honorNodes []map[string]any
 	if len(sp.Value) > 0 {
 		if err := json.Unmarshal([]byte(sp.Value), &honorNodes); err != nil {
 			log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err, "value": sp.Value}).Error("unmarshalling honor nodes from JSON")

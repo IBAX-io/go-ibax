@@ -378,7 +378,7 @@ func filesLs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s := shell.NewShell(conf.IpfsHost())
-	var out interface{}
+	var out any
 	err := s.Request("files/ls").Option("arg", leadingSlash+converter.Int64ToStr(client.KeyID)+form.Paths).Option("l", true).
 		Exec(context.Background(), &out)
 	if err != nil {

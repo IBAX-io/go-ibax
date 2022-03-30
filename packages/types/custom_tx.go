@@ -62,7 +62,7 @@ type SmartTransaction struct {
 	Lang     string
 	Expedite string
 	SignedBy int64
-	Params   map[string]interface{}
+	Params   map[string]any
 }
 
 func (s *SmartTransaction) TxType() byte { return SmartContractTxType }

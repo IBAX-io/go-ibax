@@ -9,10 +9,10 @@ var (
 )
 
 type Response struct {
-	JSONRPC string      `json:"jsonrpc"`
-	ID      ID          `json:"id"`
-	Result  interface{} `json:"result,omitempty"`
-	Error   interface{} `json:"error,omitempty"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      ID     `json:"id"`
+	Result  any    `json:"result,omitempty"`
+	Error   any    `json:"error,omitempty"`
 }
 
 type BatchResponse []*Response
@@ -27,9 +27,9 @@ func (r Response) MarshalJSON() ([]byte, error) {
 
 	if r.Error != nil {
 		response := struct {
-			JSONRPC string      `json:"jsonrpc"`
-			ID      ID          `json:"id"`
-			Error   interface{} `json:"error,omitempty"`
+			JSONRPC string `json:"jsonrpc"`
+			ID      ID     `json:"id"`
+			Error   any    `json:"error,omitempty"`
 		}{
 			JSONRPC: "2.0",
 			ID:      r.ID,
@@ -39,9 +39,9 @@ func (r Response) MarshalJSON() ([]byte, error) {
 		return json.Marshal(response)
 	} else {
 		response := struct {
-			JSONRPC string      `json:"jsonrpc"`
-			ID      ID          `json:"id"`
-			Result  interface{} `json:"result,omitempty"`
+			JSONRPC string `json:"jsonrpc"`
+			ID      ID     `json:"id"`
+			Result  any    `json:"result,omitempty"`
 		}{
 			JSONRPC: "2.0",
 			ID:      r.ID,

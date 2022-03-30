@@ -8,7 +8,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
-func GetOrder(tblname string, inOrder interface{}) (string, error) {
+func GetOrder(tblname string, inOrder any) (string, error) {
 	var (
 		orders           []string
 		defaultSortOrder = map[string]string{
@@ -18,7 +18,7 @@ func GetOrder(tblname string, inOrder interface{}) (string, error) {
 	)
 	cols := types.NewMap()
 
-	sanitize := func(in string, value interface{}) {
+	sanitize := func(in string, value any) {
 		in = converter.Sanitize(strings.ToLower(in), ``)
 		if len(in) > 0 {
 			cols.Set(in, true)
@@ -51,11 +51,11 @@ func GetOrder(tblname string, inOrder interface{}) (string, error) {
 			item, _ := v.Get(ikey)
 			sanitize(ikey, item)
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		for ikey, item := range v {
 			sanitize(ikey, item)
 		}
-	case []interface{}:
+	case []any:
 		for _, item := range v {
 			switch param := item.(type) {
 			case string:
@@ -65,7 +65,7 @@ func GetOrder(tblname string, inOrder interface{}) (string, error) {
 					item, _ := param.Get(ikey)
 					sanitize(ikey, item)
 				}
-			case map[string]interface{}:
+			case map[string]any:
 				for key, value := range param {
 					sanitize(key, value)
 				}
@@ -83,7 +83,7 @@ func GetOrder(tblname string, inOrder interface{}) (string, error) {
 	return strings.Join(orders, `,`), nil
 }
 
-func GetColumns(inColumns interface{}) ([]string, error) {
+func GetColumns(inColumns any) ([]string, error) {
 	var columns []string
 
 	switch v := inColumns.(type) {
@@ -91,7 +91,7 @@ func GetColumns(inColumns interface{}) ([]string, error) {
 		if len(v) > 0 {
 			columns = strings.Split(v, `,`)
 		}
-	case []interface{}:
+	case []any:
 		for _, name := range v {
 			switch col := name.(type) {
 			case string:

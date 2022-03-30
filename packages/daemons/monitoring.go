@@ -62,7 +62,7 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 	w.Write(buf.Bytes())
 }
 
-func addKey(buf *bytes.Buffer, key string, value interface{}) error {
+func addKey(buf *bytes.Buffer, key string, value any) error {
 	val, err := converter.InterfaceToStr(value)
 	if err != nil {
 		return err

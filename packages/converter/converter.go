@@ -214,7 +214,7 @@ func DecodeBytesBuf(buf *bytes.Buffer) ([]byte, error) {
 }
 
 // BinMarshal converts v parameter to []byte slice.
-func BinMarshal(out *[]byte, v interface{}) (*[]byte, error) {
+func BinMarshal(out *[]byte, v any) (*[]byte, error) {
 	var err error
 
 	t := reflect.ValueOf(v)
@@ -273,7 +273,7 @@ func BinMarshal(out *[]byte, v interface{}) (*[]byte, error) {
 	return out, nil
 }
 
-func BinUnmarshalBuff(buf *bytes.Buffer, v interface{}) error {
+func BinUnmarshalBuff(buf *bytes.Buffer, v any) error {
 	t := reflect.ValueOf(v)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -369,7 +369,7 @@ func BinUnmarshalBuff(buf *bytes.Buffer, v interface{}) error {
 }
 
 // BinUnmarshal converts []byte slice which has been made with BinMarshal to v
-func BinUnmarshal(out *[]byte, v interface{}) error {
+func BinUnmarshal(out *[]byte, v any) error {
 	t := reflect.ValueOf(v)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -531,7 +531,7 @@ func IntToStr(num int) string {
 }
 
 // DecToBin converts interface to []byte
-func DecToBin(v interface{}, sizeBytes int64) []byte {
+func DecToBin(v any, sizeBytes int64) []byte {
 	var dec int64
 	switch v.(type) {
 	case int:
@@ -548,7 +548,7 @@ func DecToBin(v interface{}, sizeBytes int64) []byte {
 }
 
 // BinToHex converts interface to hex []byte
-func BinToHex(v interface{}) []byte {
+func BinToHex(v any) []byte {
 	var bin []byte
 	switch v.(type) {
 	case []byte:
@@ -562,7 +562,7 @@ func BinToHex(v interface{}) []byte {
 }
 
 // HexToBin converts hex interface to binary []byte
-func HexToBin(ihexdata interface{}) []byte {
+func HexToBin(ihexdata any) []byte {
 	var hexdata string
 	switch ihexdata.(type) {
 	case []byte:
@@ -608,7 +608,7 @@ func BytesShift(str *[]byte, index int64) (ret []byte) {
 }
 
 // InterfaceToStr converts the interfaces to the string
-func InterfaceToStr(v interface{}) (string, error) {
+func InterfaceToStr(v any) (string, error) {
 	var str string
 	if v == nil {
 		return ``, nil
@@ -641,7 +641,7 @@ func InterfaceToStr(v interface{}) (string, error) {
 }
 
 // InterfaceSliceToStr converts the slice of interfaces to the slice of strings
-func InterfaceSliceToStr(i []interface{}) (strs []string, err error) {
+func InterfaceSliceToStr(i []any) (strs []string, err error) {
 	var val string
 	for _, v := range i {
 		val, err = InterfaceToStr(v)
@@ -654,7 +654,7 @@ func InterfaceSliceToStr(i []interface{}) (strs []string, err error) {
 }
 
 // InterfaceToFloat64 converts the interfaces to the float64
-func InterfaceToFloat64(i interface{}) float64 {
+func InterfaceToFloat64(i any) float64 {
 	var result float64
 	switch i.(type) {
 	case int:
@@ -672,7 +672,7 @@ func InterfaceToFloat64(i interface{}) float64 {
 }
 
 // BytesShiftReverse gets []byte from the end of the input and cut the input pointer to []byte
-func BytesShiftReverse(str *[]byte, v interface{}) []byte {
+func BytesShiftReverse(str *[]byte, v any) []byte {
 	var index int64
 	switch v.(type) {
 	case int:
@@ -767,7 +767,7 @@ func AddressToString(address int64) (ret string) {
 }
 
 // EncodeLengthPlusData encoding interface into []byte
-func EncodeLengthPlusData(idata interface{}) []byte {
+func EncodeLengthPlusData(idata any) []byte {
 	var data []byte
 	switch idata.(type) {
 	case int64:
@@ -987,7 +987,7 @@ func Escape(data string) string {
 }
 
 // FieldToBytes returns the value of n-th field of v as []byte
-func FieldToBytes(v interface{}, num int) []byte {
+func FieldToBytes(v any, num int) []byte {
 	t := reflect.ValueOf(v)
 	ret := make([]byte, 0, 2048)
 	if t.Kind() == reflect.Struct && num < t.NumField() {
@@ -1051,7 +1051,7 @@ func RoundWithoutPrecision(num float64) int64 {
 }
 
 // ValueToInt converts interface (string or int64) to int64
-func ValueToInt(v interface{}) (ret int64, err error) {
+func ValueToInt(v any) (ret int64, err error) {
 	switch val := v.(type) {
 	case float64:
 		ret = int64(val)
@@ -1084,7 +1084,7 @@ func ValueToInt(v interface{}) (ret int64, err error) {
 	return
 }
 
-func ValueToDecimal(v interface{}) (ret decimal.Decimal, err error) {
+func ValueToDecimal(v any) (ret decimal.Decimal, err error) {
 	switch val := v.(type) {
 	case float64:
 		ret = decimal.NewFromFloat(val).Floor()
@@ -1113,7 +1113,7 @@ func Int64Toint(dat int64) (int, error) {
 	return strconv.Atoi(str)
 }
 
-func MarshalJson(v interface{}) string {
+func MarshalJson(v any) string {
 	buff, err := json.Marshal(v)
 	if err != nil {
 		log.WithFields(log.Fields{"v": v, "error": err}).Error("marshalJson error")

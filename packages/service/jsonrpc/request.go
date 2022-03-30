@@ -26,7 +26,7 @@ func NewRequest() *Request {
 
 // MakeRequest builds a Request from all its parts, but returns an error if the
 // params cannot be marshalled.
-func MakeRequest(id int, method string, params ...interface{}) (*Request, error) {
+func MakeRequest(id int, method string, params ...any) (*Request, error) {
 	p, err := MakeParams(params...)
 	if err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func MakeRequest(id int, method string, params ...interface{}) (*Request, error)
 
 // MustRequest builds a request from all its parts but panics if the params cannot be marshaled,
 // so should only be used with well-known parameter data.
-func MustRequest(id int, method string, params ...interface{}) *Request {
+func MustRequest(id int, method string, params ...any) *Request {
 	r, err := MakeRequest(id, method, params...)
 	if err != nil {
 		panic(err)

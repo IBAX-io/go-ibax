@@ -24,7 +24,7 @@ type blockInfoResult struct {
 
 func MaxBlockIDs(nodesList []string) ([]int64, error) {
 	wg := sync.WaitGroup{}
-	workResults := ConcurrentMap{m: map[string]interface{}{}}
+	workResults := ConcurrentMap{m: map[string]any{}}
 	for _, nodeUrl := range nodesList {
 		wg.Add(1)
 		go func(url string) {
@@ -52,7 +52,7 @@ func MaxBlockIDs(nodesList []string) ([]int64, error) {
 
 func BlockInfo(nodesList []string, blockID int64) (map[string]*blockInfoResult, error) {
 	wg := sync.WaitGroup{}
-	workResults := ConcurrentMap{m: map[string]interface{}{}}
+	workResults := ConcurrentMap{m: map[string]any{}}
 	for _, nodeUrl := range nodesList {
 		wg.Add(1)
 		go func(url string) {

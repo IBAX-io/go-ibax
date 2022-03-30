@@ -60,12 +60,12 @@ func GetHTTPTextAnswer(url string) (string, error) {
 }
 
 // ErrInfoFmt fomats the error message
-func ErrInfoFmt(err string, a ...interface{}) error {
+func ErrInfoFmt(err string, a ...any) error {
 	return fmt.Errorf("%s (%s)", fmt.Sprintf(err, a...), Caller(1))
 }
 
 // ErrInfo formats the error message
-func ErrInfo(verr interface{}, additionally ...string) error {
+func ErrInfo(verr any, additionally ...string) error {
 	var err error
 	switch verr.(type) {
 	case error:
@@ -83,7 +83,7 @@ func ErrInfo(verr interface{}, additionally ...string) error {
 }
 
 // CallMethod calls the function by its name
-func CallMethod(i interface{}, methodName string) interface{} {
+func CallMethod(i any, methodName string) any {
 	var ptr reflect.Value
 	var value reflect.Value
 	var finalMethod reflect.Value

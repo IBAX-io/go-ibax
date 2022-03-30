@@ -14,14 +14,14 @@ import (
 
 // ExtendData is used for the definition of the extended functions and variables
 type ExtendData struct {
-	Objects    map[string]interface{}
+	Objects    map[string]any
 	AutoPars   map[string]string
 	WriteFuncs map[string]struct{}
 }
 
 func NewExtendData() *ExtendData {
 	return &ExtendData{
-		Objects: map[string]interface{}{
+		Objects: map[string]any{
 			"ExecContract": ExecContract,
 			"CallContract": ExContract,
 			"Settings":     GetSettings,
@@ -35,7 +35,7 @@ func NewExtendData() *ExtendData {
 
 // ExecContract runs the name contract where txs contains the list of parameters and
 // params are the values of parameters
-func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interface{}, error) {
+func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 
 	contract, ok := rt.vm.Objects[name]
 	if !ok {
@@ -60,7 +60,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 	rt.extend[`loop_`+name] = true
 	defer delete(rt.extend, `loop_`+name)
 
-	prevExtend := make(map[string]interface{})
+	prevExtend := make(map[string]any)
 	for key, item := range rt.extend {
 		if isSysVar(key) {
 			continue
@@ -132,7 +132,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 	if rt.extend[`sc`] != nil && isSignature {
 		obj := rt.vm.Objects[`check_signature`]
 		finfo := obj.Value.ExtFuncInfo()
-		if err := finfo.Func.(func(map[string]interface{}, string) error)(rt.extend, name); err != nil {
+		if err := finfo.Func.(func(map[string]any, string) error)(rt.extend, name); err != nil {
 			logger.WithFields(log.Fields{"error": err, "func_name": finfo.Name, "type": consts.ContractError}).Error("executing exended function")
 			return nil, err
 		}
@@ -174,7 +174,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...interface{}) (interfa
 }
 
 // ExContract executes the name contract in the state with specified parameters
-func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (interface{}, error) {
+func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (any, error) {
 
 	name = StateName(state, name)
 	contract, ok := rt.vm.Objects[name]
@@ -187,7 +187,7 @@ func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (inte
 	}
 	logger := log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError})
 	names := make([]string, 0)
-	vals := make([]interface{}, 0)
+	vals := make([]any, 0)
 	cblock := contract.Value.CodeBlock()
 	if cblock.Info.ContractInfo().Tx != nil {
 		for _, tx := range *cblock.Info.ContractInfo().Tx {
@@ -210,7 +210,7 @@ func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (inte
 }
 
 // GetSettings returns the value of the parameter
-func GetSettings(rt *RunTime, cntname, name string) (interface{}, error) {
+func GetSettings(rt *RunTime, cntname, name string) (any, error) {
 	contract, ok := rt.vm.Objects[cntname]
 	if !ok {
 		log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError}).Error("unknown contract")

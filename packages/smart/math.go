@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-func parseFloat(x interface{}) (float64, error) {
+func parseFloat(x any) (float64, error) {
 	var (
 		fx  float64
 		err error
@@ -34,7 +34,7 @@ func isValidFloat(x float64) bool {
 }
 
 // Floor returns the greatest integer value less than or equal to x
-func Floor(x interface{}) (int64, error) {
+func Floor(x any) (int64, error) {
 	fx, err := parseFloat(x)
 	if err != nil {
 		return 0, err
@@ -46,7 +46,7 @@ func Floor(x interface{}) (int64, error) {
 }
 
 // Log returns the natural logarithm of x
-func Log(x interface{}) (float64, error) {
+func Log(x any) (float64, error) {
 	fx, err := parseFloat(x)
 	if err != nil {
 		return 0, err
@@ -58,7 +58,7 @@ func Log(x interface{}) (float64, error) {
 }
 
 // Log10 returns the decimal logarithm of x
-func Log10(x interface{}) (float64, error) {
+func Log10(x any) (float64, error) {
 	fx, err := parseFloat(x)
 	if err != nil {
 		return 0, err
@@ -70,7 +70,7 @@ func Log10(x interface{}) (float64, error) {
 }
 
 // Pow returns x**y, the base-x exponential of y
-func Pow(x, y interface{}) (float64, error) {
+func Pow(x, y any) (float64, error) {
 	fx, err := parseFloat(x)
 	if err != nil {
 		return 0, err
@@ -86,7 +86,7 @@ func Pow(x, y interface{}) (float64, error) {
 }
 
 // Round returns the nearest integer, rounding half away from zero
-func Round(x interface{}) (int64, error) {
+func Round(x any) (int64, error) {
 	fx, err := parseFloat(x)
 	if err != nil {
 		return 0, err
@@ -98,7 +98,7 @@ func Round(x interface{}) (int64, error) {
 }
 
 // Sqrt returns the square root of x
-func Sqrt(x interface{}) (float64, error) {
+func Sqrt(x any) (float64, error) {
 	fx, err := parseFloat(x)
 	if err != nil {
 		return 0, err

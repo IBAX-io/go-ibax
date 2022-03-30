@@ -58,7 +58,7 @@ type SmartContract struct {
 	SysUpdate       bool
 	VM              *script.VM
 	TxSmart         *types.SmartTransaction
-	TxData          map[string]interface{}
+	TxData          map[string]any
 	TxContract      *Contract
 	TxFuel          int64           // The fuel of executing contract
 	TxCost          int64           // Maximum cost of executing contract
@@ -85,7 +85,7 @@ type SmartContract struct {
 	multiPays       multiPays
 	taxes           bool
 	Penalty         bool
-	TokenEcosystems map[int64]interface{}
+	TokenEcosystems map[int64]any
 }
 
 // AppendStack adds an element to the stack of contract call or removes the top element when name is empty
@@ -189,7 +189,7 @@ func SetContractWallet(sc *SmartContract, tblid, state int64, wallet int64) erro
 	return nil
 }
 
-func (sc *SmartContract) getExtend() map[string]interface{} {
+func (sc *SmartContract) getExtend() map[string]any {
 	var block, blockTime, blockKeyID, blockNodePosition int64
 	var perBlockHash string
 	if sc.BlockData != nil {
@@ -202,7 +202,7 @@ func (sc *SmartContract) getExtend() map[string]interface{} {
 		perBlockHash = hex.EncodeToString(sc.PreBlockData.Hash)
 	}
 	head := sc.TxSmart
-	extend := map[string]interface{}{
+	extend := map[string]any{
 		`type`:                head.ID,
 		`time`:                sc.Timestamp,
 		`ecosystem_id`:        head.EcosystemID,

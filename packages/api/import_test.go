@@ -24,7 +24,7 @@ func ImportApps(path, appname string) error {
 	if err != nil {
 		return err
 	}
-	var val = make(map[interface{}]interface{})
+	var val = make(map[any]any)
 	val["Body"] = apps
 	val["MimeType"] = "application/json"
 	val["Name"] = appname + ".json"

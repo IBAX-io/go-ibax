@@ -26,8 +26,8 @@ type rowsInfo struct {
 }
 
 type RowsListResult struct {
-	Count int64                    `json:"count"`
-	List  []map[string]interface{} `json:"list"`
+	Count int64            `json:"count"`
+	List  []map[string]any `json:"list"`
 }
 
 func (f *tableInfoForm) Validate(r *http.Request) error {

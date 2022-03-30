@@ -59,29 +59,29 @@ func GetWhere(inWhere *types.Map) (string, error) {
 	if inWhere == nil {
 		inWhere = types.NewMap()
 	}
-	escape := func(value interface{}) string {
+	escape := func(value any) string {
 		return strings.Replace(fmt.Sprint(value), `'`, `''`, -1)
 	}
-	oper := func(action string, v interface{}) (string, error) {
+	oper := func(action string, v any) (string, error) {
 		switch value := v.(type) {
 		default:
 			return fmt.Sprintf(`%s '%s'`, action, escape(value)), nil
 		}
 	}
-	like := func(pattern string, v interface{}) (string, error) {
+	like := func(pattern string, v any) (string, error) {
 		switch value := v.(type) {
 		default:
 			return fmt.Sprintf(pattern, escape(value)), nil
 		}
 	}
-	in := func(action string, v interface{}) (ret string, err error) {
+	in := func(action string, v any) (ret string, err error) {
 		switch value := v.(type) {
 		case string:
 			if len(value) == 0 {
 				return `false`, errWhereFalse
 			}
 			ret = fmt.Sprintf(`%s ('%s')`, action, value)
-		case []interface{}:
+		case []any:
 			var list []string
 			for _, ival := range value {
 				list = append(list, escape(ival))
@@ -94,9 +94,9 @@ func GetWhere(inWhere *types.Map) (string, error) {
 		}
 		return
 	}
-	logic := func(action string, v interface{}) (ret string, err error) {
+	logic := func(action string, v any) (ret string, err error) {
 		switch value := v.(type) {
-		case []interface{}:
+		case []any:
 			var list []string
 			for _, ival := range value {
 				switch avalue := ival.(type) {
@@ -165,7 +165,7 @@ func GetWhere(inWhere *types.Map) (string, error) {
 				key = `"` + key + `"`
 			}
 			switch value := v.(type) {
-			case []interface{}:
+			case []any:
 				var acond []string
 				for _, iarr := range value {
 					switch avalue := iarr.(type) {

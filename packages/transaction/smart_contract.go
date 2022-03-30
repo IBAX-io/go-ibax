@@ -168,7 +168,7 @@ func (s *SmartTransactionParser) parseFromContract(fillData bool) error {
 	}
 
 	s.TxContract = contract
-	s.TxData = make(map[string]interface{})
+	s.TxData = make(map[string]any)
 	txInfo := contract.Info().Tx
 
 	if txInfo != nil {
@@ -179,8 +179,8 @@ func (s *SmartTransactionParser) parseFromContract(fillData bool) error {
 		} else {
 			s.TxData = smartTx.Params
 			for key, item := range s.TxData {
-				if v, ok := item.(map[interface{}]interface{}); ok {
-					imap := make(map[string]interface{})
+				if v, ok := item.(map[any]any); ok {
+					imap := make(map[string]any)
 					for ikey, ival := range v {
 						imap[fmt.Sprint(ikey)] = ival
 					}

@@ -126,7 +126,7 @@ func sqlConvert(in []string) (ret string, err error) {
 	return
 }
 
-func sqlTemplate(input []string, data interface{}) (ret string, err error) {
+func sqlTemplate(input []string, data any) (ret string, err error) {
 	for _, item := range input {
 		var (
 			out  bytes.Buffer

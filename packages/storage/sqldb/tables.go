@@ -45,7 +45,7 @@ func (p Permissions) Value() (driver.Value, error) {
 	}
 	return string(data), err
 }
-func (p *Permissions) Scan(v interface{}) error {
+func (p *Permissions) Scan(v any) error {
 	data, ok := v.([]byte)
 	if !ok {
 		return errors.New("Bad permissions")

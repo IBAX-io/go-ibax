@@ -22,7 +22,7 @@ type Value struct {
 
 // ToMap returns values as map
 func (v *Value) ToMap() *types.Map {
-	return types.LoadMap(map[string]interface{}{
+	return types.LoadMap(map[string]any{
 		"time":   v.Time,
 		"metric": v.Metric,
 		"key":    v.Key,
@@ -36,8 +36,8 @@ type Collector struct {
 }
 
 // Values returns values of all metrics
-func (c *Collector) Values(timeBlock int64) []interface{} {
-	values := make([]interface{}, 0)
+func (c *Collector) Values(timeBlock int64) []any {
+	values := make([]any, 0)
 	for _, fn := range c.funcs {
 		result, err := fn(timeBlock)
 		if err != nil {

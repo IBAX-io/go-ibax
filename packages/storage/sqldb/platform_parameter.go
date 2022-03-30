@@ -81,7 +81,7 @@ func (sp *PlatformParameter) SaveArray(list [][]string) error {
 }
 
 func (sp *PlatformParameter) GetNumberOfHonorNodes() (int, error) {
-	var hns []map[string]interface{}
+	var hns []map[string]any
 	f, err := sp.GetTransaction(nil, `honor_nodes`)
 	if err != nil {
 		return 0, err

@@ -79,7 +79,7 @@ func getCost(name string) int64 {
 func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int64, error) {
 	var (
 		fields []string
-		values []interface{}
+		values []any
 	)
 	par := &sqldb.PlatformParameter{}
 	found, err := par.Get(sc.DbTransaction, name)
@@ -203,12 +203,12 @@ func SysFuel(state int64) string {
 }
 
 // Int converts the value to a number
-func Int(v interface{}) (int64, error) {
+func Int(v any) (int64, error) {
 	return converter.ValueToInt(v)
 }
 
 // Str converts the value to a string
-func Str(v interface{}) (ret string) {
+func Str(v any) (ret string) {
 	if v == nil {
 		return
 	}
@@ -222,23 +222,23 @@ func Str(v interface{}) (ret string) {
 }
 
 // Money converts the value into a numeric type for money
-func Money(v interface{}) (decimal.Decimal, error) {
+func Money(v any) (decimal.Decimal, error) {
 	return script.ValueToDecimal(v)
 }
 
-func MoneyDiv(d1, d2 interface{}) string {
+func MoneyDiv(d1, d2 any) string {
 	val1, _ := script.ValueToDecimal(d1)
 	val2, _ := script.ValueToDecimal(d2)
 	return val1.Div(val2).Mul(decimal.New(1, 2)).StringFixed(0)
 }
 
 // Float converts the value to float64
-func Float(v interface{}) (ret float64) {
+func Float(v any) (ret float64) {
 	return script.ValueToFloat(v)
 }
 
 // Join is joining input with separator
-func Join(input []interface{}, sep string) string {
+func Join(input []any, sep string) string {
 	var ret string
 	for i, item := range input {
 		if i > 0 {
@@ -250,9 +250,9 @@ func Join(input []interface{}, sep string) string {
 }
 
 // Split splits the input string to array
-func Split(input, sep string) []interface{} {
+func Split(input, sep string) []any {
 	out := strings.Split(input, sep)
-	result := make([]interface{}, len(out))
+	result := make([]any, len(out))
 	for i, val := range out {
 		result[i] = reflect.ValueOf(val).Interface()
 	}
@@ -317,7 +317,7 @@ func CreateLanguage(sc *SmartContract, name, trans string) (id int64, err error)
 	if err = language.UpdateLang(int(sc.TxSmart.EcosystemID), name, trans); err != nil {
 		return 0, err
 	}
-	if _, id, err = DBInsert(sc, `@1languages`, types.LoadMap(map[string]interface{}{"name": name,
+	if _, id, err = DBInsert(sc, `@1languages`, types.LoadMap(map[string]any{"name": name,
 		"ecosystem": idStr, "res": trans})); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting new language")
 		return 0, err
@@ -334,7 +334,7 @@ func EditLanguage(sc *SmartContract, id int64, name, trans string) error {
 		return err
 	}
 	if _, err := DBUpdate(sc, `@1languages`, id,
-		types.LoadMap(map[string]interface{}{"name": name, "res": trans})); err != nil {
+		types.LoadMap(map[string]any{"name": name, "res": trans})); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting new language")
 		return err
 	}
@@ -437,32 +437,32 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 
 	sc.FullAccess = true
 
-	if _, _, err = DBInsert(sc, "@1parameters", types.LoadMap(map[string]interface{}{
+	if _, _, err = DBInsert(sc, "@1parameters", types.LoadMap(map[string]any{
 		"name": "ecosystem_wallet", "value": "0", "conditions": `ContractConditions("MainCondition")`,
 		"ecosystem": idStr,
 	})); err != nil {
 		return 0, logErrorDB(err, "inserting system parameter")
 	}
 
-	if _, _, err = DBInsert(sc, "@1applications", types.LoadMap(map[string]interface{}{
+	if _, _, err = DBInsert(sc, "@1applications", types.LoadMap(map[string]any{
 		"name":       "System",
 		"conditions": `ContractConditions("MainCondition")`,
 		"ecosystem":  id,
 	})); err != nil {
 		return 0, logErrorDB(err, "inserting application")
 	}
-	if _, _, err = DBInsert(sc, `@1pages`, types.LoadMap(map[string]interface{}{"ecosystem": idStr,
+	if _, _, err = DBInsert(sc, `@1pages`, types.LoadMap(map[string]any{"ecosystem": idStr,
 		"name": "default_page", "app_id": appID, "value": SysParamString("default_ecosystem_page"),
 		"menu": "default_menu", "conditions": `ContractConditions("DeveloperCondition")`})); err != nil {
 		return 0, logErrorDB(err, "inserting default page")
 	}
-	if _, _, err = DBInsert(sc, `@1menu`, types.LoadMap(map[string]interface{}{"ecosystem": idStr,
+	if _, _, err = DBInsert(sc, `@1menu`, types.LoadMap(map[string]any{"ecosystem": idStr,
 		"name": "default_menu", "value": SysParamString("default_ecosystem_menu"), "title": "default", "conditions": `ContractConditions("DeveloperCondition")`})); err != nil {
 		return 0, logErrorDB(err, "inserting default page")
 	}
 
 	var (
-		ret []interface{}
+		ret []any
 		pub string
 	)
 	_, ret, err = DBSelect(sc, "@1keys", "pub", wallet, `id`, 0, 1, nil, "", "", false)
@@ -475,7 +475,7 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 			pub = v.(string)
 		}
 	}
-	if _, _, err := DBInsert(sc, `@1keys`, types.LoadMap(map[string]interface{}{
+	if _, _, err := DBInsert(sc, `@1keys`, types.LoadMap(map[string]any{
 		"id":        wallet,
 		"account":   converter.AddressToString(wallet),
 		"pub":       pub,
@@ -487,7 +487,7 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 	sc.FullAccess = false
 	// because of we need to know which ecosystem to rollback.
 	// All tables will be deleted so it's no need to rollback data from tables
-	if _, _, err := DBInsert(sc, "@1ecosystems", types.LoadMap(map[string]interface{}{
+	if _, _, err := DBInsert(sc, "@1ecosystems", types.LoadMap(map[string]any{
 		"id":   id,
 		"name": name,
 	})); err != nil {
@@ -503,7 +503,7 @@ func EditEcosysName(sc *SmartContract, sysID int64, newName string) error {
 	}
 
 	_, err := DBUpdate(sc, "@1ecosystems", sysID,
-		types.LoadMap(map[string]interface{}{"name": newName}))
+		types.LoadMap(map[string]any{"name": newName}))
 	return err
 }
 
@@ -531,7 +531,7 @@ func BndWallet(sc *SmartContract, tblid int64, state int64) error {
 		return err
 	}
 
-	if _, _, err := sc.update([]string{"wallet_id"}, []interface{}{sc.TxSmart.KeyID}, "1_contracts", "id", tblid); err != nil {
+	if _, _, err := sc.update([]string{"wallet_id"}, []any{sc.TxSmart.KeyID}, "1_contracts", "id", tblid); err != nil {
 		log.WithFields(log.Fields{"error": err, "contract_id": tblid}).Error("on updating contract wallet")
 		return err
 	}
@@ -545,7 +545,7 @@ func UnbndWallet(sc *SmartContract, tblid int64, state int64) error {
 		return err
 	}
 
-	if _, _, err := sc.update([]string{"wallet_id"}, []interface{}{0}, "1_contracts", "id", tblid); err != nil {
+	if _, _, err := sc.update([]string{"wallet_id"}, []any{0}, "1_contracts", "id", tblid); err != nil {
 		log.WithFields(log.Fields{"error": err, "contract_id": tblid}).Error("on updating contract wallet")
 		return err
 	}
@@ -554,7 +554,7 @@ func UnbndWallet(sc *SmartContract, tblid int64, state int64) error {
 }
 
 // CheckSignature checks the additional signatures for the contract
-func CheckSignature(sc *SmartContract, i map[string]interface{}, name string) error {
+func CheckSignature(sc *SmartContract, i map[string]any, name string) error {
 	state, name := converter.ParseName(name)
 	sn := sqldb.Signature{}
 	sn.SetTablePrefix(converter.Int64ToStr(int64(state)))
@@ -595,7 +595,7 @@ func CheckSignature(sc *SmartContract, i map[string]interface{}, name string) er
 }
 
 // DBSelectMetrics returns list of metrics by name and time interval
-func DBSelectMetrics(sc *SmartContract, metric, timeInterval, aggregateFunc string) ([]interface{}, error) {
+func DBSelectMetrics(sc *SmartContract, metric, timeInterval, aggregateFunc string) ([]any, error) {
 	if conf.Config.IsSupportingCLB() {
 		return nil, ErrNotImplementedOnCLB
 	}
@@ -610,7 +610,7 @@ func DBSelectMetrics(sc *SmartContract, metric, timeInterval, aggregateFunc stri
 
 // DBCollectMetrics returns actual values of all metrics
 // This function used to further store these values
-func DBCollectMetrics(sc *SmartContract) []interface{} {
+func DBCollectMetrics(sc *SmartContract) []any {
 	if conf.Config.IsSupportingCLB() {
 		return nil
 	}
@@ -623,14 +623,14 @@ func DBCollectMetrics(sc *SmartContract) []interface{} {
 }
 
 // JSONDecode converts json string to object
-func JSONDecode(input string) (ret interface{}, err error) {
+func JSONDecode(input string) (ret any, err error) {
 	err = unmarshalJSON([]byte(input), &ret, "unmarshalling json")
 	ret = types.ConvertMap(ret)
 	return
 }
 
 // JSONEncodeIndent converts object to json string
-func JSONEncodeIndent(input interface{}, indent string) (string, error) {
+func JSONEncodeIndent(input any, indent string) (string, error) {
 	rv := reflect.ValueOf(input)
 	if rv.Kind() == reflect.Ptr {
 		rv = rv.Elem()
@@ -658,12 +658,12 @@ func JSONEncodeIndent(input interface{}, indent string) (string, error) {
 }
 
 // JSONEncode converts object to json string
-func JSONEncode(input interface{}) (string, error) {
+func JSONEncode(input any) (string, error) {
 	return JSONEncodeIndent(input, ``)
 }
 
 // Append syn for golang 'append' function
-func Append(slice []interface{}, val interface{}) []interface{} {
+func Append(slice []any, val any) []any {
 	return append(slice, val)
 }
 

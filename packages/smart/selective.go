@@ -34,7 +34,7 @@ func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) erro
 	return nil
 }
 
-func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []interface{},
+func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	table string, inWhere *types.Map, generalRollback bool, exists bool) (int64, string, error) {
 
 	var (
@@ -167,19 +167,19 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []inter
 	return cost, sqlBuilder.TableID(), nil
 }
 
-func (sc *SmartContract) insert(fields []string, ivalues []interface{},
+func (sc *SmartContract) insert(fields []string, ivalues []any,
 	table string) (int64, string, error) {
 	return sc.selectiveLoggingAndUpd(fields, ivalues, table, nil, !sc.CLB && sc.Rollback, false)
 }
 
-func (sc *SmartContract) updateWhere(fields []string, values []interface{},
+func (sc *SmartContract) updateWhere(fields []string, values []any,
 	table string, where *types.Map) (int64, string, error) {
 	return sc.selectiveLoggingAndUpd(fields, values, table, where, !sc.CLB && sc.Rollback, true)
 }
 
-func (sc *SmartContract) update(fields []string, values []interface{},
-	table string, whereField string, whereValue interface{}) (int64, string, error) {
-	return sc.updateWhere(fields, values, table, types.LoadMap(map[string]interface{}{
+func (sc *SmartContract) update(fields []string, values []any,
+	table string, whereField string, whereValue any) (int64, string, error) {
+	return sc.updateWhere(fields, values, table, types.LoadMap(map[string]any{
 		whereField: fmt.Sprint(whereValue)}))
 }
 

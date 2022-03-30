@@ -20,7 +20,7 @@ type SingleResult struct {
 }
 
 // Single is retrieving single result
-func (dbTx *DbTransaction) Single(query string, args ...interface{}) *SingleResult {
+func (dbTx *DbTransaction) Single(query string, args ...any) *SingleResult {
 	var result []byte
 	err := GetDB(dbTx).Raw(query, args...).Row().Scan(&result)
 	switch {
@@ -135,7 +135,7 @@ func (r *OneRow) Int() (map[string]int, error) {
 }
 
 // GetAllTransaction is retrieve all query result rows
-func (dbTx *DbTransaction) GetAllTransaction(query string, countRows int, args ...interface{}) ([]map[string]string, error) {
+func (dbTx *DbTransaction) GetAllTransaction(query string, countRows int, args ...any) ([]map[string]string, error) {
 	request := GetDB(dbTx).Raw(query, args...)
 	if countRows > 0 {
 		request = request.Limit(countRows)
@@ -153,17 +153,17 @@ func (dbTx *DbTransaction) GetAllTransaction(query string, countRows int, args .
 }
 
 // GetAll returns all transaction
-func (dbTx *DbTransaction) GetAll(query string, countRows int, args ...interface{}) ([]map[string]string, error) {
+func (dbTx *DbTransaction) GetAll(query string, countRows int, args ...any) ([]map[string]string, error) {
 	return dbTx.GetAllTransaction(query, countRows, args)
 }
 
 // GetAllTx returns all tx's
-func (dbTx *DbTransaction) GetAllTx(query string, countRows int, args ...interface{}) ([]map[string]string, error) {
+func (dbTx *DbTransaction) GetAllTx(query string, countRows int, args ...any) ([]map[string]string, error) {
 	return dbTx.GetAllTransaction(query, countRows, args)
 }
 
 // GetOneRowTransaction returns one row from transactions
-func (dbTx *DbTransaction) GetOneRowTransaction(query string, args ...interface{}) *OneRow {
+func (dbTx *DbTransaction) GetOneRowTransaction(query string, args ...any) *OneRow {
 	result := make(map[string]string)
 	all, err := dbTx.GetAllTransaction(query, 1, args...)
 	if err != nil {
@@ -176,7 +176,7 @@ func (dbTx *DbTransaction) GetOneRowTransaction(query string, args ...interface{
 }
 
 // GetOneRow returns one row
-func (dbTx *DbTransaction) GetOneRow(query string, args ...interface{}) *OneRow {
+func (dbTx *DbTransaction) GetOneRow(query string, args ...any) *OneRow {
 	return dbTx.GetOneRowTransaction(query, args...)
 }
 
@@ -217,7 +217,7 @@ func (r *ListResult) String() ([]string, error) {
 }
 
 // GetList returns the result of the query as ListResult variable
-func (dbTx *DbTransaction) GetList(query string, args ...interface{}) *ListResult {
+func (dbTx *DbTransaction) GetList(query string, args ...any) *ListResult {
 	var result []string
 	all, err := dbTx.GetAll(query, -1, args...)
 	if err != nil {
@@ -245,7 +245,7 @@ func getResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
 	// rows.Scan wants '[]interface{}' as an argument, so we must copy the
 	// references into such a slice
 	// See http://code.google.com/p/go-wiki/wiki/InterfaceSlice for details
-	scanArgs := make([]interface{}, len(values))
+	scanArgs := make([]any, len(values))
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
@@ -303,7 +303,7 @@ func getnodeResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
 	// rows.Scan wants '[]interface{}' as an argument, so we must copy the
 	// references into such a slice
 	// See http://code.google.com/p/go-wiki/wiki/InterfaceSlice for details
-	scanArgs := make([]interface{}, len(values))
+	scanArgs := make([]any, len(values))
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}

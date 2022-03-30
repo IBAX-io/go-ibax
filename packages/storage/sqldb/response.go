@@ -14,9 +14,9 @@ package sqldb
 type Response struct {
 	// 40003, " %s illegal media file type"
 	//
-	Code    int         `json:"code" example:1` // 0:
-	Data    interface{} `json:"data" example:""`
-	Message string      `json:"message" example:""` //
+	Code    int    `json:"code" example:1` // 0:
+	Data    any    `json:"data" example:""`
+	Message string `json:"message" example:""` //
 }
 
 // TableName returns name of table
@@ -32,7 +32,7 @@ func (r *Response) ReturnFailureString(str string) {
 }
 
 // TableName returns name of table
-func (r *Response) Return(dat interface{}, ct CodeType) {
+func (r *Response) Return(dat any, ct CodeType) {
 	r.Code = ct.Code
 	r.Message = ct.Message
 	r.Data = dat

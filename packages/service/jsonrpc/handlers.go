@@ -49,7 +49,7 @@ var (
 	contextKeyRawJSON            = contextKey("Raw JSON")
 )
 
-type requestHandlerFunc func(ctx RequestContext, request *Request) (interface{}, *Error)
+type requestHandlerFunc func(ctx RequestContext, request *Request) (any, *Error)
 
 func (h requestHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	buff, err := ioutil.ReadAll(r.Body)
@@ -79,12 +79,12 @@ func (h requestHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	WriteResponse(w, &request, result, e)
 }
 
-func WriteResponse(w http.ResponseWriter, request *Request, result interface{}, e *Error) {
+func WriteResponse(w http.ResponseWriter, request *Request, result any, e *Error) {
 	response := struct {
-		JSONRPC string      `json:"jsonrpc"`
-		ID      *ID         `json:"id,omitempty"`
-		Result  interface{} `json:"result,omitempty"`
-		Error   interface{} `json:"error,omitempty"`
+		JSONRPC string `json:"jsonrpc"`
+		ID      *ID    `json:"id,omitempty"`
+		Result  any    `json:"result,omitempty"`
+		Error   any    `json:"error,omitempty"`
 	}{
 		JSONRPC: "2.0",
 	}

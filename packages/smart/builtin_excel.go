@@ -16,7 +16,7 @@ import (
 )
 
 // GetDataFromXLSX returns json by parameters range
-func GetDataFromXLSX(sc *SmartContract, binaryID, startLine, linesCount, sheetNum int64) (data []interface{}, err error) {
+func GetDataFromXLSX(sc *SmartContract, binaryID, startLine, linesCount, sheetNum int64) (data []any, err error) {
 	book, err := excelBookFromStoredBinary(sc, binaryID)
 	if err != nil || book == nil {
 		return nil, err
@@ -28,9 +28,9 @@ func GetDataFromXLSX(sc *SmartContract, binaryID, startLine, linesCount, sheetNu
 	if endLine > int64(len(rows)) {
 		endLine = int64(len(rows))
 	}
-	processedRows := []interface{}{}
+	processedRows := []any{}
 	for ; startLine < endLine; startLine++ {
-		var row []interface{}
+		var row []any
 		for _, item := range rows[startLine] {
 			row = append(row, item)
 		}

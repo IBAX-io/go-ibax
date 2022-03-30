@@ -18,20 +18,20 @@ const (
 )
 
 type QueryCoster interface {
-	QueryCost(*sqldb.DbTransaction, string, ...interface{}) (int64, error)
+	QueryCost(*sqldb.DbTransaction, string, ...any) (int64, error)
 }
 
 type ExplainQueryCoster struct {
 }
 
-func (*ExplainQueryCoster) QueryCost(transaction *sqldb.DbTransaction, query string, args ...interface{}) (int64, error) {
+func (*ExplainQueryCoster) QueryCost(transaction *sqldb.DbTransaction, query string, args ...any) (int64, error) {
 	return explainQueryCost(transaction, true, query, args...)
 }
 
 type ExplainAnalyzeQueryCoster struct {
 }
 
-func (*ExplainAnalyzeQueryCoster) QueryCost(transaction *sqldb.DbTransaction, query string, args ...interface{}) (int64, error) {
+func (*ExplainAnalyzeQueryCoster) QueryCost(transaction *sqldb.DbTransaction, query string, args ...any) (int64, error) {
 	return explainQueryCost(transaction, true, query, args...)
 }
 

@@ -86,9 +86,9 @@ type permColumn struct {
 }
 
 type TxInfo struct {
-	Block    string                 `json:"block,omitempty"`
-	Contract string                 `json:"contract,omitempty"`
-	Params   map[string]interface{} `json:"params,omitempty"`
+	Block    string         `json:"block,omitempty"`
+	Contract string         `json:"contract,omitempty"`
+	Params   map[string]any `json:"params,omitempty"`
 }
 
 type TableInfo struct {
@@ -179,8 +179,8 @@ var (
 )
 
 // EmbedFuncs is extending vm with embedded functions
-func EmbedFuncs(vt script.VMType) map[string]interface{} {
-	f := map[string]interface{}{
+func EmbedFuncs(vt script.VMType) map[string]any {
+	f := map[string]any{
 		"AddressToId":                  AddressToID,
 		"ColumnCondition":              ColumnCondition,
 		"Contains":                     strings.Contains,
@@ -334,7 +334,7 @@ func accessContracts(sc *SmartContract, names ...string) bool {
 }
 
 // CompileContract is compiling contract
-func CompileContract(sc *SmartContract, code string, state, id, token int64) (interface{}, error) {
+func CompileContract(sc *SmartContract, code string, state, id, token int64) (any, error) {
 	if err := validateAccess(sc, "CompileContract"); err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func CompileContract(sc *SmartContract, code string, state, id, token int64) (in
 }
 
 // ContractAccess checks whether the name of the executable contract matches one of the names listed in the parameters.
-func ContractAccess(sc *SmartContract, names ...interface{}) bool {
+func ContractAccess(sc *SmartContract, names ...any) bool {
 	if conf.Config.FuncBench {
 		return true
 	}
@@ -370,7 +370,7 @@ func ContractAccess(sc *SmartContract, names ...interface{}) bool {
 }
 
 // RoleAccess checks whether the name of the role matches one of the names listed in the parameters.
-func RoleAccess(sc *SmartContract, ids ...interface{}) (bool, error) {
+func RoleAccess(sc *SmartContract, ids ...any) (bool, error) {
 	rolesList, err := sqldb.GetMemberRoles(sc.DbTransaction, sc.TxSmart.EcosystemID, sc.Key.AccountID)
 	if err != nil {
 		return false, err
@@ -394,7 +394,7 @@ func RoleAccess(sc *SmartContract, ids ...interface{}) (bool, error) {
 }
 
 // ContractConditions calls the 'conditions' function for each of the contracts specified in the parameters
-func ContractConditions(sc *SmartContract, names ...interface{}) (bool, error) {
+func ContractConditions(sc *SmartContract, names ...any) (bool, error) {
 	for _, iname := range names {
 		name := iname.(string)
 		if len(name) > 0 {
@@ -417,7 +417,7 @@ func ContractConditions(sc *SmartContract, names ...interface{}) (bool, error) {
 			if err := sc.AppendStack(name); err != nil {
 				return false, err
 			}
-			_, err := script.VMRun(sc.VM, block, []interface{}{}, vars)
+			_, err := script.VMRun(sc.VM, block, []any{}, vars)
 			if err != nil {
 				return false, err
 			}
@@ -470,9 +470,9 @@ func UpdateContract(sc *SmartContract, id int64, value, conditions string, recip
 	if err := validateAccess(sc, "UpdateContract"); err != nil {
 		return err
 	}
-	pars := make(map[string]interface{})
+	pars := make(map[string]any)
 	ecosystemID := sc.TxSmart.EcosystemID
-	var root interface{}
+	var root any
 	if len(value) > 0 {
 		var err error
 		root, err = CompileContract(sc, value, ecosystemID, recipient, converter.StrToInt64(tokenID))
@@ -519,7 +519,7 @@ func CreateContract(sc *SmartContract, name, value, conditions string, tokenEcos
 	if err != nil {
 		return 0, err
 	}
-	_, id, err = DBInsert(sc, "@1contracts", types.LoadMap(map[string]interface{}{
+	_, id, err = DBInsert(sc, "@1contracts", types.LoadMap(map[string]any{
 		"name":       name,
 		"value":      value,
 		"conditions": conditions,
@@ -546,7 +546,7 @@ func CreateContract(sc *SmartContract, name, value, conditions string, tokenEcos
 func getColumns(columns string) (colsSQL string, colout []byte, err error) {
 	var (
 		sqlColType string
-		cols       []interface{}
+		cols       []any
 		out        []byte
 	)
 	if err = unmarshalJSON([]byte(columns), &cols, "columns from json"); err != nil {
@@ -555,14 +555,14 @@ func getColumns(columns string) (colsSQL string, colout []byte, err error) {
 	colperm := make(map[string]string)
 	colList := make(map[string]bool)
 	for _, icol := range cols {
-		var data map[string]interface{}
+		var data map[string]any
 		switch v := icol.(type) {
 		case string:
 			if err = unmarshalJSON([]byte(v), &data, `columns permissions from json`); err != nil {
 				return
 			}
 		default:
-			data = v.(map[string]interface{})
+			data = v.(map[string]any)
 		}
 		colname := converter.EscapeSQL(strings.ToLower(data[`name`].(string)))
 		if err = checkColumnName(colname); err != nil {
@@ -584,7 +584,7 @@ func getColumns(columns string) (colsSQL string, colout []byte, err error) {
 		switch v := data[`conditions`].(type) {
 		case string:
 			condition = v
-		case map[string]interface{}:
+		case map[string]any:
 			out, err = marshalJSON(v, `conditions to json`)
 			if err != nil {
 				return
@@ -626,7 +626,7 @@ func CreateView(sc *SmartContract, vname, columns, where string, applicationID i
 	}
 	prefix, name := PrefixName(viewName)
 	_, _, err = sc.insert([]string{`name`, `columns`, `wheres`, `app_id`,
-		`ecosystem`}, []interface{}{name, string(colout), string(whsout),
+		`ecosystem`}, []any{name, string(colout), string(whsout),
 		applicationID, prefix}, `1_views`)
 	if err != nil {
 		return logErrorDB(err, "insert table info")
@@ -847,7 +847,7 @@ func CreateTable(sc *SmartContract, name, columns, permissions string, applicati
 	prefix, name := PrefixName(tableName)
 
 	_, _, err = sc.insert([]string{`name`, `columns`, `permissions`, `conditions`, `app_id`,
-		`ecosystem`}, []interface{}{name, string(colout), string(permout),
+		`ecosystem`}, []any{name, string(colout), string(permout),
 		`ContractAccess("@1EditTable")`, applicationID, prefix}, `1_tables`)
 	if err != nil {
 		return logErrorDB(err, "insert table info")
@@ -870,7 +870,7 @@ func columnType(colType string) (string, error) {
 	return ``, fmt.Errorf(eColumnType, colType)
 }
 
-func mapToParams(values *types.Map) (params []string, val []interface{}, err error) {
+func mapToParams(values *types.Map) (params []string, val []any, err error) {
 	for _, key := range values.Keys() {
 		v, _ := values.Get(key)
 		params = append(params, converter.Sanitize(key, ` ->+`))
@@ -902,8 +902,8 @@ func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64
 	if err != nil {
 		return
 	}
-	if reflect.TypeOf(val[0]) == reflect.TypeOf([]interface{}{}) {
-		val = val[0].([]interface{})
+	if reflect.TypeOf(val[0]) == reflect.TypeOf([]any{}) {
+		val = val[0].([]any)
 	}
 	qcost, lastID, err = sc.insert(params, val, tblname)
 	if ind > 0 {
@@ -937,8 +937,8 @@ func PrepareColumns(columns []string) string {
 }
 
 // DBSelect returns an array of values of the specified columns when there is selection of data 'offset', 'limit', 'where'
-func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64, inOrder interface{},
-	offset, limit int64, inWhere *types.Map, query interface{}, group string, all bool) (int64, []interface{}, error) {
+func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrder any,
+	offset, limit int64, inWhere *types.Map, query any, group string, all bool) (int64, []any, error) {
 
 	var (
 		err     error
@@ -1004,12 +1004,12 @@ func DBSelect(sc *SmartContract, tblname string, inColumns interface{}, id int64
 		return 0, nil, logErrorDB(err, "getting rows columns")
 	}
 	values := make([][]byte, len(cols))
-	scanArgs := make([]interface{}, len(values))
+	scanArgs := make([]any, len(values))
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
 
-	result := make([]interface{}, 0, 50)
+	result := make([]any, 0, 50)
 	for rows.Next() {
 		err = rows.Scan(scanArgs...)
 		if err != nil {
@@ -1064,7 +1064,7 @@ func DBUpdateExt(sc *SmartContract, tblname string, where *types.Map,
 
 // DBUpdate updates the item with the specified id in the table
 func DBUpdate(sc *SmartContract, tblname string, id int64, values *types.Map) (qcost int64, err error) {
-	return DBUpdateExt(sc, tblname, types.LoadMap(map[string]interface{}{`id`: id}), values)
+	return DBUpdateExt(sc, tblname, types.LoadMap(map[string]any{`id`: id}), values)
 }
 
 // EcosysParam returns the value of the specified parameter for the ecosystem
@@ -1117,7 +1117,7 @@ func CheckCondition(sc *SmartContract, condition string) (bool, error) {
 }
 
 // FlushContract is flushing contract
-func FlushContract(sc *SmartContract, iroot interface{}, id int64) error {
+func FlushContract(sc *SmartContract, iroot any, id int64) error {
 	if err := validateAccess(sc, "FlushContract"); err != nil {
 		return err
 	}
@@ -1167,7 +1167,7 @@ func IsObject(sc *SmartContract, name string, state int64) bool {
 }
 
 // Len returns the length of the slice
-func Len(in []interface{}) int64 {
+func Len(in []any) int64 {
 	if in == nil {
 		return 0
 	}
@@ -1198,13 +1198,13 @@ func PermTable(sc *SmartContract, name, permissions string) error {
 	if !found {
 		return fmt.Errorf(eTableNotFound, name)
 	}
-	_, _, err = sc.update([]string{`permissions`}, []interface{}{string(permout)},
+	_, _, err = sc.update([]string{`permissions`}, []any{string(permout)},
 		`1_tables`, `id`, tbl.ID)
 	return err
 }
 
 func columnConditions(sc *SmartContract, columns string) (err error) {
-	var cols []interface{}
+	var cols []any
 	if err = unmarshalJSON([]byte(columns), &cols, "columns permissions from json"); err != nil {
 		return
 	}
@@ -1215,14 +1215,14 @@ func columnConditions(sc *SmartContract, columns string) (err error) {
 		return logErrorfShort(eManyColumns, syspar.GetMaxColumns(), consts.ParameterExceeded)
 	}
 	for _, icol := range cols {
-		var data map[string]interface{}
+		var data map[string]any
 		switch v := icol.(type) {
 		case string:
 			if err = unmarshalJSON([]byte(v), &data, `columns permissions from json`); err != nil {
 				return err
 			}
 		default:
-			data = v.(map[string]interface{})
+			data = v.(map[string]any)
 		}
 		if data[`name`] == nil || data[`type`] == nil {
 			return logErrorShort(errWrongColumn, consts.InvalidObject)
@@ -1234,7 +1234,7 @@ func columnConditions(sc *SmartContract, columns string) (err error) {
 		switch v := data[`conditions`].(type) {
 		case string:
 			condition = v
-		case map[string]interface{}:
+		case map[string]any:
 			out, err := marshalJSON(v, `conditions to json`)
 			if err != nil {
 				return err
@@ -1498,7 +1498,7 @@ func CreateColumn(sc *SmartContract, tableName, name, colType, permissions strin
 	if err != nil {
 		return
 	}
-	_, _, err = sc.update([]string{`columns`}, []interface{}{string(permout)},
+	_, _, err = sc.update([]string{`columns`}, []any{string(permout)},
 		`1_tables`, `id`, temp.ID)
 	if err != nil {
 		return err
@@ -1537,7 +1537,7 @@ func PermColumn(sc *SmartContract, tableName, name, permissions string) error {
 	if err != nil {
 		return err
 	}
-	_, _, err = sc.update([]string{`columns`}, []interface{}{string(permout)},
+	_, _, err = sc.update([]string{`columns`}, []any{string(permout)},
 		tables, `name`, tableName)
 	return err
 }
@@ -1584,8 +1584,8 @@ func HMac(key, data string, raw_output bool) (ret string, err error) {
 }
 
 // GetMapKeys returns the array of keys of the map
-func GetMapKeys(in *types.Map) []interface{} {
-	keys := make([]interface{}, 0, in.Size())
+func GetMapKeys(in *types.Map) []any {
+	keys := make([]any, 0, in.Size())
 	for _, k := range in.Keys() {
 		keys = append(keys, k)
 	}
@@ -1593,7 +1593,7 @@ func GetMapKeys(in *types.Map) []interface{} {
 }
 
 // SortedKeys returns the sorted array of keys of the map
-func SortedKeys(m *types.Map) []interface{} {
+func SortedKeys(m *types.Map) []any {
 	i, sorted := 0, make([]string, m.Size())
 	for _, k := range m.Keys() {
 		sorted[i] = k
@@ -1601,14 +1601,14 @@ func SortedKeys(m *types.Map) []interface{} {
 	}
 	sort.Strings(sorted)
 
-	ret := make([]interface{}, len(sorted))
+	ret := make([]any, len(sorted))
 	for k, v := range sorted {
 		ret[k] = v
 	}
 	return ret
 }
 
-func httpRequest(req *http.Request, headers map[string]interface{}) (string, error) {
+func httpRequest(req *http.Request, headers map[string]any) (string, error) {
 	for key, v := range headers {
 		req.Header.Set(key, fmt.Sprint(v))
 	}
@@ -1634,7 +1634,7 @@ func HTTPRequest(requrl, method string, head *types.Map, params *types.Map) (str
 
 	var ioform io.Reader
 
-	headers := make(map[string]interface{})
+	headers := make(map[string]any)
 	for _, key := range head.Keys() {
 		v, _ := head.Get(key)
 		headers[key] = v
@@ -1661,7 +1661,7 @@ func HTTPPostJSON(requrl string, head *types.Map, json_str string) (string, erro
 	if err != nil {
 		return ``, logError(err, consts.NetworkError, "new http request")
 	}
-	headers := make(map[string]interface{})
+	headers := make(map[string]any)
 	for _, key := range head.Keys() {
 		v, _ := head.Get(key)
 		headers[key] = v
@@ -1742,7 +1742,7 @@ func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
 
 				for _, b := range blocks {
 					if _, err := DBUpdate(smartContract, "@1bad_blocks", b.ID,
-						types.LoadMap(map[string]interface{}{"deleted": "1"})); err != nil {
+						types.LoadMap(map[string]any{"deleted": "1"})); err != nil {
 						return logErrorValue(err, consts.DBError, "deleting bad block",
 							converter.Int64ToStr(b.ID))
 					}
@@ -1758,7 +1758,7 @@ func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
 				_, _, err = DBInsert(
 					smartContract,
 					"@1node_ban_logs",
-					types.LoadMap(map[string]interface{}{
+					types.LoadMap(map[string]any{
 						"node_id":   nodeKeyID,
 						"banned_at": now.Format(time.RFC3339),
 						"ban_time":  int64(syspar.GetNodeBanTime() / time.Millisecond), // in ms
@@ -1773,7 +1773,7 @@ func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
 				_, _, err = DBInsert(
 					smartContract,
 					"@1notifications",
-					types.LoadMap(map[string]interface{}{
+					types.LoadMap(map[string]any{
 						"recipient->member_id": nodeKeyID,
 						"notification->type":   sqldb.NotificationTypeSingle,
 						"notification->header": nodeBanNotificationHeader,
@@ -1817,7 +1817,7 @@ func GetBlock(blockID int64) (*types.Map, error) {
 		return nil, nil
 	}
 
-	return types.LoadMap(map[string]interface{}{
+	return types.LoadMap(map[string]any{
 		"id":     block.ID,
 		"time":   block.Time,
 		"key_id": block.KeyID,
@@ -1840,7 +1840,7 @@ func EncodeBase64(input string) (out string) {
 }
 
 // Hash returns hash sum of data
-func Hash(data interface{}) (string, error) {
+func Hash(data any) (string, error) {
 	var b []byte
 
 	switch v := data.(type) {
@@ -1863,7 +1863,7 @@ func GetColumnType(sc *SmartContract, tableName, columnName string) (string, err
 }
 
 // GetType returns the name of the type of the value
-func GetType(val interface{}) string {
+func GetType(val any) string {
 	if val == nil {
 		return `nil`
 	}
@@ -1910,7 +1910,7 @@ func GetCLBList(sc *SmartContract) map[string]string {
 }
 
 func GetHistoryRaw(transaction *sqldb.DbTransaction, ecosystem int64, tableName string,
-	id, idRollback int64) ([]interface{}, error) {
+	id, idRollback int64) ([]any, error) {
 	table := qb.GetTableName(ecosystem, tableName)
 	rows, err := sqldb.GetDB(transaction).Table(table).Where("id=?", id).Rows()
 	if err != nil {
@@ -1928,7 +1928,7 @@ func GetHistoryRaw(transaction *sqldb.DbTransaction, ecosystem int64, tableName 
 		return nil, err
 	}
 	values := make([][]byte, len(columns))
-	scanArgs := make([]interface{}, len(values))
+	scanArgs := make([]any, len(values))
 	for i := range values {
 		scanArgs[i] = &values[i]
 	}
@@ -1947,7 +1947,7 @@ func GetHistoryRaw(transaction *sqldb.DbTransaction, ecosystem int64, tableName 
 		}
 		curVal.Set(columns[i], value)
 	}
-	var rollbackList []interface{}
+	var rollbackList []any
 	rollbackTx := &sqldb.RollbackTx{}
 	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(converter.Int64ToStr(id),
 		table, historyLimit)
@@ -1979,7 +1979,7 @@ func GetHistoryRaw(transaction *sqldb.DbTransaction, ecosystem int64, tableName 
 			v, _ := curVal.Get(k)
 			rollback.Set(k, v)
 		}
-		var updValues map[string]interface{}
+		var updValues map[string]any
 		if err := json.Unmarshal([]byte(tx.Data), &updValues); err != nil {
 			log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollbackTx.Data from JSON")
 			return nil, err
@@ -1999,12 +1999,12 @@ func GetHistoryRaw(transaction *sqldb.DbTransaction, ecosystem int64, tableName 
 		prev.Set(`block_time`, ``)
 	}
 	if idRollback > 0 {
-		return []interface{}{}, nil
+		return []any{}, nil
 	}
 	return rollbackList, nil
 }
 
-func GetHistory(sc *SmartContract, tableName string, id int64) ([]interface{}, error) {
+func GetHistory(sc *SmartContract, tableName string, id int64) ([]any, error) {
 	return GetHistoryRaw(sc.DbTransaction, sc.TxSmart.EcosystemID, tableName, id, 0)
 }
 
@@ -2028,13 +2028,13 @@ func StackOverflow(sc *SmartContract) {
 	StackOverflow(sc)
 }
 
-func UpdateNotifications(sc *SmartContract, ecosystemID int64, accounts ...interface{}) {
+func UpdateNotifications(sc *SmartContract, ecosystemID int64, accounts ...any) {
 	accountList := make([]string, 0, len(accounts))
 	for i, id := range accounts {
 		switch v := id.(type) {
 		case string:
 			accountList = append(accountList, v)
-		case []interface{}:
+		case []any:
 			if i == 0 {
 				UpdateNotifications(sc, ecosystemID, v...)
 				return
@@ -2044,7 +2044,7 @@ func UpdateNotifications(sc *SmartContract, ecosystemID int64, accounts ...inter
 	sc.Notifications.AddAccounts(ecosystemID, accountList...)
 }
 
-func UpdateRolesNotifications(sc *SmartContract, ecosystemID int64, roles ...interface{}) {
+func UpdateRolesNotifications(sc *SmartContract, ecosystemID int64, roles ...any) {
 	rolesList := make([]int64, 0, len(roles))
 	for i, roleID := range roles {
 		switch v := roleID.(type) {
@@ -2052,7 +2052,7 @@ func UpdateRolesNotifications(sc *SmartContract, ecosystemID int64, roles ...int
 			rolesList = append(rolesList, v)
 		case string:
 			rolesList = append(rolesList, converter.StrToInt64(v))
-		case []interface{}:
+		case []any:
 			if i == 0 {
 				UpdateRolesNotifications(sc, ecosystemID, v...)
 				return
@@ -2209,7 +2209,7 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 	if err = sc.DbTransaction.AlterTableDropColumn(tblname, name); err != nil {
 		return
 	}
-	_, _, err = sc.update([]string{`columns`}, []interface{}{string(permout)},
+	_, _, err = sc.update([]string{`columns`}, []any{string(permout)},
 		`1_tables`, `id`, t.ID)
 	if err != nil {
 		return err
@@ -2334,7 +2334,7 @@ func FormatMoney(sc *SmartContract, exp string, digit int64) (string, error) {
 	return exp, nil
 }
 
-func PubToHex(in interface{}) (ret string) {
+func PubToHex(in any) (ret string) {
 	switch v := in.(type) {
 	case string:
 		ret = crypto.PubToHex([]byte(v))
@@ -2363,7 +2363,7 @@ func SendExternalTransaction(sc *SmartContract, uid, url, externalContract strin
 		Table: `external_blockchain`,
 		Fields: []string{`value`, `uid`, `url`, `external_contract`,
 			`result_contract`, `tx_time`},
-		FieldValues: []interface{}{out, uid, url, externalContract,
+		FieldValues: []any{out, uid, url, externalContract,
 			resultContract, sc.Timestamp},
 		KeyTableChkr: sqldb.KeyTableChecker{},
 	}

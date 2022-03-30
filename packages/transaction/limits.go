@@ -100,7 +100,7 @@ func (limits *Limits) CheckLimit(t *Transaction) error {
 	return nil
 }
 
-func limitError(limitName, msg string, args ...interface{}) error {
+func limitError(limitName, msg string, args ...any) error {
 	err := fmt.Errorf(msg, args...)
 	log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error(limitName)
 	return script.SetVMError(`panic`, err)

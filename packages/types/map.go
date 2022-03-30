@@ -17,7 +17,7 @@ import (
 // Link represents a node of doubly linked list
 type Link struct {
 	key   string
-	value interface{}
+	value any
 	next  *Link
 	prev  *Link
 }
@@ -30,7 +30,7 @@ type Map struct {
 	tail *Link
 }
 
-func newLink(key string, value interface{}) *Link {
+func newLink(key string, value any) *Link {
 	return &Link{key: key, value: value, next: nil, prev: nil}
 }
 
@@ -39,9 +39,9 @@ func NewMap() *Map {
 	return &Map{m: make(map[string]*Link), head: nil, tail: nil}
 }
 
-func ConvertMap(in interface{}) interface{} {
+func ConvertMap(in any) any {
 	switch v := in.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		out := NewMap()
 		keys := make([]string, 0, len(v))
 		for key := range v {
@@ -52,7 +52,7 @@ func ConvertMap(in interface{}) interface{} {
 			out.Set(key, ConvertMap(v[key]))
 		}
 		return out
-	case []interface{}:
+	case []any:
 		for i, item := range v {
 			v[i] = ConvertMap(item)
 		}
@@ -61,7 +61,7 @@ func ConvertMap(in interface{}) interface{} {
 }
 
 // LoadMap instantiates a linked hash map and initializing it from map[string]interface{}.
-func LoadMap(init map[string]interface{}) (ret *Map) {
+func LoadMap(init map[string]any) (ret *Map) {
 	ret = NewMap()
 	keys := make([]string, 0, len(init))
 	for key := range init {
@@ -75,7 +75,7 @@ func LoadMap(init map[string]interface{}) (ret *Map) {
 }
 
 // Put inserts an element into the map.
-func (m *Map) Set(key string, value interface{}) {
+func (m *Map) Set(key string, value any) {
 	link, found := m.m[key]
 	if !found {
 		link = newLink(key, value)
@@ -95,7 +95,7 @@ func (m *Map) Set(key string, value interface{}) {
 
 // Get searches the element in the map by key and returns its value or nil if key doesn't exists.
 // Second return parameter is true if key was found, otherwise false.
-func (m *Map) Get(key string) (value interface{}, found bool) {
+func (m *Map) Get(key string) (value any, found bool) {
 	var link *Link
 	link, found = m.m[key]
 	if found {
@@ -149,8 +149,8 @@ func (m *Map) Keys() []string {
 }
 
 // Values returns all values of the map (insertion order).
-func (m *Map) Values() []interface{} {
-	values := make([]interface{}, m.Size())
+func (m *Map) Values() []any {
+	values := make([]any, m.Size())
 	count := 0
 	for current := m.head; current != nil; current = current.next {
 		values[count] = current.value

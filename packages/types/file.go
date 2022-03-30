@@ -7,15 +7,15 @@ package types
 //type File *Map
 
 func NewFile() *Map {
-	return LoadMap(map[string]interface{}{
+	return LoadMap(map[string]any{
 		"Name":     "",
 		"MimeType": "",
 		"Body":     []byte{},
 	})
 }
 
-func NewFileFromMap(m map[string]interface{}) (f *Map, ok bool) {
-	var v interface{}
+func NewFileFromMap(m map[string]any) (f *Map, ok bool) {
+	var v any
 	f = NewFile()
 
 	if v, ok = m["Name"].(string); !ok {

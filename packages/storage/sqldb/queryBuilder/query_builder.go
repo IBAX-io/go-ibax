@@ -48,7 +48,7 @@ type SQLQueryBuilder struct {
 	keyEcosystem string
 	keyName      string
 	Fields       []string
-	FieldValues  []interface{}
+	FieldValues  []any
 	stringValues []string
 	Where        *types.Map
 	KeyTableChkr KeyTableChecker
@@ -365,7 +365,7 @@ func (b SQLQueryBuilder) normalizeValues() error {
 	return nil
 }
 
-func isParamsContainsEcosystem(fields []string, ivalues []interface{}) (bool, int) {
+func isParamsContainsEcosystem(fields []string, ivalues []any) (bool, int) {
 	ecosysIndx := getFieldIndex(fields, `ecosystem`)
 	if ecosysIndx >= 0 && len(ivalues) > ecosysIndx && converter.StrToInt64(fmt.Sprint(ivalues[ecosysIndx])) > 0 {
 		return true, ecosysIndx

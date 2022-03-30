@@ -152,7 +152,7 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 			Time:        time.Now().Unix(),
 			KeyID:       conf.Config.KeyID,
 		},
-		Params: map[string]interface{}{
+		Params: map[string]any{
 			"ProducerNodeID": crypto.Address(producer.PublicKey),
 			"ConsumerNodeID": crypto.Address(currentNode.PublicKey),
 			"BlockID":        blockId,

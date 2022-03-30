@@ -153,7 +153,7 @@ func (s DeleteQueryType) CalculateCost(rowCount int64) int64 {
 	return DeleteCost + int64(DeleteRowCoeff*float64(rowCount))
 }
 
-func (f *FormulaQueryCoster) QueryCost(transaction *sqldb.DbTransaction, query string, args ...interface{}) (int64, error) {
+func (f *FormulaQueryCoster) QueryCost(transaction *sqldb.DbTransaction, query string, args ...any) (int64, error) {
 	cleanedQuery := strings.TrimSpace(strings.ToLower(query))
 	var queryType QueryType
 	switch {
