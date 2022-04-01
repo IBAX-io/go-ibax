@@ -5,6 +5,7 @@
 package smart
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -48,7 +49,10 @@ func logErrorDB(err error, comment string) error {
 }
 
 func unmarshalJSON(input []byte, v any, comment string) (err error) {
-	if err = json.Unmarshal(input, v); err != nil {
+	d := json.NewDecoder(bytes.NewReader(input))
+	d.UseNumber()
+	if err = d.Decode(&v); err != nil {
+		//if err = json.Unmarshal(input, v); err != nil {
 		return logErrorValue(err, consts.JSONUnmarshallError, comment, string(input))
 	}
 	return nil

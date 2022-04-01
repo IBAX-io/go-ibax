@@ -7,7 +7,6 @@ package types
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"sort"
 	"strings"
 )
@@ -58,7 +57,6 @@ func ConvertMap(in any) any {
 					v[key] = f
 				}
 			}
-			fmt.Println(key, reflect.TypeOf(v[key]))
 			out.Set(key, ConvertMap(v[key]))
 		}
 		return out

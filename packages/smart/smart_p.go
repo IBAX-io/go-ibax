@@ -624,10 +624,7 @@ func DBCollectMetrics(sc *SmartContract) []any {
 
 // JSONDecode converts json string to object
 func JSONDecode(input string) (ret any, err error) {
-	//err = unmarshalJSON([]byte(input), &ret, "unmarshalling json")
-	d := json.NewDecoder(strings.NewReader(input))
-	d.UseNumber()
-	err = d.Decode(&ret)
+	err = unmarshalJSON([]byte(input), &ret, "unmarshalling json")
 	ret = types.ConvertMap(ret)
 	return
 }
