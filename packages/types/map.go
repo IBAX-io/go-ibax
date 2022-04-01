@@ -7,6 +7,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 )
@@ -49,6 +50,15 @@ func ConvertMap(in any) any {
 		}
 		sort.Strings(keys)
 		for _, key := range keys {
+			switch val := v[key].(type) {
+			case json.Number:
+				if n, err := val.Int64(); err == nil {
+					v[key] = n
+				} else if f, err := val.Float64(); err == nil {
+					v[key] = f
+				}
+			}
+			fmt.Println(key, reflect.TypeOf(v[key]))
 			out.Set(key, ConvertMap(v[key]))
 		}
 		return out

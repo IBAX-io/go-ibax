@@ -1,0 +1,27 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract AccessVoteTempRun {
+    data {
+        ContractAccept string "optional"
+        ContractAcceptParams map "optional"
+    }
+
+    func votingCheck(){
+        var app_id int
+        app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
+        $templateId = Int(DBFind("@1app_params").Where({"app_id": app_id, "name": "voting_template_control_mode", "ecosystem": $ecosystem_id}).One("value"))
+        if $templateId == 0 {
+            warning LangRes("@1template_id_not_found")
+        }
+    }
+
+    action {
+        votingCheck()
+        var temp map
+        temp["TemplateId"] = $templateId
+        temp["Duration"] = 7
+        temp["ContractAccept"] = $ContractAccept
+        temp["ContractAcceptParams"] = JSONEncode($ContractAcceptParams)
+        CallContract("@1VotingTemplateRun",temp)
+    }
+}

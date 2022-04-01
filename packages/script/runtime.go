@@ -186,6 +186,14 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		for i, v := range finfo.Params {
 			switch v.Kind() {
 			case reflect.String, reflect.Int64:
+				if v.Kind() == reflect.Int64 {
+					rv := reflect.ValueOf(rt.stack[len(rt.stack)-in+i])
+					switch rv.Kind() {
+					case reflect.Float64:
+						val, _ := converter.ValueToInt(rt.stack[len(rt.stack)-in+i])
+						rt.stack[len(rt.stack)-in+i] = val
+					}
+				}
 				if reflect.TypeOf(rt.stack[len(rt.stack)-in+i]) != v {
 					log.WithFields(log.Fields{"type": consts.VMError}).Error(eTypeParam)
 					return fmt.Errorf(eTypeParam, i+1)

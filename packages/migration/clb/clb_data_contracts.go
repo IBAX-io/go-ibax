@@ -5,6 +5,80 @@ package clb
 var contractsDataSQL = `
 INSERT INTO "1_contracts" (id, name, value, token_id, conditions, app_id, ecosystem)
 VALUES
+	(next_id('1_contracts'), 'AccessControlMode', 'contract AccessControlMode {
+    data {
+        VotingId int "optional"
+    }
+
+    func decentralizedAutonomous(){
+        if !DBFind("@1ecosystems").Where({"id":$ecosystem_id,"control_mode":2}).Row(){
+            warning "control mode DAO error"
+        }
+        var prev string
+        prev = $stack[0]
+        if Len($stack) > 3{
+            prev = $stack[Len($stack) - 3]
+        }
+        if prev != "@1VotingDecisionCheck" {
+            warning LangRes("@1contract_start_votingdecisioncheck_only")
+        }
+
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $VotingId,"voting->name":{"$begin":"voting_for_control_mode_template"}}).Columns("voting->type_decision,flags->success,voting->type").Row()
+        if Int($voting["voting.type"]) != 2 {
+            warning LangRes("@1voting_type_invalid")
+        }
+        if Int($voting["voting.type_decision"]) != 4 {
+            warning LangRes("@1voting_error_decision")
+        }
+        if Int($voting["flags.success"]) != 1 {
+            warning LangRes("@1voting_error_success")
+        }
+    }
+    func chooseControl(){
+        $control = DBFind("@1ecosystems").Where({"id":$ecosystem_id,"control_mode":{"$in":["1","2"]}}).Row()
+        if !$control{
+            warning "control mode error"
+        }
+
+        if $control["control_mode"] == 2 && $VotingId{
+            decentralizedAutonomous()
+            return
+        }
+        DeveloperCondition()
+    }
+    conditions {
+        $VotingId = Int($VotingId)
+        chooseControl()
+        $result = $control["control_mode"]
+    }
+}
+', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
+	(next_id('1_contracts'), 'AccessVoteTempRun', 'contract AccessVoteTempRun {
+    data {
+        ContractAccept string "optional"
+        ContractAcceptParams map "optional"
+    }
+
+    func votingCheck(){
+        var app_id int
+        app_id = Int(DBFind("@1applications").Where({"ecosystem": $ecosystem_id, "name": "Basic"}).One("id"))
+        $templateId = Int(DBFind("@1app_params").Where({"app_id": app_id, "name": "voting_template_control_mode", "ecosystem": $ecosystem_id}).One("value"))
+        if $templateId == 0 {
+            warning LangRes("@1template_id_not_found")
+        }
+    }
+
+    action {
+        votingCheck()
+        var temp map
+        temp["TemplateId"] = $templateId
+        temp["Duration"] = 7
+        temp["ContractAccept"] = $ContractAccept
+        temp["ContractAcceptParams"] = JSONEncode($ContractAcceptParams)
+        CallContract("@1VotingTemplateRun",temp)
+    }
+}
+', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
 	(next_id('1_contracts'), 'BindWallet', 'contract BindWallet {
 	data {
 		Id  int
@@ -311,6 +385,62 @@ VALUES
         }
         if pars {
             DBUpdate("pages", $Id, pars)
+        }
+    }
+}
+', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
+	(next_id('1_contracts'), 'EditParameter', 'contract EditParameter {
+    data {
+        Id int
+        Value string "optional"
+        Conditions string "optional"
+    }
+
+    func onlyConditions() bool {
+        return $Conditions && !$Value
+    }
+
+    conditions {
+        DeveloperCondition()
+
+        RowConditions("@1parameters", $Id, onlyConditions())
+        if $Conditions {
+            ValidateCondition($Conditions, $ecosystem_id)
+        }
+        if $Value {
+            $Name = DBFind("@1parameters").Where({"id": $Id, "ecosystem": $ecosystem_id}).One("name")
+            if $Name == "founder_account" {
+                var account string
+                account = IdToAddress(Int($Value))
+                if !DBFind("@1keys").Where({"account": account, "ecosystem": $ecosystem_id, "deleted": 0}).One("id") {
+                    warning Sprintf(LangRes("@1template_user_not_found"), $Value)
+                }
+            }
+            if $Name == "max_block_user_tx" || $Name == "money_digit" || $Name == "max_sum" || $Name == "min_page_validate_count" || $Name == "max_page_validate_count" {
+                if Size($Value) == 0 {
+                    warning LangRes("@1value_not_received")
+                }
+                if Int($Value) <= 0 {
+                    warning LangRes("@1value_must_greater_zero")
+                }
+            }
+        }
+    }
+
+    action {
+        var pars map
+        if $Value {
+            if $Value == ` + "`" + `""` + "`" + ` {
+                pars["value"] = ""
+            } else {
+                pars["value"] = $Value
+            }
+        }
+        if $Conditions {
+            pars["conditions"] = $Conditions
+        }
+        if pars {
+            DBUpdate("@1parameters", $Id, pars)
         }
     }
 }
@@ -879,6 +1009,33 @@ VALUES
     }
     func price() int {
         return SysParamInt("page_price")
+    }
+}
+', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
+	(next_id('1_contracts'), 'NewParameter', 'contract NewParameter {
+    data {
+        Name string
+        Value string
+        Conditions string
+    }
+    func warnEmpty(name value string) {
+        if Size(value) == 0 {
+            warning Sprintf(LangRes("@1x_parameter_empty"),name)
+        }
+    }
+    conditions {
+        DeveloperCondition()
+
+        ValidateCondition($Conditions, $ecosystem_id)
+        $Name = TrimSpace($Name)
+        warnEmpty("Name",$Name)
+        if DBFind("@1parameters").Where({"name": $Name, "ecosystem": $ecosystem_id}).One("id") {
+            warning Sprintf(LangRes("@1template_parameter_exists"), $Name)
+        }
+    }
+
+    action {
+        DBInsert("@1parameters", {"name": $Name, "value": $Value, "conditions": $Conditions, "ecosystem": $ecosystem_id})
     }
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),

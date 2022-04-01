@@ -29,7 +29,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     (next_id('1_tables'), 'ecosystems',
         '{
             "insert": "ContractAccess(\"@1NewEcosystem\")",
-            "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1EcoFeeModeManage\",\"@1NewToken\",\"@1TeChange\",\"@1TeBurn\")",
+            "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1EcoFeeModeManage\",\"@1EditControlMode\",\"@1NewToken\",\"@1TeChange\",\"@1TeBurn\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
@@ -42,7 +42,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "token_name": "ContractAccess(\"@1NewToken\")",
             "type_emission": "ContractAccess(\"@1NewToken\",\"@1TeChange\")",
             "type_withdraw": "ContractAccess(\"@1NewToken\",\"@1TeChange\")",
-            "control_mode": "ContractConditions(\"@1MainCondition\")"
+            "control_mode": "ContractAccess(\"@1EditControlMode\")"
         }',
         'ContractConditions("@1MainCondition")'
     ),

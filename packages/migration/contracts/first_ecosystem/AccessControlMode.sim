@@ -1,0 +1,49 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract AccessControlMode {
+    data {
+        VotingId int "optional"
+    }
+
+    func decentralizedAutonomous(){
+        if !DBFind("@1ecosystems").Where({"id":$ecosystem_id,"control_mode":2}).Row(){
+            warning "control mode DAO error"
+        }
+        var prev string
+        prev = $stack[0]
+        if Len($stack) > 3{
+            prev = $stack[Len($stack) - 3]
+        }
+        if prev != "@1VotingDecisionCheck" {
+            warning LangRes("@1contract_start_votingdecisioncheck_only")
+        }
+
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $VotingId,"voting->name":{"$begin":"voting_for_control_mode_template"}}).Columns("voting->type_decision,flags->success,voting->type").Row()
+        if Int($voting["voting.type"]) != 2 {
+            warning LangRes("@1voting_type_invalid")
+        }
+        if Int($voting["voting.type_decision"]) != 4 {
+            warning LangRes("@1voting_error_decision")
+        }
+        if Int($voting["flags.success"]) != 1 {
+            warning LangRes("@1voting_error_success")
+        }
+    }
+    func chooseControl(){
+        $control = DBFind("@1ecosystems").Where({"id":$ecosystem_id,"control_mode":{"$in":["1","2"]}}).Row()
+        if !$control{
+            warning "control mode error"
+        }
+
+        if $control["control_mode"] == 2 && $VotingId{
+            decentralizedAutonomous()
+            return
+        }
+        DeveloperCondition()
+    }
+    conditions {
+        $VotingId = Int($VotingId)
+        chooseControl()
+        $result = $control["control_mode"]
+    }
+}
