@@ -36,12 +36,18 @@ type FeeModeFlag struct {
 	ConversionRate float64 `json:"conversion_rate"`
 }
 
+type Combustion struct {
+	Flag    int64 `json:"flag"`
+	Percent int64 `json:"percent"`
+}
+
 type FeeModeInfo struct {
-	MultiFee int64       `json:"multi_fee"`
-	VmCost   FeeModeFlag `json:"vmCost"`
-	Element  FeeModeFlag `json:"element"`
-	Storage  FeeModeFlag `json:"storage"`
-	Expedite FeeModeFlag `json:"expedite"`
+	MultiFee   int64       `json:"multi_fee"`
+	VmCost     FeeModeFlag `json:"vmCost"`
+	Element    FeeModeFlag `json:"element"`
+	Storage    FeeModeFlag `json:"storage"`
+	Expedite   FeeModeFlag `json:"expedite"`
+	Combustion Combustion  `json:"combustion"`
 }
 
 // TableName returns name of table

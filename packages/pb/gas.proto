@@ -11,16 +11,24 @@ enum PaymentType {
   EcosystemAddress = 3;
 }
 
-//enum FuelType {
-//  unknown = 0;
-//  vmCost = 1;
-//  storage = 2;
-//  element = 3;
-//  expedite = 4;
-//}
+enum GasScenesType {
+  Unknown = 0;
+  Reward = 1;
+  Taxes = 2;
+  Direct = 15;
+  Combustion = 16;
+}
 
 enum DirectType {
-  invalid = 0;
-  direct = 1;
-  indirect = 2;
+  Invalid = 0;
+  DirectPay = 1;
+  IndirectPay = 2;
+}
+
+enum FuelType {
+  UNKNOWN = 0;
+  vmCost_fee = 1;
+  storage_fee = 2;
+  element_fee = 3;
+  expedite_fee = 4;
 }
