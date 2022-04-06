@@ -1682,7 +1682,7 @@ func RandomInt(sc *SmartContract, min int64, max int64) (int64, error) {
 
 func RandomFloat(sc *SmartContract, min float64, max float64) (float64, error) {
 	if min < 0 || max < 0 || min >= max {
-		return 0, logError(fmt.Errorf("wrong random parameters %f %f", min, max), consts.InvalidObject, "getting random")
+		return 0, logError(fmt.Errorf(eWrongRandom, min, max), consts.InvalidObject, "getting random")
 	}
 	return min + sc.Rand.Float64()*(max-min), nil
 }
@@ -1691,7 +1691,7 @@ func RandomDecimal(sc *SmartContract, min decimal.Decimal, max decimal.Decimal) 
 	if min.LessThan(decimal.Zero) || max.LessThan(decimal.Zero) || min.GreaterThanOrEqual(max) {
 		return decimal.Zero, logError(fmt.Errorf(eWrongRandom, min, max), consts.InvalidObject, "getting random")
 	}
-	return decimal.NewFromInt(sc.Rand.Int63()).Mul(max.Sub(min)).Add(min), nil
+	return decimal.NewFromFloat(sc.Rand.Float64()).Mul(max.Sub(min)).Add(min).Floor(), nil
 }
 
 func ValidateCron(cronSpec string) (err error) {

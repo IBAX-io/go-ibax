@@ -30,7 +30,7 @@ const (
 	eTypeJSON           = `Type %T doesn't support json marshalling`
 	eUnknownContract    = `Unknown contract %s`
 	eUnsupportedType    = "Unsupported type %T"
-	eWrongRandom        = `Wrong random parameters %d %d`
+	eWrongRandom        = `wrong random parameters min: %v, max: %v`
 	eGreaterThan        = `%s must be greater than 0`
 	eTableNotEmpty      = `Table %s is not empty`
 	eColumnNotDeleted   = `Column %s cannot be deleted`
