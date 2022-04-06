@@ -27,7 +27,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/IBAX-io/go-ibax/packages/utils/metric"
-
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -698,4 +697,8 @@ func DBCount(sc *SmartContract, tableName string, inWhere *types.Map) (count int
 
 func MathMod(x, y float64) float64 {
 	return math.Mod(x, y)
+}
+
+func MathModDecimal(x, y decimal.Decimal) decimal.Decimal {
+	return x.Mod(y)
 }

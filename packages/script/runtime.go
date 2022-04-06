@@ -435,6 +435,8 @@ func ValueToFloat(v any) (ret float64) {
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.ConversionError, "error": err, "value": val}).Error("converting value from string to float")
 		}
+	case decimal.Decimal:
+		ret = val.InexactFloat64()
 	}
 	return
 }

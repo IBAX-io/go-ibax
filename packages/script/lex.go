@@ -164,6 +164,30 @@ var (
 	}
 )
 
+func GetFieldDefaultValue(fieldType uint32) any {
+	switch fieldType {
+	case DtBool:
+		return false
+	case DtFloat:
+		return float64(0)
+	case DtInt, DtAddress:
+		return int64(0)
+	case DtMoney:
+		return decimal.New(0, consts.MoneyDigits)
+	case DtString:
+		return ""
+	case DtBytes:
+		return []byte{}
+	case DtArray:
+		return []any{}
+	case DtMap:
+		return types.NewMap()
+	case DtFile:
+		return types.NewFile()
+	}
+	return nil
+}
+
 // Lexem contains information about language item
 type Lexem struct {
 	Type   uint32 // Type of the lexem

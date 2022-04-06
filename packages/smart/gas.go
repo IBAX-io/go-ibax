@@ -412,6 +412,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		toID:           sc.BlockData.KeyID,
 		payWallet:      &sqldb.Key{},
 		Ecosystem:      &sqldb.Ecosystem{},
+		Combustion:     &Combustion{},
 		fuelCategories: make([]*FuelCategory, 0),
 		taxesSize:      syspar.SysInt64(syspar.TaxesSize),
 	}

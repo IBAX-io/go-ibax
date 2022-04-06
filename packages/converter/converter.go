@@ -1071,6 +1071,8 @@ func ValueToInt(v any) (ret int64, err error) {
 			}
 			err = fmt.Errorf(`%s is not a valid integer %s`, val, errText)
 		}
+	case decimal.Decimal:
+		ret = val.IntPart()
 	default:
 		if v == nil {
 			return 0, nil

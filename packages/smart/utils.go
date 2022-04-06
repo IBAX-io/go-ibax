@@ -89,7 +89,7 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]any) (map[stri
 
 		if _, ok := params[index]; !ok {
 			if fitem.ContainsTag(script.TagOptional) {
-				txData[index] = getFieldDefaultValue(fitem.Original)
+				txData[index] = script.GetFieldDefaultValue(fitem.Original)
 				continue
 			}
 			return nil, fmt.Errorf(eParamNotFound, index)
@@ -226,28 +226,4 @@ func FillTxData(fieldInfos []*script.FieldInfo, params map[string]any) (map[stri
 	}
 
 	return txData, nil
-}
-
-func getFieldDefaultValue(fieldType uint32) any {
-	switch fieldType {
-	case script.DtBool:
-		return false
-	case script.DtFloat:
-		return float64(0)
-	case script.DtInt, script.DtAddress:
-		return int64(0)
-	case script.DtMoney:
-		return decimal.New(0, consts.MoneyDigits)
-	case script.DtString:
-		return ""
-	case script.DtBytes:
-		return []byte{}
-	case script.DtArray:
-		return []any{}
-	case script.DtMap:
-		return types.NewMap()
-	case script.DtFile:
-		return types.NewFile()
-	}
-	return nil
 }

@@ -218,7 +218,9 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"FormatMoney":                  FormatMoney,
 		"PermColumn":                   PermColumn,
 		"PermTable":                    PermTable,
-		"Random":                       Random,
+		"Random":                       RandomInt,
+		"RandomFloat":                  RandomFloat,
+		"RandomDecimal":                RandomDecimal,
 		"Split":                        Split,
 		"Str":                          Str,
 		"Substr":                       Substr,
@@ -296,6 +298,7 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"RegexpMatch":      RegexpMatch,
 		"DBCount":          DBCount,
 		"MathMod":          MathMod,
+		"MathModDecimal":   MathModDecimal,
 		"CreateView":       CreateView,
 	}
 	switch vt {
@@ -1669,12 +1672,26 @@ func HTTPPostJSON(requrl string, head *types.Map, json_str string) (string, erro
 	return httpRequest(req, headers)
 }
 
-// Random returns a random value between min and max
-func Random(sc *SmartContract, min int64, max int64) (int64, error) {
+// RandomInt returns a random value between min and max
+func RandomInt(sc *SmartContract, min int64, max int64) (int64, error) {
 	if min < 0 || max < 0 || min >= max {
 		return 0, logError(fmt.Errorf(eWrongRandom, min, max), consts.InvalidObject, "getting random")
 	}
 	return min + sc.Rand.Int63n(max-min), nil
+}
+
+func RandomFloat(sc *SmartContract, min float64, max float64) (float64, error) {
+	if min < 0 || max < 0 || min >= max {
+		return 0, logError(fmt.Errorf("wrong random parameters %f %f", min, max), consts.InvalidObject, "getting random")
+	}
+	return min + sc.Rand.Float64()*(max-min), nil
+}
+
+func RandomDecimal(sc *SmartContract, min decimal.Decimal, max decimal.Decimal) (decimal.Decimal, error) {
+	if min.LessThan(decimal.Zero) || max.LessThan(decimal.Zero) || min.GreaterThanOrEqual(max) {
+		return decimal.Zero, logError(fmt.Errorf(eWrongRandom, min, max), consts.InvalidObject, "getting random")
+	}
+	return decimal.NewFromInt(sc.Rand.Int63()).Mul(max.Sub(min)).Add(min), nil
 }
 
 func ValidateCron(cronSpec string) (err error) {
