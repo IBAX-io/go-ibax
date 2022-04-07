@@ -12,4 +12,5 @@ pb-install:
 pb-generate:
 	protoc -I=. --gogofaster_out=:../script --gogofaster_opt=paths=source_relative ./vm.proto
 	protoc -I=. --gogofaster_out=:../smart --gogofaster_opt=paths=source_relative ./gas.proto
+	protoc -I=. --gogofaster_out=:../pbgo --gogofaster_opt=paths=source_relative ./block.proto
 

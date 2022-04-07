@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option go_package = "github.com/IBAX-io/go-ibax/packages/pbgo";
+
+package pbgo;
+
+//BlockHeader is a structure of the block's header
+message BlockHeader{
+  int64 block_id = 1;
+  int64 timestamp = 2;
+  int64 ecosystem_id = 3;
+  int64 key_id = 4;
+  int64 node_position = 5;
+  bytes sign = 6;
+  bytes block_hash = 7;
+  bytes rollbacks_hash = 8;
+  int32 version = 9;
+}
+

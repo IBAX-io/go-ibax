@@ -156,7 +156,9 @@ func (pay *PaymentInfo) Detail() any {
 	detail.Set("payment_type", pay.paymentType.String())
 	detail.Set("fuel_rate", pay.fuelRate)
 	detail.Set("token_symbol", pay.Ecosystem.TokenSymbol)
-	detail.Set("combustion", pay.Combustion.Detail())
+	if !pay.indirect && pay.tokenEco != consts.DefaultTokenEcosystem {
+		detail.Set("combustion", pay.Combustion.Detail())
+	}
 	b, _ := JSONEncode(detail)
 	s, _ := JSONDecode(b)
 	return s
@@ -209,6 +211,7 @@ func (sc *SmartContract) resetFromIDForNativePay(from int64) *PaymentInfo {
 		fuelCategories: make([]*FuelCategory, 0),
 		Ecosystem:      origin.Ecosystem,
 		payWallet:      new(sqldb.Key),
+		Combustion:     origin.Combustion,
 		taxesSize:      origin.taxesSize,
 	}
 	return cpy
@@ -410,9 +413,9 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 	var pay = &PaymentInfo{
 		tokenEco:       eco,
 		toID:           sc.BlockData.KeyID,
-		payWallet:      &sqldb.Key{},
-		Ecosystem:      &sqldb.Ecosystem{},
-		Combustion:     &Combustion{},
+		payWallet:      new(sqldb.Key),
+		Ecosystem:      new(sqldb.Ecosystem),
+		Combustion:     new(Combustion),
 		fuelCategories: make([]*FuelCategory, 0),
 		taxesSize:      syspar.SysInt64(syspar.TaxesSize),
 	}
@@ -485,7 +488,8 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 			paymentType:    pay.paymentType,
 			fuelRate:       pay.fuelRate,
 			fuelCategories: make([]*FuelCategory, 0),
-			payWallet:      &sqldb.Key{},
+			payWallet:      new(sqldb.Key),
+			Combustion:     new(Combustion),
 		}
 
 		cpy1 := sc.resetFromIDForNativePay(sc.TxSmart.KeyID)
