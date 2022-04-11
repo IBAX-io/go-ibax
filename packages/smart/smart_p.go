@@ -457,7 +457,7 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 	}
 	if _, _, err = DBInsert(sc, `@1menu`, types.LoadMap(map[string]any{"ecosystem": idStr,
 		"name": "default_menu", "value": SysParamString("default_ecosystem_menu"), "title": "default", "conditions": `ContractConditions("DeveloperCondition")`})); err != nil {
-		return 0, logErrorDB(err, "inserting default page")
+		return 0, logErrorDB(err, "inserting default menu")
 	}
 
 	var (

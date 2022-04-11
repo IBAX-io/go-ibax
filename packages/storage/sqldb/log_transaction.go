@@ -11,12 +11,13 @@ import (
 
 // LogTransaction is model
 type LogTransaction struct {
-	Hash        []byte `gorm:"primary_key;not null"`
-	Block       int64  `gorm:"not null"`
-	TxData      []byte `gorm:"not null"`
-	Timestamp   int64  `gorm:"not null"`
-	Address     int64  `gorm:"not null"`
-	EcosystemID int64  `gorm:"not null"`
+	Hash         []byte `gorm:"primary_key;not null"`
+	Block        int64  `gorm:"not null"`
+	TxData       []byte `gorm:"not null"`
+	Timestamp    int64  `gorm:"not null"`
+	Address      int64  `gorm:"not null"`
+	EcosystemID  int64  `gorm:"not null"`
+	ContractName string `gorm:"not null"`
 }
 
 // GetByHash returns LogTransactions existence by hash

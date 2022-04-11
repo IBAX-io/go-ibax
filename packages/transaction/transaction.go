@@ -36,10 +36,6 @@ type TransactionCaller interface {
 	Validate() error
 	Action(*Transaction) error
 	TxRollback() error
-	TransactionInfoer
-}
-
-type TransactionInfoer interface {
 	txType() byte
 	txHash() []byte
 	txPayload() []byte

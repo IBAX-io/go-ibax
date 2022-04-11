@@ -54,6 +54,7 @@ var (
 		t.Column("hash", "bytea", {"default": ""})
 		t.Column("block", "int", {"default": "0"})
 		t.Column("timestamp", "bigint", {"default": "0"})
+		t.Column("contract_name", "string", {"default": "", "size":255})
 		t.Column("address", "bigint", {"default": "0"})
 		t.Column("ecosystem_id", "bigint", {"default": "0"})
 		t.Column("tx_data", "bytea", {"default": ""})

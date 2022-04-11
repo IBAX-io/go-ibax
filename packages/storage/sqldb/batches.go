@@ -1,9 +1,7 @@
 package sqldb
 
 import (
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	log "github.com/sirupsen/logrus"
-
+	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -31,23 +29,19 @@ type AfterTxs struct {
 	UpdTxStatus []*updateBlockMsg
 }
 
-func AfterPlayTxs(dbTx *DbTransaction, blockID int64, playTx AfterTxs, logger *log.Entry) error {
+func AfterPlayTxs(dbTx *DbTransaction, blockID int64, playTx AfterTxs) error {
 	return GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
 		if err := DeleteTransactions(tx, playTx.UsedTx); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("batches delete used transactions")
-			return err
+			return errors.Wrap(err, "batches delete used transactions")
 		}
 		if err := CreateLogTransactionBatches(tx, playTx.Lts); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("batches insert log_transactions")
-			return err
+			return errors.Wrap(err, "batches insert log_transactions")
 		}
 		if err := CreateBatchesRollbackTx(tx, playTx.Rts); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("batches insert rollback tx")
-			return err
+			return errors.Wrap(err, "batches insert rollback tx")
 		}
 		if err := UpdateBlockMsgBatches(tx, blockID); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("batches update block msg transaction status")
-			return err
+			return errors.Wrap(err, "batches update block msg transaction status")
 		}
 
 		return nil

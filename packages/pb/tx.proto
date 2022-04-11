@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+option go_package = "github.com/IBAX-io/go-ibax/packages/pbgo";
+
+package pbgo;
+
+// Transaction types.
+enum TransactionTypes{
+  SMARTCONTRACT = 0;
+  FIRSTBLOCK = 1;
+  STOPNETWORK = 2;
+}
+
+message FirstBlock {
+  int64 key_id = 1;
+  int64 timestamp = 2;
+  bytes public_key = 3;
+  bytes node_public_key = 4;
+  bytes stop_network_cert_bundle = 5;
+  int64 test = 6;
+  uint64 private_blockchain = 7;
+}
+
+message StopNetwork {
+  int64 key_id = 1;
+  int64 timestamp = 2;
+  bytes stop_network_cert = 3;
+}

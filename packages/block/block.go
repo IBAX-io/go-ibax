@@ -182,7 +182,7 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 		if b.GenBlock {
 			b.Transactions = processedTx
 		}
-		if err := sqldb.AfterPlayTxs(dbTransaction, b.Header.BlockID, playTxs, logger); err != nil {
+		if err := sqldb.AfterPlayTxs(dbTransaction, b.Header.BlockID, playTxs); err != nil {
 			batchErr = err
 			return
 		}
@@ -255,17 +255,22 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
 		playTxs.UsedTx = append(playTxs.UsedTx, t.Hash())
-		var eco int64
+		var (
+			eco      int64
+			contract string
+		)
 		if t.IsSmartContract() {
 			eco = t.SmartContract().TxSmart.EcosystemID
+			contract = t.SmartContract().TxContract.Name
 		}
 		playTxs.Lts = append(playTxs.Lts, &sqldb.LogTransaction{
-			Block:       b.Header.BlockID,
-			Hash:        t.Hash(),
-			TxData:      t.FullData,
-			Timestamp:   t.Timestamp(),
-			Address:     t.KeyID(),
-			EcosystemID: eco,
+			Block:        b.Header.BlockID,
+			Hash:         t.Hash(),
+			TxData:       t.FullData,
+			Timestamp:    t.Timestamp(),
+			Address:      t.KeyID(),
+			EcosystemID:  eco,
+			ContractName: contract,
 		})
 		playTxs.Rts = append(playTxs.Rts, t.RollBackTx...)
 		processedTx = append(processedTx, t)
