@@ -7,15 +7,11 @@ package sqldb
 
 import (
 	"encoding/json"
-	"fmt"
-	"strconv"
+
+	"github.com/pkg/errors"
 )
 
 const ecosysTable = "1_ecosystems"
-
-const (
-	MultiFee = "multi_fee"
-)
 
 // Ecosystem is model
 type Ecosystem struct {
@@ -42,12 +38,9 @@ type Combustion struct {
 }
 
 type FeeModeInfo struct {
-	MultiFee   int64       `json:"multi_fee"`
-	VmCost     FeeModeFlag `json:"vmCost"`
-	Element    FeeModeFlag `json:"element"`
-	Storage    FeeModeFlag `json:"storage"`
-	Expedite   FeeModeFlag `json:"expedite"`
-	Combustion Combustion  `json:"combustion"`
+	FeeModeDetail map[string]FeeModeFlag `json:"fee_mode_detail"`
+	Combustion    Combustion             `json:"combustion"`
+	FollowFuel    int64                  `json:"follow_fuel"`
 }
 
 // TableName returns name of table
@@ -87,29 +80,18 @@ func (sys *Ecosystem) Delete(transaction *DbTransaction) error {
 	return GetDB(transaction).Delete(sys).Error
 }
 
-func (sys *Ecosystem) IsOpenMultiFee() bool {
-	if len(sys.FeeModeInfo) > 0 {
-		var info map[string]interface{}
-		json.Unmarshal([]byte(sys.FeeModeInfo), &info)
-		if v, ok := info[MultiFee]; ok {
-			multi, _ := strconv.Atoi(fmt.Sprint(v))
-			if multi == 1 {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // FeeMode is get ecosystem fee mode
-func (sys *Ecosystem) FeeMode() *FeeModeInfo {
-	if !sys.IsOpenMultiFee() {
-		return nil
+func (sys *Ecosystem) FeeMode() (*FeeModeInfo, error) {
+	if len(sys.TokenSymbol) == 0 {
+		return nil, nil
 	}
-	if len(sys.TokenSymbol) <= 0 {
-		return nil
+	if len(sys.FeeModeInfo) == 0 {
+		return nil, nil
 	}
 	var info = &FeeModeInfo{}
-	json.Unmarshal([]byte(sys.FeeModeInfo), info)
-	return info
+	err := json.Unmarshal([]byte(sys.FeeModeInfo), info)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Unmarshal eco[%d] feemode err", sys.ID)
+	}
+	return info, nil
 }

@@ -19,10 +19,10 @@ enum GasScenesType {
   Combustion = 16;
 }
 
-enum DirectType {
+enum GasPayAbleType {
   Invalid = 0;
-  DirectPay = 1;
-  IndirectPay = 2;
+  Unable = 1;
+  Capable = 2;
 }
 
 enum FuelType {

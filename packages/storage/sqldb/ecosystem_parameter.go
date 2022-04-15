@@ -9,7 +9,6 @@ import "github.com/IBAX-io/go-ibax/packages/converter"
 
 var (
 	EcosystemWallet = "ecosystem_wallet"
-	FollowFuel      = "follow_fuel"
 )
 
 // StateParameter is model
