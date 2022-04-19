@@ -477,7 +477,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 			Ecosystem:      pay.Ecosystem,
 			toID:           pay.fromID,
 			fromID:         sc.TxSmart.KeyID,
-			paymentType:    pay.paymentType,
+			paymentType:    PaymentType_ContractCaller,
 			fuelRate:       pay.fuelRate,
 			fuelCategories: make([]FuelCategory, 0),
 			payWallet:      new(sqldb.Key),
@@ -485,6 +485,8 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		}
 		// caller to reward and taxes for platform eco
 		cpyPlatCaller := sc.resetFromIDForNativePay(sc.TxSmart.KeyID)
+		cpyPlatCaller.paymentType = PaymentType_ContractCaller
+
 		// indirect to reward and taxes for platform eco
 		cpyPlatIndirect := sc.resetFromIDForNativePay(pay.fromID)
 		cpyPlatIndirect.paymentType = pay.paymentType
