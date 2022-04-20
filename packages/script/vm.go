@@ -128,7 +128,7 @@ func VMFlushBlock(vm *VM, root *CodeBlock) {
 
 func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any) (ret []any, err error) {
 	var cost int64
-	if ecost, ok := extend[`txcost`]; ok {
+	if ecost, ok := extend[Extend_txcost]; ok {
 		cost = ecost.(int64)
 	} else {
 		cost = syspar.GetMaxCost()
@@ -138,9 +138,9 @@ func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any) (ret [
 		rt.cost -= block.parentContractCost()
 	}
 	ret, err = rt.Run(block, params, extend)
-	extend[`txcost`] = rt.Cost()
+	extend[Extend_txcost] = rt.Cost()
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.VMError, "error": err, "original_contract": extend[`original_contract`], "this_contract": extend[`this_contract`], "ecosystem_id": extend[`ecosystem_id`]}).Error("running block in smart vm")
+		log.WithFields(log.Fields{"type": consts.VMError, "error": err, "original_contract": extend[Extend_original_contract], "this_contract": extend[Extend_this_contract], "ecosystem_id": extend[Extend_ecosystem_id]}).Error("running block in smart vm")
 		return nil, err
 	}
 	return

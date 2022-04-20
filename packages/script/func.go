@@ -53,12 +53,12 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 	for _, ipar := range pars {
 		parnames[ipar] = true
 	}
-	if _, ok := rt.extend[`loop_`+name]; ok {
+	if _, ok := rt.extend[Extend_loop+name]; ok {
 		logger.WithFields(log.Fields{"type": consts.ContractError, "contract_name": name}).Error("there is loop in contract")
 		return nil, fmt.Errorf(eContractLoop, name)
 	}
-	rt.extend[`loop_`+name] = true
-	defer delete(rt.extend, `loop_`+name)
+	rt.extend[Extend_loop+name] = true
+	defer delete(rt.extend, Extend_loop+name)
 
 	prevExtend := make(map[string]any)
 	for key, item := range rt.extend {
@@ -87,11 +87,11 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 	for i, ipar := range pars {
 		rt.extend[ipar] = params[i]
 	}
-	prevthis := rt.extend[`this_contract`]
+	prevthis := rt.extend[Extend_this_contract]
 	_, nameContract := converter.ParseName(name)
-	rt.extend[`this_contract`] = nameContract
+	rt.extend[Extend_this_contract] = nameContract
 
-	prevparent := rt.extend[`parent`]
+	prevparent := rt.extend[Extend_parent]
 	parent := ``
 	for i := len(rt.blocks) - 1; i >= 0; i-- {
 		if rt.blocks[i].Block.Type == ObjectType_Func && rt.blocks[i].Block.Parent != nil &&
@@ -124,12 +124,12 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 		stack Stacker
 		err   error
 	)
-	if stack, ok = rt.extend["sc"].(Stacker); ok {
+	if stack, ok = rt.extend[Extend_sc].(Stacker); ok {
 		if err := stack.AppendStack(name); err != nil {
 			return nil, err
 		}
 	}
-	if rt.extend[`sc`] != nil && isSignature {
+	if rt.extend[Extend_sc] != nil && isSignature {
 		obj := rt.vm.Objects[`check_signature`]
 		finfo := obj.Value.ExtFuncInfo()
 		if err := finfo.Func.(func(map[string]any, string) error)(rt.extend, name); err != nil {
@@ -140,7 +140,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 	for _, method := range []string{`conditions`, `action`} {
 		if block, ok := (*cblock).Objects[method]; ok && block.Type == ObjectType_Func {
 			rtemp := NewRunTime(rt.vm, rt.cost)
-			rt.extend[`parent`] = parent
+			rt.extend[Extend_parent] = parent
 			_, err = rtemp.Run(block.Value.CodeBlock(), nil, rt.extend)
 			rt.cost = rtemp.cost
 			if err != nil {
@@ -155,10 +155,10 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	rt.extend[`parent`] = prevparent
-	rt.extend[`this_contract`] = prevthis
+	rt.extend[Extend_parent] = prevparent
+	rt.extend[Extend_this_contract] = prevthis
 
-	result := rt.extend[`result`]
+	result := rt.extend[Extend_result]
 	for key := range rt.extend {
 		if isSysVar(key) {
 			continue

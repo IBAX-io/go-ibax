@@ -43,28 +43,28 @@ const (
 )
 
 var sysVars = map[string]struct{}{
-	`block`:               {},
-	`block_key_id`:        {},
-	`block_time`:          {},
-	`data`:                {},
-	`ecosystem_id`:        {},
-	`key_id`:              {},
-	`account_id`:          {},
-	`node_position`:       {},
-	`parent`:              {},
-	`original_contract`:   {},
-	`sc`:                  {},
-	`contract`:            {},
-	`stack`:               {},
-	`this_contract`:       {},
-	`time`:                {},
-	`type`:                {},
-	`txcost`:              {},
-	`txhash`:              {},
-	`guest_key`:           {},
-	`gen_block`:           {},
-	`time_limit`:          {},
-	`pre_block_data_hash`: {},
+	sysVars_block:               {},
+	sysVars_block_key_id:        {},
+	sysVars_block_time:          {},
+	sysVars_data:                {},
+	sysVars_ecosystem_id:        {},
+	sysVars_key_id:              {},
+	sysVars_account_id:          {},
+	sysVars_node_position:       {},
+	sysVars_parent:              {},
+	sysVars_original_contract:   {},
+	sysVars_sc:                  {},
+	sysVars_contract:            {},
+	sysVars_stack:               {},
+	sysVars_this_contract:       {},
+	sysVars_time:                {},
+	sysVars_type:                {},
+	sysVars_txcost:              {},
+	sysVars_txhash:              {},
+	sysVars_guest_key:           {},
+	sysVars_gen_block:           {},
+	sysVars_time_limit:          {},
+	sysVars_pre_block_data_hash: {},
 }
 
 var (
@@ -117,7 +117,7 @@ func NewRunTime(vm *VM, cost int64) *RunTime {
 }
 
 func isSysVar(name string) bool {
-	if _, ok := sysVars[name]; ok || strings.HasPrefix(name, `loop_`) {
+	if _, ok := sysVars[name]; ok || strings.HasPrefix(name, Extend_loop) {
 		return true
 	}
 	return false
@@ -216,12 +216,12 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		foo    = reflect.ValueOf(finfo.Func)
 		pars   = make([]reflect.Value, in)
 	)
-	if stack, ok = rt.extend["sc"].(Stacker); ok {
+	if stack, ok = rt.extend[Extend_sc].(Stacker); ok {
 		if err := stack.AppendStack(finfo.Name); err != nil {
 			return err
 		}
 	}
-	rt.extend[`rt`] = rt
+	rt.extend[Extend_rt] = rt
 	auto := 0
 	for k := 0; k < in; k++ {
 		if len(finfo.Auto[k]) > 0 {
@@ -576,7 +576,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 				stack := block.Parent.Info.ContractInfo()
 				curContract = stack.Name
 			}
-			if stack, ok := rt.extend["stack"].([]any); ok {
+			if stack, ok := rt.extend[Extend_stack].([]any); ok {
 				curContract = stack[len(stack)-1].(string)
 			}
 
@@ -1360,14 +1360,14 @@ func (rt *RunTime) Run(block *CodeBlock, params []any, extend map[string]any) (r
 		genBlock bool
 		timer    *time.Timer
 	)
-	if gen, ok := extend[`gen_block`]; ok {
+	if gen, ok := extend[Extend_gen_block]; ok {
 		genBlock = gen.(bool)
 	}
 	timeOver := func() {
 		rt.timeLimit = true
 	}
 	if genBlock {
-		timer = time.AfterFunc(time.Millisecond*time.Duration(extend[`time_limit`].(int64)), timeOver)
+		timer = time.AfterFunc(time.Millisecond*time.Duration(extend[Extend_time_limit].(int64)), timeOver)
 	}
 	if _, err = rt.RunCode(block); err == nil {
 		off := len(rt.stack) - len(info.Results)

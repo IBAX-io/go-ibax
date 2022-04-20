@@ -508,6 +508,8 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 				categoryFee = elementFee
 			case FuelType_expedite_fee.String():
 				categoryFee = expediteFee
+			default:
+				continue
 			}
 			category := newFuelCategory(FuelType(FuelType_value[k]), categoryFee, GasPayAbleType(flag.Flag), flag.ConversionRate)
 			switch category.flag {

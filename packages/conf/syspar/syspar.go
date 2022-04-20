@@ -354,7 +354,7 @@ func GetFuelRate(ecosystem int64) string {
 	if ret, ok := fuels[ecosystem]; ok {
 		return ret
 	}
-	return fuels[1]
+	return ``
 }
 
 // HasFuelRate is returns fuels exist
@@ -374,7 +374,7 @@ func GetTaxesWallet(ecosystem int64) string {
 	if ret, ok := wallets[ecosystem]; ok {
 		return ret
 	}
-	return wallets[1]
+	return ``
 }
 
 // HasTaxesWallet is returns taxes exist

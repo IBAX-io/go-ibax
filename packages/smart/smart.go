@@ -98,7 +98,7 @@ func (sc *SmartContract) AppendStack(fn string) error {
 			}
 		}
 		cont.StackCont = append(cont.StackCont, fn)
-		sc.TxContract.Extend["stack"] = cont.StackCont
+		sc.TxContract.Extend[script.Extend_stack] = cont.StackCont
 	}
 	return nil
 }
@@ -108,7 +108,7 @@ func (sc *SmartContract) PopStack(fn string) {
 		cont := sc.TxContract
 		if len(cont.StackCont) > 0 {
 			cont.StackCont = cont.StackCont[:len(cont.StackCont)-1]
-			sc.TxContract.Extend["stack"] = cont.StackCont
+			sc.TxContract.Extend[script.Extend_stack] = cont.StackCont
 		}
 	}
 }
@@ -203,28 +203,28 @@ func (sc *SmartContract) getExtend() map[string]any {
 	}
 	head := sc.TxSmart
 	extend := map[string]any{
-		`type`:                head.ID,
-		`time`:                sc.Timestamp,
-		`ecosystem_id`:        head.EcosystemID,
-		`node_position`:       blockNodePosition,
-		`block`:               block,
-		`key_id`:              sc.Key.ID,
-		`account_id`:          sc.Key.AccountID,
-		`block_key_id`:        blockKeyID,
-		`parent`:              ``,
-		`txcost`:              sc.GetContractLimit(),
-		`txhash`:              sc.Hash,
-		`result`:              ``,
-		`sc`:                  sc,
-		`contract`:            sc.TxContract,
-		`block_time`:          blockTime,
-		`original_contract`:   ``,
-		`this_contract`:       ``,
-		`guest_key`:           consts.GuestKey,
-		`guest_account`:       consts.GuestAddress,
-		`pre_block_data_hash`: perBlockHash,
-		`gen_block`:           sc.GenBlock,
-		`time_limit`:          sc.TimeLimit,
+		script.Extend_type:                head.ID,
+		script.Extend_time:                sc.Timestamp,
+		script.Extend_ecosystem_id:        head.EcosystemID,
+		script.Extend_node_position:       blockNodePosition,
+		script.Extend_block:               block,
+		script.Extend_key_id:              sc.Key.ID,
+		script.Extend_account_id:          sc.Key.AccountID,
+		script.Extend_block_key_id:        blockKeyID,
+		script.Extend_parent:              ``,
+		script.Extend_txcost:              sc.GetContractLimit(),
+		script.Extend_txhash:              sc.Hash,
+		script.Extend_result:              ``,
+		script.Extend_sc:                  sc,
+		script.Extend_contract:            sc.TxContract,
+		script.Extend_block_time:          blockTime,
+		script.Extend_original_contract:   ``,
+		script.Extend_this_contract:       ``,
+		script.Extend_guest_key:           consts.GuestKey,
+		script.Extend_guest_account:       consts.GuestAddress,
+		script.Extend_pre_block_data_hash: perBlockHash,
+		script.Extend_gen_block:           sc.GenBlock,
+		script.Extend_time_limit:          sc.TimeLimit,
 	}
 	for key, val := range sc.TxData {
 		extend[key] = val
@@ -578,13 +578,13 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 	sc.VM = script.GetVM()
 
 	ctrctExtend := sc.TxContract.Extend
-	before := ctrctExtend[`txcost`].(int64)
+	before := ctrctExtend[script.Extend_txcost].(int64)
 	txSizeFuel := syspar.GetSizeFuel() * sc.TxSize / 1024
-	ctrctExtend[`txcost`] = ctrctExtend[`txcost`].(int64) - txSizeFuel
+	ctrctExtend[script.Extend_txcost] = ctrctExtend[script.Extend_txcost].(int64) - txSizeFuel
 
 	_, nameContract := converter.ParseName(sc.TxContract.Name)
-	ctrctExtend[`original_contract`] = nameContract
-	ctrctExtend[`this_contract`] = nameContract
+	ctrctExtend[script.Extend_original_contract] = nameContract
+	ctrctExtend[script.Extend_this_contract] = nameContract
 
 	methods := []string{`conditions`, `action`}
 	var (
@@ -608,7 +608,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 		}
 		cfuncs = append(cfuncs, cfunc)
 	}
-	ctrctExtend[`txcost`] = ctrctExtend[`txcost`].(int64) - script.CostContract
+	ctrctExtend[script.Extend_txcost] = ctrctExtend[script.Extend_txcost].(int64) - script.CostContract
 
 	for i := 0; i < len(cfuncs); i++ {
 		sc.TxContract.Called = 1 << i
@@ -616,12 +616,12 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 			break
 		}
 	}
-	sc.TxFuel = before - ctrctExtend[`txcost`].(int64)
+	sc.TxFuel = before - ctrctExtend[script.Extend_txcost].(int64)
 	sc.TxUsedCost = decimal.New(sc.TxFuel, 0)
 
 	if err == nil {
-		if ctrctExtend[`result`] != nil {
-			result = fmt.Sprint(ctrctExtend[`result`])
+		if ctrctExtend[script.Extend_result] != nil {
+			result = fmt.Sprint(ctrctExtend[script.Extend_result])
 			if !utf8.ValidString(result) {
 				result, err = retError(errNotValidUTF)
 			}
