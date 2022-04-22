@@ -32,3 +32,8 @@ enum FuelType {
   element_fee = 3;
   expedite_fee = 4;
 }
+enum Arithmetic {
+  NATIVE = 0;
+  MUL = 3;
+  DIV = 4;
+}
