@@ -5,174 +5,132 @@
 package crypto
 
 import (
-	"bytes"
-	"crypto/aes"
-	"crypto/cipher"
-	crand "crypto/rand"
-	"errors"
+	"crypto/sha512"
+	"encoding/hex"
 	"fmt"
+	"strconv"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/asymalgo"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/hashalgo"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 )
 
-// TODO In order to add new crypto provider with another key length it will be neccecary to fix constant blocksizes like
-// crypto func getSharedKey() pub.X = new(big.Int).SetBytes(public[0:32])
-// egcons func checkKey() gSettings.Key = hex.EncodeToString(privKey[aes.BlockSize:])
-
-type cryptoProvider int
-type ellipticSizeProvider int
-
-const (
-	_AESCBC cryptoProvider = iota
-)
-
-const (
-	elliptic256 ellipticSizeProvider = iota
-)
-
 var (
-	// ErrHashing is Hashing error
-	ErrHashing = errors.New("Hashing error") // nolint
-	// ErrEncrypting is Encoding error
-	ErrEncrypting = errors.New("Encoding error")
-	// ErrDecrypting is Decrypting error
-	ErrDecrypting = errors.New("Decrypting error")
-	// ErrUnknownProvider is Unknown provider error
-	ErrUnknownProvider = errors.New("Unknown provider")
-	// ErrHashingEmpty is Hashing empty value error
-	ErrHashingEmpty = errors.New("Hashing empty value")
-	// ErrEncryptingEmpty is Encrypting empty value error
-	ErrEncryptingEmpty = errors.New("Encrypting empty value")
-	// ErrDecryptingEmpty is Decrypting empty value error
-	ErrDecryptingEmpty = errors.New("Decrypting empty value")
-	// ErrSigningEmpty is Signing empty value error
-	ErrSigningEmpty = errors.New("Signing empty value")
-	// ErrCheckingSignEmpty is Checking sign of empty error
-	ErrCheckingSignEmpty = errors.New("Cheking sign of empty")
-	// ErrIncorrectSign is Incorrect sign
-	ErrIncorrectSign = errors.New("Incorrect sign")
-	// ErrUnsupportedCurveSize is Unsupported curve size error
-	ErrUnsupportedCurveSize = errors.New("Unsupported curve size")
-	// ErrIncorrectPrivKeyLength is Incorrect private key length error
-	ErrIncorrectPrivKeyLength = errors.New("Incorrect private key length")
-	// ErrIncorrectPubKeyLength is Incorrect public key length
-	ErrIncorrectPubKeyLength = errors.New("Incorrect public key length")
+	asymAlgo AsymAlgo
+	hashAlgo HashAlgo
 )
 
-var (
-	cryptoProv   = _AESCBC
-	hashProv     = _SHA256
-	ellipticSize = elliptic256
-	signProv     = _ECDSA
-	checksumProv = _CRC64
-	hmacProv     = _SHA256
-)
-
-// Encrypt is encrypting
-func Encrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
-	if len(msg) == 0 {
-		return nil, ErrEncryptingEmpty
+func NewAsymAlgo(a AsymAlgo) AsymProvider {
+	switch a {
+	case AsymAlgo_ECC_P256:
+		return &asymalgo.P256{}
+	case AsymAlgo_ECC_Secp256k1:
+		return &asymalgo.Secp256k1{}
+	case AsymAlgo_SM2:
+		return &asymalgo.SM2{}
 	}
-	switch cryptoProv {
-	case _AESCBC:
-		return encryptCBC(msg, key, iv)
-	default:
-		return nil, ErrUnknownProvider
-	}
+	panic(fmt.Errorf("curve algo [%v] is not supported yet", a))
 }
 
-// Decrypt is decrypting
-func Decrypt(msg []byte, key []byte, iv []byte) ([]byte, error) {
-	if len(msg) == 0 {
-		return nil, ErrDecryptingEmpty
+func InitAsymAlgo(s string) {
+	v, ok := AsymAlgo_value[s]
+	if !ok {
+		panic(fmt.Errorf("curve algo [%v] is not supported yet", s))
 	}
-	switch cryptoProv {
-	case _AESCBC:
-		return decryptCBC(msg, key, iv)
-	default:
-		return nil, ErrUnknownProvider
-	}
+	asymAlgo = AsymAlgo(v)
+	return
 }
 
-// SharedEncrypt creates a shared key and encrypts text. The first 32 characters are the created public key.
-// The cipher text can be only decrypted with the original private key.
-//func SharedEncrypt(public, text []byte) ([]byte, error) {
-//	priv, pub, err := genBytesKeys()
-//	if err != nil {
-//		return nil, err
-//	}
-//	shared, err := getSharedKey(priv, public)
-//	if err != nil {
-//		return nil, err
-//	}
-//	val, err := Encrypt(shared, text, pub)
-//	return val, err
-//}
+func GetAsymProvider() AsymProvider {
+	return NewAsymAlgo(asymAlgo)
+}
 
-// CBCEncrypt encrypts the text by using the key parameter. It uses CBC mode of AES.
-func encryptCBC(text, key, iv []byte) ([]byte, error) {
-	if iv == nil {
-		iv = make([]byte, consts.BlockSize)
-		if _, err := crand.Read(iv); err != nil {
-			return nil, err
-		}
-	} else if len(iv) < consts.BlockSize {
-		return nil, fmt.Errorf(`wrong size of iv %d`, len(iv))
-	} else if len(iv) > consts.BlockSize {
-		iv = iv[:consts.BlockSize]
+func NewHashAlgo(a HashAlgo) HashProvider {
+	switch a {
+	case HashAlgo_SHA256:
+		return &hashalgo.SHA256{}
+	case HashAlgo_SM3:
+		return &hashalgo.SM3{}
+	case HashAlgo_KECCAK256:
+		return &hashalgo.Keccak256{}
 	}
+	panic(fmt.Errorf("hash algo [%v] is not supported yet", a))
+}
 
-	block, err := aes.NewCipher(key)
+func InitHashAlgo(s string) {
+	v, ok := HashAlgo_value[s]
+	if !ok {
+		panic(fmt.Errorf("hash algo [%v] is not supported yet", s))
+	}
+	hashAlgo = HashAlgo(v)
+	return
+}
+
+func GetHashProvider() HashProvider {
+	return NewHashAlgo(hashAlgo)
+}
+
+// Address gets int64 address from the public key
+func Address(pubKey []byte) int64 {
+	pubKey = CutPub(pubKey)
+	h := Hash(pubKey)
+	h512 := sha512.Sum512(h[:])
+	crc := calcCRC64(h512[:])
+	// replace the last digit by checksum
+	num := strconv.FormatUint(crc, 10)
+	val := []byte(strings.Repeat("0", consts.AddressLength-len(num)) + num)
+	return int64(crc - (crc % 10) + uint64(checkSum(val[:len(val)-1])))
+}
+
+// GenKeyPair generates a random pair of private and public binary keys.
+func GenKeyPair() ([]byte, []byte, error) {
+	return GetAsymProvider().GenKeyPair()
+}
+
+// GenHexKeys generates a random pair of private and public hex keys.
+func GenHexKeys() (string, string, error) {
+	priv, pub, err := GenKeyPair()
 	if err != nil {
-		return nil, err
+		return ``, ``, err
 	}
-	plaintext := _PKCS7Padding(text, consts.BlockSize)
-	mode := cipher.NewCBCEncrypter(block, iv)
-	encrypted := make([]byte, len(plaintext))
-	mode.CryptBlocks(encrypted, plaintext)
-	return append(iv, encrypted...), nil
-
+	return hex.EncodeToString(priv), PubToHex(pub), nil
 }
 
-// CBCDecrypt decrypts the text by using key. It uses CBC mode of AES.
-func decryptCBC(ciphertext, key, iv []byte) ([]byte, error) {
-	if iv == nil {
-		iv = ciphertext[:consts.BlockSize]
-		ciphertext = ciphertext[consts.BlockSize:]
-	}
-	if len(ciphertext) < consts.BlockSize || len(ciphertext)%consts.BlockSize != 0 {
-		return nil, fmt.Errorf(`wrong size of cipher %d`, len(ciphertext))
-	}
+func Sign(privateKey, data []byte) ([]byte, error) {
+	return GetAsymProvider().Sign(privateKey, Hash(data))
+}
 
-	block, err := aes.NewCipher(key)
+func Verify(public, data, signature []byte) (bool, error) {
+	return GetAsymProvider().Verify(public, Hash(data), signature)
+}
+
+// PrivateToPublic returns the public key for the specified private key.
+func PrivateToPublic(key []byte) ([]byte, error) {
+	return GetAsymProvider().PrivateToPublic(key)
+}
+
+func SignString(privateKeyHex, data string) ([]byte, error) {
+	privateKey, err := hex.DecodeString(privateKeyHex)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decoding private key from hex: %w", err)
 	}
-
-	ret := make([]byte, len(ciphertext))
-	cipher.NewCBCDecrypter(block, iv[:consts.BlockSize]).CryptBlocks(ret, ciphertext)
-	if ret, err = _PKCS7UnPadding(ret); err != nil {
-		return nil, err
-	}
-	return ret, nil
-
+	return GetAsymProvider().Sign(privateKey, Hash([]byte(data)))
 }
 
-// PKCS7Padding realizes PKCS#7 encoding which is described in RFC 5652.
-func _PKCS7Padding(src []byte, blockSize int) []byte {
-	padding := blockSize - len(src)%blockSize
-	return append(src, bytes.Repeat([]byte{byte(padding)}, padding)...)
+func GetHMAC(secret string, message string) ([]byte, error) {
+	return GetHashProvider().GetHMAC(secret, message)
 }
 
-// PKCS7UnPadding realizes PKCS#7 decoding.
-func _PKCS7UnPadding(src []byte) ([]byte, error) {
-	length := len(src)
-	padLength := int(src[length-1])
-	for i := length - padLength; i < length; i++ {
-		if int(src[i]) != padLength {
-			return nil, fmt.Errorf(`incorrect input of PKCS7UnPadding`)
-		}
-	}
-	return src[:length-int(src[length-1])], nil
+func Hash(msg []byte) []byte {
+	return GetHashProvider().GetHash(msg)
+}
 
+func DoubleHash(msg []byte) []byte {
+	return GetHashProvider().DoubleHash(msg)
+}
+
+func HashHex(input []byte) string {
+	return hex.EncodeToString(Hash(input))
 }

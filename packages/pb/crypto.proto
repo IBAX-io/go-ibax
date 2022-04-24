@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+option go_package = "github.com/IBAX-io/go-ibax/packages/common/crypto";
+
+package crypto;
+
+// AsymAlgo is asymmetric algorithms
+enum AsymAlgo{
+  ECC_P256 = 0;
+  ECC_Secp256k1 = 1;
+  SM2 = 2;
+  ECC_P512 = 3;
+}
+
+// SymAlgo is symmetric algorithms
+enum SymAlgo{
+  AES = 0;
+  SM4 = 1;
+}
+
+// HashAlgo is hash algorithms
+enum HashAlgo{
+  SHA256 = 0;
+  KECCAK256 = 1;
+  SM3 = 2;
+  SHA3_256 = 3;
+}
+
+

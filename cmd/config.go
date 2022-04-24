@@ -140,6 +140,6 @@ func init() {
 
 	// CryptoSettings
 	cmdFlags.StringVar(&conf.Config.CryptoSettings.Hasher, "hasher", "SHA256", "Hash Algorithm")
-	cmdFlags.StringVar(&conf.Config.CryptoSettings.Cryptoer, "cryptoer", "ECDSA", "Key and Sign Algorithm")
+	cmdFlags.StringVar(&conf.Config.CryptoSettings.Cryptoer, "cryptoer", "ECC_P256", "Key and Sign Algorithm")
 	viper.BindPFlags(configCmd.PersistentFlags())
 }

@@ -52,14 +52,6 @@ var FirstEcosystemTables = map[string]bool{
 	`views`:              true,
 }
 
-// FillLeft is filling slice
-func FillLeft(slice []byte) []byte {
-	if len(slice) >= 32 {
-		return slice
-	}
-	return append(make([]byte, 32-len(slice)), slice...)
-}
-
 func EncodeLenInt64(data *[]byte, x int64) *[]byte {
 	var length int
 	buf := make([]byte, 8)

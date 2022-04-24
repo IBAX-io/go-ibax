@@ -202,7 +202,7 @@ func CheckSign(publicKeys [][]byte, forSign []byte, signs []byte, nodeKeyOrLogin
 		}
 	}
 
-	return crypto.CheckSign(publicKeys[0], forSign, signsSlice[0])
+	return crypto.Verify(publicKeys[0], forSign, signsSlice[0])
 }
 
 // MerkleTreeRoot rertun Merkle value

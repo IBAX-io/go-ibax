@@ -279,7 +279,7 @@ func CheckSign(pub, data, sign string) (bool, error) {
 		return false, err
 	}
 	pk = crypto.CutPub(pk)
-	return crypto.CheckSign(pk, []byte(data), s)
+	return crypto.Verify(pk, []byte(data), s)
 }
 
 // Replace replaces old substrings to new substrings

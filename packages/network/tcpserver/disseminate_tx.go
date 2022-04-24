@@ -13,7 +13,8 @@ import (
 	"encoding/pem"
 	"io"
 
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/symalgo/aes"
+
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -169,7 +170,7 @@ func DecryptData(binaryTx *[]byte) ([]byte, []byte, []byte, error) {
 	}
 
 	log.WithFields(log.Fields{"binaryTx": *binaryTx, "iv": iv}).Debug("binaryTx and iv is")
-	decrypted, err := crypto.Decrypt(iv, *binaryTx, decKey)
+	decrypted, err := aes.Decrypt(iv, *binaryTx, decKey)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("Decryption binary tx")
 		return nil, nil, nil, utils.ErrInfo(err)

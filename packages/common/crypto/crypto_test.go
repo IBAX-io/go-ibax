@@ -8,12 +8,14 @@ import (
 )
 
 func TestGetCryptoer(t *testing.T) {
-	c := getCryptoer()
+	InitAsymAlgo("ECC_P256")
+	InitHashAlgo("SHA256")
+
 	src := []byte("Hello")
 	encodedStr := hex.EncodeToString(src)
-	fmt.Println(src)
+	fmt.Println("Message in []byte: ", src)
 	fmt.Printf("%s\n", encodedStr)
-	prv, pub, err := c.genKeyPair()
+	prv, pub, err := GenKeyPair()
 	if err != nil {
 		return
 	}
@@ -24,7 +26,7 @@ func TestGetCryptoer(t *testing.T) {
 	addr := Address(pub)
 
 	fmt.Println("Address is:", addr)
-	signedDataByte, err := c.sign(prv, src)
+	signedDataByte, err := Sign(prv, src)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,9 +46,10 @@ func TestGetCryptoer(t *testing.T) {
 	// 	log.Fatal(err)
 	// }
 	fmt.Println("signedDataByPriv is:", signedDataByte)
-	ok, err := c.verify(pub, src, signedDataByte)
+	//signature=3045022046468a5a6c62adff1d7c6a864dae3878a34f9d07be66b71f8ba34fc5a80d0e45022100caba64be8cf53709975a6a209c5c2197b01054f9b22edf25e99dfb8ea50a0633
+	_, err = Verify(pub, src, signedDataByte)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(ok)
+
 }

@@ -7,9 +7,16 @@ package ecies
 
 import (
 	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
+	"fmt"
 	"log"
+	"math/big"
 	"runtime"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 )
 
 func init() {
@@ -66,7 +73,7 @@ func EccCryptoKey(plainText []byte, publickey string) (cryptoText []byte, err er
 	if err != nil {
 		return nil, err
 	}
-	pub, err := crypto.GetPublicKeys(pubbuff)
+	pub, err := GetPublicKeys(pubbuff)
 	if err != nil {
 		return nil, err
 	}
@@ -74,9 +81,33 @@ func EccCryptoKey(plainText []byte, publickey string) (cryptoText []byte, err er
 }
 
 func EccDeCrypto(cryptoText []byte, prikey []byte) ([]byte, error) {
-	pri, err := crypto.GetPrivateKeys(prikey)
+	pri, err := GetPrivateKeys(prikey)
 	if err != nil {
 		return nil, err
 	}
 	return EccPriDeCrypt(cryptoText, pri)
+}
+
+// GetPrivateKeys return
+func GetPrivateKeys(privateKey []byte) (ret *ecdsa.PrivateKey, err error) {
+	var pubkeyCurve elliptic.Curve
+	pubkeyCurve = elliptic.P256()
+	bi := new(big.Int).SetBytes(privateKey)
+	priv := new(ecdsa.PrivateKey)
+	priv.PublicKey.Curve = pubkeyCurve
+	priv.D = bi
+	return priv, nil
+}
+
+// GetPublicKeys return
+func GetPublicKeys(public []byte) (*ecdsa.PublicKey, error) {
+	pubkey := new(ecdsa.PublicKey)
+	if len(public) != consts.PubkeySizeLength {
+		return pubkey, fmt.Errorf("invalid parameters len(public) = %d", len(public))
+	}
+
+	pubkey.Curve = elliptic.P256()
+	pubkey.X = new(big.Int).SetBytes(public[0:consts.PrivkeyLength])
+	pubkey.Y = new(big.Int).SetBytes(public[consts.PrivkeyLength:])
+	return pubkey, nil
 }

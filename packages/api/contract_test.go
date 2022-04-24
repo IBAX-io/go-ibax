@@ -20,15 +20,15 @@ import (
 )
 
 func init() {
-	crypto.InitCurve("ECDSA")
-	crypto.InitHash("SHA256")
+	crypto.InitAsymAlgo("ECC_P256")
+	crypto.InitHashAlgo("SHA256")
 }
 func TestBin(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
-	//form := url.Values{`nowait`: {`nowait`}}
-	//assert.NoError(t, postTxMultipart(`NewContract`, &form))
-	_, _, err := postTxResult("rndPtlziReAis01638415503", &url.Values{})
-	assert.NoError(t, err)
+	form := url.Values{`nowait`: {`nowait`}}
+	assert.NoError(t, postTxMultipart(`@1NewContract`, &form))
+	//_, _, err := postTxResult("rndPtlziReAis01638415503", &url.Values{})
+	//assert.NoError(t, err)
 }
 
 func TestMath(t *testing.T) {

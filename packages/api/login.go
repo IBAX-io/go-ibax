@@ -259,7 +259,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		client.RoleID = checkedRole
 	}
 
-	verify, err := crypto.CheckSign(publicKey, []byte(nonceSalt()+uid), form.Signature.Bytes())
+	verify, err := crypto.Verify(publicKey, []byte(nonceSalt()+uid), form.Signature.Bytes())
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.CryptoError, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Error("checking signature")
 		errorResponse(w, err)

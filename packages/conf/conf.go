@@ -178,6 +178,6 @@ func GetNodesAddr() []string {
 }
 
 func registerCrypto(c CryptoSettings) {
-	crypto.InitCurve(c.Cryptoer)
-	crypto.InitHash(c.Hasher)
+	crypto.InitAsymAlgo(c.Cryptoer)
+	crypto.InitHashAlgo(c.Hasher)
 }

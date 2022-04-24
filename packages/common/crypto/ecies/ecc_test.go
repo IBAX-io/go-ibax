@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"fmt"
 	"testing"
+
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 )
 
 // HexToBytes converts the hexadecimal representation to []byte

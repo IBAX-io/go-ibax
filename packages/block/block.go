@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/asymalgo"
 	"github.com/IBAX-io/go-ibax/packages/common/random"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -375,7 +375,7 @@ func (b *Block) CheckHash() (bool, error) {
 			true)
 
 		if err != nil {
-			if err == crypto.ErrIncorrectSign {
+			if err == asymalgo.ErrIncorrectSign {
 				if !bytes.Equal(b.PrevRollbacksHash, b.PrevHeader.RollbacksHash) {
 					return false, ErrIncorrectRollbackHash
 				}
