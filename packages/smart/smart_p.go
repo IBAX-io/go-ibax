@@ -268,7 +268,6 @@ func PubToID(hexkey string) int64 {
 	return crypto.Address(pubkey)
 }
 
-// Replace replaces old substrings to new substrings
 func CheckSign(pub, data, sign string) (bool, error) {
 	pk, err := hex.DecodeString(pub)
 	if err != nil {
@@ -282,7 +281,6 @@ func CheckSign(pub, data, sign string) (bool, error) {
 	return crypto.Verify(pk, []byte(data), s)
 }
 
-// Replace replaces old substrings to new substrings
 func CheckNumberChars(data string) bool {
 	dat := []byte(data)
 	dl := len(dat)

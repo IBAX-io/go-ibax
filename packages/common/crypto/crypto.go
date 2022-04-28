@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/asymalgo"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/hashalgo"
 
@@ -37,7 +39,7 @@ func NewAsymAlgo(a AsymAlgo) AsymProvider {
 func InitAsymAlgo(s string) {
 	v, ok := AsymAlgo_value[s]
 	if !ok {
-		panic(fmt.Errorf("curve algo [%v] is not supported yet", s))
+		log.Fatal(fmt.Errorf("curve algo [%v] is not supported yet, Run 'go-ibax config --help' for details", s))
 	}
 	asymAlgo = AsymAlgo(v)
 	return
@@ -62,7 +64,7 @@ func NewHashAlgo(a HashAlgo) HashProvider {
 func InitHashAlgo(s string) {
 	v, ok := HashAlgo_value[s]
 	if !ok {
-		panic(fmt.Errorf("hash algo [%v] is not supported yet", s))
+		log.Fatal(fmt.Errorf("hash algo [%v] is not supported yet, Run 'go-ibax config --help' for details", s))
 	}
 	hashAlgo = HashAlgo(v)
 	return
@@ -116,7 +118,7 @@ func SignString(privateKeyHex, data string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("decoding private key from hex: %w", err)
 	}
-	return GetAsymProvider().Sign(privateKey, Hash([]byte(data)))
+	return Sign(privateKey, []byte(data))
 }
 
 func GetHMAC(secret string, message string) ([]byte, error) {
