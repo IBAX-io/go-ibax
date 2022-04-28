@@ -152,16 +152,6 @@ func (dbTx *DbTransaction) GetAllTransaction(query string, countRows int, args .
 	return result, nil
 }
 
-// GetAll returns all transaction
-func (dbTx *DbTransaction) GetAll(query string, countRows int, args ...any) ([]map[string]string, error) {
-	return dbTx.GetAllTransaction(query, countRows, args)
-}
-
-// GetAllTx returns all tx's
-func (dbTx *DbTransaction) GetAllTx(query string, countRows int, args ...any) ([]map[string]string, error) {
-	return dbTx.GetAllTransaction(query, countRows, args)
-}
-
 // GetOneRowTransaction returns one row from transactions
 func (dbTx *DbTransaction) GetOneRowTransaction(query string, args ...any) *OneRow {
 	result := make(map[string]string)
@@ -219,7 +209,7 @@ func (r *ListResult) String() ([]string, error) {
 // GetList returns the result of the query as ListResult variable
 func (dbTx *DbTransaction) GetList(query string, args ...any) *ListResult {
 	var result []string
-	all, err := dbTx.GetAll(query, -1, args...)
+	all, err := dbTx.GetAllTransaction(query, -1, args...)
 	if err != nil {
 		return &ListResult{result, err}
 	}

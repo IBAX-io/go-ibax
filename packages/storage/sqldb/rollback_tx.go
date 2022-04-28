@@ -24,7 +24,7 @@ func (*RollbackTx) TableName() string {
 
 // GetRollbackTransactions is returns rollback transactions
 func (rt *RollbackTx) GetRollbackTransactions(dbTransaction *DbTransaction, transactionHash []byte) ([]map[string]string, error) {
-	return dbTransaction.GetAllTx("SELECT * from rollback_tx WHERE tx_hash = ? ORDER BY ID DESC", -1, transactionHash)
+	return dbTransaction.GetAllTransaction("SELECT * from rollback_tx WHERE tx_hash = ? ORDER BY ID DESC", -1, transactionHash)
 }
 
 // GetBlockRollbackTransactions returns records of rollback by blockID

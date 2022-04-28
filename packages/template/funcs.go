@@ -761,7 +761,7 @@ func dbfindTag(par parFunc) string {
 	if len(where) > 0 {
 		where = ` where ` + where
 	}
-	list, err := sc.DbTransaction.GetAll(`select `+strings.Join(queryColumns, `, `)+` from "`+tblname+`"`+
+	list, err := sc.DbTransaction.GetAllTransaction(`select `+strings.Join(queryColumns, `, `)+` from "`+tblname+`"`+
 		where+order+offset, limit)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all from db")

@@ -344,7 +344,7 @@ func (dbTx *DbTransaction) GetColumnDataTypeCharMaxLength(tableName, columnName 
 
 // GetAllColumnTypes returns column types for table
 func (dbTx *DbTransaction) GetAllColumnTypes(tblname string) ([]map[string]string, error) {
-	return dbTx.GetAll(`SELECT column_name, data_type
+	return dbTx.GetAllTransaction(`SELECT column_name, data_type
 		FROM information_schema.columns
 		WHERE table_name = ?
 		ORDER BY ordinal_position ASC`, -1, tblname)
