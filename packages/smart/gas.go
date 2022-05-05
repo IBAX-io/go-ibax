@@ -78,6 +78,7 @@ func (f *FuelCategory) writeFlag(tf GasPayAbleType) {
 	}
 	f.Flag = tf
 }
+
 func (f *FuelCategory) writeConversionRate(cr float64) {
 	if cr > 0 {
 		f.ConversionRate = cr
@@ -108,13 +109,13 @@ func (f *FuelCategory) Fees() decimal.Decimal {
 	case Arithmetic_NATIVE:
 		value = f.Decimal
 	case Arithmetic_MUL:
-		value = f.Decimal.Mul(decimal.NewFromFloat(f.ConversionRate)).Div(decimal.NewFromFloat(100)).Floor()
+		value = f.Decimal.Mul(decimal.NewFromFloat(f.ConversionRate).Div(decimal.NewFromFloat(100)))
 	case Arithmetic_DIV:
-		value = f.Decimal.Div(decimal.NewFromFloat(f.ConversionRate)).Div(decimal.NewFromFloat(100)).Floor()
+		value = f.Decimal.Div(decimal.NewFromFloat(f.ConversionRate).Div(decimal.NewFromFloat(100)))
 	default:
 		value = f.Decimal
 	}
-	return value
+	return value.Floor()
 }
 
 func (c Combustion) Detail() any {
@@ -303,36 +304,42 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 	if sum.IsZero() {
 		return nil
 	}
-	if _, _, err := sc.updateWhere(
-		[]string{`-amount`}, []any{sum}, "1_keys",
-		types.LoadMap(map[string]any{
-			`id`:        pay.FromID,
-			`ecosystem`: pay.TokenEco,
-		})); err != nil {
-		return errTaxes
-	}
-	if _, _, err := sc.updateWhere(
-		[]string{"+amount"}, []any{sum}, "1_keys",
-		types.LoadMap(map[string]any{
-			"id":        toID,
-			"ecosystem": pay.TokenEco,
-		})); err != nil {
-		return err
-	}
 	var (
 		values *types.Map
 		fromIDBalance,
 		toIDBalance decimal.Decimal
 		err error
 	)
-
-	if fromIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, pay.FromID, pay.TokenEco); err != nil {
-		return err
+	if pay.FromID == toID {
+		if fromIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, pay.FromID, pay.TokenEco); err != nil {
+			return err
+		}
+		toIDBalance = fromIDBalance
+	} else {
+		if _, _, err := sc.updateWhere(
+			[]string{`-amount`}, []any{sum}, "1_keys",
+			types.LoadMap(map[string]any{
+				`id`:        pay.FromID,
+				`ecosystem`: pay.TokenEco,
+			})); err != nil {
+			return errTaxes
+		}
+		if _, _, err := sc.updateWhere(
+			[]string{"+amount"}, []any{sum}, "1_keys",
+			types.LoadMap(map[string]any{
+				"id":        toID,
+				"ecosystem": pay.TokenEco,
+			})); err != nil {
+			return err
+		}
+		if fromIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, pay.FromID, pay.TokenEco); err != nil {
+			return err
+		}
+		if toIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, toID, pay.TokenEco); err != nil {
+			return err
+		}
 	}
 
-	if toIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, toID, pay.TokenEco); err != nil {
-		return err
-	}
 	values = types.LoadMap(map[string]any{
 		"sender_id":         pay.FromID,
 		"sender_balance":    fromIDBalance,
@@ -470,7 +477,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 	storageFee = sc.storageFee(curPay.FuelRate)
 
 	curPay.FromID, curPay.PaymentType = sc.getFromIdAndPayType(curPay.TokenEco)
-	if feeMode != nil {
+	if feeMode != nil && eco != consts.DefaultTokenEcosystem {
 		// only eco > 1
 		curPay.Combustion = newCombustion(feeMode.Combustion.Flag, feeMode.Combustion.Percent)
 	}
@@ -535,14 +542,12 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 				if category.FuelType == FuelType_expedite_fee {
 					category.writeArithmetic(Arithmetic_DIV)
 				}
-
 				cpyPlatIndirect.PushFuelCategories(category)
-				if category.FuelType == FuelType_element_fee {
-					//revert element to platform
-					cpyPlatIndirect.SetDecimalByType(category.FuelType, elementFee.Div(decimal.NewFromInt(feeMode.FollowFuel)))
+				if category.FuelType == FuelType_expedite_fee || category.FuelType == FuelType_element_fee || category.FuelType == FuelType_storage_fee {
+					//revert fee to platform
+					cpyPlatIndirect.SetDecimalByType(category.FuelType, category.Decimal.Div(decimal.NewFromInt(feeMode.FollowFuel)).Floor())
 				}
 				category.resetArithmetic()
-
 				// exclude FuelType_expedite_fee
 				if category.FuelType != FuelType_expedite_fee {
 					curPay.PushFuelCategories(category)
