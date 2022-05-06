@@ -69,7 +69,7 @@ func NewFuelCategory(fuelType FuelType, decimal decimal.Decimal, flag GasPayAble
 }
 
 func (f *FuelCategory) writeFuelType(fuelType FuelType)      { f.FuelType = fuelType }
-func (f *FuelCategory) writeDecimal(decimal decimal.Decimal) { f.Decimal = decimal }
+func (f *FuelCategory) writeDecimal(decimal decimal.Decimal) { f.Decimal = decimal.Floor() }
 func (f *FuelCategory) writeArithmetic(a Arithmetic)         { f.Arithmetic = a }
 func (f *FuelCategory) resetArithmetic()                     { f.Arithmetic = Arithmetic_NATIVE }
 func (f *FuelCategory) writeFlag(tf GasPayAbleType) {
@@ -128,13 +128,16 @@ func (c Combustion) Detail() any {
 }
 
 func (pay *PaymentInfo) PushFuelCategories(fes ...FuelCategory) {
+	for i := range fes {
+		fes[i].writeDecimal(fes[i].Decimal.Mul(pay.FuelRate))
+	}
 	pay.FuelCategories = append(pay.FuelCategories, fes...)
 }
 
 func (pay *PaymentInfo) SetDecimalByType(fuelType FuelType, decimal decimal.Decimal) {
 	for i, v := range pay.FuelCategories {
 		if v.FuelType == fuelType {
-			pay.FuelCategories[i].writeDecimal(decimal)
+			pay.FuelCategories[i].writeDecimal(decimal.Mul(pay.FuelRate))
 			break
 		}
 	}
@@ -181,7 +184,7 @@ func (pay *PaymentInfo) Detail() any {
 	return s
 }
 
-func (f *PaymentInfo) checkVerify(sc *SmartContract, indirect bool) error {
+func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	eco := f.TokenEco
 	if err := sc.hasExitKeyID(eco, f.ToID); err != nil {
 		return errors.Wrapf(err, fmt.Sprintf("to ID %d does not exist", f.ToID))
@@ -201,8 +204,7 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract, indirect bool) error {
 	if f.PaymentType == PaymentType_ContractCaller &&
 		!bytes.Equal(sc.Key.PublicKey, f.PayWallet.PublicKey) &&
 		!bytes.Equal(sc.TxSmart.PublicKey, f.PayWallet.PublicKey) &&
-		sc.TxSmart.SignedBy == 0 &&
-		!indirect {
+		sc.TxSmart.SignedBy == 0 {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "error": errDiffKeys}).Error(errDiffKeys)
 		return errDiffKeys
 	}
@@ -247,7 +249,7 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	}
 	for i := 0; i < len(sc.multiPays); i++ {
 		pay := sc.multiPays[i]
-		pay.SetDecimalByType(FuelType_vmCost_fee, sc.TxUsedCost.Mul(pay.FuelRate))
+		pay.SetDecimalByType(FuelType_vmCost_fee, sc.TxUsedCost)
 		money := pay.GetPayMoney(errNeedPay)
 		wltAmount := pay.PayWallet.CapableAmount()
 		if wltAmount.Cmp(money) < 0 {
@@ -466,15 +468,15 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		return nil, err
 	}
 
-	if elementFee, err = sc.elementFee(curPay.TokenEco, curPay.FuelRate); err != nil {
+	if elementFee, err = sc.elementFee(); err != nil {
 		return nil, err
 	}
 
-	if expediteFee, err = sc.expediteFee(curPay.TokenEco); err != nil {
+	if expediteFee, err = sc.expediteFee(); err != nil {
 		return nil, err
 	}
 
-	storageFee = sc.storageFee(curPay.FuelRate)
+	storageFee = sc.storageFee()
 
 	curPay.FromID, curPay.PaymentType = sc.getFromIdAndPayType(curPay.TokenEco)
 	if feeMode != nil && eco != consts.DefaultTokenEcosystem {
@@ -535,39 +537,30 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 				continue
 			}
 			category := NewFuelCategory(FuelType(FuelType_value[k]), categoryFee, GasPayAbleType(flag.Flag), flag.ConversionRate)
+			var div = category.Decimal.Div(decimal.NewFromInt(feeMode.FollowFuel))
 			switch category.Flag {
 			case GasPayAbleType_Unable:
 				cpyPlatCaller.PushFuelCategories(category)
-			case GasPayAbleType_Capable:
 				if category.FuelType == FuelType_expedite_fee {
-					category.writeArithmetic(Arithmetic_DIV)
+					cpyPlatCaller.SetDecimalByType(category.FuelType, div)
 				}
-				cpyPlatIndirect.PushFuelCategories(category)
-				if category.FuelType == FuelType_expedite_fee || category.FuelType == FuelType_element_fee || category.FuelType == FuelType_storage_fee {
-					//revert fee to platform
-					cpyPlatIndirect.SetDecimalByType(category.FuelType, category.Decimal.Div(decimal.NewFromInt(feeMode.FollowFuel)).Floor())
-				}
-				category.resetArithmetic()
+			case GasPayAbleType_Capable:
 				// exclude FuelType_expedite_fee
 				if category.FuelType != FuelType_expedite_fee {
 					curPay.PushFuelCategories(category)
 					category.writeArithmetic(Arithmetic_MUL)
 				}
 				indirectPay.PushFuelCategories(category)
+				category.resetArithmetic()
+				if category.FuelType == FuelType_expedite_fee {
+					category.writeArithmetic(Arithmetic_DIV)
+				}
+				cpyPlatIndirect.PushFuelCategories(category)
+				if category.FuelType == FuelType_expedite_fee {
+					cpyPlatIndirect.SetDecimalByType(category.FuelType, div)
+					indirectPay.SetDecimalByType(category.FuelType, div)
+				}
 			}
-		}
-
-		if err = indirectPay.checkVerify(sc, false); err != nil {
-			return nil, err
-		}
-		if err = cpyPlatCaller.checkVerify(sc, false); err != nil {
-			return nil, err
-		}
-		if err = cpyPlatIndirect.checkVerify(sc, true); err != nil {
-			return nil, err
-		}
-		if err = curPay.checkVerify(sc, false); err != nil {
-			return nil, err
 		}
 		pays = append(pays, cpyPlatCaller, cpyPlatIndirect, indirectPay, curPay)
 		return pays, nil
@@ -579,12 +572,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		NewFuelCategory(FuelType_element_fee, elementFee, GasPayAbleType_Unable, 100),
 		NewFuelCategory(FuelType_expedite_fee, expediteFee, GasPayAbleType_Unable, 100),
 	)
-
-	if err = curPay.checkVerify(sc, false); err != nil {
-		return nil, err
-	}
 	pays = append(pays, curPay)
-
 	return pays, err
 }
 
@@ -599,6 +587,11 @@ func (sc *SmartContract) prepareMultiPay() error {
 		pays, err := sc.getChangeAddress(eco)
 		if err != nil {
 			return err
+		}
+		for _, pay := range pays {
+			if err = pay.checkVerify(sc); err != nil {
+				return err
+			}
 		}
 		sc.multiPays = append(sc.multiPays, pays...)
 	}
@@ -744,7 +737,7 @@ func (sc *SmartContract) taxesWallet(eco int64) (taxesID int64, err error) {
 	return
 }
 
-func (sc *SmartContract) elementFee(eco int64, fuelRate decimal.Decimal) (decimal.Decimal, error) {
+func (sc *SmartContract) elementFee() (decimal.Decimal, error) {
 	var (
 		elementFee decimal.Decimal
 		err        error
@@ -752,8 +745,7 @@ func (sc *SmartContract) elementFee(eco int64, fuelRate decimal.Decimal) (decima
 	)
 	if priceName, ok := script.ContractPrices[sc.TxContract.Name]; ok {
 		newElementPrices := decimal.NewFromInt(SysParamInt(priceName)).
-			Mul(decimal.NewFromInt(syspar.SysInt64(syspar.PriceCreateRate))).
-			Mul(fuelRate)
+			Mul(decimal.NewFromInt(syspar.SysInt64(syspar.PriceCreateRate)))
 		if newElementPrices.GreaterThan(decimal.New(MaxPrice, 0)) {
 			sc.GetLogger().WithFields(log.Fields{"type": consts.NoFunds}).Error("Price value is more than the highest value")
 			err = errMaxPrice
@@ -769,29 +761,29 @@ func (sc *SmartContract) elementFee(eco int64, fuelRate decimal.Decimal) (decima
 	return elementFee, err
 }
 
-func (sc *SmartContract) storageFee(fuelRate decimal.Decimal) decimal.Decimal {
+func (sc *SmartContract) storageFee() decimal.Decimal {
 	var (
 		storageFee decimal.Decimal
 		zero       = decimal.Zero
 	)
 	storageFee = decimal.NewFromInt(syspar.SysInt64(syspar.PriceTxSize)).
 		Mul(decimal.NewFromInt(syspar.SysInt64(syspar.PriceCreateRate))).
-		Mul(fuelRate).Mul(decimal.NewFromInt(sc.TxSize)).
-		Div(decimal.NewFromInt(consts.ChainSize)).Floor()
+		Mul(decimal.NewFromInt(sc.TxSize)).
+		Div(decimal.NewFromInt(consts.ChainSize))
 	if storageFee.LessThanOrEqual(zero) {
 		storageFee = decimal.New(1, 0)
 	}
 	return storageFee
 }
 
-func (sc *SmartContract) expediteFee(eco int64) (decimal.Decimal, error) {
+func (sc *SmartContract) expediteFee() (decimal.Decimal, error) {
 	zero := decimal.Zero
 	if len(sc.TxSmart.Expedite) > 0 {
 		expedite, _ := decimal.NewFromString(sc.TxSmart.Expedite)
 		if expedite.LessThan(zero) {
 			return zero, fmt.Errorf(eGreaterThan, sc.TxSmart.Expedite)
 		}
-		return StringToAmount(sc.TxSmart.Expedite), nil
+		return expedite.Mul(decimal.NewFromInt(syspar.SysInt64(syspar.PriceCreateRate))), nil
 	}
 	return zero, nil
 }
