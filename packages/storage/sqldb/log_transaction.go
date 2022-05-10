@@ -26,8 +26,8 @@ func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
 }
 
 // Create is creating record of model
-func (lt *LogTransaction) Create(transaction *DbTransaction) error {
-	return GetDB(transaction).Create(lt).Error
+func (lt *LogTransaction) Create(dbTx *DbTransaction) error {
+	return GetDB(dbTx).Create(lt).Error
 }
 
 func CreateLogTransactionBatches(dbTx *gorm.DB, lts []*LogTransaction) error {
@@ -38,8 +38,8 @@ func CreateLogTransactionBatches(dbTx *gorm.DB, lts []*LogTransaction) error {
 }
 
 // DeleteLogTransactionsByHash is deleting record by hash
-func DeleteLogTransactionsByHash(transaction *DbTransaction, hash []byte) (int64, error) {
-	query := GetDB(transaction).Exec("DELETE FROM log_transactions WHERE hash = ?", hash)
+func DeleteLogTransactionsByHash(dbTx *DbTransaction, hash []byte) (int64, error) {
+	query := GetDB(dbTx).Exec("DELETE FROM log_transactions WHERE hash = ?", hash)
 	return query.RowsAffected, query.Error
 }
 

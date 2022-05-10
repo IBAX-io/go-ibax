@@ -47,7 +47,11 @@ func (f *FirstBlockParser) txKeyID() int64              { return f.Data.KeyID }
 func (f *FirstBlockParser) txExpedite() decimal.Decimal { return decimal.Decimal{} }
 func (s *FirstBlockParser) setTimestamp()               { s.Timestamp = time.Now().UnixMilli() }
 
-func (f *FirstBlockParser) Init(*Transaction) error { return nil }
+func (f *FirstBlockParser) Init(t *Transaction) error {
+	f.Logger = log.WithFields(log.Fields{})
+	f.DbTransaction = t.DbTransaction
+	return nil
+}
 
 func (f *FirstBlockParser) Validate() error {
 	return nil
@@ -58,7 +62,7 @@ func (f *FirstBlockParser) Action(t *Transaction) error {
 	data := f.Data
 	keyID := crypto.Address(data.PublicKey)
 	nodeKeyID := crypto.Address(data.NodePublicKey)
-	err := sqldb.ExecSchemaEcosystem(nil, firstEcosystemID, keyID, ``, keyID, firstAppID)
+	err := sqldb.ExecSchemaEcosystem(t.DbTransaction, firstEcosystemID, keyID, ``, keyID, firstAppID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing ecosystem schema")
 		return err
@@ -67,7 +71,7 @@ func (f *FirstBlockParser) Action(t *Transaction) error {
 	amount := decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()
 
 	taxes := &sqldb.PlatformParameter{Name: `taxes_wallet`}
-	if err = taxes.SaveArray([][]string{{"1", converter.Int64ToStr(keyID)}}); err != nil {
+	if err = taxes.SaveArray(t.DbTransaction, [][]string{{"1", converter.Int64ToStr(keyID)}}); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("saving taxes_wallet array")
 		return err
 	}

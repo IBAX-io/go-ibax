@@ -330,7 +330,7 @@ func getBlocks(ctx context.Context, host string, blockID, minCount int64) ([]*bl
 }
 
 func processBlocks(blocks []*block.Block) error {
-	dbTransaction, err := sqldb.StartTransaction()
+	dbTx, err := sqldb.StartTransaction()
 	if err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("starting transaction")
 		return utils.ErrInfo(err)
@@ -355,22 +355,22 @@ func processBlocks(blocks []*block.Block) error {
 		b.Header.Hash = crypto.DoubleHash([]byte(b.Header.ForSha(b.PrevHeader, b.MrklRoot)))
 
 		if err := b.Check(); err != nil {
-			dbTransaction.Rollback()
+			dbTx.Rollback()
 			return err
 		}
 
-		if err := b.Play(dbTransaction); err != nil {
-			dbTransaction.Rollback()
+		if err := b.Play(dbTx); err != nil {
+			dbTx.Rollback()
 			return utils.ErrInfo(err)
 		}
 		prevBlocks[b.Header.BlockID] = b
 
 		// for last block we should update block info
-		if err := b.InsertIntoBlockchain(dbTransaction); err != nil {
-			dbTransaction.Rollback()
+		if err := b.InsertIntoBlockchain(dbTx); err != nil {
+			dbTx.Rollback()
 			return utils.ErrInfo(err)
 		}
 	}
 
-	return dbTransaction.Commit()
+	return dbTx.Commit()
 }

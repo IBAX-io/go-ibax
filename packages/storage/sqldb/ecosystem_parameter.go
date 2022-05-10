@@ -35,8 +35,8 @@ func (sp *StateParameter) SetTablePrefix(prefix string) *StateParameter {
 }
 
 // Get is retrieving model from database
-func (sp *StateParameter) Get(transaction *DbTransaction, name string) (bool, error) {
-	return isFound(GetDB(transaction).Where("ecosystem = ? and name = ?", sp.ecosystem, name).First(sp))
+func (sp *StateParameter) Get(dbTx *DbTransaction, name string) (bool, error) {
+	return isFound(GetDB(dbTx).Where("ecosystem = ? and name = ?", sp.ecosystem, name).First(sp))
 }
 
 // GetAllStateParameters is returning all state parameters

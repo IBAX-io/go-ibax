@@ -201,11 +201,17 @@ func GormClose() error {
 
 // DbTransaction is gorm.DB wrapper
 type DbTransaction struct {
-	conn *gorm.DB
+	conn         *gorm.DB
+	ExecutionSql []string
 }
 
 func NewDbTransaction(conn *gorm.DB) *DbTransaction {
 	return &DbTransaction{conn: conn}
+}
+
+func (d *DbTransaction) Debug() *DbTransaction {
+	d.conn = d.conn.Debug()
+	return d
 }
 
 // StartTransaction is beginning transaction
@@ -298,12 +304,26 @@ func (dbTx *DbTransaction) GetRecordsCountTx(tableName, where string) (count int
 
 // Update is updating table rows
 func (dbTx *DbTransaction) Update(tblname, set, where string) error {
-	return GetDB(dbTx).Exec(`UPDATE "` + strings.Trim(tblname, `"`) + `" SET ` + set + " " + where).Error
+	sql := `UPDATE "` + strings.Trim(tblname, `"`) + `" SET ` + set + " " + where
+	return dbTx.ExecSql(sql)
+}
+
+// ExecSql is exec sql
+func (dbTx *DbTransaction) ExecSql(sql string) error {
+	queryFn := func(tx *gorm.DB) *gorm.DB {
+		return tx.Exec(sql)
+	}
+	err := queryFn(GetDB(dbTx)).Error
+	if err != nil {
+		return err
+	}
+	dbTx.ExecutionSql = append(dbTx.ExecutionSql, sql)
+	return nil
 }
 
 // Delete is deleting table rows
 func (dbTx *DbTransaction) Delete(tblname, where string) error {
-	return GetDB(dbTx).Exec(`DELETE FROM "` + tblname + `" ` + where).Error
+	return dbTx.ExecSql(`DELETE FROM "` + tblname + `" ` + where)
 }
 
 // GetColumnCount is counting rows in table
@@ -322,12 +342,12 @@ func (dbTx *DbTransaction) GetColumnCount(tableName string) (int64, error) {
 
 // AlterTableAddColumn is adding column to table
 func (dbTx *DbTransaction) AlterTableAddColumn(tableName, columnName, columnType string) error {
-	return GetDB(dbTx).Exec(`ALTER TABLE "` + tableName + `" ADD COLUMN "` + columnName + `" ` + columnType).Error
+	return dbTx.ExecSql(`ALTER TABLE "` + tableName + `" ADD COLUMN "` + columnName + `" ` + columnType)
 }
 
 // AlterTableDropColumn is dropping column from table
 func (dbTx *DbTransaction) AlterTableDropColumn(tableName, columnName string) error {
-	return GetDB(dbTx).Exec(`ALTER TABLE "` + tableName + `" DROP COLUMN "` + columnName + `"`).Error
+	return dbTx.ExecSql(`ALTER TABLE "` + tableName + `" DROP COLUMN "` + columnName + `"`)
 }
 
 // CreateIndex is creating index on table column

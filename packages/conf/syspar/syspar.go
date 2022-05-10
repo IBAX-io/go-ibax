@@ -135,9 +135,9 @@ func GetNodePrivKey() []byte {
 }
 
 // SysUpdate reloads/updates values of system parameters
-func SysUpdate(dbTransaction *sqldb.DbTransaction) error {
+func SysUpdate(dbTx *sqldb.DbTransaction) error {
 	var err error
-	platformParameters, err := sqldb.GetAllPlatformParameters(dbTransaction)
+	platformParameters, err := sqldb.GetAllPlatformParameters(dbTx)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all system parameters")
 		return err
@@ -584,11 +584,11 @@ func GetPriceExec(s string) (price int64, ok bool) {
 }
 
 // SysTableColType reloads/updates values of all ecosystem table column data type
-func SysTableColType(dbTransaction *sqldb.DbTransaction) error {
+func SysTableColType(dbTx *sqldb.DbTransaction) error {
 	var err error
 	mutex.RLock()
 	defer mutex.RUnlock()
-	cacheTableColType, err = dbTransaction.GetAllTransaction(`
+	cacheTableColType, err = dbTx.GetAllTransaction(`
 		SELECT table_name,column_name,data_type,character_maximum_length
 		FROM information_schema.columns Where table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name ~ '[\d]' AND data_type = 'bytea' ORDER BY ordinal_position ASC;`, -1)
 	if err != nil {

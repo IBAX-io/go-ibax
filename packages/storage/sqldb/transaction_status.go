@@ -41,8 +41,8 @@ func (ts *TransactionStatus) Get(transactionHash []byte) (bool, error) {
 }
 
 // UpdateBlockID is updating block id
-func (ts *TransactionStatus) UpdateBlockID(transaction *DbTransaction, newBlockID int64, transactionHash []byte) error {
-	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("block_id", newBlockID).Error
+func (ts *TransactionStatus) UpdateBlockID(dbTx *DbTransaction, newBlockID int64, transactionHash []byte) error {
+	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("block_id", newBlockID).Error
 }
 
 type updateBlockMsg struct {
@@ -53,7 +53,7 @@ type updateBlockMsg struct {
 var updBlockMsg []updateBlockMsg
 
 // SetTransactionStatusBlockMsg is updating block msg
-func SetTransactionStatusBlockMsg(transaction *DbTransaction, newBlockID int64, msg string, transactionHash []byte) error {
+func SetTransactionStatusBlockMsg(dbTx *DbTransaction, newBlockID int64, msg string, transactionHash []byte) error {
 	if len(msg) > 255 {
 		msg = msg[:255]
 	}
@@ -62,7 +62,7 @@ func SetTransactionStatusBlockMsg(transaction *DbTransaction, newBlockID int64, 
 		return nil
 	}
 
-	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Updates(
+	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Updates(
 		map[string]any{"block_id": newBlockID, "error": msg}).Error
 }
 
@@ -86,11 +86,11 @@ func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64) error {
 }
 
 // SetError is updating transaction status error
-func (ts *TransactionStatus) SetError(transaction *DbTransaction, errorText string, transactionHash []byte) error {
-	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("error", errorText).Error
+func (ts *TransactionStatus) SetError(dbTx *DbTransaction, errorText string, transactionHash []byte) error {
+	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("error", errorText).Error
 }
 
 // UpdatePenalty is updating penalty
-func (ts *TransactionStatus) UpdatePenalty(transaction *DbTransaction, transactionHash []byte) error {
-	return GetDB(transaction).Model(&TransactionStatus{}).Where("hash = ? AND penalty = 0", transactionHash).Update("penalty", 1).Error
+func (ts *TransactionStatus) UpdatePenalty(dbTx *DbTransaction, transactionHash []byte) error {
+	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ? AND penalty = 0", transactionHash).Update("penalty", 1).Error
 }

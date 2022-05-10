@@ -142,7 +142,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		}
 
 		cost += insertCost
-		err = sqldb.GetDB(sc.DbTransaction).Exec(insertQuery).Error
+		err = sc.DbTransaction.ExecSql(insertQuery)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
 			return 0, "", err

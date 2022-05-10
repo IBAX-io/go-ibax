@@ -7,12 +7,12 @@ import (
 
 type ArrHashes [][]byte
 
-func DeleteQueueTxs(transaction *DbTransaction, hs [][]byte) error {
-	return GetDB(transaction).Delete(&QueueTx{}, hs).Error
+func DeleteQueueTxs(dbTx *DbTransaction, hs [][]byte) error {
+	return GetDB(dbTx).Delete(&QueueTx{}, hs).Error
 }
 
-func DeleteTransactionsAttempts(transaction *DbTransaction, hs [][]byte) error {
-	return GetDB(transaction).Delete(&TransactionsAttempts{}, hs).Error
+func DeleteTransactionsAttempts(dbTx *DbTransaction, hs [][]byte) error {
+	return GetDB(dbTx).Delete(&TransactionsAttempts{}, hs).Error
 }
 
 func DeleteTransactions(dbTx *gorm.DB, hs [][]byte) error {
@@ -23,14 +23,23 @@ func DeleteTransactions(dbTx *gorm.DB, hs [][]byte) error {
 }
 
 type AfterTxs struct {
-	UsedTx      [][]byte
-	Rts         []*RollbackTx
-	Lts         []*LogTransaction
-	UpdTxStatus []*updateBlockMsg
+	UsedTx         [][]byte
+	Rts            []*RollbackTx
+	Lts            []*LogTransaction
+	UpdTxStatus    []*updateBlockMsg
+	TxExecutionSql []string
 }
 
-func AfterPlayTxs(dbTx *DbTransaction, blockID int64, playTx AfterTxs) error {
+func AfterPlayTxs(dbTx *DbTransaction, blockID int64, playTx AfterTxs, genBlock, firstBlock bool) error {
 	return GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
+		if !genBlock && !firstBlock {
+			//for i := 0; i < len(playTx.TxExecutionSql); i++ {
+			//	if err := tx.Exec(playTx.TxExecutionSql[i]).Error; err != nil {
+			//		return errors.Wrap(err, "batches exec sql for tx")
+			//	}
+			//}
+		}
+
 		if err := DeleteTransactions(tx, playTx.UsedTx); err != nil {
 			return errors.Wrap(err, "batches delete used transactions")
 		}

@@ -22,13 +22,13 @@ func (sp PlatformParameter) TableName() string {
 }
 
 // Get is retrieving model from database
-func (sp *PlatformParameter) Get(transaction *DbTransaction, name string) (bool, error) {
-	return isFound(GetDB(transaction).Where("name = ?", name).First(sp))
+func (sp *PlatformParameter) Get(dbTx *DbTransaction, name string) (bool, error) {
+	return isFound(GetDB(dbTx).Where("name = ?", name).First(sp))
 }
 
 // GetTransaction is retrieving model from database using transaction
-func (sp *PlatformParameter) GetTransaction(transaction *DbTransaction, name string) (bool, error) {
-	return isFound(GetDB(transaction).Where("name = ?", name).First(sp))
+func (sp *PlatformParameter) GetTransaction(dbTx *DbTransaction, name string) (bool, error) {
+	return isFound(GetDB(dbTx).Where("name = ?", name).First(sp))
 }
 
 // GetJSONField returns fields as json
@@ -49,9 +49,9 @@ func (sp *PlatformParameter) GetValueParameterByName(name, value string) (*strin
 }
 
 // GetAllPlatformParameters returns all system parameters
-func GetAllPlatformParameters(transaction *DbTransaction) ([]PlatformParameter, error) {
+func GetAllPlatformParameters(dbTx *DbTransaction) ([]PlatformParameter, error) {
 	parameters := new([]PlatformParameter)
-	if err := GetDB(transaction).Find(&parameters).Error; err != nil {
+	if err := GetDB(dbTx).Find(&parameters).Error; err != nil {
 		return nil, err
 	}
 	return *parameters, nil
@@ -67,17 +67,17 @@ func (sp *PlatformParameter) ToMap() map[string]string {
 }
 
 // Update is update model
-func (sp PlatformParameter) Update(value string) error {
-	return DBConn.Model(sp).Where("name = ?", sp.Name).Update(`value`, value).Error
+func (sp PlatformParameter) Update(dbTx *DbTransaction, value string) error {
+	return GetDB(dbTx).Model(sp).Where("name = ?", sp.Name).Update(`value`, value).Error
 }
 
 // SaveArray is saving array
-func (sp *PlatformParameter) SaveArray(list [][]string) error {
+func (sp *PlatformParameter) SaveArray(dbTx *DbTransaction, list [][]string) error {
 	ret, err := json.Marshal(list)
 	if err != nil {
 		return err
 	}
-	return sp.Update(string(ret))
+	return sp.Update(dbTx, string(ret))
 }
 
 func (sp *PlatformParameter) GetNumberOfHonorNodes() (int, error) {

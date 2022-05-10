@@ -64,16 +64,16 @@ func (b *Block) IsGenesis() bool {
 // PlaySafe is inserting block safely
 func (b *Block) PlaySafe() error {
 	logger := b.GetLogger()
-	dbTransaction, err := sqldb.StartTransaction()
+	dbTx, err := sqldb.StartTransaction()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting db transaction")
 		return err
 	}
 
 	inputTx := b.Transactions[:]
-	err = b.Play(dbTransaction)
+	err = b.Play(dbTx)
 	if err != nil {
-		dbTransaction.Rollback()
+		dbTx.Rollback()
 		if b.GenBlock && len(b.Transactions) == 0 {
 			if err == transaction.ErrLimitStop {
 				err = script.ErrVMTimeLimit
@@ -81,7 +81,7 @@ func (b *Block) PlaySafe() error {
 			if inputTx[0].IsSmartContract() {
 				transaction.BadTxForBan(inputTx[0].KeyID())
 			}
-			if err := transaction.MarkTransactionBad(dbTransaction, inputTx[0].Hash(), err.Error()); err != nil {
+			if err := transaction.MarkTransactionBad(dbTx, inputTx[0].Hash(), err.Error()); err != nil {
 				return err
 			}
 		}
@@ -90,22 +90,22 @@ func (b *Block) PlaySafe() error {
 
 	if b.GenBlock {
 		if len(b.Transactions) == 0 {
-			dbTransaction.Commit()
+			dbTx.Commit()
 			return ErrEmptyBlock
 		} else if len(inputTx) != len(b.Transactions) {
 			if err = b.repeatMarshallBlock(); err != nil {
-				dbTransaction.Rollback()
+				dbTx.Rollback()
 				return err
 			}
 		}
 	}
 
-	if err := b.InsertIntoBlockchain(dbTransaction); err != nil {
-		dbTransaction.Rollback()
+	if err := b.InsertIntoBlockchain(dbTx); err != nil {
+		dbTx.Rollback()
 		return err
 	}
 
-	err = dbTransaction.Commit()
+	err = dbTx.Commit()
 	if err != nil {
 		return err
 	}
@@ -121,14 +121,7 @@ func (b *Block) repeatMarshallBlock() error {
 	for _, tr := range b.Transactions {
 		trData = append(trData, tr.FullData)
 	}
-	NodePrivateKey, _ := utils.GetNodeKeys()
-	if len(NodePrivateKey) < 1 {
-		err := errors.New(`empty private node key`)
-		log.WithFields(log.Fields{"type": consts.NodePrivateKeyFilename, "error": err}).Error("reading node private key")
-		return err
-	}
-
-	newBlockData, err := MarshallBlock(&b.Header, b.PrevHeader, trData, NodePrivateKey)
+	newBlockData, err := MarshallBlock(&b.Header, b.PrevHeader, trData)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marshalling new block")
 		return err
@@ -170,7 +163,7 @@ func (b *Block) limitMode() transaction.LimitMode {
 	return transaction.GetLetParsing()
 }
 
-func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
+func (b *Block) Play(dbTx *sqldb.DbTransaction) (batchErr error) {
 	var (
 		playTxs sqldb.AfterTxs
 	)
@@ -182,21 +175,21 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 		if b.GenBlock {
 			b.Transactions = processedTx
 		}
-		if err := sqldb.AfterPlayTxs(dbTransaction, b.Header.BlockID, playTxs); err != nil {
+		if err := sqldb.AfterPlayTxs(dbTx, b.Header.BlockID, playTxs, b.GenBlock, b.IsGenesis()); err != nil {
 			batchErr = err
 			return
 		}
 	}()
 
 	for curTx, t := range b.Transactions {
-		err := dbTransaction.Savepoint(consts.SetSavePointMarkBlock(curTx))
+		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
 		}
 
 		t.Notifications = notificator.NewQueue()
-		t.DbTransaction = dbTransaction
+		t.DbTransaction = dbTx
 		t.TxCheckLimits = limits
 		t.PreBlockData = b.PrevHeader
 		t.GenBlock = b.GenBlock
@@ -255,6 +248,7 @@ func (b *Block) Play(dbTransaction *sqldb.DbTransaction) (batchErr error) {
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
 		playTxs.UsedTx = append(playTxs.UsedTx, t.Hash())
+		playTxs.TxExecutionSql = append(playTxs.TxExecutionSql, t.DbTransaction.ExecutionSql...)
 		var (
 			eco      int64
 			contract string
@@ -410,28 +404,16 @@ func InsertBlockWOForks(data []byte, genBlock, firstBlock bool) error {
 	return nil
 }
 
-var (
-	ErrMaxBlockSize    = utils.WithBan(errors.New("Block size exceeds maximum limit"))
-	ErrZeroBlockSize   = utils.WithBan(errors.New("Block size is zero"))
-	ErrUnmarshallBlock = utils.WithBan(errors.New("Unmarshall block"))
-)
-
 // ProcessBlockWherePrevFromBlockchainTable is processing block with in table previous block
 func ProcessBlockWherePrevFromBlockchainTable(data []byte, checkSize bool) (*Block, error) {
 	if checkSize && int64(len(data)) > syspar.GetMaxBlockSize() {
 		log.WithFields(log.Fields{"check_size": checkSize, "size": len(data), "max_size": syspar.GetMaxBlockSize(), "type": consts.ParameterExceeded}).Error("binary block size exceeds max block size")
-		return nil, ErrMaxBlockSize
+		return nil, utils.WithBan(types.ErrMaxBlockSize(syspar.GetMaxBlockSize(), len(data)))
 	}
 
-	buf := bytes.NewBuffer(data)
-	if buf.Len() == 0 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("buffer is empty")
-		return nil, ErrZeroBlockSize
-	}
-
-	block, err := UnmarshallBlock(buf, true)
+	block, err := UnmarshallBlock(bytes.NewBuffer(data), true)
 	if err != nil {
-		return nil, errors.Wrap(ErrUnmarshallBlock, err.Error())
+		return nil, errors.Wrap(utils.WithBan(types.ErrUnmarshallBlock), err.Error())
 	}
 	block.BinData = data
 

@@ -109,5 +109,5 @@ func genesisBlock() ([]byte, error) {
 	return block.MarshallBlock(header, &types.BlockData{
 		Hash:          []byte(`0`),
 		RollbacksHash: []byte(`0`),
-	}, [][]byte{tx}, "")
+	}, [][]byte{tx})
 }

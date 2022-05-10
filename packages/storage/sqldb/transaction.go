@@ -37,10 +37,10 @@ type Transaction struct {
 }
 
 // GetAllUnusedTransactions is retrieving all unused transactions
-func GetAllUnusedTransactions(dbTransaction *DbTransaction, limit int) ([]*Transaction, error) {
+func GetAllUnusedTransactions(dbTx *DbTransaction, limit int) ([]*Transaction, error) {
 	var transactions []*Transaction
 
-	query := GetDB(dbTransaction).Where("used = ?", "0").Order(expediteOrder)
+	query := GetDB(dbTx).Where("used = ?", "0").Order(expediteOrder)
 	if limit > 0 {
 		query = query.Limit(limit)
 	}
@@ -83,19 +83,19 @@ func GetTransactionsCount(hash []byte) (int64, error) {
 }
 
 // DeleteTransactionByHash deleting transaction by hash
-func DeleteTransactionByHash(dbTransaction *DbTransaction, hash []byte) error {
-	return GetDB(dbTransaction).Where("hash = ?", hash).Delete(&Transaction{}).Error
+func DeleteTransactionByHash(dbTx *DbTransaction, hash []byte) error {
+	return GetDB(dbTx).Where("hash = ?", hash).Delete(&Transaction{}).Error
 }
 
 // DeleteUsedTransactions deleting used transaction
-func DeleteUsedTransactions(dbTransaction *DbTransaction) (int64, error) {
-	query := GetDB(dbTransaction).Exec("DELETE FROM transactions WHERE used = 1")
+func DeleteUsedTransactions(dbTx *DbTransaction) (int64, error) {
+	query := GetDB(dbTx).Exec("DELETE FROM transactions WHERE used = 1")
 	return query.RowsAffected, query.Error
 }
 
 // DeleteTransactionIfUnused deleting unused transaction
-func DeleteTransactionIfUnused(transaction *DbTransaction, transactionHash []byte) (int64, error) {
-	query := GetDB(transaction).Exec("DELETE FROM transactions WHERE hash = ? and used = 0 and verified = 0", transactionHash)
+func DeleteTransactionIfUnused(dbTx *DbTransaction, transactionHash []byte) (int64, error) {
+	query := GetDB(dbTx).Exec("DELETE FROM transactions WHERE hash = ? and used = 0 and verified = 0", transactionHash)
 	return query.RowsAffected, query.Error
 }
 
@@ -111,14 +111,14 @@ func MarkTransactionSentBatches(hashArr [][]byte) error {
 }
 
 // MarkTransactionUsed is marking transaction as used
-func MarkTransactionUsed(transaction *DbTransaction, transactionHash []byte) (int64, error) {
-	query := GetDB(transaction).Exec("UPDATE transactions SET used = 1 WHERE hash = ?", transactionHash)
+func MarkTransactionUsed(dbTx *DbTransaction, transactionHash []byte) (int64, error) {
+	query := GetDB(dbTx).Exec("UPDATE transactions SET used = 1 WHERE hash = ?", transactionHash)
 	return query.RowsAffected, query.Error
 }
 
 // MarkTransactionUnusedAndUnverified is marking transaction unused and unverified
-func MarkTransactionUnusedAndUnverified(transaction *DbTransaction, transactionHash []byte) (int64, error) {
-	query := GetDB(transaction).Exec("UPDATE transactions SET used = 0, verified = 0 WHERE hash = ?", transactionHash)
+func MarkTransactionUnusedAndUnverified(dbTx *DbTransaction, transactionHash []byte) (int64, error) {
+	query := GetDB(dbTx).Exec("UPDATE transactions SET used = 0, verified = 0 WHERE hash = ?", transactionHash)
 	return query.RowsAffected, query.Error
 }
 

@@ -76,8 +76,8 @@ func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
 }
 
 // Delete is deleting record
-func (sys *Ecosystem) Delete(transaction *DbTransaction) error {
-	return GetDB(transaction).Delete(sys).Error
+func (sys *Ecosystem) Delete(dbTx *DbTransaction) error {
+	return GetDB(dbTx).Delete(sys).Error
 }
 
 // FeeMode is get ecosystem fee mode

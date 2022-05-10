@@ -633,12 +633,14 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 lp:
 	if err != nil {
 		sc.RollBackTx = nil
+		sc.DbTransaction.ExecutionSql = nil
 		if ierr := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); ierr != nil {
 			return retError(ierr)
 		}
 		if needPayment {
 			if ierr := sc.payContract(true); ierr != nil {
 				sc.RollBackTx = nil
+				sc.DbTransaction.ExecutionSql = nil
 				if yerr := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); yerr != nil {
 					return retError(yerr)
 				}

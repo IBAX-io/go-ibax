@@ -19,13 +19,13 @@ import (
 )
 
 // explainQueryCost is counting query execution time
-func explainQueryCost(transaction *sqldb.DbTransaction, withAnalyze bool, query string, args ...any) (int64, error) {
+func explainQueryCost(dbTx *sqldb.DbTransaction, withAnalyze bool, query string, args ...any) (int64, error) {
 	var planStr string
 	explainTpl := "EXPLAIN (FORMAT JSON) %s"
 	if withAnalyze {
 		explainTpl = "EXPLAIN ANALYZE (FORMAT JSON) %s"
 	}
-	err := sqldb.GetDB(transaction).Raw(fmt.Sprintf(explainTpl, query), args...).Row().Scan(&planStr)
+	err := sqldb.GetDB(dbTx).Raw(fmt.Sprintf(explainTpl, query), args...).Row().Scan(&planStr)
 	switch {
 	case err == sql.ErrNoRows:
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": query}).Error("no rows while explaining query")

@@ -73,8 +73,6 @@ func (s *SmartTransactionParser) Validate() error {
 
 func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
 	t.TxResult, err = s.CallContract(t.SqlDbSavePoint)
-	t.RollBackTx = s.RollBackTx
-	t.SysUpdate = s.SysUpdate
 	if err == nil && s.TxSmart != nil {
 		if s.Penalty {
 			if s.FlushRollback != nil {
@@ -93,8 +91,11 @@ func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
 				flush[i].FlushVM()
 			}
 		}
+		return
 	}
-
+	t.RollBackTx = s.RollBackTx
+	t.SysUpdate = s.SysUpdate
+	t.DbTransaction.ExecutionSql = s.DbTransaction.ExecutionSql
 	return
 }
 

@@ -4,17 +4,27 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/pkg/errors"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 const (
-	firstBlock   = 1
 	minBlockSize = 9
 )
 
-var ErrBlockSize = errors.New("Bad block size")
+var (
+	ErrMaxBlockSize = func(max int64, size int) error {
+		return fmt.Errorf("block size exceeds maximum %d limit, size is %d", max, size)
+	}
+	ErrMinBlockSize = func(min int, size int) error {
+		return fmt.Errorf("block size exceeds minimum %d limit, size is %d", min, size)
+	}
+	ErrZeroBlockSize   = errors.New("Block size is zero")
+	ErrUnmarshallBlock = errors.New("Unmarshall block")
+)
 
 //BlockData is a structure of the block's header
 type BlockData struct {
@@ -54,44 +64,108 @@ func (b *BlockData) ForSign(prev *BlockData, mrklRoot []byte) string {
 }
 
 // ParseBlockHeader is parses block header
-func ParseBlockHeader(buf *bytes.Buffer, maxBlockSize int64) (header, prev BlockData, err error) {
-	if buf.Len() < minBlockSize {
-		err = ErrBlockSize
-		return
-	}
-
-	header.Version = int(converter.BinToDec(buf.Next(2)))
-	header.BlockID = converter.BinToDec(buf.Next(4))
-	header.Time = converter.BinToDec(buf.Next(4))
-	header.EcosystemID = converter.BinToDec(buf.Next(4))
-	header.KeyID, err = converter.DecodeLenInt64Buf(buf)
-	if err != nil {
-		return
-	}
-	header.NodePosition = converter.BinToDec(buf.Next(1))
-
-	// for version of block with included the rollback hash
-	if header.Version >= consts.BvIncludeRollbackHash {
-		prev.RollbacksHash, err = converter.DecodeBytesBuf(buf)
-		if err != nil {
-			return
-		}
-	}
-
-	if header.BlockID == firstBlock {
-		buf.Next(1)
-		return
-	}
-
+func ParseBlockHeader(buf *bytes.Buffer, maxBlockSize int64) (header BlockData, err error) {
 	if int64(buf.Len()) > maxBlockSize {
-		err = ErrBlockSize
+		err = ErrMaxBlockSize(maxBlockSize, buf.Len())
 		return
 	}
+	blo := &Block{}
+	if err := blo.UnmarshallBlock(buf.Bytes()); err != nil {
+		return BlockData{}, err
+	}
+	return blo.Header, nil
+}
 
-	header.Sign, err = converter.DecodeBytesBuf(buf)
+type Block struct {
+	Header     BlockData
+	PrevHeader *BlockData
+	MerkleRoot []byte
+	BinData    []byte
+	TxFullData [][]byte
+}
+
+func (b Block) ForSign() string {
+	return b.Header.ForSign(b.PrevHeader, b.MerkleRoot)
+}
+
+func (b *Block) GetMerkleRoot() []byte {
+	var mrklArray [][]byte
+	for _, tr := range b.TxFullData {
+		mrklArray = append(mrklArray, converter.BinToHex(crypto.DoubleHash(tr)))
+	}
+	if len(mrklArray) == 0 {
+		mrklArray = append(mrklArray, []byte("0"))
+	}
+	return MerkleTreeRoot(mrklArray)
+}
+
+func (b *Block) GetSign(key []byte) ([]byte, error) {
+	forSign := b.ForSign()
+	signed, err := crypto.Sign(key, []byte(forSign))
 	if err != nil {
-		return
+		return nil, errors.Wrap(err, "signing block")
+	}
+	return signed, nil
+}
+
+// MarshallBlock is marshalling block
+func (b *Block) MarshallBlock(key []byte) ([]byte, error) {
+	if b.Header.BlockID != 1 {
+		b.MerkleRoot = b.GetMerkleRoot()
+		signed, err := b.GetSign(key)
+		if err != nil {
+			return nil, err
+		}
+		b.Header.Sign = signed
+	}
+	return msgpack.Marshal(b)
+}
+
+func (b *Block) UnmarshallBlock(data []byte) error {
+	if len(data) == 0 {
+		return ErrZeroBlockSize
+	}
+	if len(data) < minBlockSize {
+		return ErrMinBlockSize(len(data), minBlockSize)
+	}
+	if err := msgpack.Unmarshal(data, &b); err != nil {
+		return errors.Wrap(err, "unmarshalling block")
+	}
+	b.BinData = data
+	return nil
+}
+
+// MerkleTreeRoot return Merkle value
+func MerkleTreeRoot(dataArray [][]byte) []byte {
+	result := make(map[int32][][]byte)
+	for _, v := range dataArray {
+		hash := converter.BinToHex(crypto.DoubleHash(v))
+		result[0] = append(result[0], hash)
+	}
+	var j int32
+	for len(result[j]) > 1 {
+		for i := 0; i < len(result[j]); i = i + 2 {
+			if len(result[j]) <= (i + 1) {
+				if _, ok := result[j+1]; !ok {
+					result[j+1] = [][]byte{result[j][i]}
+				} else {
+					result[j+1] = append(result[j+1], result[j][i])
+				}
+			} else {
+				if _, ok := result[j+1]; !ok {
+					hash := crypto.DoubleHash(append(result[j][i], result[j][i+1]...))
+					hash = converter.BinToHex(hash)
+					result[j+1] = [][]byte{hash}
+				} else {
+					hash := crypto.DoubleHash([]byte(append(result[j][i], result[j][i+1]...)))
+					hash = converter.BinToHex(hash)
+					result[j+1] = append(result[j+1], hash)
+				}
+			}
+		}
+		j++
 	}
 
-	return
+	ret := result[int32(len(result)-1)]
+	return ret[0]
 }

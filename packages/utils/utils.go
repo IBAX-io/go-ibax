@@ -205,41 +205,6 @@ func CheckSign(publicKeys [][]byte, forSign []byte, signs []byte, nodeKeyOrLogin
 	return crypto.Verify(publicKeys[0], forSign, signsSlice[0])
 }
 
-// MerkleTreeRoot rertun Merkle value
-func MerkleTreeRoot(dataArray [][]byte) ([]byte, error) {
-	result := make(map[int32][][]byte)
-	for _, v := range dataArray {
-		hash := converter.BinToHex(crypto.DoubleHash(v))
-		result[0] = append(result[0], hash)
-	}
-	var j int32
-	for len(result[j]) > 1 {
-		for i := 0; i < len(result[j]); i = i + 2 {
-			if len(result[j]) <= (i + 1) {
-				if _, ok := result[j+1]; !ok {
-					result[j+1] = [][]byte{result[j][i]}
-				} else {
-					result[j+1] = append(result[j+1], result[j][i])
-				}
-			} else {
-				if _, ok := result[j+1]; !ok {
-					hash := crypto.DoubleHash(append(result[j][i], result[j][i+1]...))
-					hash = converter.BinToHex(hash)
-					result[j+1] = [][]byte{hash}
-				} else {
-					hash := crypto.DoubleHash([]byte(append(result[j][i], result[j][i+1]...)))
-					hash = converter.BinToHex(hash)
-					result[j+1] = append(result[j+1], hash)
-				}
-			}
-		}
-		j++
-	}
-
-	ret := result[int32(len(result)-1)]
-	return []byte(ret[0]), nil
-}
-
 // GetCurrentDir returns the current directory
 func GetCurrentDir() string {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))

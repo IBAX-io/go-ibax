@@ -32,9 +32,9 @@ func (l *Language) TableName() string {
 }
 
 // GetAll is retrieving all records from database
-func (l *Language) GetAll(transaction *DbTransaction, prefix string) ([]Language, error) {
+func (l *Language) GetAll(dbTx *DbTransaction, prefix string) ([]Language, error) {
 	result := new([]Language)
-	err := GetDB(transaction).Table("1_languages").Where("ecosystem = ?", prefix).Order("name asc").Find(&result).Error
+	err := GetDB(dbTx).Table("1_languages").Where("ecosystem = ?", prefix).Order("name asc").Find(&result).Error
 	return *result, err
 }
 

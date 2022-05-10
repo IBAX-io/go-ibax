@@ -7,7 +7,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
-func ProcessQueueTransactionBatches(dbTransaction *sqldb.DbTransaction, qs []*sqldb.QueueTx) error {
+func ProcessQueueTransactionBatches(dbTx *sqldb.DbTransaction, qs []*sqldb.QueueTx) error {
 	var (
 		checkTime = time.Now().Unix()
 		hashes    sqldb.ArrHashes
@@ -33,7 +33,7 @@ func ProcessQueueTransactionBatches(dbTransaction *sqldb.DbTransaction, qs []*sq
 		return ch
 	}
 
-	txBadChan := processBadTx(dbTransaction)
+	txBadChan := processBadTx(dbTx)
 
 	defer func() {
 		close(txBadChan)
@@ -69,13 +69,13 @@ func ProcessQueueTransactionBatches(dbTransaction *sqldb.DbTransaction, qs []*sq
 	}
 
 	if len(trxs) > 0 {
-		errTx := sqldb.CreateTransactionBatches(dbTransaction, trxs)
+		errTx := sqldb.CreateTransactionBatches(dbTx, trxs)
 		if errTx != nil {
 			return errTx
 		}
 	}
 	if len(hashes) > 0 {
-		errQTx := sqldb.DeleteQueueTxs(dbTransaction, hashes)
+		errQTx := sqldb.DeleteQueueTxs(dbTx, hashes)
 		if errQTx != nil {
 			return errQTx
 		}

@@ -67,33 +67,33 @@ func (t *Table) TableName() string {
 }
 
 // Get is retrieving model from database
-func (t *Table) Get(transaction *DbTransaction, name string) (bool, error) {
-	return isFound(GetDB(transaction).Where("ecosystem = ? and name = ?", t.Ecosystem, name).First(t))
+func (t *Table) Get(dbTx *DbTransaction, name string) (bool, error) {
+	return isFound(GetDB(dbTx).Where("ecosystem = ? and name = ?", t.Ecosystem, name).First(t))
 }
 
 // Create is creating record of model
-func (t *Table) Create(transaction *DbTransaction) error {
-	return GetDB(transaction).Create(t).Error
+func (t *Table) Create(dbTx *DbTransaction) error {
+	return GetDB(dbTx).Create(t).Error
 }
 
 // Delete is deleting model from database
-func (t *Table) Delete(transaction *DbTransaction) error {
-	return GetDB(transaction).Delete(t).Error
+func (t *Table) Delete(dbTx *DbTransaction) error {
+	return GetDB(dbTx).Delete(t).Error
 }
 
 // IsExistsByPermissionsAndTableName returns columns existence by permission and table name
-func (t *Table) IsExistsByPermissionsAndTableName(transaction *DbTransaction, columnName, tableName string) (bool, error) {
-	return isFound(GetDB(transaction).Where(`ecosystem = ? AND (columns-> ? ) is not null AND name = ?`,
+func (t *Table) IsExistsByPermissionsAndTableName(dbTx *DbTransaction, columnName, tableName string) (bool, error) {
+	return isFound(GetDB(dbTx).Where(`ecosystem = ? AND (columns-> ? ) is not null AND name = ?`,
 		t.Ecosystem, columnName, tableName).First(t))
 }
 
 // GetColumns returns columns from database
-func (t *Table) GetColumns(transaction *DbTransaction, name, jsonKey string) (map[string]string, error) {
+func (t *Table) GetColumns(dbTx *DbTransaction, name, jsonKey string) (map[string]string, error) {
 	keyStr := ""
 	if jsonKey != "" {
 		keyStr = `->'` + jsonKey + `'`
 	}
-	rows, err := GetDB(transaction).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(columns`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
+	rows, err := GetDB(dbTx).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(columns`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -112,12 +112,12 @@ func (t *Table) GetColumns(transaction *DbTransaction, name, jsonKey string) (ma
 }
 
 // GetPermissions returns table permissions by name
-func (t *Table) GetPermissions(transaction *DbTransaction, name, jsonKey string) (map[string]string, error) {
+func (t *Table) GetPermissions(dbTx *DbTransaction, name, jsonKey string) (map[string]string, error) {
 	keyStr := ""
 	if jsonKey != "" {
 		keyStr = `->'` + jsonKey + `'`
 	}
-	rows, err := GetDB(transaction).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(permissions`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
+	rows, err := GetDB(dbTx).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(permissions`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -141,23 +141,23 @@ func (t *Table) Count() (count int64, err error) {
 }
 
 // CreateTable is creating table
-func CreateTable(transaction *DbTransaction, tableName, colsSQL string) error {
-	return GetDB(transaction).Exec(`CREATE TABLE "` + tableName + `" (
+func CreateTable(dbTx *DbTransaction, tableName, colsSQL string) error {
+	return dbTx.ExecSql(`CREATE TABLE "` + tableName + `" (
 				"id" bigint NOT NULL DEFAULT '0',
 				` + colsSQL + `
 				);
-				ALTER TABLE ONLY "` + tableName + `" ADD CONSTRAINT "` + tableName + `_pkey" PRIMARY KEY (id);`).Error
+				ALTER TABLE ONLY "` + tableName + `" ADD CONSTRAINT "` + tableName + `_pkey" PRIMARY KEY (id);`)
 }
 
 // CreateView is creating view table
-func CreateView(transaction *DbTransaction, inViewName, inTables, inWhere, inColSQL string) error {
+func CreateView(dbTx *DbTransaction, inViewName, inTables, inWhere, inColSQL string) error {
 	inSQL := `CREATE VIEW "` + inViewName + `" AS SELECT ` + inColSQL + ` FROM ` + inTables + ` WHERE ` + inWhere + `;`
-	return GetDB(transaction).Exec(inSQL).Error
+	return dbTx.ExecSql(inSQL)
 }
 
 // DropView is drop view table
-func DropView(transaction *DbTransaction, inViewName string) error {
-	return GetDB(transaction).Exec(`DROP VIEW "` + strings.Replace(fmt.Sprint(inViewName), `'`, `''`, -1) + `";`).Error
+func DropView(dbTx *DbTransaction, inViewName string) error {
+	return GetDB(dbTx).Exec(`DROP VIEW "` + strings.Replace(fmt.Sprint(inViewName), `'`, `''`, -1) + `";`).Error
 }
 
 // GetAll returns all tables

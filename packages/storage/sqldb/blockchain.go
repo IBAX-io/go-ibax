@@ -28,8 +28,8 @@ func (BlockChain) TableName() string {
 }
 
 // Create is creating record of model
-func (b *BlockChain) Create(transaction *DbTransaction) error {
-	return GetDB(transaction).Create(b).Error
+func (b *BlockChain) Create(dbTx *DbTransaction) error {
+	return GetDB(dbTx).Create(b).Error
 }
 
 // Get is retrieving model from database
@@ -107,8 +107,8 @@ func (b *BlockChain) GetNodeBlocksAtTime(from, to time.Time, node int64) ([]Bloc
 }
 
 // DeleteById is deleting block by ID
-func (b *BlockChain) DeleteById(transaction *DbTransaction, id int64) error {
-	return GetDB(transaction).Where("id = ?", id).Delete(BlockChain{}).Error
+func (b *BlockChain) DeleteById(dbTx *DbTransaction, id int64) error {
+	return GetDB(dbTx).Where("id = ?", id).Delete(BlockChain{}).Error
 }
 
 func GetTxCount() (int64, error) {

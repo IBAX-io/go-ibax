@@ -23,7 +23,7 @@ import (
 )
 
 // upsertInfoBlock updates info_block table
-func (b *Block) upsertInfoBlock(dbTransaction *sqldb.DbTransaction, block *sqldb.BlockChain) error {
+func (b *Block) upsertInfoBlock(dbTx *sqldb.DbTransaction, block *sqldb.BlockChain) error {
 	ib := &sqldb.InfoBlock{
 		Hash:          block.Hash,
 		BlockID:       block.ID,
@@ -35,14 +35,14 @@ func (b *Block) upsertInfoBlock(dbTransaction *sqldb.DbTransaction, block *sqldb
 	}
 	if block.ID == 1 {
 		ib.CurrentVersion = fmt.Sprintf("%d", consts.BlockVersion)
-		err := ib.Create(dbTransaction)
+		err := ib.Create(dbTx)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating info block")
 			return fmt.Errorf("error insert into info_block %s", err)
 		}
 	} else {
 		ib.Sent = 0
-		if err := ib.Update(dbTransaction); err != nil {
+		if err := ib.Update(dbTx); err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating info block")
 			return fmt.Errorf("error while updating info_block %s", err)
 		}
@@ -137,7 +137,7 @@ func GetBlockDataFromBlockChain(blockID int64) (*types.BlockData, error) {
 		return BlockData, err
 	}
 
-	header, _, err := types.ParseBlockHeader(bytes.NewBuffer(block.Data), syspar.GetMaxBlockSize())
+	header, err := types.ParseBlockHeader(bytes.NewBuffer(block.Data), syspar.GetMaxBlockSize())
 	if err != nil {
 		return nil, err
 	}

@@ -29,6 +29,6 @@ func (r *Role) TableName() string {
 }
 
 // Get is retrieving model from database
-func (r *Role) Get(transaction *DbTransaction, id int64) (bool, error) {
-	return isFound(GetDB(transaction).First(&r, id))
+func (r *Role) Get(dbTx *DbTransaction, id int64) (bool, error) {
+	return isFound(GetDB(dbTx).First(&r, id))
 }

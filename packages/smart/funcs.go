@@ -1926,10 +1926,10 @@ func GetCLBList(sc *SmartContract) map[string]string {
 	return list
 }
 
-func GetHistoryRaw(transaction *sqldb.DbTransaction, ecosystem int64, tableName string,
+func GetHistoryRaw(dbTx *sqldb.DbTransaction, ecosystem int64, tableName string,
 	id, idRollback int64) ([]any, error) {
 	table := qb.GetTableName(ecosystem, tableName)
-	rows, err := sqldb.GetDB(transaction).Table(table).Where("id=?", id).Rows()
+	rows, err := sqldb.GetDB(dbTx).Table(table).Where("id=?", id).Rows()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get current values")
 		return nil, err
@@ -2093,7 +2093,7 @@ func TransactionData(blockId int64, hash []byte) (data *TxInfo, err error) {
 	data = &TxInfo{}
 	data.Block = converter.Int64ToStr(blockId)
 	blockBuffer := bytes.NewBuffer(blockOwner.Data)
-	_, _, err = types.ParseBlockHeader(blockBuffer, syspar.GetMaxBlockSize())
+	_, err = types.ParseBlockHeader(blockBuffer, syspar.GetMaxBlockSize())
 	if err != nil {
 		return
 	}
