@@ -47,7 +47,7 @@ func init() {
 
 func genesisBlock() ([]byte, error) {
 	now := time.Now().Unix()
-	header := &types.BlockData{
+	header := &types.BlockHeader{
 		BlockID:      1,
 		Time:         now,
 		EcosystemID:  0,
@@ -106,8 +106,9 @@ func genesisBlock() ([]byte, error) {
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block body bin marshalling")
 	}
-	return block.MarshallBlock(header, &types.BlockData{
-		Hash:          []byte(`0`),
-		RollbacksHash: []byte(`0`),
-	}, [][]byte{tx})
+	return block.MarshallBlock(types.WithCurHeader(header),
+		types.WithPrevHeader(&types.BlockHeader{
+			Hash:          []byte(`0`),
+			RollbacksHash: []byte(`0`),
+		}), types.WithTxFullData([][]byte{tx}))
 }

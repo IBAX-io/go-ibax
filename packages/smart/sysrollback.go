@@ -34,7 +34,7 @@ func SysRollback(sc *SmartContract, data SysRollData) error {
 		return err
 	}
 	rollbackSys := &sqldb.RollbackTx{
-		BlockID:   sc.BlockData.BlockID,
+		BlockID:   sc.BlockHeader.BlockID,
 		TxHash:    sc.Hash,
 		NameTable: SysName,
 		TableID:   converter.Int64ToStr(sc.TxSmart.EcosystemID),

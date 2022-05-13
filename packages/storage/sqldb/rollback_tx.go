@@ -5,7 +5,12 @@
 
 package sqldb
 
-import "gorm.io/gorm"
+import (
+	"bytes"
+	"encoding/json"
+
+	"gorm.io/gorm"
+)
 
 // RollbackTx is model
 type RollbackTx struct {
@@ -78,4 +83,19 @@ func (rt *RollbackTx) Create(dbTx *DbTransaction) error {
 func (rt *RollbackTx) Get(dbTx *DbTransaction, transactionHash []byte, tableName string) (bool, error) {
 	return isFound(GetDB(dbTx).Where("tx_hash = ? AND table_name = ?", transactionHash,
 		tableName).Order("id desc").First(rt))
+}
+
+func (rt *RollbackTx) GetRollbacksDiff(dbTx *DbTransaction, blockID int64) ([]byte, error) {
+	list, err := rt.GetBlockRollbackTransactions(dbTx, blockID)
+	if err != nil {
+		return nil, err
+	}
+	buf := new(bytes.Buffer)
+	enc := json.NewEncoder(buf)
+	for _, rtx := range list {
+		if err = enc.Encode(&rtx); err != nil {
+			return nil, err
+		}
+	}
+	return buf.Bytes(), nil
 }

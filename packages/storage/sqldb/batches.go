@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -27,7 +28,7 @@ type AfterTxs struct {
 	Rts            []*RollbackTx
 	Lts            []*LogTransaction
 	UpdTxStatus    []*updateBlockMsg
-	TxExecutionSql []string
+	TxExecutionSql types.TxExecutionSql
 }
 
 func AfterPlayTxs(dbTx *DbTransaction, blockID int64, playTx AfterTxs, genBlock, firstBlock bool) error {

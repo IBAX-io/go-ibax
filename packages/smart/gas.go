@@ -349,7 +349,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 		"recipient_balance": toIDBalance,
 		"amount":            sum,
 		"comment":           comment,
-		"block_id":          sc.BlockData.BlockID,
+		"block_id":          sc.BlockHeader.BlockID,
 		"txhash":            sc.Hash,
 		"ecosystem":         pay.TokenEco,
 		"type":              int64(t),
@@ -437,7 +437,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		feeMode     *sqldb.FeeModeInfo
 		curPay      = &PaymentInfo{
 			TokenEco:       eco,
-			ToID:           sc.BlockData.KeyID,
+			ToID:           sc.BlockHeader.KeyID,
 			PayWallet:      new(sqldb.Key),
 			Ecosystem:      new(sqldb.Ecosystem),
 			Combustion:     new(Combustion),

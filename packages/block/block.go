@@ -37,11 +37,8 @@ var (
 
 // Block is storing block data
 type Block struct {
-	Header            types.BlockData
-	PrevHeader        *types.BlockData
+	types.BlockData
 	PrevRollbacksHash []byte
-	MrklRoot          []byte
-	BinData           []byte
 	Transactions      []*transaction.Transaction
 	SysUpdate         bool
 	GenBlock          bool // it equals true when we are generating a new block
@@ -88,17 +85,23 @@ func (b *Block) PlaySafe() error {
 		return err
 	}
 
-	if b.GenBlock {
-		if len(b.Transactions) == 0 {
-			dbTx.Commit()
-			return ErrEmptyBlock
-		} else if len(inputTx) != len(b.Transactions) {
-			if err = b.repeatMarshallBlock(); err != nil {
-				dbTx.Rollback()
-				return err
-			}
-		}
+	//if b.GenBlock {
+	if len(b.Transactions) == 0 {
+		dbTx.Commit()
+		return ErrEmptyBlock
 	}
+	//if len(inputTx) != len(b.Transactions) {
+	b.Header.RollbacksHash, err = b.GetRollbacksHash(dbTx)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
+		return err
+	}
+	if err = b.repeatMarshallBlock(); err != nil {
+		dbTx.Rollback()
+		return err
+	}
+	//}
+	//}
 
 	if err := b.InsertIntoBlockchain(dbTx); err != nil {
 		dbTx.Rollback()
@@ -121,7 +124,11 @@ func (b *Block) repeatMarshallBlock() error {
 	for _, tr := range b.Transactions {
 		trData = append(trData, tr.FullData)
 	}
-	newBlockData, err := MarshallBlock(&b.Header, b.PrevHeader, trData)
+	newBlockData, err := MarshallBlock(
+		types.WithCurHeader(b.Header),
+		types.WithPrevHeader(b.PrevHeader),
+		types.WithTxExecSql(b.TxExecutionSql),
+		types.WithTxFullData(trData))
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marshalling new block")
 		return err
@@ -133,15 +140,15 @@ func (b *Block) repeatMarshallBlock() error {
 		return err
 	}
 	b.BinData = newBlockData
-	b.Transactions = nb.Transactions
-	b.MrklRoot = nb.MrklRoot
-	b.SysUpdate = nb.SysUpdate
+	//b.Transactions = nb.Transactions
+	b.MerkleRoot = nb.MerkleRoot
+	//b.SysUpdate = nb.SysUpdate
 	return nil
 }
 
 func (b *Block) readPreviousBlockFromBlockchainTable() error {
 	if b.IsGenesis() {
-		b.PrevHeader = &types.BlockData{}
+		b.PrevHeader = &types.BlockHeader{}
 		return nil
 	}
 
@@ -173,6 +180,7 @@ func (b *Block) Play(dbTx *sqldb.DbTransaction) (batchErr error) {
 	processedTx := make([]*transaction.Transaction, 0, len(b.Transactions))
 	defer func() {
 		if b.GenBlock {
+			b.TxExecutionSql = playTxs.TxExecutionSql
 			b.Transactions = processedTx
 		}
 		if err := sqldb.AfterPlayTxs(dbTx, b.Header.BlockID, playTxs, b.GenBlock, b.IsGenesis()); err != nil {
@@ -180,8 +188,8 @@ func (b *Block) Play(dbTx *sqldb.DbTransaction) (batchErr error) {
 			return
 		}
 	}()
-
-	for curTx, t := range b.Transactions {
+	for curTx := 0; curTx < len(b.Transactions); curTx++ {
+		t := b.Transactions[curTx]
 		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
@@ -190,8 +198,10 @@ func (b *Block) Play(dbTx *sqldb.DbTransaction) (batchErr error) {
 
 		t.Notifications = notificator.NewQueue()
 		t.DbTransaction = dbTx
+		t.DbTransaction.ExecutionSql.Reset()
 		t.TxCheckLimits = limits
-		t.PreBlockData = b.PrevHeader
+		t.BlockHeader = b.Header
+		t.PreBlockHeader = b.PrevHeader
 		t.GenBlock = b.GenBlock
 		t.SqlDbSavePoint = curTx
 		t.Rand = rand.BytesSeed(t.Hash())
@@ -240,7 +250,7 @@ func (b *Block) Play(dbTx *sqldb.DbTransaction) (batchErr error) {
 			b.SysUpdate = true
 			t.SysUpdate = false
 		}
-		if err := sqldb.SetTransactionStatusBlockMsg(t.DbTransaction, t.BlockData.BlockID, t.TxResult, t.Hash()); err != nil {
+		if err := sqldb.SetTransactionStatusBlockMsg(t.DbTransaction, t.BlockHeader.BlockID, t.TxResult, t.Hash()); err != nil {
 			t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("updating transaction status block id")
 			return err
 		}
@@ -360,7 +370,7 @@ func (b *Block) CheckHash() (bool, error) {
 			return false, utils.ErrInfo(fmt.Errorf("empty nodePublicKey"))
 		}
 
-		signSource := b.Header.ForSign(b.PrevHeader, b.MrklRoot)
+		signSource := b.Header.ForSign(b.PrevHeader, b.MerkleRoot)
 
 		resultCheckSign, err := utils.CheckSign(
 			[][]byte{nodePublicKey},
@@ -415,7 +425,6 @@ func ProcessBlockWherePrevFromBlockchainTable(data []byte, checkSize bool) (*Blo
 	if err != nil {
 		return nil, errors.Wrap(utils.WithBan(types.ErrUnmarshallBlock), err.Error())
 	}
-	block.BinData = data
 
 	if err := block.readPreviousBlockFromBlockchainTable(); err != nil {
 		return nil, err

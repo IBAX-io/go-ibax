@@ -197,7 +197,7 @@ type BlockDetailedInfo struct {
 	Tx            int32            `json:"tx_count"`
 	Size          string           `json:"size"`
 	RollbacksHash []byte           `json:"rollbacks_hash"`
-	MrklRoot      []byte           `json:"mrkl_root"`
+	MerkleRoot    []byte           `json:"merkle_root"`
 	BinData       []byte           `json:"bin_data"`
 	SysUpdate     bool             `json:"-"`
 	GenBlock      bool             `json:"-"`
@@ -280,7 +280,7 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 			Time:          blockModel.Time,
 			Tx:            blockModel.Tx,
 			RollbacksHash: blockModel.RollbacksHash,
-			MrklRoot:      blck.MrklRoot,
+			MerkleRoot:    blck.MerkleRoot,
 			BinData:       blck.BinData,
 			Size:          common.StorageSize(len(blockModel.Data)).TerminalString(),
 			SysUpdate:     blck.SysUpdate,

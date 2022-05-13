@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/block"
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -317,7 +316,7 @@ func getBlocks(ctx context.Context, host string, blockID, minCount int64) ([]*bl
 
 		// check the signature
 		_, okSignErr := utils.CheckSign([][]byte{nodePublicKey},
-			[]byte(bl.Header.ForSign(bl.PrevHeader, bl.MrklRoot)),
+			[]byte(bl.Header.ForSign(bl.PrevHeader, bl.MerkleRoot)),
 			bl.Header.Sign, true)
 		if okSignErr == nil && len(blocks) >= int(minCount) {
 			break
@@ -341,7 +340,6 @@ func processBlocks(blocks []*block.Block) error {
 
 	for i := len(blocks) - 1; i >= 0; i-- {
 		b := blocks[i]
-
 		if prevBlocks[b.Header.BlockID-1] != nil {
 			b.PrevHeader.Hash = prevBlocks[b.Header.BlockID-1].Header.Hash
 			b.PrevHeader.RollbacksHash = prevBlocks[b.Header.BlockID-1].Header.RollbacksHash
@@ -352,7 +350,7 @@ func processBlocks(blocks []*block.Block) error {
 			b.PrevHeader.NodePosition = prevBlocks[b.Header.BlockID-1].Header.NodePosition
 		}
 
-		b.Header.Hash = crypto.DoubleHash([]byte(b.Header.ForSha(b.PrevHeader, b.MrklRoot)))
+		//b.Header.Hash = b.Header.GenHash(b.PrevHeader, b.MerkleRoot)
 
 		if err := b.Check(); err != nil {
 			dbTx.Rollback()

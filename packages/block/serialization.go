@@ -14,17 +14,16 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
-func MarshallBlock(header, prev *types.BlockData, trData [][]byte) ([]byte, error) {
-	block := &types.Block{
-		Header:     *header,
-		PrevHeader: prev,
-		TxFullData: trData,
+func MarshallBlock(opts ...types.BlockDataOption) ([]byte, error) {
+	block := &types.BlockData{}
+	if err := block.Apply(opts...); err != nil {
+		return nil, err
 	}
 	return block.MarshallBlock(syspar.GetNodePrivKey())
 }
 
 func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
-	block := &types.Block{}
+	block := &types.BlockData{}
 	if err := block.UnmarshallBlock(blockBuffer.Bytes()); err != nil {
 		return nil, err
 	}
@@ -37,15 +36,12 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 			}
 			return nil, fmt.Errorf("parse transaction error(%s)", err)
 		}
-		t.BlockData = &block.Header
 		transactions = append(transactions, t)
 	}
 
 	return &Block{
-		BinData:           block.BinData,
-		Header:            block.Header,
+		BlockData:         *block,
 		PrevRollbacksHash: block.PrevHeader.RollbacksHash,
 		Transactions:      transactions,
-		MrklRoot:          block.MerkleRoot,
 	}, nil
 }

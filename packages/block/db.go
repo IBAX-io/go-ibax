@@ -7,9 +7,10 @@ package block
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -51,23 +52,13 @@ func (b *Block) upsertInfoBlock(dbTx *sqldb.DbTransaction, block *sqldb.BlockCha
 	return nil
 }
 
-func GetRollbacksHash(transaction *sqldb.DbTransaction, blockID int64) ([]byte, error) {
+func (b *Block) GetRollbacksHash(transaction *sqldb.DbTransaction) ([]byte, error) {
 	r := &sqldb.RollbackTx{}
-	list, err := r.GetBlockRollbackTransactions(transaction, blockID)
+	diff, err := r.GetRollbacksDiff(transaction, b.Header.BlockID)
 	if err != nil {
 		return nil, err
 	}
-
-	buf := new(bytes.Buffer)
-	enc := json.NewEncoder(buf)
-
-	for _, rtx := range list {
-		if err = enc.Encode(&rtx); err != nil {
-			return nil, err
-		}
-	}
-
-	return crypto.Hash(buf.Bytes()), nil
+	return crypto.Hash(diff), nil
 }
 
 // InsertIntoBlockchain inserts a block into the blockchain
@@ -79,22 +70,23 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		return err
 	}
-	rollbacksHash, err := GetRollbacksHash(dbTx, blockID)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
-		return err
-	}
+	//rollbacksHash, err := GetRollbacksHash(dbTx, blockID)
+	//if err != nil {
+	//	log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
+	//	return err
+	//}
 
 	blockchain := &sqldb.BlockChain{
 		ID:            blockID,
-		Hash:          crypto.DoubleHash([]byte(b.Header.ForSha(b.PrevHeader, b.MrklRoot))),
+		Hash:          b.Header.Hash,
 		Data:          b.BinData,
 		EcosystemID:   b.Header.EcosystemID,
 		KeyID:         b.Header.KeyID,
 		NodePosition:  b.Header.NodePosition,
 		Time:          b.Header.Time,
-		RollbacksHash: rollbacksHash,
-		Tx:            int32(len(b.Transactions)),
+		RollbacksHash: b.Header.RollbacksHash,
+		//RollbacksHash: rollbacksHash,
+		Tx: int32(len(b.Transactions)),
 	}
 	var validBlockTime bool
 	if blockID > 1 {
@@ -128,24 +120,22 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 }
 
 // GetBlockDataFromBlockChain is retrieving block data from blockchain
-func GetBlockDataFromBlockChain(blockID int64) (*types.BlockData, error) {
-	BlockData := new(types.BlockData)
-	block := &sqldb.BlockChain{}
-	_, err := block.Get(blockID)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting block by ID")
-		return BlockData, err
+func GetBlockDataFromBlockChain(blockID int64) (*types.BlockHeader, error) {
+	header := new(types.BlockHeader)
+	block := new(sqldb.BlockChain)
+	if _, err := block.Get(blockID); err != nil {
+		return nil, errors.Wrapf(err, "Getting block by ID %d", blockID)
 	}
 
-	header, err := types.ParseBlockHeader(bytes.NewBuffer(block.Data), syspar.GetMaxBlockSize())
+	h, err := types.ParseBlockHeader(bytes.NewBuffer(block.Data), syspar.GetMaxBlockSize())
 	if err != nil {
 		return nil, err
 	}
 
-	BlockData = &header
-	BlockData.Hash = block.Hash
-	BlockData.RollbacksHash = block.RollbacksHash
-	return BlockData, nil
+	header = h
+	header.Hash = block.Hash
+	header.RollbacksHash = block.RollbacksHash
+	return header, nil
 }
 
 // GetDataFromFirstBlock returns data of first block

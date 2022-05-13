@@ -133,7 +133,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return nil
 	}
 
-	header := &types.BlockData{
+	header := &types.BlockHeader{
 		BlockID:      prevBlock.BlockID + 1,
 		Time:         st.Unix(),
 		EcosystemID:  0,
@@ -142,7 +142,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		Version:      consts.BlockVersion,
 	}
 
-	pb := &types.BlockData{
+	pb := &types.BlockHeader{
 		BlockID:       prevBlock.BlockID,
 		Hash:          prevBlock.Hash,
 		RollbacksHash: prevBlock.RollbacksHash,
@@ -164,13 +164,13 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	return nil
 }
 
-func generateNextBlock(blockHeader, prevBlock *types.BlockData, trs []*sqldb.Transaction) ([]byte, error) {
+func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs []*sqldb.Transaction) ([]byte, error) {
 	trData := make([][]byte, 0, len(trs))
 	for _, tr := range trs {
 		trData = append(trData, tr.Data)
 	}
 
-	return block.MarshallBlock(blockHeader, prevBlock, trData)
+	return block.MarshallBlock(types.WithCurHeader(blockHeader), types.WithPrevHeader(prevBlock), types.WithTxFullData(trData))
 }
 
 func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-chan time.Time, st int64) ([]*sqldb.Transaction, error) {

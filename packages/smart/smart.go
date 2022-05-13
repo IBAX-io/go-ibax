@@ -64,8 +64,8 @@ type SmartContract struct {
 	TxCost          int64           // Maximum cost of executing contract
 	TxUsedCost      decimal.Decimal // Used cost of CPU resources
 	TXBlockFuel     decimal.Decimal
-	BlockData       *types.BlockData
-	PreBlockData    *types.BlockData
+	BlockHeader     *types.BlockHeader
+	PreBlockHeader  *types.BlockHeader
 	Loop            map[string]bool
 	Hash            []byte
 	Payload         []byte
@@ -192,14 +192,14 @@ func SetContractWallet(sc *SmartContract, tblid, state int64, wallet int64) erro
 func (sc *SmartContract) getExtend() map[string]any {
 	var block, blockTime, blockKeyID, blockNodePosition int64
 	var perBlockHash string
-	if sc.BlockData != nil {
-		block = sc.BlockData.BlockID
-		blockKeyID = sc.BlockData.KeyID
-		blockTime = sc.BlockData.Time
-		blockNodePosition = sc.BlockData.NodePosition
+	if sc.BlockHeader != nil {
+		block = sc.BlockHeader.BlockID
+		blockKeyID = sc.BlockHeader.KeyID
+		blockTime = sc.BlockHeader.Time
+		blockNodePosition = sc.BlockHeader.NodePosition
 	}
-	if sc.PreBlockData != nil {
-		perBlockHash = hex.EncodeToString(sc.PreBlockData.Hash)
+	if sc.PreBlockHeader != nil {
+		perBlockHash = hex.EncodeToString(sc.PreBlockHeader.Hash)
 	}
 	head := sc.TxSmart
 	extend := map[string]any{
@@ -633,14 +633,14 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 lp:
 	if err != nil {
 		sc.RollBackTx = nil
-		sc.DbTransaction.ExecutionSql = nil
+		sc.DbTransaction.ExecutionSql.Reset()
 		if ierr := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); ierr != nil {
 			return retError(ierr)
 		}
 		if needPayment {
 			if ierr := sc.payContract(true); ierr != nil {
 				sc.RollBackTx = nil
-				sc.DbTransaction.ExecutionSql = nil
+				sc.DbTransaction.ExecutionSql.Reset()
 				if yerr := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); yerr != nil {
 					return retError(yerr)
 				}

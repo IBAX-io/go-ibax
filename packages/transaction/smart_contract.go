@@ -44,8 +44,8 @@ func (s *SmartTransactionParser) setTimestamp() {
 func (s *SmartTransactionParser) Init(t *Transaction) error {
 	s.Rand = t.Rand
 	s.GenBlock = t.GenBlock
-	s.BlockData = t.BlockData
-	s.PreBlockData = t.PreBlockData
+	s.BlockHeader = t.BlockHeader
+	s.PreBlockHeader = t.PreBlockHeader
 	s.Notifications = t.Notifications
 	s.DbTransaction = t.DbTransaction
 	s.TxSize = int64(len(s.Payload))

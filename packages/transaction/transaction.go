@@ -19,8 +19,8 @@ type Transaction struct {
 	GenBlock       bool
 	SysUpdate      bool
 	RollBackTx     []*sqldb.RollbackTx
-	BlockData      *types.BlockData
-	PreBlockData   *types.BlockData
+	BlockHeader    *types.BlockHeader
+	PreBlockHeader *types.BlockHeader
 	DbTransaction  *sqldb.DbTransaction
 	Rand           *rand.Rand
 	TxCheckLimits  *Limits

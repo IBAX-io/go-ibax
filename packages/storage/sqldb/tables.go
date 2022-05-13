@@ -157,7 +157,7 @@ func CreateView(dbTx *DbTransaction, inViewName, inTables, inWhere, inColSQL str
 
 // DropView is drop view table
 func DropView(dbTx *DbTransaction, inViewName string) error {
-	return GetDB(dbTx).Exec(`DROP VIEW "` + strings.Replace(fmt.Sprint(inViewName), `'`, `''`, -1) + `";`).Error
+	return dbTx.ExecSql(`DROP VIEW "` + strings.Replace(fmt.Sprint(inViewName), `'`, `''`, -1) + `";`)
 }
 
 // GetAll returns all tables
