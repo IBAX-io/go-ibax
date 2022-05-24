@@ -9,10 +9,39 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
+
+func (b *Block) repeatMarshallBlock() error {
+	trData := make([][]byte, 0, len(b.Transactions))
+	for _, tr := range b.Transactions {
+		trData = append(trData, tr.FullData)
+	}
+	b.TxFullData = trData
+	newBlockData, err := MarshallBlock(
+		types.WithCurHeader(b.Header),
+		types.WithPrevHeader(b.PrevHeader),
+		types.WithTxExecSql(b.TxExecutionSql),
+		types.WithTxFullData(b.TxFullData))
+	if err != nil {
+		return errors.Wrap(err, "marshalling repeat block")
+	}
+
+	var nb = new(Block)
+	nb, err = UnmarshallBlock(bytes.NewBuffer(newBlockData), true)
+	if err != nil {
+		return errors.Wrap(err, "parsing repeat block")
+	}
+	b.BinData = newBlockData
+	//b.Transactions = nb.Transactions
+	b.MerkleRoot = nb.MerkleRoot
+	//b.SysUpdate = nb.SysUpdate
+	return nil
+}
 
 func MarshallBlock(opts ...types.BlockDataOption) ([]byte, error) {
 	block := &types.BlockData{}
@@ -40,7 +69,7 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
 	}
 
 	return &Block{
-		BlockData:         *block,
+		BlockData:         block,
 		PrevRollbacksHash: block.PrevHeader.RollbacksHash,
 		Transactions:      transactions,
 	}, nil

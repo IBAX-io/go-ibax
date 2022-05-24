@@ -73,7 +73,6 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		d.logger.WithFields(log.Fields{"type": consts.JustWaiting}).Debug("not my generation time")
 		return nil
 	}
-
 	//if !NtpDriftFlag {
 	//	d.logger.WithFields(log.Fields{"type": consts.Ntpdate}).Error("ntp time not ntpdate")
 	//	return nil
@@ -142,13 +141,13 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		Version:      consts.BlockVersion,
 	}
 
-	pb := &types.BlockHeader{
+	prev := &types.BlockHeader{
 		BlockID:       prevBlock.BlockID,
 		Hash:          prevBlock.Hash,
 		RollbacksHash: prevBlock.RollbacksHash,
 	}
 
-	blockBin, err := generateNextBlock(header, pb, trs)
+	blockBin, err := generateNextBlock(header, prev, trs)
 	if err != nil {
 		return err
 	}
@@ -158,22 +157,18 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		log.WithFields(log.Fields{"error": err}).Error("on inserting new block")
 		return err
 	}
-	log.WithFields(log.Fields{"block": header.String(), "type": consts.SyncProcess}).Debug("Generated block ID")
-
 	//go notificator.CheckTokenMovementLimits(nil, conf.Config.TokenMovement, header.BlockID)
 	return nil
 }
 
-func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs []*sqldb.Transaction) ([]byte, error) {
-	trData := make([][]byte, 0, len(trs))
-	for _, tr := range trs {
-		trData = append(trData, tr.Data)
-	}
-
-	return block.MarshallBlock(types.WithCurHeader(blockHeader), types.WithPrevHeader(prevBlock), types.WithTxFullData(trData))
+func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) ([]byte, error) {
+	return block.MarshallBlock(
+		types.WithCurHeader(blockHeader),
+		types.WithPrevHeader(prevBlock),
+		types.WithTxFullData(trs))
 }
 
-func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-chan time.Time, st int64) ([]*sqldb.Transaction, error) {
+func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-chan time.Time, st int64) ([][]byte, error) {
 	//p := new(transaction.Transaction)
 
 	//verify transactions
@@ -216,7 +211,7 @@ func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-cha
 	}()
 
 	// Checks preprocessing count limits
-	txList := make([]*sqldb.Transaction, 0, len(trs))
+	txList := make([][]byte, 0, len(trs))
 	txs = append(txs, trs...)
 	for i, txItem := range txs {
 		select {
@@ -224,7 +219,7 @@ func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-cha
 			return txList, nil
 		default:
 			if txItem.GetTransactionRateStopNetwork() {
-				txList = append(txList[:0], txs[i])
+				txList = append(txList[:0], txs[i].Data)
 				break
 			}
 			bufTransaction := bytes.NewBuffer(txItem.Data)
@@ -252,7 +247,7 @@ func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-cha
 					continue
 				}
 			}
-			txList = append(txList, txs[i])
+			txList = append(txList, txs[i].Data)
 		}
 	}
 	return txList, nil

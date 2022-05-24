@@ -48,12 +48,13 @@ func init() {
 func genesisBlock() ([]byte, error) {
 	now := time.Now().Unix()
 	header := &types.BlockHeader{
-		BlockID:      1,
-		Time:         now,
-		EcosystemID:  0,
-		KeyID:        conf.Config.KeyID,
-		NodePosition: 0,
-		Version:      consts.BlockVersion,
+		BlockID:       1,
+		Time:          now,
+		EcosystemID:   0,
+		KeyID:         conf.Config.KeyID,
+		NodePosition:  0,
+		Version:       consts.BlockVersion,
+		RollbacksHash: crypto.Hash([]byte(`0`)),
 	}
 
 	decodeKeyFile := func(kName string) []byte {
@@ -108,7 +109,7 @@ func genesisBlock() ([]byte, error) {
 	}
 	return block.MarshallBlock(types.WithCurHeader(header),
 		types.WithPrevHeader(&types.BlockHeader{
-			Hash:          []byte(`0`),
-			RollbacksHash: []byte(`0`),
+			Hash:          crypto.DoubleHash([]byte(`0`)),
+			RollbacksHash: crypto.Hash([]byte(`0`)),
 		}), types.WithTxFullData([][]byte{tx}))
 }

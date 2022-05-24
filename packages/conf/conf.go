@@ -38,7 +38,7 @@ func LoadConfig(path string) error {
 	log.WithFields(log.Fields{"path": path}).Info("Loading config")
 	err := LoadConfigToVar(path, &Config)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	registerCrypto(Config.CryptoSettings)
 	return nil

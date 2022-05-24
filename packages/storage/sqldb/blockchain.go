@@ -80,13 +80,12 @@ func (b *BlockChain) GetBlocks(startFromID int64, limit int) ([]BlockChain, erro
 
 // GetBlocksFrom is retrieving ordered chain of blocks from database
 func (b *BlockChain) GetBlocksFrom(startFromID int64, ordering string, limit int) ([]BlockChain, error) {
-	var err error
 	blockchain := new([]BlockChain)
-	if limit == 0 {
-		err = DBConn.Order("id "+ordering).Where("id > ?", startFromID).Find(&blockchain).Error
-	} else {
-		err = DBConn.Order("id "+ordering).Where("id > ?", startFromID).Limit(limit).Find(&blockchain).Error
+	q := DBConn.Model(&BlockChain{}).Order("id "+ordering).Where("id > ?", startFromID)
+	if limit > 0 {
+		q = q.Limit(limit)
 	}
+	err := q.Find(&blockchain).Error
 	return *blockchain, err
 }
 

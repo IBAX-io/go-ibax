@@ -23,38 +23,28 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// upsertInfoBlock updates info_block table
-func (b *Block) upsertInfoBlock(dbTx *sqldb.DbTransaction, block *sqldb.BlockChain) error {
-	ib := &sqldb.InfoBlock{
-		Hash:          block.Hash,
-		BlockID:       block.ID,
-		Time:          block.Time,
-		EcosystemID:   block.EcosystemID,
-		KeyID:         block.KeyID,
-		NodePosition:  converter.Int64ToStr(block.NodePosition),
-		RollbacksHash: block.RollbacksHash,
-	}
-	if block.ID == 1 {
-		ib.CurrentVersion = fmt.Sprintf("%d", consts.BlockVersion)
-		err := ib.Create(dbTx)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating info block")
-			return fmt.Errorf("error insert into info_block %s", err)
-		}
-	} else {
-		ib.Sent = 0
-		if err := ib.Update(dbTx); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating info block")
-			return fmt.Errorf("error while updating info_block %s", err)
-		}
+// ProcessBlockWherePrevFromBlockchainTable is processing block with in table previous block
+func ProcessBlockWherePrevFromBlockchainTable(data []byte, checkSize bool) (*Block, error) {
+	if checkSize && int64(len(data)) > syspar.GetMaxBlockSize() {
+		log.WithFields(log.Fields{"check_size": checkSize, "size": len(data), "max_size": syspar.GetMaxBlockSize(), "type": consts.ParameterExceeded}).Error("binary block size exceeds max block size")
+		return nil, types.ErrMaxBlockSize(syspar.GetMaxBlockSize(), len(data))
 	}
 
-	return nil
+	block, err := UnmarshallBlock(bytes.NewBuffer(data), true)
+	if err != nil {
+		return nil, errors.Wrap(types.ErrUnmarshallBlock, err.Error())
+	}
+	block.PrevHeader, err = GetBlockHeaderFromBlockChain(block.Header.BlockID - 1)
+	if err != nil {
+		return nil, err
+	}
+
+	return block, nil
 }
 
-func (b *Block) GetRollbacksHash(transaction *sqldb.DbTransaction) ([]byte, error) {
+func (b *Block) GetRollbacksHash(dbTx *sqldb.DbTransaction) ([]byte, error) {
 	r := &sqldb.RollbackTx{}
-	diff, err := r.GetRollbacksDiff(transaction, b.Header.BlockID)
+	diff, err := r.GetRollbacksDiff(dbTx, b.Header.BlockID)
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +60,6 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		return err
 	}
-	//rollbacksHash, err := GetRollbacksHash(dbTx, blockID)
-	//if err != nil {
-	//	log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
-	//	return err
-	//}
 
 	blockchain := &sqldb.BlockChain{
 		ID:            blockID,
@@ -85,8 +70,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		NodePosition:  b.Header.NodePosition,
 		Time:          b.Header.Time,
 		RollbacksHash: b.Header.RollbacksHash,
-		//RollbacksHash: rollbacksHash,
-		Tx: int32(len(b.Transactions)),
+		Tx:            int32(len(b.Transactions)),
 	}
 	var validBlockTime bool
 	if blockID > 1 {
@@ -119,20 +103,20 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 	return nil
 }
 
-// GetBlockDataFromBlockChain is retrieving block data from blockchain
-func GetBlockDataFromBlockChain(blockID int64) (*types.BlockHeader, error) {
-	header := new(types.BlockHeader)
+// GetBlockHeaderFromBlockChain is retrieving block data from blockchain
+func GetBlockHeaderFromBlockChain(blockID int64) (*types.BlockHeader, error) {
+	if blockID < 1 {
+		return &types.BlockHeader{}, nil
+	}
 	block := new(sqldb.BlockChain)
 	if _, err := block.Get(blockID); err != nil {
-		return nil, errors.Wrapf(err, "Getting block by ID %d", blockID)
+		return nil, errors.Wrapf(err, "find block by ID %d", blockID)
 	}
 
-	h, err := types.ParseBlockHeader(bytes.NewBuffer(block.Data), syspar.GetMaxBlockSize())
+	header, err := types.ParseBlockHeader(bytes.NewBuffer(block.Data), syspar.GetMaxBlockSize())
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "parse block header by ID %d", blockID)
 	}
-
-	header = h
 	header.Hash = block.Hash
 	header.RollbacksHash = block.RollbacksHash
 	return header, nil
@@ -172,4 +156,33 @@ func GetDataFromFirstBlock() (data *types.FirstBlock, ok bool) {
 	syspar.SetFirstBlockTimestamp(time.UnixMilli(tx.Timestamp).Unix())
 	syspar.SysUpdate(nil)
 	return
+}
+
+// upsertInfoBlock updates info_block table
+func (b *Block) upsertInfoBlock(dbTx *sqldb.DbTransaction, block *sqldb.BlockChain) error {
+	ib := &sqldb.InfoBlock{
+		Hash:          block.Hash,
+		BlockID:       block.ID,
+		Time:          block.Time,
+		EcosystemID:   block.EcosystemID,
+		KeyID:         block.KeyID,
+		NodePosition:  converter.Int64ToStr(block.NodePosition),
+		RollbacksHash: block.RollbacksHash,
+	}
+	if block.ID == 1 {
+		ib.CurrentVersion = fmt.Sprintf("%d", consts.BlockVersion)
+		err := ib.Create(dbTx)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating info block")
+			return fmt.Errorf("error insert into info_block %s", err)
+		}
+	} else {
+		ib.Sent = 0
+		if err := ib.Update(dbTx); err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating info block")
+			return fmt.Errorf("error while updating info_block %s", err)
+		}
+	}
+
+	return nil
 }

@@ -38,12 +38,8 @@ type BlockHeader struct {
 	NodePosition  int64
 	Sign          []byte
 	Hash          []byte
-	RollbacksHash []byte
+	RollbacksHash []byte //differences with before and after in tx modification table
 	Version       int
-}
-
-func (b BlockHeader) String() string {
-	return fmt.Sprintf("BlockID:%d, Time:%d, NodePosition %d", b.BlockID, b.Time, b.NodePosition)
 }
 
 func blockVer(cur, prev *BlockHeader) (ret string) {
