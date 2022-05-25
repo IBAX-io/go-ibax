@@ -23,7 +23,7 @@ func Date(timeFormat string, timestamp int64) string {
 func BlockTime(sc *SmartContract) string {
 	var blockTime int64
 	if sc.BlockHeader != nil {
-		blockTime = sc.BlockHeader.Time
+		blockTime = sc.BlockHeader.Timestamp
 	}
 	if sc.CLB {
 		blockTime = time.Now().Unix()

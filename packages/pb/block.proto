@@ -1,8 +1,10 @@
 syntax = "proto3";
 
-option go_package = "github.com/IBAX-io/go-ibax/packages/pbgo";
+option go_package = "github.com/IBAX-io/go-ibax/packages/types";
 
-package pbgo;
+package types;
+
+import "play.proto";
 
 //BlockHeader is a structure of the block's header
 message BlockHeader{
@@ -17,3 +19,12 @@ message BlockHeader{
   int32 version = 9;
 }
 
+// BlockData is a structure of the block's
+message BlockData {
+    BlockHeader header = 1;
+    BlockHeader prev_header = 2;
+    bytes merkle_root =3;
+    bytes bin_data =4;
+    repeated bytes tx_full_data =5;
+    AfterTxs after_txs =6;
+}

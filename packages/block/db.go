@@ -34,7 +34,7 @@ func ProcessBlockWherePrevFromBlockchainTable(data []byte, checkSize bool) (*Blo
 	if err != nil {
 		return nil, errors.Wrap(types.ErrUnmarshallBlock, err.Error())
 	}
-	block.PrevHeader, err = GetBlockHeaderFromBlockChain(block.Header.BlockID - 1)
+	block.PrevHeader, err = GetBlockHeaderFromBlockChain(block.Header.BlockId - 1)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func ProcessBlockWherePrevFromBlockchainTable(data []byte, checkSize bool) (*Blo
 
 func (b *Block) GetRollbacksHash(dbTx *sqldb.DbTransaction) ([]byte, error) {
 	r := &sqldb.RollbackTx{}
-	diff, err := r.GetRollbacksDiff(dbTx, b.Header.BlockID)
+	diff, err := r.GetRollbacksDiff(dbTx, b.Header.BlockId)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (b *Block) GetRollbacksHash(dbTx *sqldb.DbTransaction) ([]byte, error) {
 
 // InsertIntoBlockchain inserts a block into the blockchain
 func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
-	blockID := b.Header.BlockID
+	blockID := b.Header.BlockId
 	bl := &sqldb.BlockChain{}
 	err := bl.DeleteById(dbTx, blockID)
 	if err != nil {
@@ -63,12 +63,12 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 
 	blockchain := &sqldb.BlockChain{
 		ID:            blockID,
-		Hash:          b.Header.Hash,
+		Hash:          b.Header.BlockHash,
 		Data:          b.BinData,
-		EcosystemID:   b.Header.EcosystemID,
-		KeyID:         b.Header.KeyID,
+		EcosystemID:   b.Header.EcosystemId,
+		KeyID:         b.Header.KeyId,
 		NodePosition:  b.Header.NodePosition,
-		Time:          b.Header.Time,
+		Time:          b.Header.Timestamp,
 		RollbacksHash: b.Header.RollbacksHash,
 		Tx:            int32(len(b.TxFullData)),
 	}
@@ -80,7 +80,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 			return err
 		}
 		if validBlockTime {
-			err = fmt.Errorf("invalid block time: %d", b.Header.Time)
+			err = fmt.Errorf("invalid block time: %d", b.Header.Timestamp)
 			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("invalid block time")
 			return err
 		}
@@ -117,7 +117,7 @@ func GetBlockHeaderFromBlockChain(blockID int64) (*types.BlockHeader, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "parse block header by ID %d", blockID)
 	}
-	header.Hash = block.Hash
+	header.BlockHash = block.Hash
 	header.RollbacksHash = block.RollbacksHash
 	return header, nil
 }

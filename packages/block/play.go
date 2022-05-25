@@ -85,14 +85,13 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 	}
 	logger := b.GetLogger()
 	limits := transaction.NewLimits(b.limitMode())
-	rand := random.NewRand(b.Header.Time)
+	rand := random.NewRand(b.Header.Timestamp)
 	processedTx := make([][]byte, 0, len(b.Transactions))
 	defer func() {
 		if b.GenBlock {
-			//b.TxExecutionSql = playTxs.TxExecutionSql
 			b.TxFullData = processedTx
 		}
-		if err := sqldb.AfterPlayTxs(dbTx, b.Header.BlockID, after, b.GenBlock, b.IsGenesis()); err != nil {
+		if err := sqldb.AfterPlayTxs(dbTx, b.Header.BlockId, after, b.GenBlock, b.IsGenesis()); err != nil {
 			return
 		}
 	}()
@@ -106,7 +105,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 
 		t.Notifications = notificator.NewQueue()
 		t.DbTransaction = dbTx
-		t.DbTransaction.ExecutionSql.Reset()
+		t.DbTransaction.ExecutionSql = nil
 		t.TxCheckLimits = limits
 		t.BlockHeader = b.Header
 		t.PreBlockHeader = b.PrevHeader
@@ -158,13 +157,14 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			b.SysUpdate = true
 			t.SysUpdate = false
 		}
-		if err := sqldb.SetTransactionStatusBlockMsg(t.DbTransaction, t.BlockHeader.BlockID, t.TxResult, t.Hash()); err != nil {
+		if err := sqldb.SetTransactionStatusBlockMsg(t.DbTransaction, t.BlockHeader.BlockId, t.TxResult, t.Hash()); err != nil {
 			t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("updating transaction status block id")
 			return err
 		}
 		if t.Notifications.Size() > 0 {
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
+
 		after.UsedTx = append(after.UsedTx, t.Hash())
 		after.TxExecutionSql = append(after.TxExecutionSql, t.DbTransaction.ExecutionSql...)
 		var (
@@ -176,12 +176,12 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			contract = t.SmartContract().TxContract.Name
 		}
 		after.Lts = append(after.Lts, &types.LogTransaction{
-			Block:        t.BlockHeader.BlockID,
+			Block:        t.BlockHeader.BlockId,
 			Hash:         t.Hash(),
 			TxData:       t.FullData,
 			Timestamp:    t.Timestamp(),
 			Address:      t.KeyID(),
-			EcosystemID:  eco,
+			EcosystemId:  eco,
 			ContractName: contract,
 		})
 		after.UpdTxStatus = append(after.UpdTxStatus, &types.UpdateBlockMsg{

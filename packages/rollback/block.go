@@ -32,7 +32,7 @@ func RollbackBlock(data []byte) error {
 		return err
 	}
 
-	if b.ID != bl.Header.BlockID {
+	if b.ID != bl.Header.BlockId {
 		return ErrLastBlock
 	}
 
@@ -48,14 +48,14 @@ func RollbackBlock(data []byte) error {
 		return err
 	}
 
-	if err = b.DeleteById(dbTx, bl.Header.BlockID); err != nil {
+	if err = b.DeleteById(dbTx, bl.Header.BlockId); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		dbTx.Rollback()
 		return err
 	}
 
 	b = &sqldb.BlockChain{}
-	if _, err = b.Get(bl.Header.BlockID - 1); err != nil {
+	if _, err = b.Get(bl.Header.BlockId - 1); err != nil {
 		dbTx.Rollback()
 		return err
 	}
@@ -73,7 +73,7 @@ func RollbackBlock(data []byte) error {
 		NodePosition:   strconv.Itoa(int(b.NodePosition)),
 		KeyID:          b.KeyID,
 		Time:           b.Time,
-		CurrentVersion: strconv.Itoa(bl.Header.Version),
+		CurrentVersion: strconv.Itoa(int(bl.Header.Version)),
 	}
 	err = ib.Update(dbTx)
 	if err != nil {

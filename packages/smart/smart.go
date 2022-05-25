@@ -193,13 +193,13 @@ func (sc *SmartContract) getExtend() map[string]any {
 	var block, blockTime, blockKeyID, blockNodePosition int64
 	var perBlockHash string
 	if sc.BlockHeader != nil {
-		block = sc.BlockHeader.BlockID
-		blockKeyID = sc.BlockHeader.KeyID
-		blockTime = sc.BlockHeader.Time
+		block = sc.BlockHeader.BlockId
+		blockKeyID = sc.BlockHeader.KeyId
+		blockTime = sc.BlockHeader.Timestamp
 		blockNodePosition = sc.BlockHeader.NodePosition
 	}
 	if sc.PreBlockHeader != nil {
-		perBlockHash = hex.EncodeToString(sc.PreBlockHeader.Hash)
+		perBlockHash = hex.EncodeToString(sc.PreBlockHeader.BlockHash)
 	}
 	head := sc.TxSmart
 	extend := map[string]any{
@@ -334,7 +334,7 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 			if sc.TxSmart.KeyID == converter.StrToInt64(EcosysParam(sc, `founder_account`)) {
 				return nil
 			}
-			log.WithFields(log.Fields{"txSmart.KeyID": sc.TxSmart.KeyID}).Error("ACCESS DENIED")
+			log.WithFields(log.Fields{"txSmart.KeyId": sc.TxSmart.KeyID}).Error("ACCESS DENIED")
 			return errAccessDenied
 		}
 		return nil
@@ -633,14 +633,14 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 lp:
 	if err != nil {
 		sc.RollBackTx = nil
-		sc.DbTransaction.ExecutionSql.Reset()
+		sc.DbTransaction.ExecutionSql = nil
 		if ierr := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); ierr != nil {
 			return retError(ierr)
 		}
 		if needPayment {
 			if ierr := sc.payContract(true); ierr != nil {
 				sc.RollBackTx = nil
-				sc.DbTransaction.ExecutionSql.Reset()
+				sc.DbTransaction.ExecutionSql = nil
 				if yerr := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); yerr != nil {
 					return retError(yerr)
 				}

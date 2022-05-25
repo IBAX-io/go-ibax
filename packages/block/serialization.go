@@ -20,7 +20,7 @@ func (b *Block) repeatMarshallBlock() error {
 	newBlockData, err := MarshallBlock(
 		types.WithCurHeader(b.Header),
 		types.WithPrevHeader(b.PrevHeader),
-		types.WithTxExecSql(b.TxExecutionSql),
+		types.WithTxExecSql(b.AfterTxs.TxExecutionSql),
 		types.WithTxFullData(b.TxFullData))
 	if err != nil {
 		return errors.Wrap(err, "marshalling repeat block")
@@ -38,7 +38,7 @@ func (b *Block) repeatMarshallBlock() error {
 }
 
 func MarshallBlock(opts ...types.BlockDataOption) ([]byte, error) {
-	block := &types.BlockData{}
+	block := &types.BlockData{AfterTxs: new(types.AfterTxs)}
 	if err := block.Apply(opts...); err != nil {
 		return nil, err
 	}

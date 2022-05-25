@@ -62,12 +62,12 @@ func ToBlockID(blockID int64, dbTx *sqldb.DbTransaction, logger *log.Entry) erro
 
 	ib := &sqldb.InfoBlock{
 		Hash:           block.Hash,
-		BlockID:        header.BlockID,
-		Time:           header.Time,
-		EcosystemID:    header.EcosystemID,
-		KeyID:          header.KeyID,
+		BlockID:        header.BlockId,
+		Time:           header.Timestamp,
+		EcosystemID:    header.EcosystemId,
+		KeyID:          header.KeyId,
 		NodePosition:   converter.Int64ToStr(header.NodePosition),
-		CurrentVersion: strconv.Itoa(header.Version),
+		CurrentVersion: strconv.Itoa(int(header.Version)),
 		RollbacksHash:  block.RollbacksHash,
 	}
 

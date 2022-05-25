@@ -11,6 +11,14 @@ enum TransactionTypes{
   STOPNETWORK = 2;
 }
 
+// Transaction invoke status.
+enum TxInvokeStatus{
+  SUCCESS = 0;
+  PENALTY = 1;
+  FAIL = 2;
+  PENDING = 3;
+}
+
 message FirstBlock {
   int64 key_id = 1;
   int64 timestamp = 2;

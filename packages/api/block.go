@@ -150,7 +150,7 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if blck.IsGenesis() {
-				txInfo.KeyID = blck.Header.KeyID
+				txInfo.KeyID = blck.Header.KeyId
 			} else {
 				txInfo.KeyID = tx.KeyID()
 			}
@@ -261,14 +261,14 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		header := BlockHeaderInfo{
-			BlockID:      blck.Header.BlockID,
-			Time:         blck.Header.Time,
-			EcosystemID:  blck.Header.EcosystemID,
-			KeyID:        blck.Header.KeyID,
+			BlockID:      blck.Header.BlockId,
+			Time:         blck.Header.Timestamp,
+			EcosystemID:  blck.Header.EcosystemId,
+			KeyID:        blck.Header.KeyId,
 			NodePosition: blck.Header.NodePosition,
 			Sign:         blck.Header.Sign,
-			Hash:         blck.Header.Hash,
-			Version:      blck.Header.Version,
+			Hash:         blck.Header.BlockHash,
+			Version:      int(blck.Header.Version),
 		}
 
 		bdi := BlockDetailedInfo{

@@ -30,7 +30,7 @@ func QueueParserTx(ctx context.Context, d *daemon) error {
 	//	d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting info block")
 	//	return err
 	//}
-	//if infoBlock.BlockID == 0 {
+	//if infoBlock.BlockId == 0 {
 	//	d.logger.Debug("no blocks for parsing")
 	//	return nil
 	//}

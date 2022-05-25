@@ -16,10 +16,10 @@ func (t *Transaction) GetLogger() *log.Entry {
 		logger = log.WithFields(log.Fields{"tx_type": t.Type(), "tx_time": t.Timestamp(), "tx_wallet_id": t.KeyID()})
 	}
 	if t.BlockHeader != nil {
-		logger = logger.WithFields(log.Fields{"block_id": t.BlockHeader.BlockID, "block_time": t.BlockHeader.Time, "block_wallet_id": t.BlockHeader.KeyID, "block_state_id": t.BlockHeader.EcosystemID, "block_hash": t.BlockHeader.Hash, "block_version": t.BlockHeader.Version})
+		logger = logger.WithFields(log.Fields{"block_id": t.BlockHeader.BlockId, "block_time": t.BlockHeader.Timestamp, "block_wallet_id": t.BlockHeader.KeyId, "block_state_id": t.BlockHeader.EcosystemId, "block_hash": t.BlockHeader.BlockHash, "block_version": t.BlockHeader.Version})
 	}
 	if t.PreBlockHeader != nil {
-		logger = logger.WithFields(log.Fields{"block_id": t.BlockHeader.BlockID, "block_time": t.BlockHeader.Time, "block_wallet_id": t.BlockHeader.KeyID, "block_state_id": t.BlockHeader.EcosystemID, "block_hash": t.BlockHeader.Hash, "block_version": t.BlockHeader.Version})
+		logger = logger.WithFields(log.Fields{"block_id": t.BlockHeader.BlockId, "block_time": t.BlockHeader.Timestamp, "block_wallet_id": t.BlockHeader.KeyId, "block_state_id": t.BlockHeader.EcosystemId, "block_hash": t.BlockHeader.BlockHash, "block_version": t.BlockHeader.Version})
 	}
 	return logger
 }

@@ -36,10 +36,10 @@ func SysRollback(sc *SmartContract, data SysRollData) error {
 		return err
 	}
 	rollbackSys := &types.RollbackTx{
-		BlockID:   sc.BlockHeader.BlockID,
+		BlockId:   sc.BlockHeader.BlockId,
 		TxHash:    sc.Hash,
 		NameTable: SysName,
-		TableID:   converter.Int64ToStr(sc.TxSmart.EcosystemID),
+		TableId:   converter.Int64ToStr(sc.TxSmart.EcosystemID),
 		Data:      string(out),
 	}
 	sc.RollBackTx = append(sc.RollBackTx, rollbackSys)

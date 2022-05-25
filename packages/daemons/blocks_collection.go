@@ -122,13 +122,13 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 			return err
 		}
 
-		if curBlock.BlockID != bl.PrevHeader.BlockID {
+		if curBlock.BlockID != bl.PrevHeader.BlockId {
 			d.logger.WithFields(log.Fields{"type": consts.BlockError}).Error("info block compare with previous block")
-			return fmt.Errorf("info block compare with previous block err curBlock: %d, PrevBlock: %d", curBlock.BlockID, bl.PrevHeader.BlockID)
+			return fmt.Errorf("info block compare with previous block err curBlock: %d, PrevBlock: %d", curBlock.BlockID, bl.PrevHeader.BlockId)
 		}
 
-		lastBlockID = bl.Header.BlockID
-		lastBlockTime = bl.Header.Time
+		lastBlockID = bl.Header.BlockId
+		lastBlockTime = bl.Header.Timestamp
 
 		if err = bl.Check(); err != nil {
 			var replaceCount int64 = 1
@@ -137,12 +137,12 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 			}
 			d.logger.WithFields(log.Fields{"error": err, "from_host": host,
 				"different": fmt.Errorf("not match previous block %d, prev_position %d, current_position %d",
-					bl.PrevHeader.BlockID,
+					bl.PrevHeader.BlockId,
 					bl.PrevHeader.NodePosition,
 					bl.Header.NodePosition),
 				"type": consts.BlockError, "replaceCount": replaceCount}).Error("checking block hash")
 			//if it is forked, replace the previous blocks to ones from the host
-			if errReplace := ReplaceBlocksFromHost(ctx, host, bl.PrevHeader.BlockID, replaceCount); errReplace != nil {
+			if errReplace := ReplaceBlocksFromHost(ctx, host, bl.PrevHeader.BlockId, replaceCount); errReplace != nil {
 				return errReplace
 			}
 			return err
@@ -244,7 +244,7 @@ func ReplaceBlocksFromHost(ctx context.Context, host string, blockID, replaceCou
 
 	// get starting blockID from slice of blocks
 	if len(blocks) > 0 {
-		blockID = blocks[len(blocks)-1].Header.BlockID
+		blockID = blocks[len(blocks)-1].Header.BlockId
 	}
 
 	// we have the slice of blocks for applying
@@ -301,15 +301,15 @@ func getBlocks(ctx context.Context, host string, blockID, minCount int64) ([]*bl
 			return nil, err
 		}
 
-		if bl.Header.BlockID != nextBlockID {
-			log.WithFields(log.Fields{"header_block_id": bl.Header.BlockID, "block_id": blockID, "type": consts.InvalidObject}).Error("block ids does not match")
+		if bl.Header.BlockId != nextBlockID {
+			log.WithFields(log.Fields{"header_block_id": bl.Header.BlockId, "block_id": blockID, "type": consts.InvalidObject}).Error("block ids does not match")
 			return nil, utils.WithBan(errors.New("bad block_data['block_id']"))
 		}
 
 		// the public key of the one who has generated this block
 		nodePublicKey, err := syspar.GetNodePublicKeyByPosition(bl.Header.NodePosition)
 		if err != nil {
-			log.WithFields(log.Fields{"header_block_id": bl.Header.BlockID, "block_id": blockID, "type": consts.InvalidObject}).Error("block ids does not match")
+			log.WithFields(log.Fields{"header_block_id": bl.Header.BlockId, "block_id": blockID, "type": consts.InvalidObject}).Error("block ids does not match")
 			return nil, utils.ErrInfo(err)
 		}
 
@@ -335,8 +335,8 @@ func processBlocks(blocks []*block.Block) error {
 	prevBlocks := make(map[int64]*block.Block, 0)
 	for i := len(blocks) - 1; i >= 0; i-- {
 		b := blocks[i]
-		if _, ok := prevBlocks[b.Header.BlockID-1]; ok {
-			b.PrevHeader = prevBlocks[b.Header.BlockID-1].Header
+		if _, ok := prevBlocks[b.Header.BlockId-1]; ok {
+			b.PrevHeader = prevBlocks[b.Header.BlockId-1].Header
 		}
 		if err := b.Check(); err != nil {
 			return err
@@ -345,7 +345,7 @@ func processBlocks(blocks []*block.Block) error {
 			return err
 		}
 
-		prevBlocks[b.Header.BlockID] = b
+		prevBlocks[b.Header.BlockId] = b
 
 	}
 	return nil

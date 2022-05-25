@@ -133,17 +133,17 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	}
 
 	header := &types.BlockHeader{
-		BlockID:      prevBlock.BlockID + 1,
-		Time:         st.Unix(),
-		EcosystemID:  0,
-		KeyID:        conf.Config.KeyID,
+		BlockId:      prevBlock.BlockID + 1,
+		Timestamp:    st.Unix(),
+		EcosystemId:  0,
+		KeyId:        conf.Config.KeyID,
 		NodePosition: nodePosition,
 		Version:      consts.BlockVersion,
 	}
 
 	prev := &types.BlockHeader{
-		BlockID:       prevBlock.BlockID,
-		Hash:          prevBlock.Hash,
+		BlockId:       prevBlock.BlockID,
+		BlockHash:     prevBlock.Hash,
 		RollbacksHash: prevBlock.RollbacksHash,
 	}
 
@@ -157,7 +157,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		log.WithFields(log.Fields{"error": err}).Error("on inserting new block")
 		return err
 	}
-	//go notificator.CheckTokenMovementLimits(nil, conf.Config.TokenMovement, header.BlockID)
+	//go notificator.CheckTokenMovementLimits(nil, conf.Config.TokenMovement, header.BlockId)
 	return nil
 }
 

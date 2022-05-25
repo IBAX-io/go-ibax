@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+option go_package = "github.com/IBAX-io/go-ibax/packages/types";
+
+package types;
+
+import "tx.proto";
+
+//AfterTxs defined block batch process tx for sql DML
+message AfterTxs {
+  //TxExecutionSql defined contract exec sql for tx DML
+  repeated bytes tx_execution_sql = 1;
+  repeated bytes used_tx = 2;
+  repeated RollbackTx rts = 3;
+  repeated LogTransaction lts = 4;
+  repeated UpdateBlockMsg upd_tx_status = 5;
+}
+
+message RollbackTx {
+  int64 id = 1;
+  int64 block_id = 2;
+  bytes tx_hash = 3;
+  string name_table = 4;
+  string table_id = 5;
+  string data = 6;
+}
+
+message LogTransaction {
+  bytes hash = 1;
+  int64 block = 2;
+  bytes tx_data = 3;
+  int64 timestamp = 4;
+  int64 address = 5;
+  int64 ecosystem_id = 6;
+  string contract_name = 7;
+  pbgo.TxInvokeStatus invoke_status =8;
+}
+
+message UpdateBlockMsg {
+  bytes hash = 1;
+  string msg = 2;
+}

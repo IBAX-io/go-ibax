@@ -48,9 +48,9 @@ func (p ClbTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 	}
 
 	ts := &sqldb.TransactionStatus{
-		BlockID:  1,
+		BlockId:  1,
 		Hash:     tx.TxHash,
-		Time:     time.Now().Unix(),
+		Timestamp:     time.Now().Unix(),
 		WalletID: key,
 		Type:     tx.Rtx.Type(),
 	}

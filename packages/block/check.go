@@ -28,22 +28,22 @@ func (b *Block) Check() error {
 		return nil
 	}
 	logger := b.GetLogger()
-	if b.PrevHeader.BlockID != b.Header.BlockID-1 {
+	if b.PrevHeader.BlockId != b.Header.BlockId-1 {
 		var err error
-		b.PrevHeader, err = GetBlockHeaderFromBlockChain(b.Header.BlockID - 1)
+		b.PrevHeader, err = GetBlockHeaderFromBlockChain(b.Header.BlockId - 1)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.InvalidObject}).Error("block id is larger then previous more than on 1")
 			return err
 		}
 	}
 
-	if b.Header.Time > time.Now().Unix() {
+	if b.Header.Timestamp > time.Now().Unix() {
 		logger.WithFields(log.Fields{"type": consts.ParameterExceeded}).Error("block time is larger than now")
 		return ErrIncorrectBlockTime
 	}
 
 	// is this block too early? Allowable error = error_time
-	exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Time, 0), int(b.Header.NodePosition))
+	exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Timestamp, 0), int(b.Header.NodePosition))
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("calculating block time")
 		return err
@@ -51,7 +51,7 @@ func (b *Block) Check() error {
 
 	if exists {
 		logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Warn("incorrect block time")
-		return utils.WithBan(fmt.Errorf("%s %d", ErrIncorrectBlockTime, b.PrevHeader.Time))
+		return utils.WithBan(fmt.Errorf("%s %d", ErrIncorrectBlockTime, b.PrevHeader.Timestamp))
 	}
 	if !bytes.Equal(b.PrevRollbacksHash, b.PrevHeader.RollbacksHash) {
 		return ErrIncorrectRollbackHash
@@ -74,7 +74,7 @@ func (b *Block) Check() error {
 			return utils.WithBan(utils.ErrInfo(fmt.Errorf("max_block_user_transactions")))
 		}
 
-		err := t.Check(b.Header.Time)
+		err := t.Check(b.Header.Timestamp)
 		if err != nil {
 			transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
 			delete(txHashes, hexHash)
@@ -119,7 +119,7 @@ func (b *Block) CheckHash() (bool, error) {
 	if err != nil {
 		//logger.WithFields(log.Fields{"error": err, "type": consts.CryptoError}).Error("checking block header sign")
 		return false, errors.Wrap(err, "checking block header sign")
-		//return false, errors.Wrap(err, fmt.Sprintf("per_block_id: %d, per_block_hash: %x", b.PrevHeader.BlockID, b.PrevHeader.Hash))
+		//return false, errors.Wrap(err, fmt.Sprintf("per_block_id: %d, per_block_hash: %x", b.PrevHeader.BlockId, b.PrevHeader.Hash))
 	}
 	return true, nil
 }

@@ -2,9 +2,9 @@ package types
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	math_bits "math/bits"
+
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -27,19 +27,6 @@ var (
 	ErrUnmarshallBlock = errors.New("Unmarshall block")
 )
 
-//BlockHeader is a structure of the block's header
-type BlockHeader struct {
-	BlockID       int64
-	Time          int64
-	EcosystemID   int64
-	KeyID         int64
-	NodePosition  int64
-	Sign          []byte
-	Hash          []byte
-	RollbacksHash []byte //differences with before and after in tx modification table
-	Version       int
-}
-
 func blockVer(cur, prev *BlockHeader) (ret string) {
 	if cur.Version >= consts.BvRollbackHash {
 		ret = fmt.Sprintf(",%x", prev.RollbacksHash)
@@ -53,14 +40,14 @@ func (b *BlockHeader) GenHash(prev *BlockHeader, mrklRoot []byte) []byte {
 
 func (b *BlockHeader) ForSha(prev *BlockHeader, mrklRoot []byte) string {
 	return fmt.Sprintf("%d,%x,%s,%d,%d,%d,%d",
-		b.BlockID, prev.Hash, mrklRoot, b.Time, b.EcosystemID, b.KeyID, b.NodePosition) +
+		b.BlockId, prev.BlockHash, mrklRoot, b.Timestamp, b.EcosystemId, b.KeyId, b.NodePosition) +
 		blockVer(b, prev)
 }
 
 // ForSign from 128 bytes to 512 bytes. Signature of TYPE, BLOCK_ID, PREV_BLOCK_HASH, TIME, WALLET_ID, state_id, MRKL_ROOT
 func (b *BlockHeader) ForSign(prev *BlockHeader, mrklRoot []byte) string {
 	return fmt.Sprintf("0,%v,%x,%v,%v,%v,%v,%s",
-		b.BlockID, prev.Hash, b.Time, b.EcosystemID, b.KeyID, b.NodePosition, mrklRoot) +
+		b.BlockId, prev.BlockHash, b.Timestamp, b.EcosystemId, b.KeyId, b.NodePosition, mrklRoot) +
 		blockVer(b, prev)
 }
 
@@ -75,16 +62,6 @@ func ParseBlockHeader(buf *bytes.Buffer, maxBlockSize int64) (header *BlockHeade
 		return nil, err
 	}
 	return blo.Header, nil
-}
-
-// BlockData is a structure of the block's
-type BlockData struct {
-	Header     *BlockHeader
-	PrevHeader *BlockHeader
-	MerkleRoot []byte
-	BinData    []byte
-	TxFullData [][]byte
-	AfterTxs
 }
 
 type BlockDataOption func(b *BlockData) error
@@ -122,9 +99,11 @@ func WithTxFullData(data [][]byte) BlockDataOption {
 	}
 }
 
-func WithTxExecSql(sql TxExecutionSql) BlockDataOption {
+func WithTxExecSql(sql [][]byte) BlockDataOption {
 	return func(b *BlockData) error {
-		b.TxExecutionSql = sql
+		if b.AfterTxs != nil {
+			b.AfterTxs.TxExecutionSql = sql
+		}
 		return nil
 	}
 }
@@ -133,7 +112,7 @@ func (b BlockData) ForSign() string {
 	return b.Header.ForSign(b.PrevHeader, b.MerkleRoot)
 }
 
-func (b *BlockData) GetMerkleRoot() []byte {
+func (b *BlockData) GenMerkleRoot() []byte {
 	var mrklArray [][]byte
 	for _, tr := range b.TxFullData {
 		mrklArray = append(mrklArray, converter.BinToHex(crypto.DoubleHash(tr)))
@@ -155,22 +134,20 @@ func (b *BlockData) GetSign(key []byte) ([]byte, error) {
 
 // MarshallBlock is marshalling block
 func (b *BlockData) MarshallBlock(key []byte) ([]byte, error) {
-	for i := 0; i < len(b.TxExecutionSql); i++ {
-		d := b.TxExecutionSql[i]
-		b.TxExecutionSql[i] = DoZlibCompress(d)
+	for i := 0; i < len(b.AfterTxs.TxExecutionSql); i++ {
+		b.AfterTxs.TxExecutionSql[i] = DoZlibCompress(b.AfterTxs.TxExecutionSql[i])
 	}
 	for i := 0; i < len(b.TxFullData); i++ {
-		d := b.TxFullData[i]
-		b.TxFullData[i] = DoZlibCompress(d)
+		b.TxFullData[i] = DoZlibCompress(b.TxFullData[i])
 	}
-	b.MerkleRoot = b.GetMerkleRoot()
+	b.MerkleRoot = b.GenMerkleRoot()
 	signed, err := b.GetSign(key)
 	if err != nil {
 		return nil, err
 	}
 	b.Header.Sign = signed
-	b.Header.Hash = b.Header.GenHash(b.PrevHeader, b.MerkleRoot)
-	return json.Marshal(&b)
+	b.Header.BlockHash = b.Header.GenHash(b.PrevHeader, b.MerkleRoot)
+	return proto.Marshal(b)
 }
 
 func (b *BlockData) UnmarshallBlock(data []byte) error {
@@ -180,72 +157,17 @@ func (b *BlockData) UnmarshallBlock(data []byte) error {
 	if len(data) < minBlockSize {
 		return ErrMinBlockSize(len(data), minBlockSize)
 	}
-	if err := json.Unmarshal(data, &b); err != nil {
+	if err := proto.Unmarshal(data, b); err != nil {
 		return errors.Wrap(err, "unmarshalling block")
 	}
-	for i := 0; i < len(b.TxExecutionSql); i++ {
-		d := b.TxExecutionSql[i]
-		b.TxExecutionSql[i] = DoZlibUnCompress(d)
+	for i := 0; i < len(b.AfterTxs.TxExecutionSql); i++ {
+		b.AfterTxs.TxExecutionSql[i] = DoZlibUnCompress(b.AfterTxs.TxExecutionSql[i])
 	}
 	for i := 0; i < len(b.TxFullData); i++ {
-		d := b.TxFullData[i]
-		b.TxFullData[i] = DoZlibUnCompress(d)
+		b.TxFullData[i] = DoZlibUnCompress(b.TxFullData[i])
 	}
 	b.BinData = data
 	return nil
-}
-
-type (
-	// TxExecutionSql defined contract exec sql for tx DML
-	TxExecutionSql [][]byte
-	RollbackTx     struct {
-		ID        int64
-		BlockID   int64
-		TxHash    []byte
-		NameTable string
-		TableID   string
-		Data      string
-	}
-
-	LogTransaction struct {
-		Hash         []byte
-		Block        int64
-		TxData       []byte
-		Timestamp    int64
-		Address      int64
-		EcosystemID  int64
-		ContractName string
-	}
-
-	UpdateBlockMsg struct {
-		Hash []byte
-		Msg  string
-	}
-
-	AfterTxs struct {
-		TxExecutionSql TxExecutionSql
-		UsedTx         [][]byte
-		Rts            []*RollbackTx
-		Lts            []*LogTransaction
-		UpdTxStatus    []*UpdateBlockMsg
-	}
-)
-
-func (t *TxExecutionSql) Reset() { *t = TxExecutionSql{} }
-
-func (t TxExecutionSql) Size() (n int) {
-	sovBlock := func(x uint64) (n int) {
-		return (math_bits.Len64(x|1) + 6) / 7
-	}
-	if t == nil {
-		return 0
-	}
-	var l int
-	for _, b := range t {
-		l = len(b)
-		n += 1 + l + sovBlock(uint64(l))
-	}
-	return n
 }
 
 // MerkleTreeRoot return Merkle value

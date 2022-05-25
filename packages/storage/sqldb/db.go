@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/types"
-
 	log "github.com/sirupsen/logrus"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -204,7 +202,7 @@ func GormClose() error {
 // DbTransaction is gorm.DB wrapper
 type DbTransaction struct {
 	conn         *gorm.DB
-	ExecutionSql types.TxExecutionSql
+	ExecutionSql [][]byte
 }
 
 func NewDbTransaction(conn *gorm.DB) *DbTransaction {

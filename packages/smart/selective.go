@@ -20,10 +20,10 @@ import (
 
 func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) error {
 	rollbackTx := &types.RollbackTx{
-		BlockID:   sc.BlockHeader.BlockID,
+		BlockId:   sc.BlockHeader.BlockId,
 		TxHash:    sc.Hash,
 		NameTable: table,
-		TableID:   tableID,
+		TableId:   tableID,
 		Data:      rollbackInfoStr,
 	}
 	sc.RollBackTx = append(sc.RollBackTx, rollbackTx)

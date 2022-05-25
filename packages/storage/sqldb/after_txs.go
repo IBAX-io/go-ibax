@@ -22,10 +22,10 @@ func GenAfterTxs(after *types.AfterTxs) *AfterTxs {
 	playTx.UsedTx = after.UsedTx
 	for i := 0; i < len(after.Rts); i++ {
 		rt := new(RollbackTx)
-		rt.BlockID = after.Rts[i].BlockID
+		rt.BlockID = after.Rts[i].BlockId
 		rt.NameTable = after.Rts[i].NameTable
 		rt.Data = after.Rts[i].Data
-		rt.TableID = after.Rts[i].TableID
+		rt.TableID = after.Rts[i].TableId
 		rt.TxHash = after.Rts[i].TxHash
 		playTx.Rts[i] = rt
 	}
@@ -36,7 +36,7 @@ func GenAfterTxs(after *types.AfterTxs) *AfterTxs {
 		lt.TxData = after.Lts[i].TxData
 		lt.Timestamp = after.Lts[i].Timestamp
 		lt.Address = after.Lts[i].Address
-		lt.EcosystemID = after.Lts[i].EcosystemID
+		lt.EcosystemID = after.Lts[i].EcosystemId
 		lt.ContractName = after.Lts[i].ContractName
 		playTx.Lts[i] = lt
 	}
