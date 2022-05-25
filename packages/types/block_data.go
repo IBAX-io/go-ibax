@@ -99,11 +99,9 @@ func WithTxFullData(data [][]byte) BlockDataOption {
 	}
 }
 
-func WithTxExecSql(sql [][]byte) BlockDataOption {
+func WithAfterTxs(a *AfterTxs) BlockDataOption {
 	return func(b *BlockData) error {
-		if b.AfterTxs != nil {
-			b.AfterTxs.TxExecutionSql = sql
-		}
+		b.AfterTxs = a
 		return nil
 	}
 }
@@ -134,8 +132,10 @@ func (b *BlockData) GetSign(key []byte) ([]byte, error) {
 
 // MarshallBlock is marshalling block
 func (b *BlockData) MarshallBlock(key []byte) ([]byte, error) {
-	for i := 0; i < len(b.AfterTxs.TxExecutionSql); i++ {
-		b.AfterTxs.TxExecutionSql[i] = DoZlibCompress(b.AfterTxs.TxExecutionSql[i])
+	if b.AfterTxs != nil {
+		for i := 0; i < len(b.AfterTxs.TxExecutionSql); i++ {
+			b.AfterTxs.TxExecutionSql[i] = DoZlibCompress(b.AfterTxs.TxExecutionSql[i])
+		}
 	}
 	for i := 0; i < len(b.TxFullData); i++ {
 		b.TxFullData[i] = DoZlibCompress(b.TxFullData[i])
@@ -160,8 +160,10 @@ func (b *BlockData) UnmarshallBlock(data []byte) error {
 	if err := proto.Unmarshal(data, b); err != nil {
 		return errors.Wrap(err, "unmarshalling block")
 	}
-	for i := 0; i < len(b.AfterTxs.TxExecutionSql); i++ {
-		b.AfterTxs.TxExecutionSql[i] = DoZlibUnCompress(b.AfterTxs.TxExecutionSql[i])
+	if b.AfterTxs != nil {
+		for i := 0; i < len(b.AfterTxs.TxExecutionSql); i++ {
+			b.AfterTxs.TxExecutionSql[i] = DoZlibUnCompress(b.AfterTxs.TxExecutionSql[i])
+		}
 	}
 	for i := 0; i < len(b.TxFullData); i++ {
 		b.TxFullData[i] = DoZlibUnCompress(b.TxFullData[i])

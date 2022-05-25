@@ -78,23 +78,25 @@ func (b *Block) PlaySafe() error {
 }
 
 func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
-	after := &types.AfterTxs{
-		Rts:         make([]*types.RollbackTx, 0),
-		Lts:         make([]*types.LogTransaction, 0),
-		UpdTxStatus: make([]*types.UpdateBlockMsg, 0),
-	}
+	afters := &types.AfterTxs{}
 	logger := b.GetLogger()
 	limits := transaction.NewLimits(b.limitMode())
 	rand := random.NewRand(b.Header.Timestamp)
 	processedTx := make([][]byte, 0, len(b.Transactions))
 	defer func() {
+		b.AfterTxs = afters
 		if b.GenBlock {
 			b.TxFullData = processedTx
 		}
-		if err := sqldb.AfterPlayTxs(dbTx, b.Header.BlockId, after, b.GenBlock, b.IsGenesis()); err != nil {
+		if err := sqldb.AfterPlayTxs(dbTx, b.Header.BlockId, b.AfterTxs, b.GenBlock, b.IsGenesis()); err != nil {
 			return
 		}
 	}()
+
+	if !b.GenBlock && !b.IsGenesis() {
+		return nil
+	}
+
 	for curTx := 0; curTx < len(b.Transactions); curTx++ {
 		t := b.Transactions[curTx]
 		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
@@ -165,9 +167,8 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
 
-		after.UsedTx = append(after.UsedTx, t.Hash())
-		after.TxExecutionSql = append(after.TxExecutionSql, t.DbTransaction.ExecutionSql...)
 		var (
+			after    = &types.AfterTx{}
 			eco      int64
 			contract string
 		)
@@ -175,7 +176,8 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			eco = t.SmartContract().TxSmart.EcosystemID
 			contract = t.SmartContract().TxContract.Name
 		}
-		after.Lts = append(after.Lts, &types.LogTransaction{
+		after.UsedTx = t.Hash()
+		after.Lts = &types.LogTransaction{
 			Block:        t.BlockHeader.BlockId,
 			Hash:         t.Hash(),
 			TxData:       t.FullData,
@@ -183,12 +185,14 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			Address:      t.KeyID(),
 			EcosystemId:  eco,
 			ContractName: contract,
-		})
-		after.UpdTxStatus = append(after.UpdTxStatus, &types.UpdateBlockMsg{
+		}
+		after.UpdTxStatus = &types.UpdateBlockMsg{
 			Hash: t.Hash(),
 			Msg:  t.TxResult,
-		})
-		after.Rts = append(after.Rts, t.RollBackTx...)
+		}
+		afters.Txs = append(afters.Txs, after)
+		afters.Rts = append(afters.Rts, t.RollBackTx...)
+		afters.TxExecutionSql = append(afters.TxExecutionSql, t.DbTransaction.ExecutionSql...)
 		processedTx = append(processedTx, t.FullData)
 	}
 	return nil
