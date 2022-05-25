@@ -74,11 +74,6 @@ func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
 	return dbTx.Model(&RollbackTx{}).Create(&rts).Error
 }
 
-// Create is creating record of model
-func (rt *RollbackTx) Create(dbTx *DbTransaction) error {
-	return nil
-}
-
 // Get is retrieving model from database
 func (rt *RollbackTx) Get(dbTx *DbTransaction, transactionHash []byte, tableName string) (bool, error) {
 	return isFound(GetDB(dbTx).Where("tx_hash = ? AND table_name = ?", transactionHash,

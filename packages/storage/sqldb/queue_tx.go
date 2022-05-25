@@ -76,3 +76,10 @@ func GetAllUnverifiedAndUnusedTransactions(dbTx *DbTransaction, limit int) ([]*Q
 	}
 	return result, nil
 }
+
+func DeleteQueueTxs(dbTx *DbTransaction, hs [][]byte) error {
+	if len(hs) == 0 {
+		return nil
+	}
+	return GetDB(dbTx).Delete(&QueueTx{}, hs).Error
+}

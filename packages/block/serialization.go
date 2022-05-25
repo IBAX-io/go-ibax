@@ -17,11 +17,6 @@ import (
 )
 
 func (b *Block) repeatMarshallBlock() error {
-	trData := make([][]byte, 0, len(b.Transactions))
-	for _, tr := range b.Transactions {
-		trData = append(trData, tr.FullData)
-	}
-	b.TxFullData = trData
 	newBlockData, err := MarshallBlock(
 		types.WithCurHeader(b.Header),
 		types.WithPrevHeader(b.PrevHeader),
@@ -37,9 +32,8 @@ func (b *Block) repeatMarshallBlock() error {
 		return errors.Wrap(err, "parsing repeat block")
 	}
 	b.BinData = newBlockData
-	//b.Transactions = nb.Transactions
+	b.Transactions = nb.Transactions
 	b.MerkleRoot = nb.MerkleRoot
-	//b.SysUpdate = nb.SysUpdate
 	return nil
 }
 

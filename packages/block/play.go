@@ -8,6 +8,8 @@ package block
 import (
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/types"
+
 	"github.com/IBAX-io/go-ibax/packages/common/random"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -29,7 +31,7 @@ func (b *Block) PlaySafe() error {
 	}
 
 	inputTx := b.Transactions[:]
-	err = b.Play(dbTx)
+	err = b.ProcessTxs(dbTx)
 	if err != nil {
 		dbTx.Rollback()
 		if b.GenBlock && len(b.Transactions) == 0 {
@@ -51,8 +53,6 @@ func (b *Block) PlaySafe() error {
 			dbTx.Commit()
 			return ErrEmptyBlock
 		}
-
-		//if len(inputTx) != len(b.Transactions) {
 		b.Header.RollbacksHash, err = b.GetRollbacksHash(dbTx)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
@@ -62,39 +62,37 @@ func (b *Block) PlaySafe() error {
 			dbTx.Rollback()
 			return err
 		}
-		//}
 	}
 	if err := b.InsertIntoBlockchain(dbTx); err != nil {
 		dbTx.Rollback()
 		return err
 	}
-
 	err = dbTx.Commit()
 	if err != nil {
 		return err
 	}
-
 	for _, q := range b.Notifications {
 		q.Send()
 	}
 	return nil
 }
 
-func (b *Block) Play(dbTx *sqldb.DbTransaction) (batchErr error) {
-	var (
-		playTxs sqldb.AfterTxs
-	)
+func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
+	after := &types.AfterTxs{
+		Rts:         make([]*types.RollbackTx, 0),
+		Lts:         make([]*types.LogTransaction, 0),
+		UpdTxStatus: make([]*types.UpdateBlockMsg, 0),
+	}
 	logger := b.GetLogger()
 	limits := transaction.NewLimits(b.limitMode())
 	rand := random.NewRand(b.Header.Time)
-	processedTx := make([]*transaction.Transaction, 0, len(b.Transactions))
+	processedTx := make([][]byte, 0, len(b.Transactions))
 	defer func() {
 		if b.GenBlock {
-			b.TxExecutionSql = playTxs.TxExecutionSql
-			b.Transactions = processedTx
+			//b.TxExecutionSql = playTxs.TxExecutionSql
+			b.TxFullData = processedTx
 		}
-		if err := sqldb.AfterPlayTxs(dbTx, b.Header.BlockID, playTxs, b.GenBlock, b.IsGenesis()); err != nil {
-			batchErr = err
+		if err := sqldb.AfterPlayTxs(dbTx, b.Header.BlockID, after, b.GenBlock, b.IsGenesis()); err != nil {
 			return
 		}
 	}()
@@ -167,8 +165,8 @@ func (b *Block) Play(dbTx *sqldb.DbTransaction) (batchErr error) {
 		if t.Notifications.Size() > 0 {
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
-		playTxs.UsedTx = append(playTxs.UsedTx, t.Hash())
-		playTxs.TxExecutionSql = append(playTxs.TxExecutionSql, t.DbTransaction.ExecutionSql...)
+		after.UsedTx = append(after.UsedTx, t.Hash())
+		after.TxExecutionSql = append(after.TxExecutionSql, t.DbTransaction.ExecutionSql...)
 		var (
 			eco      int64
 			contract string
@@ -177,8 +175,8 @@ func (b *Block) Play(dbTx *sqldb.DbTransaction) (batchErr error) {
 			eco = t.SmartContract().TxSmart.EcosystemID
 			contract = t.SmartContract().TxContract.Name
 		}
-		playTxs.Lts = append(playTxs.Lts, &sqldb.LogTransaction{
-			Block:        b.Header.BlockID,
+		after.Lts = append(after.Lts, &types.LogTransaction{
+			Block:        t.BlockHeader.BlockID,
 			Hash:         t.Hash(),
 			TxData:       t.FullData,
 			Timestamp:    t.Timestamp(),
@@ -186,8 +184,12 @@ func (b *Block) Play(dbTx *sqldb.DbTransaction) (batchErr error) {
 			EcosystemID:  eco,
 			ContractName: contract,
 		})
-		playTxs.Rts = append(playTxs.Rts, t.RollBackTx...)
-		processedTx = append(processedTx, t)
+		after.UpdTxStatus = append(after.UpdTxStatus, &types.UpdateBlockMsg{
+			Hash: t.Hash(),
+			Msg:  t.TxResult,
+		})
+		after.Rts = append(after.Rts, t.RollBackTx...)
+		processedTx = append(processedTx, t.FullData)
 	}
 	return nil
 }

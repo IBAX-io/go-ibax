@@ -194,3 +194,10 @@ func (t *Transaction) GetStopNetwork() (bool, error) {
 func (t *Transaction) GetTransactionRateStopNetwork() bool {
 	return t.HighRate == TransactionRateStopNetwork
 }
+
+func DeleteTransactions(dbTx *gorm.DB, hs [][]byte) error {
+	if len(hs) == 0 {
+		return nil
+	}
+	return dbTx.Delete(&Transaction{}, hs).Error
+}

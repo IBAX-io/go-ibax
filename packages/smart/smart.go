@@ -81,7 +81,7 @@ type SmartContract struct {
 	GenBlock        bool
 	TimeLimit       int64
 	Key             *sqldb.Key
-	RollBackTx      []*sqldb.RollbackTx
+	RollBackTx      []*types.RollbackTx
 	multiPays       multiPays
 	taxes           bool
 	Penalty         bool

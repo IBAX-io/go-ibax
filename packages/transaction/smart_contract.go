@@ -15,7 +15,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/pkg/errors"
@@ -53,7 +52,7 @@ func (s *SmartTransactionParser) Init(t *Transaction) error {
 	s.CLB = false
 	s.Rollback = true
 	s.SysUpdate = false
-	s.RollBackTx = make([]*sqldb.RollbackTx, 0)
+	s.RollBackTx = make([]*types.RollbackTx, 0)
 	if s.GenBlock {
 		s.TimeLimit = syspar.GetMaxBlockGenerationTime()
 	}

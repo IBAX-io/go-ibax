@@ -70,7 +70,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		NodePosition:  b.Header.NodePosition,
 		Time:          b.Header.Time,
 		RollbacksHash: b.Header.RollbacksHash,
-		Tx:            int32(len(b.Transactions)),
+		Tx:            int32(len(b.TxFullData)),
 	}
 	var validBlockTime bool
 	if blockID > 1 {

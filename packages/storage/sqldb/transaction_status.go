@@ -45,12 +45,12 @@ func (ts *TransactionStatus) UpdateBlockID(dbTx *DbTransaction, newBlockID int64
 	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("block_id", newBlockID).Error
 }
 
-type updateBlockMsg struct {
+type UpdateBlockMsg struct {
 	Hash []byte
 	Msg  string
 }
 
-var updBlockMsg []updateBlockMsg
+//var updBlockMsg []UpdateBlockMsg
 
 // SetTransactionStatusBlockMsg is updating block msg
 func SetTransactionStatusBlockMsg(dbTx *DbTransaction, newBlockID int64, msg string, transactionHash []byte) error {
@@ -58,7 +58,7 @@ func SetTransactionStatusBlockMsg(dbTx *DbTransaction, newBlockID int64, msg str
 		msg = msg[:255]
 	}
 	if !conf.Config.IsCLBMaster() {
-		updBlockMsg = append(updBlockMsg, updateBlockMsg{Msg: msg, Hash: transactionHash})
+		//updBlockMsg = append(updBlockMsg, UpdateBlockMsg{Msg: msg, Hash: transactionHash})
 		return nil
 	}
 
@@ -66,10 +66,7 @@ func SetTransactionStatusBlockMsg(dbTx *DbTransaction, newBlockID int64, msg str
 		map[string]any{"block_id": newBlockID, "error": msg}).Error
 }
 
-func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64) error {
-	defer func() {
-		updBlockMsg = []updateBlockMsg{}
-	}()
+func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64, updBlockMsg []*UpdateBlockMsg) error {
 	if len(updBlockMsg) == 0 {
 		return nil
 	}

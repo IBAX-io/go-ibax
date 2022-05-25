@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/types"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/script"
@@ -33,7 +35,7 @@ func SysRollback(sc *SmartContract, data SysRollData) error {
 	if err != nil {
 		return err
 	}
-	rollbackSys := &sqldb.RollbackTx{
+	rollbackSys := &types.RollbackTx{
 		BlockID:   sc.BlockHeader.BlockID,
 		TxHash:    sc.Hash,
 		NameTable: SysName,
@@ -41,11 +43,6 @@ func SysRollback(sc *SmartContract, data SysRollData) error {
 		Data:      string(out),
 	}
 	sc.RollBackTx = append(sc.RollBackTx, rollbackSys)
-	err = rollbackSys.Create(sc.DbTransaction)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating system  rollback")
-		return err
-	}
 	return nil
 }
 

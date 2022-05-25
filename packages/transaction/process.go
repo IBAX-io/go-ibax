@@ -10,7 +10,7 @@ import (
 func ProcessQueueTransactionBatches(dbTx *sqldb.DbTransaction, qs []*sqldb.QueueTx) error {
 	var (
 		checkTime = time.Now().Unix()
-		hashes    sqldb.ArrHashes
+		hashes    [][]byte
 		trxs      []*sqldb.Transaction
 		err       error
 	)

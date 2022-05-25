@@ -18,7 +18,7 @@ type Transaction struct {
 	Notifications  types.Notifications
 	GenBlock       bool
 	SysUpdate      bool
-	RollBackTx     []*sqldb.RollbackTx
+	RollBackTx     []*types.RollbackTx
 	BlockHeader    *types.BlockHeader
 	PreBlockHeader *types.BlockHeader
 	DbTransaction  *sqldb.DbTransaction
@@ -67,4 +67,37 @@ func UnmarshallTransaction(buffer *bytes.Buffer, fillData bool) (*Transaction, e
 		return nil, err
 	}
 	return tx, nil
+}
+
+func (t *Transaction) BuildAfterTxs() *types.AfterTxs {
+	after := &types.AfterTxs{
+		Rts:         make([]*types.RollbackTx, 0),
+		Lts:         make([]*types.LogTransaction, 0),
+		UpdTxStatus: make([]*types.UpdateBlockMsg, 0),
+	}
+	after.UsedTx = append(after.UsedTx, t.Hash())
+	after.TxExecutionSql = append(after.TxExecutionSql, t.DbTransaction.ExecutionSql...)
+	var (
+		eco      int64
+		contract string
+	)
+	if t.IsSmartContract() {
+		eco = t.SmartContract().TxSmart.EcosystemID
+		contract = t.SmartContract().TxContract.Name
+	}
+	after.Lts = append(after.Lts, &types.LogTransaction{
+		Block:        t.BlockHeader.BlockID,
+		Hash:         t.Hash(),
+		TxData:       t.FullData,
+		Timestamp:    t.Timestamp(),
+		Address:      t.KeyID(),
+		EcosystemID:  eco,
+		ContractName: contract,
+	})
+	after.UpdTxStatus = append(after.UpdTxStatus, &types.UpdateBlockMsg{
+		Hash: t.Hash(),
+		Msg:  t.TxResult,
+	})
+	after.Rts = append(after.Rts, t.RollBackTx...)
+	return after
 }

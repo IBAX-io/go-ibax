@@ -2,10 +2,8 @@ package types
 
 import (
 	"bytes"
-	"compress/zlib"
 	"encoding/json"
 	"fmt"
-	"io"
 	math_bits "math/bits"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -81,12 +79,12 @@ func ParseBlockHeader(buf *bytes.Buffer, maxBlockSize int64) (header *BlockHeade
 
 // BlockData is a structure of the block's
 type BlockData struct {
-	Header         *BlockHeader
-	PrevHeader     *BlockHeader
-	MerkleRoot     []byte
-	BinData        []byte
-	TxFullData     [][]byte
-	TxExecutionSql TxExecutionSql
+	Header     *BlockHeader
+	PrevHeader *BlockHeader
+	MerkleRoot []byte
+	BinData    []byte
+	TxFullData [][]byte
+	AfterTxs
 }
 
 type BlockDataOption func(b *BlockData) error
@@ -157,7 +155,6 @@ func (b *BlockData) GetSign(key []byte) ([]byte, error) {
 
 // MarshallBlock is marshalling block
 func (b *BlockData) MarshallBlock(key []byte) ([]byte, error) {
-	//if b.Header.BlockID != 1 {
 	for i := 0; i < len(b.TxExecutionSql); i++ {
 		d := b.TxExecutionSql[i]
 		b.TxExecutionSql[i] = DoZlibCompress(d)
@@ -173,7 +170,6 @@ func (b *BlockData) MarshallBlock(key []byte) ([]byte, error) {
 	}
 	b.Header.Sign = signed
 	b.Header.Hash = b.Header.GenHash(b.PrevHeader, b.MerkleRoot)
-	//}
 	return json.Marshal(&b)
 }
 
@@ -199,8 +195,41 @@ func (b *BlockData) UnmarshallBlock(data []byte) error {
 	return nil
 }
 
-// TxExecutionSql defined contract exec sql for tx DML
-type TxExecutionSql [][]byte
+type (
+	// TxExecutionSql defined contract exec sql for tx DML
+	TxExecutionSql [][]byte
+	RollbackTx     struct {
+		ID        int64
+		BlockID   int64
+		TxHash    []byte
+		NameTable string
+		TableID   string
+		Data      string
+	}
+
+	LogTransaction struct {
+		Hash         []byte
+		Block        int64
+		TxData       []byte
+		Timestamp    int64
+		Address      int64
+		EcosystemID  int64
+		ContractName string
+	}
+
+	UpdateBlockMsg struct {
+		Hash []byte
+		Msg  string
+	}
+
+	AfterTxs struct {
+		TxExecutionSql TxExecutionSql
+		UsedTx         [][]byte
+		Rts            []*RollbackTx
+		Lts            []*LogTransaction
+		UpdTxStatus    []*UpdateBlockMsg
+	}
+)
 
 func (t *TxExecutionSql) Reset() { *t = TxExecutionSql{} }
 
@@ -218,8 +247,6 @@ func (t TxExecutionSql) Size() (n int) {
 	}
 	return n
 }
-
-type TxExecSqlMap map[string]TxExecutionSql
 
 // MerkleTreeRoot return Merkle value
 func MerkleTreeRoot(dataArray [][]byte) []byte {
@@ -254,20 +281,4 @@ func MerkleTreeRoot(dataArray [][]byte) []byte {
 
 	ret := result[int32(len(result)-1)]
 	return ret[0]
-}
-
-func DoZlibCompress(src []byte) []byte {
-	var in bytes.Buffer
-	w := zlib.NewWriter(&in)
-	w.Write(src)
-	w.Close()
-	return in.Bytes()
-}
-
-func DoZlibUnCompress(compressSrc []byte) []byte {
-	b := bytes.NewReader(compressSrc)
-	var out bytes.Buffer
-	r, _ := zlib.NewReader(b)
-	io.Copy(&out, r)
-	return out.Bytes()
 }
