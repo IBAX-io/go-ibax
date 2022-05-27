@@ -10,11 +10,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
-	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
@@ -93,12 +91,11 @@ func confirmationsBlocks(ctx context.Context, d *daemon, lastBlockID, startBlock
 			d.logger.WithFields(log.Fields{"hash": hashStr, "type": consts.NotFound}).Debug("hash not found")
 			continue
 		}
-
-		hosts, err := node.GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
+		var hosts []string
+		hosts, err = GetRemoteGoodHosts()
 		if err != nil {
 			return err
 		}
-
 		ch := make(chan string)
 		for i := 0; i < len(hosts); i++ {
 			host, err := tcpclient.NormalizeHostAddress(hosts[i], consts.DefaultTcpPort)

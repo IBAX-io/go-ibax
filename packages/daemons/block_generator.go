@@ -33,6 +33,11 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	} else {
 		return nil
 	}
+	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
+	if err == nil && len(candidateNodes) > 0 {
+		syspar.SetRunModel(consts.CandidateNodeMode)
+		return BlockGeneratorCandidate(ctx, d)
+	}
 	d.sleepTime = time.Second
 	if node.IsNodePaused() {
 		return nil
@@ -133,12 +138,13 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	}
 
 	header := &types.BlockHeader{
-		BlockId:      prevBlock.BlockID + 1,
-		Timestamp:    st.Unix(),
-		EcosystemId:  0,
-		KeyId:        conf.Config.KeyID,
-		NodePosition: nodePosition,
-		Version:      consts.BlockVersion,
+		BlockId:       prevBlock.BlockID + 1,
+		Timestamp:     st.Unix(),
+		EcosystemId:   0,
+		KeyId:         conf.Config.KeyID,
+		NodePosition:  nodePosition,
+		Version:       consts.BlockVersion,
+		ConsensusMode: consts.HonorNodeMode,
 	}
 
 	prev := &types.BlockHeader{
@@ -147,14 +153,8 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		RollbacksHash: prevBlock.RollbacksHash,
 	}
 
-	blockBin, err := generateNextBlock(header, prev, trs)
+	err = generateProcessBlock(header, prev, trs)
 	if err != nil {
-		return err
-	}
-
-	err = block.InsertBlockWOForks(blockBin, true, false)
-	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on inserting new block")
 		return err
 	}
 	//go notificator.CheckTokenMovementLimits(nil, conf.Config.TokenMovement, header.BlockId)

@@ -67,15 +67,17 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 	}
 
 	blockchain := &sqldb.BlockChain{
-		ID:            blockID,
-		Hash:          b.Header.BlockHash,
-		Data:          b.BinData,
-		EcosystemID:   b.Header.EcosystemId,
-		KeyID:         b.Header.KeyId,
-		NodePosition:  b.Header.NodePosition,
-		Time:          b.Header.Timestamp,
-		RollbacksHash: b.Header.RollbacksHash,
-		Tx:            int32(len(b.TxFullData)),
+		ID:             blockID,
+		Hash:           b.Header.BlockHash,
+		Data:           b.BinData,
+		EcosystemID:    b.Header.EcosystemId,
+		KeyID:          b.Header.KeyId,
+		NodePosition:   b.Header.NodePosition,
+		Time:           b.Header.Timestamp,
+		RollbacksHash:  b.Header.RollbacksHash,
+		Tx:             int32(len(b.TxFullData)),
+		ConsensusMode:  b.Header.ConsensusMode,
+		CandidateNodes: b.Header.CandidateNodes,
 	}
 	var validBlockTime bool
 	if blockID > 1 {
@@ -166,13 +168,15 @@ func GetDataFromFirstBlock() (data *types.FirstBlock, ok bool) {
 // upsertInfoBlock updates info_block table
 func (b *Block) upsertInfoBlock(dbTx *sqldb.DbTransaction, block *sqldb.BlockChain) error {
 	ib := &sqldb.InfoBlock{
-		Hash:          block.Hash,
-		BlockID:       block.ID,
-		Time:          block.Time,
-		EcosystemID:   block.EcosystemID,
-		KeyID:         block.KeyID,
-		NodePosition:  converter.Int64ToStr(block.NodePosition),
-		RollbacksHash: block.RollbacksHash,
+		Hash:           block.Hash,
+		BlockID:        block.ID,
+		Time:           block.Time,
+		EcosystemID:    block.EcosystemID,
+		KeyID:          block.KeyID,
+		NodePosition:   converter.Int64ToStr(block.NodePosition),
+		RollbacksHash:  block.RollbacksHash,
+		ConsensusMode:  block.ConsensusMode,
+		CandidateNodes: block.CandidateNodes,
 	}
 	if block.ID == 1 {
 		ib.CurrentVersion = fmt.Sprintf("%d", consts.BlockVersion)

@@ -104,6 +104,7 @@ func (BCDaemonFactory) GetDaemonsList() []string {
 		"Disseminator",
 		"Confirmations",
 		"Scheduler",
+		"CandidateNodeVoting",
 		//"ExternalNetwork",
 	}
 }

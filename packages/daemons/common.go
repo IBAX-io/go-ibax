@@ -8,6 +8,8 @@ package daemons
 import (
 	"context"
 	"fmt"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"strings"
 	"time"
 
@@ -36,13 +38,14 @@ type daemon struct {
 }
 
 var daemonsList = map[string]func(context.Context, *daemon) error{
-	"BlocksCollection":  BlocksCollection,
-	"BlockGenerator":    BlockGenerator,
-	"Disseminator":      Disseminator,
-	"QueueParserTx":     QueueParserTx,
-	"QueueParserBlocks": QueueParserBlocks,
-	"Confirmations":     Confirmations,
-	"Scheduler":         Scheduler,
+	"BlocksCollection":    BlocksCollection,
+	"BlockGenerator":      BlockGenerator,
+	"Disseminator":        Disseminator,
+	"QueueParserTx":       QueueParserTx,
+	"QueueParserBlocks":   QueueParserBlocks,
+	"Confirmations":       Confirmations,
+	"Scheduler":           Scheduler,
+	"CandidateNodeVoting": CandidateNodeVoting,
 	//"ExternalNetwork":   ExternalNetwork,
 }
 
@@ -170,4 +173,20 @@ func Ntp_Work(ctx context.Context) {
 
 		}
 	}
+}
+
+func GetRemoteGoodHosts() (hosts []string, err error) {
+	if syspar.GetRunModel() == consts.HonorNodeMode {
+		return node.GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
+	}
+	candidateNode := &sqldb.CandidateNode{}
+	candidateNodes, err := candidateNode.GetCandidateNode()
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("getting candidate node list")
+		return
+	}
+	for _, node := range candidateNodes {
+		hosts = append(hosts, node.TcpAddress)
+	}
+	return
 }

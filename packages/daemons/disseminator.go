@@ -32,7 +32,9 @@ func Disseminator(ctx context.Context, d *daemon) error {
 	defer DBUnlock()
 
 	isHonorNode := true
-	myNodePosition, err := syspar.GetThisNodePosition()
+	selectMode := SelectModel{}
+	myNodePosition, err := selectMode.GetThisNodePosition()
+
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("finding node")
 		isHonorNode = false
@@ -102,8 +104,22 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 		logger.Debug("nothing to send")
 		return nil
 	}
+	selectModel := SelectModel{}.GetWorkMode()
+	_, ok := selectModel.(*HonorNodeMode)
+	var (
+		hosts          []string
+		banHosts       []string
+		candidateNodes []sqldb.CandidateNode
+	)
+	if ok {
+		hosts, banHosts, err = node.GetNodesBanService().FilterHosts(syspar.GetRemoteHosts())
+	} else {
+		candidateNodes, err = GetCandidateNodes()
+		for _, node := range candidateNodes {
+			hosts = append(hosts, node.TcpAddress)
+		}
+	}
 
-	hosts, banHosts, err := node.GetNodesBanService().FilterHosts(syspar.GetRemoteHosts())
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("on getting remotes hosts")
 		return err

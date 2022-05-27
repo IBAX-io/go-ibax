@@ -153,6 +153,9 @@ const (
 
 	NoneCLB     = "none"
 	DBFindLimit = 10000
+
+	HonorNodeMode     = 1
+	CandidateNodeMode = 2
 )
 
 const (

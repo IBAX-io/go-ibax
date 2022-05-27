@@ -55,8 +55,8 @@ func genesisBlock() ([]byte, error) {
 		NodePosition:  0,
 		Version:       consts.BlockVersion,
 		RollbacksHash: crypto.Hash([]byte(`0`)),
+		ConsensusMode: consts.HonorNodeMode,
 	}
-
 	decodeKeyFile := func(kName string) []byte {
 		filepath := filepath.Join(conf.Config.DirPathConf.KeysDir, kName)
 		data, err := os.ReadFile(filepath)
