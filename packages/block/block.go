@@ -291,8 +291,14 @@ func (b *Block) Check() error {
 
 	// is this block too early? Allowable error = error_time
 	if b.PrevHeader != nil {
-		// skip time validation for first block
-		exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Time, 0), int(b.Header.NodePosition))
+		var (
+			exists bool
+			err    error
+		)
+		if syspar.GetRunModel() == consts.HonorNodeMode {
+			// skip time validation for first block
+			exists, err = protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Time, 0), int(b.Header.NodePosition))
+		}
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("calculating block time")
 			return err
@@ -351,7 +357,13 @@ func (b *Block) CheckHash() (bool, error) {
 	}
 	// check block signature
 	if b.PrevHeader != nil {
-		nodePublicKey, err := syspar.GetNodePublicKeyByPosition(b.Header.NodePosition)
+		var (
+			nodePublicKey   []byte
+			resultCheckSign bool
+			err             error
+		)
+
+		nodePublicKey, err = syspar.GetNodePublicKeyByPosition(b.Header.NodePosition)
 		if err != nil {
 			return false, utils.ErrInfo(err)
 		}
@@ -362,7 +374,7 @@ func (b *Block) CheckHash() (bool, error) {
 
 		signSource := b.Header.ForSign(b.PrevHeader, b.MrklRoot)
 
-		resultCheckSign, err := utils.CheckSign(
+		resultCheckSign, err = utils.CheckSign(
 			[][]byte{nodePublicKey},
 			[]byte(signSource),
 			b.Header.Sign,

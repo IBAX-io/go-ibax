@@ -205,9 +205,9 @@ func banNodePause(host string, blockID, blockTime int64, err error) {
 
 // GetHostWithMaxID returns host with maxBlockID
 func getHostWithMaxID(ctx context.Context, logger *log.Entry) (host string, maxBlockID int64, err error) {
+	selectMode := SelectModel{}
+	hosts, err := selectMode.GetHostWithMaxID()
 
-	nbs := node.GetNodesBanService()
-	hosts, err := nbs.FilterBannedHosts(syspar.GetRemoteHosts())
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Error("on filtering banned hosts")
 	}

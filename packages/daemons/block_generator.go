@@ -33,6 +33,12 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	} else {
 		return nil
 	}
+	candidateNode := &sqldb.CandidateNode{}
+	candidateNodes, err := candidateNode.GetCandidateNode()
+	if err == nil && len(candidateNodes) > 0 {
+		syspar.SetRunModel(consts.CandidateNodeMode)
+		return BlockGeneratorNew(ctx, d)
+	}
 	d.sleepTime = time.Second
 	if node.IsNodePaused() {
 		return nil
@@ -134,12 +140,13 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	}
 
 	header := &types.BlockData{
-		BlockID:      prevBlock.BlockID + 1,
-		Time:         st.Unix(),
-		EcosystemID:  0,
-		KeyID:        conf.Config.KeyID,
-		NodePosition: nodePosition,
-		Version:      consts.BlockVersion,
+		BlockID:       prevBlock.BlockID + 1,
+		Time:          st.Unix(),
+		EcosystemID:   0,
+		KeyID:         conf.Config.KeyID,
+		NodePosition:  nodePosition,
+		Version:       consts.BlockVersion,
+		ConsensusMode: consts.HonorNodeMode,
 	}
 
 	pb := &types.BlockData{
