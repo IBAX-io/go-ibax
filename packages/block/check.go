@@ -41,9 +41,14 @@ func (b *Block) Check() error {
 		logger.WithFields(log.Fields{"type": consts.ParameterExceeded}).Error("block time is larger than now")
 		return ErrIncorrectBlockTime
 	}
-
-	// is this block too early? Allowable error = error_time
-	exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Timestamp, 0), int(b.Header.NodePosition))
+	var (
+		exists bool
+		err    error
+	)
+	if syspar.GetRunModel() == consts.HonorNodeMode {
+		// is this block too early? Allowable error = error_time
+		exists, err = protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Timestamp, 0), int(b.Header.NodePosition))
+	}
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("calculating block time")
 		return err

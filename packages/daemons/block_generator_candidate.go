@@ -11,7 +11,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"github.com/IBAX-io/go-ibax/packages/block"
+	"math"
+	"strconv"
+	"time"
+
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -22,12 +25,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
-	"math"
-	"strconv"
-	"time"
 )
 
-func BlockGeneratorNew(ctx context.Context, d *daemon) error {
+func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 	d.sleepTime = time.Second
 	if node.IsNodePaused() {
 		return nil
@@ -48,93 +48,75 @@ func BlockGeneratorNew(ctx context.Context, d *daemon) error {
 		return errors.New(`node public key is empty`)
 	}
 
-	candidateNode := &sqldb.CandidateNode{}
 	var (
 		candidateNodes []sqldb.CandidateNode
 	)
-	candidateNodes, err = candidateNode.GetCandidateNode()
+	candidateNodes, err = sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting candidate node list")
 		return err
 	}
-	currentCandidateNode, nodePosition := GetThisNodePosition(candidateNodes, NodePublicKey, prevBlock)
-	log.Info("Whether it is the current packaging node", nodePosition, "current node id:", currentCandidateNode.ID, "tcpaddress:", currentCandidateNode.TcpAddress)
-	if nodePosition {
-		btc := protocols.NewBlockTimeCounter()
-		st := time.Now()
-
-		dtx := DelayedTx{
-			privateKey: NodePrivateKey,
-			publicKey:  NodePublicKey,
-			logger:     d.logger,
-			time:       st.Unix(),
-		}
-
-		_, endTime, err := btc.RangeByTime(st)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.TimeCalcError, "error": err}).Error("on getting end time of generation")
-			return err
-		}
-		done := time.After(endTime.Sub(st))
-		txs, err := dtx.RunForDelayBlockID(prevBlock.BlockID + 1)
-		if err != nil {
-			return err
-		}
-		//trs, err := processTransactionsNew(d.logger, txs, done, st.Unix())
-		trs, err := processTransactions(d.logger, txs, done, st.Unix())
-		if err != nil {
-			return err
-		}
-		// Block generation will be started only if we have transactions
-		if len(trs) == 0 {
-			return nil
-		}
-		candidateNodesByte, _ := json.Marshal(candidateNodes)
-		header := &types.BlockData{
-			BlockID:        prevBlock.BlockID + 1,
-			Time:           st.Unix(),
-			EcosystemID:    0,
-			KeyID:          conf.Config.KeyID,
-			NodePosition:   currentCandidateNode.ID,
-			Version:        consts.BlockVersion,
-			ConsensusMode:  consts.CandidateNodeMode,
-			CandidateNodes: candidateNodesByte,
-		}
-		pb := &types.BlockData{
-			BlockID:       prevBlock.BlockID,
-			Hash:          prevBlock.Hash,
-			RollbacksHash: prevBlock.RollbacksHash,
-		}
-
-		err = generateCommon(header, pb, trs, NodePrivateKey)
-		if err != nil {
-			return err
-		}
-	} else {
+	currentCandidateNode, nodePosition := GetThisNodePosition(candidateNodes, prevBlock)
+	if !nodePosition {
 		d.sleepTime = 4 * time.Second
 		d.logger.WithFields(log.Fields{"type": consts.JustWaiting, "error": err}).Debug("we are not honor node, sleep for 10 seconds")
 		return nil
 	}
-	return nil
-}
+	btc := protocols.NewBlockTimeCounter()
+	st := time.Now()
 
-func generateCommon(blockHeader, prevBlock *types.BlockData, trs []*sqldb.Transaction, key string) error {
-	//blockBin, err := generateNextBlockNew(blockHeader, prevBlock, trs)
-	blockBin, err := generateNextBlock(blockHeader, prevBlock, trs)
+	dtx := DelayedTx{
+		privateKey: NodePrivateKey,
+		publicKey:  NodePublicKey,
+		logger:     d.logger,
+		time:       st.Unix(),
+	}
+
+	_, endTime, err := btc.RangeByTime(st)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.TimeCalcError, "error": err}).Error("on getting end time of generation")
+		return err
+	}
+	done := time.After(endTime.Sub(st))
+	txs, err := dtx.RunForDelayBlockID(prevBlock.BlockID + 1)
 	if err != nil {
 		return err
 	}
-	//err = block.InsertBlockWOForksNew(blockBin, true, false)
-	err = block.InsertBlockWOForks(blockBin, true, false)
+	//trs, err := processTransactionsNew(d.logger, txs, done, st.Unix())
+	trs, err := processTransactions(d.logger, txs, done, st.Unix())
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on inserting new block")
 		return err
 	}
-	log.WithFields(log.Fields{"block": blockHeader.String(), "type": consts.SyncProcess}).Debug("Generated block ID")
+	// Block generation will be started only if we have transactions
+	if len(trs) == 0 {
+		return nil
+	}
+	candidateNodesByte, _ := json.Marshal(candidateNodes)
+	header := &types.BlockHeader{
+		BlockId:        prevBlock.BlockID + 1,
+		Timestamp:      st.Unix(),
+		EcosystemId:    0,
+		KeyId:          conf.Config.KeyID,
+		NodePosition:   currentCandidateNode.ID,
+		Version:        consts.BlockVersion,
+		ConsensusMode:  consts.CandidateNodeMode,
+		CandidateNodes: candidateNodesByte,
+	}
+	prev := &types.BlockHeader{
+		BlockId:       prevBlock.BlockID,
+		BlockHash:     prevBlock.Hash,
+		RollbacksHash: prevBlock.RollbacksHash,
+	}
+
+	err = generateProcessBlock(header, prev, trs)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func GetThisNodePosition(candidateNodes []sqldb.CandidateNode, NodePublicKey string, prevBlock *sqldb.InfoBlock) (sqldb.CandidateNode, bool) {
+func GetThisNodePosition(candidateNodes []sqldb.CandidateNode, prevBlock *sqldb.InfoBlock) (sqldb.CandidateNode, bool) {
 	candidateNode := sqldb.CandidateNode{}
 	if len(candidateNodes) == 0 {
 

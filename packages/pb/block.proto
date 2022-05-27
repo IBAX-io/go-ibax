@@ -24,6 +24,8 @@ message BlockHeader{
   //differences with before and after in tx modification table
   bytes rollbacks_hash = 8;
   int32 version = 9;
+  int32 consensus_mode = 10;
+  bytes candidate_nodes = 11;
 }
 
 // BlockData is a structure of the block's

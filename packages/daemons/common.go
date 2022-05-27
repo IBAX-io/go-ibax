@@ -8,10 +8,14 @@ package daemons
 import (
 	"context"
 	"fmt"
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
-	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"strings"
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/block"
+	"github.com/IBAX-io/go-ibax/packages/types"
+
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
@@ -175,12 +179,26 @@ func Ntp_Work(ctx context.Context) {
 	}
 }
 
+func generateProcessBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) error {
+	//blockBin, err := generateNextBlockNew(blockHeader, prevBlock, trs)
+	blockBin, err := generateNextBlock(blockHeader, prevBlock, trs)
+	if err != nil {
+		return err
+	}
+	err = block.InsertBlockWOForks(blockBin, true, false)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err}).Error("on inserting new block")
+		return err
+	}
+	log.WithFields(log.Fields{"block": blockHeader.String(), "type": consts.SyncProcess}).Debug("Generated block ID")
+	return nil
+}
+
 func GetRemoteGoodHosts() (hosts []string, err error) {
 	if syspar.GetRunModel() == consts.HonorNodeMode {
 		return node.GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
 	}
-	candidateNode := &sqldb.CandidateNode{}
-	candidateNodes, err := candidateNode.GetCandidateNode()
+	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting candidate node list")
 		return

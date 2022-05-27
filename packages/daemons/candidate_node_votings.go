@@ -5,16 +5,18 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	log "github.com/sirupsen/logrus"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 type VotingRes struct {
@@ -81,8 +83,7 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 	defer func() {
 		d.sleepTime = time.Second * 10
 	}()
-	candidateNode := &sqldb.CandidateNode{}
-	candidateNodes, err = candidateNode.GetCandidateNode()
+	candidateNodes, err = sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
 		return err
 	}

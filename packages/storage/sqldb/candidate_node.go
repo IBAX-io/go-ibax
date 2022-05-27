@@ -1,10 +1,11 @@
 package sqldb
 
 import (
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/shopspring/decimal"
 	"strconv"
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/shopspring/decimal"
 )
 
 type CandidateNode struct {
@@ -42,13 +43,12 @@ func (ib *CandidateNode) TableName() string {
 }
 
 // GetCandidateNode returns last good block
-func (c *CandidateNode) GetCandidateNode() ([]CandidateNode, error) {
+func GetCandidateNode(numberOfNodes int) ([]CandidateNode, error) {
 	var candidateNodes []CandidateNode
 	pledgeAmount, err := GetPledgeAmount()
 	if err != nil {
 		return nil, err
 	}
-	numberOfNodes := getNumberOfNodes()
 	err = GetDB(nil).Where("deleted = ? and earnest_total >= ?", 0, pledgeAmount).Order("date_reply,reply_count desc").Limit(numberOfNodes).Find(&candidateNodes).Error
 	if err != nil {
 		return nil, err
@@ -132,9 +132,4 @@ func GetPledgeAmount() (int64, error) {
 		return 0, err
 	}
 	return i, err
-}
-func getNumberOfNodes() int {
-	//numberOfNodes := syspar.SysInt("number_of_nodes")
-	numberOfNodes := 101
-	return numberOfNodes
 }

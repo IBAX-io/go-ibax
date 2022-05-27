@@ -3,6 +3,7 @@ package daemons
 import (
 	"encoding/hex"
 	"errors"
+
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
@@ -38,9 +39,7 @@ func (candidateNodeMode *CandidateNodeMode) GetThisNodePosition() (int64, error)
 	return GetCandidateNodePositionByPublicKey()
 }
 func (candidateNodeMode *CandidateNodeMode) GetHostWithMaxID() ([]string, error) {
-	candidateNode := &sqldb.CandidateNode{}
-
-	candidateNodes, err := candidateNode.GetCandidateNode()
+	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting candidate node list")
 		return nil, err
@@ -91,8 +90,7 @@ func GetCandidateNodes() ([]sqldb.CandidateNode, error) {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
 		return nil, errors.New(`node public key is empty`)
 	}
-	candidateNode := &sqldb.CandidateNode{}
-	candidateNodes, err := candidateNode.GetCandidateNode()
+	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
 		log.WithFields(log.Fields{"error": err}).Error("getting candidate node error")
 		return nil, err

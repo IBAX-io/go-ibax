@@ -96,8 +96,7 @@ func Start() {
 			log.WithFields(log.Fields{"error": err}).Error("on running update migrations")
 			exitErr(1)
 		}
-		candidateNode := &sqldb.CandidateNode{}
-		candidateNodes, err := candidateNode.GetCandidateNode()
+		candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 		if err == nil && len(candidateNodes) > 0 {
 			syspar.SetRunModel(consts.CandidateNodeMode)
 		} else {

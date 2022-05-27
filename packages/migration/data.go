@@ -26,7 +26,7 @@ var (
 		t.Column("time", "bigint", {"default": "0"})
 		t.Column("tx", "int", {"default": "0"})
 		t.Column("consensus_mode", "int", {"default": "1"})
-		t.Column("candidate_nodes", "bytea", {"default": ""})
+		t.Column("candidate_nodes", "bytea", {"default": "\x"})
 	{{footer "primary" "index(node_position, time)"}}
 
 	{{head "confirmations"}}
@@ -47,7 +47,7 @@ var (
 		t.Column("current_version", "string", {"default": "0.0.1", "size": 50})
 		t.Column("sent", "smallint", {"default": "0"})
 		t.Column("consensus_mode", "int", {"default": "1"})
-		t.Column("candidate_nodes", "bytea", {"default": ""})
+		t.Column("candidate_nodes", "bytea", {"default": "\x"})
 	{{footer "index(sent)"}}
 
 	{{head "install"}}
