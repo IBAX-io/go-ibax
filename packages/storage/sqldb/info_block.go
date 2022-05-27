@@ -20,6 +20,8 @@ type InfoBlock struct {
 	CurrentVersion string `gorm:"not null"`
 	Sent           int8   `gorm:"not null"`
 	RollbacksHash  []byte `gorm:"not null"`
+	ConsensusMode  int8   `gorm:"not null"`
+	CandidateNodes []byte `gorm:"not null"`
 }
 
 // TableName returns name of table

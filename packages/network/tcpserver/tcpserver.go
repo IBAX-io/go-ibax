@@ -65,6 +65,19 @@ func HandleTCPRequest(rw net.Conn) {
 
 	case network.RequestTypeMaxBlock:
 		response, err = MaxBlock()
+
+	case network.RequestTypeVoting:
+		req := &network.CandidateNodeVotingRequest{}
+		if err = req.Read(rw); err == nil {
+			response, err = CandidateNodeVoting(req)
+		}
+	case network.RequestSyncMatchineState:
+		req := &network.BroadcastNodeConnInfoRequest{}
+		if err = req.Read(rw); err == nil {
+			//response, err = SyncMatchineStateRes(req)
+			SyncMatchineStateRes(req)
+			return
+		}
 	}
 
 	if err != nil || response == nil {

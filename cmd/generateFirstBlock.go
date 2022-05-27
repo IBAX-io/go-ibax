@@ -47,15 +47,6 @@ func init() {
 
 func genesisBlock() ([]byte, error) {
 	now := time.Now().Unix()
-	header := &types.BlockData{
-		BlockID:      1,
-		Time:         now,
-		EcosystemID:  0,
-		KeyID:        conf.Config.KeyID,
-		NodePosition: 0,
-		Version:      consts.BlockVersion,
-	}
-
 	decodeKeyFile := func(kName string) []byte {
 		filepath := filepath.Join(conf.Config.DirPathConf.KeysDir, kName)
 		data, err := os.ReadFile(filepath)
@@ -69,6 +60,16 @@ func genesisBlock() ([]byte, error) {
 		}
 
 		return decodedKey
+	}
+
+	header := &types.BlockData{
+		BlockID:       1,
+		Time:          now,
+		EcosystemID:   0,
+		KeyID:         conf.Config.KeyID,
+		NodePosition:  0,
+		Version:       consts.BlockVersion,
+		ConsensusMode: consts.HonorNodeMode,
 	}
 
 	var stopNetworkCert []byte

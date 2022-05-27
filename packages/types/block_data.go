@@ -28,15 +28,17 @@ var (
 
 //BlockData is a structure of the block's header
 type BlockData struct {
-	BlockID       int64
-	Time          int64
-	EcosystemID   int64
-	KeyID         int64
-	NodePosition  int64
-	Sign          []byte
-	Hash          []byte
-	RollbacksHash []byte
-	Version       int
+	BlockID        int64
+	Time           int64
+	EcosystemID    int64
+	KeyID          int64
+	NodePosition   int64
+	Sign           []byte
+	Hash           []byte
+	RollbacksHash  []byte
+	Version        int
+	ConsensusMode  int8
+	CandidateNodes []byte
 }
 
 func (b BlockData) String() string {

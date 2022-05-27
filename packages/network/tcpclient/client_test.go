@@ -49,22 +49,22 @@ func BenchmarkGetBlockBodiesWithChanReadAll(t *testing.B) {
 			resp.Write(r)
 		}
 
-		ctxDone, cancel := context.WithCancel(context.Background())
+		//ctxDone, cancel := context.WithCancel(context.Background())
 
 		t.StartTimer()
-		blocksC, errC := GetBlockBodiesChanReadAll(ctxDone, r, 100)
+		//blocksC, errC := GetBlockBodiesChanReadAll(ctxDone, r, 100)
 		// blocksC, errC := GetBlockBodiesChan(ctxDone, r, 100)
-		go func() {
-			err := <-errC
-			if err != nil {
-				fmt.Println(err)
-			}
-		}()
-
-		for item := range blocksC {
-			item = item[:0]
-		}
-		cancel()
+		//go func() {
+		//	err := <-errC
+		//	if err != nil {
+		//		fmt.Println(err)
+		//	}
+		//}()
+		//
+		//for item := range blocksC {
+		//	item = item[:0]
+		//}
+		//cancel()
 	}
 }
 
@@ -87,22 +87,22 @@ func BenchmarkGetBlockBodiesChanByBlockWithSyncPool(t *testing.B) {
 			resp.Write(r)
 		}
 
-		ctxDone, cancel := context.WithCancel(context.Background())
-
-		t.StartTimer()
-		blocksC, errC := GetBlockBodiesChanByBlock(ctxDone, r, 100)
-
-		go func() {
-			err := <-errC
-			if err != nil {
-				fmt.Println(err)
-			}
-		}()
-
-		for item := range blocksC {
-			item = item[:0]
-		}
-		cancel()
+		//ctxDone, cancel := context.WithCancel(context.Background())
+		//
+		//t.StartTimer()
+		//blocksC, errC := GetBlockBodiesChanByBlock(ctxDone, r, 100)
+		//
+		//go func() {
+		//	err := <-errC
+		//	if err != nil {
+		//		fmt.Println(err)
+		//	}
+		//}()
+		//
+		//for item := range blocksC {
+		//	item = item[:0]
+		//}
+		//cancel()
 	}
 
 }
@@ -131,23 +131,23 @@ func BenchmarkGetBlockBodiesChanByBlockWithBytePool(t *testing.B) {
 			resp.Write(r)
 		}
 
-		ctxDone, cancel := context.WithCancel(context.Background())
-
-		t.StartTimer()
-		blocksC, errC := GetBlockBodiesChanByBlockWithBytePool(ctxDone, r, 100)
-
-		go func() {
-			err := <-errC
-			if err != nil {
-				fmt.Println(err)
-			}
-		}()
-
-		for item := range blocksC {
-			// fmt.Println(len(item))
-			item = item[:0]
-		}
-		cancel()
+		//ctxDone, cancel := context.WithCancel(context.Background())
+		//
+		//t.StartTimer()
+		//blocksC, errC := GetBlockBodiesChanByBlockWithBytePool(ctxDone, r, 100)
+		//
+		//go func() {
+		//	err := <-errC
+		//	if err != nil {
+		//		fmt.Println(err)
+		//	}
+		//}()
+		//
+		//for item := range blocksC {
+		//	// fmt.Println(len(item))
+		//	item = item[:0]
+		//}
+		//cancel()
 	}
 }
 
@@ -201,18 +201,18 @@ func BenchmarkGetBlockBodiesAsSlice(t *testing.B) {
 			resp.Write(r)
 		}
 
-		ctxDone, cancel := context.WithCancel(context.Background())
-
-		t.StartTimer()
-		blocks, err := GetBlockBodiesReadAll(ctxDone, r, 100)
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		for i := 0; i < len(blocks); i++ {
-			blocks[i] = blocks[i][:0]
-		}
-		cancel()
+		//ctxDone, cancel := context.WithCancel(context.Background())
+		//
+		//t.StartTimer()
+		//blocks, err := GetBlockBodiesReadAll(ctxDone, r, 100)
+		//if err != nil {
+		//	fmt.Println(err)
+		//}
+		//
+		//for i := 0; i < len(blocks); i++ {
+		//	blocks[i] = blocks[i][:0]
+		//}
+		//cancel()
 	}
 }
 

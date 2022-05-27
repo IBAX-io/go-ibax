@@ -102,6 +102,7 @@ var (
 	nodePubKey          []byte
 	nodePrivKey         []byte
 	cacheTableColType   = make([]map[string]string, 0)
+	runModel            uint8
 )
 
 func ReadNodeKeys() (err error) {
@@ -310,6 +311,21 @@ func GetNodeByHost(host string) (HonorNode, error) {
 func GetNodeHostByPosition(position int64) (string, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
+	if GetRunModel() == consts.CandidateNodeMode {
+		candidateNode := &sqldb.CandidateNode{}
+		err := candidateNode.GetCandidateNodeById(position)
+		if err != nil {
+			return "", err
+		}
+		nodePublicKey, err := hex.DecodeString(candidateNode.NodePubKey)
+		if err != nil {
+			return "", err
+		}
+		nodePublicKey = crypto.CutPub(nodePublicKey)
+
+		return candidateNode.TcpAddress, nil
+	}
+
 	nodeData, err := GetNodeByPosition(position)
 	if err != nil {
 		return "", err
@@ -321,6 +337,20 @@ func GetNodeHostByPosition(position int64) (string, error) {
 func GetNodePublicKeyByPosition(position int64) ([]byte, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
+	if GetRunModel() == consts.CandidateNodeMode {
+		candidateNode := &sqldb.CandidateNode{}
+		err := candidateNode.GetCandidateNodeById(position)
+		if err != nil {
+			return nil, err
+		}
+		nodePublicKey, err := hex.DecodeString(candidateNode.NodePubKey)
+		if err != nil {
+			return nil, err
+		}
+		nodePublicKey = crypto.CutPub(nodePublicKey)
+
+		return nodePublicKey, nil
+	}
 	if int64(len(nodesByPosition)) <= position {
 		return nil, fmt.Errorf("incorrect position")
 	}
@@ -610,4 +640,12 @@ func IsByteColumn(table, column string) bool {
 		}
 	}
 	return false
+}
+
+func SetRunModel(setVal uint8) {
+	runModel = setVal
+}
+
+func GetRunModel() uint8 {
+	return runModel
 }

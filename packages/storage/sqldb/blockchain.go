@@ -11,15 +11,17 @@ import (
 
 // BlockChain is model
 type BlockChain struct {
-	ID            int64  `gorm:"primary_key;not_null"`
-	Hash          []byte `gorm:"not null"`
-	RollbacksHash []byte `gorm:"not null"`
-	Data          []byte `gorm:"not null"`
-	EcosystemID   int64  `gorm:"not null"`
-	KeyID         int64  `gorm:"not null"`
-	NodePosition  int64  `gorm:"not null"`
-	Time          int64  `gorm:"not null"`
-	Tx            int32  `gorm:"not null"`
+	ID             int64  `gorm:"primary_key;not_null"`
+	Hash           []byte `gorm:"not null"`
+	RollbacksHash  []byte `gorm:"not null"`
+	Data           []byte `gorm:"not null"`
+	EcosystemID    int64  `gorm:"not null"`
+	KeyID          int64  `gorm:"not null"`
+	NodePosition   int64  `gorm:"not null"`
+	Time           int64  `gorm:"not null"`
+	Tx             int32  `gorm:"not null"`
+	ConsensusMode  int8   `gorm:"not null"`
+	CandidateNodes []byte `gorm:"not null"`
 }
 
 // TableName returns name of table
@@ -125,4 +127,10 @@ func GetBlockCountByNode(NodePosition int64) (int64, error) {
 	err := row.Scan(&BlockCount)
 
 	return BlockCount, err
+}
+func (b *BlockChain) GetRecentBlockChain(startBlockId int64, maxBlockId int64) ([]BlockChain, error) {
+	blockchain := new([]BlockChain)
+	err := DBConn.Where("id > ? and id <= ?", startBlockId, maxBlockId).Find(&blockchain).Error
+
+	return *blockchain, err
 }

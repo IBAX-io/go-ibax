@@ -96,13 +96,20 @@ func Start() {
 			log.WithFields(log.Fields{"error": err}).Error("on running update migrations")
 			exitErr(1)
 		}
+		candidateNode := &sqldb.CandidateNode{}
+		candidateNodes, err := candidateNode.GetCandidateNode()
+		if err == nil && len(candidateNodes) > 0 {
+			syspar.SetRunModel(consts.CandidateNodeMode)
+		} else {
+			syspar.SetRunModel(consts.HonorNodeMode)
+		}
 
 		ctx, cancel := context.WithCancel(context.Background())
 		utils.CancelFunc = cancel
 		utils.ReturnCh = make(chan string)
 
 		// The installation process is already finished (where user has specified DB and where wallet has been restarted)
-		err := daemonsctl.RunAllDaemons(ctx)
+		err = daemonsctl.RunAllDaemons(ctx)
 		log.Info("Daemons started")
 		if err != nil {
 			exitErr(1)
