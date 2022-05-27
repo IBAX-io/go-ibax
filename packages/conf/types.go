@@ -111,27 +111,30 @@ type (
 		NetworkID             int64
 		MaxPageGenerationTime int64 // in milliseconds
 	}
-
+	BlockSyncMethod struct {
+		Method string
+	}
 	// GlobalConfig is storing all startup config as global struct
 	GlobalConfig struct {
-		KeyID          int64  `toml:"-"`
-		ConfigPath     string `toml:"-"`
-		TestRollBack   bool   `toml:"-"`
-		FuncBench      bool   `toml:"-"`
-		LocalConf      LocalConfig
-		DirPathConf    DirectoryConfig
-		BootNodes      BootstrapNodeConfig
-		TLSConf        TLSConfig
-		TCPServer      HostPort
-		HTTP           HostPort
-		DB             DBConfig
-		Redis          RedisConfig
-		StatsD         StatsDConfig
-		Centrifugo     CentrifugoConfig
-		Log            LogConfig
-		TokenMovement  TokenMovementConfig
-		BanKey         BanKeyConfig
-		IpfsConf       IpfsConfig
-		CryptoSettings CryptoSettings
+		KeyID           int64  `toml:"-"`
+		ConfigPath      string `toml:"-"`
+		TestRollBack    bool   `toml:"-"`
+		FuncBench       bool   `toml:"-"`
+		LocalConf       LocalConfig
+		DirPathConf     DirectoryConfig
+		BootNodes       BootstrapNodeConfig
+		TLSConf         TLSConfig
+		TCPServer       HostPort
+		HTTP            HostPort
+		DB              DBConfig
+		Redis           RedisConfig
+		StatsD          StatsDConfig
+		Centrifugo      CentrifugoConfig
+		Log             LogConfig
+		TokenMovement   TokenMovementConfig
+		BanKey          BanKeyConfig
+		IpfsConf        IpfsConfig
+		CryptoSettings  CryptoSettings
+		BlockSyncMethod BlockSyncMethod
 	}
 )

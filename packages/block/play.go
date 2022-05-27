@@ -8,6 +8,7 @@ package block
 import (
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
@@ -78,25 +79,28 @@ func (b *Block) PlaySafe() error {
 }
 
 func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
-	afters := &types.AfterTxs{}
+	afters := &types.AfterTxs{
+		Rts: make([]*types.RollbackTx, 0),
+		Txs: make([]*types.AfterTx, 0),
+	}
 	logger := b.GetLogger()
 	limits := transaction.NewLimits(b.limitMode())
 	rand := random.NewRand(b.Header.Timestamp)
 	processedTx := make([][]byte, 0, len(b.Transactions))
 	defer func() {
-		b.AfterTxs = afters
+		if b.IsGenesis() || b.GenBlock {
+			b.AfterTxs = afters
+		}
 		if b.GenBlock {
 			b.TxFullData = processedTx
 		}
-		if err := sqldb.AfterPlayTxs(dbTx, b.Header.BlockId, b.AfterTxs, b.GenBlock, b.IsGenesis()); err != nil {
+		if err := b.AfterPlayTxs(dbTx); err != nil {
 			return
 		}
 	}()
-
-	if !b.GenBlock && !b.IsGenesis() {
+	if !b.GenBlock && !b.IsGenesis() && conf.Config.BlockSyncMethod.Method == types.BlockSyncMethod_SQLDML.String() {
 		return nil
 	}
-
 	for curTx := 0; curTx < len(b.Transactions); curTx++ {
 		t := b.Transactions[curTx]
 		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
@@ -151,7 +155,6 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			if b.GenBlock {
 				continue
 			}
-
 			return err
 		}
 
@@ -159,10 +162,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			b.SysUpdate = true
 			t.SysUpdate = false
 		}
-		if err := sqldb.SetTransactionStatusBlockMsg(t.DbTransaction, t.BlockHeader.BlockId, t.TxResult, t.Hash()); err != nil {
-			t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("updating transaction status block id")
-			return err
-		}
+
 		if t.Notifications.Size() > 0 {
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}

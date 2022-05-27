@@ -73,7 +73,7 @@ const (
 	TaxesSize = `taxes_size`
 	// PriceTxSize is the size of a user's resource in the database
 	PriceTxSize = `price_tx_size`
-	// PriceCreateRate is new element rate, include table、contract、column、ecosystem、page、menu
+	// PriceCreateRate is new element rate, include table,contract,column,ecosystem,page,menu
 	PriceCreateRate = `price_create_rate`
 	// Test equals true or 1 if we have a test blockchain
 	Test = `test`

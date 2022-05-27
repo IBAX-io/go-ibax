@@ -61,7 +61,7 @@ func (t *Transaction) SmartContract() *SmartTransactionParser {
 }
 
 // UnmarshallTransaction is unmarshalling transaction
-func UnmarshallTransaction(buffer *bytes.Buffer, fillData bool) (*Transaction, error) {
+func UnmarshallTransaction(buffer *bytes.Buffer) (*Transaction, error) {
 	tx := &Transaction{}
 	if err := tx.Unmarshall(buffer); err != nil {
 		return nil, err

@@ -124,7 +124,7 @@ open:
 	}), &gorm.Config{
 		AllowGlobalUpdate: true, //allow global update
 		//PrepareStmt:       true,
-		Logger: logger.Default.LogMode(logger.Silent), // start Logger，show detail log
+		Logger: logger.Default.LogMode(logger.Silent), // start Logger, show detail log
 	})
 	//DBConn, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

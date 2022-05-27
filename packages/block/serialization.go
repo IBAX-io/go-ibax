@@ -27,7 +27,7 @@ func (b *Block) repeatMarshallBlock() error {
 	}
 
 	var nb = new(Block)
-	nb, err = UnmarshallBlock(bytes.NewBuffer(newBlockData), true)
+	nb, err = UnmarshallBlock(bytes.NewBuffer(newBlockData))
 	if err != nil {
 		return errors.Wrap(err, "parsing repeat block")
 	}
@@ -45,14 +45,14 @@ func MarshallBlock(opts ...types.BlockDataOption) ([]byte, error) {
 	return block.MarshallBlock(syspar.GetNodePrivKey())
 }
 
-func UnmarshallBlock(blockBuffer *bytes.Buffer, fillData bool) (*Block, error) {
+func UnmarshallBlock(blockBuffer *bytes.Buffer) (*Block, error) {
 	block := &types.BlockData{}
 	if err := block.UnmarshallBlock(blockBuffer.Bytes()); err != nil {
 		return nil, err
 	}
 	transactions := make([]*transaction.Transaction, 0)
 	for i := 0; i < len(block.TxFullData); i++ {
-		t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(block.TxFullData[i]), fillData)
+		t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(block.TxFullData[i]))
 		if err != nil {
 			if t != nil && t.Hash() != nil {
 				transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())

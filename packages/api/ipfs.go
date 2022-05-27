@@ -420,7 +420,7 @@ func getFileData(r *http.Request, prefix, key string) error {
 	//1.Read the amount of data stored in the last copy from the temporary file
 	totalBytes := make([]byte, 100)
 	count1, _ := file3.Read(totalBytes)     // Read the amount of data that has been copied into the array
-	totalStr := string(totalBytes[:count1]) // Get the number of reads from the array，-->string
+	totalStr := string(totalBytes[:count1]) // Get the number of reads from the array,-->string
 	total, _ := strconv.Atoi(totalStr)      //int
 	toltemp := 0
 	//2.

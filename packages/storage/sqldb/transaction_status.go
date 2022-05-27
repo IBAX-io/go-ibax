@@ -10,8 +10,6 @@ import (
 	"strings"
 
 	"gorm.io/gorm"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
 )
 
 // TransactionStatus is model
@@ -48,22 +46,6 @@ func (ts *TransactionStatus) UpdateBlockID(dbTx *DbTransaction, newBlockID int64
 type UpdateBlockMsg struct {
 	Hash []byte
 	Msg  string
-}
-
-//var updBlockMsg []UpdateBlockMsg
-
-// SetTransactionStatusBlockMsg is updating block msg
-func SetTransactionStatusBlockMsg(dbTx *DbTransaction, newBlockID int64, msg string, transactionHash []byte) error {
-	if len(msg) > 255 {
-		msg = msg[:255]
-	}
-	if !conf.Config.IsCLBMaster() {
-		//updBlockMsg = append(updBlockMsg, UpdateBlockMsg{Msg: msg, Hash: transactionHash})
-		return nil
-	}
-
-	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Updates(
-		map[string]any{"block_id": newBlockID, "error": msg}).Error
 }
 
 func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64, updBlockMsg []*UpdateBlockMsg) error {

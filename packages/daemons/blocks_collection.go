@@ -105,15 +105,10 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 				banNodePause(host, lastBlockID, lastBlockTime, *err2)
 			}
 		}(&err)
-		bl, err = block.ProcessBlockWherePrevFromBlockchainTable(rb, true)
+		bl, err = block.ProcessBlockByBinData(rb, true)
 		if err != nil {
 			d.logger.WithFields(log.Fields{"error": err, "type": consts.BlockError}).Error("processing block")
 			return err
-		}
-
-		if bl.PrevHeader == nil {
-			d.logger.WithFields(log.Fields{"type": consts.DBError}).Error("Getting info block previous header nil")
-			return errors.New("Getting info block previous header nil")
 		}
 
 		curBlock := &sqldb.InfoBlock{}
@@ -296,7 +291,7 @@ func getBlocks(ctx context.Context, host string, blockID, minCount int64) ([]*bl
 			break
 		}
 
-		bl, err := block.ProcessBlockWherePrevFromBlockchainTable(binaryBlock, true)
+		bl, err := block.ProcessBlockByBinData(binaryBlock, true)
 		if err != nil {
 			return nil, err
 		}

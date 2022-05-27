@@ -10,6 +10,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
+
+	"gorm.io/gorm"
+
 	"github.com/pkg/errors"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -23,14 +27,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// ProcessBlockWherePrevFromBlockchainTable is processing block with in table previous block
-func ProcessBlockWherePrevFromBlockchainTable(data []byte, checkSize bool) (*Block, error) {
+// ProcessBlockByBinData is processing block with in table previous block
+func ProcessBlockByBinData(data []byte, checkSize bool) (*Block, error) {
 	if checkSize && int64(len(data)) > syspar.GetMaxBlockSize() {
 		log.WithFields(log.Fields{"check_size": checkSize, "size": len(data), "max_size": syspar.GetMaxBlockSize(), "type": consts.ParameterExceeded}).Error("binary block size exceeds max block size")
 		return nil, types.ErrMaxBlockSize(syspar.GetMaxBlockSize(), len(data))
 	}
-
-	block, err := UnmarshallBlock(bytes.NewBuffer(data), true)
+	block, err := UnmarshallBlock(bytes.NewBuffer(data))
 	if err != nil {
 		return nil, errors.Wrap(types.ErrUnmarshallBlock, err.Error())
 	}
@@ -38,7 +41,9 @@ func ProcessBlockWherePrevFromBlockchainTable(data []byte, checkSize bool) (*Blo
 	if err != nil {
 		return nil, err
 	}
-
+	if block.PrevHeader == nil {
+		return nil, errors.New("block previous header nil")
+	}
 	return block, nil
 }
 
@@ -57,7 +62,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 	bl := &sqldb.BlockChain{}
 	err := bl.DeleteById(dbTx, blockID)
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
+		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		return err
 	}
 
@@ -135,7 +140,7 @@ func GetDataFromFirstBlock() (data *types.FirstBlock, ok bool) {
 		return
 	}
 
-	pb, err := UnmarshallBlock(bytes.NewBuffer(block.Data), true)
+	pb, err := UnmarshallBlock(bytes.NewBuffer(block.Data))
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.ParserError, "error": err}).Error("parsing data of first block")
 		return
@@ -185,4 +190,77 @@ func (b *Block) upsertInfoBlock(dbTx *sqldb.DbTransaction, block *sqldb.BlockCha
 	}
 
 	return nil
+}
+
+type AfterTxs struct {
+	UsedTx      [][]byte
+	Rts         []*sqldb.RollbackTx
+	Lts         []*sqldb.LogTransaction
+	UpdTxStatus []*sqldb.UpdateBlockMsg
+}
+
+func (b *Block) GenAfterTxs() *AfterTxs {
+	after := b.AfterTxs
+	playTx := &AfterTxs{
+		Rts:         make([]*sqldb.RollbackTx, len(after.Rts)),
+		Lts:         make([]*sqldb.LogTransaction, len(after.Txs)),
+		UpdTxStatus: make([]*sqldb.UpdateBlockMsg, len(after.Txs)),
+	}
+
+	for i := 0; i < len(after.Rts); i++ {
+		tx := after.Rts[i]
+		rt := new(sqldb.RollbackTx)
+		rt.BlockID = tx.BlockId
+		rt.NameTable = tx.NameTable
+		rt.Data = tx.Data
+		rt.TableID = tx.TableId
+		rt.TxHash = tx.TxHash
+		playTx.Rts[i] = rt
+	}
+
+	for i := 0; i < len(after.Txs); i++ {
+		tx := after.Txs[i]
+		playTx.UsedTx = append(playTx.UsedTx, tx.UsedTx)
+		lt := new(sqldb.LogTransaction)
+		lt.Block = tx.Lts.Block
+		lt.Hash = tx.Lts.Hash
+		lt.TxData = tx.Lts.TxData
+		lt.Timestamp = tx.Lts.Timestamp
+		lt.Address = tx.Lts.Address
+		lt.EcosystemID = tx.Lts.EcosystemId
+		lt.ContractName = tx.Lts.ContractName
+		playTx.Lts[i] = lt
+
+		u := new(sqldb.UpdateBlockMsg)
+		u.Hash = tx.UpdTxStatus.Hash
+		u.Msg = tx.UpdTxStatus.Msg
+		playTx.UpdTxStatus[i] = u
+	}
+	return playTx
+}
+
+func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
+	playTx := b.GenAfterTxs()
+	return sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
+		if !b.GenBlock && !b.IsGenesis() && conf.Config.BlockSyncMethod.Method == types.BlockSyncMethod_SQLDML.String() {
+			for i := 0; i < len(b.AfterTxs.TxExecutionSql); i++ {
+				if err := tx.Exec(string(b.AfterTxs.TxExecutionSql[i])).Error; err != nil {
+					return errors.Wrap(err, "batches exec sql for tx")
+				}
+			}
+		}
+		if err := sqldb.DeleteTransactions(tx, playTx.UsedTx); err != nil {
+			return errors.Wrap(err, "batches delete used transactions")
+		}
+		if err := sqldb.CreateLogTransactionBatches(tx, playTx.Lts); err != nil {
+			return errors.Wrap(err, "batches insert log_transactions")
+		}
+		if err := sqldb.CreateBatchesRollbackTx(tx, playTx.Rts); err != nil {
+			return errors.Wrap(err, "batches insert rollback tx")
+		}
+		if err := sqldb.UpdateBlockMsgBatches(tx, b.Header.BlockId, playTx.UpdTxStatus); err != nil {
+			return errors.Wrap(err, "batches update block msg transaction status")
+		}
+		return nil
+	})
 }

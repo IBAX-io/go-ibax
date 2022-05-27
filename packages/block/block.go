@@ -51,10 +51,11 @@ func (b *Block) limitMode() transaction.LimitMode {
 
 // InsertBlockWOForks is inserting blocks
 func InsertBlockWOForks(data []byte, genBlock, firstBlock bool) error {
-	block, err := ProcessBlockWherePrevFromBlockchainTable(data, !firstBlock)
+	block, err := ProcessBlockByBinData(data, !firstBlock)
 	if err != nil {
 		return err
 	}
+
 	block.GenBlock = genBlock
 	if err := block.Check(); err != nil {
 		return err

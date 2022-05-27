@@ -41,7 +41,7 @@ func ProcessQueueTransactionBatches(dbTx *sqldb.DbTransaction, qs []*sqldb.Queue
 
 	for i := 0; i < len(qs); i++ {
 		tx := &Transaction{}
-		tx, err = UnmarshallTransaction(bytes.NewBuffer(qs[i].Data), true)
+		tx, err = UnmarshallTransaction(bytes.NewBuffer(qs[i].Data))
 		if err != nil {
 			if tx != nil {
 				txBadChan <- badTxStruct{hash: tx.Hash(), msg: err.Error(), keyID: tx.KeyID()}

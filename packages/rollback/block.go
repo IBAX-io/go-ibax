@@ -22,7 +22,7 @@ var (
 
 // RollbackBlock is blocking rollback
 func RollbackBlock(data []byte) error {
-	bl, err := block.UnmarshallBlock(bytes.NewBuffer(data), true)
+	bl, err := block.UnmarshallBlock(bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func RollbackBlock(data []byte) error {
 		return err
 	}
 
-	bl, err = block.UnmarshallBlock(bytes.NewBuffer(b.Data), false)
+	bl, err = block.UnmarshallBlock(bytes.NewBuffer(b.Data))
 	if err != nil {
 		dbTx.Rollback()
 		return err
