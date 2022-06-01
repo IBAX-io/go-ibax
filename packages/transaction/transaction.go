@@ -84,6 +84,7 @@ func (tr *Transaction) WithOption(
 	tr.BlockHeader = blockHeader
 	tr.PreBlockHeader = preBlockHeader
 	tr.DbTransaction = dbTransaction
+	tr.DbTransaction.ExecutionSql = nil
 	tr.Rand = rand
 	tr.TxCheckLimits = txCheckLimits
 	tr.SqlDbSavePoint = sqlDbSavePoint
