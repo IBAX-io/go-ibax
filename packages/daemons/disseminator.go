@@ -121,7 +121,7 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 	}
 
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on getting remotes hosts")
+		log.WithError(err).Error("on getting remotes hosts")
 		return err
 	}
 	if len(banHosts) > 0 {

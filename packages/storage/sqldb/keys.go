@@ -63,11 +63,6 @@ func (m *Key) Get(db *DbTransaction, wallet int64) (bool, error) {
 	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
 }
 
-// GetTr is retrieving model from database
-func (m *Key) GetTr(db *DbTransaction, wallet int64) (bool, error) {
-	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
-}
-
 func (m *Key) AccountKeyID() int64 {
 	if m.accountKeyID == 0 {
 		m.accountKeyID = converter.StringToAddress(m.AccountID)

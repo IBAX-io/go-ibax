@@ -32,7 +32,7 @@ var generateKeysCmd = &cobra.Command{
 			filepath.Join(conf.Config.DirPathConf.KeysDir, consts.PublicKeyFilename),
 		)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Fatal("generating user keys")
+			log.WithError(err).Fatal("generating user keys")
 			return
 		}
 		_, _, err = createKeyPair(
@@ -40,7 +40,7 @@ var generateKeysCmd = &cobra.Command{
 			filepath.Join(conf.Config.DirPathConf.KeysDir, consts.NodePublicKeyFilename),
 		)
 		if err != nil {
-			log.WithFields(log.Fields{"error": err}).Fatal("generating node keys")
+			log.WithError(err).Fatal("generating node keys")
 			return
 		}
 		address := crypto.Address(publicKey)
@@ -69,7 +69,7 @@ func createFile(filename string, data []byte) error {
 func createKeyPair(privFilename, pubFilename string) (priv, pub []byte, err error) {
 	priv, pub, err = crypto.GenKeyPair()
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("generate keys")
+		log.WithError(err).Error("generate keys")
 		return
 	}
 

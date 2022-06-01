@@ -12,6 +12,7 @@ import (
 )
 
 func TestGetEcosystemScript(t *testing.T) {
-	str := fmt.Sprintf(GetFirstEcosystemScript(), -1744264011260937456)
-	os.WriteFile("/home/losaped/ecosystem_test.sql", []byte(str), 0777)
+	str := fmt.Sprintf(GetFirstEcosystemScript(SqlData{Wallet: -1744264011260937456}))
+	path, _ := os.Getwd()
+	os.WriteFile(path+"/eco.sql", []byte(str), 0777)
 }

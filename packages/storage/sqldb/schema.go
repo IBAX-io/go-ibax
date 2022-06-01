@@ -18,8 +18,8 @@ import (
 )
 
 // ExecSchemaEcosystem is executing ecosystem schema
-func ExecSchemaEcosystem(db *DbTransaction, id int, wallet int64, name string, founder, appID int64) error {
-	if id == 1 {
+func ExecSchemaEcosystem(db *DbTransaction, data migration.SqlData) error {
+	if data.Ecosystem == 1 {
 		q, err := migration.GetCommonEcosystemScript()
 		if err != nil {
 			return err
@@ -29,7 +29,7 @@ func ExecSchemaEcosystem(db *DbTransaction, id int, wallet int64, name string, f
 			return err
 		}
 	}
-	q, err := migration.GetEcosystemScript(id, wallet, name, founder, appID)
+	q, err := migration.GetEcosystemScript(data)
 	if err != nil {
 		return err
 	}
@@ -37,15 +37,15 @@ func ExecSchemaEcosystem(db *DbTransaction, id int, wallet int64, name string, f
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing ecosystem schema")
 		return err
 	}
-	if id == 1 {
-		q, err = migration.GetFirstEcosystemScript(wallet)
+	if data.Ecosystem == 1 {
+		q, err = migration.GetFirstEcosystemScript(data)
 		if err != nil {
 			return err
 		}
 		if err := db.ExecSql(q); err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing first ecosystem schema")
 		}
-		q, err = migration.GetFirstTableScript(id)
+		q, err = migration.GetFirstTableScript(data)
 		if err != nil {
 			return err
 		}

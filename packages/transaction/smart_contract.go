@@ -13,8 +13,10 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/pkg/errors"
@@ -56,6 +58,7 @@ func (s *SmartTransactionParser) Init(t *Transaction) error {
 	if s.GenBlock {
 		s.TimeLimit = syspar.GetMaxBlockGenerationTime()
 	}
+	s.Key = &sqldb.Key{}
 	return nil
 }
 
@@ -71,7 +74,12 @@ func (s *SmartTransactionParser) Validate() error {
 }
 
 func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
-	t.TxResult, err = s.CallContract(t.SqlDbSavePoint)
+	defer func() {
+		if s.Penalty {
+			t.TxResult.Code = pbgo.TxInvokeStatusCode_PENALTY
+		}
+	}()
+	t.TxResult.Result, err = s.CallContract(t.SqlDbSavePoint)
 	if err == nil && s.TxSmart != nil {
 		if s.Penalty {
 			if s.FlushRollback != nil {

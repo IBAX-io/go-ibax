@@ -55,7 +55,7 @@ func Disseminator(rw io.ReadWriter) error {
 	log.Debug("honorNodeID", honorNodeID)
 	n, err := syspar.GetNodeByPosition(honorNodeID)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on getting node by position")
+		log.WithError(err).Error("on getting node by position")
 		return err
 	}
 
@@ -71,7 +71,7 @@ func Disseminator(rw io.ReadWriter) error {
 		} else {
 			err := processBlock(buf, honorNodeID)
 			if err != nil {
-				log.WithFields(log.Fields{"error": err}).Error("on process block")
+				log.WithError(err).Error("on process block")
 				return err
 			}
 		}
@@ -80,14 +80,14 @@ func Disseminator(rw io.ReadWriter) error {
 	// get unknown transactions from received packet
 	needTx, err := getUnknownTransactions(buf)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on getting unknown txes")
+		log.WithError(err).Error("on getting unknown txes")
 		return err
 	}
 
 	// send the list of transactions which we want to get
 	err = (&network.DisHashResponse{Data: needTx}).Write(rw)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on sending neeeded tx list")
+		log.WithError(err).Error("on sending neeeded tx list")
 		return err
 	}
 
@@ -98,7 +98,7 @@ func Disseminator(rw io.ReadWriter) error {
 	// get this new transactions
 	txBodies, err := resieveTxBodies(rw)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on reading needed txes from disseminator")
+		log.WithError(err).Error("on reading needed txes from disseminator")
 		return err
 	}
 

@@ -21,6 +21,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/language"
+	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
@@ -418,7 +419,15 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 		return 0, logErrorDB(err, "generating next application id")
 	}
 
-	if err = sqldb.ExecSchemaEcosystem(sc.DbTransaction, int(id), wallet, name, converter.StrToInt64(sp.Value), appID); err != nil {
+	if err = sqldb.ExecSchemaEcosystem(sc.DbTransaction,
+		migration.SqlData{
+			Ecosystem: int(id),
+			Wallet:    wallet,
+			Name:      name,
+			Founder:   converter.StrToInt64(sp.Value),
+			AppID:     appID,
+			Account:   converter.AddressToString(wallet),
+		}); err != nil {
 		return 0, logErrorDB(err, "executing ecosystem schema")
 	}
 

@@ -53,7 +53,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 	)
 	candidateNodes, err = sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting candidate node list")
+		log.WithError(err).Error("getting candidate node list")
 		return err
 	}
 	currentCandidateNode, nodePosition := GetThisNodePosition(candidateNodes, prevBlock)
@@ -82,7 +82,6 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 	if err != nil {
 		return err
 	}
-	//trs, err := processTransactionsNew(d.logger, txs, done, st.Unix())
 	trs, err := processTransactions(d.logger, txs, done, st.Unix())
 	if err != nil {
 		return err

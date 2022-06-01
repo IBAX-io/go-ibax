@@ -41,7 +41,7 @@ func CreateContract(contractName string, keyID int64, params map[string]any,
 		},
 		Params: params,
 	}
-	txData, _, err := NewTransaction(sc, privateKey)
+	txData, _, err := NewTransactionInProc(sc, privateKey)
 	if err == nil {
 		rtx := &Transaction{}
 		if err = rtx.Unmarshall(bytes.NewBuffer(txData)); err == nil {

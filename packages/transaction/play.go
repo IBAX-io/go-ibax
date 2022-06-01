@@ -24,12 +24,10 @@ func (t *Transaction) GetLogger() *log.Entry {
 	return logger
 }
 
-func (t *Transaction) Play() (err error) {
-	err = t.Inner.Init(t)
-	if err != nil {
-		return
+func (t *Transaction) Play() error {
+	if err := t.Inner.Init(t); err != nil {
+		return err
 	}
-
 	return t.Inner.Action(t)
 }
 

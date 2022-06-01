@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"gorm.io/gorm"
 )
 
@@ -43,24 +44,32 @@ func (ts *TransactionStatus) UpdateBlockID(dbTx *DbTransaction, newBlockID int64
 	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("block_id", newBlockID).Error
 }
 
-type UpdateBlockMsg struct {
-	Hash []byte
-	Msg  string
-}
-
-func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64, updBlockMsg []*UpdateBlockMsg) error {
+func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64, updBlockMsg []*pbgo.TxResult) error {
 	if len(updBlockMsg) == 0 {
 		return nil
 	}
 	var (
-		upStr   string
-		hashArr [][]byte
+		upErrStr, upBlockIdStr string
+		hashArr                [][]byte
+		header                 = "UPDATE transactions_status SET"
+		colErr, colBlockId     = "error = CASE hash", "block_id = CASE hash"
 	)
+
 	for _, s := range updBlockMsg {
+		if s == nil {
+			continue
+		}
 		hashArr = append(hashArr, s.Hash)
-		upStr += fmt.Sprintf("WHEN decode('%x','hex') THEN '%s' ", s.Hash, strings.Replace(s.Msg, `'`, `''`, -1))
+		upErrStr += fmt.Sprintf("WHEN decode('%x','hex') THEN '%s' ", s.Hash, strings.Replace(s.Result, `'`, `''`, -1))
+		upBlockIdStr += fmt.Sprintf("WHEN decode('%x','hex') THEN %d ", s.Hash, newBlockID)
 	}
-	sqlStr := fmt.Sprintf("UPDATE transactions_status SET error = CASE hash %s END , block_id  = %d WHERE hash in(?)", upStr, newBlockID)
+	if len(hashArr) == 0 {
+		return nil
+	}
+	sqlStr := fmt.Sprintf("%s ", header)
+	sqlStr += fmt.Sprintf(" %s %s END,", colErr, upErrStr)
+	sqlStr += fmt.Sprintf(" %s %s END", colBlockId, upBlockIdStr)
+	sqlStr += fmt.Sprint(" WHERE hash in(?)")
 	return dbTx.Exec(sqlStr, hashArr).Error
 }
 
@@ -71,5 +80,5 @@ func (ts *TransactionStatus) SetError(dbTx *DbTransaction, errorText string, tra
 
 // UpdatePenalty is updating penalty
 func (ts *TransactionStatus) UpdatePenalty(dbTx *DbTransaction, transactionHash []byte) error {
-	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ? AND penalty = 0", transactionHash).Update("penalty", 1).Error
+	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ? AND penalty = 0", transactionHash).Update("penalty", pbgo.TxInvokeStatusCode_PENALTY).Error
 }

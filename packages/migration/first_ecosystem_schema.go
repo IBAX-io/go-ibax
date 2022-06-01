@@ -19,6 +19,7 @@ var sqlFirstEcosystemSchema = `
 		t.Column("type_emission", "bigint", {"default": "0"})
 		t.Column("type_withdraw", "bigint", {"default": "0"})
 		t.Column("control_mode", "bigint", {"default": "1"})
+		t.Column("digits", "bigint", {"default": "0"})
 	{{footer "primary"}}
 
 	{{head "1_platform_parameters"}}
@@ -168,6 +169,7 @@ var sqlFirstEcosystemCommon = `
 		t.Column("amount", "decimal(30)", {"default": "0"})
 		t.Column("value_detail", "jsonb", {"null": true})
 		t.Column("comment", "text", {"default": ""})
+		t.Column("status", "bigint", {"default": "0"})
 		t.Column("block_id", "bigint", {"default": "0"})
 		t.Column("txhash", "bytea", {"default": ""})
 		t.Column("created_at", "bigint", {"default": "0"})

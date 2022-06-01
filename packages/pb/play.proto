@@ -15,9 +15,9 @@ message AfterTxs {
 }
 
 message AfterTx {
-    bytes used_tx = 2;
-    LogTransaction lts = 4;
-    UpdateBlockMsg upd_tx_status = 5;
+    bytes used_tx = 1;
+    LogTransaction lts = 2;
+    pbgo.TxResult upd_tx_status = 3;
 }
 
 message RollbackTx {
@@ -37,10 +37,5 @@ message LogTransaction {
   int64 address = 5;
   int64 ecosystem_id = 6;
   string contract_name = 7;
-  pbgo.TxInvokeStatus invoke_status =8;
-}
-
-message UpdateBlockMsg {
-  bytes hash = 1;
-  string msg = 2;
+  pbgo.TxInvokeStatusCode invoke_status = 8;
 }

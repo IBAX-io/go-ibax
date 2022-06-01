@@ -48,7 +48,7 @@ func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*sqldb.Transaction, e
 		params["Id"] = c.ID
 		tx, err := dtx.createDelayTx(c.KeyID, c.HighRate, params)
 		if err != nil {
-			dtx.logger.WithFields(log.Fields{"error": err}).Debug("can't create transaction for delayed contract")
+			dtx.logger.WithError(err).Debug("can't create transaction for delayed contract")
 			return nil, err
 		}
 		txList = append(txList, tx)

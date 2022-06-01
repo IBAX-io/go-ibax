@@ -258,7 +258,7 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 		txTime = converter.StrToInt64(newTime)
 	}
 
-	data, txhash, err := transaction.NewTransaction(types.SmartTransaction{
+	data, txhash, err := transaction.NewTransactionInProc(types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(contract.ID),
 			EcosystemID: 1,

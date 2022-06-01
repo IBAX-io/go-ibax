@@ -8,17 +8,17 @@ package block
 import (
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/types"
-
 	"github.com/IBAX-io/go-ibax/packages/common/random"
+	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/notificator"
+	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -78,7 +78,7 @@ func (b *Block) PlaySafe() error {
 	return nil
 }
 
-func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
+func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (retErr error) {
 	afters := &types.AfterTxs{
 		Rts: make([]*types.RollbackTx, 0),
 		Txs: make([]*types.AfterTx, 0),
@@ -95,6 +95,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			b.TxFullData = processedTx
 		}
 		if err := b.AfterPlayTxs(dbTx); err != nil {
+			retErr = err
 			return
 		}
 	}()
@@ -108,16 +109,10 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
 		}
-
-		t.Notifications = notificator.NewQueue()
-		t.DbTransaction = dbTx
-		t.DbTransaction.ExecutionSql = nil
-		t.TxCheckLimits = limits
-		t.BlockHeader = b.Header
-		t.PreBlockHeader = b.PrevHeader
-		t.GenBlock = b.GenBlock
-		t.SqlDbSavePoint = curTx
-		t.Rand = rand.BytesSeed(t.Hash())
+		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, curTx)
+		if err != nil {
+			return err
+		}
 		err = t.Play()
 		if err != nil {
 			if err == transaction.ErrNetworkStopping {
@@ -171,10 +166,12 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			after    = &types.AfterTx{}
 			eco      int64
 			contract string
+			code     pbgo.TxInvokeStatusCode
 		)
 		if t.IsSmartContract() {
 			eco = t.SmartContract().TxSmart.EcosystemID
 			contract = t.SmartContract().TxContract.Name
+			code = t.TxResult.Code
 		}
 		after.UsedTx = t.Hash()
 		after.Lts = &types.LogTransaction{
@@ -185,11 +182,9 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
 			Address:      t.KeyID(),
 			EcosystemId:  eco,
 			ContractName: contract,
+			InvokeStatus: code,
 		}
-		after.UpdTxStatus = &types.UpdateBlockMsg{
-			Hash: t.Hash(),
-			Msg:  t.TxResult,
-		}
+		after.UpdTxStatus = t.TxResult
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
 		afters.TxExecutionSql = append(afters.TxExecutionSql, t.DbTransaction.ExecutionSql...)

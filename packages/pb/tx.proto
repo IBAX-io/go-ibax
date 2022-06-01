@@ -11,11 +11,11 @@ enum TransactionTypes{
   STOPNETWORK = 2;
 }
 
-// Transaction invoke status.
-enum TxInvokeStatus{
+// Transaction invoke status code.
+enum TxInvokeStatusCode{
   SUCCESS = 0;
   PENALTY = 1;
-  FAIL = 2;
+  FAILED = 2;
   PENDING = 3;
 }
 
@@ -33,4 +33,12 @@ message StopNetwork {
   int64 key_id = 1;
   int64 timestamp = 2;
   bytes stop_network_cert = 3;
+}
+
+message TxResult{
+  bytes hash = 1;
+  int64 block_id = 2;
+  TxInvokeStatusCode code = 3;
+  string result = 4;
+  string error = 5;
 }

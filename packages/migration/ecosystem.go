@@ -12,19 +12,20 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/IBAX-io/go-ibax/packages/converter"
-
 	"github.com/gobuffalo/fizz"
 	"github.com/gobuffalo/fizz/translators"
 )
 
 type SqlData struct {
-	Ecosystem int
-	Wallet    int64
-	Name      string
-	Founder   int64
-	AppID     int64
-	Account   string
+	Ecosystem   int
+	Wallet      int64
+	Name        string
+	Founder     int64
+	AppID       int64
+	Account     string
+	Digits      int64
+	TokenSymbol string
+	TokenName   string
 }
 
 var _ fizz.Translator = (*translators.Postgres)(nil)
@@ -145,16 +146,7 @@ func sqlTemplate(input []string, data any) (ret string, err error) {
 }
 
 // GetEcosystemScript returns script to create ecosystem
-func GetEcosystemScript(id int, wallet int64, name string, founder,
-	appID int64) (string, error) {
-	data := SqlData{
-		Ecosystem: id,
-		Wallet:    wallet,
-		Name:      name,
-		Founder:   founder,
-		AppID:     appID,
-		Account:   converter.AddressToString(wallet),
-	}
+func GetEcosystemScript(data SqlData) (string, error) {
 	return sqlTemplate([]string{
 		contractsDataSQL,
 		menuDataSQL,
@@ -167,7 +159,7 @@ func GetEcosystemScript(id int, wallet int64, name string, founder,
 }
 
 // GetFirstEcosystemScript returns script to update with additional data for first ecosystem
-func GetFirstEcosystemScript(wallet int64) (ret string, err error) {
+func GetFirstEcosystemScript(data SqlData) (ret string, err error) {
 	ret, err = sqlConvert([]string{
 		sqlFirstEcosystemSchema,
 	})
@@ -177,14 +169,14 @@ func GetFirstEcosystemScript(wallet int64) (ret string, err error) {
 	var out string
 	out, err = sqlTemplate([]string{
 		firstDelayedContractsDataSQL,
-	}, SqlData{Wallet: wallet})
+		firstEcosystemDataSQL,
+	}, data)
 	ret += out
 
 	scripts := []string{
 		firstEcosystemContractsSQL,
 		firstEcosystemPagesDataSQL,
 		firstEcosystemBlocksDataSQL,
-		firstEcosystemDataSQL,
 		platformParametersDataSQL,
 		firstTablesDataSQL,
 	}
@@ -193,10 +185,10 @@ func GetFirstEcosystemScript(wallet int64) (ret string, err error) {
 }
 
 // GetFirstTableScript returns script to update _tables for first ecosystem
-func GetFirstTableScript(ecosystem int) (string, error) {
+func GetFirstTableScript(data SqlData) (string, error) {
 	return sqlTemplate([]string{
 		tablesDataSQL,
-	}, SqlData{Ecosystem: ecosystem})
+	}, data)
 }
 
 // GetCommonEcosystemScript returns script with common tables

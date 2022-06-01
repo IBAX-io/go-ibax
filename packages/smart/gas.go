@@ -11,6 +11,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -118,10 +119,14 @@ func (f *FuelCategory) Fees() decimal.Decimal {
 	return value.Floor()
 }
 
-func (c Combustion) Detail() any {
+func (c Combustion) Detail(sum decimal.Decimal) any {
 	detail := types.NewMap()
+	combustion := sum.Mul(decimal.NewFromInt(c.Percent)).Div(decimal.New(100, 0)).Floor()
 	detail.Set("flag", c.Flag)
 	detail.Set("percent", c.Percent)
+	detail.Set("before", sum)
+	detail.Set("value", combustion)
+	detail.Set("after", sum.Sub(combustion))
 	b, _ := JSONEncode(detail)
 	s, _ := JSONDecode(b)
 	return s
@@ -176,8 +181,15 @@ func (pay *PaymentInfo) Detail() any {
 	detail.Set("payment_type", pay.PaymentType.String())
 	detail.Set("fuel_rate", pay.FuelRate)
 	detail.Set("token_symbol", pay.Ecosystem.TokenSymbol)
+	b, _ := JSONEncode(detail)
+	s, _ := JSONDecode(b)
+	return s
+}
+
+func (pay *PaymentInfo) DetailCombustion(sum decimal.Decimal) any {
+	detail := types.NewMap()
 	if !pay.Indirect && pay.TokenEco != consts.DefaultTokenEcosystem {
-		detail.Set("combustion", pay.Combustion.Detail())
+		detail.Set("combustion", pay.Combustion.Detail(sum))
 	}
 	b, _ := JSONEncode(detail)
 	s, _ := JSONDecode(b)
@@ -240,8 +252,10 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	sc.Penalty = errNeedPay
 	placeholder := `taxes for execution of %s contract`
 	comment := fmt.Sprintf(placeholder, sc.TxContract.Name)
+	status := pbgo.TxInvokeStatusCode_SUCCESS
 	if errNeedPay {
 		comment = "(error)" + comment
+		status = pbgo.TxInvokeStatusCode_PENALTY
 		ts := sqldb.TransactionStatus{}
 		if err := ts.UpdatePenalty(sc.DbTransaction, sc.Hash); err != nil {
 			return err
@@ -256,32 +270,32 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 			return errTaxes
 		}
 		if pay.Indirect {
-			if err := sc.payTaxes(pay, money, GasScenesType_Direct, comment); err != nil {
+			if err := sc.payTaxes(pay, money, GasScenesType_Direct, comment, status); err != nil {
 				return err
 			}
-		} else {
-			if pay.Combustion.Flag == 2 && pay.TokenEco != consts.DefaultTokenEcosystem {
-				combustion := money.Mul(decimal.New(pay.Combustion.Percent, 0)).Div(decimal.New(100, 0)).Floor()
-				if err := sc.payTaxes(pay, combustion, GasScenesType_Combustion, comment); err != nil {
-					return err
-				}
-				money = money.Sub(combustion)
-			}
-			taxes := money.Mul(decimal.New(pay.TaxesSize, 0)).Div(decimal.New(100, 0)).Floor()
-			if err := sc.payTaxes(pay, money.Sub(taxes), GasScenesType_Reward, comment); err != nil {
+			continue
+		}
+		if pay.Combustion.Flag == 2 && pay.TokenEco != consts.DefaultTokenEcosystem {
+			if err := sc.payTaxes(pay, money, GasScenesType_Combustion, comment, status); err != nil {
 				return err
 			}
-			if err := sc.payTaxes(pay, taxes, GasScenesType_Taxes, comment); err != nil {
-				return err
-			}
+			combustion := money.Mul(decimal.NewFromInt(pay.Combustion.Percent)).Div(decimal.New(100, 0)).Floor()
+			money = money.Sub(combustion)
+		}
+		taxes := money.Mul(decimal.NewFromInt(pay.TaxesSize)).Div(decimal.New(100, 0)).Floor()
+		if err := sc.payTaxes(pay, money.Sub(taxes), GasScenesType_Reward, comment, status); err != nil {
+			return err
+		}
+		if err := sc.payTaxes(pay, taxes, GasScenesType_Taxes, comment, status); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (sc *SmartContract) accountBalanceSingle(db *sqldb.DbTransaction, id, eco int64) (decimal.Decimal, error) {
+func (sc *SmartContract) accountBalanceSingle(eco, id int64) (decimal.Decimal, error) {
 	key := &sqldb.Key{}
-	_, err := key.SetTablePrefix(eco).GetTr(db, id)
+	_, err := key.SetTablePrefix(eco).Get(sc.DbTransaction, id)
 	if err != nil {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": id}).Error("get key balance")
 		return decimal.Zero, err
@@ -290,7 +304,10 @@ func (sc *SmartContract) accountBalanceSingle(db *sqldb.DbTransaction, id, eco i
 	return balance, nil
 }
 
-func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasScenesType, comment string) error {
+func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasScenesType, comment string, status pbgo.TxInvokeStatusCode) error {
+	if sum.IsZero() {
+		return nil
+	}
 	var toID int64
 	switch t {
 	case GasScenesType_Reward, GasScenesType_Direct:
@@ -303,9 +320,6 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 	if err := sc.hasExitKeyID(pay.TokenEco, toID); err != nil {
 		return err
 	}
-	if sum.IsZero() {
-		return nil
-	}
 	var (
 		values *types.Map
 		fromIDBalance,
@@ -313,7 +327,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 		err error
 	)
 	if pay.FromID == toID {
-		if fromIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, pay.FromID, pay.TokenEco); err != nil {
+		if fromIDBalance, err = sc.accountBalanceSingle(pay.TokenEco, pay.FromID); err != nil {
 			return err
 		}
 		toIDBalance = fromIDBalance
@@ -334,10 +348,10 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 			})); err != nil {
 			return err
 		}
-		if fromIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, pay.FromID, pay.TokenEco); err != nil {
+		if fromIDBalance, err = sc.accountBalanceSingle(pay.TokenEco, pay.FromID); err != nil {
 			return err
 		}
-		if toIDBalance, err = sc.accountBalanceSingle(sc.DbTransaction, toID, pay.TokenEco); err != nil {
+		if toIDBalance, err = sc.accountBalanceSingle(pay.TokenEco, toID); err != nil {
 			return err
 		}
 	}
@@ -349,6 +363,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 		"recipient_balance": toIDBalance,
 		"amount":            sum,
 		"comment":           comment,
+		"status":            int64(status),
 		"block_id":          sc.BlockHeader.BlockId,
 		"txhash":            sc.Hash,
 		"ecosystem":         pay.TokenEco,
@@ -358,7 +373,11 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 	if t == GasScenesType_Reward || t == GasScenesType_Direct {
 		values.Set("value_detail", pay.Detail())
 	}
-
+	if t == GasScenesType_Combustion {
+		combustion := sum.Mul(decimal.NewFromInt(pay.Combustion.Percent)).Div(decimal.New(100, 0)).Floor()
+		values.Set("amount", combustion)
+		values.Set("value_detail", pay.DetailCombustion(sum))
+	}
 	_, _, err = sc.insert(values.Keys(), values.Values(), `1_history`)
 	if err != nil {
 		return err

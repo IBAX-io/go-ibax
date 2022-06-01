@@ -90,7 +90,7 @@ func (b *SQLQueryBuilder) Prepare() error {
 	}
 
 	if err := b.normalizeValues(); err != nil {
-		b.WithFields(log.Fields{"error": err}).Error("on normalize field values")
+		b.WithError(err).Error("on normalize field values")
 		return err
 	}
 
@@ -120,13 +120,13 @@ func (b *SQLQueryBuilder) GetSelectExpr() (string, error) {
 
 	fieldsExpr, err := b.GetSQLSelectFieldsExpr()
 	if err != nil {
-		b.WithFields(log.Fields{"error": err}).Error("on getting sql fields statement")
+		b.WithError(err).Error("on getting sql fields statement")
 		return "", err
 	}
 
 	whereExpr, err := b.GetSQLWhereExpr()
 	if err != nil {
-		b.WithFields(log.Fields{"error": err}).Error("on getting sql where statement")
+		b.WithError(err).Error("on getting sql where statement")
 		return "", err
 	}
 	return fmt.Sprintf(`SELECT %s FROM "%s" %s`, fieldsExpr, b.Table, whereExpr), nil

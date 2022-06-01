@@ -17,6 +17,7 @@ type LogTransaction struct {
 	Timestamp    int64  `gorm:"not null"`
 	Address      int64  `gorm:"not null"`
 	EcosystemID  int64  `gorm:"not null"`
+	Status       int64  `gorm:"not null"`
 	ContractName string `gorm:"not null"`
 }
 

@@ -27,7 +27,7 @@ func InitialLoad(logger *log.Entry) error {
 		logger.Debug("start first block loading")
 
 		if err := firstLoad(logger); err != nil {
-			logger.WithFields(log.Fields{"error": err}).Error("cant load first block form file or host")
+			logger.WithError(err).Error("cant load first block form file or host")
 			return err
 		}
 

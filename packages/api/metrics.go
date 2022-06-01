@@ -123,7 +123,7 @@ func (m Mode) ecosysCountHandler(w http.ResponseWriter, r *http.Request) {
 	ids, _, err := m.EcosystemGetter.GetEcosystemLookup()
 	if err != nil {
 		logger := getLogger(r)
-		logger.WithFields(log.Fields{"error": err}).Error("on getting ecosystem count")
+		logger.WithError(err).Error("on getting ecosystem count")
 		errorResponse(w, err, http.StatusInternalServerError)
 		return
 	}

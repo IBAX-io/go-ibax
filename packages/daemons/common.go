@@ -180,14 +180,13 @@ func Ntp_Work(ctx context.Context) {
 }
 
 func generateProcessBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) error {
-	//blockBin, err := generateNextBlockNew(blockHeader, prevBlock, trs)
 	blockBin, err := generateNextBlock(blockHeader, prevBlock, trs)
 	if err != nil {
 		return err
 	}
 	err = block.InsertBlockWOForks(blockBin, true, false)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on inserting new block")
+		log.WithError(err).Error("on inserting new block")
 		return err
 	}
 	log.WithFields(log.Fields{"block": blockHeader.String(), "type": consts.SyncProcess}).Debug("Generated block ID")
@@ -200,7 +199,7 @@ func GetRemoteGoodHosts() (hosts []string, err error) {
 	}
 	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting candidate node list")
+		log.WithError(err).Error("getting candidate node list")
 		return
 	}
 	for _, node := range candidateNodes {

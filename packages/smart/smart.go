@@ -556,7 +556,6 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 		return ``, err
 	}
 
-	sc.Key = &sqldb.Key{}
 	if err = sc.checkTxSign(); err != nil {
 		return retError(err)
 	}
@@ -565,7 +564,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 	if needPayment {
 		err = sc.prepareMultiPay()
 		if err != nil {
-			logger.WithFields(log.Fields{"error": err}).Error("prepare multi")
+			logger.WithError(err).Error("prepare multi")
 			return retError(err)
 		}
 	}
@@ -634,17 +633,17 @@ lp:
 	if err != nil {
 		sc.RollBackTx = nil
 		sc.DbTransaction.ExecutionSql = nil
-		if ierr := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); ierr != nil {
-			return retError(ierr)
+		if err := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); err != nil {
+			return retError(err)
 		}
 		if needPayment {
-			if ierr := sc.payContract(true); ierr != nil {
+			if err := sc.payContract(true); err != nil {
 				sc.RollBackTx = nil
 				sc.DbTransaction.ExecutionSql = nil
-				if yerr := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); yerr != nil {
-					return retError(yerr)
+				if err := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); err != nil {
+					return retError(err)
 				}
-				return ierr.Error(), nil
+				return err.Error(), nil
 			}
 			return err.Error(), nil
 		}
@@ -652,8 +651,8 @@ lp:
 	}
 
 	if needPayment {
-		if ierr := sc.payContract(false); ierr != nil {
-			err = ierr
+		if errPay := sc.payContract(false); errPay != nil {
+			err = errPay
 			goto lp
 		}
 	}

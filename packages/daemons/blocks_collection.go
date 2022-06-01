@@ -52,7 +52,7 @@ func blocksCollection(ctx context.Context, d *daemon) (err error) {
 
 	host, maxBlockID, err := getHostWithMaxID(ctx, d.logger)
 	if err != nil {
-		d.logger.WithFields(log.Fields{"error": err}).Warn("on checking best host")
+		d.logger.WithError(err).Warn("on checking best host")
 		return err
 	}
 
@@ -189,7 +189,7 @@ func banNodePause(host string, blockID, blockTime int64, err error) {
 
 	n, err := syspar.GetNodeByHost(host)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting node by host")
+		log.WithError(err).Error("getting node by host")
 		return
 	}
 
@@ -206,7 +206,7 @@ func getHostWithMaxID(ctx context.Context, logger *log.Entry) (host string, maxB
 	hosts, err := selectMode.GetHostWithMaxID()
 
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("on filtering banned hosts")
+		logger.WithError(err).Error("on filtering banned hosts")
 	}
 
 	host, maxBlockID, err = tcpclient.HostWithMaxBlock(ctx, hosts)

@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/migration"
+
 	"github.com/pkg/errors"
 
 	"github.com/vmihailenco/msgpack/v5"
@@ -62,7 +64,17 @@ func (f *FirstBlockParser) Action(t *Transaction) error {
 	data := f.Data
 	keyID := crypto.Address(data.PublicKey)
 	nodeKeyID := crypto.Address(data.NodePublicKey)
-	err := sqldb.ExecSchemaEcosystem(t.DbTransaction, firstEcosystemID, keyID, ``, keyID, firstAppID)
+	err := sqldb.ExecSchemaEcosystem(t.DbTransaction, migration.SqlData{
+		Ecosystem:   firstEcosystemID,
+		Wallet:      keyID,
+		Name:        consts.DefaultEcosystemName,
+		Founder:     keyID,
+		AppID:       firstAppID,
+		Account:     converter.AddressToString(keyID),
+		Digits:      consts.MoneyDigits,
+		TokenSymbol: consts.DefaultTokenSymbol,
+		TokenName:   consts.DefaultTokenName,
+	})
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing ecosystem schema")
 		return err

@@ -58,7 +58,7 @@ func NewInternalTransaction(smartTx types.SmartTransaction, privateKey []byte) (
 	return newTransaction(smartTx, privateKey, true)
 }
 
-func NewTransaction(smartTx types.SmartTransaction, privateKey []byte) (data, hash []byte, err error) {
+func NewTransactionInProc(smartTx types.SmartTransaction, privateKey []byte) (data, hash []byte, err error) {
 	return newTransaction(smartTx, privateKey, false)
 }
 

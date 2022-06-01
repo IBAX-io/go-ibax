@@ -27,7 +27,7 @@ func getTxData(r *http.Request, key string) ([]byte, error) {
 
 	file, _, err := r.FormFile(key)
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("request.FormFile")
+		logger.WithError(err).Error("request.FormFile")
 		return nil, err
 	}
 	defer file.Close()

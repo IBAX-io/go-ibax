@@ -93,7 +93,7 @@ func Start() {
 
 	if sqldb.DBConn != nil {
 		if err := sqldb.UpdateSchema(); err != nil {
-			log.WithFields(log.Fields{"error": err}).Error("on running update migrations")
+			log.WithError(err).Error("on running update migrations")
 			exitErr(1)
 		}
 		candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))

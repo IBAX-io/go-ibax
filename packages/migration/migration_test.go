@@ -34,7 +34,7 @@ func TestMockMigration(t *testing.T) {
 
 	appVer := "0.0.2"
 
-	err = migrate(createDBMock("0"), appVer, []*migration{{"error version", ""}})
+	err = migrate(createDBMock("0"), appVer, []*migration{{version: "error version", data: ""}})
 	if err.Error() != "Wrong version 0" {
 		t.Error(err)
 	}
@@ -43,8 +43,8 @@ func TestMockMigration(t *testing.T) {
 	err = migrate(
 		db, appVer,
 		[]*migration{
-			{"0.0.1", ""},
-			{"0.0.2", ""},
+			{version: "0.0.1", data: ""},
+			{version: "0.0.2", data: ""},
 		},
 	)
 	if err != nil {
@@ -56,7 +56,7 @@ func TestMockMigration(t *testing.T) {
 
 	db = createDBMock("0.0.2")
 	err = migrate(db, appVer, []*migration{
-		{"0.0.3", ""},
+		{version: "0.0.3", data: ""},
 	})
 	if err != nil {
 		t.Error(err)

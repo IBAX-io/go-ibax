@@ -404,7 +404,7 @@ func getFileData(r *http.Request, prefix, key string) error {
 
 	fileByte, _, err := r.FormFile(key)
 	if err != nil {
-		logger.WithFields(log.Fields{"error": err}).Error("request.FormFile")
+		logger.WithError(err).Error("request.FormFile")
 		return err
 	}
 	defer fileByte.Close()

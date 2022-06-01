@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"math/rand"
 
+	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/shopspring/decimal"
@@ -24,7 +25,7 @@ type Transaction struct {
 	DbTransaction  *sqldb.DbTransaction
 	Rand           *rand.Rand
 	TxCheckLimits  *Limits
-	TxResult       string
+	TxResult       *pbgo.TxResult
 	SqlDbSavePoint int
 	FullData       []byte // full transaction, with type and data
 	Inner          TransactionCaller
@@ -67,4 +68,39 @@ func UnmarshallTransaction(buffer *bytes.Buffer) (*Transaction, error) {
 		return nil, err
 	}
 	return tx, nil
+}
+
+func (tr *Transaction) WithOption(
+	notifications types.Notifications,
+	genBlock bool,
+	blockHeader, preBlockHeader *types.BlockHeader,
+	dbTransaction *sqldb.DbTransaction,
+	rand *rand.Rand,
+	txCheckLimits *Limits,
+	sqlDbSavePoint int,
+	opts ...TransactionOption) error {
+	tr.Notifications = notifications
+	tr.GenBlock = genBlock
+	tr.BlockHeader = blockHeader
+	tr.PreBlockHeader = preBlockHeader
+	tr.DbTransaction = dbTransaction
+	tr.Rand = rand
+	tr.TxCheckLimits = txCheckLimits
+	tr.SqlDbSavePoint = sqlDbSavePoint
+	tr.TxResult = &pbgo.TxResult{Hash: tr.Hash()}
+	return tr.Apply(opts...)
+}
+
+type TransactionOption func(b *Transaction) error
+
+func (tr *Transaction) Apply(opts ...TransactionOption) error {
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		if err := opt(tr); err != nil {
+			return err
+		}
+	}
+	return nil
 }

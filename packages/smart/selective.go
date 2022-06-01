@@ -61,7 +61,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	if exists {
 		selectQuery, err := sqlBuilder.GetSelectExpr()
 		if err != nil {
-			logger.WithFields(log.Fields{"error": err}).Error("on getting sql select statement")
+			logger.WithError(err).Error("on getting sql select statement")
 			return 0, "", err
 		}
 
@@ -92,19 +92,19 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		var err error
 		rollbackInfoStr, err = sqlBuilder.GenerateRollBackInfoString(logData)
 		if err != nil {
-			logger.WithFields(log.Fields{"error": err}).Error("on generate rollback info string for update")
+			logger.WithError(err).Error("on generate rollback info string for update")
 			return 0, "", err
 		}
 
 		updateExpr, err := sqlBuilder.GetSQLUpdateExpr(logData)
 		if err != nil {
-			logger.WithFields(log.Fields{"error": err}).Error("on getting update expression for update")
+			logger.WithError(err).Error("on getting update expression for update")
 			return 0, "", err
 		}
 
 		whereExpr, err := sqlBuilder.GetSQLWhereExpr()
 		if err != nil {
-			logger.WithFields(log.Fields{"error": err}).Error("on getting where expression for update")
+			logger.WithError(err).Error("on getting where expression for update")
 			return 0, "", err
 		}
 		if !sc.CLB {
@@ -127,7 +127,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 
 		insertQuery, err := sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
 		if err != nil {
-			logger.WithFields(log.Fields{"error": err}).Error("on build insert query")
+			logger.WithError(err).Error("on build insert query")
 			return 0, "", err
 		}
 

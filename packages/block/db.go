@@ -10,21 +10,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/conf"
-
-	"gorm.io/gorm"
-
-	"github.com/pkg/errors"
-
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 // ProcessBlockByBinData is processing block with in table previous block
@@ -200,7 +198,7 @@ type AfterTxs struct {
 	UsedTx      [][]byte
 	Rts         []*sqldb.RollbackTx
 	Lts         []*sqldb.LogTransaction
-	UpdTxStatus []*sqldb.UpdateBlockMsg
+	UpdTxStatus []*pbgo.TxResult
 }
 
 func (b *Block) GenAfterTxs() *AfterTxs {
@@ -208,7 +206,7 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 	playTx := &AfterTxs{
 		Rts:         make([]*sqldb.RollbackTx, len(after.Rts)),
 		Lts:         make([]*sqldb.LogTransaction, len(after.Txs)),
-		UpdTxStatus: make([]*sqldb.UpdateBlockMsg, len(after.Txs)),
+		UpdTxStatus: make([]*pbgo.TxResult, len(after.Txs)),
 	}
 
 	for i := 0; i < len(after.Rts); i++ {
@@ -233,11 +231,11 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 		lt.Address = tx.Lts.Address
 		lt.EcosystemID = tx.Lts.EcosystemId
 		lt.ContractName = tx.Lts.ContractName
+		lt.Status = int64(tx.Lts.InvokeStatus)
 		playTx.Lts[i] = lt
 
-		u := new(sqldb.UpdateBlockMsg)
-		u.Hash = tx.UpdTxStatus.Hash
-		u.Msg = tx.UpdTxStatus.Msg
+		u := new(pbgo.TxResult)
+		u = tx.UpdTxStatus
 		playTx.UpdTxStatus[i] = u
 	}
 	return playTx
@@ -261,6 +259,9 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 		}
 		if err := sqldb.CreateBatchesRollbackTx(tx, playTx.Rts); err != nil {
 			return errors.Wrap(err, "batches insert rollback tx")
+		}
+		if !b.GenBlock {
+			return nil
 		}
 		if err := sqldb.UpdateBlockMsgBatches(tx, b.Header.BlockId, playTx.UpdTxStatus); err != nil {
 			return errors.Wrap(err, "batches update block msg transaction status")

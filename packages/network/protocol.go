@@ -114,7 +114,7 @@ type GetBodyResponse struct {
 func (resp *GetBodyResponse) Read(r io.Reader) error {
 	slice, err := ReadSlice(r)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on reading GetBodyResponse")
+		log.WithError(err).Error("on reading GetBodyResponse")
 		return err
 	}
 
@@ -173,7 +173,7 @@ type DisRequest struct {
 func (req *DisRequest) Read(r io.Reader) error {
 	slice, err := ReadSlice(r)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on reading disseminator request")
+		log.WithError(err).Error("on reading disseminator request")
 		return err
 	}
 
@@ -184,7 +184,7 @@ func (req *DisRequest) Read(r io.Reader) error {
 func (req *DisRequest) Write(w io.Writer) error {
 	err := writeSlice(w, req.Data)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on sending disseminator request")
+		log.WithError(err).Error("on sending disseminator request")
 	}
 
 	return err
@@ -394,7 +394,7 @@ type CandidateNodeVotingRequest struct {
 func (req *CandidateNodeVotingRequest) Read(r io.Reader) error {
 	slice, err := ReadSlice(r)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on reading disseminator request")
+		log.WithError(err).Error("on reading disseminator request")
 		return err
 	}
 
@@ -405,7 +405,7 @@ func (req *CandidateNodeVotingRequest) Read(r io.Reader) error {
 func (req *CandidateNodeVotingRequest) Write(w io.Writer) error {
 	err := writeSlice(w, req.Data)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on sending disseminator request")
+		log.WithError(err).Error("on sending disseminator request")
 	}
 
 	return err
@@ -418,7 +418,7 @@ type CandidateNodeVotingResponse struct {
 func (resp *CandidateNodeVotingResponse) Read(r io.Reader) error {
 	slice, err := ReadSlice(r)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on reading CandidateNodeVotingResponse")
+		log.WithError(err).Error("on reading CandidateNodeVotingResponse")
 		return err
 	}
 
@@ -436,7 +436,7 @@ type BroadcastNodeConnInfoRequest struct {
 func (req *BroadcastNodeConnInfoRequest) Read(r io.Reader) error {
 	slice, err := ReadSlice(r)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on reading disseminator request")
+		log.WithError(err).Error("on reading disseminator request")
 		return err
 	}
 
@@ -447,7 +447,7 @@ func (req *BroadcastNodeConnInfoRequest) Read(r io.Reader) error {
 func (req *BroadcastNodeConnInfoRequest) Write(w io.Writer) error {
 	err := writeSlice(w, req.Data)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on sending disseminator request")
+		log.WithError(err).Error("on sending disseminator request")
 	}
 
 	return err
@@ -460,7 +460,7 @@ type BroadcastNodeConnInfoResponse struct {
 func (resp *BroadcastNodeConnInfoResponse) Read(r io.Reader) error {
 	slice, err := ReadSlice(r)
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on reading CandidateNodeVotingResponse")
+		log.WithError(err).Error("on reading CandidateNodeVotingResponse")
 		return err
 	}
 

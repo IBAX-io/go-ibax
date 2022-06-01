@@ -26,7 +26,7 @@ func (honorNodeMode *HonorNodeMode) GetHostWithMaxID() ([]string, error) {
 	nbs := node.GetNodesBanService()
 	hosts, err := nbs.FilterBannedHosts(syspar.GetRemoteHosts())
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("on filtering banned hosts")
+		log.WithError(err).Error("on filtering banned hosts")
 		return nil, err
 	}
 	return hosts, nil
@@ -41,7 +41,7 @@ func (candidateNodeMode *CandidateNodeMode) GetThisNodePosition() (int64, error)
 func (candidateNodeMode *CandidateNodeMode) GetHostWithMaxID() ([]string, error) {
 	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting candidate node list")
+		log.WithError(err).Error("getting candidate node list")
 		return nil, err
 	}
 	hosts := make([]string, len(candidateNodes))
@@ -92,7 +92,7 @@ func GetCandidateNodes() ([]sqldb.CandidateNode, error) {
 	}
 	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
-		log.WithFields(log.Fields{"error": err}).Error("getting candidate node error")
+		log.WithError(err).Error("getting candidate node error")
 		return nil, err
 	}
 	ret := make([]sqldb.CandidateNode, 0)
