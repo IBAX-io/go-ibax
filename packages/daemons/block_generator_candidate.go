@@ -19,7 +19,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/protocols"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -28,7 +27,9 @@ import (
 )
 
 func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
-	d.sleepTime = time.Second
+	defer func() {
+		d.sleepTime = syspar.GetMaxBlockTimeDuration()
+	}()
 	if node.IsNodePaused() {
 		return nil
 	}
@@ -62,27 +63,19 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		d.logger.WithFields(log.Fields{"type": consts.JustWaiting, "error": err}).Debug("we are not honor node, sleep for 10 seconds")
 		return nil
 	}
-	btc := protocols.NewBlockTimeCounter()
 	st := time.Now()
-
 	dtx := DelayedTx{
 		privateKey: NodePrivateKey,
 		publicKey:  NodePublicKey,
 		logger:     d.logger,
 		time:       st.Unix(),
 	}
-
-	_, endTime, err := btc.RangeByTime(st)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.TimeCalcError, "error": err}).Error("on getting end time of generation")
-		return err
-	}
-	done := time.After(endTime.Sub(st))
 	txs, err := dtx.RunForDelayBlockID(prevBlock.BlockID + 1)
 	if err != nil {
 		return err
 	}
-	trs, err := processTransactions(d.logger, txs, done, st.Unix())
+
+	trs, err := processTransactions(d.logger, txs, st)
 	if err != nil {
 		return err
 	}

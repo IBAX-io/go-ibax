@@ -505,6 +505,9 @@ func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 	if sc.TxSmart.SignedBy != 0 {
 		var isNode bool
 		signedBy = sc.TxSmart.SignedBy
+		if syspar.IsCandidateNodeMode() {
+			return signedBy, nil
+		}
 		honorNodes := syspar.GetNodes()
 		if !builtinContract[sc.TxContract.Name] {
 			return 0, errDelayedContract

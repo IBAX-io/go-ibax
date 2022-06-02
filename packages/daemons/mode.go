@@ -63,7 +63,7 @@ func (s *SelectModel) GetHostWithMaxID() ([]string, error) {
 }
 
 func (s SelectModel) GetWorkMode() Model {
-	if syspar.GetRunModel() == consts.HonorNodeMode {
+	if syspar.IsHonorNodeMode() {
 		return &HonorNodeMode{} //1
 	}
 	return &CandidateNodeMode{} //2

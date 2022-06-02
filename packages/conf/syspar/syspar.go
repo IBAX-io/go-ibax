@@ -311,7 +311,7 @@ func GetNodeByHost(host string) (HonorNode, error) {
 func GetNodeHostByPosition(position int64) (string, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
-	if GetRunModel() == consts.CandidateNodeMode {
+	if IsCandidateNodeMode() {
 		candidateNode := &sqldb.CandidateNode{}
 		err := candidateNode.GetCandidateNodeById(position)
 		if err != nil {
@@ -337,7 +337,7 @@ func GetNodeHostByPosition(position int64) (string, error) {
 func GetNodePublicKeyByPosition(position int64) ([]byte, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
-	if GetRunModel() == consts.CandidateNodeMode {
+	if IsCandidateNodeMode() {
 		candidateNode := &sqldb.CandidateNode{}
 		err := candidateNode.GetCandidateNodeById(position)
 		if err != nil {
@@ -437,6 +437,16 @@ func GetMaxBlockGenerationTime() int64 {
 	return converter.StrToInt64(SysString(MaxBlockGenerationTime))
 }
 
+// GetGapsBetweenBlocks is returns gaps between blocks
+func GetGapsBetweenBlocks() int64 {
+	return converter.StrToInt64(SysString(GapsBetweenBlocks))
+}
+
+//GetMaxBlockTimeDuration return max block time duration
+func GetMaxBlockTimeDuration() time.Duration {
+	return time.Millisecond*time.Duration(GetMaxBlockGenerationTime()) + time.Second*time.Duration(GetGapsBetweenBlocks())
+}
+
 // GetMaxTxSize is returns max tx size
 func GetMaxTxSize() int64 {
 	return converter.StrToInt64(SysString(MaxTxSize))
@@ -445,11 +455,6 @@ func GetMaxTxSize() int64 {
 // GetMaxTxTextSize is returns max tx text size
 func GetMaxForsignSize() int64 {
 	return converter.StrToInt64(SysString(MaxForsignSize))
-}
-
-// GetGapsBetweenBlocks is returns gaps between blocks
-func GetGapsBetweenBlocks() int64 {
-	return converter.StrToInt64(SysString(GapsBetweenBlocks))
 }
 
 // GetMaxTxCount is returns max tx count
@@ -646,6 +651,10 @@ func SetRunModel(setVal uint8) {
 	runModel = setVal
 }
 
-func GetRunModel() uint8 {
-	return runModel
+func IsHonorNodeMode() bool {
+	return runModel == consts.HonorNodeMode
+}
+
+func IsCandidateNodeMode() bool {
+	return runModel == consts.CandidateNodeMode
 }

@@ -194,7 +194,7 @@ func generateProcessBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byt
 }
 
 func GetRemoteGoodHosts() (hosts []string, err error) {
-	if syspar.GetRunModel() == consts.HonorNodeMode {
+	if syspar.IsHonorNodeMode() {
 		return node.GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
 	}
 	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
