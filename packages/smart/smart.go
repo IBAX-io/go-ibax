@@ -614,7 +614,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 
 	for i := 0; i < len(cfuncs); i++ {
 		sc.TxContract.Called = 1 << i
-		if _, err = script.VMRun(sc.VM, cfuncs[i], nil, sc.TxContract.Extend); err != nil {
+		if _, err = script.VMRun(sc.VM, cfuncs[i], nil, sc.TxContract.Extend, sc.Hash); err != nil {
 			break
 		}
 	}
