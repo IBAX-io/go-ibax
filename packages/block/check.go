@@ -45,7 +45,7 @@ func (b *Block) Check() error {
 		exists bool
 		err    error
 	)
-	if syspar.GetRunModel() == consts.HonorNodeMode {
+	if syspar.IsHonorNodeMode() {
 		// is this block too early? Allowable error = error_time
 		exists, err = protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Timestamp, 0), int(b.Header.NodePosition))
 	}

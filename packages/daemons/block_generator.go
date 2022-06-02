@@ -63,7 +63,6 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 
 	btc := protocols.NewBlockTimeCounter()
 	st := time.Now()
-
 	if exists, err := btc.BlockForTimeExists(st, int(nodePosition)); exists || err != nil {
 		return nil
 	}
@@ -94,14 +93,6 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	//	d.logger.WithFields(log.Fields{"type": consts.JustWaiting}).Debug("not my confirmation time")
 	//	return nil
 	//}
-
-	_, endTime, err := btc.RangeByTime(st)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.TimeCalcError, "error": err}).Error("on getting end time of generation")
-		return err
-	}
-
-	done := time.After(endTime.Sub(st))
 	prevBlock := &sqldb.InfoBlock{}
 	_, err = prevBlock.Get()
 	if err != nil {
@@ -127,7 +118,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	trs, err := processTransactions(d.logger, txs, done, st.Unix())
+	trs, err := processTransactions(d.logger, txs, st)
 	if err != nil {
 		return err
 	}
@@ -168,15 +159,17 @@ func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) 
 		types.WithTxFullData(trs))
 }
 
-func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-chan time.Time, st int64) ([][]byte, error) {
-	//p := new(transaction.Transaction)
-
-	//verify transactions
-	//err := transaction.ProcessTransactionsQueue(p.DbTransaction)
-	//if err != nil {
-	//	return nil, err
-	//}
-
+func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, st time.Time) ([][]byte, error) {
+	var done = make(<-chan time.Time, 1)
+	if syspar.IsHonorNodeMode() {
+		btc := protocols.NewBlockTimeCounter()
+		_, endTime, err := btc.RangeByTime(st)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.TimeCalcError, "error": err}).Error("on getting end time of generation")
+			return nil, err
+		}
+		done = time.After(endTime.Sub(st))
+	}
 	trs, err := sqldb.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount())
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unused transactions")
@@ -214,41 +207,42 @@ func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, done <-cha
 	txList := make([][]byte, 0, len(trs))
 	txs = append(txs, trs...)
 	for i, txItem := range txs {
-		select {
-		case <-done:
-			return txList, nil
-		default:
-			if txItem.GetTransactionRateStopNetwork() {
-				txList = append(txList[:0], txs[i].Data)
-				break
+		if syspar.IsHonorNodeMode() {
+			select {
+			case <-done:
+				return txList, nil
 			}
-			bufTransaction := bytes.NewBuffer(txItem.Data)
-			tr, err := transaction.UnmarshallTransaction(bufTransaction)
-			if err != nil {
-				if tr != nil {
+		}
+		if txItem.GetTransactionRateStopNetwork() {
+			txList = append(txList[:0], txs[i].Data)
+			break
+		}
+		bufTransaction := bytes.NewBuffer(txItem.Data)
+		tr, err := transaction.UnmarshallTransaction(bufTransaction)
+		if err != nil {
+			if tr != nil {
+				txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+			}
+			continue
+		}
+
+		if err := tr.Check(st.Unix()); err != nil {
+			txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+			continue
+		}
+
+		if tr.IsSmartContract() {
+			err = limits.CheckLimit(tr)
+			if err == transaction.ErrLimitStop && i > 0 {
+				break
+			} else if err != nil {
+				if err != transaction.ErrLimitSkip {
 					txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
 				}
 				continue
 			}
-
-			if err := tr.Check(st); err != nil {
-				txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
-				continue
-			}
-
-			if tr.IsSmartContract() {
-				err = limits.CheckLimit(tr)
-				if err == transaction.ErrLimitStop && i > 0 {
-					break
-				} else if err != nil {
-					if err != transaction.ErrLimitSkip {
-						txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
-					}
-					continue
-				}
-			}
-			txList = append(txList, txs[i].Data)
 		}
+		txList = append(txList, txs[i].Data)
 	}
 	return txList, nil
 }

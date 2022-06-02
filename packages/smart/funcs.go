@@ -2392,6 +2392,9 @@ func SendExternalTransaction(sc *SmartContract, uid, url, externalContract strin
 }
 
 func IsHonorNodeKey(id int64) bool {
+	if syspar.IsCandidateNodeMode() {
+		return true
+	}
 	for _, item := range syspar.GetNodes() {
 		if crypto.Address(item.PublicKey) == id {
 			return true

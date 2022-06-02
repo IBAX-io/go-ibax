@@ -5,14 +5,10 @@
 package transaction
 
 import (
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/vmihailenco/msgpack/v5"
-
 	log "github.com/sirupsen/logrus"
 )
 
@@ -28,30 +24,6 @@ func newTransaction(smartTx types.SmartTransaction, privateKey []byte, internal 
 	hash = stp.Hash
 	return
 
-	var publicKey []byte
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
-		return
-	}
-	smartTx.PublicKey = publicKey
-
-	if internal {
-		smartTx.SignedBy = crypto.Address(publicKey)
-	}
-
-	if data, err = msgpack.Marshal(smartTx); err != nil {
-		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Error("marshalling smart contract to msgpack")
-		return
-	}
-	hash = crypto.DoubleHash(data)
-	signature, err := crypto.Sign(privateKey, hash)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by node private key")
-		return
-	}
-
-	data = append(append([]byte{types.SmartContractTxType}, converter.EncodeLengthPlusData(data)...), converter.EncodeLengthPlusData(signature)...)
-	return
 }
 
 func NewInternalTransaction(smartTx types.SmartTransaction, privateKey []byte) (data, hash []byte, err error) {
