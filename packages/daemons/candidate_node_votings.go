@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -88,7 +87,7 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 		return err
 	}
 	if len(candidateNodes) == 0 {
-		return errors.New("Candidate node is empty")
+		return nil
 	}
 	ch := make(chan map[string]VotingRes, len(candidateNodes))
 	var wg sync.WaitGroup
