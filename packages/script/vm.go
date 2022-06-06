@@ -126,7 +126,7 @@ func VMFlushBlock(vm *VM, root *CodeBlock) {
 	vm.FlushBlock(root)
 }
 
-func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any) (ret []any, err error) {
+func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any, hash []byte) (ret []any, err error) {
 	var cost int64
 	if ecost, ok := extend[Extend_txcost]; ok {
 		cost = ecost.(int64)
@@ -140,7 +140,7 @@ func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any) (ret [
 	ret, err = rt.Run(block, params, extend)
 	extend[Extend_txcost] = rt.Cost()
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.VMError, "error": err, "original_contract": extend[Extend_original_contract], "this_contract": extend[Extend_this_contract], "ecosystem_id": extend[Extend_ecosystem_id]}).Error("running block in smart vm")
+		vm.logger.WithFields(log.Fields{"type": consts.VMError, "tx_hash": fmt.Sprintf("%x", hash), "error": err, "original_contract": extend[Extend_original_contract], "this_contract": extend[Extend_this_contract], "ecosystem_id": extend[Extend_ecosystem_id]}).Error("running block in smart vm")
 		return nil, err
 	}
 	return
@@ -201,7 +201,7 @@ func FuncCallsDB(funcCallsDB map[string]struct{}) {
 
 // Run executes CodeBlock in smartVM
 func Run(block *CodeBlock, params []any, extend map[string]any) (ret []any, err error) {
-	return VMRun(smartVM, block, params, extend)
+	return VMRun(smartVM, block, params, extend, nil)
 }
 
 func LoadSysFuncs(vm *VM, state int) error {

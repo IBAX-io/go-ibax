@@ -211,6 +211,7 @@ func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, st time.Ti
 			select {
 			case <-done:
 				return txList, nil
+			default:
 			}
 		}
 		if txItem.GetTransactionRateStopNetwork() {

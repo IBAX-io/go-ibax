@@ -420,7 +420,7 @@ func ContractConditions(sc *SmartContract, names ...any) (bool, error) {
 			if err := sc.AppendStack(name); err != nil {
 				return false, err
 			}
-			_, err := script.VMRun(sc.VM, block, []any{}, vars)
+			_, err := script.VMRun(sc.VM, block, []any{}, vars, sc.Hash)
 			if err != nil {
 				return false, err
 			}

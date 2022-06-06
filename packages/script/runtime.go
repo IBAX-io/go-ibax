@@ -269,7 +269,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 				cost := iret.Int()
 				if cost > rt.cost {
 					rt.cost = 0
-					rt.vm.logger.WithFields(log.Fields{"type": consts.VMError}).Error("paid CPU resource is over")
+					rt.vm.logger.Error("paid CPU resource is over")
 					return fmt.Errorf("paid CPU resource is over")
 				}
 
@@ -725,7 +725,7 @@ main:
 					if (*item).Obj.Type == ObjectType_ExtVar {
 						if isSysVar((*item).Obj.Value.String()) {
 							err = fmt.Errorf(eSysVar, (*item).Obj.Value.String())
-							rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "error": err}).Error("modifying system variable")
+							rt.vm.logger.WithError(err).Error("modifying system variable")
 							break main
 						}
 						rt.setExtendVar((*item).Obj.Value.String(), rt.stack[len(rt.stack)-count+ivar])
@@ -809,7 +809,7 @@ main:
 				}
 			}
 			if i < 0 {
-				rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "var": ivar.Obj.Value}).Error("wrong var")
+				rt.vm.logger.WithFields(log.Fields{"var": ivar.Obj.Value}).Error("wrong var")
 				err = fmt.Errorf(`wrong var %v`, ivar.Obj.Value)
 				break main
 			}
@@ -819,7 +819,7 @@ main:
 				if cmd.Cmd == cmdCallExtend {
 					err = rt.extendFunc(cmd.Value.(string))
 					if err != nil {
-						rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "error": err, "cmd": cmd.Value.(string)}).Error("executing extended function")
+						rt.vm.logger.WithFields(log.Fields{"error": err, "cmd": cmd.Value.(string)}).Error("executing extended function")
 						err = fmt.Errorf(`extend function %s %s`, cmd.Value.(string), err.Error())
 						break main
 					}
@@ -831,7 +831,7 @@ main:
 					rt.stack = append(rt.stack, val)
 				}
 			} else {
-				rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "cmd": cmd.Value.(string)}).Error("unknown extend identifier")
+				rt.vm.logger.WithFields(log.Fields{"cmd": cmd.Value.(string)}).Error("unknown extend identifier")
 				err = fmt.Errorf(`unknown extend identifier %s`, cmd.Value.(string))
 			}
 		case cmdIndex:
@@ -865,7 +865,7 @@ main:
 				rt.stack = rt.stack[:size-1]
 			default:
 				itype := reflect.TypeOf(rt.stack[size-2]).String()
-				rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "vm_type": itype}).Error("type does not support indexing")
+				rt.vm.logger.WithFields(log.Fields{"vm_type": itype}).Error("type does not support indexing")
 				err = fmt.Errorf(`Type %s doesn't support indexing`, itype)
 			}
 		case cmdSetIndex:
@@ -927,7 +927,7 @@ main:
 				}
 				rt.stack = rt.stack[:size-2]
 			default:
-				rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "vm_type": itype}).Error("type does not support indexing")
+				rt.vm.logger.WithFields(log.Fields{"vm_type": itype}).Error("type does not support indexing")
 				err = fmt.Errorf(`Type %s doesn't support indexing`, itype)
 			}
 
@@ -1301,7 +1301,7 @@ main:
 			}
 			rt.stack = append(rt.stack, initMap)
 		default:
-			rt.vm.logger.WithFields(log.Fields{"type": consts.VMError, "vm_cmd": cmd.Cmd}).Error("Unknown command")
+			rt.vm.logger.WithFields(log.Fields{"vm_cmd": cmd.Cmd}).Error("Unknown command")
 			err = fmt.Errorf(`Unknown command %d`, cmd.Cmd)
 		}
 		if err != nil {

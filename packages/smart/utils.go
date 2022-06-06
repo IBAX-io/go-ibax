@@ -9,6 +9,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/script"
@@ -52,8 +54,7 @@ func unmarshalJSON(input []byte, v any, comment string) (err error) {
 	d := json.NewDecoder(bytes.NewReader(input))
 	d.UseNumber()
 	if err = d.Decode(&v); err != nil {
-		//if err = json.Unmarshal(input, v); err != nil {
-		return logErrorValue(err, consts.JSONUnmarshallError, comment, string(input))
+		return errors.Wrap(err, comment)
 	}
 	return nil
 }
@@ -61,7 +62,7 @@ func unmarshalJSON(input []byte, v any, comment string) (err error) {
 func marshalJSON(v any, comment string) (out []byte, err error) {
 	out, err = json.Marshal(v)
 	if err != nil {
-		logError(err, consts.JSONMarshallError, comment)
+		return nil, errors.Wrap(err, comment)
 	}
 	return
 }
