@@ -64,6 +64,12 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		return nil
 	}
 	st := time.Now()
+
+	lastBlockInterval := time.Unix(prevBlock.Time, 0)
+	timeDifference := st.Sub(lastBlockInterval)
+	if timeDifference <= 4*time.Second {
+		time.Sleep(4*time.Second - timeDifference)
+	}
 	dtx := DelayedTx{
 		privateKey: NodePrivateKey,
 		publicKey:  NodePublicKey,
