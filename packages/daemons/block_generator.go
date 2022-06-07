@@ -33,6 +33,8 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	} else {
 		return nil
 	}
+	DBLock()
+	defer DBUnlock()
 	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err == nil && len(candidateNodes) > 0 {
 		syspar.SetRunModel(consts.CandidateNodeMode)
@@ -50,9 +52,6 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		d.logger.WithFields(log.Fields{"type": consts.JustWaiting, "error": err}).Debug("we are not honor node, sleep for 10 seconds")
 		return nil
 	}
-
-	DBLock()
-	defer DBUnlock()
 
 	// wee need fresh myNodePosition after locking
 	nodePosition, err = syspar.GetThisNodePosition()
