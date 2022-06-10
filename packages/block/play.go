@@ -120,7 +120,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		}
 		err = t.Play()
 		if err != nil {
-			if err == transaction.ErrNetworkStopping {
+			if _, ok := t.Inner.(*transaction.StopNetworkParser); ok && err == transaction.ErrNetworkStopping {
 				// Set the node in a pause state
 				node.PauseNodeActivity(node.PauseTypeStopingNetwork)
 				return err
