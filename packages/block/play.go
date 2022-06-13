@@ -6,10 +6,7 @@
 package block
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -105,180 +102,93 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (retErr error) {
 	if !b.GenBlock && !b.IsGenesis() && conf.Config.BlockSyncMethod.Method == types.BlockSyncMethod_SQLDML.String() {
 		return nil
 	}
-	var keyIds []int64
-	for indexTx := 0; indexTx < len(b.Transactions); indexTx++ {
-		t := b.Transactions[indexTx]
-		//fmt.Println("KeyID", t.KeyID())
-		if t.IsSmartContract() && t.SmartContract().TxSmart.Utxo != nil {
-			//fmt.Println("ToId", t.SmartContract().TxSmart.Utxo.ToID)
+	for curTx := 0; curTx < len(b.Transactions); curTx++ {
+		t := b.Transactions[curTx]
+		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
+			return err
 		}
-		keyIds = append(keyIds, t.KeyID())
-	}
-	// GroupTxs KeyID ToID
-	outputs, err := sqldb.GetTxOutputs(dbTx, keyIds)
-	if err != nil {
-		return err
-	}
-	fmt.Println("outputs", outputs)
-	//b.TxOutputs
-	//b.TxInputs
-
-	walletAddress := make(map[int64]int64)
-	groupTxs(b.Transactions, walletAddress)
-	// exec GroupTxs
-
-	var wg sync.WaitGroup
-	var totalTx = 0
-	for _, transactions := range txsGroupMap {
-		wg.Add(1)
-		go func(_transactions []*transaction.Transaction) error {
-			defer wg.Done()
-			for curTx := 0; curTx < len(_transactions); curTx++ {
-				t := b.Transactions[curTx]
-				err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
-				if err != nil {
-					logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
-					return err
-				}
-				err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, totalTx)
-				if err != nil {
-					return err
-				}
-				err = t.Play()
-				if err != nil {
-					if err == transaction.ErrNetworkStopping {
-						// Set the node in a pause state
-						node.PauseNodeActivity(node.PauseTypeStopingNetwork)
+		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, curTx)
+		if err != nil {
+			return err
+		}
+		err = t.Play()
+		if err != nil {
+			if err == transaction.ErrNetworkStopping {
+				// Set the node in a pause state
+				node.PauseNodeActivity(node.PauseTypeStopingNetwork)
+				return err
+			}
+			errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(curTx))
+			if errRoll != nil {
+				t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("rolling back to previous savepoint")
+				return errRoll
+			}
+			if b.GenBlock {
+				if err == transaction.ErrLimitStop {
+					if curTx == 0 {
 						return err
 					}
-					errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(curTx))
-					if errRoll != nil {
-						t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("rolling back to previous savepoint")
-						return errRoll
-					}
-					if b.GenBlock {
-						if err == transaction.ErrLimitStop {
-							if curTx == 0 {
-								return err
-							}
-							break
-						}
-						if strings.Contains(err.Error(), script.ErrVMTimeLimit.Error()) {
-							err = script.ErrVMTimeLimit
-						}
-					}
-					if t.IsSmartContract() {
-						transaction.BadTxForBan(t.KeyID())
-					}
-					_ = transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
-					if t.SysUpdate {
-						if err := syspar.SysUpdate(t.DbTransaction); err != nil {
-							log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
-							return err
-						}
-						t.SysUpdate = false
-					}
-					if b.GenBlock {
-						continue
-					}
+					break
+				}
+				if strings.Contains(err.Error(), script.ErrVMTimeLimit.Error()) {
+					err = script.ErrVMTimeLimit
+				}
+			}
+			if t.IsSmartContract() {
+				transaction.BadTxForBan(t.KeyID())
+			}
+			_ = transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
+			if t.SysUpdate {
+				if err := syspar.SysUpdate(t.DbTransaction); err != nil {
+					log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
 					return err
 				}
-
-				if t.SysUpdate {
-					b.SysUpdate = true
-					t.SysUpdate = false
-				}
-
-				if t.Notifications.Size() > 0 {
-					b.Notifications = append(b.Notifications, t.Notifications)
-				}
-
-				var (
-					after    = &types.AfterTx{}
-					eco      int64
-					contract string
-					code     pbgo.TxInvokeStatusCode
-				)
-				if t.IsSmartContract() {
-					eco = t.SmartContract().TxSmart.EcosystemID
-					contract = t.SmartContract().TxContract.Name
-					code = t.TxResult.Code
-				}
-				after.UsedTx = t.Hash()
-				after.Lts = &types.LogTransaction{
-					Block:        t.BlockHeader.BlockId,
-					Hash:         t.Hash(),
-					TxData:       t.FullData,
-					Timestamp:    t.Timestamp(),
-					Address:      t.KeyID(),
-					EcosystemId:  eco,
-					ContractName: contract,
-					InvokeStatus: code,
-				}
-				after.UpdTxStatus = t.TxResult
-				afters.Txs = append(afters.Txs, after)
-				afters.Rts = append(afters.Rts, t.RollBackTx...)
-				afters.TxExecutionSql = append(afters.TxExecutionSql, t.DbTransaction.ExecutionSql...)
-				processedTx = append(processedTx, t.FullData)
-				totalTx++
+				t.SysUpdate = false
 			}
-			return nil
-		}(transactions)
+			if b.GenBlock {
+				continue
+			}
+			return err
+		}
+
+		if t.SysUpdate {
+			b.SysUpdate = true
+			t.SysUpdate = false
+		}
+
+		if t.Notifications.Size() > 0 {
+			b.Notifications = append(b.Notifications, t.Notifications)
+		}
+
+		var (
+			after    = &types.AfterTx{}
+			eco      int64
+			contract string
+			code     pbgo.TxInvokeStatusCode
+		)
+		if t.IsSmartContract() {
+			eco = t.SmartContract().TxSmart.EcosystemID
+			contract = t.SmartContract().TxContract.Name
+			code = t.TxResult.Code
+		}
+		after.UsedTx = t.Hash()
+		after.Lts = &types.LogTransaction{
+			Block:        t.BlockHeader.BlockId,
+			Hash:         t.Hash(),
+			TxData:       t.FullData,
+			Timestamp:    t.Timestamp(),
+			Address:      t.KeyID(),
+			EcosystemId:  eco,
+			ContractName: contract,
+			InvokeStatus: code,
+		}
+		after.UpdTxStatus = t.TxResult
+		afters.Txs = append(afters.Txs, after)
+		afters.Rts = append(afters.Rts, t.RollBackTx...)
+		afters.TxExecutionSql = append(afters.TxExecutionSql, t.DbTransaction.ExecutionSql...)
+		processedTx = append(processedTx, t.FullData)
 	}
-	wg.Wait()
 	return nil
-}
-
-var (
-	txsGroupMap         = make(map[string][]*transaction.Transaction)
-	groupTxsList        = make([]*transaction.Transaction, 0)
-	groupSerial  uint16 = 1
-)
-
-func groupTxs(txs []*transaction.Transaction, walletAddress map[int64]int64) map[string][]*transaction.Transaction {
-	if len(txs) == 0 {
-		return txsGroupMap
-	}
-	crrentGroupTxsSize := len(groupTxsList)
-	size := len(txs)
-	for i := 0; i < size; i++ {
-		if len(walletAddress) == 0 {
-			walletAddress[txs[i].KeyID()] = txs[i].KeyID()
-			// TODO  Utxo.ToID maybe nil
-			walletAddress[txs[i].SmartContract().TxSmart.Utxo.ToID] = txs[i].SmartContract().TxSmart.Utxo.ToID
-
-			groupTxsList = append(groupTxsList, txs[i])
-			txs = txs[1:]
-			size = len(txs)
-			i--
-			continue
-		}
-		if walletAddress[txs[i].KeyID()] != 0 || walletAddress[txs[i].SmartContract().TxSmart.Utxo.ToID] != 0 {
-			walletAddress[txs[i].KeyID()] = txs[i].KeyID()
-			walletAddress[txs[i].SmartContract().TxSmart.Utxo.ToID] = txs[i].SmartContract().TxSmart.Utxo.ToID
-
-			groupTxsList = append(groupTxsList, txs[i])
-			txs = append(txs[:i], txs[i+1:]...)
-			size = len(txs)
-			i--
-		}
-	}
-
-	if crrentGroupTxsSize < len(groupTxsList) {
-		if len(txs) == 0 {
-			txsGroupMap[strconv.Itoa(int(groupSerial))] = groupTxsList
-			return txsGroupMap
-		}
-		return groupTxs(txs, walletAddress)
-	}
-
-	if len(groupTxsList) > 0 {
-		tempGroupTxsList := groupTxsList
-		txsGroupMap[strconv.Itoa(int(groupSerial))] = tempGroupTxsList
-		groupSerial++
-		groupTxsList = make([]*transaction.Transaction, 0)
-		walletAddress = make(map[int64]int64)
-	}
-
-	return groupTxs(txs, walletAddress)
 }
