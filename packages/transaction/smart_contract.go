@@ -82,7 +82,7 @@ func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
 
 	_utxo := s.TxSmart.Utxo
 	if _utxo != nil {
-		err = smart.UtxoToken(s.SmartContract, _utxo.ToID, _utxo.Value)
+		_, err = smart.UtxoToken(s.SmartContract, _utxo.ToID, _utxo.Value)
 		if err != nil {
 			return err
 		}
