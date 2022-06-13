@@ -60,9 +60,15 @@ type SmartTransaction struct {
 	MaxSum   string
 	PayOver  string
 	Lang     string
+	Utxo     *Utxo
 	Expedite string
 	SignedBy int64
 	Params   map[string]any
+}
+
+type Utxo struct {
+	ToID  int64
+	Value string
 }
 
 func (s *SmartTransaction) TxType() byte { return SmartContractTxType }
