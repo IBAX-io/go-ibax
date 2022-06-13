@@ -79,16 +79,6 @@ func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
 			t.TxResult.Code = pbgo.TxInvokeStatusCode_PENALTY
 		}
 	}()
-
-	_utxo := s.TxSmart.Utxo
-	if _utxo != nil {
-		err = smart.UtxoToken(s.SmartContract, _utxo.ToID, _utxo.Value)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
 	t.TxResult.Result, err = s.CallContract(t.SqlDbSavePoint)
 	if err == nil && s.TxSmart != nil {
 		if s.Penalty {
