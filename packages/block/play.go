@@ -81,7 +81,7 @@ func (b *Block) PlaySafe() error {
 	return nil
 }
 
-func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (retErr error) {
+func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	afters := &types.AfterTxs{
 		Rts: make([]*types.RollbackTx, 0),
 		Txs: make([]*types.AfterTx, 0),
@@ -97,8 +97,12 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (retErr error) {
 		if b.GenBlock {
 			b.TxFullData = processedTx
 		}
-		if err := b.AfterPlayTxs(dbTx); err != nil {
-			retErr = err
+		if errA := b.AfterPlayTxs(dbTx); errA != nil {
+			if err == nil {
+				err = errA
+			} else if err != nil {
+				err = fmt.Errorf("%v; %w", err, errA)
+			}
 			return
 		}
 	}()
