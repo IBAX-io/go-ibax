@@ -28,7 +28,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/IBAX-io/go-ibax/packages/utils/metric"
-	"github.com/IBAX-io/go-ibax/packages/utxo"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -709,26 +708,4 @@ func MathMod(x, y float64) float64 {
 
 func MathModDecimal(x, y decimal.Decimal) decimal.Decimal {
 	return x.Mod(y)
-}
-
-func UtxoToken(sc *SmartContract, toID int64, value string) (b bool, err error) {
-	ctx := utxo.GetContext()
-	keyID := ctx.KeyID
-	txInputs := ctx.TxInputs
-	totalAmount := decimal.Zero
-	var txOutputs []sqldb.SpentInfo
-	for _, input := range txInputs {
-		outputValue, _ := decimal.NewFromString(input.OutputValue)
-		totalAmount = totalAmount.Add(outputValue)
-	}
-	payValue, _ := decimal.NewFromString(value)
-	if totalAmount.GreaterThanOrEqual(payValue) {
-		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: toID, OutputValue: value})
-		totalAmount = totalAmount.Sub(payValue)
-	}
-	if totalAmount.GreaterThan(decimal.Zero) {
-		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: keyID, OutputValue: totalAmount.String()})
-	}
-	ctx.TxOutputs = txOutputs
-	return
 }
