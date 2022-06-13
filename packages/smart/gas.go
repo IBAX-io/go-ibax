@@ -46,7 +46,6 @@ type (
 		TaxesSize      int64
 		Indirect       bool
 		Combustion     *Combustion
-		Penalty        bool
 	}
 	multiPays []*PaymentInfo
 )
@@ -120,13 +119,9 @@ func (f *FuelCategory) Fees() decimal.Decimal {
 	return value.Floor()
 }
 
-func (c Combustion) Fees(sum decimal.Decimal) decimal.Decimal {
-	return sum.Mul(decimal.NewFromInt(c.Percent)).Div(decimal.New(100, 0)).Floor()
-}
-
 func (c Combustion) Detail(sum decimal.Decimal) any {
 	detail := types.NewMap()
-	combustion := c.Fees(sum)
+	combustion := sum.Mul(decimal.NewFromInt(c.Percent)).Div(decimal.New(100, 0)).Floor()
 	detail.Set("flag", c.Flag)
 	detail.Set("percent", c.Percent)
 	detail.Set("before", sum)
@@ -153,11 +148,11 @@ func (pay *PaymentInfo) SetDecimalByType(fuelType FuelType, decimal decimal.Deci
 	}
 }
 
-func (pay *PaymentInfo) GetPayMoney() decimal.Decimal {
+func (pay *PaymentInfo) GetPayMoney(errNeedPay bool) decimal.Decimal {
 	var money decimal.Decimal
 	for i := 0; i < len(pay.FuelCategories); i++ {
 		f := pay.FuelCategories[i]
-		if pay.Penalty && f.FuelType == FuelType_element_fee {
+		if errNeedPay && f.FuelType == FuelType_element_fee {
 			continue
 		}
 		money = money.Add(f.Fees())
@@ -191,24 +186,11 @@ func (pay *PaymentInfo) Detail() any {
 	return s
 }
 
-func (pay *PaymentInfo) DetailCombustion() any {
-	c := pay.Combustion
+func (pay *PaymentInfo) DetailCombustion(sum decimal.Decimal) any {
 	detail := types.NewMap()
-	var money decimal.Decimal
-	for i := 0; i < len(pay.FuelCategories); i++ {
-		f := pay.FuelCategories[i]
-		if pay.Penalty && f.FuelType == FuelType_element_fee {
-			continue
-		}
-		s := f.Fees().Mul(decimal.NewFromInt(c.Percent)).Div(decimal.New(100, 0)).Floor()
-		detail.Set(f.FuelType.String(), s)
-		money = money.Add(f.Fees())
-	}
 	if !pay.Indirect && pay.TokenEco != consts.DefaultTokenEcosystem {
-		detail.Set("combustion", pay.Combustion.Detail(money))
+		detail.Set("combustion", pay.Combustion.Detail(sum))
 	}
-	detail.Set("token_symbol", pay.Ecosystem.TokenSymbol)
-	detail.Set("fuel_rate", pay.FuelRate)
 	b, _ := JSONEncode(detail)
 	s, _ := JSONDecode(b)
 	return s
@@ -281,9 +263,8 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	}
 	for i := 0; i < len(sc.multiPays); i++ {
 		pay := sc.multiPays[i]
-		pay.Penalty = sc.Penalty
 		pay.SetDecimalByType(FuelType_vmCost_fee, sc.TxUsedCost)
-		money := pay.GetPayMoney()
+		money := pay.GetPayMoney(errNeedPay)
 		wltAmount := pay.PayWallet.CapableAmount()
 		if wltAmount.Cmp(money) < 0 {
 			return errTaxes
@@ -393,8 +374,9 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 		values.Set("value_detail", pay.Detail())
 	}
 	if t == GasScenesType_Combustion {
-		values.Set("amount", pay.Combustion.Fees(sum))
-		values.Set("value_detail", pay.DetailCombustion())
+		combustion := sum.Mul(decimal.NewFromInt(pay.Combustion.Percent)).Div(decimal.New(100, 0)).Floor()
+		values.Set("amount", combustion)
+		values.Set("value_detail", pay.DetailCombustion(sum))
 	}
 	_, _, err = sc.insert(values.Keys(), values.Values(), `1_history`)
 	if err != nil {
@@ -493,7 +475,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		return nil, nil
 	}
 
-	var f2 float64
+	var f2 int64
 	if feeMode != nil {
 		f2 = feeMode.FollowFuel
 	}
@@ -574,7 +556,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 				continue
 			}
 			category := NewFuelCategory(FuelType(FuelType_value[k]), categoryFee, GasPayAbleType(flag.Flag), flag.ConversionRate)
-			var div = category.Decimal.Div(decimal.NewFromFloat(feeMode.FollowFuel))
+			var div = category.Decimal.Div(decimal.NewFromInt(feeMode.FollowFuel))
 			switch category.Flag {
 			case GasPayAbleType_Unable:
 				cpyPlatCaller.PushFuelCategories(category)
@@ -690,7 +672,7 @@ func (sc *SmartContract) payFreeContract() bool {
 	return !ispay
 }
 
-func (sc *SmartContract) fuelRate(eco int64, followFuel float64) (decimal.Decimal, error) {
+func (sc *SmartContract) fuelRate(eco, followFuel int64) (decimal.Decimal, error) {
 	var (
 		fuelRate decimal.Decimal
 		err      error
@@ -703,7 +685,7 @@ func (sc *SmartContract) fuelRate(eco int64, followFuel float64) (decimal.Decima
 			return zero, err
 		}
 		follow, _ := decimal.NewFromString(syspar.GetFuelRate(consts.DefaultTokenEcosystem))
-		times := decimal.NewFromFloat(followFuel)
+		times := decimal.NewFromInt(followFuel)
 		if times.LessThanOrEqual(zero) {
 			times = decimal.New(1, 0)
 		}

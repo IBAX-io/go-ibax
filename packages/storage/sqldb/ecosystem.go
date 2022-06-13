@@ -40,7 +40,7 @@ type Combustion struct {
 type FeeModeInfo struct {
 	FeeModeDetail map[string]FeeModeFlag `json:"fee_mode_detail"`
 	Combustion    Combustion             `json:"combustion"`
-	FollowFuel    float64                `json:"follow_fuel"`
+	FollowFuel    int64                  `json:"follow_fuel"`
 }
 
 // TableName returns name of table
