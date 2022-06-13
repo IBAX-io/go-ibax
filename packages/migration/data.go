@@ -92,20 +92,6 @@ var (
 		t.Column("stop_time", "int", {"default": "0"})
 	{{footer}}
 
-	{{head "spent_info"}}
-		t.Column("input_tx_hash", "bytea", {"null": true})
-		t.Column("input_index", "smallint", {"null": true})
-		t.Column("output_tx_hash", "bytea")
-		t.Column("output_index", "smallint")
-		t.Column("output_key_id", "bigint")
-		t.Column("output_value", "decimal(30)", {"default_raw": "'0' CHECK (output_value >= 0)"})
-		t.Column("scene", "string", { "size":50})
-		t.Column("ecosystem", "bigint", {"default": "1"})
-		t.Column("contract", "string", { "size":255})
-		t.Column("block_id", "bigint")
-		t.Column("asset", "string", { "size":50})
-	{{footer "primary(output_tx_hash,output_key_id,output_index)" "index(input_tx_hash)" "index(output_key_id)" "index(output_tx_hash)"}}
-
 	{{head "transactions"}}
 		t.Column("hash", "bytea", {"default": ""})
 		t.Column("data", "bytea", {"default": ""})
