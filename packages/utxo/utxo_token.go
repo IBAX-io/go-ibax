@@ -1,47 +1,70 @@
 package utxo
 
 import (
-	"context"
-
+	"bytes"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
 var (
 	outputsMap map[int64][]sqldb.SpentInfo
-	ctx        context.Context
 )
 
-const CONTEXT = "CONTEXT"
+// func CallContract(outputsMap map[int64][]sqldb.SpentInfo, tx Tx) {
+//	_txInputs := GetUnusedOutputsMap(outputsMap, tx.KeyID)
+//	smartVM := &SmartVM{TxSmart: tx, TxInputs: _txInputs}
+//	_, _ = VMCallContract(smartVM)
+//	txInputsCtx := smartVM.TxInputs
+//	txOutputsCtx := smartVM.TxOutputs
+//	if len(txInputsCtx) > 0 && len(txOutputsCtx) > 0 {
+//		updateTxInputs(outputsMap, tx.Hash, txInputsCtx)
+//		insertTxOutputs(outputsMap, tx.Hash, txOutputsCtx)
+//	}
+// }
 
-type Context struct {
-	KeyID     int64
-	TxOutputs []sqldb.SpentInfo
-	TxInputs  []sqldb.SpentInfo
+func InsertTxOutputs(outputTxHash []byte, txOutputsCtx []sqldb.SpentInfo) {
+	for _, txOutput := range txOutputsCtx {
+		spentInfos := outputsMap[txOutput.OutputKeyId]
+		txOutput.OutputTxHash = outputTxHash
+		// txOutput.Height=height
+		spentInfos = append(spentInfos, txOutput)
+		outputsMap[txOutput.OutputKeyId] = spentInfos
+	}
 }
 
-func init() {
-	var _context Context
-	ctx = context.WithValue(context.Background(), CONTEXT, _context)
+func UpdateTxInputs(inputTxHash []byte, txInputsCtx []sqldb.SpentInfo) {
+	var inputIndex int32
+	for _, txInput := range txInputsCtx {
+		// spentInfos := GetUnusedOutputsMap(outputsMap, txInput.OutputKeyId)
+		spentInfos := outputsMap[txInput.OutputKeyId]
+		for i, info := range spentInfos {
+			if bytes.EqualFold(info.OutputTxHash, txInput.OutputTxHash) &&
+				info.OutputKeyId == txInput.OutputKeyId &&
+				info.OutputIndex == txInput.OutputIndex &&
+				len(txInput.InputTxHash) == 0 && len(info.InputTxHash) == 0 {
+				outputsMap[txInput.OutputKeyId][i].InputTxHash = inputTxHash
+				outputsMap[txInput.OutputKeyId][i].InputIndex = inputIndex
+				inputIndex++
+			}
+		}
+	}
 }
 
-func GetContext() Context {
-	return ctx.Value(CONTEXT).(Context)
+func PutAllOutputsMap(outputs []sqldb.SpentInfo) {
+	for _, output := range outputs {
+		spentInfos := outputsMap[output.OutputKeyId]
+		spentInfos = append(spentInfos, output)
+		PutOutputsMap(output.OutputKeyId, spentInfos)
+	}
+}
+func PutOutputsMap(keyID int64, outputs []sqldb.SpentInfo) {
+	outputsMap[keyID] = outputs
 }
 
-func SetContext(_context Context) {
-	ctx = context.WithValue(ctx, CONTEXT, _context)
-}
-
-func GetUnusedOutputs(keyID int64) []sqldb.SpentInfo {
-
-	//outputsMap2[keyID].mu.Lock()
-	//defer outputsMap2[keyID].mu.Unlock()
-
+func GetUnusedOutputsMap(keyID int64) []sqldb.SpentInfo {
 	spentInfos := outputsMap[keyID]
-	var inputIndex int32 = 0
+	var inputIndex int32
 	var list []sqldb.SpentInfo
 	for _, output := range spentInfos {
-		//if &output.InputTxHash == nil {
 		if len(output.InputTxHash) == 0 {
 			output.InputIndex = inputIndex
 			inputIndex++
@@ -51,26 +74,7 @@ func GetUnusedOutputs(keyID int64) []sqldb.SpentInfo {
 	return list
 }
 
-func GetAllOutputs(keyID int64) []sqldb.SpentInfo {
-	spentInfos := outputsMap[keyID]
-	return spentInfos
-}
-
-func PutAllOutputs(outputs []sqldb.SpentInfo) {
-	for _, output := range outputs {
-		spentInfos := outputsMap[output.OutputKeyId]
-		spentInfos = append(spentInfos, output)
-		PutOutputs(output.OutputKeyId, spentInfos)
-	}
-}
-func PutOutputs(keyID int64, outputs []sqldb.SpentInfo) {
-	outputsMap[keyID] = outputs
-}
-func RemoveAllOutputs() {
-	outputsMap = map[int64][]sqldb.SpentInfo{}
-}
-
-func getAllOutputs() []sqldb.SpentInfo {
+func GetAllOutputs() []sqldb.SpentInfo {
 	var list []sqldb.SpentInfo
 	for _, outputs := range outputsMap {
 		list = append(list, outputs...)

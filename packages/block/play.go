@@ -7,6 +7,7 @@ package block
 
 import (
 	"fmt"
+	"github.com/IBAX-io/go-ibax/packages/utxo"
 	"strconv"
 	"strings"
 	"sync"
@@ -112,9 +113,9 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	var keyIds []int64
 	for indexTx := 0; indexTx < len(b.Transactions); indexTx++ {
 		t := b.Transactions[indexTx]
-		//fmt.Println("KeyID", t.KeyID())
+		// fmt.Println("KeyID", t.KeyID())
 		if t.IsSmartContract() && t.SmartContract().TxSmart.Utxo != nil {
-			//fmt.Println("ToId", t.SmartContract().TxSmart.Utxo.ToID)
+			// fmt.Println("ToId", t.SmartContract().TxSmart.Utxo.ToID)
 		}
 		keyIds = append(keyIds, t.KeyID())
 	}
@@ -124,8 +125,9 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		return err
 	}
 	fmt.Println("outputs", outputs)
-	//b.TxOutputs
-	//b.TxInputs
+	utxo.PutAllOutputsMap(outputs)
+	// b.TxOutputs
+	// b.TxInputs
 
 	walletAddress := make(map[int64]int64)
 	groupTxs(b.Transactions, walletAddress)
@@ -139,12 +141,18 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			defer wg.Done()
 			for curTx := 0; curTx < len(_transactions); curTx++ {
 				t := b.Transactions[curTx]
+				txInputs := utxo.GetUnusedOutputsMap(t.KeyID())
+				if len(txInputs) == 0 {
+					continue
+				}
+				//t.TxInputs = txInputs
+
 				err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
 				if err != nil {
 					logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 					return err
 				}
-				err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, totalTx)
+				err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, totalTx, txInputs)
 				if err != nil {
 					return err
 				}
@@ -186,6 +194,11 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 						continue
 					}
 					return err
+				}
+
+				if len(t.TxOutputs) > 0 {
+					utxo.UpdateTxInputs(t.Hash(), txInputs)
+					utxo.InsertTxOutputs(t.Hash(), t.TxOutputs)
 				}
 
 				if t.SysUpdate {

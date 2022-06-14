@@ -5,13 +5,16 @@
 
 package sqldb
 
-import "gorm.io/gorm/clause"
+import (
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
 
 // SpentInfo is model
 type SpentInfo struct {
-	InputTxHash  string
+	InputTxHash  []byte
 	InputIndex   int32
-	OutputTxHash string `gorm:"not null"`
+	OutputTxHash []byte `gorm:"not null"`
 	OutputIndex  int32  `gorm:"not null"`
 	OutputKeyId  int64  `gorm:"not null"`
 	OutputValue  string `gorm:"not null"`
@@ -28,8 +31,8 @@ func (si *SpentInfo) TableName() string {
 }
 
 // CreateSpentInfoBatches is creating record of model
-func CreateSpentInfoBatches(db *DbTransaction, spentInfos []*SpentInfo) error {
-	return GetDB(db).Debug().Clauses(clause.OnConflict{
+func CreateSpentInfoBatches(dbTx *gorm.DB, spentInfos []SpentInfo) error {
+	return dbTx.Debug().Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "output_tx_hash"}, {Name: "output_key_id"}, {Name: "output_index"}},
 		DoUpdates: clause.AssignmentColumns([]string{"input_tx_hash", "input_index"}),
 		Where: clause.Where{Exprs: []clause.Expression{
@@ -37,10 +40,10 @@ func CreateSpentInfoBatches(db *DbTransaction, spentInfos []*SpentInfo) error {
 			clause.Eq{Column: "spent_info.output_key_id", Value: "EXCLUDED.output_key_id"},
 			clause.Eq{Column: "spent_info.output_index", Value: "EXCLUDED.output_index"},
 		}},
-	}).CreateInBatches(&spentInfos, 5000).Error
+	}).CreateInBatches(spentInfos, 5000).Error
 }
 
-func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]*SpentInfo, error) {
+func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	query :=
 		` SELECT
 			si.input_tx_hash,row_number() over (PARTITION BY si.output_key_id order by si.block_id ASC, tr.timestamp ASC) AS input_index,
@@ -49,8 +52,8 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]*SpentInfo, error) {
 			spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
 		WHERE output_key_id IN ? AND si.input_tx_hash IS NULL
 		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `
-	var result []*SpentInfo
-	err := GetDB(db).Debug().Raw(query, keyIds).Scan(&result).Error
+	var result []SpentInfo
+	err := GetDB(db).Debug().Raw(query, keyIds).Scan(result).Error
 	if err != nil {
 		return nil, err
 	}

@@ -8,6 +8,7 @@ package block
 import (
 	"bytes"
 	"fmt"
+	"github.com/IBAX-io/go-ibax/packages/utxo"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -257,6 +258,13 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 		if err := sqldb.CreateLogTransactionBatches(tx, playTx.Lts); err != nil {
 			return errors.Wrap(err, "batches insert log_transactions")
 		}
+		spentInfos := utxo.GetAllOutputs()
+		if len(spentInfos) > 0 {
+			if err := sqldb.CreateSpentInfoBatches(tx, spentInfos); err != nil {
+				return errors.Wrap(err, "batches insert spent_info")
+			}
+		}
+
 		if err := sqldb.CreateBatchesRollbackTx(tx, playTx.Rts); err != nil {
 			return errors.Wrap(err, "batches insert rollback tx")
 		}
