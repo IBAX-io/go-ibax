@@ -7,10 +7,8 @@ package block
 
 import (
 	"fmt"
-	"github.com/IBAX-io/go-ibax/packages/utxo"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -23,6 +21,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/IBAX-io/go-ibax/packages/utxo"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -124,125 +123,109 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	if err != nil {
 		return err
 	}
-	fmt.Println("outputs", outputs)
+	//fmt.Println("outputs", outputs)
 	utxo.PutAllOutputsMap(outputs)
 	// b.TxOutputs
 	// b.TxInputs
 
-	walletAddress := make(map[int64]int64)
-	groupTxs(b.Transactions, walletAddress)
-	// exec GroupTxs
+	for curTx := 0; curTx < len(b.Transactions); curTx++ {
+		t := b.Transactions[curTx]
+		var txInputs []sqldb.SpentInfo
+		if t.IsSmartContract() {
+			txInputs = utxo.GetUnusedOutputsMap(t.KeyID())
+		}
 
-	var wg sync.WaitGroup
-	var totalTx = 0
-	for _, transactions := range txsGroupMap {
-		wg.Add(1)
-		go func(_transactions []*transaction.Transaction) error {
-			defer wg.Done()
-			for curTx := 0; curTx < len(_transactions); curTx++ {
-				t := b.Transactions[curTx]
-				txInputs := utxo.GetUnusedOutputsMap(t.KeyID())
-				if len(txInputs) == 0 {
-					continue
-				}
-				//t.TxInputs = txInputs
-
-				err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
-				if err != nil {
-					logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
-					return err
-				}
-				err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, totalTx, txInputs)
-				if err != nil {
-					return err
-				}
-				err = t.Play()
-				if err != nil {
-					if err == transaction.ErrNetworkStopping {
-						// Set the node in a pause state
-						node.PauseNodeActivity(node.PauseTypeStopingNetwork)
+		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
+			return err
+		}
+		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, curTx, txInputs)
+		if err != nil {
+			return err
+		}
+		err = t.Play()
+		if err != nil {
+			if err == transaction.ErrNetworkStopping {
+				// Set the node in a pause state
+				node.PauseNodeActivity(node.PauseTypeStopingNetwork)
+				return err
+			}
+			errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(curTx))
+			if errRoll != nil {
+				t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("rolling back to previous savepoint")
+				return errRoll
+			}
+			if b.GenBlock {
+				if err == transaction.ErrLimitStop {
+					if curTx == 0 {
 						return err
 					}
-					errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(curTx))
-					if errRoll != nil {
-						t.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("rolling back to previous savepoint")
-						return errRoll
-					}
-					if b.GenBlock {
-						if err == transaction.ErrLimitStop {
-							if curTx == 0 {
-								return err
-							}
-							break
-						}
-						if strings.Contains(err.Error(), script.ErrVMTimeLimit.Error()) {
-							err = script.ErrVMTimeLimit
-						}
-					}
-					if t.IsSmartContract() {
-						transaction.BadTxForBan(t.KeyID())
-					}
-					_ = transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
-					if t.SysUpdate {
-						if err := syspar.SysUpdate(t.DbTransaction); err != nil {
-							log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
-							return err
-						}
-						t.SysUpdate = false
-					}
-					if b.GenBlock {
-						continue
-					}
+					break
+				}
+				if strings.Contains(err.Error(), script.ErrVMTimeLimit.Error()) {
+					err = script.ErrVMTimeLimit
+				}
+			}
+			if t.IsSmartContract() {
+				transaction.BadTxForBan(t.KeyID())
+			}
+			_ = transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
+			if t.SysUpdate {
+				if err := syspar.SysUpdate(t.DbTransaction); err != nil {
+					log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
 					return err
 				}
-
-				if len(t.TxOutputs) > 0 {
-					utxo.UpdateTxInputs(t.Hash(), txInputs)
-					utxo.InsertTxOutputs(t.Hash(), t.TxOutputs)
-				}
-
-				if t.SysUpdate {
-					b.SysUpdate = true
-					t.SysUpdate = false
-				}
-
-				if t.Notifications.Size() > 0 {
-					b.Notifications = append(b.Notifications, t.Notifications)
-				}
-
-				var (
-					after    = &types.AfterTx{}
-					eco      int64
-					contract string
-					code     pbgo.TxInvokeStatusCode
-				)
-				if t.IsSmartContract() {
-					eco = t.SmartContract().TxSmart.EcosystemID
-					contract = t.SmartContract().TxContract.Name
-					code = t.TxResult.Code
-				}
-				after.UsedTx = t.Hash()
-				after.Lts = &types.LogTransaction{
-					Block:        t.BlockHeader.BlockId,
-					Hash:         t.Hash(),
-					TxData:       t.FullData,
-					Timestamp:    t.Timestamp(),
-					Address:      t.KeyID(),
-					EcosystemId:  eco,
-					ContractName: contract,
-					InvokeStatus: code,
-				}
-				after.UpdTxStatus = t.TxResult
-				afters.Txs = append(afters.Txs, after)
-				afters.Rts = append(afters.Rts, t.RollBackTx...)
-				afters.TxExecutionSql = append(afters.TxExecutionSql, t.DbTransaction.ExecutionSql...)
-				processedTx = append(processedTx, t.FullData)
-				totalTx++
+				t.SysUpdate = false
 			}
-			return nil
-		}(transactions)
+			if b.GenBlock {
+				continue
+			}
+			return err
+		}
+
+		if t.IsSmartContract() && len(t.TxOutputs) > 0 {
+			utxo.UpdateTxInputs(t.Hash(), txInputs)
+			utxo.InsertTxOutputs(t.Hash(), t.TxOutputs)
+		}
+
+		if t.SysUpdate {
+			b.SysUpdate = true
+			t.SysUpdate = false
+		}
+
+		if t.Notifications.Size() > 0 {
+			b.Notifications = append(b.Notifications, t.Notifications)
+		}
+
+		var (
+			after    = &types.AfterTx{}
+			eco      int64
+			contract string
+			code     pbgo.TxInvokeStatusCode
+		)
+		if t.IsSmartContract() {
+			eco = t.SmartContract().TxSmart.EcosystemID
+			contract = t.SmartContract().TxContract.Name
+			code = t.TxResult.Code
+		}
+		after.UsedTx = t.Hash()
+		after.Lts = &types.LogTransaction{
+			Block:        t.BlockHeader.BlockId,
+			Hash:         t.Hash(),
+			TxData:       t.FullData,
+			Timestamp:    t.Timestamp(),
+			Address:      t.KeyID(),
+			EcosystemId:  eco,
+			ContractName: contract,
+			InvokeStatus: code,
+		}
+		after.UpdTxStatus = t.TxResult
+		afters.Txs = append(afters.Txs, after)
+		afters.Rts = append(afters.Rts, t.RollBackTx...)
+		afters.TxExecutionSql = append(afters.TxExecutionSql, t.DbTransaction.ExecutionSql...)
+		processedTx = append(processedTx, t.FullData)
 	}
-	wg.Wait()
 	return nil
 }
 

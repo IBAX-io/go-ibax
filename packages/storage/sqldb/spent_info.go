@@ -47,13 +47,13 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	query :=
 		` SELECT
 			si.input_tx_hash,row_number() over (PARTITION BY si.output_key_id order by si.block_id ASC, tr.timestamp ASC) AS input_index,
-			si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.scene, si.ecosystem, si.contract, si.block, si.asset
+			si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.scene, si.ecosystem, si.contract, si.block_id, si.asset
 		FROM
 			spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
 		WHERE output_key_id IN ? AND si.input_tx_hash IS NULL
 		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `
 	var result []SpentInfo
-	err := GetDB(db).Debug().Raw(query, keyIds).Scan(result).Error
+	err := GetDB(db).Raw(query, keyIds).Scan(result).Error
 	if err != nil {
 		return nil, err
 	}

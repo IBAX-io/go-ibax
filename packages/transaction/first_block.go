@@ -113,8 +113,8 @@ func (f *FirstBlockParser) Action(t *Transaction) error {
 		return err
 	}
 
-	err = sqldb.GetDB(t.DbTransaction).Exec(`insert into "spent_info" (output_tx_hash,output_index,output_key_id,output_value,scene,ecosystem,contract,block_id,asset) values(?,?,?,?,?,?,?,?,?)`,
-		crypto.DoubleHash([]byte(`0`)), 0, keyID, amount, "Token", 1, "Transfer", 1, "IBXC").Error
+	err = sqldb.GetDB(t.DbTransaction).Exec(`insert into "spent_info" (output_index,output_tx_hash,output_key_id,output_value,scene,ecosystem,contract,block_id,asset) values(?,?,?,?,?,?,?,?,?)`,
+		0, crypto.DoubleHash([]byte(`0`)), keyID, amount, "Token", 1, "Transfer", 1, "IBXC").Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting spent info")
 		return err
