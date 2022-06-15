@@ -19,16 +19,19 @@ func (t *Transaction) GetLogger() *log.Entry {
 		logger = logger.WithFields(log.Fields{"block_id": t.BlockHeader.BlockId, "block_time": t.BlockHeader.Timestamp, "block_wallet_id": t.BlockHeader.KeyId, "block_state_id": t.BlockHeader.EcosystemId, "block_hash": t.BlockHeader.BlockHash, "block_version": t.BlockHeader.Version})
 	}
 	if t.PreBlockHeader != nil {
-		logger = logger.WithFields(log.Fields{"block_id": t.BlockHeader.BlockId, "block_time": t.BlockHeader.Timestamp, "block_wallet_id": t.BlockHeader.KeyId, "block_state_id": t.BlockHeader.EcosystemId, "block_hash": t.BlockHeader.BlockHash, "block_version": t.BlockHeader.Version})
+		logger = logger.WithFields(log.Fields{"pre_block_id": t.PreBlockHeader.BlockId, "pre_block_time": t.PreBlockHeader.Timestamp, "pre_block_wallet_id": t.PreBlockHeader.KeyId, "pre_block_state_id": t.PreBlockHeader.EcosystemId, "pre_block_hash": t.PreBlockHeader.BlockHash, "pre_block_version": t.PreBlockHeader.Version})
 	}
 	return logger
 }
 
 func (t *Transaction) Play() error {
-	if err := t.Inner.Init(t); err != nil {
+	if err := t.Inner.Init(t.InToCxt); err != nil {
 		return err
 	}
-	return t.Inner.Action(t)
+	if err := t.Inner.Action(t.InToCxt, t.OutCtx); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (t *Transaction) Check(checkTime int64) error {

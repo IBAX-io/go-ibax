@@ -50,26 +50,6 @@ var (
 	ErrNotImplementedOnCLB = errors.New("Contract not implemented on CLB")
 )
 
-type ThrowError struct {
-	Type    string `json:"type"`
-	Code    string `json:"id"`
-	ErrText string `json:"error"`
-}
-
-func (throw *ThrowError) Error() string {
-	return throw.ErrText
-}
-
-func Throw(code, errText string) error {
-	if len(errText) > script.MaxErrLen {
-		errText = errText[:script.MaxErrLen] + `...`
-	}
-	if len(code) > 32 {
-		code = code[:32]
-	}
-	return &ThrowError{Code: code, ErrText: errText, Type: `exception`}
-}
-
 var BOM = []byte{0xEF, 0xBB, 0xBF}
 
 type permTable struct {
@@ -274,7 +254,6 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"TransactionInfo":          TransactionInfo,
 		"DelTable":                 DelTable,
 		"DelColumn":                DelColumn,
-		"Throw":                    Throw,
 		"HexToPub":                 crypto.HexToPub,
 		"PubToHex":                 PubToHex,
 		"UpdateNodesBan":           UpdateNodesBan,

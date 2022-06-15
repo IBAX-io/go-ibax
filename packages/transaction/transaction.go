@@ -16,26 +16,17 @@ import (
 
 // Transaction is a structure for parsing transactions
 type Transaction struct {
-	Notifications  types.Notifications
-	GenBlock       bool
-	SysUpdate      bool
-	RollBackTx     []*types.RollbackTx
-	BlockHeader    *types.BlockHeader
-	PreBlockHeader *types.BlockHeader
-	DbTransaction  *sqldb.DbTransaction
-	Rand           *rand.Rand
-	TxCheckLimits  *Limits
-	TxResult       *pbgo.TxResult
-	SqlDbSavePoint int
-	FullData       []byte // full transaction, with type and data
-	Inner          TransactionCaller
+	FullData []byte // full transaction, with type and data
+	*InToCxt
+	*OutCtx
+	Inner TransactionCaller
 }
 
 // TransactionCaller is parsing transactions
 type TransactionCaller interface {
-	Init(*Transaction) error
+	Init(*InToCxt) error
 	Validate() error
-	Action(*Transaction) error
+	Action(*InToCxt, *OutCtx) error
 	TxRollback() error
 	txType() byte
 	txHash() []byte
@@ -79,16 +70,21 @@ func (tr *Transaction) WithOption(
 	txCheckLimits *Limits,
 	sqlDbSavePoint int,
 	opts ...TransactionOption) error {
-	tr.Notifications = notifications
-	tr.GenBlock = genBlock
-	tr.BlockHeader = blockHeader
-	tr.PreBlockHeader = preBlockHeader
-	tr.DbTransaction = dbTransaction
-	tr.DbTransaction.ExecutionSql = nil
-	tr.Rand = rand
-	tr.TxCheckLimits = txCheckLimits
-	tr.SqlDbSavePoint = sqlDbSavePoint
-	tr.TxResult = &pbgo.TxResult{Hash: tr.Hash()}
+	in := &InToCxt{
+		SqlDbSavePoint: sqlDbSavePoint,
+		TxCheckLimits:  txCheckLimits,
+		Rand:           rand,
+		DbTransaction:  dbTransaction,
+		PreBlockHeader: preBlockHeader,
+		BlockHeader:    blockHeader,
+		GenBlock:       genBlock,
+		Notifications:  notifications,
+	}
+	in.DbTransaction.BinLogSql = nil
+	tr.InToCxt = in
+	tr.OutCtx = &OutCtx{
+		TxResult: &pbgo.TxResult{Hash: tr.Hash()},
+	}
 	return tr.Apply(opts...)
 }
 

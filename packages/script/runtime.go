@@ -69,6 +69,7 @@ var sysVars = map[string]struct{}{
 
 var (
 	ErrMemoryLimit = errors.New("Memory limit exceeded")
+	//ErrVMTimeLimit returns when the time limit exceeded
 	ErrVMTimeLimit = errors.New(`time limit exceeded`)
 )
 

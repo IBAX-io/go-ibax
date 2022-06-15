@@ -36,4 +36,5 @@ message BlockData {
     bytes bin_data =4;
     repeated bytes tx_full_data =5;
     AfterTxs after_txs =6;
+    bool sys_update = 7;
 }

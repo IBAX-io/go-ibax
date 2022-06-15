@@ -24,7 +24,6 @@ type Block struct {
 	*types.BlockData
 	PrevRollbacksHash []byte
 	Transactions      []*transaction.Transaction
-	SysUpdate         bool
 	GenBlock          bool // it equals true when we are generating a new block
 	Notifications     []types.Notifications
 }

@@ -25,7 +25,6 @@ import (
 	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
-	"github.com/pkg/errors"
 
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -546,15 +545,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 	retError := func(err error) (string, error) {
 		eText := err.Error()
 		if !strings.HasPrefix(eText, `{`) && err != script.ErrVMTimeLimit {
-			if throw, ok := err.(*ThrowError); ok {
-				out, errThrow := json.Marshal(throw)
-				if errThrow != nil {
-					out = []byte(`{"type": "panic", "error": "marshalling throw"}`)
-				}
-				err = errors.New(string(out))
-			} else {
-				err = script.SetVMError(`panic`, eText)
-			}
+			err = script.SetVMError(`panic`, eText)
 		}
 		return ``, err
 	}
@@ -635,14 +626,14 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 lp:
 	if err != nil {
 		sc.RollBackTx = nil
-		sc.DbTransaction.ExecutionSql = nil
+		sc.DbTransaction.BinLogSql = nil
 		if err := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); err != nil {
 			return retError(err)
 		}
 		if needPayment {
 			if err := sc.payContract(true); err != nil {
 				sc.RollBackTx = nil
-				sc.DbTransaction.ExecutionSql = nil
+				sc.DbTransaction.BinLogSql = nil
 				if err := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); err != nil {
 					return retError(err)
 				}

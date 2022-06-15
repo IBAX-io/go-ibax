@@ -6,7 +6,10 @@
 package block
 
 import (
+	"fmt"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -35,10 +38,7 @@ func (b *Block) PlaySafe() error {
 	err = b.ProcessTxs(dbTx)
 	if err != nil {
 		dbTx.Rollback()
-		if b.GenBlock && len(b.Transactions) == 0 {
-			if err == transaction.ErrLimitStop {
-				err = script.ErrVMTimeLimit
-			}
+		if b.GenBlock && len(b.TxFullData) == 0 {
 			if inputTx[0].IsSmartContract() {
 				transaction.BadTxForBan(inputTx[0].KeyID())
 			}
@@ -50,7 +50,7 @@ func (b *Block) PlaySafe() error {
 	}
 
 	if b.GenBlock {
-		if len(b.Transactions) == 0 {
+		if len(b.TxFullData) == 0 {
 			dbTx.Commit()
 			return ErrEmptyBlock
 		}
@@ -130,7 +130,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 				return errRoll
 			}
 			if b.GenBlock {
-				if err == transaction.ErrLimitStop {
+				if errors.Cause(err) == transaction.ErrLimitStop {
 					if curTx == 0 {
 						return err
 					}
@@ -191,7 +191,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		after.UpdTxStatus = t.TxResult
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
-		afters.TxExecutionSql = append(afters.TxExecutionSql, t.DbTransaction.ExecutionSql...)
+		afters.TxBinLogSql = append(afters.TxBinLogSql, t.DbTransaction.BinLogSql...)
 		processedTx = append(processedTx, t.FullData)
 	}
 	return nil

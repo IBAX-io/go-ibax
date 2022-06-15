@@ -42,7 +42,7 @@ func (s *SmartTransactionParser) setTimestamp() {
 	s.Timestamp = time.Now().UnixMilli()
 }
 
-func (s *SmartTransactionParser) Init(t *Transaction) error {
+func (s *SmartTransactionParser) Init(t *InToCxt) error {
 	s.Rand = t.Rand
 	s.GenBlock = t.GenBlock
 	s.BlockHeader = t.BlockHeader
@@ -73,13 +73,13 @@ func (s *SmartTransactionParser) Validate() error {
 	return nil
 }
 
-func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
+func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	defer func() {
 		if s.Penalty {
-			t.TxResult.Code = pbgo.TxInvokeStatusCode_PENALTY
+			out.TxResult.Code = pbgo.TxInvokeStatusCode_PENALTY
 		}
 	}()
-	t.TxResult.Result, err = s.CallContract(t.SqlDbSavePoint)
+	out.TxResult.Result, err = s.CallContract(in.SqlDbSavePoint)
 	if err == nil && s.TxSmart != nil {
 		if s.Penalty {
 			if s.FlushRollback != nil {
@@ -89,7 +89,7 @@ func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
 				}
 			}
 		}
-		err = t.TxCheckLimits.CheckLimit(t)
+		err = in.TxCheckLimits.CheckLimit(s)
 	}
 	if err != nil {
 		if s.FlushRollback != nil {
@@ -100,9 +100,9 @@ func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
 		}
 		return
 	}
-	t.RollBackTx = s.RollBackTx
-	t.SysUpdate = s.SysUpdate
-	t.DbTransaction.ExecutionSql = s.DbTransaction.ExecutionSql
+	out.RollBackTx = s.RollBackTx
+	out.SysUpdate = s.SysUpdate
+	in.DbTransaction.BinLogSql = s.DbTransaction.BinLogSql
 	return
 }
 
@@ -199,4 +199,43 @@ func (s *SmartTransactionParser) parseFromContract(fillData bool) error {
 	}
 
 	return nil
+}
+
+func (s *SmartTransactionParser) SysUpdateWorker(dbTx *sqldb.DbTransaction) error {
+	if !s.SysUpdate {
+		return nil
+	}
+	if err := syspar.SysUpdate(dbTx); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
+		return err
+	}
+	return nil
+}
+
+func (s *SmartTransactionParser) SysTableColByteaWorker(dbTx *sqldb.DbTransaction) error {
+	if err := syspar.SysTableColType(dbTx); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
+		return err
+	}
+	return nil
+}
+
+func (s *SmartTransactionParser) FlushVM() {
+	if s.FlushRollback == nil {
+		return
+	}
+	flush := s.FlushRollback
+	for i := len(flush) - 1; i >= 0; i-- {
+		flush[i].FlushVM()
+	}
+	return
+}
+
+type TxOutCtx struct {
+	SysUpdate        bool
+	SysTableColBytea bool
+	Flush            bool
+	FlushRollback    []*smart.FlushInfo
+	VM               *script.VM
+	VM2              *script.VM
 }

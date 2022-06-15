@@ -201,8 +201,8 @@ func GormClose() error {
 
 // DbTransaction is gorm.DB wrapper
 type DbTransaction struct {
-	conn         *gorm.DB
-	ExecutionSql [][]byte
+	conn      *gorm.DB
+	BinLogSql [][]byte
 }
 
 func NewDbTransaction(conn *gorm.DB) *DbTransaction {
@@ -317,7 +317,7 @@ func (dbTx *DbTransaction) ExecSql(sql string) error {
 	if err != nil {
 		return err
 	}
-	dbTx.ExecutionSql = append(dbTx.ExecutionSql, []byte(sql))
+	dbTx.BinLogSql = append(dbTx.BinLogSql, []byte(sql))
 	return nil
 }
 
