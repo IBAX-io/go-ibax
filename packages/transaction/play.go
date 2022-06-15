@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
@@ -28,8 +29,17 @@ func (t *Transaction) Play() error {
 	if err := t.Inner.Init(t.InToCxt); err != nil {
 		return err
 	}
-	if err := t.Inner.Action(t.InToCxt, t.OutCtx); err != nil {
-		return err
+	err := t.Inner.Action(t.InToCxt, t.OutCtx)
+	if err != nil {
+		if err == ErrNetworkStopping {
+			// Set the node in a pause state
+			node.PauseNodeActivity(node.PauseTypeStopingNetwork)
+			return err
+		}
+		errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(t.InToCxt.SqlDbSavePoint))
+		if errRoll != nil {
+			return errRoll
+		}
 	}
 	return nil
 }

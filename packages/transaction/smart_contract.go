@@ -74,35 +74,34 @@ func (s *SmartTransactionParser) Validate() error {
 }
 
 func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
+	var res string
 	defer func() {
 		if s.Penalty {
 			out.TxResult.Code = pbgo.TxInvokeStatusCode_PENALTY
 		}
-	}()
-	out.TxResult.Result, err = s.CallContract(in.SqlDbSavePoint)
-	if err == nil && s.TxSmart != nil {
-		if s.Penalty {
+		if err != nil || s.Penalty {
 			if s.FlushRollback != nil {
 				flush := s.FlushRollback
 				for i := len(flush) - 1; i >= 0; i-- {
 					flush[i].FlushVM()
 				}
 			}
+			return
 		}
+		out.Apply(
+			WithOutCtxTxResult(&pbgo.TxResult{Result: res}),
+			WithOutCtxSysUpdate(s.SysUpdate),
+			WithOutCtxRollBackTx(s.RollBackTx),
+		)
+		in.DbTransaction.BinLogSql = s.DbTransaction.BinLogSql
+	}()
+	out.TxResult.Result, err = s.CallContract(in.SqlDbSavePoint)
+	if err == nil && s.TxSmart != nil {
 		err = in.TxCheckLimits.CheckLimit(s)
 	}
 	if err != nil {
-		if s.FlushRollback != nil {
-			flush := s.FlushRollback
-			for i := len(flush) - 1; i >= 0; i-- {
-				flush[i].FlushVM()
-			}
-		}
 		return
 	}
-	out.RollBackTx = s.RollBackTx
-	out.SysUpdate = s.SysUpdate
-	in.DbTransaction.BinLogSql = s.DbTransaction.BinLogSql
 	return
 }
 

@@ -35,3 +35,33 @@ type OutCtx struct {
 	RollBackTx []*types.RollbackTx
 	TxResult   *pbgo.TxResult
 }
+
+type OutCtxOption func(b *OutCtx)
+
+func (tr *OutCtx) Apply(opts ...OutCtxOption) {
+	for _, opt := range opts {
+		if opt == nil {
+			continue
+		}
+		opt(tr)
+	}
+	return
+}
+
+func WithOutCtxTxResult(ret *pbgo.TxResult) OutCtxOption {
+	return func(b *OutCtx) {
+		b.TxResult = ret
+	}
+}
+
+func WithOutCtxSysUpdate(ret bool) OutCtxOption {
+	return func(b *OutCtx) {
+		b.SysUpdate = ret
+	}
+}
+
+func WithOutCtxRollBackTx(ret []*types.RollbackTx) OutCtxOption {
+	return func(b *OutCtx) {
+		b.RollBackTx = ret
+	}
+}
