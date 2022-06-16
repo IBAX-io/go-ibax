@@ -8,7 +8,6 @@ package daemons
 import (
 	"bytes"
 	"context"
-	"errors"
 	"sync/atomic"
 	"time"
 
@@ -22,6 +21,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
+	"github.com/pkg/errors"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -233,7 +233,7 @@ func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, st time.Ti
 
 		if tr.IsSmartContract() {
 			err = limits.CheckLimit(tr.Inner)
-			if err == transaction.ErrLimitStop && i > 0 {
+			if errors.Cause(err) == transaction.ErrLimitStop && i > 0 {
 				break
 			} else if err != nil {
 				if err != transaction.ErrLimitSkip {

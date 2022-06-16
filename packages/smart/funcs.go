@@ -867,7 +867,7 @@ func mapToParams(values *types.Map) (params []string, val []any, err error) {
 // DBInsert inserts a record into the specified database table
 func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64, ret int64, err error) {
 	if tblname == "platform_parameters" {
-		return 0, 0, fmt.Errorf("system parameters access denied")
+		return 0, 0, fmt.Errorf("platform parameters access denied")
 	}
 
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
@@ -1027,7 +1027,7 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 func DBUpdateExt(sc *SmartContract, tblname string, where *types.Map,
 	values *types.Map) (qcost int64, err error) {
 	if tblname == "platform_parameters" {
-		return 0, fmt.Errorf("system parameters access denied")
+		return 0, fmt.Errorf("platform parameters access denied")
 	}
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
 	if err = sc.AccessTable(tblname, "update"); err != nil {

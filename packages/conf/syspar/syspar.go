@@ -135,12 +135,12 @@ func GetNodePrivKey() []byte {
 	return nodePrivKey
 }
 
-// SysUpdate reloads/updates values of system parameters
+// SysUpdate reloads/updates values of platform parameters
 func SysUpdate(dbTx *sqldb.DbTransaction) error {
 	var err error
 	platformParameters, err := sqldb.GetAllPlatformParameters(dbTx)
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all system parameters")
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all platform parameters")
 		return err
 	}
 	mutex.Lock()

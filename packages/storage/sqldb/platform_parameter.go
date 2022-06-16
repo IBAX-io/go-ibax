@@ -48,7 +48,7 @@ func (sp *PlatformParameter) GetValueParameterByName(name, value string) (*strin
 	return result, nil
 }
 
-// GetAllPlatformParameters returns all system parameters
+// GetAllPlatformParameters returns all platform parameters
 func GetAllPlatformParameters(dbTx *DbTransaction) ([]PlatformParameter, error) {
 	parameters := new([]PlatformParameter)
 	if err := GetDB(dbTx).Find(&parameters).Error; err != nil {

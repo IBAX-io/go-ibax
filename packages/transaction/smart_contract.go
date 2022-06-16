@@ -89,7 +89,11 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 			return
 		}
 		out.Apply(
-			WithOutCtxTxResult(res),
+			WithOutCtxTxResult(&pbgo.TxResult{
+				Result: res,
+				Hash:   s.txHash(),
+				Code:   pbgo.TxInvokeStatusCode_SUCCESS,
+			}),
 			WithOutCtxSysUpdate(s.SysUpdate),
 			WithOutCtxRollBackTx(s.RollBackTx),
 		)

@@ -51,7 +51,7 @@ func (l BCDaemonFactory) Load(ctx context.Context) error {
 	}
 
 	if err := syspar.SysUpdate(nil); err != nil {
-		log.Errorf("can't read system parameters: %s", utils.ErrInfo(err))
+		log.Errorf("can't read platform parameters: %s", utils.ErrInfo(err))
 		return err
 	}
 	if err := syspar.SysTableColType(nil); err != nil {
@@ -119,7 +119,7 @@ func (l SNDaemonFactory) Load(ctx context.Context) error {
 	daemons.InitialLoad(l.logger)
 
 	if err := syspar.SysUpdate(nil); err != nil {
-		log.Errorf("can't read system parameters: %s", utils.ErrInfo(err))
+		log.Errorf("can't read platform parameters: %s", utils.ErrInfo(err))
 		return err
 	}
 	if err := syspar.SysTableColType(nil); err != nil {
@@ -174,7 +174,7 @@ type CLBDaemonFactory struct {
 // Load loads clb daemons
 func (l CLBDaemonFactory) Load(ctx context.Context) error {
 	if err := syspar.SysUpdate(nil); err != nil {
-		l.logger.Errorf("can't read system parameters: %s", utils.ErrInfo(err))
+		l.logger.Errorf("can't read platform parameters: %s", utils.ErrInfo(err))
 		return err
 	}
 	if err := syspar.SysTableColType(nil); err != nil {

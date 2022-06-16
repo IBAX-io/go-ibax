@@ -103,6 +103,11 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		}
 	}()
 	if !b.GenBlock && !b.IsGenesis() && conf.Config.BlockSyncMethod.Method == types.BlockSyncMethod_SQLDML.String() {
+		if b.SysUpdate {
+			if err := syspar.SysUpdate(dbTx); err != nil {
+				return fmt.Errorf("updating syspar: %w", err)
+			}
+		}
 		return nil
 	}
 	for curTx := 0; curTx < len(b.Transactions); curTx++ {
