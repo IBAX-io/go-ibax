@@ -89,7 +89,7 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 			return
 		}
 		out.Apply(
-			WithOutCtxTxResult(&pbgo.TxResult{Result: res}),
+			WithOutCtxTxResult(res),
 			WithOutCtxSysUpdate(s.SysUpdate),
 			WithOutCtxRollBackTx(s.RollBackTx),
 		)

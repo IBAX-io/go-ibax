@@ -48,9 +48,9 @@ func (tr *OutCtx) Apply(opts ...OutCtxOption) {
 	return
 }
 
-func WithOutCtxTxResult(ret *pbgo.TxResult) OutCtxOption {
+func WithOutCtxTxResult(ret string) OutCtxOption {
 	return func(b *OutCtx) {
-		b.TxResult = ret
+		b.TxResult.Result = ret
 	}
 }
 
