@@ -65,6 +65,9 @@ func (f *FirstBlockParser) Validate() error {
 }
 
 func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
+	if in.BlockHeader.BlockId > 1 {
+		return nil
+	}
 	logger := f.Logger
 	data := f.Data
 	dbTx := in.DbTransaction

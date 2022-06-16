@@ -95,7 +95,7 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		)
 		in.DbTransaction.BinLogSql = s.DbTransaction.BinLogSql
 	}()
-	out.TxResult.Result, err = s.CallContract(in.SqlDbSavePoint)
+	res, err = s.CallContract(in.SqlDbSavePoint)
 	if err == nil && s.TxSmart != nil {
 		err = in.TxCheckLimits.CheckLimit(s)
 	}

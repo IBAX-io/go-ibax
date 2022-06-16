@@ -13,7 +13,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
-type DeliveProvider interface {
+type DeliverProvider interface {
 	SysUpdateWorker(*sqldb.DbTransaction) error
 	SysTableColByteaWorker(*sqldb.DbTransaction) error
 	FlushVM()

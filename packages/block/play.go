@@ -16,6 +16,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/notificator"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -117,6 +118,15 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		}
 		err = t.Play()
 		if err != nil {
+			if err == transaction.ErrNetworkStopping {
+				// Set the node in a pause state
+				node.PauseNodeActivity(node.PauseTypeStopingNetwork)
+				return err
+			}
+			errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(t.InToCxt.SqlDbSavePoint))
+			if errRoll != nil {
+				return fmt.Errorf("%v; %w", err, errRoll)
+			}
 			if b.GenBlock {
 				if errors.Cause(err) == transaction.ErrLimitStop {
 					if curTx == 0 {
@@ -134,8 +144,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			_ = transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
 			if t.SysUpdate {
 				if err := syspar.SysUpdate(t.DbTransaction); err != nil {
-					log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
-					return err
+					return fmt.Errorf("updating syspar: %w", err)
 				}
 				t.SysUpdate = false
 			}
