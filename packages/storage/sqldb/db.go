@@ -209,9 +209,8 @@ func NewDbTransaction(conn *gorm.DB) *DbTransaction {
 	return &DbTransaction{conn: conn}
 }
 
-func (d *DbTransaction) Debug() *DbTransaction {
+func (d *DbTransaction) Debug() {
 	d.conn = d.conn.Debug()
-	return d
 }
 
 // StartTransaction is beginning transaction
@@ -219,6 +218,27 @@ func StartTransaction() (*DbTransaction, error) {
 	conn := DBConn.Begin()
 	if conn.Error != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": conn.Error}).Error("cannot start transaction because of connection error")
+		return nil, conn.Error
+	}
+
+	if err := setupConnOptions(conn); err != nil {
+		return nil, err
+	}
+
+	return &DbTransaction{
+		conn: conn,
+	}, nil
+}
+func StartTransaction2(dbTx *gorm.DB) (*DbTransaction, error) {
+	var cache *gorm.DB
+	if dbTx != nil {
+		cache = dbTx
+	} else {
+		dbTx = DBConn
+	}
+	conn := cache.Begin()
+	if conn.Error != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": conn.Error}).Error("cannot start transaction2 because of connection error")
 		return nil, conn.Error
 	}
 

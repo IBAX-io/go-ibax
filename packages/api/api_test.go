@@ -384,7 +384,7 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 		return
 	}
 
-	data, hash, err := transaction.NewTransaction(types.SmartTransaction{
+	data, hash, err := transaction.NewTransactionInProc(types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(contract.ID),
 			EcosystemID: 1,
@@ -484,7 +484,7 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 		//params["TokenEcosystem"] = int64(2)
 		params["Value"] = fmt.Sprintf(`contract rnd%v%d  { action { }}`, conname, i)
 		expedite := strconv.Itoa(1)
-		data, txhash, _ := transaction.NewTransaction(types.SmartTransaction{
+		data, txhash, _ := transaction.NewTransactionInProc(types.SmartTransaction{
 			Header: &types.Header{
 				ID:          int(contract.ID),
 				Time:        time.Now().Unix(),
@@ -584,7 +584,7 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 		return
 	}
 
-	data, _, err := transaction.NewTransaction(types.SmartTransaction{
+	data, _, err := transaction.NewTransactionInProc(types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(contract.ID),
 			EcosystemID: 1,
@@ -674,7 +674,7 @@ func postTxResult2(name string, form getter) (id int64, msg string, err error) {
 		return
 	}
 
-	data, _, err := transaction.NewTransaction(types.SmartTransaction{
+	data, _, err := transaction.NewTransactionInProc(types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(contract.ID),
 			EcosystemID: 2,

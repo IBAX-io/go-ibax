@@ -88,7 +88,7 @@ func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
 			return err
 		}
 		t.TxOutputs = s.TxOutputs
-		return nil
+		return
 	}
 
 	t.TxResult.Result, err = s.CallContract(t.SqlDbSavePoint)

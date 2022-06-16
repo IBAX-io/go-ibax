@@ -36,11 +36,11 @@ func CreateSpentInfoBatches(dbTx *gorm.DB, spentInfos []SpentInfo) error {
 		Columns:   []clause.Column{{Name: "output_tx_hash"}, {Name: "output_key_id"}, {Name: "output_index"}},
 		DoUpdates: clause.AssignmentColumns([]string{"input_tx_hash", "input_index"}),
 		Where: clause.Where{Exprs: []clause.Expression{
-			clause.Eq{Column: "spent_info.output_tx_hash", Value: "EXCLUDED.output_tx_hash"},
-			clause.Eq{Column: "spent_info.output_key_id", Value: "EXCLUDED.output_key_id"},
-			clause.Eq{Column: "spent_info.output_index", Value: "EXCLUDED.output_index"},
+			clause.Eq{Column: "spent_info.output_tx_hash", Value: gorm.Expr(`"excluded"."output_tx_hash"`)},
+			clause.Eq{Column: "spent_info.output_key_id", Value: gorm.Expr(`"excluded"."output_key_id"`)},
+			clause.Eq{Column: "spent_info.output_index", Value: gorm.Expr(`"excluded"."output_index"`)},
 		}},
-	}).CreateInBatches(spentInfos, 5000).Error
+	}).CreateInBatches(spentInfos, 1000).Error
 }
 
 func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
@@ -53,7 +53,7 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 		WHERE output_key_id IN ? AND si.input_tx_hash IS NULL
 		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `
 	var result []SpentInfo
-	err := GetDB(db).Raw(query, keyIds).Scan(result).Error
+	err := GetDB(db).Raw(query, keyIds).Scan(&result).Error
 	if err != nil {
 		return nil, err
 	}

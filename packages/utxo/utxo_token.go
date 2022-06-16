@@ -2,6 +2,7 @@ package utxo
 
 import (
 	"bytes"
+
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
@@ -50,6 +51,7 @@ func UpdateTxInputs(inputTxHash []byte, txInputsCtx []sqldb.SpentInfo) {
 }
 
 func PutAllOutputsMap(outputs []sqldb.SpentInfo) {
+	outputsMap = make(map[int64][]sqldb.SpentInfo)
 	for _, output := range outputs {
 		spentInfos := outputsMap[output.OutputKeyId]
 		spentInfos = append(spentInfos, output)
@@ -79,5 +81,6 @@ func GetAllOutputs() []sqldb.SpentInfo {
 	for _, outputs := range outputsMap {
 		list = append(list, outputs...)
 	}
+	outputsMap = make(map[int64][]sqldb.SpentInfo)
 	return list
 }
