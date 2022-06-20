@@ -602,7 +602,9 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 		}
 		if needPayment {
 			for _, pay := range sc.multiPays {
-				wltAmount, _ := decimal.NewFromString(pay.PayWallet.Amount)
+
+				wltAmount := pay.PayWallet.Balance
+
 				estimateCost := converter.StrToInt64(converter.IntToStr(len(cfunc.Vars) + len(cfunc.Code)))
 				estimate = estimate.Add(decimal.New(estimateCost*2, 0).Mul(pay.FuelRate))
 				if wltAmount.Cmp(estimate) < 0 {
@@ -674,7 +676,7 @@ func (sc *SmartContract) checkTxSign() error {
 		return err
 	}
 
-	isFound, err := sc.Key.SetTablePrefix(sc.TxSmart.EcosystemID).Get(sc.DbTransaction, signedBy)
+	isFound, err := sc.Key.SetTablePrefix(sc.TxSmart.EcosystemID).Get(sc.DbTransaction, signedBy, false)
 	if err != nil {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting wallet")
 		return err

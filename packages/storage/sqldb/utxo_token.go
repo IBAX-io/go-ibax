@@ -1,13 +1,13 @@
-package utxo
+package sqldb
 
 import (
 	"bytes"
 
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/shopspring/decimal"
 )
 
 var (
-	outputsMap map[int64][]sqldb.SpentInfo
+	outputsMap map[int64][]SpentInfo
 )
 
 // func CallContract(outputsMap map[int64][]sqldb.SpentInfo, tx Tx) {
@@ -22,7 +22,7 @@ var (
 //	}
 // }
 
-func InsertTxOutputs(outputTxHash []byte, txOutputsCtx []sqldb.SpentInfo) {
+func InsertTxOutputs(outputTxHash []byte, txOutputsCtx []SpentInfo) {
 	for _, txOutput := range txOutputsCtx {
 		spentInfos := outputsMap[txOutput.OutputKeyId]
 		txOutput.OutputTxHash = outputTxHash
@@ -32,7 +32,7 @@ func InsertTxOutputs(outputTxHash []byte, txOutputsCtx []sqldb.SpentInfo) {
 	}
 }
 
-func UpdateTxInputs(inputTxHash []byte, txInputsCtx []sqldb.SpentInfo) {
+func UpdateTxInputs(inputTxHash []byte, txInputsCtx []SpentInfo) {
 	var inputIndex int32
 	for _, txInput := range txInputsCtx {
 		// spentInfos := GetUnusedOutputsMap(outputsMap, txInput.OutputKeyId)
@@ -50,22 +50,22 @@ func UpdateTxInputs(inputTxHash []byte, txInputsCtx []sqldb.SpentInfo) {
 	}
 }
 
-func PutAllOutputsMap(outputs []sqldb.SpentInfo) {
-	outputsMap = make(map[int64][]sqldb.SpentInfo)
+func PutAllOutputsMap(outputs []SpentInfo) {
+	outputsMap = make(map[int64][]SpentInfo)
 	for _, output := range outputs {
 		spentInfos := outputsMap[output.OutputKeyId]
 		spentInfos = append(spentInfos, output)
 		PutOutputsMap(output.OutputKeyId, spentInfos)
 	}
 }
-func PutOutputsMap(keyID int64, outputs []sqldb.SpentInfo) {
+func PutOutputsMap(keyID int64, outputs []SpentInfo) {
 	outputsMap[keyID] = outputs
 }
 
-func GetUnusedOutputsMap(keyID int64) []sqldb.SpentInfo {
+func GetUnusedOutputsMap(keyID int64) []SpentInfo {
 	spentInfos := outputsMap[keyID]
 	var inputIndex int32
-	var list []sqldb.SpentInfo
+	var list []SpentInfo
 	for _, output := range spentInfos {
 		if len(output.InputTxHash) == 0 {
 			output.InputIndex = inputIndex
@@ -75,12 +75,25 @@ func GetUnusedOutputsMap(keyID int64) []sqldb.SpentInfo {
 	}
 	return list
 }
+func GetBalance(keyID int64) *decimal.Decimal {
+	txInputs := GetUnusedOutputsMap(keyID)
+	balance := decimal.Zero
+	if len(txInputs) > 0 {
+		for _, input := range txInputs {
+			outputValue, _ := decimal.NewFromString(input.OutputValue)
+			balance = balance.Add(outputValue)
+		}
+		return &balance
+	}
+	return nil
 
-func GetAllOutputs() []sqldb.SpentInfo {
-	var list []sqldb.SpentInfo
+}
+
+func GetAllOutputs() []SpentInfo {
+	var list []SpentInfo
 	for _, outputs := range outputsMap {
 		list = append(list, outputs...)
 	}
-	outputsMap = make(map[int64][]sqldb.SpentInfo)
+	outputsMap = make(map[int64][]SpentInfo)
 	return list
 }

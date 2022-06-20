@@ -29,8 +29,6 @@ type Transaction struct {
 	SqlDbSavePoint int
 	FullData       []byte // full transaction, with type and data
 	Inner          TransactionCaller
-	TxInputs       []sqldb.SpentInfo
-	TxOutputs      []sqldb.SpentInfo
 }
 
 // TransactionCaller is parsing transactions
@@ -80,7 +78,6 @@ func (tr *Transaction) WithOption(
 	rand *rand.Rand,
 	txCheckLimits *Limits,
 	sqlDbSavePoint int,
-	txInputs []sqldb.SpentInfo,
 	opts ...TransactionOption) error {
 	tr.Notifications = notifications
 	tr.GenBlock = genBlock
@@ -92,7 +89,6 @@ func (tr *Transaction) WithOption(
 	tr.TxCheckLimits = txCheckLimits
 	tr.SqlDbSavePoint = sqlDbSavePoint
 	tr.TxResult = &pbgo.TxResult{Hash: tr.Hash()}
-	tr.TxInputs = txInputs
 	return tr.Apply(opts...)
 }
 

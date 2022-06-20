@@ -117,7 +117,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	account := &sqldb.Key{}
 	account.SetTablePrefix(client.EcosystemID)
-	isAccount, err := account.Get(nil, wallet)
+	isAccount, err := account.Get(nil, wallet, false)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting public key from keys")
 		errorResponse(w, err)
@@ -210,7 +210,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 							errorResponse(w, errors.New(`encountered some problems when login account`))
 							return
 						} else {
-							_, _ = account.Get(nil, wallet)
+							_, _ = account.Get(nil, wallet, false)
 							break
 						}
 					}

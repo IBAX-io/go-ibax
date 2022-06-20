@@ -8,13 +8,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"math"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -713,7 +714,28 @@ func MathModDecimal(x, y decimal.Decimal) decimal.Decimal {
 
 func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err error) {
 	keyID := sc.TxSmart.KeyID
-	txInputs := sc.TxInputs
+	return utxoTransfer(sc, keyID, toID, value)
+}
+
+func utxoTokenFromID(sc *SmartContract, keyID int64, toID int64, value string) (flag bool, err error) {
+
+	return utxoTransfer(sc, keyID, toID, value)
+}
+
+func utxoTransfer(sc *SmartContract, keyID int64, toID int64, value string) (flag bool, err error) {
+	txInputs := sqldb.GetUnusedOutputsMap(keyID)
+	if len(txInputs) == 0 {
+		txInputs, _ = sqldb.GetTxOutputs(sc.DbTransaction, []int64{keyID})
+		totalAmount := decimal.Zero
+		if len(txInputs) > 0 {
+			for _, input := range txInputs {
+				outputValue, _ := decimal.NewFromString(input.OutputValue)
+				totalAmount = totalAmount.Add(outputValue)
+			}
+			sqldb.PutOutputsMap(keyID, txInputs)
+		}
+	}
+
 	totalAmount := decimal.Zero
 	var txOutputs []sqldb.SpentInfo
 	for _, input := range txInputs {
@@ -732,6 +754,10 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	if totalAmount.GreaterThan(decimal.Zero) {
 		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: keyID, OutputValue: totalAmount.String()})
 	}
-	sc.TxOutputs = txOutputs
+	//sc.TxOutputs = txOutputs
+	if len(txInputs) > 0 && len(txOutputs) > 0 {
+		sqldb.UpdateTxInputs(sc.Hash, txInputs)
+		sqldb.InsertTxOutputs(sc.Hash, txOutputs)
+	}
 	return flag, err
 }

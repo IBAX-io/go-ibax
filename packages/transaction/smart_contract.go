@@ -54,7 +54,6 @@ func (s *SmartTransactionParser) Init(t *Transaction) error {
 	s.CLB = false
 	s.Rollback = true
 	s.SysUpdate = false
-	s.TxInputs = t.TxInputs
 	s.RollBackTx = make([]*types.RollbackTx, 0)
 	if s.GenBlock {
 		s.TimeLimit = syspar.GetMaxBlockGenerationTime()
@@ -87,7 +86,6 @@ func (s *SmartTransactionParser) Action(t *Transaction) (err error) {
 		if err != nil {
 			return err
 		}
-		t.TxOutputs = s.TxOutputs
 		return
 	}
 

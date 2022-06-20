@@ -22,7 +22,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/IBAX-io/go-ibax/packages/utxo"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -125,7 +124,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		return err
 	}
 	//fmt.Println("outputs", outputs)
-	utxo.PutAllOutputsMap(outputs)
+	sqldb.PutAllOutputsMap(outputs)
 	// b.TxOutputs
 	// b.TxInputs
 
@@ -179,7 +178,6 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		wg.Wait()
 
 		if len(txsGroupMap) == 0 {
-			log.Printf("执行分组结束")
 			break
 		}
 	}
@@ -187,20 +185,13 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 }
 func (b *Block) executeTx(k string, t *transaction.Transaction, _dbTx2 *sqldb.DbTransaction, rand *random.Rand, limits *transaction.Limits, curTx int) (*types.AfterTx, *transaction.Transaction, error) {
 	logger := b.GetLogger()
-	log.Printf("执行分组 = %v,执行交易=%+v\n", k, t)
-
-	var txInputs []sqldb.SpentInfo
-	if t.IsSmartContract() {
-
-		txInputs = utxo.GetUnusedOutputsMap(t.KeyID())
-	}
 
 	err := _dbTx2.Savepoint(consts.SetSavePointMarkBlock(curTx))
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 		return nil, nil, err
 	}
-	err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, _dbTx2, rand.BytesSeed(t.Hash()), limits, curTx, txInputs)
+	err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, _dbTx2, rand.BytesSeed(t.Hash()), limits, curTx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -242,11 +233,6 @@ func (b *Block) executeTx(k string, t *transaction.Transaction, _dbTx2 *sqldb.Db
 			//continue
 		}
 		return nil, nil, err
-	}
-
-	if t.IsSmartContract() && len(t.TxOutputs) > 0 {
-		utxo.UpdateTxInputs(t.Hash(), txInputs)
-		utxo.InsertTxOutputs(t.Hash(), t.TxOutputs)
 	}
 
 	if t.SysUpdate {
