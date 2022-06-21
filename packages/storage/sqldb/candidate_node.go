@@ -61,7 +61,7 @@ func (c *CandidateNode) UpdateCandidateNodeInfo() error {
 	if err != nil {
 		return err
 	}
-	err = GetDB(nil).Model(&c).Where("tcp_address = ? and deleted = ? and earnest_total >= ?", c.TcpAddress, 0, pledgeAmount).Omit("candidate_nodes").Updates(CandidateNode{ReplyCount: c.ReplyCount, DateReply: time.Now().UnixMilli(), CandidateNodes: c.CandidateNodes}).Error
+	err = GetDB(nil).Model(&c).Where("tcp_address = ? and deleted = ? and earnest_total >= ?", c.TcpAddress, 0, pledgeAmount).Updates(CandidateNode{ReplyCount: c.ReplyCount, DateReply: time.Now().UnixMilli(), CandidateNodes: c.CandidateNodes}).Error
 	if err != nil {
 		return err
 	}

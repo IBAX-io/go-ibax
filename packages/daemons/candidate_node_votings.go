@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"github.com/IBAX-io/go-ibax/packages/utils"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,7 +21,7 @@ import (
 
 type VotingRes struct {
 	VoteMsgInfo network.VoteMsg `json:"voteMsgInfo"`
-	Err         error           `json:"err"`
+	Err         string          `json:"err"`
 }
 
 type VotingTotal struct {
@@ -40,7 +41,7 @@ func ToUpdateMachineStatus(tcpAddress string, ch chan map[string]VotingRes, logg
 		voteMsg.TcpAddress = tcpAddress
 		voteMsg.Time = time.Now().UnixMilli()
 		ch <- map[string]VotingRes{
-			tcpAddress: {*voteMsg, err},
+			tcpAddress: {*voteMsg, "tcp connection error"},
 		}
 		return err
 	}
@@ -51,7 +52,7 @@ func ToUpdateMachineStatus(tcpAddress string, ch chan map[string]VotingRes, logg
 		return err
 	}
 	ch <- map[string]VotingRes{
-		tcpAddress: {*voteMsg, nil},
+		tcpAddress: {*voteMsg, ""},
 	}
 	return nil
 }
@@ -89,6 +90,18 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 	if len(candidateNodes) == 0 {
 		return nil
 	}
+	_, NodePublicKey := utils.GetNodeKeys()
+	NodePublicKey = "04" + NodePublicKey
+	var isHonorNode bool
+	for _, node := range candidateNodes {
+		if NodePublicKey == node.NodePubKey {
+			isHonorNode = true
+			break
+		}
+	}
+	if !isHonorNode {
+		return nil
+	}
 	ch := make(chan map[string]VotingRes, len(candidateNodes))
 	var wg sync.WaitGroup
 	for _, node := range candidateNodes {
@@ -107,7 +120,7 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 			break
 		}
 		for tcpAddress, res := range serverVotingInfo {
-			if res.Err != nil {
+			if res.Err != "" {
 				nodeConnMap[tcpAddress] = res
 				continue
 			}
