@@ -573,7 +573,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 			default:
 				continue
 			}
-			category := NewFuelCategory(FuelType(FuelType_value[k]), categoryFee, GasPayAbleType(flag.Flag), flag.ConversionRate)
+			category := NewFuelCategory(FuelType(FuelType_value[k]), categoryFee, GasPayAbleType(flag.FlagToInt()), flag.ConversionRateToFloat())
 			var div = category.Decimal.Div(decimal.NewFromFloat(feeMode.FollowFuel))
 			switch category.Flag {
 			case GasPayAbleType_Unable:

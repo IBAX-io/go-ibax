@@ -25,6 +25,7 @@ import (
 	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
+	"github.com/pkg/errors"
 
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -627,17 +628,17 @@ lp:
 	if err != nil {
 		sc.RollBackTx = nil
 		sc.DbTransaction.BinLogSql = nil
-		if err := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); err != nil {
-			return retError(err)
+		if errReset := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); errReset != nil {
+			return retError(errors.Wrap(err, errReset.Error()))
 		}
 		if needPayment {
-			if err := sc.payContract(true); err != nil {
+			if errPay := sc.payContract(true); errPay != nil {
 				sc.RollBackTx = nil
 				sc.DbTransaction.BinLogSql = nil
-				if err := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); err != nil {
-					return retError(err)
+				if errRollsp := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); errRollsp != nil {
+					return retError(errors.Wrap(err, errRollsp.Error()))
 				}
-				return err.Error(), nil
+				return errors.Wrap(err, errPay.Error()).Error(), nil
 			}
 			return err.Error(), nil
 		}

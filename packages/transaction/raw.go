@@ -24,7 +24,9 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer) error {
 		return fmt.Errorf("empty transaction buffer")
 	}
 	rtx.FullData = buffer.Bytes()
-
+	rtx.InToCxt = &InToCxt{
+		DbTransaction: new(sqldb.DbTransaction),
+	}
 	txT, err := buffer.ReadByte()
 	if err != nil {
 		return err
