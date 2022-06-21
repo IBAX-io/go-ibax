@@ -86,8 +86,8 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 	}
 	lastBlockInterval := time.Unix(prevBlock.Time, 0)
 	timeDifference := st.Sub(lastBlockInterval)
-	if timeDifference <= 4*time.Second {
-		time.Sleep(4*time.Second - timeDifference)
+	if timeDifference <= syspar.GetMaxBlockTimeDuration() {
+		time.Sleep(syspar.GetMaxBlockTimeDuration() - timeDifference)
 	}
 
 	candidateNodesByte, _ := json.Marshal(candidateNodes)
