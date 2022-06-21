@@ -212,13 +212,7 @@ func Str(v any) (ret string) {
 	if v == nil {
 		return
 	}
-	switch val := v.(type) {
-	case float64:
-		ret = fmt.Sprintf(`%f`, val)
-	default:
-		ret = fmt.Sprintf(`%v`, val)
-	}
-	return
+	return fmt.Sprintf(`%v`, v)
 }
 
 // Money converts the value into a numeric type for money
