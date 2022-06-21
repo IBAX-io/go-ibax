@@ -37,7 +37,7 @@ func CandidateNodeVoting(r *network.CandidateNodeVotingRequest) (*network.Candid
 
 type VotingRes struct {
 	VoteMsgInfo network.VoteMsg `json:"voteMsgInfo"`
-	Err         error           `json:"err"`
+	Err         string          `json:"err"`
 }
 type VotingTotal struct {
 	Data          map[string]VotingRes `json:"data"`

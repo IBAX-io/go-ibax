@@ -65,11 +65,6 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 	}
 	st := time.Now()
 
-	lastBlockInterval := time.Unix(prevBlock.Time, 0)
-	timeDifference := st.Sub(lastBlockInterval)
-	if timeDifference <= 4*time.Second {
-		time.Sleep(4*time.Second - timeDifference)
-	}
 	dtx := DelayedTx{
 		privateKey: NodePrivateKey,
 		publicKey:  NodePublicKey,
@@ -89,6 +84,12 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 	if len(trs) == 0 {
 		return nil
 	}
+	lastBlockInterval := time.Unix(prevBlock.Time, 0)
+	timeDifference := st.Sub(lastBlockInterval)
+	if timeDifference <= syspar.GetMaxBlockTimeDuration() {
+		time.Sleep(syspar.GetMaxBlockTimeDuration() - timeDifference)
+	}
+
 	candidateNodesByte, _ := json.Marshal(candidateNodes)
 	header := &types.BlockHeader{
 		BlockId:        prevBlock.BlockID + 1,
