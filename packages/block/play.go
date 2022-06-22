@@ -113,21 +113,13 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	var keyIds []int64
 	for indexTx := 0; indexTx < len(b.Transactions); indexTx++ {
 		t := b.Transactions[indexTx]
-		// fmt.Println("KeyID", t.KeyID())
-		if t.IsSmartContract() && t.SmartContract().TxSmart.Utxo != nil {
-			// fmt.Println("ToId", t.SmartContract().TxSmart.Utxo.ToID)
-		}
 		keyIds = append(keyIds, t.KeyID())
 	}
-	// GroupTxs KeyID ToID
 	outputs, err := sqldb.GetTxOutputs(dbTx, keyIds)
 	if err != nil {
 		return err
 	}
-	//fmt.Println("outputs", outputs)
 	sqldb.PutAllOutputsMap(outputs)
-	// b.TxOutputs
-	// b.TxInputs
 
 	for curTx := 0; curTx < len(b.Transactions); curTx++ {
 		t := b.Transactions[curTx]
