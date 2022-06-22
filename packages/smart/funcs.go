@@ -50,26 +50,6 @@ var (
 	ErrNotImplementedOnCLB = errors.New("Contract not implemented on CLB")
 )
 
-type ThrowError struct {
-	Type    string `json:"type"`
-	Code    string `json:"id"`
-	ErrText string `json:"error"`
-}
-
-func (throw *ThrowError) Error() string {
-	return throw.ErrText
-}
-
-func Throw(code, errText string) error {
-	if len(errText) > script.MaxErrLen {
-		errText = errText[:script.MaxErrLen] + `...`
-	}
-	if len(code) > 32 {
-		code = code[:32]
-	}
-	return &ThrowError{Code: code, ErrText: errText, Type: `exception`}
-}
-
 var BOM = []byte{0xEF, 0xBB, 0xBF}
 
 type permTable struct {
@@ -274,7 +254,6 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"TransactionInfo":          TransactionInfo,
 		"DelTable":                 DelTable,
 		"DelColumn":                DelColumn,
-		"Throw":                    Throw,
 		"HexToPub":                 crypto.HexToPub,
 		"PubToHex":                 PubToHex,
 		"UpdateNodesBan":           UpdateNodesBan,
@@ -889,7 +868,7 @@ func mapToParams(values *types.Map) (params []string, val []any, err error) {
 // DBInsert inserts a record into the specified database table
 func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64, ret int64, err error) {
 	if tblname == "platform_parameters" {
-		return 0, 0, fmt.Errorf("system parameters access denied")
+		return 0, 0, fmt.Errorf("platform parameters access denied")
 	}
 
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
@@ -1049,7 +1028,7 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 func DBUpdateExt(sc *SmartContract, tblname string, where *types.Map,
 	values *types.Map) (qcost int64, err error) {
 	if tblname == "platform_parameters" {
-		return 0, fmt.Errorf("system parameters access denied")
+		return 0, fmt.Errorf("platform parameters access denied")
 	}
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
 	if err = sc.AccessTable(tblname, "update"); err != nil {

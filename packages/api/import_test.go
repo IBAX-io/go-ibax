@@ -58,16 +58,19 @@ func ImportApps(path, appname string) error {
 func TestImportApps(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
 	path, err := os.Getwd()
+	path = "C:\\gitrepo\\lib.venas.io\\IBAX\\dapps"
 	assert.NoError(t, err)
 	assert.NoError(t, ImportApps(path, "system"))
 	assert.NoError(t, ImportApps(path, "conditions"))
 	assert.NoError(t, ImportApps(path, "basic"))
 	//assert.NoError(t, ImportApps(path, "lang_res"))
-	assert.NoError(t, ImportApps(path, "platform_apps/ecosystems_catalog"))
-	assert.NoError(t, ImportApps(path, "platform_apps/token_emission"))
-	form := url.Values{}
-	assert.NoError(t, postTx(`@1RolesInstall`, &form))
-	fmt.Println("successful RolesInstall ")
+	//assert.NoError(t, ImportApps(path, "lang_res1"))
+	//assert.NoError(t, ImportApps(path, "lang_res2"))
+	//assert.NoError(t, ImportApps(path, "platform_apps/ecosystems_catalog"))
+	//assert.NoError(t, ImportApps(path, "platform_apps/token_emission"))
+	//form := url.Values{}
+	//assert.NoError(t, postTx(`@1RolesInstall`, &form))
+	//fmt.Println("successful RolesInstall ")
 
 	//form = url.Values{"SetDefault": {"yes"}}
 	//assert.NoError(t, postTx(`@1VotingTemplatesInstall`, &form))

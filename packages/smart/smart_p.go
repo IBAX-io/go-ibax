@@ -214,13 +214,7 @@ func Str(v any) (ret string) {
 	if v == nil {
 		return
 	}
-	switch val := v.(type) {
-	case float64:
-		ret = fmt.Sprintf(`%f`, val)
-	default:
-		ret = fmt.Sprintf(`%v`, val)
-	}
-	return
+	return fmt.Sprintf(`%v`, v)
 }
 
 // Money converts the value into a numeric type for money
@@ -723,41 +717,76 @@ func utxoTokenFromID(sc *SmartContract, keyID int64, toID int64, value string) (
 }
 
 func utxoTransfer(sc *SmartContract, keyID int64, toID int64, value string) (flag bool, err error) {
-	txInputs := sqldb.GetUnusedOutputsMap(keyID)
-	if len(txInputs) == 0 {
-		txInputs, _ = sqldb.GetTxOutputs(sc.DbTransaction, []int64{keyID})
+	txHash := sc.Hash
+	ecosystem := sc.TxSmart.EcosystemID
+	blockId := sc.BlockHeader.BlockId
+	inputChange := sqldb.GetChangeOutputsMap(ecosystem, keyID, txHash)
+	if inputChange != nil {
 		totalAmount := decimal.Zero
-		if len(txInputs) > 0 {
-			for _, input := range txInputs {
-				outputValue, _ := decimal.NewFromString(input.OutputValue)
-				totalAmount = totalAmount.Add(outputValue)
+		var txOutputs []sqldb.SpentInfo
+
+		outputValue, _ := decimal.NewFromString(inputChange.OutputValue)
+		totalAmount = totalAmount.Add(outputValue)
+		payValue, _ := decimal.NewFromString(value)
+		if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
+			flag = true // The transfer was successful
+			txOutputs = append(txOutputs, sqldb.SpentInfo{
+				OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
+			totalAmount = totalAmount.Sub(payValue)
+		} else {
+			flag = false
+			err = errors.New("transfer failure")
+		}
+		// The change
+		if totalAmount.GreaterThan(decimal.Zero) {
+			txOutputs = append(txOutputs, sqldb.SpentInfo{
+				OutputKeyId: keyID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem,
+				Action: "change"}) // The change
+		}
+		if len(txOutputs) > 0 {
+			sqldb.InsertTxOutputsChange(ecosystem, txHash, *inputChange, txOutputs)
+		}
+	} else {
+		txInputs := sqldb.GetUnusedOutputsMap(ecosystem, keyID)
+		if len(txInputs) == 0 {
+			txInputs, _ = sqldb.GetTxOutputsEcosystem(sc.DbTransaction, ecosystem, []int64{keyID})
+			totalAmount := decimal.Zero
+			if len(txInputs) > 0 {
+				for _, input := range txInputs {
+					outputValue, _ := decimal.NewFromString(input.OutputValue)
+					totalAmount = totalAmount.Add(outputValue)
+				}
+				sqldb.PutOutputsMap(ecosystem, keyID, txInputs)
 			}
-			sqldb.PutOutputsMap(keyID, txInputs)
+		}
+
+		totalAmount := decimal.Zero
+		var txOutputs []sqldb.SpentInfo
+		for _, input := range txInputs {
+			outputValue, _ := decimal.NewFromString(input.OutputValue)
+			totalAmount = totalAmount.Add(outputValue)
+		}
+		payValue, _ := decimal.NewFromString(value)
+		if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
+			flag = true // The transfer was successful
+			txOutputs = append(txOutputs, sqldb.SpentInfo{
+				OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
+			totalAmount = totalAmount.Sub(payValue)
+		} else {
+			flag = false
+			err = errors.New("transfer failure")
+		}
+		// The change
+		if totalAmount.GreaterThan(decimal.Zero) {
+			txOutputs = append(txOutputs, sqldb.SpentInfo{
+				OutputKeyId: keyID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem,
+				Action: "change"}) // The change
+		}
+		if len(txInputs) > 0 && len(txOutputs) > 0 {
+			sqldb.UpdateTxInputs(ecosystem, txHash, txInputs)
+			sqldb.InsertTxOutputs(ecosystem, txHash, txOutputs)
 		}
 	}
 
-	totalAmount := decimal.Zero
-	var txOutputs []sqldb.SpentInfo
-	for _, input := range txInputs {
-		outputValue, _ := decimal.NewFromString(input.OutputValue)
-		totalAmount = totalAmount.Add(outputValue)
-	}
-	payValue, _ := decimal.NewFromString(value)
-	if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
-		flag = true // The transfer was successful
-		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: toID, OutputValue: value})
-		totalAmount = totalAmount.Sub(payValue)
-	} else {
-		flag = false
-		err = errors.New("transfer failure")
-	}
-	if totalAmount.GreaterThan(decimal.Zero) {
-		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: keyID, OutputValue: totalAmount.String()})
-	}
-	//sc.TxOutputs = txOutputs
-	if len(txInputs) > 0 && len(txOutputs) > 0 {
-		sqldb.UpdateTxInputs(sc.Hash, txInputs)
-		sqldb.InsertTxOutputs(sc.Hash, txOutputs)
-	}
 	return flag, err
 }

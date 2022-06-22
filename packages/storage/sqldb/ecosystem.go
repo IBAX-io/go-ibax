@@ -7,7 +7,9 @@ package sqldb
 
 import (
 	"encoding/json"
+	"strconv"
 
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/pkg/errors"
 )
 
@@ -28,8 +30,19 @@ type Ecosystem struct {
 }
 
 type FeeModeFlag struct {
-	Flag           int64   `json:"flag"`
-	ConversionRate float64 `json:"conversion_rate"`
+	Flag           string `json:"flag"`
+	ConversionRate string `json:"conversion_rate"`
+}
+
+func (f FeeModeFlag) FlagToInt() int64 {
+	ret, _ := strconv.ParseInt(f.Flag, 10, 64)
+	return ret
+
+}
+
+func (f FeeModeFlag) ConversionRateToFloat() float64 {
+	ret, _ := strconv.ParseFloat(f.ConversionRate, 64)
+	return ret
 }
 
 type Combustion struct {
@@ -82,10 +95,7 @@ func (sys *Ecosystem) Delete(dbTx *DbTransaction) error {
 
 // FeeMode is get ecosystem fee mode
 func (sys *Ecosystem) FeeMode() (*FeeModeInfo, error) {
-	if len(sys.TokenSymbol) == 0 {
-		return nil, nil
-	}
-	if len(sys.FeeModeInfo) == 0 {
+	if len(sys.TokenSymbol) == 0 || len(sys.FeeModeInfo) == 0 || sys.ID == consts.DefaultTokenEcosystem {
 		return nil, nil
 	}
 	var info = &FeeModeInfo{}

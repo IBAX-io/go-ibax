@@ -9,8 +9,8 @@ import "tx.proto";
 //AfterTxs defined block batch process tx for sql DML
 message AfterTxs {
   repeated AfterTx txs =1;
-  //TxExecutionSql defined contract exec sql for tx DML
-  repeated bytes tx_execution_sql = 2;
+  //TxBinLogSql defined contract exec sql for tx DML
+  repeated bytes tx_bin_log_sql = 2;
   repeated     RollbackTx rts = 3;
 }
 

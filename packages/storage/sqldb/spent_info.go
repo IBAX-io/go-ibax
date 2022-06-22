@@ -12,7 +12,7 @@ import (
 
 // SpentInfo is model
 type SpentInfo struct {
-	InputTxHash  []byte
+	InputTxHash  []byte `gorm:"default:(-)"`
 	InputIndex   int32
 	OutputTxHash []byte `gorm:"not null"`
 	OutputIndex  int32  `gorm:"not null"`
@@ -23,6 +23,7 @@ type SpentInfo struct {
 	Contract     string
 	BlockId      int64
 	Asset        string
+	Action       string `gorm:"-"` // UTXO operation control : change
 }
 
 // TableName returns name of table
@@ -43,6 +44,23 @@ func CreateSpentInfoBatches(dbTx *gorm.DB, spentInfos []SpentInfo) error {
 	}).CreateInBatches(spentInfos, 1000).Error
 }
 
+func GetTxOutputsEcosystem(db *DbTransaction, ecosystem int64, keyIds []int64) ([]SpentInfo, error) {
+	query :=
+		` SELECT
+			si.input_tx_hash,row_number() over (PARTITION BY si.output_key_id order by si.block_id ASC, tr.timestamp ASC) AS input_index,
+			si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.scene, si.ecosystem, si.contract, si.block_id, si.asset
+		FROM
+			spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
+		WHERE si.ecosystem = ? AND si.output_key_id IN ? AND  si.input_tx_hash IS NULL
+		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `
+	var result []SpentInfo
+	err := GetDB(db).Raw(query, ecosystem, keyIds).Scan(&result).Error
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	query :=
 		` SELECT
@@ -50,7 +68,7 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 			si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.scene, si.ecosystem, si.contract, si.block_id, si.asset
 		FROM
 			spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
-		WHERE output_key_id IN ? AND si.input_tx_hash IS NULL
+		WHERE si.output_key_id IN ? AND si.input_tx_hash IS NULL
 		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `
 	var result []SpentInfo
 	err := GetDB(db).Raw(query, keyIds).Scan(&result).Error

@@ -68,11 +68,11 @@ func (m *Key) CapableAmount() decimal.Decimal {
 func (m *Key) Get(db *DbTransaction, wallet int64, fetchBalance bool) (bool, error) {
 	found, err := isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
 	if found && fetchBalance {
-		balance := GetBalance(wallet)
+		balance := GetBalance(m.ecosystem, wallet)
 		if balance != nil {
 			m.Balance = *balance
 		} else {
-			txInputs, _ := GetTxOutputs(db, []int64{wallet})
+			txInputs, _ := GetTxOutputsEcosystem(db, m.ecosystem, []int64{wallet})
 			totalAmount := decimal.Zero
 			if len(txInputs) > 0 {
 				for _, input := range txInputs {
@@ -88,18 +88,18 @@ func (m *Key) Get(db *DbTransaction, wallet int64, fetchBalance bool) (bool, err
 
 // two methods Get and PutOutputsMap
 func (m *Key) GetBalanceAndPut(db *DbTransaction, wallet int64) {
-	balance := GetBalance(wallet)
+	balance := GetBalance(m.ecosystem, wallet)
 	if balance != nil {
 		m.Balance = *balance
 	} else {
-		txInputs, _ := GetTxOutputs(db, []int64{wallet})
+		txInputs, _ := GetTxOutputsEcosystem(db, m.ecosystem, []int64{wallet})
 		totalAmount := decimal.Zero
 		if len(txInputs) > 0 {
 			for _, input := range txInputs {
 				outputValue, _ := decimal.NewFromString(input.OutputValue)
 				totalAmount = totalAmount.Add(outputValue)
 			}
-			PutOutputsMap(wallet, txInputs)
+			PutOutputsMap(m.ecosystem, wallet, txInputs)
 		}
 		m.Balance = totalAmount
 	}

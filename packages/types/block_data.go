@@ -105,6 +105,12 @@ func WithAfterTxs(a *AfterTxs) BlockDataOption {
 		return nil
 	}
 }
+func WithSysUpdate(a bool) BlockDataOption {
+	return func(b *BlockData) error {
+		b.SysUpdate = a
+		return nil
+	}
+}
 
 func (b BlockData) ForSign() string {
 	return b.Header.ForSign(b.PrevHeader, b.MerkleRoot)
@@ -133,8 +139,8 @@ func (b *BlockData) GetSign(key []byte) ([]byte, error) {
 // MarshallBlock is marshalling block
 func (b *BlockData) MarshallBlock(key []byte) ([]byte, error) {
 	if b.AfterTxs != nil {
-		for i := 0; i < len(b.AfterTxs.TxExecutionSql); i++ {
-			b.AfterTxs.TxExecutionSql[i] = DoZlibCompress(b.AfterTxs.TxExecutionSql[i])
+		for i := 0; i < len(b.AfterTxs.TxBinLogSql); i++ {
+			b.AfterTxs.TxBinLogSql[i] = DoZlibCompress(b.AfterTxs.TxBinLogSql[i])
 		}
 	}
 	for i := 0; i < len(b.TxFullData); i++ {
@@ -161,8 +167,8 @@ func (b *BlockData) UnmarshallBlock(data []byte) error {
 		return errors.Wrap(err, "unmarshalling block")
 	}
 	if b.AfterTxs != nil {
-		for i := 0; i < len(b.AfterTxs.TxExecutionSql); i++ {
-			b.AfterTxs.TxExecutionSql[i] = DoZlibUnCompress(b.AfterTxs.TxExecutionSql[i])
+		for i := 0; i < len(b.AfterTxs.TxBinLogSql); i++ {
+			b.AfterTxs.TxBinLogSql[i] = DoZlibUnCompress(b.AfterTxs.TxBinLogSql[i])
 		}
 	}
 	for i := 0; i < len(b.TxFullData); i++ {

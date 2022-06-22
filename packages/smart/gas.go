@@ -410,7 +410,6 @@ func (sc *SmartContract) hasExitKeyID(eco, id int64) error {
 		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
 			"id":      id,
 			"account": IDToAddress(id),
-			//"amount":    0,
 			"ecosystem": eco,
 		}))
 		if err != nil {
@@ -561,7 +560,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 			default:
 				continue
 			}
-			category := NewFuelCategory(FuelType(FuelType_value[k]), categoryFee, GasPayAbleType(flag.Flag), flag.ConversionRate)
+			category := NewFuelCategory(FuelType(FuelType_value[k]), categoryFee, GasPayAbleType(flag.FlagToInt()), flag.ConversionRateToFloat())
 			var div = category.Decimal.Div(decimal.NewFromFloat(feeMode.FollowFuel))
 			switch category.Flag {
 			case GasPayAbleType_Unable:

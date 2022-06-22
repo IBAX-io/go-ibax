@@ -86,8 +86,6 @@ type SmartContract struct {
 	taxes           bool
 	Penalty         bool
 	TokenEcosystems map[int64]any
-	TxInputs        []sqldb.SpentInfo
-	TxOutputs       []sqldb.SpentInfo
 }
 
 // AppendStack adds an element to the stack of contract call or removes the top element when name is empty
@@ -548,15 +546,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 	retError := func(err error) (string, error) {
 		eText := err.Error()
 		if !strings.HasPrefix(eText, `{`) && err != script.ErrVMTimeLimit {
-			if throw, ok := err.(*ThrowError); ok {
-				out, errThrow := json.Marshal(throw)
-				if errThrow != nil {
-					out = []byte(`{"type": "panic", "error": "marshalling throw"}`)
-				}
-				err = errors.New(string(out))
-			} else {
-				err = script.SetVMError(`panic`, eText)
-			}
+			err = script.SetVMError(`panic`, eText)
 		}
 		return ``, err
 	}
@@ -639,18 +629,18 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 lp:
 	if err != nil {
 		sc.RollBackTx = nil
-		sc.DbTransaction.ExecutionSql = nil
-		if err := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); err != nil {
-			return retError(err)
+		sc.DbTransaction.BinLogSql = nil
+		if errReset := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); errReset != nil {
+			return retError(errors.Wrap(err, errReset.Error()))
 		}
 		if needPayment {
-			if err := sc.payContract(true); err != nil {
+			if errPay := sc.payContract(true); errPay != nil {
 				sc.RollBackTx = nil
-				sc.DbTransaction.ExecutionSql = nil
-				if err := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); err != nil {
-					return retError(err)
+				sc.DbTransaction.BinLogSql = nil
+				if errRollsp := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); errRollsp != nil {
+					return retError(errors.Wrap(err, errRollsp.Error()))
 				}
-				return err.Error(), nil
+				return errors.Wrap(err, errPay.Error()).Error(), nil
 			}
 			return err.Error(), nil
 		}

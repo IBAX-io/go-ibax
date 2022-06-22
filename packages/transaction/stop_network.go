@@ -9,6 +9,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+
 	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -43,7 +45,7 @@ func (s *StopNetworkParser) txKeyID() int64              { return s.Data.KeyID }
 func (s *StopNetworkParser) txExpedite() decimal.Decimal { return decimal.Decimal{} }
 func (s *StopNetworkParser) setTimestamp()               { s.Timestamp = time.Now().UnixMilli() }
 
-func (s *StopNetworkParser) Init(*Transaction) error {
+func (s *StopNetworkParser) Init(in *InToCxt) error {
 	return nil
 }
 
@@ -76,7 +78,7 @@ func (s *StopNetworkParser) validate() error {
 	return nil
 }
 
-func (s *StopNetworkParser) Action(t *Transaction) error {
+func (s *StopNetworkParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	// Allow execute transaction, if the certificate was used
 	if s.Cert.EqualBytes(consts.UsedStopNetworkCerts...) {
 		return nil
@@ -89,9 +91,10 @@ func (s *StopNetworkParser) Action(t *Transaction) error {
 	return ErrNetworkStopping
 }
 
-func (s *StopNetworkParser) TxRollback() error {
-	return nil
-}
+func (s *StopNetworkParser) TxRollback() error                                      { return nil }
+func (s *StopNetworkParser) SysUpdateWorker(dbTx *sqldb.DbTransaction) error        { return nil }
+func (s *StopNetworkParser) SysTableColByteaWorker(dbTx *sqldb.DbTransaction) error { return nil }
+func (s *StopNetworkParser) FlushVM()                                               {}
 
 func (s *StopNetworkParser) BinMarshal(data *types.StopNetwork) ([]byte, error) {
 	s.setTimestamp()

@@ -1,0 +1,5 @@
+FROM golang:latest
+WORKDIR /go/src/go-ibax
+COPY . .
+
+

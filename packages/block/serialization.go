@@ -21,6 +21,7 @@ func (b *Block) repeatMarshallBlock() error {
 		types.WithCurHeader(b.Header),
 		types.WithPrevHeader(b.PrevHeader),
 		types.WithAfterTxs(b.AfterTxs),
+		types.WithSysUpdate(b.SysUpdate),
 		types.WithTxFullData(b.TxFullData))
 	if err != nil {
 		return errors.Wrap(err, "marshalling repeat block")

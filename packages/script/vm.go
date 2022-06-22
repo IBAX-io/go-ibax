@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -16,23 +17,33 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var (
+type GlobalVm struct {
+	mu      *sync.Mutex
 	smartVM *VM
-)
-
-func init() {
-	smartVM = newVM()
 }
 
-func newVM() *VM {
+func init() {
+	_vm = newVM()
+}
+
+var (
+	_vm *GlobalVm
+)
+
+func newVM() *GlobalVm {
 	vm := NewVM()
 	vm.Extern = true
-	return vm
+	return &GlobalVm{
+		smartVM: vm,
+		mu:      &sync.Mutex{},
+	}
 }
 
 // GetVM is returning smart vm
 func GetVM() *VM {
-	return smartVM
+	_vm.mu.Lock()
+	defer _vm.mu.Unlock()
+	return _vm.smartVM
 }
 
 var smartObjects map[string]*ObjInfo
@@ -40,19 +51,19 @@ var children uint32
 
 func SavepointSmartVMObjects() {
 	smartObjects = make(map[string]*ObjInfo)
-	for k, v := range smartVM.Objects {
+	for k, v := range GetVM().Objects {
 		smartObjects[k] = v
 	}
-	children = uint32(len(smartVM.Children))
+	children = uint32(len(GetVM().Children))
 }
 
 func RollbackSmartVMObjects() {
-	smartVM.Objects = make(map[string]*ObjInfo)
+	GetVM().Objects = make(map[string]*ObjInfo)
 	for k, v := range smartObjects {
-		smartVM.Objects[k] = v
+		GetVM().Objects[k] = v
 	}
 
-	smartVM.Children = smartVM.Children[:children]
+	GetVM().Children = GetVM().Children[:children]
 	smartObjects = nil
 }
 
@@ -160,48 +171,48 @@ func vmFuncCallsDB(vm *VM, funcCallsDB map[string]struct{}) {
 	vm.FuncCallsDB = funcCallsDB
 }
 
-// ExternOff switches off the extern compiling mode in smartVM
+// ExternOff switches off the extern compiling mode in GetVM()
 func ExternOff() {
-	vmExternOff(smartVM)
+	vmExternOff(GetVM())
 }
 
-// Compile compiles contract source code in smartVM
+// Compile compiles contract source code in GetVM()
 func Compile(src string, owner *OwnerInfo) error {
-	return vmCompile(smartVM, src, owner)
+	return vmCompile(GetVM(), src, owner)
 }
 
-// CompileBlock calls CompileBlock for smartVM
+// CompileBlock calls CompileBlock for GetVM()
 func CompileBlock(src string, owner *OwnerInfo) (*CodeBlock, error) {
-	return VMCompileBlock(smartVM, src, owner)
+	return VMCompileBlock(GetVM(), src, owner)
 }
 
-// CompileEval calls CompileEval for smartVM
+// CompileEval calls CompileEval for GetVM()
 func CompileEval(src string, prefix uint32) error {
-	return VMCompileEval(smartVM, src, prefix)
+	return VMCompileEval(GetVM(), src, prefix)
 }
 
-// EvalIf calls EvalIf for smartVM
+// EvalIf calls EvalIf for GetVM()
 func EvalIf(src string, state uint32, extend map[string]any) (bool, error) {
-	return VMEvalIf(smartVM, src, state, extend)
+	return VMEvalIf(GetVM(), src, state, extend)
 }
 
-// FlushBlock calls FlushBlock for smartVM
+// FlushBlock calls FlushBlock for GetVM()
 func FlushBlock(root *CodeBlock) {
-	VMFlushBlock(smartVM, root)
+	VMFlushBlock(GetVM(), root)
 }
 
-// ExtendCost sets the cost of calling extended obj in smartVM
+// ExtendCost sets the cost of calling extended obj in GetVM()
 func ExtendCost(ext func(string) int64) {
-	vmExtendCost(smartVM, ext)
+	vmExtendCost(GetVM(), ext)
 }
 
 func FuncCallsDB(funcCallsDB map[string]struct{}) {
-	vmFuncCallsDB(smartVM, funcCallsDB)
+	vmFuncCallsDB(GetVM(), funcCallsDB)
 }
 
-// Run executes CodeBlock in smartVM
+// Run executes CodeBlock in GetVM()
 func Run(block *CodeBlock, params []any, extend map[string]any) (ret []any, err error) {
-	return VMRun(smartVM, block, params, extend, nil)
+	return VMRun(GetVM(), block, params, extend, nil)
 }
 
 func LoadSysFuncs(vm *VM, state int) error {
