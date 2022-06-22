@@ -79,6 +79,7 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		if s.Penalty {
 			out.TxResult.Code = pbgo.TxInvokeStatusCode_PENALTY
 		}
+		out.TxResult.Result = res
 		if err != nil || s.Penalty {
 			if s.FlushRollback != nil {
 				flush := s.FlushRollback
