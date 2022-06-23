@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/script"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -58,6 +59,7 @@ func init() {
 	funcs[`Lower`] = tplFunc{lowerTag, defaultTag, `lower`, `Text`}
 	funcs[`AddToolButton`] = tplFunc{defaultTailTag, defaultTailTag, `addtoolbutton`, `Title,Icon,Page,PageParams`}
 	funcs[`Address`] = tplFunc{addressTag, defaultTag, `address`, `Wallet`}
+	funcs[`PubToID`] = tplFunc{pubToIdTag, defaultTag, `pubtoid`, `Pub`}
 	funcs[`AddressToId`] = tplFunc{addressIDTag, defaultTag, `addresstoid`, `Wallet`}
 	funcs[`AppParam`] = tplFunc{appparTag, defaultTag, `apppar`, `Name,App,Index,Source,Ecosystem`}
 	funcs[`Calculate`] = tplFunc{calculateTag, defaultTag, `calculate`, `Exp,Type,Prec`}
@@ -308,6 +310,19 @@ func addressTag(par parFunc) string {
 		return `unknown address`
 	}
 	return converter.AddressToString(id)
+}
+
+func pubToIdTag(par parFunc) string {
+	hexkey := (*par.Pars)[`Pub`]
+	if len(hexkey) == 0 {
+		return `0`
+	}
+	idval := processToText(par, macro(hexkey, par.Workspace.Vars))
+	pubkey, err := crypto.HexToPub(idval)
+	if err != nil {
+		return `0`
+	}
+	return converter.Int64ToStr(crypto.Address(pubkey))
 }
 
 func addressIDTag(par parFunc) string {
