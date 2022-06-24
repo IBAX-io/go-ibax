@@ -69,6 +69,7 @@ func (tr *Transaction) WithOption(
 	rand *rand.Rand,
 	txCheckLimits *Limits,
 	sqlDbSavePoint int,
+	outputsMap map[int64][]sqldb.SpentInfo,
 	opts ...TransactionOption) error {
 	in := &InToCxt{
 		SqlDbSavePoint: sqlDbSavePoint,
@@ -79,6 +80,7 @@ func (tr *Transaction) WithOption(
 		BlockHeader:    blockHeader,
 		GenBlock:       genBlock,
 		Notifications:  notifications,
+		OutputsMap:     outputsMap,
 	}
 	in.DbTransaction.BinLogSql = nil
 	tr.InToCxt = in

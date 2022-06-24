@@ -54,6 +54,9 @@ func (s *SmartTransactionParser) Init(t *InToCxt) error {
 	s.CLB = false
 	s.Rollback = true
 	s.SysUpdate = false
+	s.OutputsMap = t.OutputsMap
+	s.TxInputsMap = make(map[int64][]sqldb.SpentInfo)
+	s.TxOutputsMap = make(map[int64][]sqldb.SpentInfo)
 	s.RollBackTx = make([]*types.RollbackTx, 0)
 	if s.GenBlock {
 		s.TimeLimit = syspar.GetMaxBlockGenerationTime()
@@ -79,6 +82,7 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		if s.Penalty {
 			out.TxResult.Code = pbgo.TxInvokeStatusCode_PENALTY
 		}
+		out.TxResult.Result = res
 		if err != nil || s.Penalty {
 			if s.FlushRollback != nil {
 				flush := s.FlushRollback
@@ -88,6 +92,7 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 			}
 			return
 		}
+
 		out.Apply(
 			WithOutCtxTxResult(&pbgo.TxResult{
 				Result: res,
@@ -96,6 +101,8 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 			}),
 			WithOutCtxSysUpdate(s.SysUpdate),
 			WithOutCtxRollBackTx(s.RollBackTx),
+			WithOutCtxTxOutputs(s.TxOutputsMap),
+			WithOutCtxTxInputs(s.TxInputsMap),
 		)
 		in.DbTransaction.BinLogSql = s.DbTransaction.BinLogSql
 	}()

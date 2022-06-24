@@ -1,7 +1,6 @@
 package sqldb
 
 import (
-	"strconv"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -106,7 +105,11 @@ func (c *CandidateNode) GetCandidateNodeById(id int64) error {
 }
 
 func GetPledgeAmount() (int64, error) {
-	var pledgeAmount string
+	var (
+		pledgeAmount string
+		err          error
+		amount       decimal.Decimal
+	)
 	row := DBConn.Raw(`select
 								ap.value 
 							from
@@ -118,18 +121,13 @@ func GetPledgeAmount() (int64, error) {
 								and ap."name" = 'limit_candidate_pack'
 								and a.deleted = 0
 								and a.ecosystem = 1`).Row()
-	err := row.Scan(&pledgeAmount)
-	if err != nil {
-		return 0, err
-
-	}
-	for i := 0; i < consts.MoneyDigits; i++ {
-		pledgeAmount = pledgeAmount + "0"
-	}
-
-	i, err := strconv.ParseInt(pledgeAmount, 10, 64)
+	err = row.Scan(&pledgeAmount)
 	if err != nil {
 		return 0, err
 	}
-	return i, err
+	amount, err = decimal.NewFromString(pledgeAmount)
+	if err != nil {
+		return 0, err
+	}
+	return amount.Mul(decimal.New(1, consts.MoneyDigits)).IntPart(), nil
 }

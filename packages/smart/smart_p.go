@@ -15,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -30,6 +28,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/IBAX-io/go-ibax/packages/utils/metric"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
@@ -707,24 +706,22 @@ func MathModDecimal(x, y decimal.Decimal) decimal.Decimal {
 }
 
 func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err error) {
-	keyID := sc.TxSmart.KeyID
-	return utxoTransfer(sc, keyID, toID, value)
+	fromID := sc.TxSmart.KeyID
+	return utxoTokenFromID(sc, fromID, toID, value)
 }
 
-func utxoTokenFromID(sc *SmartContract, keyID int64, toID int64, value string) (flag bool, err error) {
-
-	return utxoTransfer(sc, keyID, toID, value)
-}
-
-func utxoTransfer(sc *SmartContract, keyID int64, toID int64, value string) (flag bool, err error) {
+func utxoTokenFromID(sc *SmartContract, fromID int64, toID int64, value string) (flag bool, err error) {
+	outputsMap := sc.OutputsMap
+	txInputsMap := sc.TxInputsMap
+	txOutputsMap := sc.TxOutputsMap
 	txHash := sc.Hash
 	ecosystem := sc.TxSmart.EcosystemID
 	blockId := sc.BlockHeader.BlockId
-	inputChange := sqldb.GetChangeOutputsMap(ecosystem, keyID, txHash)
+	dbTx := sc.DbTransaction
+	inputChange := sqldb.GetChangeOutputsMap(fromID, txHash, txOutputsMap)
 	if inputChange != nil {
 		totalAmount := decimal.Zero
 		var txOutputs []sqldb.SpentInfo
-
 		outputValue, _ := decimal.NewFromString(inputChange.OutputValue)
 		totalAmount = totalAmount.Add(outputValue)
 		payValue, _ := decimal.NewFromString(value)
@@ -740,23 +737,25 @@ func utxoTransfer(sc *SmartContract, keyID int64, toID int64, value string) (fla
 		// The change
 		if totalAmount.GreaterThan(decimal.Zero) {
 			txOutputs = append(txOutputs, sqldb.SpentInfo{
-				OutputKeyId: keyID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem,
-				Action: "change"}) // The change
+				OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
 		}
 		if len(txOutputs) > 0 {
-			sqldb.InsertTxOutputsChange(ecosystem, txHash, *inputChange, txOutputs)
+			sqldb.InsertTxOutputsChange(txHash, *inputChange, txOutputs, txOutputsMap)
 		}
 	} else {
-		txInputs := sqldb.GetUnusedOutputsMap(ecosystem, keyID)
+		//txInputs := sqldb.GetUnusedOutputsMap(ecosystem, fromID, txOutputsMap)
+		//if len(txInputs) == 0 {
+		txInputs := sqldb.GetUnusedOutputsMap(fromID, outputsMap)
+		//}
 		if len(txInputs) == 0 {
-			txInputs, _ = sqldb.GetTxOutputsEcosystem(sc.DbTransaction, ecosystem, []int64{keyID})
+			txInputs, _ = sqldb.GetTxOutputsEcosystem(dbTx, ecosystem, []int64{fromID})
 			totalAmount := decimal.Zero
 			if len(txInputs) > 0 {
 				for _, input := range txInputs {
 					outputValue, _ := decimal.NewFromString(input.OutputValue)
 					totalAmount = totalAmount.Add(outputValue)
 				}
-				sqldb.PutOutputsMap(ecosystem, keyID, txInputs)
+				//sqldb.PutOutputsMap(ecosystem, fromID, txInputs, txInputsMap)
 			}
 		}
 
@@ -779,14 +778,16 @@ func utxoTransfer(sc *SmartContract, keyID int64, toID int64, value string) (fla
 		// The change
 		if totalAmount.GreaterThan(decimal.Zero) {
 			txOutputs = append(txOutputs, sqldb.SpentInfo{
-				OutputKeyId: keyID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem,
-				Action: "change"}) // The change
+				OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
 		}
 		if len(txInputs) > 0 && len(txOutputs) > 0 {
-			sqldb.UpdateTxInputs(ecosystem, txHash, txInputs)
-			sqldb.InsertTxOutputs(ecosystem, txHash, txOutputs)
+			sqldb.PutAllOutputsMap(txInputs, txInputsMap)
+			//sqldb.UpdateTxInputs(ecosystem, txHash, txInputs, txInputsMap)
+			//sqldb.InsertTxOutputs(ecosystem, txHash, txOutputs, txOutputsMap)
+			sqldb.PutAllOutputsMap(txOutputs, txOutputsMap)
 		}
 	}
-
+	sc.TxInputsMap = txInputsMap
+	sc.TxOutputsMap = txOutputsMap
 	return flag, err
 }

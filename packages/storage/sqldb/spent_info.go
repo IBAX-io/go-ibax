@@ -33,7 +33,11 @@ func (si *SpentInfo) TableName() string {
 
 // CreateSpentInfoBatches is creating record of model
 func CreateSpentInfoBatches(dbTx *gorm.DB, spentInfos []SpentInfo) error {
-	return dbTx.Debug().Clauses(clause.OnConflict{
+	//for _, info := range spentInfos {
+	//	fmt.Println(hex.EncodeToString(info.InputTxHash), info.InputIndex, hex.EncodeToString(info.OutputTxHash), info.OutputIndex, info.OutputKeyId, info.OutputValue, info.BlockId)
+	//}
+
+	return dbTx.Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "output_tx_hash"}, {Name: "output_key_id"}, {Name: "output_index"}},
 		DoUpdates: clause.AssignmentColumns([]string{"input_tx_hash", "input_index"}),
 		Where: clause.Where{Exprs: []clause.Expression{
@@ -46,11 +50,8 @@ func CreateSpentInfoBatches(dbTx *gorm.DB, spentInfos []SpentInfo) error {
 
 func GetTxOutputsEcosystem(db *DbTransaction, ecosystem int64, keyIds []int64) ([]SpentInfo, error) {
 	query :=
-		` SELECT
-			si.input_tx_hash,row_number() over (PARTITION BY si.output_key_id order by si.block_id ASC, tr.timestamp ASC) AS input_index,
-			si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.scene, si.ecosystem, si.contract, si.block_id, si.asset
-		FROM
-			spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
+		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.scene, si.ecosystem, si.contract, si.block_id, si.asset
+		FROM spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
 		WHERE si.ecosystem = ? AND si.output_key_id IN ? AND  si.input_tx_hash IS NULL
 		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `
 	var result []SpentInfo
@@ -63,11 +64,8 @@ func GetTxOutputsEcosystem(db *DbTransaction, ecosystem int64, keyIds []int64) (
 
 func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	query :=
-		` SELECT
-			si.input_tx_hash,row_number() over (PARTITION BY si.output_key_id order by si.block_id ASC, tr.timestamp ASC) AS input_index,
-			si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.scene, si.ecosystem, si.contract, si.block_id, si.asset
-		FROM
-			spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
+		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.scene, si.ecosystem, si.contract, si.block_id, si.asset
+		FROM spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
 		WHERE si.output_key_id IN ? AND si.input_tx_hash IS NULL
 		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `
 	var result []SpentInfo

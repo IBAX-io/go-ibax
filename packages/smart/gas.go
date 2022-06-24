@@ -222,7 +222,7 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	if err := sc.hasExitKeyID(eco, f.TaxesID); err != nil {
 		return errors.Wrapf(err, fmt.Sprintf("taxes ID %d does not exist", f.TaxesID))
 	}
-	if found, err := f.PayWallet.SetTablePrefix(eco).Get(sc.DbTransaction, f.FromID, true); err != nil || !found {
+	if found, err := f.PayWallet.SetTablePrefix(eco).GetBalanceAndPut(sc.DbTransaction, f.FromID, sc.OutputsMap); err != nil || !found {
 		if !found {
 			sc.GetLogger().WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("looking for keyid in ecosystem")
 			return fmt.Errorf(eEcoKeyNotFound, converter.AddressToString(f.FromID), eco)
@@ -314,7 +314,7 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 
 func (sc *SmartContract) accountBalanceSingle(eco, id int64) (decimal.Decimal, error) {
 	key := &sqldb.Key{}
-	key.SetTablePrefix(eco).GetBalanceAndPut(sc.DbTransaction, id)
+	key.SetTablePrefix(eco).GetBalanceAndPut(sc.DbTransaction, id, sc.OutputsMap)
 	return key.Balance, nil
 }
 
@@ -402,14 +402,14 @@ func (sc *SmartContract) hasExitKeyID(eco, id int64) error {
 		err   error
 	)
 	key := &sqldb.Key{}
-	found, err = key.SetTablePrefix(eco).Get(sc.DbTransaction, id, false)
+	found, err = key.SetTablePrefix(eco).Get(sc.DbTransaction, id)
 	if err != nil {
 		return err
 	}
 	if !found {
 		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
-			"id":      id,
-			"account": IDToAddress(id),
+			"id":        id,
+			"account":   IDToAddress(id),
 			"ecosystem": eco,
 		}))
 		if err != nil {

@@ -64,7 +64,7 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 	for i, ecosystemID := range ids {
 		key := &sqldb.Key{}
 		key.SetTablePrefix(ecosystemID)
-		found, err = key.Get(nil, keyID, false)
+		found, err = key.Get(nil, keyID)
 		if err != nil {
 			errorResponse(w, err)
 			return

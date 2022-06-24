@@ -975,13 +975,11 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 	} else {
 		rows, err = q.Offset(int(offset)).Limit(int(limit)).Rows()
 	}
-
+	defer rows.Close()
 	if err != nil {
-		logErrorDB(err, fmt.Sprintf("Contract %s %v %v", sc.TxContract.Name, sc.TxContract.StackCont, sc.TxData))
 		return 0, nil, logErrorDB(err, fmt.Sprintf("selecting rows from table %s %s where %s order %s",
 			tblname, PrepareColumns(columns), where, order))
 	}
-	defer rows.Close()
 	cols, err := rows.Columns()
 	if err != nil {
 		return 0, nil, logErrorDB(err, "getting rows columns")

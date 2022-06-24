@@ -257,7 +257,7 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 		if err := sqldb.CreateLogTransactionBatches(tx, playTx.Lts); err != nil {
 			return errors.Wrap(err, "batches insert log_transactions")
 		}
-		spentInfos := sqldb.GetAllOutputs()
+		spentInfos := sqldb.GetAllOutputs(b.OutputsMap)
 		if len(spentInfos) > 0 {
 			if err := sqldb.CreateSpentInfoBatches(tx, spentInfos); err != nil {
 				return errors.Wrap(err, "batches insert spent_info")

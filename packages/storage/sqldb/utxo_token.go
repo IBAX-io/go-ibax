@@ -7,9 +7,9 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-var (
-	outputsMap map[int64][]SpentInfo
-)
+//var (
+//outputsMap map[int64][]SpentInfo
+//)
 
 // func CallContract(outputsMap map[int64][]sqldb.SpentInfo, tx Tx) {
 //	_txInputs := GetUnusedOutputsMap(outputsMap, tx.KeyID)
@@ -23,7 +23,7 @@ var (
 //	}
 // }
 
-func InsertTxOutputs(ecosystem int64, outputTxHash []byte, txOutputsCtx []SpentInfo) {
+func InsertTxOutputs(outputTxHash []byte, txOutputsCtx []SpentInfo, outputsMap map[int64][]SpentInfo) {
 	for index, txOutput := range txOutputsCtx {
 		spentInfos := outputsMap[txOutput.OutputKeyId]
 		txOutput.OutputTxHash = outputTxHash
@@ -33,11 +33,11 @@ func InsertTxOutputs(ecosystem int64, outputTxHash []byte, txOutputsCtx []SpentI
 		outputsMap[txOutput.OutputKeyId] = spentInfos
 	}
 }
-func InsertTxOutputsChange(ecosystem int64, outputTxHash []byte, inputChange SpentInfo, txOutputsCtx []SpentInfo) {
+func InsertTxOutputsChange(outputTxHash []byte, inputChange SpentInfo, txOutputsCtx []SpentInfo, outputsMap map[int64][]SpentInfo) {
 	spentInfosChange := outputsMap[inputChange.OutputKeyId]
 	var outputIndex int32
 	for index, info := range spentInfosChange {
-		if bytes.EqualFold(info.OutputTxHash, outputTxHash) && strings.EqualFold(info.Action, "change") {
+		if strings.EqualFold(info.Action, "change") {
 			spentInfosChange = append(spentInfosChange[:index], spentInfosChange[index+1:]...) // delete change
 			outputIndex = info.OutputIndex
 			break
@@ -55,7 +55,7 @@ func InsertTxOutputsChange(ecosystem int64, outputTxHash []byte, inputChange Spe
 	}
 }
 
-func UpdateTxInputs(ecosystem int64, inputTxHash []byte, txInputsCtx []SpentInfo) {
+func UpdateTxInputs(inputTxHash []byte, txInputsCtx []SpentInfo, outputsMap map[int64][]SpentInfo) {
 	var inputIndex int32
 	for _, txInput := range txInputsCtx {
 		// spentInfos := GetUnusedOutputsMap(outputsMap, txInput.OutputKeyId)
@@ -73,29 +73,31 @@ func UpdateTxInputs(ecosystem int64, inputTxHash []byte, txInputsCtx []SpentInfo
 	}
 }
 
-func PutAllOutputsMap(outputs []SpentInfo) {
-	outputsMap = make(map[int64][]SpentInfo)
+func PutAllOutputsMap(outputs []SpentInfo, outputsMap map[int64][]SpentInfo) {
+	//if len(outputsMap) == 0 {
+	//	outputsMap = make(map[int64][]SpentInfo)
+	//}
 	for _, output := range outputs {
 		spentInfos := outputsMap[output.OutputKeyId]
 		spentInfos = append(spentInfos, output)
 		var ecosystem int64 // TODO ecosystem
-		PutOutputsMap(ecosystem, output.OutputKeyId, spentInfos)
+		PutOutputsMap(ecosystem, output.OutputKeyId, spentInfos, outputsMap)
 	}
 }
-func PutOutputsMap(ecosystem int64, keyID int64, outputs []SpentInfo) {
+func PutOutputsMap(ecosystem int64, keyID int64, outputs []SpentInfo, outputsMap map[int64][]SpentInfo) {
 	outputsMap[keyID] = outputs
 }
 
-func GetChangeOutputsMap(ecosystem int64, keyID int64, txHash []byte) *SpentInfo {
+func GetChangeOutputsMap(keyID int64, txHash []byte, outputsMap map[int64][]SpentInfo) *SpentInfo {
 	spentInfos := outputsMap[keyID]
 	for _, info := range spentInfos {
-		if info.Ecosystem == ecosystem && bytes.EqualFold(info.OutputTxHash, txHash) && strings.EqualFold(info.Action, "change") {
+		if strings.EqualFold(info.Action, "change") {
 			return &info
 		}
 	}
 	return nil
 }
-func GetUnusedOutputsMap(ecosystem int64, keyID int64) []SpentInfo {
+func GetUnusedOutputsMap(keyID int64, outputsMap map[int64][]SpentInfo) []SpentInfo {
 	spentInfos := outputsMap[keyID]
 	var inputIndex int32
 	var list []SpentInfo
@@ -108,8 +110,8 @@ func GetUnusedOutputsMap(ecosystem int64, keyID int64) []SpentInfo {
 	}
 	return list
 }
-func GetBalance(ecosystem int64, keyID int64) *decimal.Decimal {
-	txInputs := GetUnusedOutputsMap(ecosystem, keyID)
+func GetBalanceOutputsMap(ecosystem int64, keyID int64, outputsMap map[int64][]SpentInfo) *decimal.Decimal {
+	txInputs := GetUnusedOutputsMap(keyID, outputsMap)
 	balance := decimal.Zero
 	if len(txInputs) > 0 {
 		for _, input := range txInputs {
@@ -122,7 +124,7 @@ func GetBalance(ecosystem int64, keyID int64) *decimal.Decimal {
 
 }
 
-func GetAllOutputs() []SpentInfo {
+func GetAllOutputs(outputsMap map[int64][]SpentInfo) []SpentInfo {
 	var list []SpentInfo
 	for _, outputs := range outputsMap {
 		list = append(list, outputs...)

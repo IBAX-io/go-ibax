@@ -65,10 +65,31 @@ func (m *Key) CapableAmount() decimal.Decimal {
 }
 
 // Get is retrieving model from database
-func (m *Key) Get(db *DbTransaction, wallet int64, fetchBalance bool) (bool, error) {
-	found, err := isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
-	if found && fetchBalance {
-		balance := GetBalance(m.ecosystem, wallet)
+func (m *Key) Get(db *DbTransaction, wallet int64) (bool, error) {
+	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
+}
+
+func (m *Key) GetAndBalance(db *DbTransaction, wallet int64) (bool, error) {
+	found, err := m.Get(db, wallet)
+	if found {
+		txInputs, _ := GetTxOutputsEcosystem(db, m.ecosystem, []int64{wallet})
+		totalAmount := decimal.Zero
+		if len(txInputs) > 0 {
+			for _, input := range txInputs {
+				outputValue, _ := decimal.NewFromString(input.OutputValue)
+				totalAmount = totalAmount.Add(outputValue)
+			}
+		}
+		m.Balance = totalAmount
+	}
+	return found, err
+}
+
+// GetBalanceAndPut two methods Get and PutOutputsMap
+func (m *Key) GetBalanceAndPut(db *DbTransaction, wallet int64, outputsMap map[int64][]SpentInfo) (bool, error) {
+	found, err := m.Get(db, wallet)
+	if found {
+		balance := GetBalanceOutputsMap(m.ecosystem, wallet, outputsMap)
 		if balance != nil {
 			m.Balance = *balance
 		} else {
@@ -79,30 +100,12 @@ func (m *Key) Get(db *DbTransaction, wallet int64, fetchBalance bool) (bool, err
 					outputValue, _ := decimal.NewFromString(input.OutputValue)
 					totalAmount = totalAmount.Add(outputValue)
 				}
+				PutOutputsMap(m.ecosystem, wallet, txInputs, outputsMap)
 			}
 			m.Balance = totalAmount
 		}
 	}
 	return found, err
-}
-
-// two methods Get and PutOutputsMap
-func (m *Key) GetBalanceAndPut(db *DbTransaction, wallet int64) {
-	balance := GetBalance(m.ecosystem, wallet)
-	if balance != nil {
-		m.Balance = *balance
-	} else {
-		txInputs, _ := GetTxOutputsEcosystem(db, m.ecosystem, []int64{wallet})
-		totalAmount := decimal.Zero
-		if len(txInputs) > 0 {
-			for _, input := range txInputs {
-				outputValue, _ := decimal.NewFromString(input.OutputValue)
-				totalAmount = totalAmount.Add(outputValue)
-			}
-			PutOutputsMap(m.ecosystem, wallet, txInputs)
-		}
-		m.Balance = totalAmount
-	}
 }
 
 func (m *Key) AccountKeyID() int64 {

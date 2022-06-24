@@ -116,10 +116,12 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		keyIds = append(keyIds, t.KeyID())
 	}
 	outputs, err := sqldb.GetTxOutputs(dbTx, keyIds)
+	//fmt.Println(outputs)
 	if err != nil {
 		return err
 	}
-	sqldb.PutAllOutputsMap(outputs)
+	b.OutputsMap = make(map[int64][]sqldb.SpentInfo)
+	sqldb.PutAllOutputsMap(outputs, b.OutputsMap)
 
 	for curTx := 0; curTx < len(b.Transactions); curTx++ {
 		t := b.Transactions[curTx]
@@ -128,7 +130,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
 		}
-		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, curTx)
+		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, curTx, b.OutputsMap)
 		if err != nil {
 			return err
 		}
@@ -206,6 +208,9 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
 		afters.TxBinLogSql = append(afters.TxBinLogSql, t.DbTransaction.BinLogSql...)
 		processedTx = append(processedTx, t.FullData)
+
+		sqldb.UpdateTxInputs(t.Hash(), t.TxInputs, b.OutputsMap)
+		sqldb.InsertTxOutputs(t.Hash(), t.TxOutputs, b.OutputsMap)
 	}
 	return nil
 }
