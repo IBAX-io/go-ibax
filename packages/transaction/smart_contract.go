@@ -78,6 +78,7 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	defer func() {
 		if s.Penalty {
 			out.TxResult.Code = pbgo.TxInvokeStatusCode_PENALTY
+			out.TxResult.BlockId = s.BlockHeader.BlockId
 		}
 		out.TxResult.Result = res
 		if err != nil || s.Penalty {
@@ -91,9 +92,10 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		}
 		out.Apply(
 			WithOutCtxTxResult(&pbgo.TxResult{
-				Result: res,
-				Hash:   s.txHash(),
-				Code:   pbgo.TxInvokeStatusCode_SUCCESS,
+				Result:  res,
+				Hash:    s.txHash(),
+				Code:    pbgo.TxInvokeStatusCode_SUCCESS,
+				BlockId: s.BlockHeader.BlockId,
 			}),
 			WithOutCtxSysUpdate(s.SysUpdate),
 			WithOutCtxRollBackTx(s.RollBackTx),

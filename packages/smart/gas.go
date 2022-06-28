@@ -216,21 +216,24 @@ func (pay *PaymentInfo) DetailCombustion() any {
 
 func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	eco := f.TokenEco
-	if err := sc.hasExitKeyID(eco, f.ToID); err != nil {
+	if err := sc.hasExistKeyID(eco, f.FromID); err != nil {
+		return errors.Wrapf(err, fmt.Sprintf("From ID %d does not exist", f.ToID))
+	}
+	if err := sc.hasExistKeyID(eco, f.ToID); err != nil {
 		return errors.Wrapf(err, fmt.Sprintf("to ID %d does not exist", f.ToID))
 	}
-	if err := sc.hasExitKeyID(eco, f.TaxesID); err != nil {
+	if err := sc.hasExistKeyID(eco, f.TaxesID); err != nil {
 		return errors.Wrapf(err, fmt.Sprintf("taxes ID %d does not exist", f.TaxesID))
 	}
 	if found, err := f.PayWallet.SetTablePrefix(eco).Get(sc.DbTransaction, f.FromID); err != nil || !found {
-		if !found {
-			sc.GetLogger().WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("looking for keyid in ecosystem")
-			return fmt.Errorf(eEcoKeyNotFound, converter.AddressToString(f.FromID), eco)
+		if err != nil {
+			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting wallet")
+			return err
 		}
-		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting wallet")
+		err = fmt.Errorf(eEcoKeyNotFound, converter.AddressToString(f.FromID), eco)
+		sc.GetLogger().WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("looking for keyid in ecosystem")
 		return err
 	}
-
 	if f.PaymentType == PaymentType_ContractCaller &&
 		!bytes.Equal(sc.Key.PublicKey, f.PayWallet.PublicKey) &&
 		!bytes.Equal(sc.TxSmart.PublicKey, f.PayWallet.PublicKey) &&
@@ -336,7 +339,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 	case GasScenesType_Taxes:
 		toID = pay.TaxesID
 	}
-	if err := sc.hasExitKeyID(pay.TokenEco, toID); err != nil {
+	if err := sc.hasExistKeyID(pay.TokenEco, toID); err != nil {
 		return err
 	}
 	var (
@@ -408,13 +411,9 @@ func (sc *SmartContract) needPayment() bool {
 	return sc.TxSmart.EcosystemID > 0 && !sc.CLB && !syspar.IsPrivateBlockchain() && sc.payFreeContract()
 }
 
-func (sc *SmartContract) hasExitKeyID(eco, id int64) error {
-	var (
-		found bool
-		err   error
-	)
+func (sc *SmartContract) hasExistKeyID(eco, id int64) error {
 	key := &sqldb.Key{}
-	found, err = key.SetTablePrefix(eco).Get(sc.DbTransaction, id)
+	found, err := key.SetTablePrefix(eco).Get(sc.DbTransaction, id)
 	if err != nil {
 		return err
 	}
@@ -422,8 +421,20 @@ func (sc *SmartContract) hasExitKeyID(eco, id int64) error {
 		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
 			"id":        id,
 			"account":   IDToAddress(id),
-			"amount":    0,
 			"ecosystem": eco,
+		}))
+		if err != nil {
+			return err
+		}
+	}
+	keyOne := &sqldb.Key{}
+	if foundOne, err := keyOne.SetTablePrefix(1).Get(sc.DbTransaction, id); err != nil {
+		return err
+	} else if !foundOne {
+		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
+			"id":        id,
+			"account":   IDToAddress(id),
+			"ecosystem": 1,
 		}))
 		if err != nil {
 			return err
@@ -744,7 +755,7 @@ func (sc *SmartContract) taxesWallet(eco int64) (taxesID int64, err error) {
 			return
 		}
 		id := PubToID(fmt.Sprintf("%x", taxesPub))
-		if err = sc.hasExitKeyID(eco, id); err != nil {
+		if err = sc.hasExistKeyID(eco, id); err != nil {
 			return
 		}
 

@@ -260,9 +260,6 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 		if err := sqldb.CreateBatchesRollbackTx(tx, playTx.Rts); err != nil {
 			return errors.Wrap(err, "batches insert rollback tx")
 		}
-		if !b.GenBlock {
-			return nil
-		}
 		if err := sqldb.UpdateBlockMsgBatches(tx, b.Header.BlockId, playTx.UpdTxStatus); err != nil {
 			return errors.Wrap(err, "batches update block msg transaction status")
 		}
