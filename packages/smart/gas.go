@@ -246,7 +246,7 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	if amount.LessThan(estimate) {
 		difference, _ := FormatMoney(sc, estimate.Sub(amount).String(), consts.MoneyDigits)
 		sc.GetLogger().WithFields(log.Fields{"type": consts.NoFunds, "token_eco": eco, "difference": difference}).Error("current balance is not enough")
-		return fmt.Errorf(eEcoCurrentBalance, eco, difference)
+		return fmt.Errorf(eEcoCurrentBalanceDiff, f.PayWallet.AccountID, eco, difference)
 	}
 	return nil
 }

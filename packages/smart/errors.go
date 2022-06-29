@@ -10,37 +10,38 @@ import (
 )
 
 const (
-	eContractLoop       = `there is loop in %s contract`
-	eContractExist      = `contract %s already exists`
-	eLatin              = `Name %s must only contain latin, digit and '_', '-' characters`
-	eAccessContract     = `%s can only be called with condition: %s`
-	eColumnExist        = `column %s exists`
-	eColumnNotExist     = `column %s doesn't exist`
-	eColumnType         = `Type '%s' of columns is not supported`
-	eNotCustomTable     = `%s is not a custom table`
-	eEmptyCond          = `%v condition is empty`
-	eIncorrectSignature = `incorrect signature %s`
-	eItemNotFound       = `item %d has not been found`
-	eManyColumns        = `Too many columns. Limit is %d`
-	eNotCondition       = `There is not %s in parameters`
-	eParamNotFound      = `Parameter %s has not been found`
-	eRecordNotFound     = `Record %s has not been found`
-	eTableExists        = `table %s exists`
-	eTableNotFound      = `table %s has not been found`
-	eTypeJSON           = `Type %T doesn't support json marshalling`
-	eUnknownContract    = `Unknown contract %s`
-	eUnsupportedType    = "Unsupported type %T"
-	eWrongRandom        = `wrong random parameters min: %v, max: %v`
-	eGreaterThan        = `%s must be greater than 0`
-	eTableNotEmpty      = `Table %s is not empty`
-	eColumnNotDeleted   = `Column %s cannot be deleted`
-	eRollbackContract   = `Wrong rollback of the latest contract %d != %d`
-	eExternalNet        = `External network %s is not defined`
-	eKeyNotFound        = `sender %s has not been found`
-	eEcoKeyNotFound     = `sender %s has not been found in ecosystem %d`
-	eEcoKeyDisable      = `%s disable in ecosystem %d`
-	eEcoFuelRate        = `fuel rate must be greater than 0 or empty in ecosystem %d`
-	eEcoCurrentBalance  = `current balance is not enough in ecosystem %d, at least [%s] difference`
+	eContractLoop          = `there is loop in %s contract`
+	eContractExist         = `contract %s already exists`
+	eLatin                 = `Name %s must only contain latin, digit and '_', '-' characters`
+	eAccessContract        = `%s can only be called with condition: %s`
+	eColumnExist           = `column %s exists`
+	eColumnNotExist        = `column %s doesn't exist`
+	eColumnType            = `Type '%s' of columns is not supported`
+	eNotCustomTable        = `%s is not a custom table`
+	eEmptyCond             = `%v condition is empty`
+	eIncorrectSignature    = `incorrect signature %s`
+	eItemNotFound          = `item %d has not been found`
+	eManyColumns           = `Too many columns. Limit is %d`
+	eNotCondition          = `There is not %s in parameters`
+	eParamNotFound         = `Parameter %s has not been found`
+	eRecordNotFound        = `Record %s has not been found`
+	eTableExists           = `table %s exists`
+	eTableNotFound         = `table %s has not been found`
+	eTypeJSON              = `Type %T doesn't support json marshalling`
+	eUnknownContract       = `Unknown contract %s`
+	eUnsupportedType       = "Unsupported type %T"
+	eWrongRandom           = `wrong random parameters min: %v, max: %v`
+	eGreaterThan           = `%s must be greater than 0`
+	eTableNotEmpty         = `Table %s is not empty`
+	eColumnNotDeleted      = `Column %s cannot be deleted`
+	eRollbackContract      = `Wrong rollback of the latest contract %d != %d`
+	eExternalNet           = `External network %s is not defined`
+	eKeyNotFound           = `sender %s has not been found`
+	eEcoKeyNotFound        = `sender %s has not been found in ecosystem %d`
+	eEcoKeyDisable         = `%s disable in ecosystem %d`
+	eEcoFuelRate           = `fuel rate must be greater than 0 or empty in ecosystem %d`
+	eEcoCurrentBalance     = `account %s current balance is not enough in ecosystem %d`
+	eEcoCurrentBalanceDiff = eEcoCurrentBalance + `, at least [%s] difference`
 )
 
 var (
@@ -53,7 +54,6 @@ var (
 	errWrongColumn       = errors.New(`column name cannot begin with digit`)
 	errNotFound          = errors.New(`record has not been found`)
 	errContractChange    = errors.New(`contract cannot be removed or inserted`)
-	errCurrentBalance    = errors.New(`current balance is not enough`)
 	errDeletedKey        = errors.New(`the key is deleted`)
 	errDiffKeys          = errors.New(`contract and user public keys are different`)
 	errEmpty             = errors.New(`empty value and condition`)

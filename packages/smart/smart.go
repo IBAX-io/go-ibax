@@ -552,7 +552,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 	}
 
 	if err = sc.checkTxSign(); err != nil {
-		return retError(err)
+		return ``, err
 	}
 
 	needPayment := sc.needPayment()
@@ -560,7 +560,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 		err = sc.prepareMultiPay()
 		if err != nil {
 			logger.WithError(err).Error("prepare multi")
-			return retError(err)
+			return ``, err
 		}
 	}
 
@@ -596,7 +596,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 				estimateCost := converter.StrToInt64(converter.IntToStr(len(cfunc.Vars) + len(cfunc.Code)))
 				estimate = estimate.Add(decimal.New(estimateCost*2, 0).Mul(pay.FuelRate))
 				if wltAmount.Cmp(estimate) < 0 {
-					return retError(errCurrentBalance)
+					return ``, fmt.Errorf(eEcoCurrentBalance, pay.PayWallet.AccountID, pay.TokenEco)
 				}
 			}
 		}
