@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
-	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network"
@@ -30,18 +29,17 @@ type VotingTotal struct {
 	LocalAddress  string               `json:"localAddress"`
 }
 
-func ToUpdateMachineStatus(tcpAddress string, ch chan map[string]VotingRes, logger *log.Entry) error {
-	localAddress := conf.Config.TCPServer.Str()
-	data, err := tcpclient.UpdateMachineStatus(localAddress, tcpAddress, logger)
+func ToUpdateMachineStatus(currentTcpAddress, tcpAddress string, ch chan map[string]VotingRes, logger *log.Entry) error {
+	data, err := tcpclient.UpdateMachineStatus(currentTcpAddress, tcpAddress, logger)
 	voteMsg := &network.VoteMsg{}
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.IOError, "error": err, "tcpAddress": tcpAddress}).Error("sending request error")
+		logger.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "tcpAddress": tcpAddress}).Error("sending request error")
 		voteMsg.Msg = "tcp connection error"
-		voteMsg.LocalAddress = localAddress
+		voteMsg.LocalAddress = currentTcpAddress
 		voteMsg.TcpAddress = tcpAddress
 		voteMsg.Time = time.Now().UnixMilli()
 		ch <- map[string]VotingRes{
-			tcpAddress: {*voteMsg, "tcp connection error"},
+			tcpAddress: {*voteMsg, voteMsg.Msg},
 		}
 		return err
 	}
@@ -57,16 +55,17 @@ func ToUpdateMachineStatus(tcpAddress string, ch chan map[string]VotingRes, logg
 	return nil
 }
 
-func ToBroadcastNodeConnInfo(votingTotal VotingTotal, tcpAddress string, logger *log.Entry) {
+func ToBroadcastNodeConnInfo(votingTotal VotingTotal, tcpAddress string, logger *log.Entry) error {
 	data, err := json.Marshal(votingTotal)
 	if err != nil {
-		return
+		return err
 	}
 	err = tcpclient.BroadcastNodeConnInfo(tcpAddress, data, logger)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.IOError, "error": err, "tcpAddress": tcpAddress}).Error("sending request error")
-		return
+		return err
 	}
+	return nil
 }
 
 func CandidateNodeVoting(ctx context.Context, d *daemon) error {
@@ -92,10 +91,15 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 	}
 	_, NodePublicKey := utils.GetNodeKeys()
 	NodePublicKey = "04" + NodePublicKey
-	var isHonorNode bool
+	var (
+		isHonorNode       bool
+		currentTcpAddress string
+	)
+
 	for _, node := range candidateNodes {
 		if NodePublicKey == node.NodePubKey {
 			isHonorNode = true
+			currentTcpAddress = node.TcpAddress
 			break
 		}
 	}
@@ -108,7 +112,10 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 		wg.Add(1)
 		go func(tcpAddress string) {
 			defer wg.Done()
-			err = ToUpdateMachineStatus(tcpAddress, ch, d.logger)
+			err = ToUpdateMachineStatus(currentTcpAddress, tcpAddress, ch, d.logger)
+			if err != nil {
+				d.logger.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "tcpAddress": tcpAddress}).Error("sending voting request error")
+			}
 		}(node.TcpAddress)
 	}
 	wg.Wait()
@@ -128,6 +135,7 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 			if err != nil {
 				res.VoteMsgInfo.Msg = "Signature verification failed"
 				res.VoteMsgInfo.Agree = false
+				d.logger.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "tcpAddress": tcpAddress}).Error("sign error")
 			}
 			if res.VoteMsgInfo.Agree {
 				agreeQuantity++
@@ -136,20 +144,22 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 		}
 	}
 	close(ch)
-
 	if len(nodeConnMap) > 0 {
-		localAddress := conf.Config.TCPServer.Str()
 		var wg sync.WaitGroup
 		for _, node := range candidateNodes {
 			wg.Add(1)
 			go func(tcpAddress string) {
 				defer wg.Done()
-				votingTotal := VotingTotal{Data: nodeConnMap, AgreeQuantity: agreeQuantity, LocalAddress: localAddress}
-				ToBroadcastNodeConnInfo(votingTotal, tcpAddress, d.logger)
+				votingTotal := VotingTotal{Data: nodeConnMap, AgreeQuantity: agreeQuantity, LocalAddress: currentTcpAddress}
+				err = ToBroadcastNodeConnInfo(votingTotal, tcpAddress, d.logger)
+				if err != nil {
+					d.logger.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "tcpAddress": tcpAddress}).Error("broadcast node conn info error")
+				}
 			}(node.TcpAddress)
 		}
 		wg.Wait()
 	}
+
 	return nil
 }
 
@@ -165,7 +175,6 @@ func checkServerSign(serverVoteMsg network.VoteMsg) error {
 	}
 	pk = crypto.CutPub(pk)
 	_, err = crypto.Verify(pk, []byte(serverVoteMsg.VerifyVoteForSign()), serverVoteMsg.Sign)
-
 	if err != nil {
 		return err
 	}

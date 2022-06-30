@@ -74,8 +74,10 @@ func HandleTCPRequest(rw net.Conn) {
 	case network.RequestSyncMatchineState:
 		req := &network.BroadcastNodeConnInfoRequest{}
 		if err = req.Read(rw); err == nil {
-			//response, err = SyncMatchineStateRes(req)
-			SyncMatchineStateRes(req)
+			_, err = SyncMatchineStateRes(req)
+			if err != nil {
+				log.WithFields(log.Fields{"type": "SyncMatchineStateRes", "error": err}).Error("SyncMatchineStateRes hour candidate voting")
+			}
 			return
 		}
 	}
