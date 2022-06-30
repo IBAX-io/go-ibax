@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
-	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -24,6 +23,7 @@ func CandidateNodeVoting(r *network.CandidateNodeVotingRequest) (*network.Candid
 	}
 	voteMsg, err = checkClientVote(r, voteMsg)
 	if err != nil {
+		log.WithFields(log.Fields{"type": "CheckVote", "error": err}).Error("check vote error")
 		return nil, err
 	}
 	data, err := json.Marshal(voteMsg)
@@ -51,9 +51,9 @@ func SyncMatchineStateRes(request *network.BroadcastNodeConnInfoRequest) (*netwo
 
 	err := json.Unmarshal(request.Data, &votingTotal)
 	if err != nil {
+		log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("unmarshal voting total")
 		return nil, err
 	}
-
 	if votingTotal.AgreeQuantity > 0 {
 		candidateNode := &sqldb.CandidateNode{
 			TcpAddress:     votingTotal.LocalAddress,
@@ -62,6 +62,7 @@ func SyncMatchineStateRes(request *network.BroadcastNodeConnInfoRequest) (*netwo
 		}
 		err = candidateNode.UpdateCandidateNodeInfo()
 		if err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("update candidate honor voting")
 			return nil, err
 		}
 	}
@@ -85,11 +86,10 @@ func checkClientVote(r *network.CandidateNodeVotingRequest, voteMsgParam *networ
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
 		return nil, errors.New(`node public key is empty`)
 	}
-
 	voteMsg := &network.VoteMsg{
 		CurrentBlockHeight: prevBlock.BlockID,
 		LocalAddress:       voteMsgParam.LocalAddress,
-		TcpAddress:         conf.Config.TCPServer.Str(),
+		TcpAddress:         voteMsgParam.TcpAddress,
 		EcosystemID:        0,
 		Hash:               prevBlock.Hash,
 		Time:               time.Now().UnixMilli(),
@@ -115,10 +115,10 @@ func checkClientVote(r *network.CandidateNodeVotingRequest, voteMsgParam *networ
 	pk, err := hex.DecodeString(candidateNodeSql.NodePubKey)
 	pk = crypto.CutPub(pk)
 	_, err = crypto.Verify(pk, []byte(voteMsgParam.VoteForSign()), voteMsgParam.Sign)
-
 	if err != nil {
 		voteMsg.Msg = "Signature verification failed"
 		voteMsg.Agree = false
+		voteMsg.Time = time.Now().UnixMilli()
 		return voteMsg, nil
 	}
 
@@ -129,7 +129,7 @@ func checkClientVote(r *network.CandidateNodeVotingRequest, voteMsgParam *networ
 	signStr := voteMsg.VerifyVoteForSign()
 	signed, err := crypto.SignString(NodePrivateKey, signStr)
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("Verify voting signature")
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("verify voting signature")
 		return nil, err
 	}
 	voteMsg.Sign = signed
