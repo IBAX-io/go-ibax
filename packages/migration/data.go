@@ -85,6 +85,7 @@ var (
 		t.Column("tx_hash", "bytea", {"default": ""})
 		t.Column("table_name", "string", {"default": "", "size":255})
 		t.Column("table_id", "string", {"default": "", "size":255})
+		t.Column("data_hash", "bytea", {"default": ""})
 		t.Column("data", "text", {"default": ""})
 	{{footer "seq" "primary" "index(table_name, table_id, block_id)"}}
 

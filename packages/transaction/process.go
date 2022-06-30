@@ -26,7 +26,7 @@ func ProcessQueueTransactionBatches(dbTx *sqldb.DbTransaction, qs []*sqldb.Queue
 		go func() {
 			for badTxItem := range ch {
 				BadTxForBan(badTxItem.keyID)
-				_ = MarkTransactionBad(dbTx, badTxItem.hash, badTxItem.msg)
+				_ = MarkTransactionBad(badTxItem.hash, badTxItem.msg)
 			}
 		}()
 

@@ -63,6 +63,14 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		return err
 	}
+	b.Header.RollbacksHash, err = b.GetRollbacksHash(dbTx)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
+		return err
+	}
+	if err = b.repeatMarshallBlock(); err != nil {
+		return err
+	}
 
 	blockchain := &sqldb.BlockChain{
 		ID:             blockID,
@@ -217,6 +225,7 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 		rt.Data = tx.Data
 		rt.TableID = tx.TableId
 		rt.TxHash = tx.TxHash
+		rt.DataHash = tx.DataHash
 		playTx.Rts[i] = rt
 	}
 

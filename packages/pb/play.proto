@@ -27,6 +27,7 @@ message RollbackTx {
   string name_table = 4;
   string table_id = 5;
   string data = 6;
+  bytes data_hash = 7;
 }
 
 message LogTransaction {

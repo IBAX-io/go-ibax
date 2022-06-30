@@ -190,7 +190,7 @@ func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, st time.Ti
 		go func() {
 			for badTxItem := range ch {
 				transaction.BadTxForBan(badTxItem.keyID)
-				_ = transaction.MarkTransactionBad(dbTx, badTxItem.hash, badTxItem.msg)
+				_ = transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
 			}
 		}()
 
