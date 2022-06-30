@@ -534,7 +534,24 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 
 	if feeMode != nil && curPay.TokenEco != consts.DefaultTokenEcosystem {
 		if curPay.PaymentType == PaymentType_ContractCaller {
-			return nil, err
+			return nil, nil
+		}
+		keys := make([]string, 0, len(feeMode.FeeModeDetail))
+		for k := range feeMode.FeeModeDetail {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		var indirectBool bool
+		for i := 0; i < len(keys); i++ {
+			k := keys[i]
+			flag := feeMode.FeeModeDetail[k]
+			if _, ok := FuelType_value[k]; ok && GasPayAbleType(flag.FlagToInt()) == GasPayAbleType_Capable {
+				indirectBool = true
+				break
+			}
+		}
+		if !indirectBool {
+			return nil, nil
 		}
 		// indirect to reward and taxes for other eco
 		indirectPay := &PaymentInfo{
@@ -563,11 +580,6 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		// reset sc multiPays
 		sc.multiPays = sc.multiPays[:0]
 
-		keys := make([]string, 0, len(feeMode.FeeModeDetail))
-		for k := range feeMode.FeeModeDetail {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
 		for i := 0; i < len(keys); i++ {
 			k := keys[i]
 			flag := feeMode.FeeModeDetail[k]
@@ -621,7 +633,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		NewFuelCategory(FuelType_expedite_fee, expediteFee, GasPayAbleType_Unable, 100),
 	)
 	pays = append(pays, curPay)
-	return pays, err
+	return pays, nil
 }
 
 func (sc *SmartContract) prepareMultiPay() error {
