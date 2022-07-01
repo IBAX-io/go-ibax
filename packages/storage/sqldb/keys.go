@@ -21,14 +21,10 @@ type Key struct {
 	ID        int64  `gorm:"primary_key;not null"`
 	AccountID string `gorm:"column:account;not null"`
 	PublicKey []byte `gorm:"column:pub;not null"`
-
-	// Amount string `gorm:"not null"`
-	// TODO UTXO balance replace Amount
-	Balance decimal.Decimal `gorm:"-"`
-
-	Maxpay  string `gorm:"not null"`
-	Deleted int64  `gorm:"not null"`
-	Blocked int64  `gorm:"not null"`
+	Amount    string `gorm:"not null"`
+	Maxpay    string `gorm:"not null"`
+	Deleted   int64  `gorm:"not null"`
+	Blocked   int64  `gorm:"not null"`
 }
 
 // SetTablePrefix is setting table prefix
@@ -47,12 +43,10 @@ func (m Key) TableName() string {
 func (m *Key) Disable() bool {
 	return m.Deleted != 0 || m.Blocked != 0
 }
-
-// The GetBalance method must be called before it can be called
 func (m *Key) CapableAmount() decimal.Decimal {
 	amount := decimal.Zero
-	if m.Balance.GreaterThan(decimal.Zero) {
-		amount = m.Balance
+	if len(m.Amount) > 0 {
+		amount, _ = decimal.NewFromString(m.Amount)
 	}
 	maxpay := decimal.Zero
 	if len(m.Maxpay) > 0 {
@@ -67,45 +61,6 @@ func (m *Key) CapableAmount() decimal.Decimal {
 // Get is retrieving model from database
 func (m *Key) Get(db *DbTransaction, wallet int64) (bool, error) {
 	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
-}
-
-func (m *Key) GetAndBalance(db *DbTransaction, wallet int64) (bool, error) {
-	found, err := m.Get(db, wallet)
-	if found {
-		txInputs, _ := GetTxOutputsEcosystem(db, m.ecosystem, []int64{wallet})
-		totalAmount := decimal.Zero
-		if len(txInputs) > 0 {
-			for _, input := range txInputs {
-				outputValue, _ := decimal.NewFromString(input.OutputValue)
-				totalAmount = totalAmount.Add(outputValue)
-			}
-		}
-		m.Balance = totalAmount
-	}
-	return found, err
-}
-
-// GetBalanceAndPut two methods Get and PutOutputsMap
-func (m *Key) GetBalanceAndPut(db *DbTransaction, wallet int64, outputsMap map[int64][]SpentInfo) (bool, error) {
-	found, err := m.Get(db, wallet)
-	if found {
-		balance := GetBalanceOutputsMap(m.ecosystem, wallet, outputsMap)
-		if balance != nil {
-			m.Balance = *balance
-		} else {
-			txInputs, _ := GetTxOutputsEcosystem(db, m.ecosystem, []int64{wallet})
-			totalAmount := decimal.Zero
-			if len(txInputs) > 0 {
-				for _, input := range txInputs {
-					outputValue, _ := decimal.NewFromString(input.OutputValue)
-					totalAmount = totalAmount.Add(outputValue)
-				}
-				PutOutputsMap(m.ecosystem, wallet, txInputs, outputsMap)
-			}
-			m.Balance = totalAmount
-		}
-	}
-	return found, err
 }
 
 func (m *Key) AccountKeyID() int64 {

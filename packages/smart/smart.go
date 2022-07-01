@@ -595,7 +595,7 @@ func (sc *SmartContract) CallContract(point int) (string, error) {
 		}
 		if needPayment {
 			for _, pay := range sc.multiPays {
-				wltAmount := pay.PayWallet.Balance
+				wltAmount, _ := decimal.NewFromString(pay.PayWallet.Amount)
 				estimateCost := converter.StrToInt64(converter.IntToStr(len(cfunc.Vars) + len(cfunc.Code)))
 				estimate = estimate.Add(decimal.New(estimateCost*2, 0).Mul(pay.FuelRate))
 				if wltAmount.Cmp(estimate) < 0 {

@@ -56,15 +56,14 @@ func ImportApps(path, appname string) error {
 	return nil
 }
 func TestImportApps(t *testing.T) {
-
 	assert.NoError(t, keyLogin(1))
 	path, err := os.Getwd()
 	path = "C:\\gitrepo\\lib.venas.io\\IBAX\\dapps"
 	assert.NoError(t, err)
-	//assert.NoError(t, ImportApps(path, "system"))
-	//assert.NoError(t, ImportApps(path, "conditions"))
-	//assert.NoError(t, ImportApps(path, "basic"))
-	assert.NoError(t, ImportApps(path, "lang_res"))
+	assert.NoError(t, ImportApps(path, "system"))
+	assert.NoError(t, ImportApps(path, "conditions"))
+	assert.NoError(t, ImportApps(path, "basic"))
+	//assert.NoError(t, ImportApps(path, "lang_res"))
 	//assert.NoError(t, ImportApps(path, "platform_apps/ecosystems_catalog"))
 	//assert.NoError(t, ImportApps(path, "platform_apps/token_emission"))
 	//form := url.Values{}

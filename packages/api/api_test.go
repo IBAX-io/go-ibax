@@ -583,23 +583,141 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
 		return
 	}
+	arrData := make(map[string][]byte)
+
+	for i := 0; i < 1; i++ {
+		conname := crypto.RandSeq(10)
+		params["ApplicationId"] = int64(1)
+		params["Conditions"] = "1"
+		//params["TokenEcosystem"] = int64(2)
+		params["Value"] = fmt.Sprintf(`contract rnd%v%d  { action { }}`, conname, i)
+		expedite := strconv.Itoa(1)
+		data, txhash, _ := transaction.NewTransactionInProc(types.SmartTransaction{
+			Header: &types.Header{
+				ID:          int(contract.ID),
+				Time:        time.Now().Unix(),
+				EcosystemID: 1,
+				KeyID:       crypto.Address(publicKey),
+				NetworkID:   conf.Config.LocalConf.NetworkID,
+			},
+			Params:   params,
+			Expedite: expedite,
+		}, privateKey)
+		arrData[fmt.Sprintf("%x", txhash)] = data
+		fmt.Println(fmt.Sprintf("%x", txhash))
+	}
+	ret := &sendTxResult{}
+	err = sendMultipart("sendTx", arrData, &ret)
+	//err = sendMultipart("sendTx", map[string][]byte{
+	//	"data": data,
+	//}, &ret)
+	if err != nil {
+		return
+	}
+
+	if len(form.Get("nowait")) > 0 {
+		return
+	}
+
+	//var ids, ps []int64
+	//
+	//for s := range arrData {
+	//	id, penalty, err := waitTx(ret.Hashes[s])
+	//	ids = append(ids, id)
+	//	ps = append(ps, penalty)
+	//	if id != 0 && err != nil {
+	//		if penalty == 1 {
+	//			//return
+	//		}
+	//		msg = err.Error()
+	//		err = nil
+	//	}
+	//}
+	//fmt.Println(ids, ps)
+
+	return
+}
+
+func postTransferSelfTxResult(form getter) (id int64, msg string, err error) {
+
+	var privateKey, publicKey []byte
+	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
+		return
+	}
+	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+		return
+	}
 
 	data, _, err := transaction.NewTransactionInProc(types.SmartTransaction{
 		Header: &types.Header{
-			ID:          int(contract.ID),
+			ID:          int(1),
 			EcosystemID: 1,
 			Time:        time.Now().Unix(),
 			KeyID:       crypto.Address(publicKey),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
-		Params: params,
+		TransferSelf: &types.TransferSelf{
+			Value:  "1000000000000000000",
+			Asset:  "IBAX",
+			Source: "UTXO",
+			Target: "Account",
+		},
 	}, privateKey)
 	if err != nil {
 		return 0, "", err
 	}
 
 	ret := &sendTxResult{}
-	err = sendMultipart("sendSignTx", map[string][]byte{
+	err = sendMultipart("sendTx", map[string][]byte{
+		"data": data,
+	}, &ret)
+	if err != nil {
+		return
+	}
+
+	if len(form.Get("nowait")) > 0 {
+		return
+	}
+	id, penalty, err := waitTx(ret.Hashes["data"])
+	if id != 0 && err != nil {
+		if penalty == 1 {
+			return
+		}
+		msg = err.Error()
+		err = nil
+	}
+	return
+}
+
+func postUTXOTxResult(form getter) (id int64, msg string, err error) {
+
+	var privateKey, publicKey []byte
+	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
+		return
+	}
+	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+		return
+	}
+
+	data, _, err := transaction.NewTransactionInProc(types.SmartTransaction{
+		Header: &types.Header{
+			ID:          int(1),
+			EcosystemID: 1,
+			Time:        time.Now().Unix(),
+			KeyID:       crypto.Address(publicKey),
+			NetworkID:   conf.Config.LocalConf.NetworkID,
+		},
+		UTXO: &types.UTXO{
+			Value: "1000000000000000",
+			ToID:  -8055926748644556208,
+		},
+	}, privateKey)
+	if err != nil {
+		return 0, "", err
+	}
+
+	ret := &sendTxResult{}
+	err = sendMultipart("sendTx", map[string][]byte{
 		"data": data,
 	}, &ret)
 	if err != nil {
@@ -722,6 +840,16 @@ func postTx(txname string, form *url.Values) error {
 
 func postTxMultipart(txname string, form *url.Values) error {
 	_, _, err := postTxResultMultipart(txname, form)
+	return err
+}
+
+func postTransferSelfTxMultipart(form *url.Values) error {
+	_, _, err := postTransferSelfTxResult(form)
+	return err
+}
+
+func postUTXOTxMultipart(form *url.Values) error {
+	_, _, err := postUTXOTxResult(form)
 	return err
 }
 

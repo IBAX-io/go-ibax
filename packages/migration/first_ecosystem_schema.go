@@ -65,6 +65,7 @@ var sqlFirstEcosystemCommon = `
 	{{head "1_keys"}}
 		t.Column("id", "bigint", {"default": "0"})
 		t.Column("pub", "bytea", {"default": ""})
+		t.Column("amount", "decimal(30)", {"default_raw": "'0' CHECK (amount >= 0)"})
 		t.Column("maxpay", "decimal(30)", {"default_raw": "'0' CHECK (maxpay >= 0)"})
 		t.Column("deposit", "decimal(30)", {"default_raw": "'0' CHECK (deposit >= 0)"})
 		t.Column("multi", "bigint", {"default": "0"})

@@ -222,7 +222,7 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	if err := sc.hasExitKeyID(eco, f.TaxesID); err != nil {
 		return errors.Wrapf(err, fmt.Sprintf("taxes ID %d does not exist", f.TaxesID))
 	}
-	if found, err := f.PayWallet.SetTablePrefix(eco).GetBalanceAndPut(sc.DbTransaction, f.FromID, sc.OutputsMap); err != nil || !found {
+	if found, err := f.PayWallet.SetTablePrefix(eco).Get(sc.DbTransaction, f.FromID); err != nil || !found {
 		if !found {
 			sc.GetLogger().WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("looking for keyid in ecosystem")
 			return fmt.Errorf(eEcoKeyNotFound, converter.AddressToString(f.FromID), eco)
@@ -314,8 +314,13 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 
 func (sc *SmartContract) accountBalanceSingle(eco, id int64) (decimal.Decimal, error) {
 	key := &sqldb.Key{}
-	key.SetTablePrefix(eco).GetBalanceAndPut(sc.DbTransaction, id, sc.OutputsMap)
-	return key.Balance, nil
+	_, err := key.SetTablePrefix(eco).Get(sc.DbTransaction, id)
+	if err != nil {
+		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": id}).Error("get key balance")
+		return decimal.Zero, err
+	}
+	balance, _ := decimal.NewFromString(key.Amount)
+	return balance, nil
 }
 
 func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasScenesType, comment string, status pbgo.TxInvokeStatusCode) error {
@@ -346,13 +351,22 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 		}
 		toIDBalance = fromIDBalance
 	} else {
-
-		//if _, _, err := sc.updateWhere([]string{`-amount`}, []any{sum}, "1_keys", types.LoadMap(map[string]any{`id`: pay.FromID, `ecosystem`: pay.TokenEco})); err != nil {
-		//	return errTaxes
-		//}
-		//if _, _, err := sc.updateWhere([]string{"+amount"}, []any{sum}, "1_keys", types.LoadMap(map[string]any{"id": toID, "ecosystem": pay.TokenEco})); err != nil {
-		//	return err
-		//}
+		if _, _, err := sc.updateWhere(
+			[]string{`-amount`}, []any{sum}, "1_keys",
+			types.LoadMap(map[string]any{
+				`id`:        pay.FromID,
+				`ecosystem`: pay.TokenEco,
+			})); err != nil {
+			return errTaxes
+		}
+		if _, _, err := sc.updateWhere(
+			[]string{"+amount"}, []any{sum}, "1_keys",
+			types.LoadMap(map[string]any{
+				"id":        toID,
+				"ecosystem": pay.TokenEco,
+			})); err != nil {
+			return err
+		}
 		if fromIDBalance, err = sc.accountBalanceSingle(pay.TokenEco, pay.FromID); err != nil {
 			return err
 		}
@@ -360,9 +374,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 			return err
 		}
 	}
-	if _, err1 := utxoTokenFromID(sc, pay.FromID, toID, sum.String()); err1 != nil {
-		return err1
-	}
+
 	values = types.LoadMap(map[string]any{
 		"sender_id":         pay.FromID,
 		"sender_balance":    fromIDBalance,
@@ -410,6 +422,7 @@ func (sc *SmartContract) hasExitKeyID(eco, id int64) error {
 		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
 			"id":        id,
 			"account":   IDToAddress(id),
+			"amount":    0,
 			"ecosystem": eco,
 		}))
 		if err != nil {

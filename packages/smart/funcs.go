@@ -280,6 +280,7 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"MathModDecimal":   MathModDecimal,
 		"CreateView":       CreateView,
 		"UtxoToken":        UtxoToken,
+		"TransferSelf":     TransferSelf,
 	}
 	switch vt {
 	case script.VMType_CLB:

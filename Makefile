@@ -16,6 +16,7 @@ try:
 	go-ibax generateFirstBlock --test=true
 	go-ibax initDatabase
 	go-ibax start
+
 init:
 	go-ibax initDatabase
 
