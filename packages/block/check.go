@@ -81,7 +81,7 @@ func (b *Block) Check() error {
 
 		err := t.Check(b.Header.Timestamp)
 		if err != nil {
-			transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
+			transaction.MarkTransactionBad(t.Hash(), err.Error())
 			delete(txHashes, hexHash)
 			b.Transactions = append(b.Transactions[:i], b.Transactions[i+1:]...)
 			return errors.Wrap(err, "check transaction")

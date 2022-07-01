@@ -8,12 +8,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/types"
-
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/types"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -41,6 +41,7 @@ func SysRollback(sc *SmartContract, data SysRollData) error {
 		NameTable: SysName,
 		TableId:   converter.Int64ToStr(sc.TxSmart.EcosystemID),
 		Data:      string(out),
+		DataHash:  crypto.Hash(out),
 	}
 	sc.RollBackTx = append(sc.RollBackTx, rollbackSys)
 	return nil

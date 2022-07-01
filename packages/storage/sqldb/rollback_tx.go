@@ -20,6 +20,7 @@ type RollbackTx struct {
 	NameTable string `gorm:"not null;size:255;column:table_name" json:"table_name"`
 	TableID   string `gorm:"not null;size:255" json:"table_id"`
 	Data      string `gorm:"not null;type:jsonb" json:"data"`
+	DataHash  []byte `gorm:"not null" json:"data_hash"`
 }
 
 // TableName returns name of table

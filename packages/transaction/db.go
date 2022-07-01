@@ -75,7 +75,7 @@ func DeleteQueueTx(dbTx *sqldb.DbTransaction, hash []byte) error {
 	return nil
 }
 
-func MarkTransactionBad(dbTx *sqldb.DbTransaction, hash []byte, errText string) error {
+func MarkTransactionBad(hash []byte, errText string) error {
 	if hash == nil {
 		return nil
 	}
@@ -200,7 +200,7 @@ func ProcessTransactionsAttempt(dbTx *sqldb.DbTransaction) error {
 		return err
 	}
 	for _, data := range all {
-		err := MarkTransactionBad(dbTx, data.Hash, fmt.Sprintf("The limit of %d attempts has been reached", consts.MaxTXAttempt))
+		err := MarkTransactionBad(data.Hash, fmt.Sprintf("The limit of %d attempts has been reached", consts.MaxTXAttempt))
 		if err != nil {
 			return utils.ErrInfo(err)
 		}

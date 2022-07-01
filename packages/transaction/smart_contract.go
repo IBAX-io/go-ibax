@@ -79,10 +79,18 @@ func (s *SmartTransactionParser) Validate() error {
 func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	var res string
 	defer func() {
-		if s.Penalty {
-			out.TxResult.Code = pbgo.TxInvokeStatusCode_PENALTY
+		ret := &pbgo.TxResult{
+			Result: res,
+			Hash:   out.TxResult.Hash,
 		}
-		out.TxResult.Result = res
+		if s.Penalty {
+			ret.Code = pbgo.TxInvokeStatusCode_PENALTY
+			ret.BlockId = s.BlockHeader.BlockId
+		}
+		out.Apply(
+			WithOutCtxTxResult(ret),
+			WithOutCtxRollBackTx(s.RollBackTx),
+		)
 		if err != nil || s.Penalty {
 			if s.FlushRollback != nil {
 				flush := s.FlushRollback
@@ -92,18 +100,15 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 			}
 			return
 		}
+		ret.Code = pbgo.TxInvokeStatusCode_SUCCESS
+		ret.BlockId = s.BlockHeader.BlockId
 		out.Apply(
-			WithOutCtxTxResult(&pbgo.TxResult{
-				Result: res,
-				Hash:   s.txHash(),
-				Code:   pbgo.TxInvokeStatusCode_SUCCESS,
-			}),
+			WithOutCtxTxResult(ret),
 			WithOutCtxSysUpdate(s.SysUpdate),
-			WithOutCtxRollBackTx(s.RollBackTx),
 			WithOutCtxTxOutputs(s.TxOutputsMap),
 			WithOutCtxTxInputs(s.TxInputsMap),
 		)
-		in.DbTransaction.BinLogSql = s.DbTransaction.BinLogSql
+		//in.DbTransaction.BinLogSql = s.DbTransaction.BinLogSql
 	}()
 
 	_transferSelf := s.TxSmart.TransferSelf

@@ -41,27 +41,16 @@ func (b *Block) PlaySafe() error {
 			if inputTx[0].IsSmartContract() {
 				transaction.BadTxForBan(inputTx[0].KeyID())
 			}
-			if err := transaction.MarkTransactionBad(dbTx, inputTx[0].Hash(), err.Error()); err != nil {
+			if err := transaction.MarkTransactionBad(inputTx[0].Hash(), err.Error()); err != nil {
 				return err
 			}
 		}
 		return err
 	}
 
-	if b.GenBlock {
-		if len(b.TxFullData) == 0 {
-			dbTx.Commit()
-			return ErrEmptyBlock
-		}
-		b.Header.RollbacksHash, err = b.GetRollbacksHash(dbTx)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
-			return err
-		}
-		if err = b.repeatMarshallBlock(); err != nil {
-			dbTx.Rollback()
-			return err
-		}
+	if b.GenBlock && len(b.TxFullData) == 0 {
+		dbTx.Commit()
+		return ErrEmptyBlock
 	}
 	if err := b.InsertIntoBlockchain(dbTx); err != nil {
 		dbTx.Rollback()
@@ -159,7 +148,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			if t.IsSmartContract() {
 				transaction.BadTxForBan(t.KeyID())
 			}
-			_ = transaction.MarkTransactionBad(t.DbTransaction, t.Hash(), err.Error())
+			_ = transaction.MarkTransactionBad(t.Hash(), err.Error())
 			if t.SysUpdate {
 				if err := syspar.SysUpdate(t.DbTransaction); err != nil {
 					return fmt.Errorf("updating syspar: %w", err)

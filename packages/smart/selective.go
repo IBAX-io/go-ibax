@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb/querycost"
@@ -18,13 +19,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string) error {
+func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr, rollDataHashStr string) error {
 	rollbackTx := &types.RollbackTx{
 		BlockId:   sc.BlockHeader.BlockId,
 		TxHash:    sc.Hash,
 		NameTable: table,
 		TableId:   tableID,
 		Data:      rollbackInfoStr,
+		DataHash:  crypto.Hash([]byte(rollDataHashStr)),
 	}
 	sc.RollBackTx = append(sc.RollBackTx, rollbackTx)
 	return nil
@@ -87,6 +89,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			return 0, "", errWhereUpdate
 		}
 	}
+	var rollDataHashStr string
 
 	if !sqlBuilder.Where.IsEmpty() && len(logData) > 0 {
 		var err error
@@ -116,7 +119,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			}
 			cost += updateCost
 		}
-
+		rollDataHashStr = `UPDATE "` + strings.Trim(sqlBuilder.Table, `"`) + `" SET ` + updateExpr + " " + whereExpr
 		err = sc.DbTransaction.Update(sqlBuilder.Table, updateExpr, whereExpr)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Error("getting update query")
@@ -136,7 +139,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
 			return 0, "", err
 		}
-
+		rollDataHashStr = insertQuery
 		cost += insertCost
 		err = sc.DbTransaction.ExecSql(insertQuery)
 		if err != nil {
@@ -156,7 +159,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 				}
 			}
 		}
-		if err := addRollback(sc, sqlBuilder.Table, tid, rollbackInfoStr); err != nil {
+		if err := addRollback(sc, sqlBuilder.Table, tid, rollbackInfoStr, rollDataHashStr); err != nil {
 			return 0, sqlBuilder.TableID(), err
 		}
 	}
