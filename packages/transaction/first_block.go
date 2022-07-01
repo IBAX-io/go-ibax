@@ -121,6 +121,14 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting key")
 		return err
 	}
+
+	err = sqldb.GetDB(dbTx).Exec(`insert into "spent_info" (output_index,output_tx_hash,output_key_id,output_value,scene,ecosystem,contract,block_id,asset) values(?,?,?,?,?,?,?,?,?)`,
+		0, crypto.DoubleHash([]byte(`0`)), keyID, amount, "Token", 1, "Transfer", 1, "IBXC").Error
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting spent info")
+		return err
+	}
+
 	id, err = dbTx.GetNextID("1_pages")
 	if err != nil {
 		return err

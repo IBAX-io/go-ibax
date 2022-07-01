@@ -6,6 +6,7 @@
 package block
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
@@ -26,6 +27,7 @@ type Block struct {
 	Transactions      []*transaction.Transaction
 	GenBlock          bool // it equals true when we are generating a new block
 	Notifications     []types.Notifications
+	OutputsMap        map[int64][]sqldb.SpentInfo
 }
 
 // GetLogger is returns logger

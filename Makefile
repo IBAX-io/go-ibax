@@ -11,5 +11,14 @@ mod:
 build:
 	bash $(HOMEDIR)/build.sh
 
+try:
+	go build
+	go-ibax generateFirstBlock --test=true
+	go-ibax initDatabase
+	go-ibax start
+
+init:
+	go-ibax initDatabase
+
 # avoid filename conflict and speed up build
 .PHONY: all

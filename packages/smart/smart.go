@@ -86,6 +86,9 @@ type SmartContract struct {
 	taxes           bool
 	Penalty         bool
 	TokenEcosystems map[int64]any
+	OutputsMap      map[int64][]sqldb.SpentInfo
+	TxInputsMap     map[int64][]sqldb.SpentInfo
+	TxOutputsMap    map[int64][]sqldb.SpentInfo
 }
 
 // AppendStack adds an element to the stack of contract call or removes the top element when name is empty

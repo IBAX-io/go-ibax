@@ -47,6 +47,6 @@ INSERT INTO "1_platform_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_platform_parameters'),'test','false','false'),
 	(next_id('1_platform_parameters'),'price_tx_data', '10', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'private_blockchain', '1', 'false'),
-	(next_id('1_platform_parameters'),'pay_free_contract', '@1CallDelayedContract', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'pay_free_contract', '@1CallDelayedContract,@1TransferSelf', 'ContractAccess("@1UpdatePlatformParam")'),
     (next_id('1_platform_parameters'),'local_node_ban_time', '60', 'ContractAccess("@1UpdatePlatformParam")');
 `

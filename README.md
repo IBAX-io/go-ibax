@@ -51,8 +51,7 @@ $    go-ibax generateKeys
    Otherwise you will not be able to create new accounts.
 
 ```bash
-$    go-ibax generateFirstBlock \
-        --test=true
+$    go-ibax generateFirstBlock --test=true
 ```
 
 4. Initialize the database.

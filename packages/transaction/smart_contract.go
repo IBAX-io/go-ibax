@@ -54,6 +54,9 @@ func (s *SmartTransactionParser) Init(t *InToCxt) error {
 	s.CLB = false
 	s.Rollback = true
 	s.SysUpdate = false
+	s.OutputsMap = t.OutputsMap
+	s.TxInputsMap = make(map[int64][]sqldb.SpentInfo)
+	s.TxOutputsMap = make(map[int64][]sqldb.SpentInfo)
 	s.RollBackTx = make([]*types.RollbackTx, 0)
 	if s.GenBlock {
 		s.TimeLimit = syspar.GetMaxBlockGenerationTime()
@@ -102,9 +105,28 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		out.Apply(
 			WithOutCtxTxResult(ret),
 			WithOutCtxSysUpdate(s.SysUpdate),
+			WithOutCtxTxOutputs(s.TxOutputsMap),
+			WithOutCtxTxInputs(s.TxInputsMap),
 		)
 		//in.DbTransaction.BinLogSql = s.DbTransaction.BinLogSql
 	}()
+
+	_transferSelf := s.TxSmart.TransferSelf
+	if _transferSelf != nil {
+		_, err = smart.TransferSelf(s.SmartContract, _transferSelf.Value, _transferSelf.Asset, _transferSelf.Source, _transferSelf.Target)
+		if err != nil {
+			return err
+		}
+		return
+	}
+	_utxo := s.TxSmart.UTXO
+	if _utxo != nil {
+		_, err = smart.UtxoToken(s.SmartContract, _utxo.ToID, _utxo.Value)
+		if err != nil {
+			return err
+		}
+		return
+	}
 	res, err = s.CallContract(in.SqlDbSavePoint)
 	if err == nil && s.TxSmart != nil {
 		err = in.TxCheckLimits.CheckLimit(s)
@@ -168,6 +190,9 @@ func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer) error {
 	buffer.UnreadByte()
 	if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
 		return err
+	}
+	if s.SmartContract.TxSmart.UTXO != nil || s.SmartContract.TxSmart.TransferSelf != nil {
+		return nil
 	}
 	if err := s.parseFromContract(true); err != nil {
 		return err

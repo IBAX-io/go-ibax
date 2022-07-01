@@ -165,8 +165,10 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		)
 		if t.IsSmartContract() {
 			eco = t.SmartContract().TxSmart.EcosystemID
-			contract = t.SmartContract().TxContract.Name
 			code = t.TxResult.Code
+			if t.SmartContract().TxContract != nil {
+				contract = t.SmartContract().TxContract.Name
+			}
 		}
 		after.UsedTx = t.Hash()
 		after.Lts = &types.LogTransaction{

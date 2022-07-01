@@ -54,15 +54,30 @@ type Header struct {
 	PublicKey   []byte
 }
 
+type TransferSelf struct {
+	Value  string
+	Asset  string
+	Source string
+	Target string
+}
+
+// UTXO Transfer
+type UTXO struct {
+	ToID  int64
+	Value string
+}
+
 // SmartTransaction is storing smart contract data
 type SmartTransaction struct {
 	*Header
-	MaxSum   string
-	PayOver  string
-	Lang     string
-	Expedite string
-	SignedBy int64
-	Params   map[string]any
+	MaxSum       string
+	PayOver      string
+	Lang         string
+	Expedite     string
+	SignedBy     int64
+	TransferSelf *TransferSelf
+	UTXO         *UTXO
+	Params       map[string]any
 }
 
 func (s *SmartTransaction) TxType() byte { return SmartContractTxType }

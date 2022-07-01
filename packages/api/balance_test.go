@@ -6,12 +6,9 @@
 package api
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"testing"
-
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 )
 
 func TestBalance(t *testing.T) {
@@ -37,31 +34,6 @@ func TestBalance(t *testing.T) {
 		t.Error(fmt.Errorf(`wrong balance %s`, ret.Amount))
 		return
 	}
-}
-
-func TestAssignBalance(t *testing.T) {
-	if err := keyLogin(1); err != nil {
-		t.Error(err)
-		return
-	}
-	var ret sqldb.Response
-	err := sendGet(`assignbalance/`+gAddress, nil, &ret)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	data, _ := json.Marshal(ret)
-	fmt.Println(string(data))
-	//err = sendGet(`assignbalance/3434341`, nil, &ret)
-	//if err != nil {
-	//	t.Error(err)
-	//	return
-	//}
-	//if len(ret.Amount) > 0 {
-	//	t.Error(fmt.Errorf(`wrong balance %s`, ret.Amount))
-	//	return
-	//}
 }
 
 func TestMoneyMoreSend(t *testing.T) {

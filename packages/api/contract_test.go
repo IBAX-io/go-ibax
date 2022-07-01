@@ -31,6 +31,20 @@ func TestBin(t *testing.T) {
 	//assert.NoError(t, err)
 }
 
+func TestTransferSelf(t *testing.T) {
+	assert.NoError(t, keyLogin(1))
+	form := url.Values{`nowait`: {`nowait`}}
+	assert.NoError(t, postTransferSelfTxMultipart(&form))
+
+}
+
+func TestUTXO(t *testing.T) {
+	assert.NoError(t, keyLogin(1))
+	form := url.Values{`nowait`: {`nowait`}}
+	assert.NoError(t, postUTXOTxMultipart(&form))
+
+}
+
 func TestMath(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
 	users := []string{

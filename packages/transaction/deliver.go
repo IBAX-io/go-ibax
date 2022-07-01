@@ -28,12 +28,15 @@ type InToCxt struct {
 	Notifications  types.Notifications
 	Rand           *rand.Rand
 	TxCheckLimits  *Limits
+	OutputsMap     map[int64][]sqldb.SpentInfo
 }
 
 type OutCtx struct {
 	SysUpdate  bool
 	RollBackTx []*types.RollbackTx
 	TxResult   *pbgo.TxResult
+	TxOutputs  []sqldb.SpentInfo
+	TxInputs   []sqldb.SpentInfo
 }
 
 type OutCtxOption func(b *OutCtx)
@@ -63,5 +66,25 @@ func WithOutCtxSysUpdate(ret bool) OutCtxOption {
 func WithOutCtxRollBackTx(ret []*types.RollbackTx) OutCtxOption {
 	return func(b *OutCtx) {
 		b.RollBackTx = ret
+	}
+}
+
+func WithOutCtxTxOutputs(txOutputsMap map[int64][]sqldb.SpentInfo) OutCtxOption {
+	return func(b *OutCtx) {
+		var list []sqldb.SpentInfo
+		for _, txOutputs := range txOutputsMap {
+			list = append(list, txOutputs...)
+		}
+		b.TxOutputs = list
+	}
+}
+
+func WithOutCtxTxInputs(txInputsMap map[int64][]sqldb.SpentInfo) OutCtxOption {
+	return func(b *OutCtx) {
+		var list []sqldb.SpentInfo
+		for _, txInputs := range txInputsMap {
+			list = append(list, txInputs...)
+		}
+		b.TxInputs = list
 	}
 }
