@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -84,11 +85,15 @@ func (b *Block) GetRollbacksHashWithDiff(dbTx *sqldb.DbTransaction) ([]byte, err
 		diff.Diff = append(diff.Diff, hashHex)
 		br.TxMap[tx] = diff
 	}
+	for s, hashes := range br.TxMap {
+		sort.Strings(hashes.Diff)
+		br.TxMap[s] = hashes
+	}
 	blockRollMarshal, err := proto.Marshal(br)
 	if err != nil {
 		return nil, err
 	}
-	return blockRollMarshal, nil
+	return crypto.Hash(blockRollMarshal), nil
 }
 
 // InsertIntoBlockchain inserts a block into the blockchain
