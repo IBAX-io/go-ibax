@@ -35,11 +35,11 @@ func (c *GlobalConfig) GetPidPath() string {
 // LoadConfig from configFile
 // the function has side effect updating global var Config
 func LoadConfig(path string) error {
-	log.WithFields(log.Fields{"path": path}).Info("Loading config")
 	err := LoadConfigToVar(path, &Config)
 	if err != nil {
-		log.Panic(err)
+		log.WithError(err).Fatal("Loading config")
 	}
+	log.WithFields(log.Fields{"path": path}).Info("Loading config")
 	registerCrypto(Config.CryptoSettings)
 	return nil
 }

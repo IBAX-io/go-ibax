@@ -127,7 +127,7 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 
 		if err = bl.Check(); err != nil {
 			var replaceCount int64 = 1
-			if err == block.ErrIncorrectRollbackHash {
+			if errors.Is(err, block.ErrIncorrectRollbackHash) {
 				replaceCount++
 			}
 			d.logger.WithFields(log.Fields{"error": err, "from_host": host,

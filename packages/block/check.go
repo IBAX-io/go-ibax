@@ -6,10 +6,7 @@
 package block
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"github.com/IBAX-io/go-ibax/packages/types"
 	"sort"
 	"time"
 
@@ -19,7 +16,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
+	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -61,37 +60,9 @@ func (b *Block) Check() error {
 		logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Warn("incorrect block time")
 		return utils.WithBan(fmt.Errorf("%s %d", ErrIncorrectBlockTime, b.PrevHeader.Timestamp))
 	}
-	if b.Header.ConsensusMode == consts.HonorNodeMode && !bytes.Equal(b.PrevRollbacksHash, b.PrevHeader.RollbacksHash) {
-		return ErrIncorrectRollbackHash
-	} else {
-		br1 := &types.BlockRoll{}
-		br2 := &types.BlockRoll{}
-		json.Unmarshal(b.PrevRollbacksHash, br1)
-		json.Unmarshal(b.PrevHeader.RollbacksHash, br2)
-
-		if br1.BlockId != br2.BlockId {
-			return errors.New("Rollback block id doesn't match")
-		}
-		if len(br1.Roll) != len(br2.Roll) {
-			return errors.New("Rollback hash size doesn't match")
-		}
-
-		var match bool
-		for hash, b := range br1.Roll {
-			arr, ok := br2.Roll[hash]
-			if !ok {
-				return errors.New("hash not exist in block")
-			}
-			if len(b) != len(arr) {
-				return errors.New("rollback len doesn't match")
-			}
-			match = Compare(b, arr)
-			if !match {
-				return errors.New("rollback tx doesn't match")
-				break
-			}
-		}
-
+	err = b.RollbackCmp()
+	if err != nil {
+		return fmt.Errorf("%w; %v", ErrIncorrectRollbackHash, err)
 	}
 	// check each transaction
 	txCounter := make(map[int64]int)
@@ -161,16 +132,48 @@ func (b *Block) CheckHash() (bool, error) {
 	return true, nil
 }
 
-func Compare(a, b []string) bool {
-	var match = true
-	sort.Strings(a)
-	sort.Strings(b)
-
-	for i := range a {
-		if a[i] != b[i] {
-			match = false
-			break
+func (b *Block) RollbackCmp() error {
+	br1 := &types.BlockRollbackCmp{}
+	br2 := &types.BlockRollbackCmp{}
+	err := proto.Unmarshal(b.PrevRollbacksHash, br1)
+	if err != nil {
+		return err
+	}
+	err = proto.Unmarshal(b.PrevHeader.RollbacksHash, br2)
+	if err != nil {
+		return err
+	}
+	if br1.BlockId != br2.BlockId {
+		return errors.New("block id doesn't match")
+	}
+	if len(br1.TxMap) != len(br2.TxMap) {
+		return errors.New("hash size doesn't match")
+	}
+	compare := func(a, b []string) bool {
+		var match = true
+		sort.Strings(a)
+		sort.Strings(b)
+		for i := range a {
+			if a[i] != b[i] {
+				match = false
+				break
+			}
+		}
+		return match
+	}
+	var match bool
+	for hash, b := range br1.TxMap {
+		arr, ok := br2.TxMap[hash]
+		if !ok {
+			return errors.New("hash not exist in block")
+		}
+		if len(b.Diff) != len(arr.Diff) {
+			return errors.New("rollback tx len doesn't match")
+		}
+		match = compare(b.Diff, arr.Diff)
+		if !match {
+			return errors.New("rollback tx contain relation doesn't match")
 		}
 	}
-	return match
+	return nil
 }
