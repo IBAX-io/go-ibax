@@ -7,6 +7,8 @@ package block
 
 import (
 	"bytes"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -63,7 +65,34 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		return err
 	}
-	b.Header.RollbacksHash, err = b.GetRollbacksHash(dbTx)
+	if syspar.IsHonorNodeMode() {
+		b.Header.RollbacksHash, err = b.GetRollbacksHash(dbTx)
+	} else {
+		rollbackTx := sqldb.RollbackTx{}
+		rollbackTxs, err := rollbackTx.GetBlockRollbackTransactions(dbTx, b.Header.BlockId)
+		if err != nil {
+			return err
+		}
+		br := &types.BlockRoll{
+			BlockId: b.Header.BlockId,
+			Roll:    make(map[string][]string),
+		}
+		for _, rollbackTx := range rollbackTxs {
+			rollbackTxMarshal, err := json.Marshal(rollbackTx)
+			if err != nil {
+				continue
+			}
+			tx := hex.EncodeToString(rollbackTx.TxHash)
+			//br.Roll[tx] = append(br.Roll[tx], crypto.Hash(rollbackTxMarshal))
+			br.Roll[tx] = append(br.Roll[tx], hex.EncodeToString(crypto.Hash(rollbackTxMarshal)))
+		}
+		blockRollMarshal, err := json.Marshal(br)
+		if err != nil {
+			return err
+		}
+		b.Header.RollbacksHash = blockRollMarshal
+	}
+
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
 		return err
