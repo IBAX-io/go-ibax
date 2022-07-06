@@ -80,7 +80,7 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 		agreeQuantity  int64
 	)
 	defer func() {
-		d.sleepTime = time.Second * 10
+		d.sleepTime = time.Second * 2
 	}()
 	candidateNodes, err = sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
