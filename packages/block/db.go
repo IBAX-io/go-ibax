@@ -7,7 +7,6 @@ package block
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -23,7 +22,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/gogo/protobuf/proto"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -58,42 +56,23 @@ func (b *Block) GetRollbacksHash(dbTx *sqldb.DbTransaction) ([]byte, error) {
 	return crypto.Hash(diff), nil
 }
 
-func (b *Block) GetRollbacksHashWithDiff(dbTx *sqldb.DbTransaction) ([]byte, error) {
+func (b *Block) GetRollbacksHashWithDiffArr(dbTx *sqldb.DbTransaction) ([]byte, error) {
 	rollbackTx := sqldb.RollbackTx{}
 	rollbackTxs, err := rollbackTx.GetBlockRollbackTransactions(dbTx, b.Header.BlockId)
 	if err != nil {
 		return nil, err
 	}
-	br := &types.BlockRollbackCmp{
-		BlockId: b.Header.BlockId,
-		TxMap:   make(map[string]*types.RollbackDiffHashes),
-	}
-	for _, rollbackTx := range rollbackTxs {
-		marshal, err := json.Marshal(rollbackTx)
+	arr := make([]string, 0, len(rollbackTxs))
+	for _, row := range rollbackTxs {
+		data, err := json.Marshal(row)
 		if err != nil {
 			continue
 		}
-		tx := hex.EncodeToString(rollbackTx.TxHash)
-		hashHex := crypto.HashHex(marshal)
-		if _, ok := br.TxMap[tx]; ok {
-			br.TxMap[tx].Diff = append(br.TxMap[tx].Diff, hashHex)
-			continue
-		}
-		var diff = &types.RollbackDiffHashes{
-			Diff: make([]string, 0),
-		}
-		diff.Diff = append(diff.Diff, hashHex)
-		br.TxMap[tx] = diff
+		arr = append(arr, crypto.HashHex(data))
 	}
-	for s, hashes := range br.TxMap {
-		sort.Strings(hashes.Diff)
-		br.TxMap[s] = hashes
-	}
-	blockRollMarshal, err := proto.Marshal(br)
-	if err != nil {
-		return nil, err
-	}
-	return crypto.Hash(blockRollMarshal), nil
+	sort.Strings(arr)
+	marshal, _ := json.Marshal(arr)
+	return crypto.Hash(marshal), nil
 }
 
 // InsertIntoBlockchain inserts a block into the blockchain
@@ -106,7 +85,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		return err
 	}
-	protoData, err = b.GetRollbacksHashWithDiff(dbTx)
+	protoData, err = b.GetRollbacksHashWithDiffArr(dbTx)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
 		return err

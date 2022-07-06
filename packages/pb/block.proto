@@ -38,12 +38,3 @@ message BlockData {
     AfterTxs after_txs =6;
     bool sys_update = 7;
 }
-
-message BlockRollbackCmp {
-    int64 block_id = 1;
-    map<string,RollbackDiffHashes> tx_map = 2;
-}
-
-message RollbackDiffHashes{
-  repeated string diff=1;
-}
