@@ -8,19 +8,20 @@ import (
 )
 
 type CandidateNode struct {
-	ID             int64           `gorm:"column:id" json:"id"`
-	ApiAddress     string          `gorm:"column:api_address" json:"apiAddress"`
-	TcpAddress     string          `gorm:"column:tcp_address" json:"tcpAddress"`
-	NodePubKey     string          `gorm:"column:node_pub_key" json:"nodePubKey"`
-	DateCreated    int64           `gorm:"column:date_created" json:"dateCreated"`
-	Deleted        uint8           `gorm:"column:deleted" json:"deleted"`
-	DateDeleted    int64           `gorm:"column:date_deleted" json:"dateDeleted"`
-	Website        string          `gorm:"column:website" json:"website"`
-	ReplyCount     int64           `gorm:"column:reply_count" json:"replyCount"`
-	DateReply      int64           `gorm:"column:date_reply" json:"dateReply"`
-	EarnestTotal   decimal.Decimal `gorm:"column:earnest_total" json:"earnestTotal"`
-	NodeName       string          `gorm:"column:node_name" json:"nodeName"`
-	CandidateNodes []byte          `json:"candidateNodes"`
+	ID              int64           `gorm:"column:id" json:"id"`
+	ApiAddress      string          `gorm:"column:api_address" json:"apiAddress"`
+	TcpAddress      string          `gorm:"column:tcp_address" json:"tcpAddress"`
+	NodePubKey      string          `gorm:"column:node_pub_key" json:"nodePubKey"`
+	DateCreated     int64           `gorm:"column:date_created" json:"dateCreated"`
+	Deleted         uint8           `gorm:"column:deleted" json:"deleted"`
+	DateDeleted     int64           `gorm:"column:date_deleted" json:"dateDeleted"`
+	Website         string          `gorm:"column:website" json:"website"`
+	ReplyCount      int64           `gorm:"column:reply_count" json:"replyCount"`
+	DateReply       int64           `gorm:"column:date_reply" json:"dateReply"`
+	EarnestTotal    decimal.Decimal `gorm:"column:earnest_total" json:"earnestTotal"`
+	NodeName        string          `gorm:"column:node_name" json:"nodeName"`
+	ReferendumTotal decimal.Decimal `gorm:"column:referendum_total" json:"referendumTotal"`
+	CandidateNodes  []byte          `json:"candidateNodes"`
 }
 
 type ByReplyCount []CandidateNode
