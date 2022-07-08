@@ -7,7 +7,6 @@ package block
 
 import (
 	"bytes"
-	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -58,7 +57,7 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer) (*Block, error) {
 			if t != nil && t.Hash() != nil {
 				transaction.MarkTransactionBad(t.Hash(), err.Error())
 			}
-			return nil, fmt.Errorf("parse transaction error(%s)", err)
+			return nil, err
 		}
 		transactions = append(transactions, t)
 	}

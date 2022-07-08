@@ -6,12 +6,10 @@
 package daemons
 
 import (
-	"bytes"
 	"context"
 	"sync/atomic"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -49,12 +47,12 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	nodePosition, err := syspar.GetThisNodePosition()
 	if err != nil {
 		// we are not honor node and can't generate new blocks
-		d.sleepTime = 4 * time.Second
+		d.sleepTime = syspar.GetMaxBlockTimeDuration()
 		d.logger.WithFields(log.Fields{"type": consts.JustWaiting, "error": err}).Debug("we are not honor node, sleep for 10 seconds")
 		return nil
 	}
 
-	// wee need fresh myNodePosition after locking
+	// we need fresh myNodePosition after locking
 	nodePosition, err = syspar.GetThisNodePosition()
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting node position by key id")
@@ -118,7 +116,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	trs, err := processTransactions(d.logger, txs, st)
+	trs, err := transaction.ProcessTransactions(d.logger, txs, st)
 	if err != nil {
 		return err
 	}
@@ -150,100 +148,4 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	}
 	//go notificator.CheckTokenMovementLimits(nil, conf.Config.TokenMovement, header.BlockId)
 	return nil
-}
-
-func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) ([]byte, error) {
-	return block.MarshallBlock(
-		types.WithCurHeader(blockHeader),
-		types.WithPrevHeader(prevBlock),
-		types.WithTxFullData(trs))
-}
-
-func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, st time.Time) ([][]byte, error) {
-	var done = make(<-chan time.Time, 1)
-	if syspar.IsHonorNodeMode() {
-		btc := protocols.NewBlockTimeCounter()
-		_, endTime, err := btc.RangeByTime(st)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.TimeCalcError, "error": err}).Error("on getting end time of generation")
-			return nil, err
-		}
-		done = time.After(endTime.Sub(st))
-	}
-	trs, err := sqldb.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount())
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unused transactions")
-		return nil, err
-	}
-
-	limits := transaction.NewLimits(transaction.GetLetPreprocess())
-
-	type badTxStruct struct {
-		hash  []byte
-		msg   string
-		keyID int64
-	}
-
-	processBadTx := func(dbTx *sqldb.DbTransaction) chan badTxStruct {
-		ch := make(chan badTxStruct)
-
-		go func() {
-			for badTxItem := range ch {
-				transaction.BadTxForBan(badTxItem.keyID)
-				_ = transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
-			}
-		}()
-
-		return ch
-	}
-
-	txBadChan := processBadTx(nil)
-
-	defer func() {
-		close(txBadChan)
-	}()
-
-	// Checks preprocessing count limits
-	txList := make([][]byte, 0, len(trs))
-	txs = append(txs, trs...)
-	for i, txItem := range txs {
-		if syspar.IsHonorNodeMode() {
-			select {
-			case <-done:
-				return txList, nil
-			default:
-			}
-		}
-		if txItem.GetTransactionRateStopNetwork() {
-			txList = append(txList[:0], txs[i].Data)
-			break
-		}
-		bufTransaction := bytes.NewBuffer(txItem.Data)
-		tr, err := transaction.UnmarshallTransaction(bufTransaction)
-		if err != nil {
-			if tr != nil {
-				txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
-			}
-			continue
-		}
-
-		if err := tr.Check(st.Unix()); err != nil {
-			txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
-			continue
-		}
-
-		if tr.IsSmartContract() {
-			err = limits.CheckLimit(tr.Inner)
-			if errors.Cause(err) == transaction.ErrLimitStop && i > 0 {
-				break
-			} else if err != nil {
-				if err != transaction.ErrLimitSkip {
-					txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
-				}
-				continue
-			}
-		}
-		txList = append(txList, txs[i].Data)
-	}
-	return txList, nil
 }
