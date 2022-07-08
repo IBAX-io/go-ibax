@@ -57,6 +57,8 @@ func NewHashAlgo(a HashAlgo) HashProvider {
 		return &hashalgo.SM3{}
 	case HashAlgo_KECCAK256:
 		return &hashalgo.Keccak256{}
+	case HashAlgo_SHA3_256:
+		return &hashalgo.Sha3256{}
 	}
 	panic(fmt.Errorf("hash algo [%v] is not supported yet", a))
 }
