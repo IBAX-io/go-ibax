@@ -56,9 +56,9 @@ func (b *Block) GetRollbacksHash(dbTx *sqldb.DbTransaction) ([]byte, error) {
 	return crypto.Hash(diff), nil
 }
 
-func (b *Block) GetRollbacksHashWithDiffArr(dbTx *sqldb.DbTransaction) ([]byte, error) {
+func GetRollbacksHashWithDiffArr(dbTx *sqldb.DbTransaction, bId int64) ([]byte, error) {
 	rollbackTx := sqldb.RollbackTx{}
-	rollbackTxs, err := rollbackTx.GetBlockRollbackTransactions(dbTx, b.Header.BlockId)
+	rollbackTxs, err := rollbackTx.GetBlockRollbackTransactions(dbTx, bId)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,6 @@ func (b *Block) GetRollbacksHashWithDiffArr(dbTx *sqldb.DbTransaction) ([]byte, 
 
 // InsertIntoBlockchain inserts a block into the blockchain
 func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
-	var protoData []byte
 	blockID := b.Header.BlockId
 	bl := &sqldb.BlockChain{}
 	err := bl.DeleteById(dbTx, blockID)
@@ -85,17 +84,16 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		return err
 	}
-	protoData, err = b.GetRollbacksHashWithDiffArr(dbTx)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
-		return err
+	var rHash []byte
+	if !b.GenBlock {
+		rHash, err = GetRollbacksHashWithDiffArr(dbTx, b.Header.BlockId)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
+			return err
+		}
+	} else {
+		rHash = b.Header.RollbacksHash
 	}
-	b.Header.RollbacksHash = protoData
-
-	if err = b.repeatMarshallBlock(); err != nil {
-		return err
-	}
-
 	blockchain := &sqldb.BlockChain{
 		ID:             blockID,
 		Hash:           b.Header.BlockHash,
@@ -104,7 +102,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		KeyID:          b.Header.KeyId,
 		NodePosition:   b.Header.NodePosition,
 		Time:           b.Header.Timestamp,
-		RollbacksHash:  b.Header.RollbacksHash,
+		RollbacksHash:  rHash,
 		Tx:             int32(len(b.TxFullData)),
 		ConsensusMode:  b.Header.ConsensusMode,
 		CandidateNodes: b.Header.CandidateNodes,
