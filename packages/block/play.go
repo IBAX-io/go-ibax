@@ -48,20 +48,9 @@ func (b *Block) PlaySafe() error {
 		return err
 	}
 
-	if b.GenBlock {
-		if len(b.TxFullData) == 0 {
-			dbTx.Commit()
-			return ErrEmptyBlock
-		}
-		rHash, err := GetRollbacksHashWithDiffArr(dbTx, b.Header.BlockId)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
-			return err
-		}
-		b.Header.RollbacksHash = rHash
-		if err = b.repeatMarshallBlock(); err != nil {
-			return err
-		}
+	if b.GenBlock && len(b.TxFullData) == 0 {
+		dbTx.Commit()
+		return ErrEmptyBlock
 	}
 
 	if err := b.InsertIntoBlockchain(dbTx); err != nil {

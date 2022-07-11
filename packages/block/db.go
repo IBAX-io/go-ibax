@@ -85,14 +85,16 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		return err
 	}
 	var rHash []byte
-	if !b.GenBlock {
-		rHash, err = GetRollbacksHashWithDiffArr(dbTx, b.Header.BlockId)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
+	rHash, err = GetRollbacksHashWithDiffArr(dbTx, blockID)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
+		return err
+	}
+	if b.GenBlock {
+		b.Header.RollbacksHash = rHash
+		if err = b.repeatMarshallBlock(); err != nil {
 			return err
 		}
-	} else {
-		rHash = b.Header.RollbacksHash
 	}
 	blockchain := &sqldb.BlockChain{
 		ID:             blockID,
