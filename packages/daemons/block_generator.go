@@ -118,7 +118,8 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	trs, err := processTransactions(d.logger, txs, st)
+	//trs, err := processTransactions(d.logger, txs, st)
+	trs, classifyTxsMap, err := processTransactionsNew(d.logger, txs, st)
 	if err != nil {
 		return err
 	}
@@ -144,7 +145,8 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		RollbacksHash: prevBlock.RollbacksHash,
 	}
 
-	err = generateProcessBlock(header, prev, trs)
+	//err = generateProcessBlock(header, prev, trs)
+	err = generateProcessBlockNew(header, prev, trs, classifyTxsMap)
 	if err != nil {
 		return err
 	}
@@ -246,4 +248,135 @@ func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, st time.Ti
 		txList = append(txList, txs[i].Data)
 	}
 	return txList, nil
+}
+
+func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time.Time) ([][]byte, map[int][][]byte, error) {
+	classifyTxsMap := make(map[int][][]byte)
+	//classifyTxsMap := make(map[int]*types.TxsEncapsulation)
+	if len(txs) > 0 {
+		for _, tx := range txs {
+			classifyTxsMap[consts.DelayTxType] = append(classifyTxsMap[consts.DelayTxType], tx.Data)
+			//classifyTxsMap[DelayTxType].Data = append(classifyTxsMap[DelayTxType].Data, tx.Data)
+			//delayTxsType := &types.DelayTxsType{}
+			//delayTxsType.Data = append(delayTxsType.Data, tx.Data)
+			//classifyTxsMap[DelayTxType].TxClassify = delayTxsType
+
+		}
+	}
+	var done = make(<-chan time.Time, 1)
+	if syspar.IsHonorNodeMode() {
+		btc := protocols.NewBlockTimeCounter()
+		_, endTime, err := btc.RangeByTime(st)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.TimeCalcError, "error": err}).Error("on getting end time of generation")
+			return nil, nil, err
+		}
+		done = time.After(endTime.Sub(st))
+	}
+	trs, err := sqldb.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount())
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unused transactions")
+		return nil, nil, err
+	}
+
+	limits := transaction.NewLimits(transaction.GetLetPreprocess())
+
+	type badTxStruct struct {
+		hash  []byte
+		msg   string
+		keyID int64
+	}
+
+	processBadTx := func(dbTx *sqldb.DbTransaction) chan badTxStruct {
+		ch := make(chan badTxStruct)
+
+		go func() {
+			for badTxItem := range ch {
+				transaction.BadTxForBan(badTxItem.keyID)
+				_ = transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
+			}
+		}()
+
+		return ch
+	}
+
+	txBadChan := processBadTx(nil)
+
+	defer func() {
+		close(txBadChan)
+	}()
+
+	// Checks preprocessing count limits
+	txList := make([][]byte, 0, len(trs))
+	txs = append(txs, trs...)
+	for i, txItem := range txs {
+		if syspar.IsHonorNodeMode() {
+			select {
+			case <-done:
+				return txList, classifyTxsMap, nil
+			default:
+			}
+		}
+		if txItem.GetTransactionRateStopNetwork() {
+			classifyTxsMap[consts.StopNetworkTxType] = append(classifyTxsMap[consts.StopNetworkTxType], txs[i].Data)
+			//stopNetworkTxsType := &types.StopNetworkTxsType{}
+			//stopNetworkTxsType.Data = append(stopNetworkTxsType.Data, txs[i].Data)
+			//classifyTxsMap[StopNetworkTxType].TxClassify = stopNetworkTxsType
+
+			txList = append(txList[:0], txs[i].Data)
+			break
+		}
+		bufTransaction := bytes.NewBuffer(txItem.Data)
+		tr, err := transaction.UnmarshallTransaction(bufTransaction)
+		if err != nil {
+			if tr != nil {
+				txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+			}
+			continue
+		}
+
+		if err := tr.Check(st.Unix()); err != nil {
+			txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+			continue
+		}
+
+		if tr.IsSmartContract() {
+			err = limits.CheckLimit(tr.Inner)
+			if errors.Cause(err) == transaction.ErrLimitStop && i > 0 {
+				break
+			} else if err != nil {
+				if err != transaction.ErrLimitSkip {
+					txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+				}
+				continue
+			}
+			if tr.SmartContract().TxSmart.UTXO != nil {
+				classifyTxsMap[consts.Utxo] = append(classifyTxsMap[consts.Utxo], txs[i].Data)
+				//utxoTxsType := &types.UtxoTxsType{}
+				//utxoTxsType.Data = append(utxoTxsType.Data, txs[i].Data)
+				//classifyTxsMap[Utxo].TxClassify = utxoTxsType
+
+			} else if tr.SmartContract().TxSmart.TransferSelf != nil {
+				classifyTxsMap[consts.TransferSelf] = append(classifyTxsMap[consts.TransferSelf], txs[i].Data)
+				//transferSelfTxType := &types.TransferSelfTxType{}
+				//transferSelfTxType.Data = append(transferSelfTxType.Data, txs[i].Data)
+				//classifyTxsMap[TransferSelf].TxClassify = transferSelfTxType
+			} else {
+				classifyTxsMap[consts.SmartContractTxType] = append(classifyTxsMap[consts.SmartContractTxType], txs[i].Data)
+				//smartContractTxsType := &types.SmartContractTxsType{}
+				//smartContractTxsType.Data = append(smartContractTxsType.Data, txs[i].Data)
+				//classifyTxsMap[SmartContractTxType].TxClassify = smartContractTxsType
+			}
+
+		}
+		if txs[i].Type == types.FirstBlockTxType {
+			classifyTxsMap[consts.FirstBlockTxType] = append(classifyTxsMap[consts.FirstBlockTxType], txs[i].Data)
+			//firstBlockTxsType := &types.FirstBlockTxsType{}
+			//firstBlockTxsType.Data = append(firstBlockTxsType.Data, txs[i].Data)
+			//classifyTxsMap[FirstBlockTxType].TxClassify = firstBlockTxsType
+
+		}
+		txList = append(txList, txs[i].Data)
+	}
+	return txList, classifyTxsMap, nil
 }

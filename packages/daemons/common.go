@@ -193,6 +193,21 @@ func generateProcessBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byt
 	return nil
 }
 
+func generateProcessBlockNew(blockHeader, prevBlock *types.BlockHeader, trs [][]byte, classifyTxsMap map[int][][]byte) error {
+	blockBin, err := generateNextBlock(blockHeader, prevBlock, trs)
+	if err != nil {
+		return err
+	}
+	//err = block.InsertBlockWOForks(blockBin, true, false)
+	err = block.InsertBlockWOForksNew(blockBin, classifyTxsMap, true, false)
+	if err != nil {
+		log.WithError(err).Error("on inserting new block")
+		return err
+	}
+	log.WithFields(log.Fields{"block": blockHeader.String(), "type": consts.SyncProcess}).Debug("Generated block ID")
+	return nil
+}
+
 func GetRemoteGoodHosts() (hosts []string, err error) {
 	if syspar.IsHonorNodeMode() {
 		return node.GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())

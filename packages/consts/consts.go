@@ -139,6 +139,15 @@ const (
 	SavePointMarkTx    = "tx"
 )
 
+const (
+	DelayTxType = iota + 1
+	FirstBlockTxType
+	StopNetworkTxType
+	SmartContractTxType
+	Utxo
+	TransferSelf
+)
+
 func Version() string {
 	return strings.TrimSpace(strings.Join([]string{VERSION, BuildInfo}, " "))
 }
