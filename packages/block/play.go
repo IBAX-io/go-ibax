@@ -104,6 +104,18 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		return nil
 	}
 
+	var keyIds []int64
+	for indexTx := 0; indexTx < len(b.Transactions); indexTx++ {
+		t := b.Transactions[indexTx]
+		keyIds = append(keyIds, t.KeyID())
+	}
+	outputs, err := sqldb.GetTxOutputs(dbTx, keyIds)
+	if err != nil {
+		return err
+	}
+	b.OutputsMap = make(map[int64][]sqldb.SpentInfo)
+	sqldb.PutAllOutputsMap(outputs, b.OutputsMap)
+
 	// start
 	txsMap := b.ClassifyTxsMap
 	//trs := []*sqldb.Transaction{}
@@ -167,6 +179,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 				return err
 			}
 		}
+
 		// TransferSelf
 		if len(txsMap[consts.TransferSelf]) > 0 {
 			for curTx, txBytes := range txsMap[consts.TransferSelf] {
@@ -222,18 +235,6 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 				}
 				transactions = append(transactions, t)
 			}
-
-			var keyIds []int64
-			for indexTx := 0; indexTx < len(transactions); indexTx++ {
-				t := b.Transactions[indexTx]
-				keyIds = append(keyIds, t.KeyID())
-			}
-			outputs, err := sqldb.GetTxOutputs(dbTx, keyIds)
-			if err != nil {
-				return err
-			}
-			b.OutputsMap = make(map[int64][]sqldb.SpentInfo)
-			sqldb.PutAllOutputsMap(outputs, b.OutputsMap)
 
 			// utxo group
 			walletAddress := make(map[int64]int64)
