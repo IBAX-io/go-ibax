@@ -55,6 +55,7 @@ func (b *Block) PlaySafe() error {
 		dbTx.Commit()
 		return ErrEmptyBlock
 	}
+
 	if err := b.InsertIntoBlockchain(dbTx); err != nil {
 		dbTx.Rollback()
 		return err

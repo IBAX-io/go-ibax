@@ -7,7 +7,9 @@ package block
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -54,6 +56,25 @@ func (b *Block) GetRollbacksHash(dbTx *sqldb.DbTransaction) ([]byte, error) {
 	return crypto.Hash(diff), nil
 }
 
+func GetRollbacksHashWithDiffArr(dbTx *sqldb.DbTransaction, bId int64) ([]byte, error) {
+	rollbackTx := sqldb.RollbackTx{}
+	rollbackTxs, err := rollbackTx.GetBlockRollbackTransactions(dbTx, bId)
+	if err != nil {
+		return nil, err
+	}
+	arr := make([]string, 0, len(rollbackTxs))
+	for _, row := range rollbackTxs {
+		data, err := json.Marshal(row)
+		if err != nil {
+			continue
+		}
+		arr = append(arr, crypto.HashHex(data))
+	}
+	sort.Strings(arr)
+	marshal, _ := json.Marshal(arr)
+	return crypto.Hash(marshal), nil
+}
+
 // InsertIntoBlockchain inserts a block into the blockchain
 func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 	blockID := b.Header.BlockId
@@ -63,15 +84,18 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		return err
 	}
-	b.Header.RollbacksHash, err = b.GetRollbacksHash(dbTx)
+	var rHash []byte
+	rHash, err = GetRollbacksHashWithDiffArr(dbTx, blockID)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
 		return err
 	}
-	if err = b.repeatMarshallBlock(); err != nil {
-		return err
+	if b.GenBlock {
+		b.Header.RollbacksHash = rHash
+		if err = b.repeatMarshallBlock(); err != nil {
+			return err
+		}
 	}
-
 	blockchain := &sqldb.BlockChain{
 		ID:             blockID,
 		Hash:           b.Header.BlockHash,
@@ -80,7 +104,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		KeyID:          b.Header.KeyId,
 		NodePosition:   b.Header.NodePosition,
 		Time:           b.Header.Timestamp,
-		RollbacksHash:  b.Header.RollbacksHash,
+		RollbacksHash:  rHash,
 		Tx:             int32(len(b.TxFullData)),
 		ConsensusMode:  b.Header.ConsensusMode,
 		CandidateNodes: b.Header.CandidateNodes,

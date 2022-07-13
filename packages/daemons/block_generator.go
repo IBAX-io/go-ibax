@@ -6,12 +6,10 @@
 package daemons
 
 import (
-	"bytes"
 	"context"
 	"sync/atomic"
 	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -49,12 +47,12 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	nodePosition, err := syspar.GetThisNodePosition()
 	if err != nil {
 		// we are not honor node and can't generate new blocks
-		d.sleepTime = 4 * time.Second
+		d.sleepTime = syspar.GetMaxBlockTimeDuration()
 		d.logger.WithFields(log.Fields{"type": consts.JustWaiting, "error": err}).Debug("we are not honor node, sleep for 10 seconds")
 		return nil
 	}
 
-	// wee need fresh myNodePosition after locking
+	// we need fresh myNodePosition after locking
 	nodePosition, err = syspar.GetThisNodePosition()
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting node position by key id")

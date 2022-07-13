@@ -6,6 +6,7 @@ package transaction
 
 import (
 	"bytes"
+	"fmt"
 	"math/rand"
 
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
@@ -56,7 +57,7 @@ func (t *Transaction) SmartContract() *SmartTransactionParser {
 func UnmarshallTransaction(buffer *bytes.Buffer) (*Transaction, error) {
 	tx := &Transaction{}
 	if err := tx.Unmarshall(buffer); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parse transaction error: %w", err)
 	}
 	return tx, nil
 }

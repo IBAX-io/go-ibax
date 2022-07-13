@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
-	"github.com/IBAX-io/go-ibax/packages/utils"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -80,7 +80,7 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 		agreeQuantity  int64
 	)
 	defer func() {
-		d.sleepTime = time.Second * 10
+		d.sleepTime = time.Minute
 	}()
 	candidateNodes, err = sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {

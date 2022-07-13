@@ -36,7 +36,7 @@ func (rt *RollbackTx) GetRollbackTransactions(dbTx *DbTransaction, transactionHa
 // GetBlockRollbackTransactions returns records of rollback by blockID
 func (rt *RollbackTx) GetBlockRollbackTransactions(dbTx *DbTransaction, blockID int64) ([]RollbackTx, error) {
 	var rollbackTransactions []RollbackTx
-	err := GetDB(dbTx).Where("block_id = ?", blockID).Order("id asc").Find(&rollbackTransactions).Error
+	err := GetDB(dbTx).Where("block_id = ?", blockID).Omit("id").Order("id asc").Find(&rollbackTransactions).Error
 	return rollbackTransactions, err
 }
 

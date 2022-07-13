@@ -180,7 +180,10 @@ func Ntp_Work(ctx context.Context) {
 }
 
 func generateProcessBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) error {
-	blockBin, err := generateNextBlock(blockHeader, prevBlock, trs)
+	blockBin, err := block.MarshallBlock(
+		types.WithCurHeader(blockHeader),
+		types.WithPrevHeader(prevBlock),
+		types.WithTxFullData(trs))
 	if err != nil {
 		return err
 	}

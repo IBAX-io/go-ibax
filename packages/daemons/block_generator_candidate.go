@@ -21,6 +21,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
@@ -76,7 +77,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	trs, err := processTransactions(d.logger, txs, st)
+	trs, err := transaction.ProcessTransactions(d.logger, txs, st)
 	if err != nil {
 		return err
 	}
@@ -153,23 +154,54 @@ func GetThisNodePosition(candidateNodes []sqldb.CandidateNode, prevBlock *sqldb.
 	if len(candidateNodes) == 2 {
 		_, NodePublicKey := utils.GetNodeKeys()
 		NodePublicKey = "04" + NodePublicKey
-		var (
-			packageNode sqldb.CandidateNode
-			flag        bool
-		)
-		for _, node := range candidateNodes {
 
-			if NodePublicKey == node.NodePubKey && prevBlock.NodePosition != strconv.FormatInt(node.ID, 10) {
-				flag = true
-				packageNode = node
-				break
+		compare := func(c []sqldb.CandidateNode) (sqldb.CandidateNode, bool) {
+			var (
+				generateBlockNode   sqldb.CandidateNode
+				isGenerateBlockNode bool
+				extNode             bool
+				node1               = candidateNodes[0]
+				node2               = candidateNodes[1]
+			)
+			for i := 0; i < len(c); i++ {
+				if prevBlock.NodePosition == strconv.FormatInt(c[i].ID, 10) {
+					extNode = true
+					break
+				}
 			}
-			packageNode = node
+
+			if extNode {
+				for _, node := range c {
+					if NodePublicKey == node.NodePubKey && prevBlock.NodePosition != strconv.FormatInt(node.ID, 10) {
+						isGenerateBlockNode = true
+						generateBlockNode = node
+						break
+					}
+				}
+				return generateBlockNode, isGenerateBlockNode
+			}
+			generateBlockNode = node1
+			switch node1.ReferendumTotal.Cmp(node2.ReferendumTotal) {
+			case 0:
+				switch node1.EarnestTotal.Cmp(node2.EarnestTotal) {
+				case 0:
+					if node1.ReplyCount < node2.ReplyCount {
+						generateBlockNode = node2
+					} else if node1.ReplyCount == node2.ReplyCount {
+						if node1.DateReply < node2.DateReply {
+							generateBlockNode = node2
+						}
+					}
+				case -1:
+					generateBlockNode = node2
+				}
+			case -1:
+				generateBlockNode = node2
+			}
+			return generateBlockNode, generateBlockNode.NodePubKey == NodePublicKey
 		}
-		if flag {
-			return packageNode, flag
-		}
-		return packageNode, flag
+
+		return compare(candidateNodes)
 	}
 	if len(candidateNodes) > 2 {
 		candidateNodesSqrt := math.Sqrt(float64(len(candidateNodes)))
