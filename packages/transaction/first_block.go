@@ -116,7 +116,7 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	}
 
 	err = sqldb.GetDB(dbTx).Exec(`insert into "1_keys" (id,account,pub,amount) values(?,?,?,?),(?,?,?,?)`,
-		keyID, converter.AddressToString(keyID), data.PublicKey, 0,nodeKeyID, converter.AddressToString(nodeKeyID), data.NodePublicKey, 0).Error
+		keyID, converter.AddressToString(keyID), data.PublicKey, 0, nodeKeyID, converter.AddressToString(nodeKeyID), data.NodePublicKey, 0).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting key")
 		return err
