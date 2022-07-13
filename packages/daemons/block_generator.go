@@ -370,13 +370,6 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 			}
 
 		}
-		if txs[i].Type == types.FirstBlockTxType {
-			classifyTxsMap[consts.FirstBlockTxType] = append(classifyTxsMap[consts.FirstBlockTxType], txs[i].Data)
-			//firstBlockTxsType := &types.FirstBlockTxsType{}
-			//firstBlockTxsType.Data = append(firstBlockTxsType.Data, txs[i].Data)
-			//classifyTxsMap[FirstBlockTxType].TxClassify = firstBlockTxsType
-
-		}
 		txList = append(txList, txs[i].Data)
 	}
 	return txList, classifyTxsMap, nil

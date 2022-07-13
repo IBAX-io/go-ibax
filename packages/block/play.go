@@ -116,7 +116,6 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	b.OutputsMap = make(map[int64][]sqldb.SpentInfo)
 	sqldb.PutAllOutputsMap(outputs, b.OutputsMap)
 
-	// start
 	txsMap := b.ClassifyTxsMap
 	//trs := []*sqldb.Transaction{}
 	transactions := make([]*transaction.Transaction, 0)
@@ -141,10 +140,11 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 				return err
 			}
 		}
+
 		// FirstBlockTxType
-		if len(txsMap[consts.FirstBlockTxType]) > 0 {
-			for _, txBytes := range txsMap[consts.FirstBlockTxType] {
-				t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
+		if b.IsGenesis() {
+			for _, tx := range b.Transactions {
+				t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(tx.FullData))
 				if err != nil {
 					if t != nil && t.Hash() != nil {
 						transaction.MarkTransactionBad(t.Hash(), err.Error())
@@ -154,12 +154,12 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 				transactions = append(transactions, t)
 			}
 			err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions)
-			delete(txsMap, consts.FirstBlockTxType)
 			transactions = make([]*transaction.Transaction, 0)
 			if err != nil {
 				return err
 			}
 		}
+
 		// DelayTxType
 		if len(txsMap[consts.DelayTxType]) > 0 {
 			for _, txBytes := range txsMap[consts.DelayTxType] {
@@ -204,6 +204,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			delete(txsMap, consts.TransferSelf)
 			transactions = make([]*transaction.Transaction, 0)
 		}
+
 		// SmartContractTxType
 		if len(txsMap[consts.SmartContractTxType]) > 0 {
 			for _, txBytes := range txsMap[consts.SmartContractTxType] {
@@ -223,7 +224,8 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 				return err
 			}
 		}
-		// Utxo
+
+		//Utxo
 		if len(txsMap[consts.Utxo]) > 0 {
 			for _, txBytes := range txsMap[consts.Utxo] {
 				t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
@@ -268,7 +270,6 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			break
 		}
 	}
-	//end
 	return nil
 }
 

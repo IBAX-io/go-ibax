@@ -81,7 +81,9 @@ func InsertBlockWOForksNew(data []byte, classifyTxsMap map[int][][]byte, genBloc
 	}
 
 	block.GenBlock = genBlock
-	block.ClassifyTxsMap = classifyTxsMap
+	if !firstBlock {
+		block.ClassifyTxsMap = classifyTxsMap
+	}
 	if err := block.Check(); err != nil {
 		return err
 	}

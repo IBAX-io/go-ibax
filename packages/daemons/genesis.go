@@ -62,7 +62,7 @@ func loadFirstBlock(logger *log.Entry) error {
 			newBlock = rawBlock
 		}
 	}
-	if err = block.InsertBlockWOForks(newBlock, false, true); err != nil {
+	if err = block.InsertBlockWOForksNew(newBlock, nil, false, true); err != nil {
 		logger.WithFields(log.Fields{"type": consts.ParserError, "error": err}).Error("inserting new block")
 		return err
 	}

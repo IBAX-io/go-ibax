@@ -141,7 +141,6 @@ const (
 
 const (
 	DelayTxType = iota + 1
-	FirstBlockTxType
 	StopNetworkTxType
 	SmartContractTxType
 	Utxo
