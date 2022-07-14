@@ -275,7 +275,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 
 func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, logger *log.Entry, rand *random.Rand, limits *transaction.Limits, afters *types.AfterTxs, processedTx *[][]byte, txs []*transaction.Transaction) error {
 	for curTx := 0; curTx < len(txs); curTx++ {
-		t := b.Transactions[curTx]
+		t := txs[curTx]
 		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")

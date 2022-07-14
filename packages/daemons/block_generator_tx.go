@@ -65,6 +65,7 @@ func (dtx *DelayedTx) createDelayTx(keyID, highRate int64, params map[string]any
 	smartTx := types.SmartTransaction{
 		Header: &types.Header{
 			ID:          int(info.ID),
+			Name:        info.Name,
 			EcosystemID: firstEcosystemID,
 			KeyID:       keyID,
 			Time:        dtx.time,
