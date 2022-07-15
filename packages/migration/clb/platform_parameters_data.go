@@ -77,5 +77,5 @@ INSERT INTO "1_platform_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_platform_parameters'),'private_blockchain', '1', 'false'),
 	(next_id('1_platform_parameters'),'price_create_application', '100', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'external_blockchain', '', 'ContractAccess("@1UpdatePlatformParam")'),
-	(next_id('1_platform_parameters'),'pay_free_contract', '@1CallDelayedContract,@1NewUser', 'ContractAccess("@1UpdatePlatformParam")');
+	(next_id('1_platform_parameters'),'pay_free_contract', '@1CallDelayedContract', 'ContractAccess("@1UpdatePlatformParam")');
 `
