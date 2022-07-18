@@ -330,7 +330,7 @@ func addressIDTag(par parFunc) string {
 	if len(address) == 0 {
 		return getVar(par.Workspace, `key_id`)
 	}
-	id := smart.AddressToID(processToText(par, macro(address, par.Workspace.Vars)))
+	id := converter.AddressToID(processToText(par, macro(address, par.Workspace.Vars)))
 	if id == 0 {
 		return `0`
 	}
