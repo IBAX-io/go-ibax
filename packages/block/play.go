@@ -7,6 +7,7 @@ package block
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
@@ -38,11 +39,19 @@ func (b *Block) PlaySafe() error {
 	if err != nil {
 		dbTx.Rollback()
 		if b.GenBlock && len(b.TxFullData) == 0 {
-			if inputTx[0].IsSmartContract() {
-				transaction.BadTxForBan(inputTx[0].KeyID())
-			}
-			if err := transaction.MarkTransactionBad(inputTx[0].Hash(), err.Error()); err != nil {
-				return err
+			var banK = make(map[string]struct{}, len(inputTx))
+			for i := 0; i < len(inputTx); i++ {
+				var t, k = inputTx[i], strconv.FormatInt(inputTx[i].KeyID(), 10)
+				if t.IsSmartContract() {
+					if _, ok := banK[k]; !ok {
+						transaction.BadTxForBan(t.KeyID())
+						banK[k] = struct{}{}
+						continue
+					}
+				}
+				if err := transaction.MarkTransactionBad(t.Hash(), err.Error()); err != nil {
+					return err
+				}
 			}
 		}
 		return err
