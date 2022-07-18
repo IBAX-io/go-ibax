@@ -20,6 +20,10 @@ const (
 	Extend_this_contract       = `this_contract`
 	Extend_guest_key           = `guest_key`
 	Extend_guest_account       = `guest_account`
+	Extend_black_hole_key      = `black_hole_key`
+	Extend_black_hole_account  = `black_hole_account`
+	Extend_white_hole_key      = `white_hole_key`
+	Extend_white_hole_account  = `white_hole_account`
 	Extend_pre_block_data_hash = `pre_block_data_hash`
 	Extend_gen_block           = `gen_block`
 	Extend_time_limit          = `time_limit`
@@ -50,6 +54,11 @@ const (
 	sysVars_txcost              = `txcost`
 	sysVars_txhash              = `txhash`
 	sysVars_guest_key           = `guest_key`
+	sysVars_guest_account       = `guest_account`
+	sysVars_black_hole_key      = `black_hole_key`
+	sysVars_white_hole_key      = `white_hole_key`
+	sysVars_black_hole_account  = `black_hole_account`
+	sysVars_white_hole_account  = `white_hole_account`
 	sysVars_gen_block           = `gen_block`
 	sysVars_time_limit          = `time_limit`
 	sysVars_pre_block_data_hash = `pre_block_data_hash`
