@@ -151,6 +151,6 @@ func Version() string {
 	return strings.TrimSpace(strings.Join([]string{VERSION, BuildInfo}, " "))
 }
 
-func SetSavePointMarkBlock(idTx int) string {
+func SetSavePointMarkBlock(idTx string) string {
 	return fmt.Sprintf("\"%s-%d\";", SavePointMarkBlock, idTx)
 }

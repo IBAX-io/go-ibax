@@ -539,7 +539,7 @@ func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 }
 
 // CallContract calls the contract functions according to the specified flags
-func (sc *SmartContract) CallContract(point int) (string, error) {
+func (sc *SmartContract) CallContract(point string) (string, error) {
 	var (
 		result string
 		err    error
@@ -631,14 +631,14 @@ lp:
 	if err != nil {
 		sc.RollBackTx = nil
 		sc.DbTransaction.BinLogSql = nil
-		if errReset := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); errReset != nil {
+		if errReset := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(consts.SetSavePointMarkBlock(hex.EncodeToString(sc.Hash)))); errReset != nil {
 			return retError(errors.Wrap(err, errReset.Error()))
 		}
 		if needPayment {
 			if errPay := sc.payContract(true); errPay != nil {
 				sc.RollBackTx = nil
 				sc.DbTransaction.BinLogSql = nil
-				if errRollsp := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); errRollsp != nil {
+				if errRollsp := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(consts.SetSavePointMarkBlock(hex.EncodeToString(sc.Hash)))); errRollsp != nil {
 					return retError(errors.Wrap(err, errRollsp.Error()))
 				}
 				return errors.Wrap(err, errPay.Error()).Error(), nil

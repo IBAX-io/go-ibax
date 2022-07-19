@@ -125,6 +125,10 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		if err != nil {
 			return err
 		}
+		err = in.TxCheckLimits.CheckLimit(s)
+		if err != nil {
+			return
+		}
 		return
 	}
 	res, err = s.CallContract(in.SqlDbSavePoint)

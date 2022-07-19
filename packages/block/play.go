@@ -7,6 +7,7 @@ package block
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -266,7 +267,6 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		walletAddress := make(map[int64]int64)
 		groupUtxoTxs(transactions, walletAddress)
 
-		//for {
 		for g, transactions := range utxoTxsGroupMap {
 			wg.Add(1)
 			go func(_g string, _transactions []*transaction.Transaction, _utxoTxsGroupMap map[string][]*transaction.Transaction) {
@@ -294,12 +294,12 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, logger *log.Entry, rand *random.Rand, limits *transaction.Limits, afters *types.AfterTxs, processedTx *[][]byte, txs []*transaction.Transaction) error {
 	for curTx := 0; curTx < len(txs); curTx++ {
 		t := txs[curTx]
-		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
+		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())))
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
 		}
-		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, curTx, b.OutputsMap)
+		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap)
 		if err != nil {
 			return err
 		}
@@ -388,12 +388,12 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, logger *log.Entry, r
 
 func (b *Block) executeSingleTx(dbTx *sqldb.DbTransaction, logger *log.Entry, rand *random.Rand, limits *transaction.Limits, afters *types.AfterTxs, processedTx *[][]byte, tx *transaction.Transaction, curTx int) error {
 	t := tx
-	err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
+	err := dbTx.Savepoint(consts.SetSavePointMarkBlock(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash()))))
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 		return err
 	}
-	err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, curTx, b.OutputsMap)
+	err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap)
 	if err != nil {
 		return err
 	}
