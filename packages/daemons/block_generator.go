@@ -344,10 +344,12 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 			}
 			if tr.SmartContract().TxSmart.TransferSelf != nil {
 				classifyTxsMap[consts.TransferSelf] = append(classifyTxsMap[consts.TransferSelf], txs[i].Data)
+				txList = append(txList, txs[i].Data)
 				continue
 			}
 			if tr.SmartContract().TxSmart.UTXO != nil {
 				classifyTxsMap[consts.Utxo] = append(classifyTxsMap[consts.Utxo], txs[i].Data)
+				txList = append(txList, txs[i].Data)
 				continue
 			}
 			if tr.SmartContract().TxSmart.Name != "@1CallDelayedContract" {
