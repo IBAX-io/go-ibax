@@ -271,6 +271,27 @@ func GetNumberOfNodes() int64 {
 }
 
 func GetNumberOfNodesFromDB(transaction *sqldb.DbTransaction) int64 {
+	var bk sqldb.BlockChain
+	f, err := bk.GetMaxBlock()
+	if err != nil || !f {
+		return 1
+	}
+	if bk.ConsensusMode == consts.CandidateNodeMode {
+		var candidate sqldb.CandidateNode
+		var total int64
+		pledgeAmount, err := sqldb.GetPledgeAmount()
+		if err != nil {
+			return 1
+		}
+		err = sqldb.GetDB(transaction).Table(candidate.TableName()).Where("deleted = 0 AND earnest_total >= ?", pledgeAmount).Limit(SysInt(NumberNodes)).Count(&total).Error
+		if err != nil {
+			return 1
+		}
+		if total < 1 {
+			total = 1
+		}
+		return total
+	}
 	sp := &sqldb.PlatformParameter{}
 	sp.GetTransaction(transaction, HonorNodes)
 	var honorNodes []map[string]any

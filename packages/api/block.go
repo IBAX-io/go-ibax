@@ -100,6 +100,13 @@ func (f *blocksTxInfoForm) Validate(r *http.Request) error {
 	if f.BlockID > 0 {
 		f.BlockID--
 	}
+	if f.Count <= 0 {
+		f.Count = defaultPaginatorLimit
+	}
+
+	if f.Count > maxPaginatorLimit {
+		f.Count = maxPaginatorLimit
+	}
 	return nil
 }
 
@@ -235,7 +242,7 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 	for _, blockModel := range blocks {
 		blck, err := block.UnmarshallBlock(bytes.NewBuffer(blockModel.Data))
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err, "bolck_id": blockModel.ID}).Error("on unmarshalling block")
+			logger.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err, "block_id": blockModel.ID}).Error("on unmarshalling block")
 			errorResponse(w, err)
 			return
 		}
