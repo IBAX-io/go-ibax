@@ -3,27 +3,18 @@ package sqldb
 import (
 	"bytes"
 	"strings"
+	"sync"
 
 	"github.com/shopspring/decimal"
 )
 
-//var (
-//outputsMap map[int64][]SpentInfo
-//)
-
-// func CallContract(outputsMap map[int64][]sqldb.SpentInfo, tx Tx) {
-//	_txInputs := GetUnusedOutputsMap(outputsMap, tx.KeyID)
-//	smartVM := &SmartVM{TxSmart: tx, TxInputs: _txInputs}
-//	_, _ = VMCallContract(smartVM)
-//	txInputsCtx := smartVM.TxInputs
-//	txOutputsCtx := smartVM.TxOutputs
-//	if len(txInputsCtx) > 0 && len(txOutputsCtx) > 0 {
-//		updateTxInputs(outputsMap, tx.Hash, txInputsCtx)
-//		insertTxOutputs(outputsMap, tx.Hash, txOutputsCtx)
-//	}
-// }
+var (
+	lock = &sync.RWMutex{}
+)
 
 func InsertTxOutputs(outputTxHash []byte, txOutputsCtx []SpentInfo, outputsMap map[int64][]SpentInfo) {
+	lock.Lock()
+	defer lock.Unlock()
 	for index, txOutput := range txOutputsCtx {
 		spentInfos := outputsMap[txOutput.OutputKeyId]
 		txOutput.OutputTxHash = outputTxHash
@@ -34,6 +25,8 @@ func InsertTxOutputs(outputTxHash []byte, txOutputsCtx []SpentInfo, outputsMap m
 	}
 }
 func InsertTxOutputsChange(outputTxHash []byte, inputChange SpentInfo, txOutputsCtx []SpentInfo, outputsMap map[int64][]SpentInfo) {
+	lock.Lock()
+	defer lock.Unlock()
 	spentInfosChange := outputsMap[inputChange.OutputKeyId]
 	var outputIndex int32
 	for index, info := range spentInfosChange {
@@ -56,6 +49,8 @@ func InsertTxOutputsChange(outputTxHash []byte, inputChange SpentInfo, txOutputs
 }
 
 func UpdateTxInputs(inputTxHash []byte, txInputsCtx []SpentInfo, outputsMap map[int64][]SpentInfo) {
+	lock.Lock()
+	defer lock.Unlock()
 	var inputIndex int32
 	for _, txInput := range txInputsCtx {
 		// spentInfos := GetUnusedOutputsMap(outputsMap, txInput.OutputKeyId)
@@ -74,6 +69,8 @@ func UpdateTxInputs(inputTxHash []byte, txInputsCtx []SpentInfo, outputsMap map[
 }
 
 func PutAllOutputsMap(outputs []SpentInfo, outputsMap map[int64][]SpentInfo) {
+	//lock.Lock()
+	//defer lock.Unlock()
 	//if len(outputsMap) == 0 {
 	//	outputsMap = make(map[int64][]SpentInfo)
 	//}
@@ -85,10 +82,14 @@ func PutAllOutputsMap(outputs []SpentInfo, outputsMap map[int64][]SpentInfo) {
 	}
 }
 func PutOutputsMap(ecosystem int64, keyID int64, outputs []SpentInfo, outputsMap map[int64][]SpentInfo) {
+	//lock.Lock()
+	//defer lock.Unlock()
 	outputsMap[keyID] = outputs
 }
 
 func GetChangeOutputsMap(keyID int64, txHash []byte, outputsMap map[int64][]SpentInfo) *SpentInfo {
+	lock.Lock()
+	defer lock.Unlock()
 	spentInfos := outputsMap[keyID]
 	for _, info := range spentInfos {
 		if strings.EqualFold(info.Action, "change") {
@@ -98,6 +99,8 @@ func GetChangeOutputsMap(keyID int64, txHash []byte, outputsMap map[int64][]Spen
 	return nil
 }
 func GetUnusedOutputsMap(keyID int64, outputsMap map[int64][]SpentInfo) []SpentInfo {
+	lock.Lock()
+	defer lock.Unlock()
 	spentInfos := outputsMap[keyID]
 	var inputIndex int32
 	var list []SpentInfo
