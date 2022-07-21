@@ -516,8 +516,9 @@ func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 			return signedBy, nil
 		}
 		honorNodes := syspar.GetNodes()
-		if !builtinContract[sc.TxContract.Name] {
-			return 0, errDelayedContract
+		delay := sqldb.DelayedContract{}
+		if ok, _ := delay.GetByContract(sc.DbTransaction, sc.TxContract.Name); !ok && !builtinContract[sc.TxContract.Name] {
+			return 0, fmt.Errorf("%w: %v", errDelayedContract, sc.TxContract.Name)
 		}
 		if len(honorNodes) > 0 {
 			for _, node := range honorNodes {

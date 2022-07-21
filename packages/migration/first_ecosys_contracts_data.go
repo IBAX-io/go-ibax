@@ -142,9 +142,44 @@ VALUES
 }
 ', '1', 'ContractConditions("MainCondition")', '1', '1'),
 	(next_id('1_contracts'), 'CheckNodesBan', 'contract CheckNodesBan {
-	action {
-		UpdateNodesBan($block_time)
-	}
+    func getPermission() {
+        var array_permissions array result i int prevContract string
+        array_permissions = ["@1CheckNodesBan"]
+
+        prevContract = $stack[0]
+        if Len($stack) > 2 {
+            prevContract = $stack[Len($stack) - 2]
+        }
+        while i < Len(array_permissions) {
+            var contract_name string
+            contract_name = array_permissions[i]
+            if contract_name == prevContract {
+                result = 1
+            }
+            i = i + 1
+        }
+
+        if result == 0 {
+            warning LangRes("@1contract_chain_distorted")
+        }
+    }
+    conditions {
+        getPermission()
+        HonorNodeCondition()
+        var rows array
+        rows = DBFind("@1delayed_contracts").Where({"contract": "@1CheckNodesBan", "deleted": 0})
+        if !Len(rows) {
+            warning Sprintf(LangRes("@1template_delayed_contract_not_exist"), $Id)
+        }
+        $cur = rows[0]
+        $counter = Int($cur["counter"]) + 1
+        $Id = Int($cur["id"])
+    }
+    action {
+        DBUpdateExt("@1delayed_contracts", {"id":$Id}, {"counter": $counter})
+
+        UpdateNodesBan($block_time)
+    }
 }
 ', '1', 'ContractConditions("MainCondition")', '1', '1'),
 	(next_id('1_contracts'), 'EditAppParam', 'contract EditAppParam {
