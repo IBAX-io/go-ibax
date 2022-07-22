@@ -5,8 +5,12 @@
 package crypto
 
 import (
+	"crypto/sha512"
 	"encoding/hex"
+	"strconv"
+	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
@@ -16,6 +20,32 @@ func CutPub(pubKey []byte) []byte {
 		pubKey = pubKey[1:]
 	}
 	return pubKey
+}
+
+// Address gets int64 address from the public key
+func Address(pubKey []byte) int64 {
+	pubKey = CutPub(pubKey)
+	h := Hash(pubKey)
+	h512 := sha512.Sum512(h[:])
+	crc := CalcChecksum(h512[:])
+	return buildChecksumConvert(crc)
+}
+
+func buildChecksumConvert(crc uint64) int64 {
+	num := strconv.FormatUint(crc, 10)
+	val := RepeatPrefixed(num)
+	v := val[:len(val)-1]
+	sum := converter.CheckSum(v)
+	uSum := uint64(sum)
+	return int64(crc - (crc % 10) + uSum)
+}
+
+func RepeatPrefixed(input string) []byte {
+	const size = consts.AddressLength
+	if len(input) > size {
+		input = input[:size]
+	}
+	return []byte(strings.Repeat("0", size-len(input)) + input)
 }
 
 // KeyToAddress converts a public key to chain address XXXX-...-XXXX.

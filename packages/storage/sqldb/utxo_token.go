@@ -69,8 +69,8 @@ func UpdateTxInputs(inputTxHash []byte, txInputsCtx []SpentInfo, outputsMap map[
 }
 
 func PutAllOutputsMap(outputs []SpentInfo, outputsMap map[int64][]SpentInfo) {
-	//lock.Lock()
-	//defer lock.Unlock()
+	lock.Lock()
+	defer lock.Unlock()
 	//if len(outputsMap) == 0 {
 	//	outputsMap = make(map[int64][]SpentInfo)
 	//}
@@ -82,8 +82,6 @@ func PutAllOutputsMap(outputs []SpentInfo, outputsMap map[int64][]SpentInfo) {
 	}
 }
 func PutOutputsMap(ecosystem int64, keyID int64, outputs []SpentInfo, outputsMap map[int64][]SpentInfo) {
-	//lock.Lock()
-	//defer lock.Unlock()
 	outputsMap[keyID] = outputs
 }
 

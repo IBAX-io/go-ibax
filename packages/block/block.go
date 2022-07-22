@@ -28,7 +28,6 @@ type Block struct {
 	GenBlock          bool // it equals true when we are generating a new block
 	Notifications     []types.Notifications
 	OutputsMap        map[int64][]sqldb.SpentInfo
-	//ClassifyTxsMap    map[int]*types.TxsEncapsulation
 	ClassifyTxsMap map[int][][]byte
 }
 

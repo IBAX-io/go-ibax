@@ -47,7 +47,6 @@ func (t *StopNetwork) TxType() byte { return StopNetworkTxType }
 // Header is contain header data
 type Header struct {
 	ID          int
-	Name        string
 	EcosystemID int64
 	KeyID       int64
 	Time        int64

@@ -225,6 +225,10 @@ func (sc *SmartContract) getExtend() map[string]any {
 		script.Extend_this_contract:       ``,
 		script.Extend_guest_key:           consts.GuestKey,
 		script.Extend_guest_account:       consts.GuestAddress,
+		script.Extend_black_hole_key:      converter.HoleAddrMap[converter.BlackHoleAddr].K,
+		script.Extend_black_hole_account:  converter.HoleAddrMap[converter.BlackHoleAddr].S,
+		script.Extend_white_hole_key:      converter.HoleAddrMap[converter.WhiteHoleAddr].K,
+		script.Extend_white_hole_account:  converter.HoleAddrMap[converter.WhiteHoleAddr].S,
 		script.Extend_pre_block_data_hash: perBlockHash,
 		script.Extend_gen_block:           sc.GenBlock,
 		script.Extend_time_limit:          sc.TimeLimit,
@@ -512,8 +516,9 @@ func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 			return signedBy, nil
 		}
 		honorNodes := syspar.GetNodes()
-		if !builtinContract[sc.TxContract.Name] {
-			return 0, errDelayedContract
+		delay := sqldb.DelayedContract{}
+		if ok, _ := delay.GetByContract(sc.DbTransaction, sc.TxContract.Name); !ok && !builtinContract[sc.TxContract.Name] {
+			return 0, fmt.Errorf("%w: %v", errDelayedContract, sc.TxContract.Name)
 		}
 		if len(honorNodes) > 0 {
 			for _, node := range honorNodes {

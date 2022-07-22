@@ -77,7 +77,6 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 	}
 
 	trs, classifyTxsMap, err := processTransactionsNew(d.logger, txs, st)
-	//trs, err := transaction.ProcessTransactions(d.logger, txs, st)
 	if err != nil {
 		return err
 	}

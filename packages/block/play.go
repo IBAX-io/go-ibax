@@ -42,11 +42,19 @@ func (b *Block) PlaySafe() error {
 	if err != nil {
 		dbTx.Rollback()
 		if b.GenBlock && len(b.TxFullData) == 0 {
-			if inputTx[0].IsSmartContract() {
-				transaction.BadTxForBan(inputTx[0].KeyID())
-			}
-			if err := transaction.MarkTransactionBad(inputTx[0].Hash(), err.Error()); err != nil {
-				return err
+			var banK = make(map[string]struct{}, len(inputTx))
+			for i := 0; i < len(inputTx); i++ {
+				var t, k = inputTx[i], strconv.FormatInt(inputTx[i].KeyID(), 10)
+				if t.IsSmartContract() {
+					if _, ok := banK[k]; !ok {
+						transaction.BadTxForBan(t.KeyID())
+						banK[k] = struct{}{}
+						continue
+					}
+				}
+				if err := transaction.MarkTransactionBad(t.Hash(), err.Error()); err != nil {
+					return err
+				}
 			}
 		}
 		return err
@@ -80,12 +88,16 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	limits := transaction.NewLimits(b.limitMode())
 	rand := random.NewRand(b.Header.Timestamp)
 	processedTx := make([][]byte, 0, len(b.Transactions))
+	var genBErr error
 	defer func() {
 		if b.IsGenesis() || b.GenBlock {
 			b.AfterTxs = afters
 		}
 		if b.GenBlock {
 			b.TxFullData = processedTx
+		}
+		if genBErr != nil {
+			err = genBErr
 		}
 		if errA := b.AfterPlayTxs(dbTx); errA != nil {
 			if err == nil {
@@ -343,6 +355,7 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, logger *log.Entry, r
 				t.SysUpdate = false
 			}
 			if b.GenBlock {
+				genBErr = err
 				continue
 			}
 			return err
