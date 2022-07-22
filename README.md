@@ -67,8 +67,4 @@ $    go-ibax start
 ```
 
 
-go-ibax config
-go-ibax generateKeys
-go-ibax generateFirstBlock --test=true
-go-ibax initDatabase
-go-ibax start
+
