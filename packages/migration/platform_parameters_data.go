@@ -29,10 +29,10 @@ INSERT INTO "1_platform_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_platform_parameters'),'price_create_section', '1', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'max_block_size', '67108864', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'max_tx_size', '33554432', 'ContractAccess("@1UpdatePlatformParam")'),
-	(next_id('1_platform_parameters'),'max_tx_block', '1000', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'max_tx_block', '5000', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'max_columns', '50', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'max_indexes', '5', 'ContractAccess("@1UpdatePlatformParam")'),
-	(next_id('1_platform_parameters'),'max_tx_block_per_user', '1000', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'max_tx_block_per_user', '5000', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'max_fuel_tx', '20000000', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'max_fuel_block', '200000000', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'taxes_size', '3', 'ContractAccess("@1UpdatePlatformParam")'),
@@ -47,6 +47,6 @@ INSERT INTO "1_platform_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_platform_parameters'),'test','false','false'),
 	(next_id('1_platform_parameters'),'price_tx_data', '10', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'private_blockchain', '1', 'false'),
-	(next_id('1_platform_parameters'),'pay_free_contract', '@1CallDelayedContract,@1CheckNodesBan,@1TransferSelf', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'pay_free_contract', '@1CallDelayedContract,@1CheckNodesBan,@1NewUser', 'ContractAccess("@1UpdatePlatformParam")'),
     (next_id('1_platform_parameters'),'local_node_ban_time', '60', 'ContractAccess("@1UpdatePlatformParam")');
 `

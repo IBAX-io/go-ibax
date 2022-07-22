@@ -6,9 +6,12 @@
 package block
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -113,14 +116,187 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		}
 		return nil
 	}
-	for curTx := 0; curTx < len(b.Transactions); curTx++ {
-		t := b.Transactions[curTx]
-		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(curTx))
+
+	var keyIds []int64
+	for indexTx := 0; indexTx < len(b.Transactions); indexTx++ {
+		t := b.Transactions[indexTx]
+		keyIds = append(keyIds, t.KeyID())
+	}
+	outputs, err := sqldb.GetTxOutputs(dbTx, keyIds)
+	if err != nil {
+		return err
+	}
+	b.OutputsMap = make(map[int64][]sqldb.SpentInfo)
+	sqldb.PutAllOutputsMap(outputs, b.OutputsMap)
+
+	txsMap := b.ClassifyTxsMap
+	transactions := make([]*transaction.Transaction, 0)
+	var wg sync.WaitGroup
+
+	// StopNetworkTxType
+	if len(txsMap[consts.StopNetworkTxType]) > 0 {
+
+		for _, txBytes := range txsMap[consts.StopNetworkTxType] {
+			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
+			if err != nil {
+				if t != nil && t.Hash() != nil {
+					transaction.MarkTransactionBad(t.Hash(), err.Error())
+				}
+				return fmt.Errorf("parse transaction error(%s)", err)
+			}
+			transactions = append(transactions, t)
+		}
+		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
+		delete(txsMap, consts.StopNetworkTxType)
+		transactions = make([]*transaction.Transaction, 0)
+		if err != nil {
+			return err
+		}
+	}
+
+	// FirstBlockTxType
+	if b.IsGenesis() {
+		for _, tx := range b.Transactions {
+			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(tx.FullData))
+			if err != nil {
+				if t != nil && t.Hash() != nil {
+					transaction.MarkTransactionBad(t.Hash(), err.Error())
+				}
+				return fmt.Errorf("parse transaction error(%s)", err)
+			}
+			transactions = append(transactions, t)
+		}
+		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
+		transactions = make([]*transaction.Transaction, 0)
+		if err != nil {
+			return err
+		}
+	}
+
+	// DelayTxType
+	if len(txsMap[consts.DelayTxType]) > 0 {
+		for _, txBytes := range txsMap[consts.DelayTxType] {
+			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
+			if err != nil {
+				if t != nil && t.Hash() != nil {
+					transaction.MarkTransactionBad(t.Hash(), err.Error())
+				}
+				return fmt.Errorf("parse transaction error(%s)", err)
+			}
+			transactions = append(transactions, t)
+		}
+		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
+		delete(txsMap, consts.DelayTxType)
+		transactions = make([]*transaction.Transaction, 0)
+		if err != nil {
+			return err
+		}
+	}
+
+	// TransferSelf
+	if len(txsMap[consts.TransferSelf]) > 0 {
+		for _, txBytes := range txsMap[consts.TransferSelf] {
+			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
+			if err != nil {
+				if t != nil && t.Hash() != nil {
+					transaction.MarkTransactionBad(t.Hash(), err.Error())
+				}
+				return fmt.Errorf("parse transaction error(%s)", err)
+			}
+			transactions = append(transactions, t)
+		}
+
+		walletAddress := make(map[int64]int64)
+		groupTransferSelfTxs(transactions, walletAddress)
+		for g, transactions := range transferSelfTxsGroupMap {
+			wg.Add(1)
+			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
+				defer wg.Done()
+				err := b.serialExecuteTxs(_dbTx, logger, rand, limits, afters, &processedTx, _transactions, _lock, genBErr)
+				if err != nil {
+					return
+				}
+			}(dbTx, g, transactions, transferSelfTxsGroupMap, lock)
+		}
+		wg.Wait()
+		transferSelfTxsGroupMap = make(map[string][]*transaction.Transaction, 0)
+		transferSelfGroupTxsList = make([]*transaction.Transaction, 0)
+		transferSelfGroupSerial = 1
+		delete(txsMap, consts.TransferSelf)
+		transactions = make([]*transaction.Transaction, 0)
+	}
+
+	// SmartContractTxType
+	if len(txsMap[consts.SmartContractTxType]) > 0 {
+		for _, txBytes := range txsMap[consts.SmartContractTxType] {
+			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
+			if err != nil {
+				if t != nil && t.Hash() != nil {
+					transaction.MarkTransactionBad(t.Hash(), err.Error())
+				}
+
+				return fmt.Errorf("parse transaction error(%s)", err)
+			}
+			transactions = append(transactions, t)
+		}
+		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
+		delete(txsMap, consts.SmartContractTxType)
+		transactions = make([]*transaction.Transaction, 0)
+		if err != nil {
+			return err
+		}
+	}
+
+	//Utxo
+	if len(txsMap[consts.Utxo]) > 0 {
+		for _, txBytes := range txsMap[consts.Utxo] {
+			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
+			if err != nil {
+				if t != nil && t.Hash() != nil {
+					transaction.MarkTransactionBad(t.Hash(), err.Error())
+				}
+				return fmt.Errorf("parse transaction error(%s)", err)
+			}
+			transactions = append(transactions, t)
+		}
+
+		// utxo group
+		walletAddress := make(map[int64]int64)
+		groupUtxoTxs(transactions, walletAddress)
+
+		for g, transactions := range utxoTxsGroupMap {
+			wg.Add(1)
+			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
+				defer wg.Done()
+				err := b.serialExecuteTxs(_dbTx, logger, rand, limits, afters, &processedTx, _transactions, _lock, genBErr)
+				if err != nil {
+					return
+				}
+			}(dbTx, g, transactions, utxoTxsGroupMap, lock)
+		}
+		wg.Wait()
+		utxoTxsGroupMap = make(map[string][]*transaction.Transaction, 0)
+		utxoGroupTxsList = make([]*transaction.Transaction, 0)
+		utxoGroupSerial = 1
+		delete(txsMap, consts.Utxo)
+		transactions = make([]*transaction.Transaction, 0)
+	}
+
+	return nil
+}
+
+func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, logger *log.Entry, rand *random.Rand, limits *transaction.Limits, afters *types.AfterTxs, processedTx *[][]byte, txs []*transaction.Transaction, _lock *sync.RWMutex, genBErr error) error {
+	_lock.Lock()
+	defer _lock.Unlock()
+
+	for curTx := 0; curTx < len(txs); curTx++ {
+		t := txs[curTx]
+		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())))
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
 		}
-		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, curTx)
+		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap)
 		if err != nil {
 			return err
 		}
@@ -131,7 +307,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 				node.PauseNodeActivity(node.PauseTypeStopingNetwork)
 				return err
 			}
-			errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(t.InToCxt.SqlDbSavePoint))
+			errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())))
 			if errRoll != nil {
 				return fmt.Errorf("%v; %w", err, errRoll)
 			}
@@ -200,7 +376,116 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
 		afters.TxBinLogSql = append(afters.TxBinLogSql, t.DbTransaction.BinLogSql...)
-		processedTx = append(processedTx, t.FullData)
+		*processedTx = append(*processedTx, t.FullData)
+
+		sqldb.UpdateTxInputs(t.Hash(), t.TxInputs, b.OutputsMap)
+		sqldb.InsertTxOutputs(t.Hash(), t.TxOutputs, b.OutputsMap)
 	}
+
 	return nil
+}
+
+var (
+	utxoTxsGroupMap         = make(map[string][]*transaction.Transaction)
+	utxoGroupTxsList        = make([]*transaction.Transaction, 0)
+	utxoGroupSerial  uint16 = 1
+	lock                    = &sync.RWMutex{}
+)
+
+func groupUtxoTxs(txs []*transaction.Transaction, walletAddress map[int64]int64) map[string][]*transaction.Transaction {
+	if len(txs) == 0 {
+		return utxoTxsGroupMap
+	}
+	crrentGroupTxsSize := len(utxoGroupTxsList)
+	size := len(txs)
+	for i := 0; i < size; i++ {
+		if len(walletAddress) == 0 {
+			walletAddress[txs[i].KeyID()] = txs[i].KeyID()
+			walletAddress[txs[i].SmartContract().TxSmart.UTXO.ToID] = txs[i].SmartContract().TxSmart.UTXO.ToID
+
+			utxoGroupTxsList = append(utxoGroupTxsList, txs[i])
+			txs = txs[1:]
+			size = len(txs)
+			i--
+			continue
+		}
+		if walletAddress[txs[i].KeyID()] != 0 || walletAddress[txs[i].SmartContract().TxSmart.UTXO.ToID] != 0 {
+			walletAddress[txs[i].KeyID()] = txs[i].KeyID()
+			walletAddress[txs[i].SmartContract().TxSmart.UTXO.ToID] = txs[i].SmartContract().TxSmart.UTXO.ToID
+
+			utxoGroupTxsList = append(utxoGroupTxsList, txs[i])
+			txs = append(txs[:i], txs[i+1:]...)
+			size = len(txs)
+			i--
+		}
+	}
+
+	if crrentGroupTxsSize < len(utxoGroupTxsList) {
+		if len(txs) == 0 {
+			utxoTxsGroupMap[strconv.Itoa(int(utxoGroupSerial))] = utxoGroupTxsList
+			return utxoTxsGroupMap
+		}
+		return groupUtxoTxs(txs, walletAddress)
+	}
+
+	if len(utxoGroupTxsList) > 0 {
+		tempUtxoGroupTxsList := utxoGroupTxsList
+		utxoTxsGroupMap[strconv.Itoa(int(utxoGroupSerial))] = tempUtxoGroupTxsList
+		utxoGroupSerial++
+		utxoGroupTxsList = make([]*transaction.Transaction, 0)
+		walletAddress = make(map[int64]int64)
+	}
+
+	return groupUtxoTxs(txs, walletAddress)
+}
+
+var (
+	transferSelfTxsGroupMap         = make(map[string][]*transaction.Transaction)
+	transferSelfGroupTxsList        = make([]*transaction.Transaction, 0)
+	transferSelfGroupSerial  uint16 = 1
+)
+
+func groupTransferSelfTxs(txs []*transaction.Transaction, walletAddress map[int64]int64) map[string][]*transaction.Transaction {
+	if len(txs) == 0 {
+		return transferSelfTxsGroupMap
+	}
+	crrentGroupTxsSize := len(transferSelfGroupTxsList)
+	size := len(txs)
+	for i := 0; i < size; i++ {
+		if len(walletAddress) == 0 {
+			walletAddress[txs[i].KeyID()] = txs[i].KeyID()
+
+			transferSelfGroupTxsList = append(transferSelfGroupTxsList, txs[i])
+			txs = txs[1:]
+			size = len(txs)
+			i--
+			continue
+		}
+		if walletAddress[txs[i].KeyID()] != 0 {
+			walletAddress[txs[i].KeyID()] = txs[i].KeyID()
+
+			transferSelfGroupTxsList = append(transferSelfGroupTxsList, txs[i])
+			txs = append(txs[:i], txs[i+1:]...)
+			size = len(txs)
+			i--
+		}
+	}
+
+	if crrentGroupTxsSize < len(transferSelfGroupTxsList) {
+		if len(txs) == 0 {
+			transferSelfTxsGroupMap[strconv.Itoa(int(transferSelfGroupSerial))] = transferSelfGroupTxsList
+			return transferSelfTxsGroupMap
+		}
+		return groupTransferSelfTxs(txs, walletAddress)
+	}
+
+	if len(transferSelfGroupTxsList) > 0 {
+		tempTransferSelfGroupTxsList := transferSelfGroupTxsList
+		transferSelfTxsGroupMap[strconv.Itoa(int(transferSelfGroupSerial))] = tempTransferSelfGroupTxsList
+		transferSelfGroupSerial++
+		transferSelfGroupTxsList = make([]*transaction.Transaction, 0)
+		walletAddress = make(map[int64]int64)
+	}
+
+	return groupTransferSelfTxs(txs, walletAddress)
 }

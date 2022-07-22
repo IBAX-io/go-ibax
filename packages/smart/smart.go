@@ -544,7 +544,7 @@ func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 }
 
 // CallContract calls the contract functions according to the specified flags
-func (sc *SmartContract) CallContract(point int) (string, error) {
+func (sc *SmartContract) CallContract(point string) (string, error) {
 	var (
 		result string
 		err    error

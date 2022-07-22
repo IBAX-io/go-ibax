@@ -6,9 +6,12 @@
 package daemons
 
 import (
+	"bytes"
 	"context"
 	"sync/atomic"
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/block"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -116,7 +119,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	trs, err := transaction.ProcessTransactions(d.logger, txs, st)
+	trs, classifyTxsMap, err := processTransactionsNew(d.logger, txs, st)
 	if err != nil {
 		return err
 	}
@@ -142,10 +145,226 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		RollbacksHash: prevBlock.RollbacksHash,
 	}
 
-	err = generateProcessBlock(header, prev, trs)
+	err = generateProcessBlockNew(header, prev, trs, classifyTxsMap)
 	if err != nil {
 		return err
 	}
 	//go notificator.CheckTokenMovementLimits(nil, conf.Config.TokenMovement, header.BlockId)
 	return nil
+}
+
+func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) ([]byte, error) {
+	return block.MarshallBlock(
+		types.WithCurHeader(blockHeader),
+		types.WithPrevHeader(prevBlock),
+		types.WithTxFullData(trs))
+}
+
+func processTransactions(logger *log.Entry, txs []*sqldb.Transaction, st time.Time) ([][]byte, error) {
+	var done = make(<-chan time.Time, 1)
+	if syspar.IsHonorNodeMode() {
+		btc := protocols.NewBlockTimeCounter()
+		_, endTime, err := btc.RangeByTime(st)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.TimeCalcError, "error": err}).Error("on getting end time of generation")
+			return nil, err
+		}
+		done = time.After(endTime.Sub(st))
+	}
+	trs, err := sqldb.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount())
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unused transactions")
+		return nil, err
+	}
+
+	limits := transaction.NewLimits(transaction.GetLetPreprocess())
+
+	type badTxStruct struct {
+		hash  []byte
+		msg   string
+		keyID int64
+	}
+
+	processBadTx := func(dbTx *sqldb.DbTransaction) chan badTxStruct {
+		ch := make(chan badTxStruct)
+
+		go func() {
+			for badTxItem := range ch {
+				transaction.BadTxForBan(badTxItem.keyID)
+				_ = transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
+			}
+		}()
+
+		return ch
+	}
+
+	txBadChan := processBadTx(nil)
+
+	defer func() {
+		close(txBadChan)
+	}()
+
+	// Checks preprocessing count limits
+	txList := make([][]byte, 0, len(trs))
+	txs = append(txs, trs...)
+	for i, txItem := range txs {
+		if syspar.IsHonorNodeMode() {
+			select {
+			case <-done:
+				return txList, nil
+			default:
+			}
+		}
+		if txItem.GetTransactionRateStopNetwork() {
+			txList = append(txList[:0], txs[i].Data)
+			break
+		}
+		bufTransaction := bytes.NewBuffer(txItem.Data)
+		tr, err := transaction.UnmarshallTransaction(bufTransaction)
+		if err != nil {
+			if tr != nil {
+				txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+			}
+			continue
+		}
+
+		if err := tr.Check(st.Unix()); err != nil {
+			txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+			continue
+		}
+
+		if tr.IsSmartContract() {
+			err = limits.CheckLimit(tr.Inner)
+			if errors.Cause(err) == transaction.ErrLimitStop && i > 0 {
+				break
+			} else if err != nil {
+				if err != transaction.ErrLimitSkip {
+					txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+				}
+				continue
+			}
+		}
+		txList = append(txList, txs[i].Data)
+	}
+	return txList, nil
+}
+
+func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time.Time) ([][]byte, map[int][][]byte, error) {
+	classifyTxsMap := make(map[int][][]byte)
+	if len(txs) > 0 {
+		for _, tx := range txs {
+			classifyTxsMap[consts.DelayTxType] = append(classifyTxsMap[consts.DelayTxType], tx.Data)
+
+		}
+	}
+	var done = make(<-chan time.Time, 1)
+	if syspar.IsHonorNodeMode() {
+		btc := protocols.NewBlockTimeCounter()
+		_, endTime, err := btc.RangeByTime(st)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.TimeCalcError, "error": err}).Error("on getting end time of generation")
+			return nil, nil, err
+		}
+		done = time.After(endTime.Sub(st))
+	}
+	trs, err := sqldb.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount())
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unused transactions")
+		return nil, nil, err
+	}
+
+	limits := transaction.NewLimits(transaction.GetLetPreprocess())
+
+	type badTxStruct struct {
+		hash  []byte
+		msg   string
+		keyID int64
+	}
+
+	processBadTx := func(dbTx *sqldb.DbTransaction) chan badTxStruct {
+		ch := make(chan badTxStruct)
+
+		go func() {
+			for badTxItem := range ch {
+				transaction.BadTxForBan(badTxItem.keyID)
+				_ = transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
+			}
+		}()
+
+		return ch
+	}
+
+	txBadChan := processBadTx(nil)
+
+	defer func() {
+		close(txBadChan)
+	}()
+
+	// Checks preprocessing count limits
+	txList := make([][]byte, 0, len(trs))
+	txs = append(txs, trs...)
+	delayTxTypeTxDatas := classifyTxsMap[consts.DelayTxType]
+	for i, txItem := range txs {
+		if syspar.IsHonorNodeMode() {
+			select {
+			case <-done:
+				return txList, classifyTxsMap, nil
+			default:
+			}
+		}
+		if txItem.GetTransactionRateStopNetwork() {
+			classifyTxsMap[consts.StopNetworkTxType] = append(classifyTxsMap[consts.StopNetworkTxType], txs[i].Data)
+			txList = append(txList[:0], txs[i].Data)
+			break
+		}
+		bufTransaction := bytes.NewBuffer(txItem.Data)
+		tr, err := transaction.UnmarshallTransaction(bufTransaction)
+		if err != nil {
+			if tr != nil {
+				txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+			}
+			continue
+		}
+
+		if err := tr.Check(st.Unix()); err != nil {
+			txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+			continue
+		}
+
+		if tr.IsSmartContract() {
+			err = limits.CheckLimit(tr.Inner)
+			if errors.Cause(err) == transaction.ErrLimitStop && i > 0 {
+				break
+			} else if err != nil {
+				if err != transaction.ErrLimitSkip {
+					txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
+				}
+				continue
+			}
+			if tr.SmartContract().TxSmart.TransferSelf != nil {
+				classifyTxsMap[consts.TransferSelf] = append(classifyTxsMap[consts.TransferSelf], txs[i].Data)
+				txList = append(txList, txs[i].Data)
+				continue
+			}
+			if tr.SmartContract().TxSmart.UTXO != nil {
+				classifyTxsMap[consts.Utxo] = append(classifyTxsMap[consts.Utxo], txs[i].Data)
+				txList = append(txList, txs[i].Data)
+				continue
+			}
+
+			var isExist bool
+			for _, data := range delayTxTypeTxDatas {
+				isEqual := bytes.Equal(data, txs[i].Data)
+				if isEqual {
+					isExist = isEqual
+					break
+				}
+			}
+			if !isExist {
+				classifyTxsMap[consts.SmartContractTxType] = append(classifyTxsMap[consts.SmartContractTxType], txs[i].Data)
+			}
+		}
+		txList = append(txList, txs[i].Data)
+	}
+	return txList, classifyTxsMap, nil
 }

@@ -21,7 +21,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
@@ -77,7 +76,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	trs, err := transaction.ProcessTransactions(d.logger, txs, st)
+	trs, classifyTxsMap, err := processTransactionsNew(d.logger, txs, st)
 	if err != nil {
 		return err
 	}
@@ -108,7 +107,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		RollbacksHash: prevBlock.RollbacksHash,
 	}
 
-	err = generateProcessBlock(header, prev, trs)
+	err = generateProcessBlockNew(header, prev, trs, classifyTxsMap)
 	if err != nil {
 		return err
 	}

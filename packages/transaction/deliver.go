@@ -20,7 +20,7 @@ type DeliverProvider interface {
 }
 
 type InToCxt struct {
-	SqlDbSavePoint int
+	SqlDbSavePoint string
 	GenBlock       bool
 	DbTransaction  *sqldb.DbTransaction
 	BlockHeader    *types.BlockHeader
