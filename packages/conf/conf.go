@@ -172,7 +172,7 @@ func IpfsHost() string {
 	return Config.IpfsConf.Host
 }
 
-// GetNodesAddr returns addreses of nodes
+// GetNodesAddr returns address of nodes
 func GetNodesAddr() []string {
 	return Config.BootNodes.NodesAddr[:]
 }
