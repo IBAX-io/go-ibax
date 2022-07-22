@@ -303,6 +303,7 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 	// Checks preprocessing count limits
 	txList := make([][]byte, 0, len(trs))
 	txs = append(txs, trs...)
+	delayTxTypeTxDatas := classifyTxsMap[consts.DelayTxType]
 	for i, txItem := range txs {
 		if syspar.IsHonorNodeMode() {
 			select {
@@ -352,7 +353,6 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 			}
 
 			var isExist bool
-			delayTxTypeTxDatas := classifyTxsMap[consts.DelayTxType]
 			for _, data := range delayTxTypeTxDatas {
 				isEqual := bytes.Equal(data, txs[i].Data)
 				if isEqual {
