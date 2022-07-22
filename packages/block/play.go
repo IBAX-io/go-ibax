@@ -88,12 +88,16 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	limits := transaction.NewLimits(b.limitMode())
 	rand := random.NewRand(b.Header.Timestamp)
 	processedTx := make([][]byte, 0, len(b.Transactions))
+	var genBErr error
 	defer func() {
 		if b.IsGenesis() || b.GenBlock {
 			b.AfterTxs = afters
 		}
 		if b.GenBlock {
 			b.TxFullData = processedTx
+		}
+		if genBErr != nil {
+			err = genBErr
 		}
 		if errA := b.AfterPlayTxs(dbTx); errA != nil {
 			if err == nil {
@@ -142,7 +146,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			}
 			transactions = append(transactions, t)
 		}
-		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock)
+		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
 		delete(txsMap, consts.StopNetworkTxType)
 		transactions = make([]*transaction.Transaction, 0)
 		if err != nil {
@@ -162,7 +166,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			}
 			transactions = append(transactions, t)
 		}
-		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock)
+		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
 		transactions = make([]*transaction.Transaction, 0)
 		if err != nil {
 			return err
@@ -181,7 +185,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			}
 			transactions = append(transactions, t)
 		}
-		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock)
+		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
 		delete(txsMap, consts.DelayTxType)
 		transactions = make([]*transaction.Transaction, 0)
 		if err != nil {
@@ -208,7 +212,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			wg.Add(1)
 			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
 				defer wg.Done()
-				err := b.serialExecuteTxs(_dbTx, logger, rand, limits, afters, &processedTx, _transactions, _lock)
+				err := b.serialExecuteTxs(_dbTx, logger, rand, limits, afters, &processedTx, _transactions, _lock, genBErr)
 				if err != nil {
 					return
 				}
@@ -223,28 +227,6 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	}
 
 	// SmartContractTxType
-	//go func() {
-	//	if len(txsMap[consts.SmartContractTxType]) > 0 {
-	//		for _, txBytes := range txsMap[consts.SmartContractTxType] {
-	//			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
-	//			if err != nil {
-	//				if t != nil && t.Hash() != nil {
-	//					transaction.MarkTransactionBad(t.Hash(), err.Error())
-	//				}
-	//				continue
-	//				//return fmt.Errorf("parse transaction error(%s)", err)
-	//			}
-	//			transactions = append(transactions, t)
-	//		}
-	//		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions)
-	//		delete(txsMap, consts.SmartContractTxType)
-	//		transactions = make([]*transaction.Transaction, 0)
-	//		if err != nil {
-	//			//return err
-	//		}
-	//	}
-	//}()
-
 	if len(txsMap[consts.SmartContractTxType]) > 0 {
 		for _, txBytes := range txsMap[consts.SmartContractTxType] {
 			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
@@ -257,7 +239,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			}
 			transactions = append(transactions, t)
 		}
-		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock)
+		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
 		delete(txsMap, consts.SmartContractTxType)
 		transactions = make([]*transaction.Transaction, 0)
 		if err != nil {
@@ -286,7 +268,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			wg.Add(1)
 			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
 				defer wg.Done()
-				err := b.serialExecuteTxs(_dbTx, logger, rand, limits, afters, &processedTx, _transactions, _lock)
+				err := b.serialExecuteTxs(_dbTx, logger, rand, limits, afters, &processedTx, _transactions, _lock, genBErr)
 				if err != nil {
 					return
 				}
@@ -303,7 +285,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	return nil
 }
 
-func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, logger *log.Entry, rand *random.Rand, limits *transaction.Limits, afters *types.AfterTxs, processedTx *[][]byte, txs []*transaction.Transaction, _lock *sync.RWMutex) error {
+func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, logger *log.Entry, rand *random.Rand, limits *transaction.Limits, afters *types.AfterTxs, processedTx *[][]byte, txs []*transaction.Transaction, _lock *sync.RWMutex, genBErr error) error {
 	_lock.Lock()
 	defer _lock.Unlock()
 
@@ -351,6 +333,7 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, logger *log.Entry, r
 				t.SysUpdate = false
 			}
 			if b.GenBlock {
+				genBErr = err
 				continue
 			}
 			return err
