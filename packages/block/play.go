@@ -88,16 +88,12 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	limits := transaction.NewLimits(b.limitMode())
 	rand := random.NewRand(b.Header.Timestamp)
 	processedTx := make([][]byte, 0, len(b.Transactions))
-	var genBErr error
 	defer func() {
 		if b.IsGenesis() || b.GenBlock {
 			b.AfterTxs = afters
 		}
 		if b.GenBlock {
 			b.TxFullData = processedTx
-		}
-		if genBErr != nil {
-			err = genBErr
 		}
 		if errA := b.AfterPlayTxs(dbTx); errA != nil {
 			if err == nil {
@@ -355,7 +351,6 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, logger *log.Entry, r
 				t.SysUpdate = false
 			}
 			if b.GenBlock {
-				genBErr = err
 				continue
 			}
 			return err
