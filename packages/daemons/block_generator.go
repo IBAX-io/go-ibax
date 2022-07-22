@@ -350,7 +350,17 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 				txList = append(txList, txs[i].Data)
 				continue
 			}
-			if tr.SmartContract().TxSmart.Name != "@1CallDelayedContract" {
+
+			var isExist bool
+			delayTxTypeTxDatas := classifyTxsMap[consts.DelayTxType]
+			for _, data := range delayTxTypeTxDatas {
+				isEqual := bytes.Equal(data, txs[i].Data)
+				if isEqual {
+					isExist = isEqual
+					break
+				}
+			}
+			if !isExist {
 				classifyTxsMap[consts.SmartContractTxType] = append(classifyTxsMap[consts.SmartContractTxType], txs[i].Data)
 			}
 		}
