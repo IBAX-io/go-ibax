@@ -28,6 +28,8 @@ type getUIDResult struct {
 	KeyID       string `json:"key_id,omitempty"`
 	Address     string `json:"address,omitempty"`
 	NetworkID   string `json:"network_id,omitempty"`
+	Cryptoer    string `json:"cryptoer"`
+	Hasher      string `json:"hasher"`
 }
 
 func getUIDHandler(w http.ResponseWriter, r *http.Request) {
@@ -60,6 +62,7 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+	result.Cryptoer, result.Hasher = conf.Config.CryptoSettings.Cryptoer, conf.Config.CryptoSettings.Hasher
 
 	jsonResponse(w, result)
 }
