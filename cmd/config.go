@@ -142,8 +142,8 @@ func init() {
 	cmdFlags.StringVar(&conf.Config.IpfsConf.Host, "ipfsHost", "127.0.0.1:5001", "IPFS host")
 
 	// CryptoSettings
-	cmdFlags.StringVar(&conf.Config.CryptoSettings.Hasher, "hasher", crypto.HashAlgo_SHA256.String(), fmt.Sprintf("Hash Algorithm (%s | %s | %s | %s)", crypto.HashAlgo_SHA256, crypto.HashAlgo_KECCAK256, crypto.HashAlgo_SHA3_256, crypto.HashAlgo_SM3))
-	cmdFlags.StringVar(&conf.Config.CryptoSettings.Cryptoer, "cryptoer", crypto.AsymAlgo_ECC_P256.String(), fmt.Sprintf("Key and Sign Algorithm (%s | %s | %s | %s)", crypto.AsymAlgo_ECC_P256, crypto.AsymAlgo_ECC_Secp256k1, crypto.AsymAlgo_ECC_P512, crypto.AsymAlgo_SM2))
+	cmdFlags.StringVar(&conf.Config.CryptoSettings.Hasher, "hasher", crypto.HashAlgo_KECCAK256.String(), fmt.Sprintf("Hash Algorithm (%s | %s | %s | %s)", crypto.HashAlgo_SHA256, crypto.HashAlgo_KECCAK256, crypto.HashAlgo_SHA3_256, crypto.HashAlgo_SM3))
+	cmdFlags.StringVar(&conf.Config.CryptoSettings.Cryptoer, "cryptoer", crypto.AsymAlgo_ECC_Secp256k1.String(), fmt.Sprintf("Key and Sign Algorithm (%s | %s | %s | %s)", crypto.AsymAlgo_ECC_P256, crypto.AsymAlgo_ECC_Secp256k1, crypto.AsymAlgo_ECC_P512, crypto.AsymAlgo_SM2))
 
 	// BlockSyncMethod
 	cmdFlags.StringVar(&conf.Config.BlockSyncMethod.Method, "sync", types.BlockSyncMethod_CONTRACTVM.String(), fmt.Sprintf("Block sync method (%s | %s)", types.BlockSyncMethod_CONTRACTVM, types.BlockSyncMethod_SQLDML))

@@ -164,8 +164,7 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 	classifyTxsMap := make(map[int][][]byte)
 	if len(txs) > 0 {
 		for _, tx := range txs {
-			classifyTxsMap[consts.DelayTxType] = append(classifyTxsMap[consts.DelayTxType], tx.Data)
-
+			classifyTxsMap[types.DelayTxType] = append(classifyTxsMap[types.DelayTxType], tx.Data)
 		}
 	}
 	var done = make(<-chan time.Time, 1)
@@ -214,7 +213,7 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 	// Checks preprocessing count limits
 	txList := make([][]byte, 0, len(trs))
 	txs = append(txs, trs...)
-	delayTxTypeTxDatas := classifyTxsMap[consts.DelayTxType]
+	delayTxTypeTxDatas := classifyTxsMap[types.DelayTxType]
 	for i, txItem := range txs {
 		if syspar.IsHonorNodeMode() {
 			select {
@@ -224,7 +223,7 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 			}
 		}
 		if txItem.GetTransactionRateStopNetwork() {
-			classifyTxsMap[consts.StopNetworkTxType] = append(classifyTxsMap[consts.StopNetworkTxType], txs[i].Data)
+			classifyTxsMap[types.StopNetworkTxType] = append(classifyTxsMap[types.StopNetworkTxType], txs[i].Data)
 			txList = append(txList[:0], txs[i].Data)
 			break
 		}
@@ -252,13 +251,13 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 				}
 				continue
 			}
-			if tr.SmartContract().TxSmart.TransferSelf != nil {
-				classifyTxsMap[consts.TransferSelf] = append(classifyTxsMap[consts.TransferSelf], txs[i].Data)
+			if tr.Type() == types.TransferSelfTxType {
+				classifyTxsMap[types.TransferSelfTxType] = append(classifyTxsMap[types.TransferSelfTxType], txs[i].Data)
 				txList = append(txList, txs[i].Data)
 				continue
 			}
-			if tr.SmartContract().TxSmart.UTXO != nil {
-				classifyTxsMap[consts.Utxo] = append(classifyTxsMap[consts.Utxo], txs[i].Data)
+			if tr.Type() == types.UtxoTxType {
+				classifyTxsMap[types.UtxoTxType] = append(classifyTxsMap[types.UtxoTxType], txs[i].Data)
 				txList = append(txList, txs[i].Data)
 				continue
 			}
@@ -272,7 +271,7 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 				}
 			}
 			if !isExist {
-				classifyTxsMap[consts.SmartContractTxType] = append(classifyTxsMap[consts.SmartContractTxType], txs[i].Data)
+				classifyTxsMap[types.SmartContractTxType] = append(classifyTxsMap[types.SmartContractTxType], txs[i].Data)
 			}
 		}
 		txList = append(txList, txs[i].Data)

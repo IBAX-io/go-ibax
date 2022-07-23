@@ -45,12 +45,10 @@ func (b *Block) PlaySafe() error {
 			var banK = make(map[string]struct{}, len(inputTx))
 			for i := 0; i < len(inputTx); i++ {
 				var t, k = inputTx[i], strconv.FormatInt(inputTx[i].KeyID(), 10)
-				if t.IsSmartContract() {
-					if _, ok := banK[k]; !ok {
-						transaction.BadTxForBan(t.KeyID())
-						banK[k] = struct{}{}
-						continue
-					}
+				if _, ok := banK[k]; !ok && t.IsSmartContract() {
+					transaction.BadTxForBan(t.KeyID())
+					banK[k] = struct{}{}
+					continue
 				}
 				if err := transaction.MarkTransactionBad(t.Hash(), err.Error()); err != nil {
 					return err
@@ -85,6 +83,22 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		Txs: make([]*types.AfterTx, 0),
 	}
 	logger := b.GetLogger()
+	txsMap := make(map[int][]*transaction.Transaction)
+	for k, txs := range b.ClassifyTxsMap {
+		var transactions = make([]*transaction.Transaction, 0)
+		for i := 0; i < len(txs); i++ {
+			txBytes := txs[i]
+			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
+			if err != nil {
+				if t != nil && t.Hash() != nil {
+					_ = transaction.MarkTransactionBad(t.Hash(), err.Error())
+				}
+				continue
+			}
+			transactions = append(transactions, t)
+		}
+		txsMap[k] = transactions
+	}
 	limits := transaction.NewLimits(b.limitMode())
 	rand := random.NewRand(b.Header.Timestamp)
 	processedTx := make([][]byte, 0, len(b.Transactions))
@@ -129,26 +143,13 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	b.OutputsMap = make(map[int64][]sqldb.SpentInfo)
 	sqldb.PutAllOutputsMap(outputs, b.OutputsMap)
 
-	txsMap := b.ClassifyTxsMap
-	transactions := make([]*transaction.Transaction, 0)
 	var wg sync.WaitGroup
 
 	// StopNetworkTxType
-	if len(txsMap[consts.StopNetworkTxType]) > 0 {
-
-		for _, txBytes := range txsMap[consts.StopNetworkTxType] {
-			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
-			if err != nil {
-				if t != nil && t.Hash() != nil {
-					transaction.MarkTransactionBad(t.Hash(), err.Error())
-				}
-				return fmt.Errorf("parse transaction error(%s)", err)
-			}
-			transactions = append(transactions, t)
-		}
+	if len(txsMap[types.StopNetworkTxType]) > 0 {
+		transactions := txsMap[types.StopNetworkTxType]
 		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
-		delete(txsMap, consts.StopNetworkTxType)
-		transactions = make([]*transaction.Transaction, 0)
+		delete(txsMap, types.StopNetworkTxType)
 		if err != nil {
 			return err
 		}
@@ -156,6 +157,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 
 	// FirstBlockTxType
 	if b.IsGenesis() {
+		transactions := make([]*transaction.Transaction, 0)
 		for _, tx := range b.Transactions {
 			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(tx.FullData))
 			if err != nil {
@@ -174,112 +176,72 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	}
 
 	// DelayTxType
-	if len(txsMap[consts.DelayTxType]) > 0 {
-		for _, txBytes := range txsMap[consts.DelayTxType] {
-			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
-			if err != nil {
-				if t != nil && t.Hash() != nil {
-					transaction.MarkTransactionBad(t.Hash(), err.Error())
-				}
-				return fmt.Errorf("parse transaction error(%s)", err)
-			}
-			transactions = append(transactions, t)
-		}
+	if len(txsMap[types.DelayTxType]) > 0 {
+		transactions := txsMap[types.DelayTxType]
 		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
-		delete(txsMap, consts.DelayTxType)
-		transactions = make([]*transaction.Transaction, 0)
+		delete(txsMap, types.DelayTxType)
 		if err != nil {
 			return err
 		}
 	}
 
 	// TransferSelf
-	if len(txsMap[consts.TransferSelf]) > 0 {
-		for _, txBytes := range txsMap[consts.TransferSelf] {
-			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
-			if err != nil {
-				if t != nil && t.Hash() != nil {
-					transaction.MarkTransactionBad(t.Hash(), err.Error())
-				}
-				return fmt.Errorf("parse transaction error(%s)", err)
-			}
-			transactions = append(transactions, t)
-		}
+	if len(txsMap[types.TransferSelfTxType]) > 0 {
+		transactions := txsMap[types.TransferSelfTxType]
 
 		walletAddress := make(map[int64]int64)
 		groupTransferSelfTxs(transactions, walletAddress)
 		for g, transactions := range transferSelfTxsGroupMap {
 			wg.Add(1)
-			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
+			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _afters *types.AfterTxs, _processedTx *[][]byte, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
 				defer wg.Done()
-				err := b.serialExecuteTxs(_dbTx, logger, rand, limits, afters, &processedTx, _transactions, _lock, genBErr)
+				err := b.serialExecuteTxs(_dbTx, logger, rand, limits, _afters, _processedTx, _transactions, _lock, genBErr)
 				if err != nil {
 					return
 				}
-			}(dbTx, g, transactions, transferSelfTxsGroupMap, lock)
+			}(dbTx, g, transactions, afters, &processedTx, transferSelfTxsGroupMap, lock)
 		}
 		wg.Wait()
 		transferSelfTxsGroupMap = make(map[string][]*transaction.Transaction, 0)
 		transferSelfGroupTxsList = make([]*transaction.Transaction, 0)
 		transferSelfGroupSerial = 1
-		delete(txsMap, consts.TransferSelf)
-		transactions = make([]*transaction.Transaction, 0)
+		delete(txsMap, types.TransferSelfTxType)
 	}
 
-	// SmartContractTxType
-	if len(txsMap[consts.SmartContractTxType]) > 0 {
-		for _, txBytes := range txsMap[consts.SmartContractTxType] {
-			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
+	go func(_dbTx *sqldb.DbTransaction, _afters *types.AfterTxs, _processedTx *[][]byte, _lock *sync.RWMutex) {
+		// SmartContractTxType
+		if len(txsMap[types.SmartContractTxType]) > 0 {
+			transactions := txsMap[types.SmartContractTxType]
+			err := b.serialExecuteTxs(_dbTx, logger, rand, limits, afters, &processedTx, transactions, _lock, genBErr)
+			delete(txsMap, types.SmartContractTxType)
 			if err != nil {
-				if t != nil && t.Hash() != nil {
-					transaction.MarkTransactionBad(t.Hash(), err.Error())
-				}
-
-				return fmt.Errorf("parse transaction error(%s)", err)
+				return
 			}
-			transactions = append(transactions, t)
 		}
-		err := b.serialExecuteTxs(dbTx, logger, rand, limits, afters, &processedTx, transactions, lock, genBErr)
-		delete(txsMap, consts.SmartContractTxType)
-		transactions = make([]*transaction.Transaction, 0)
-		if err != nil {
-			return err
-		}
-	}
+	}(dbTx, afters, &processedTx, lock)
 
 	//Utxo
-	if len(txsMap[consts.Utxo]) > 0 {
-		for _, txBytes := range txsMap[consts.Utxo] {
-			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
-			if err != nil {
-				if t != nil && t.Hash() != nil {
-					transaction.MarkTransactionBad(t.Hash(), err.Error())
-				}
-				return fmt.Errorf("parse transaction error(%s)", err)
-			}
-			transactions = append(transactions, t)
-		}
-
+	if len(txsMap[types.UtxoTxType]) > 0 {
+		transactions := txsMap[types.UtxoTxType]
 		// utxo group
 		walletAddress := make(map[int64]int64)
 		groupUtxoTxs(transactions, walletAddress)
 
 		for g, transactions := range utxoTxsGroupMap {
 			wg.Add(1)
-			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
+			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _afters *types.AfterTxs, _processedTx *[][]byte, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
 				defer wg.Done()
-				err := b.serialExecuteTxs(_dbTx, logger, rand, limits, afters, &processedTx, _transactions, _lock, genBErr)
+				err := b.serialExecuteTxs(_dbTx, logger, rand, limits, _afters, _processedTx, _transactions, _lock, genBErr)
 				if err != nil {
 					return
 				}
-			}(dbTx, g, transactions, utxoTxsGroupMap, lock)
+			}(dbTx, g, transactions, afters, &processedTx, utxoTxsGroupMap, lock)
 		}
 		wg.Wait()
 		utxoTxsGroupMap = make(map[string][]*transaction.Transaction, 0)
 		utxoGroupTxsList = make([]*transaction.Transaction, 0)
 		utxoGroupSerial = 1
-		delete(txsMap, consts.Utxo)
-		transactions = make([]*transaction.Transaction, 0)
+		delete(txsMap, types.UtxoTxType)
 	}
 
 	return nil
