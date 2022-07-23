@@ -117,6 +117,10 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		if err != nil {
 			return err
 		}
+		err = in.TxCheckLimits.CheckLimit(s)
+		if err != nil {
+			return
+		}
 		return
 	}
 	_utxo := s.TxSmart.UTXO
@@ -124,6 +128,10 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		_, err = smart.UtxoToken(s.SmartContract, _utxo.ToID, _utxo.Value)
 		if err != nil {
 			return err
+		}
+		err = in.TxCheckLimits.CheckLimit(s)
+		if err != nil {
+			return
 		}
 		return
 	}

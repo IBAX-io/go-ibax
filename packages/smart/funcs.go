@@ -161,7 +161,7 @@ var (
 // EmbedFuncs is extending vm with embedded functions
 func EmbedFuncs(vt script.VMType) map[string]any {
 	f := map[string]any{
-		"AddressToId":                  AddressToID,
+		"AddressToId":                  converter.AddressToID,
 		"ColumnCondition":              ColumnCondition,
 		"Contains":                     strings.Contains,
 		"ContractAccess":               ContractAccess,
@@ -191,7 +191,7 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"JSONDecode":                   JSONDecode,
 		"JSONEncode":                   JSONEncode,
 		"JSONEncodeIndent":             JSONEncodeIndent,
-		"IdToAddress":                  IDToAddress,
+		"IdToAddress":                  converter.IDToAddress,
 		"Int":                          Int,
 		"Len":                          Len,
 		"Money":                        Money,
@@ -1520,35 +1520,6 @@ func PermColumn(sc *SmartContract, tableName, name, permissions string) error {
 	_, _, err = sc.update([]string{`columns`}, []any{string(permout)},
 		tables, `name`, tableName)
 	return err
-}
-
-// AddressToID converts the string representation of the wallet number to a numeric
-func AddressToID(input string) (addr int64) {
-	input = strings.TrimSpace(input)
-	if len(input) < 2 {
-		return 0
-	}
-	if input[0] == '-' {
-		addr, _ = strconv.ParseInt(input, 10, 64)
-	} else if strings.Count(input, `-`) == 4 {
-		addr = converter.StringToAddress(input)
-	} else {
-		uaddr, _ := strconv.ParseUint(input, 10, 64)
-		addr = int64(uaddr)
-	}
-	if !converter.IsValidAddress(converter.AddressToString(addr)) {
-		return 0
-	}
-	return
-}
-
-// IDToAddress converts the identifier of account to a string of the form XXXX -...- XXXX
-func IDToAddress(id int64) (out string) {
-	out = converter.AddressToString(id)
-	if !converter.IsValidAddress(out) {
-		out = `invalid`
-	}
-	return
 }
 
 // HMac returns HMAC hash as raw or hex string

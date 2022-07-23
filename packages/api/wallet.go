@@ -10,7 +10,6 @@ import (
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/shopspring/decimal"
@@ -83,8 +82,8 @@ func getWalletHistory(w http.ResponseWriter, r *http.Request) {
 						walletHistory.Comment = history.Comment
 						walletHistory.CreatedAt = history.CreatedAt
 						walletHistory.ID = history.ID
-						walletHistory.SenderAdd = smart.IDToAddress(history.SenderID)
-						walletHistory.RecipientAdd = smart.IDToAddress(history.RecipientID)
+						walletHistory.SenderAdd = converter.IDToAddress(history.SenderID)
+						walletHistory.RecipientAdd = converter.IDToAddress(history.RecipientID)
 						walletHistories = append(walletHistories, walletHistory)
 					}
 					jsonResponse(w, walletHistories)

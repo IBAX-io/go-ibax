@@ -5,18 +5,13 @@
 package crypto
 
 import (
-	"crypto/sha512"
 	"encoding/hex"
 	"fmt"
-	"strconv"
-	"strings"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/asymalgo"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/hashalgo"
-
-	"github.com/IBAX-io/go-ibax/packages/consts"
 )
 
 var (
@@ -74,18 +69,6 @@ func InitHashAlgo(s string) {
 
 func GetHashProvider() HashProvider {
 	return NewHashAlgo(hashAlgo)
-}
-
-// Address gets int64 address from the public key
-func Address(pubKey []byte) int64 {
-	pubKey = CutPub(pubKey)
-	h := Hash(pubKey)
-	h512 := sha512.Sum512(h[:])
-	crc := calcCRC64(h512[:])
-	// replace the last digit by checksum
-	num := strconv.FormatUint(crc, 10)
-	val := []byte(strings.Repeat("0", consts.AddressLength-len(num)) + num)
-	return int64(crc - (crc % 10) + uint64(checkSum(val[:len(val)-1])))
 }
 
 // GenKeyPair generates a random pair of private and public binary keys.

@@ -10,7 +10,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     (next_id('1_tables'), 'delayed_contracts',
         '{
             "insert": "ContractAccess(\"@1NewDelayedContract\")",
-            "update": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
+            "update": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\",\"@1CheckNodesBan\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
@@ -18,7 +18,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "key_id": "ContractAccess(\"@1EditDelayedContract\")",
             "block_id": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
             "every_block": "ContractAccess(\"@1EditDelayedContract\")",
-            "counter": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\")",
+            "counter": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\",\"@1CheckNodesBan\")",
             "high_rate": "ContractAccess(\"@1EditDelayedContract\")",
             "limit": "ContractAccess(\"@1EditDelayedContract\")",
             "deleted": "ContractAccess(\"@1EditDelayedContract\")",

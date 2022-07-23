@@ -41,3 +41,8 @@ func GetAllDelayedContractsForBlockID(blockID int64) ([]*DelayedContract, error)
 func (dc *DelayedContract) Get(id int64) (bool, error) {
 	return isFound(DBConn.Where("id = ?", id).First(dc))
 }
+
+// GetByContract is retrieving model by contract from database
+func (dc *DelayedContract) GetByContract(dbTx *DbTransaction, contract string) (bool, error) {
+	return isFound(GetDB(dbTx).Where("contract = ? AND deleted = ?", contract, availableDelayedContracts).First(dc))
+}

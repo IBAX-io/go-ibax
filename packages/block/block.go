@@ -28,6 +28,7 @@ type Block struct {
 	GenBlock          bool // it equals true when we are generating a new block
 	Notifications     []types.Notifications
 	OutputsMap        map[int64][]sqldb.SpentInfo
+	ClassifyTxsMap    map[int][][]byte
 }
 
 // GetLogger is returns logger
@@ -51,13 +52,16 @@ func (b *Block) limitMode() transaction.LimitMode {
 }
 
 // InsertBlockWOForks is inserting blocks
-func InsertBlockWOForks(data []byte, genBlock, firstBlock bool) error {
+func InsertBlockWOForksNew(data []byte, classifyTxsMap map[int][][]byte, genBlock, firstBlock bool) error {
 	block, err := ProcessBlockByBinData(data, !firstBlock)
 	if err != nil {
 		return err
 	}
 
 	block.GenBlock = genBlock
+	if !firstBlock {
+		block.ClassifyTxsMap = classifyTxsMap
+	}
 	if err := block.Check(); err != nil {
 		return err
 	}

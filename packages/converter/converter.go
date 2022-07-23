@@ -6,6 +6,7 @@
 package converter
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
@@ -19,8 +20,6 @@ import (
 	"strings"
 	"time"
 	"unicode"
-
-	"bytes"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 
@@ -746,18 +745,6 @@ func StrToMoney(str string) float64 {
 	return StrToFloat64(newStr)
 }
 
-// AddressToString converts int64 address to chain address as XXXX-...-XXXX.
-func AddressToString(address int64) (ret string) {
-	num := strconv.FormatUint(uint64(address), 10)
-	val := []byte(strings.Repeat("0", 20-len(num)) + num)
-
-	for i := 0; i < 4; i++ {
-		ret += string(val[i*4:(i+1)*4]) + `-`
-	}
-	ret += string(val[16:])
-	return
-}
-
 // EncodeLengthPlusData encoding interface into []byte
 func EncodeLengthPlusData(idata any) []byte {
 	var data []byte
@@ -772,60 +759,6 @@ func EncodeLengthPlusData(idata any) []byte {
 	//log.Debug("data: %x", data)
 	//log.Debug("len data: %d", len(data))
 	return append(EncodeLength(int64(len(data))), data...)
-}
-
-// StringToAddress converts string chain address to int64 address. The input address can be a positive or negative
-// number, or chain address in XXXX-...-XXXX format. Returns 0 when error occurs.
-func StringToAddress(address string) (result int64) {
-	var (
-		err error
-		ret uint64
-	)
-	if len(address) == 0 {
-		return 0
-	}
-	if address[0] == '-' {
-		var id int64
-		id, err = strconv.ParseInt(address, 10, 64)
-		if err != nil {
-			return 0
-		}
-		address = strconv.FormatUint(uint64(id), 10)
-	}
-	if len(address) < 20 {
-		address = strings.Repeat(`0`, 20-len(address)) + address
-	}
-
-	val := []byte(strings.Replace(address, `-`, ``, -1))
-	if len(val) != 20 {
-		return
-	}
-	if ret, err = strconv.ParseUint(string(val), 10, 64); err != nil {
-		return 0
-	}
-	if checkSum(val[:len(val)-1]) != int(val[len(val)-1]-'0') {
-		return 0
-	}
-	result = int64(ret)
-	return
-}
-
-// CheckSum calculates the 0-9 check sum of []byte
-func checkSum(val []byte) int {
-	var one, two int
-	for i, ch := range val {
-		digit := int(ch - '0')
-		if i&1 == 1 {
-			one += digit
-		} else {
-			two += digit
-		}
-	}
-	checksum := (two + 3*one) % 10
-	if checksum > 0 {
-		checksum = 10 - checksum
-	}
-	return checksum
 }
 
 // ChainMoney converts minimal unit to legibility unit. For example, 123455000000000 => 123.455
@@ -950,18 +883,6 @@ func IsLatin(name string) bool {
 		}
 	}
 	return true
-}
-
-// IsValidAddress checks if the specified address is chain address.
-func IsValidAddress(address string) bool {
-	val := []byte(strings.Replace(address, `-`, ``, -1))
-	if len(val) != 20 {
-		return false
-	}
-	if _, err := strconv.ParseUint(string(val), 10, 64); err != nil {
-		return false
-	}
-	return checkSum(val[:len(val)-1]) == int(val[len(val)-1]-'0')
 }
 
 // Escape deletes unaccessable characters

@@ -420,7 +420,7 @@ func (sc *SmartContract) hasExistKeyID(eco, id int64) error {
 	if !found {
 		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
 			"id":        id,
-			"account":   IDToAddress(id),
+			"account":   converter.IDToAddress(id),
 			"ecosystem": eco,
 		}))
 		if err != nil {
@@ -433,7 +433,7 @@ func (sc *SmartContract) hasExistKeyID(eco, id int64) error {
 	} else if !foundOne {
 		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
 			"id":        id,
-			"account":   IDToAddress(id),
+			"account":   converter.IDToAddress(id),
 			"ecosystem": 1,
 		}))
 		if err != nil {
@@ -463,7 +463,7 @@ func (sc *SmartContract) getFromIdAndPayType(eco int64) (int64, PaymentType) {
 		ew := &sqldb.StateParameter{}
 		if found, _ := ew.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID)).
 			Get(sc.DbTransaction, sqldb.EcosystemWallet); found && len(ew.Value) > 0 {
-			ecosystemWallet := AddressToID(ew.Value)
+			ecosystemWallet := converter.AddressToID(ew.Value)
 			if ecosystemWallet != 0 {
 				paymentType = PaymentType_EcosystemAddress
 				fromID = ecosystemWallet
