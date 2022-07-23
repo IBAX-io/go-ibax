@@ -106,7 +106,7 @@ func StartDaemons(ctx context.Context, daemonsToStart []string) {
 			daemonNameAndTime := <-MonitorDaemonCh
 			daemonsTable[daemonNameAndTime[0]] = daemonNameAndTime[1]
 			if time.Now().Unix()%10 == 0 {
-				log.Debug("daemonsTable: %v\n", daemonsTable)
+				log.Debugf("daemonsTable: %v\n", daemonsTable)
 			}
 		}
 	}()

@@ -21,6 +21,9 @@ const (
 	FirstBlockTxType = iota + 1
 	StopNetworkTxType
 	SmartContractTxType
+	DelayTxType
+	UtxoTxType
+	TransferSelfTxType
 )
 
 // FirstBlock is the header of first block transaction
@@ -80,7 +83,15 @@ type SmartTransaction struct {
 	Params       map[string]any
 }
 
-func (s *SmartTransaction) TxType() byte { return SmartContractTxType }
+func (s *SmartTransaction) TxType() byte {
+	if s.TransferSelf != nil {
+		return TransferSelfTxType
+	}
+	if s.UTXO != nil {
+		return UtxoTxType
+	}
+	return SmartContractTxType
+}
 
 func (s *SmartTransaction) WithPrivate(privateKey []byte, internal bool) error {
 	var (
