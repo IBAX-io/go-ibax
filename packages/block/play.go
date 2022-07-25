@@ -208,25 +208,15 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		delete(txsMap, types.TransferSelfTxType)
 	}
 
-	go func(_dbTx *sqldb.DbTransaction, _afters *types.AfterTxs, _processedTx *[][]byte, _lock *sync.RWMutex) {
-		// SmartContractTxType
-		if len(txsMap[types.SmartContractTxType]) > 0 {
-			transactions := txsMap[types.SmartContractTxType]
-			err := b.serialExecuteTxs(_dbTx, logger, rand, limits, afters, &processedTx, transactions, _lock, genBErr)
-			delete(txsMap, types.SmartContractTxType)
-			if err != nil {
-				return
-			}
-		}
-	}(dbTx, afters, &processedTx, lock)
-
-	//Utxo
-	if len(txsMap[types.UtxoTxType]) > 0 {
+	//Utxo && Smart contract
+	if len(txsMap[types.UtxoTxType]) > 0 || len(txsMap[types.SmartContractTxType]) > 0 {
 		transactions := txsMap[types.UtxoTxType]
 		// utxo group
 		walletAddress := make(map[int64]int64)
 		groupUtxoTxs(transactions, walletAddress)
-
+		if len(txsMap[types.SmartContractTxType]) > 0 {
+			utxoTxsGroupMap[strconv.Itoa(0)] = txsMap[types.SmartContractTxType]
+		}
 		for g, transactions := range utxoTxsGroupMap {
 			wg.Add(1)
 			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _afters *types.AfterTxs, _processedTx *[][]byte, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
@@ -242,6 +232,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		utxoGroupTxsList = make([]*transaction.Transaction, 0)
 		utxoGroupSerial = 1
 		delete(txsMap, types.UtxoTxType)
+		delete(txsMap, types.SmartContractTxType)
 	}
 
 	return nil
