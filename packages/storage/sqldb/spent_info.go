@@ -6,6 +6,8 @@
 package sqldb
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -74,4 +76,26 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func RollbackOutputs(blockID int64, db *DbTransaction, logger *log.Entry) error {
+	err := GetDB(db).Exec(`UPDATE spent_info SET  input_tx_hash= null , input_index=0 WHERE input_tx_hash  in ( SELECT output_tx_hash FROM "spent_info"  WHERE block_id = ? )`, blockID).Error
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Errorf("updating input_tx_hash rollback outputs by blockID : %d", blockID)
+		return err
+	}
+
+	err = GetDB(db).Exec(`DELETE FROM spent_info WHERE block_id = ? `, blockID).Error
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Errorf("deleting rollback outputs by blockID : %d", blockID)
+		return err
+	}
+
+	return nil
+}
+
+func GetBlockOutputs(dbTx *DbTransaction, blockID int64) ([]SpentInfo, error) {
+	var result []SpentInfo
+	err := GetDB(dbTx).Where("block_id = ?", blockID).Find(&result).Error
+	return result, err
 }

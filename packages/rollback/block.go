@@ -126,6 +126,12 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 			return err
 		}
 	}
+	
+	err := sqldb.RollbackOutputs(block.Header.BlockId, dbTx, logger)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating outputs by block id")
+		return err
+	}
 
 	return nil
 }
