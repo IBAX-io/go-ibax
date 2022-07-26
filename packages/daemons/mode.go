@@ -84,7 +84,7 @@ func GetCandidateNodePositionByPublicKey() (int64, error) {
 
 	return candidateNode.ID, nil
 }
-func GetCandidateNodes() ([]sqldb.CandidateNode, error) {
+func GetCandidateNodes() (sqldb.CandidateNodes, error) {
 	nodePublicKey := hex.EncodeToString(syspar.GetNodePubKey())
 	if len(nodePublicKey) < 1 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
@@ -95,7 +95,7 @@ func GetCandidateNodes() ([]sqldb.CandidateNode, error) {
 		log.WithError(err).Error("getting candidate node error")
 		return nil, err
 	}
-	ret := make([]sqldb.CandidateNode, 0)
+	ret := make(sqldb.CandidateNodes, 0)
 	for _, node := range candidateNodes {
 		if nodePublicKey != node.NodePubKey {
 			ret = append(ret, node)

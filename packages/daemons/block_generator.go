@@ -160,13 +160,8 @@ func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) 
 		types.WithTxFullData(trs))
 }
 
-func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time.Time) ([][]byte, map[int][][]byte, error) {
-	classifyTxsMap := make(map[int][][]byte)
-	if len(txs) > 0 {
-		for _, tx := range txs {
-			classifyTxsMap[types.DelayTxType] = append(classifyTxsMap[types.DelayTxType], tx.Data)
-		}
-	}
+func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time.Time) ([][]byte, map[int][]*transaction.Transaction, error) {
+	classifyTxsMap := make(map[int][]*transaction.Transaction)
 	var done = make(<-chan time.Time, 1)
 	if syspar.IsHonorNodeMode() {
 		btc := protocols.NewBlockTimeCounter()
@@ -213,7 +208,16 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 	// Checks preprocessing count limits
 	txList := make([][]byte, 0, len(trs))
 	txs = append(txs, trs...)
-	delayTxTypeTxDatas := classifyTxsMap[types.DelayTxType]
+
+	allDelayedContract, err := sqldb.GetAllDelayedContract()
+	if err != nil {
+		return nil, nil, err
+	}
+	var contractNames []string
+	for _, contract := range allDelayedContract {
+		contractNames = append(contractNames, contract.Contract)
+	}
+
 	for i, txItem := range txs {
 		if syspar.IsHonorNodeMode() {
 			select {
@@ -221,11 +225,6 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 				return txList, classifyTxsMap, nil
 			default:
 			}
-		}
-		if txItem.GetTransactionRateStopNetwork() {
-			classifyTxsMap[types.StopNetworkTxType] = append(classifyTxsMap[types.StopNetworkTxType], txs[i].Data)
-			txList = append(txList[:0], txs[i].Data)
-			break
 		}
 		bufTransaction := bytes.NewBuffer(txItem.Data)
 		tr, err := transaction.UnmarshallTransaction(bufTransaction)
@@ -240,7 +239,11 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 			txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
 			continue
 		}
-
+		if txItem.GetTransactionRateStopNetwork() {
+			classifyTxsMap[types.StopNetworkTxType] = append(classifyTxsMap[types.StopNetworkTxType], tr)
+			txList = append(txList[:0], txs[i].Data)
+			break
+		}
 		if tr.IsSmartContract() {
 			err = limits.CheckLimit(tr.Inner)
 			if errors.Cause(err) == transaction.ErrLimitStop && i > 0 {
@@ -252,27 +255,22 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 				continue
 			}
 			if tr.Type() == types.TransferSelfTxType {
-				classifyTxsMap[types.TransferSelfTxType] = append(classifyTxsMap[types.TransferSelfTxType], txs[i].Data)
+				classifyTxsMap[types.TransferSelfTxType] = append(classifyTxsMap[types.TransferSelfTxType], tr)
 				txList = append(txList, txs[i].Data)
 				continue
 			}
 			if tr.Type() == types.UtxoTxType {
-				classifyTxsMap[types.UtxoTxType] = append(classifyTxsMap[types.UtxoTxType], txs[i].Data)
+				classifyTxsMap[types.UtxoTxType] = append(classifyTxsMap[types.UtxoTxType], tr)
 				txList = append(txList, txs[i].Data)
 				continue
 			}
 
-			var isExist bool
-			for _, data := range delayTxTypeTxDatas {
-				isEqual := bytes.Equal(data, txs[i].Data)
-				if isEqual {
-					isExist = isEqual
-					break
-				}
+			if utils.StringInSlice(contractNames, tr.SmartContract().TxContract.Name) {
+				classifyTxsMap[types.DelayTxType] = append(classifyTxsMap[types.DelayTxType], tr)
+				txList = append(txList, txs[i].Data)
+				continue
 			}
-			if !isExist {
-				classifyTxsMap[types.SmartContractTxType] = append(classifyTxsMap[types.SmartContractTxType], txs[i].Data)
-			}
+			classifyTxsMap[types.SmartContractTxType] = append(classifyTxsMap[types.SmartContractTxType], tr)
 		}
 		txList = append(txList, txs[i].Data)
 	}

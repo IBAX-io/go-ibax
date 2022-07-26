@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"sort"
 	"strconv"
 	"time"
 
@@ -48,11 +49,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		d.logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
 		return errors.New(`node public key is empty`)
 	}
-
-	var (
-		candidateNodes []sqldb.CandidateNode
-	)
-	candidateNodes, err = sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
+	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
 		log.WithError(err).Error("getting candidate node list")
 		return err
@@ -115,7 +112,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 	return nil
 }
 
-func GetThisNodePosition(candidateNodes []sqldb.CandidateNode, prevBlock *sqldb.InfoBlock) (sqldb.CandidateNode, bool) {
+func GetThisNodePosition(candidateNodes sqldb.CandidateNodes, prevBlock *sqldb.InfoBlock) (sqldb.CandidateNode, bool) {
 	candidateNode := sqldb.CandidateNode{}
 	if len(candidateNodes) == 0 {
 
@@ -212,35 +209,25 @@ func GetThisNodePosition(candidateNodes []sqldb.CandidateNode, prevBlock *sqldb.
 			return candidateNode, false
 		}
 		size := len(candidateNodes)
-		for i, subBlock := range subBlocks {
+		for _, subBlock := range subBlocks {
 			for j := 0; j < size; j++ {
 				if candidateNodes[j].ID == subBlock.NodePosition {
 					candidateNodes = append(candidateNodes[:j], candidateNodes[j+1:]...)
 					size = len(candidateNodes)
-					i--
 				}
 			}
 		}
 		if len(candidateNodes) > 0 {
-			maxVal := candidateNodes[0].ReplyCount
-			maxIndex := 0
-			for i, node := range candidateNodes {
-				if maxVal < node.ReplyCount {
-					maxVal = candidateNodes[i].ReplyCount
-					maxIndex = i
-				}
-			}
 			_, NodePublicKey := utils.GetNodeKeys()
 			if len(NodePublicKey) < 1 {
 				log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
 				return candidateNode, false
 			}
 			NodePublicKey = "04" + NodePublicKey
-
-			if NodePublicKey == candidateNodes[maxIndex].NodePubKey {
-				return candidateNodes[maxIndex], true
+			sort.Sort(candidateNodes)
+			if NodePublicKey == candidateNodes[0].NodePubKey {
+				return candidateNodes[0], true
 			}
-
 		}
 	}
 	return candidateNode, false

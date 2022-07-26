@@ -8,6 +8,7 @@ package daemons
 import (
 	"context"
 	"fmt"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"strings"
 	"time"
 
@@ -179,7 +180,7 @@ func Ntp_Work(ctx context.Context) {
 	}
 }
 
-func generateProcessBlockNew(blockHeader, prevBlock *types.BlockHeader, trs [][]byte, classifyTxsMap map[int][][]byte) error {
+func generateProcessBlockNew(blockHeader, prevBlock *types.BlockHeader, trs [][]byte, classifyTxsMap map[int][]*transaction.Transaction) error {
 	blockBin, err := generateNextBlock(blockHeader, prevBlock, trs)
 	if err != nil {
 		return err

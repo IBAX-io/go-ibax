@@ -109,7 +109,7 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 	var (
 		hosts          []string
 		banHosts       []string
-		candidateNodes []sqldb.CandidateNode
+		candidateNodes sqldb.CandidateNodes
 	)
 	if ok {
 		hosts, banHosts, err = node.GetNodesBanService().FilterHosts(syspar.GetRemoteHosts())

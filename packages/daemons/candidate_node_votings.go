@@ -75,7 +75,7 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 		return nil
 	}
 	var (
-		candidateNodes []sqldb.CandidateNode
+		candidateNodes sqldb.CandidateNodes
 		err            error
 		agreeQuantity  int64
 	)

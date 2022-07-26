@@ -636,14 +636,14 @@ lp:
 	if err != nil {
 		sc.RollBackTx = nil
 		sc.DbTransaction.BinLogSql = nil
-		if errReset := sc.DbTransaction.ResetSavepoint(consts.SetSavePointMarkBlock(point)); errReset != nil {
+		if errReset := sc.DbTransaction.ResetSavepoint(point); errReset != nil {
 			return retError(errors.Wrap(err, errReset.Error()))
 		}
 		if needPayment {
 			if errPay := sc.payContract(true); errPay != nil {
 				sc.RollBackTx = nil
 				sc.DbTransaction.BinLogSql = nil
-				if errRollsp := sc.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(point)); errRollsp != nil {
+				if errRollsp := sc.DbTransaction.RollbackSavepoint(point); errRollsp != nil {
 					return retError(errors.Wrap(err, errRollsp.Error()))
 				}
 				return errors.Wrap(err, errPay.Error()).Error(), nil

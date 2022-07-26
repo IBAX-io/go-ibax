@@ -24,17 +24,17 @@ type CandidateNode struct {
 	CandidateNodes  []byte          `json:"candidateNodes"`
 }
 
-type ByReplyCount []CandidateNode
+type CandidateNodes []CandidateNode
 
-func (a ByReplyCount) len() int {
-	return len(a)
+func (nodes CandidateNodes) Len() int {
+	return len(nodes)
 }
-func (a ByReplyCount) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
+func (nodes CandidateNodes) Swap(i, j int) {
+	nodes[i], nodes[j] = nodes[j], nodes[i]
 }
 
-func (a ByReplyCount) Less(i, j int) bool {
-	return a[i].ReplyCount < a[j].ReplyCount
+func (nodes CandidateNodes) Less(i, j int) bool {
+	return nodes[i].DateReply > nodes[j].DateReply
 }
 
 // TableName returns name of table
@@ -43,13 +43,13 @@ func (ib *CandidateNode) TableName() string {
 }
 
 // GetCandidateNode returns last good block
-func GetCandidateNode(numberOfNodes int) ([]CandidateNode, error) {
-	var candidateNodes []CandidateNode
+func GetCandidateNode(numberOfNodes int) (CandidateNodes, error) {
+	var candidateNodes CandidateNodes
 	pledgeAmount, err := GetPledgeAmount()
 	if err != nil {
 		return nil, err
 	}
-	err = GetDB(nil).Where("deleted = ? and earnest_total >= ?", 0, pledgeAmount).Order("referendum_total desc ,date_reply,reply_count desc").Limit(numberOfNodes).Find(&candidateNodes).Error
+	err = GetDB(nil).Where("deleted = ? and earnest_total >= ?", 0, pledgeAmount).Order("referendum_total desc").Limit(numberOfNodes).Find(&candidateNodes).Error
 	if err != nil {
 		return nil, err
 	}

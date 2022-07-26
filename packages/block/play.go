@@ -83,22 +83,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		Txs: make([]*types.AfterTx, 0),
 	}
 	logger := b.GetLogger()
-	txsMap := make(map[int][]*transaction.Transaction)
-	for k, txs := range b.ClassifyTxsMap {
-		var transactions = make([]*transaction.Transaction, 0)
-		for i := 0; i < len(txs); i++ {
-			txBytes := txs[i]
-			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(txBytes))
-			if err != nil {
-				if t != nil && t.Hash() != nil {
-					_ = transaction.MarkTransactionBad(t.Hash(), err.Error())
-				}
-				continue
-			}
-			transactions = append(transactions, t)
-		}
-		txsMap[k] = transactions
-	}
+	txsMap := b.ClassifyTxsMap
 	limits := transaction.NewLimits(b.limitMode())
 	rand := random.NewRand(b.Header.Timestamp)
 	processedTx := make([][]byte, 0, len(b.Transactions))
