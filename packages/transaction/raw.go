@@ -34,7 +34,7 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer) error {
 
 	var inner TransactionCaller
 	switch txT {
-	case types.SmartContractTxType:
+	case types.SmartContractTxType, types.TransferSelfTxType, types.UtxoTxType:
 		itx := &SmartTransactionParser{
 			SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 		}
