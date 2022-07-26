@@ -79,6 +79,9 @@ func (s *SmartTransactionParser) Validate() error {
 func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	var res string
 	defer func() {
+		if len(res) > 255 {
+			res = res[:252] + "..."
+		}
 		ret := &pbgo.TxResult{
 			Result: res,
 			Hash:   out.TxResult.Hash,

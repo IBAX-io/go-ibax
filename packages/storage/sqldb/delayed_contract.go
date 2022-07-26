@@ -46,3 +46,11 @@ func (dc *DelayedContract) Get(id int64) (bool, error) {
 func (dc *DelayedContract) GetByContract(dbTx *DbTransaction, contract string) (bool, error) {
 	return isFound(GetDB(dbTx).Where("contract = ? AND deleted = ?", contract, availableDelayedContracts).First(dc))
 }
+
+func GetAllDelayedContract() ([]*DelayedContract, error) {
+	var contracts []*DelayedContract
+	if err := DBConn.Where(" deleted = ?", availableDelayedContracts).Find(&contracts).Error; err != nil {
+		return nil, err
+	}
+	return contracts, nil
+}

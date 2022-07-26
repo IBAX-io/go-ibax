@@ -144,5 +144,5 @@ func Version() string {
 }
 
 func SetSavePointMarkBlock(idTx string) string {
-	return fmt.Sprintf("\"%s-%d\";", SavePointMarkBlock, idTx)
+	return fmt.Sprintf("\"%s-%s\";", SavePointMarkBlock, idTx)
 }
