@@ -85,6 +85,7 @@ const (
 
 	PriceExec       = "price_exec_"
 	AccessExec      = "access_exec_"
+	PriceCreateExec = "price_create_exec_"
 	PayFreeContract = "pay_free_contract"
 )
 
@@ -636,6 +637,14 @@ func GetPriceExec(s string) (price int64, ok bool) {
 		return
 	}
 	price = SysInt64(PriceExec + s)
+	return
+}
+
+func GetPriceCreateExec(s string) (price int64, ok bool) {
+	if ok = HasSys(PriceCreateExec + s); !ok {
+		return
+	}
+	price = SysInt64(PriceCreateExec + s)
 	return
 }
 

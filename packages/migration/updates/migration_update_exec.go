@@ -4,6 +4,23 @@
  *--------------------------------------------------------------------------------------------*/
 package updates
 
+var MigrationUpdatePriceCreateExec = `
+INSERT INTO "1_platform_parameters" (id, name, value, conditions) VALUES
+    (next_id('1_platform_parameters'),'price_create_rate', '1000000', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_ecosystem', '100', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_table', '1', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_column', '1', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_contract', '1', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_menu', '1', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_page', '1', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_snippet', '1', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_view', '1', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_application', '1', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_token', '5000', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_lang', '1', 'ContractAccess("@1UpdatePlatformParam")'),
+	(next_id('1_platform_parameters'),'price_create_exec_@1_new_section', '1', 'ContractAccess("@1UpdatePlatformParam")');
+`
+
 var MigrationUpdatePriceExec = `
 INSERT INTO "1_platform_parameters" (id, name, value, conditions) VALUES
 	(next_id('1_platform_parameters'), 'price_exec_get_block', '50', 'ContractAccess("@1UpdatePlatformParam")'),
