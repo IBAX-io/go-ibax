@@ -62,8 +62,19 @@ func GetRollbacksHashWithDiffArr(dbTx *sqldb.DbTransaction, bId int64) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	arr := make([]string, 0, len(rollbackTxs))
+	arr := make([]string, 0)
 	for _, row := range rollbackTxs {
+		data, err := json.Marshal(row)
+		if err != nil {
+			continue
+		}
+		arr = append(arr, crypto.HashHex(data))
+	}
+	spentInfos, err := sqldb.GetBlockOutputs(dbTx, bId)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range spentInfos {
 		data, err := json.Marshal(row)
 		if err != nil {
 			continue
