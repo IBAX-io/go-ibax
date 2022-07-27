@@ -89,7 +89,7 @@ func (b *Block) Check() error {
 	}
 
 	// hash compare could be failed in the case of fork
-	_, err = b.CheckHash()
+	err = b.CheckSign()
 	if err != nil {
 		transaction.CleanCache()
 		return err
@@ -97,34 +97,20 @@ func (b *Block) Check() error {
 	return nil
 }
 
-// CheckHash is checking hash
-func (b *Block) CheckHash() (bool, error) {
-	logger := b.GetLogger()
-	if b.IsGenesis() {
-		return true, nil
+func (b *Block) CheckSign() error {
+	if b.IsGenesis() || conf.Config.IsSubNode() || b.PrevHeader == nil {
+		return nil
 	}
-	if conf.Config.IsSubNode() {
-		return true, nil
-	}
-	// check block signature
-	if b.PrevHeader == nil {
-		return true, nil
-	}
-	nodePublicKey, err := syspar.GetNodePublicKeyByPosition(b.Header.NodePosition)
+	nodePub, err := syspar.GetNodePublicKeyByPosition(b.Header.NodePosition)
 	if err != nil {
-		return false, utils.ErrInfo(err)
+		return fmt.Errorf("%v: %w", fmt.Sprintf("get node public key by position '%d'", b.Header.NodePosition), err)
 	}
-	if len(nodePublicKey) == 0 {
-		logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
-		return false, utils.ErrInfo(fmt.Errorf("empty nodePublicKey"))
+	if len(nodePub) == 0 {
+		return fmt.Errorf("empty nodePublicKey")
 	}
-
-	_, err = utils.CheckSign([][]byte{nodePublicKey}, []byte(b.ForSign()), b.Header.Sign, true)
-
+	_, err = utils.CheckSign([][]byte{nodePub}, []byte(b.ForSign()), b.Header.Sign, true)
 	if err != nil {
-		//logger.WithFields(log.Fields{"error": err, "type": consts.CryptoError}).Error("checking block header sign")
-		return false, errors.Wrap(err, "checking block header sign")
-		//return false, errors.Wrap(err, fmt.Sprintf("per_block_id: %d, per_block_hash: %x", b.PrevHeader.BlockId, b.PrevHeader.Hash))
+		return errors.Wrap(err, "checking block header sign")
 	}
-	return true, nil
+	return nil
 }
