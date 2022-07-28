@@ -7,6 +7,7 @@ package block
 
 import (
 	"bytes"
+
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/pkg/errors"
@@ -71,9 +72,6 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer) (*Block, error) {
 	for i := 0; i < len(block.TxFullData); i++ {
 		tx, err := transaction.UnmarshallTransaction(bytes.NewBuffer(block.TxFullData[i]))
 		if err != nil {
-			if tx != nil && tx.Hash() != nil {
-				transaction.MarkTransactionBad(tx.Hash(), err.Error())
-			}
 			return nil, err
 		}
 		if tx.Type() == types.StopNetworkTxType {
