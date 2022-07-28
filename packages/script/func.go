@@ -9,6 +9,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -110,8 +111,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 		}
 	}
 	rt.cost -= CostContract
-	if priceName, ok := ContractPrices[name]; ok {
-		price := syspar.SysInt64(priceName)
+	if price, ok := syspar.GetPriceCreateExec(utils.ToSnakeCase(name)); ok {
 		if price > 0 {
 			rt.cost -= price
 		}

@@ -34,7 +34,6 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "pub": "ContractAccess(\"@1NewUser\")",
             "amount": "ContractAccess(\"@1TokensTransfer\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\")",
             "maxpay": "ContractConditions(\"@1MainCondition\")",
-            "deposit": "ContractAccess(\"@1TokensDecDeposit\",\"@1TokensIncDeposit\")",
             "deleted": "ContractConditions(\"@1MainCondition\")",
             "blocked": "ContractAccess(\"@1TokensLockoutMember\")",
             "account": "false",
