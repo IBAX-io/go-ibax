@@ -12,9 +12,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
-	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/gogo/protobuf/sortkeys"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -289,7 +289,10 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 		money := pay.GetPayMoney()
 		wltAmount := pay.PayWallet.CapableAmount()
 		if wltAmount.Cmp(money) < 0 {
-			return errTaxes
+			if !errNeedPay {
+				return errTaxes
+			}
+			money = wltAmount
 		}
 		if pay.Indirect {
 			if err := sc.payTaxes(pay, money, GasScenesType_Direct, comment, status); err != nil {
@@ -803,8 +806,8 @@ func (sc *SmartContract) elementFee() (decimal.Decimal, error) {
 		err        error
 		zero       = decimal.Zero
 	)
-	if priceName, ok := script.ContractPrices[sc.TxContract.Name]; ok {
-		newElementPrices := decimal.NewFromInt(SysParamInt(priceName)).
+	if priceName, ok := syspar.GetPriceCreateExec(utils.ToSnakeCase(sc.TxContract.Name)); ok {
+		newElementPrices := decimal.NewFromInt(priceName).
 			Mul(decimal.NewFromInt(syspar.SysInt64(syspar.PriceCreateRate)))
 		if newElementPrices.GreaterThan(decimal.New(MaxPrice, 0)) {
 			sc.GetLogger().WithFields(log.Fields{"type": consts.NoFunds}).Error("Price value is more than the highest value")
