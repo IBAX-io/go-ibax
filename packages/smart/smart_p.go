@@ -868,7 +868,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 		payValue, _ := decimal.NewFromString(value)
 		if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
 			flag = true // The transfer was successful
-			txOutputs = append(txOutputs, sqldb.SpentInfo{
+			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0,
 				OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
 			totalAmount = totalAmount.Sub(payValue)
 		} else {
@@ -877,7 +877,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 		}
 		// The change
 		if totalAmount.GreaterThan(decimal.Zero) {
-			txOutputs = append(txOutputs, sqldb.SpentInfo{
+			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 1,
 				OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
 		}
 		if len(txInputs) > 0 && len(txOutputs) > 0 {
