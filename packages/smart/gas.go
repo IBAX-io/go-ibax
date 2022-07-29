@@ -289,7 +289,10 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 		money := pay.GetPayMoney()
 		wltAmount := pay.PayWallet.CapableAmount()
 		if wltAmount.Cmp(money) < 0 {
-			return errTaxes
+			if !errNeedPay {
+				return errTaxes
+			}
+			money = wltAmount
 		}
 		if pay.Indirect {
 			if err := sc.payTaxes(pay, money, GasScenesType_Direct, comment, status); err != nil {
