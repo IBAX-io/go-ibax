@@ -15,11 +15,9 @@ var (
 func InsertTxOutputs(outputTxHash []byte, txOutputsCtx []SpentInfo, outputsMap map[int64][]SpentInfo) {
 	lock.Lock()
 	defer lock.Unlock()
-	for index, txOutput := range txOutputsCtx {
+	for _, txOutput := range txOutputsCtx {
 		spentInfos := outputsMap[txOutput.OutputKeyId]
 		txOutput.OutputTxHash = outputTxHash
-		txOutput.OutputIndex = int32(index)
-		// txOutput.Height=height
 		spentInfos = append(spentInfos, txOutput)
 		outputsMap[txOutput.OutputKeyId] = spentInfos
 	}
