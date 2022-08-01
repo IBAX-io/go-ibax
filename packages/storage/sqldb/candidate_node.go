@@ -49,7 +49,7 @@ func GetCandidateNode(numberOfNodes int) (CandidateNodes, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = GetDB(nil).Where("deleted = ? and earnest_total >= ?", 0, pledgeAmount).Order("referendum_total desc").Limit(numberOfNodes).Find(&candidateNodes).Error
+	err = GetDB(nil).Where("deleted = ? and earnest_total >= ?", 0, pledgeAmount).Order("referendum_total desc,date_updated_referendum asc,reply_count desc,date_reply desc").Limit(numberOfNodes).Find(&candidateNodes).Error
 	if err != nil {
 		return nil, err
 	}
