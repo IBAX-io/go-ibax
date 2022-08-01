@@ -209,6 +209,7 @@ func GetThisNodePosition(candidateNodes sqldb.CandidateNodes, prevBlock *sqldb.I
 			return candidateNode, false
 		}
 		size := len(candidateNodes)
+		nodeCount := len(candidateNodes)
 		for _, subBlock := range subBlocks {
 			for j := 0; j < size; j++ {
 				if candidateNodes[j].ID == subBlock.NodePosition {
@@ -217,25 +218,44 @@ func GetThisNodePosition(candidateNodes sqldb.CandidateNodes, prevBlock *sqldb.I
 				}
 			}
 		}
+
+		sort.Sort(candidateNodes)
 		if len(candidateNodes) > 0 {
+			var (
+				maxIndex    int
+				isHonorNode bool
+			)
+			for i, node := range candidateNodes {
+				isHonorNode = agreeCount(int64(nodeCount), node.ReplyCount)
+				if isHonorNode {
+					maxIndex = i
+					break
+				}
+			}
 			_, NodePublicKey := utils.GetNodeKeys()
 			if len(NodePublicKey) < 1 {
 				log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
 				return candidateNode, false
 			}
 			NodePublicKey = "04" + NodePublicKey
-			sort.Sort(candidateNodes)
-			if NodePublicKey == candidateNodes[0].NodePubKey {
-				return candidateNodes[0], true
+			if isHonorNode {
+				if NodePublicKey == candidateNodes[maxIndex].NodePubKey {
+					return candidateNodes[maxIndex], true
+				}
+			}
+			for i, node := range candidateNodes {
+				if NodePublicKey == node.NodePubKey {
+					return candidateNodes[i], true
+				}
 			}
 		}
 	}
 	return candidateNode, false
 }
 
-func checkVotes(candidateNodes int64, votes int64) bool {
-	lessVotes := math.Ceil(float64(candidateNodes / 2))
-	if votes >= int64(lessVotes) {
+func agreeCount(candidateNodes int64, replyCount int64) bool {
+	lessReplyCount := math.Ceil(float64(candidateNodes) / 2)
+	if replyCount >= int64(lessReplyCount) {
 		return true
 	}
 	return false
