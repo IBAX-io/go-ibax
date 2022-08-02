@@ -269,7 +269,7 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 		lt := new(sqldb.LogTransaction)
 		lt.Block = tx.Lts.Block
 		lt.Hash = tx.Lts.Hash
-		lt.TxData = tx.Lts.TxData
+		//lt.TxData = tx.Lts.TxData
 		lt.Timestamp = tx.Lts.Timestamp
 		lt.Address = tx.Lts.Address
 		lt.EcosystemID = tx.Lts.EcosystemId

@@ -292,9 +292,9 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 		}
 		after.UsedTx = t.Hash()
 		after.Lts = &types.LogTransaction{
-			Block:        t.BlockHeader.BlockId,
-			Hash:         t.Hash(),
-			TxData:       t.FullData,
+			Block: t.BlockHeader.BlockId,
+			Hash:  t.Hash(),
+			//TxData:       t.FullData,
 			Timestamp:    t.Timestamp(),
 			Address:      t.KeyID(),
 			EcosystemId:  eco,
