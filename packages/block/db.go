@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
-	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -270,7 +269,7 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 		lt := new(sqldb.LogTransaction)
 		lt.Block = tx.Lts.Block
 		lt.Hash = tx.Lts.Hash
-		lt.TxData = tx.Lts.TxData
+		//lt.TxData = tx.Lts.TxData
 		lt.Timestamp = tx.Lts.Timestamp
 		lt.Address = tx.Lts.Address
 		lt.EcosystemID = tx.Lts.EcosystemId
@@ -288,13 +287,13 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 	playTx := b.GenAfterTxs()
 	return sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
-		if !b.GenBlock && !b.IsGenesis() && conf.Config.BlockSyncMethod.Method == types.BlockSyncMethod_SQLDML.String() {
-			for i := 0; i < len(b.AfterTxs.TxBinLogSql); i++ {
-				if err := tx.Exec(string(b.AfterTxs.TxBinLogSql[i])).Error; err != nil {
-					return errors.Wrap(err, "batches exec sql for tx")
-				}
-			}
-		}
+		//if !b.GenBlock && !b.IsGenesis() && conf.Config.BlockSyncMethod.Method == types.BlockSyncMethod_SQLDML.String() {
+		//	for i := 0; i < len(b.AfterTxs.TxBinLogSql); i++ {
+		//		if err := tx.Exec(string(b.AfterTxs.TxBinLogSql[i])).Error; err != nil {
+		//			return errors.Wrap(err, "batches exec sql for tx")
+		//		}
+		//	}
+		//}
 		if err := sqldb.DeleteTransactions(tx, playTx.UsedTx); err != nil {
 			return errors.Wrap(err, "batches delete used transactions")
 		}

@@ -52,6 +52,7 @@ func genesisBlock() ([]byte, error) {
 		Timestamp:     now,
 		EcosystemId:   0,
 		KeyId:         conf.Config.KeyID,
+		NetworkId:     conf.Config.LocalConf.NetworkID,
 		NodePosition:  0,
 		Version:       consts.BlockVersion,
 		RollbacksHash: crypto.Hash([]byte(`0`)),

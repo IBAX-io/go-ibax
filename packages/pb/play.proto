@@ -10,7 +10,7 @@ import "tx.proto";
 message AfterTxs {
   repeated AfterTx txs =1;
   //TxBinLogSql defined contract exec sql for tx DML
-  repeated bytes tx_bin_log_sql = 2;
+//  repeated bytes tx_bin_log_sql = 2;
   repeated     RollbackTx rts = 3;
 }
 
@@ -33,7 +33,7 @@ message RollbackTx {
 message LogTransaction {
   bytes hash = 1;
   int64 block = 2;
-  bytes tx_data = 3;
+//  bytes tx_data = 3;
   int64 timestamp = 4;
   int64 address = 5;
   int64 ecosystem_id = 6;

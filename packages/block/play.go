@@ -13,7 +13,6 @@ import (
 	"sync"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
-	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/notificator"
@@ -105,14 +104,14 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			return
 		}
 	}()
-	if !b.GenBlock && !b.IsGenesis() && conf.Config.BlockSyncMethod.Method == types.BlockSyncMethod_SQLDML.String() {
-		if b.SysUpdate {
-			if err := syspar.SysUpdate(dbTx); err != nil {
-				return fmt.Errorf("updating syspar: %w", err)
-			}
-		}
-		return nil
-	}
+	//if !b.GenBlock && !b.IsGenesis() && conf.Config.BlockSyncMethod.Method == types.BlockSyncMethod_SQLDML.String() {
+	//	if b.SysUpdate {
+	//		if err := syspar.SysUpdate(dbTx); err != nil {
+	//			return fmt.Errorf("updating syspar: %w", err)
+	//		}
+	//	}
+	//	return nil
+	//}
 
 	var keyIds []int64
 	for indexTx := 0; indexTx < len(b.Transactions); indexTx++ {
@@ -293,9 +292,9 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 		}
 		after.UsedTx = t.Hash()
 		after.Lts = &types.LogTransaction{
-			Block:        t.BlockHeader.BlockId,
-			Hash:         t.Hash(),
-			TxData:       t.FullData,
+			Block: t.BlockHeader.BlockId,
+			Hash:  t.Hash(),
+			//TxData:       t.FullData,
 			Timestamp:    t.Timestamp(),
 			Address:      t.KeyID(),
 			EcosystemId:  eco,
@@ -305,7 +304,7 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 		after.UpdTxStatus = t.TxResult
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
-		afters.TxBinLogSql = append(afters.TxBinLogSql, t.DbTransaction.BinLogSql...)
+		//afters.TxBinLogSql = append(afters.TxBinLogSql, t.DbTransaction.BinLogSql...)
 		*processedTx = append(*processedTx, t.FullData)
 
 		sqldb.UpdateTxInputs(t.Hash(), t.TxInputs, b.OutputsMap)

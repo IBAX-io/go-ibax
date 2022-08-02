@@ -26,6 +26,7 @@ message BlockHeader{
   int32 version = 9;
   int32 consensus_mode = 10;
   bytes candidate_nodes = 11;
+  int64 network_id = 12;
 }
 
 // BlockData is a structure of the block's

@@ -134,6 +134,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		Timestamp:     st.Unix(),
 		EcosystemId:   0,
 		KeyId:         conf.Config.KeyID,
+		NetworkId:     conf.Config.LocalConf.NetworkID,
 		NodePosition:  nodePosition,
 		Version:       consts.BlockVersion,
 		ConsensusMode: consts.HonorNodeMode,
