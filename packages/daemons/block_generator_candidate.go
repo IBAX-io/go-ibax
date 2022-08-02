@@ -93,6 +93,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		Timestamp:      st.Unix(),
 		EcosystemId:    0,
 		KeyId:          conf.Config.KeyID,
+		NetworkId:      conf.Config.LocalConf.NetworkID,
 		NodePosition:   currentCandidateNode.ID,
 		Version:        consts.BlockVersion,
 		ConsensusMode:  consts.CandidateNodeMode,

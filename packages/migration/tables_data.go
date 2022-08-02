@@ -27,7 +27,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     (next_id('1_tables'), 'keys',
         '{
             "insert": "true",
-            "update": "ContractAccess(\"@1TokensTransfer\",\"@1TokensLockoutMember\",\"@1NewToken\",\"@1TeBurn\",\"@1TokensDecDeposit\",\"@1TokensIncDeposit\",\"@1ProfileEdit\",\"@1NewUser\")",
+            "update": "ContractAccess(\"@1TokensTransfer\",\"@1TokensLockoutMember\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1NewUser\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
