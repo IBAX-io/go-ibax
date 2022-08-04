@@ -43,6 +43,7 @@ type VotingTotal struct {
 	Data          map[string]VotingRes `json:"data"`
 	AgreeQuantity int64                `json:"agreeQuantity"`
 	LocalAddress  string               `json:"localAddress"`
+	St            int64                `json:"st"`
 }
 
 func SyncMatchineStateRes(request *network.BroadcastNodeConnInfoRequest) (*network.BroadcastNodeConnInfoResponse, error) {
@@ -58,6 +59,7 @@ func SyncMatchineStateRes(request *network.BroadcastNodeConnInfoRequest) (*netwo
 		candidateNode := &sqldb.CandidateNode{
 			TcpAddress:     votingTotal.LocalAddress,
 			ReplyCount:     votingTotal.AgreeQuantity,
+			DateReply:      votingTotal.St,
 			CandidateNodes: request.Data,
 		}
 		err = candidateNode.UpdateCandidateNodeInfo()

@@ -27,6 +27,7 @@ type VotingTotal struct {
 	Data          map[string]VotingRes `json:"data"`
 	AgreeQuantity int64                `json:"agreeQuantity"`
 	LocalAddress  string               `json:"localAddress"`
+	St            int64                `json:"st"`
 }
 
 func ToUpdateMachineStatus(currentTcpAddress, tcpAddress string, ch chan map[string]VotingRes, logger *log.Entry) error {
@@ -78,6 +79,7 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 		candidateNodes sqldb.CandidateNodes
 		err            error
 		agreeQuantity  int64
+		st             int64
 	)
 	defer func() {
 		d.sleepTime = time.Minute
@@ -144,13 +146,14 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 		}
 	}
 	close(ch)
+	st = time.Now().UnixMilli()
 	if len(nodeConnMap) > 0 {
 		var wg sync.WaitGroup
 		for _, node := range candidateNodes {
 			wg.Add(1)
 			go func(tcpAddress string) {
 				defer wg.Done()
-				votingTotal := VotingTotal{Data: nodeConnMap, AgreeQuantity: agreeQuantity, LocalAddress: currentTcpAddress}
+				votingTotal := VotingTotal{Data: nodeConnMap, AgreeQuantity: agreeQuantity, LocalAddress: currentTcpAddress, St: st}
 				err = ToBroadcastNodeConnInfo(votingTotal, tcpAddress, d.logger)
 				if err != nil {
 					d.logger.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "tcpAddress": tcpAddress}).Error("broadcast node conn info error")
