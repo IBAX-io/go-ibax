@@ -61,7 +61,6 @@ var (
 		t.Column("contract_name", "string", {"default": "", "size":255})
 		t.Column("address", "bigint", {"default": "0"})
 		t.Column("ecosystem_id", "bigint", {"default": "0"})
-		t.Column("tx_data", "bytea", {"default": ""})
 		t.Column("status", "bigint", {"default": "0"})
 	{{footer "primary(hash)"}}
 

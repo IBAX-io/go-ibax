@@ -39,15 +39,15 @@ func (b *BlockHeader) GenHash(prev *BlockHeader, mrklRoot []byte) []byte {
 }
 
 func (b *BlockHeader) ForSha(prev *BlockHeader, mrklRoot []byte) string {
-	return fmt.Sprintf("%d,%x,%s,%d,%d,%d,%d",
-		b.BlockId, prev.BlockHash, mrklRoot, b.Timestamp, b.EcosystemId, b.KeyId, b.NodePosition) +
+	return fmt.Sprintf("%d,%x,%s,%d,%d,%d,%d,%d",
+		b.BlockId, prev.BlockHash, mrklRoot, b.Timestamp, b.EcosystemId, b.KeyId, b.NodePosition, b.NetworkId) +
 		blockVer(b, prev)
 }
 
 // ForSign from 128 bytes to 512 bytes. Signature of TYPE, BLOCK_ID, PREV_BLOCK_HASH, TIME, WALLET_ID, state_id, MRKL_ROOT
 func (b *BlockHeader) ForSign(prev *BlockHeader, mrklRoot []byte) string {
-	return fmt.Sprintf("0,%v,%x,%v,%v,%v,%v,%s",
-		b.BlockId, prev.BlockHash, b.Timestamp, b.EcosystemId, b.KeyId, b.NodePosition, mrklRoot) +
+	return fmt.Sprintf("0,%v,%x,%v,%v,%v,%v,%s,%d",
+		b.BlockId, prev.BlockHash, b.Timestamp, b.EcosystemId, b.KeyId, b.NodePosition, mrklRoot, b.NetworkId) +
 		blockVer(b, prev)
 }
 
@@ -138,11 +138,11 @@ func (b *BlockData) GetSign(key []byte) ([]byte, error) {
 
 // MarshallBlock is marshalling block
 func (b *BlockData) MarshallBlock(key []byte) ([]byte, error) {
-	if b.AfterTxs != nil {
-		for i := 0; i < len(b.AfterTxs.TxBinLogSql); i++ {
-			b.AfterTxs.TxBinLogSql[i] = DoZlibCompress(b.AfterTxs.TxBinLogSql[i])
-		}
-	}
+	//if b.AfterTxs != nil {
+	//	for i := 0; i < len(b.AfterTxs.TxBinLogSql); i++ {
+	//		b.AfterTxs.TxBinLogSql[i] = DoZlibCompress(b.AfterTxs.TxBinLogSql[i])
+	//	}
+	//}
 	for i := 0; i < len(b.TxFullData); i++ {
 		b.TxFullData[i] = DoZlibCompress(b.TxFullData[i])
 	}
@@ -166,11 +166,11 @@ func (b *BlockData) UnmarshallBlock(data []byte) error {
 	if err := proto.Unmarshal(data, b); err != nil {
 		return errors.Wrap(err, "unmarshalling block")
 	}
-	if b.AfterTxs != nil {
-		for i := 0; i < len(b.AfterTxs.TxBinLogSql); i++ {
-			b.AfterTxs.TxBinLogSql[i] = DoZlibUnCompress(b.AfterTxs.TxBinLogSql[i])
-		}
-	}
+	//if b.AfterTxs != nil {
+	//	for i := 0; i < len(b.AfterTxs.TxBinLogSql); i++ {
+	//		b.AfterTxs.TxBinLogSql[i] = DoZlibUnCompress(b.AfterTxs.TxBinLogSql[i])
+	//	}
+	//}
 	for i := 0; i < len(b.TxFullData); i++ {
 		b.TxFullData[i] = DoZlibUnCompress(b.TxFullData[i])
 	}

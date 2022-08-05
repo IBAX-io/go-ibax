@@ -195,17 +195,18 @@ func generateProcessBlockNew(blockHeader, prevBlock *types.BlockHeader, trs [][]
 	return nil
 }
 
-func GetRemoteGoodHosts() (hosts []string, err error) {
+func GetRemoteGoodHosts() ([]string, error) {
 	if syspar.IsHonorNodeMode() {
 		return node.GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
 	}
+	hosts := make([]string, 0)
 	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err != nil {
 		log.WithError(err).Error("getting candidate node list")
-		return
+		return nil, err
 	}
 	for _, node := range candidateNodes {
 		hosts = append(hosts, node.TcpAddress)
 	}
-	return
+	return hosts, nil
 }

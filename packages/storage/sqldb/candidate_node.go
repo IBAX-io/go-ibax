@@ -1,8 +1,6 @@
 package sqldb
 
 import (
-	"time"
-
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/shopspring/decimal"
 )
@@ -49,7 +47,7 @@ func GetCandidateNode(numberOfNodes int) (CandidateNodes, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = GetDB(nil).Where("deleted = ? and earnest_total >= ?", 0, pledgeAmount).Order("referendum_total desc").Limit(numberOfNodes).Find(&candidateNodes).Error
+	err = GetDB(nil).Where("deleted = ? and earnest_total >= ?", 0, pledgeAmount).Order("referendum_total desc,date_updated_referendum asc,reply_count desc,date_reply desc").Limit(numberOfNodes).Find(&candidateNodes).Error
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +59,7 @@ func (c *CandidateNode) UpdateCandidateNodeInfo() error {
 	if err != nil {
 		return err
 	}
-	err = GetDB(nil).Model(&c).Where("tcp_address = ? and deleted = ? and earnest_total >= ?", c.TcpAddress, 0, pledgeAmount).Updates(CandidateNode{ReplyCount: c.ReplyCount, DateReply: time.Now().UnixMilli(), CandidateNodes: c.CandidateNodes}).Error
+	err = GetDB(nil).Model(&c).Where("tcp_address = ? and deleted = ? and earnest_total >= ?", c.TcpAddress, 0, pledgeAmount).Updates(CandidateNode{ReplyCount: c.ReplyCount, DateReply: c.DateReply, CandidateNodes: c.CandidateNodes}).Error
 	if err != nil {
 		return err
 	}
