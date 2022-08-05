@@ -27,6 +27,7 @@ func rollbackUpdatedRow(tx map[string]string, where string, dbTx *sqldb.DbTransa
 	}
 	addSQLUpdate := ""
 	for k, v := range rollbackInfo {
+		k = `"` + strings.Trim(k, `"`) + `"`
 		if v == "NULL" {
 			addSQLUpdate += k + `=NULL,`
 		} else if syspar.IsByteColumn(tx["table_name"], k) && len(v) != 0 {
@@ -116,7 +117,7 @@ func rollbackTransaction(txHash []byte, dbTx *sqldb.DbTransaction, logger *log.E
 				isFirstTable = true
 			}
 		}
-		where := " WHERE id='"
+		where := ` WHERE "id"='`
 
 		if len(tx["data"]) <= 0 {
 			if isFirstTable {
@@ -132,7 +133,7 @@ func rollbackTransaction(txHash []byte, dbTx *sqldb.DbTransaction, logger *log.E
 			where += tx["table_id"] + `'`
 		}
 		if isFirstTable {
-			where += fmt.Sprintf(` AND ecosystem='%d'`, converter.StrToInt64(ecoID))
+			where += fmt.Sprintf(` AND "ecosystem"='%d'`, converter.StrToInt64(ecoID))
 			tx[`table_name`] = `1_` + keyName
 		} else {
 			where += tx["table_id"] + `'`
