@@ -704,7 +704,7 @@ func MathMod(x, y float64) float64 {
 func MathModDecimal(x, y decimal.Decimal) decimal.Decimal {
 	return x.Mod(y)
 }
-func TransferSelf(sc *SmartContract, value string, asset string, source string, target string) (flag bool, err error) {
+func TransferSelf(sc *SmartContract, value string, source string, target string) (flag bool, err error) {
 	fromID := sc.TxSmart.KeyID
 	outputsMap := sc.OutputsMap
 	txInputsMap := sc.TxInputsMap
@@ -713,11 +713,11 @@ func TransferSelf(sc *SmartContract, value string, asset string, source string, 
 	ecosystem := sc.TxSmart.EcosystemID
 	blockId := sc.BlockHeader.BlockId
 	dbTx := sc.DbTransaction
-
+	keyUTXO := sqldb.KeyUTXO{Ecosystem: ecosystem, KeyId: fromID}
 	//sum, _ := decimal.NewFromString(value)
 	payValue, _ := decimal.NewFromString(value)
 	if strings.EqualFold("UTXO", source) && strings.EqualFold("Account", target) {
-		inputChange := sqldb.GetChangeOutputsMap(fromID, txHash, txOutputsMap)
+		inputChange := sqldb.GetChangeOutputsMap(keyUTXO, txOutputsMap)
 		if inputChange != nil {
 			totalAmount := decimal.Zero
 			var txOutputs []sqldb.SpentInfo
@@ -737,14 +737,13 @@ func TransferSelf(sc *SmartContract, value string, asset string, source string, 
 			}
 			// The change
 			if totalAmount.GreaterThan(decimal.Zero) {
-				txOutputs = append(txOutputs, sqldb.SpentInfo{
-					OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
+				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
 			}
 			if len(txOutputs) > 0 {
 				sqldb.InsertTxOutputsChange(txHash, *inputChange, txOutputs, txOutputsMap)
 			}
 		} else {
-			txInputs := sqldb.GetUnusedOutputsMap(fromID, outputsMap)
+			txInputs := sqldb.GetUnusedOutputsMap(keyUTXO, outputsMap)
 			if len(txInputs) == 0 {
 				txInputs, _ = sqldb.GetTxOutputsEcosystem(dbTx, ecosystem, []int64{fromID})
 				totalAmount := decimal.Zero
@@ -775,7 +774,7 @@ func TransferSelf(sc *SmartContract, value string, asset string, source string, 
 			}
 			// The change
 			if totalAmount.GreaterThan(decimal.Zero) {
-				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
+				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
 			}
 			if len(txInputs) > 0 && len(txOutputs) > 0 {
 				sqldb.PutAllOutputsMap(txInputs, txInputsMap)
@@ -794,7 +793,7 @@ func TransferSelf(sc *SmartContract, value string, asset string, source string, 
 		}
 		if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
 			flag = true // The transfer was successful
-			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: fromID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
+			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
 			totalAmount = totalAmount.Sub(payValue)
 			if _, _, err := sc.updateWhere([]string{`-amount`}, []any{payValue}, "1_keys", types.LoadMap(map[string]any{`id`: fromID, `ecosystem`: ecosystem})); err != nil {
 				return false, errTaxes
@@ -822,7 +821,8 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	ecosystem := sc.TxSmart.EcosystemID
 	blockId := sc.BlockHeader.BlockId
 	dbTx := sc.DbTransaction
-	inputChange := sqldb.GetChangeOutputsMap(fromID, txHash, txOutputsMap)
+	keyUTXO := sqldb.KeyUTXO{Ecosystem: ecosystem, KeyId: fromID}
+	inputChange := sqldb.GetChangeOutputsMap(keyUTXO, txOutputsMap)
 	if inputChange != nil {
 		totalAmount := decimal.Zero
 		var txOutputs []sqldb.SpentInfo
@@ -831,8 +831,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 		payValue, _ := decimal.NewFromString(value)
 		if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
 			flag = true // The transfer was successful
-			txOutputs = append(txOutputs, sqldb.SpentInfo{
-				OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
+			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
 			totalAmount = totalAmount.Sub(payValue)
 		} else {
 			flag = false
@@ -840,14 +839,13 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 		}
 		// The change
 		if totalAmount.GreaterThan(decimal.Zero) {
-			txOutputs = append(txOutputs, sqldb.SpentInfo{
-				OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
+			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 1, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
 		}
 		if len(txOutputs) > 0 {
 			sqldb.InsertTxOutputsChange(txHash, *inputChange, txOutputs, txOutputsMap)
 		}
 	} else {
-		txInputs := sqldb.GetUnusedOutputsMap(fromID, outputsMap)
+		txInputs := sqldb.GetUnusedOutputsMap(keyUTXO, outputsMap)
 		if len(txInputs) == 0 {
 			txInputs, _ = sqldb.GetTxOutputsEcosystem(dbTx, ecosystem, []int64{fromID})
 			totalAmount := decimal.Zero
@@ -868,8 +866,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 		payValue, _ := decimal.NewFromString(value)
 		if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
 			flag = true // The transfer was successful
-			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0,
-				OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
+			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
 			totalAmount = totalAmount.Sub(payValue)
 		} else {
 			flag = false
@@ -877,8 +874,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 		}
 		// The change
 		if totalAmount.GreaterThan(decimal.Zero) {
-			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 1,
-				OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
+			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 1, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
 		}
 		if len(txInputs) > 0 && len(txOutputs) > 0 {
 			sqldb.PutAllOutputsMap(txInputs, txInputsMap)
