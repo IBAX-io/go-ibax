@@ -59,7 +59,6 @@ type Header struct {
 
 type TransferSelf struct {
 	Value  string
-	Asset  string
 	Source string
 	Target string
 }

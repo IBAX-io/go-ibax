@@ -28,7 +28,7 @@ type InToCxt struct {
 	Notifications  types.Notifications
 	Rand           *rand.Rand
 	TxCheckLimits  *Limits
-	OutputsMap     map[int64][]sqldb.SpentInfo
+	OutputsMap     map[sqldb.KeyUTXO][]sqldb.SpentInfo
 }
 
 type OutCtx struct {
@@ -69,7 +69,7 @@ func WithOutCtxRollBackTx(ret []*types.RollbackTx) OutCtxOption {
 	}
 }
 
-func WithOutCtxTxOutputs(txOutputsMap map[int64][]sqldb.SpentInfo) OutCtxOption {
+func WithOutCtxTxOutputs(txOutputsMap map[sqldb.KeyUTXO][]sqldb.SpentInfo) OutCtxOption {
 	return func(b *OutCtx) {
 		var list []sqldb.SpentInfo
 		for _, txOutputs := range txOutputsMap {
@@ -79,7 +79,7 @@ func WithOutCtxTxOutputs(txOutputsMap map[int64][]sqldb.SpentInfo) OutCtxOption 
 	}
 }
 
-func WithOutCtxTxInputs(txInputsMap map[int64][]sqldb.SpentInfo) OutCtxOption {
+func WithOutCtxTxInputs(txInputsMap map[sqldb.KeyUTXO][]sqldb.SpentInfo) OutCtxOption {
 	return func(b *OutCtx) {
 		var list []sqldb.SpentInfo
 		for _, txInputs := range txInputsMap {

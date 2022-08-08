@@ -122,7 +122,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	if err != nil {
 		return err
 	}
-	b.OutputsMap = make(map[int64][]sqldb.SpentInfo)
+	b.OutputsMap = make(map[sqldb.KeyUTXO][]sqldb.SpentInfo)
 	sqldb.PutAllOutputsMap(outputs, b.OutputsMap)
 
 	var wg sync.WaitGroup

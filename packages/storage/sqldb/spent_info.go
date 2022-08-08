@@ -6,6 +6,8 @@
 package sqldb
 
 import (
+	"fmt"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -20,12 +22,20 @@ type SpentInfo struct {
 	OutputIndex  int32  `gorm:"not null"`
 	OutputKeyId  int64  `gorm:"not null"`
 	OutputValue  string `gorm:"not null"`
-	Scene        string
 	Ecosystem    int64
-	Contract     string
 	BlockId      int64
-	Asset        string
 	Action       string `gorm:"-"` // UTXO operation control : change
+}
+
+type KeyUTXO struct {
+	Ecosystem int64
+	//At        string
+	KeyId int64
+	// Asset        string
+}
+
+func (k *KeyUTXO) String() string {
+	return fmt.Sprintf("%d%s%d", k.Ecosystem, "@", k.KeyId)
 }
 
 // TableName returns name of table
@@ -52,7 +62,7 @@ func CreateSpentInfoBatches(dbTx *gorm.DB, spentInfos []SpentInfo) error {
 
 func GetTxOutputsEcosystem(db *DbTransaction, ecosystem int64, keyIds []int64) ([]SpentInfo, error) {
 	query :=
-		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.scene, si.ecosystem, si.contract, si.block_id, si.asset
+		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.ecosystem, si.block_id
 		FROM spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
 		WHERE si.ecosystem = ? AND si.output_key_id IN ? AND  si.input_tx_hash IS NULL
 		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `
@@ -66,7 +76,7 @@ func GetTxOutputsEcosystem(db *DbTransaction, ecosystem int64, keyIds []int64) (
 
 func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	query :=
-		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.scene, si.ecosystem, si.contract, si.block_id, si.asset
+		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.ecosystem, si.block_id
 		FROM spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
 		WHERE si.output_key_id IN ? AND si.input_tx_hash IS NULL
 		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `

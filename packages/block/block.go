@@ -27,7 +27,7 @@ type Block struct {
 	Transactions      []*transaction.Transaction
 	GenBlock          bool // it equals true when we are generating a new block
 	Notifications     []types.Notifications
-	OutputsMap        map[int64][]sqldb.SpentInfo
+	OutputsMap        map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	ClassifyTxsMap    map[int][]*transaction.Transaction
 }
 
