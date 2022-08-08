@@ -73,20 +73,15 @@ func SyncMatchineStateRes(request *network.BroadcastNodeConnInfoRequest) (*netwo
 }
 
 func checkClientVote(r *network.CandidateNodeVotingRequest, voteMsgParam *network.VoteMsg) (*network.VoteMsg, error) {
-	prevBlock := &sqldb.InfoBlock{}
+	var (
+		prevBlock        = &sqldb.InfoBlock{}
+		st               = time.Now()
+		candidateNodeSql = &sqldb.CandidateNode{}
+	)
 	_, err := prevBlock.Get()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting previous block")
 		return nil, err
-	}
-	NodePrivateKey, NodePublicKey := utils.GetNodeKeys()
-	if len(NodePrivateKey) < 1 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
-		return nil, errors.New(`node private key is empty`)
-	}
-	if len(NodePublicKey) < 1 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
-		return nil, errors.New(`node public key is empty`)
 	}
 	voteMsg := &network.VoteMsg{
 		CurrentBlockHeight: prevBlock.BlockID,
@@ -96,20 +91,27 @@ func checkClientVote(r *network.CandidateNodeVotingRequest, voteMsgParam *networ
 		Hash:               prevBlock.Hash,
 		Time:               time.Now().UnixMilli(),
 	}
-	if voteMsg.CurrentBlockHeight < prevBlock.BlockID {
+	if voteMsgParam.CurrentBlockHeight < prevBlock.BlockID {
 		voteMsg.Msg = "Not synced to latest block"
 		voteMsg.Agree = false
+		signed, err := sign(voteMsg)
+		if err != nil {
+			return nil, err
+		}
+		voteMsg.Sign = signed
 		return voteMsg, nil
 	}
-	st := time.Now()
 	timeVerification := st.After(time.Unix(voteMsgParam.Time, 0))
 	if timeVerification {
 		voteMsg.Msg = "Time verification failed"
 		voteMsg.Agree = false
+		signed, err := sign(voteMsg)
+		if err != nil {
+			return nil, err
+		}
+		voteMsg.Sign = signed
 		return voteMsg, nil
 	}
-
-	candidateNodeSql := &sqldb.CandidateNode{}
 	err = candidateNodeSql.GetCandidateNodeByAddress(voteMsgParam.LocalAddress)
 	if err != nil {
 		return nil, err
@@ -120,21 +122,31 @@ func checkClientVote(r *network.CandidateNodeVotingRequest, voteMsgParam *networ
 	if err != nil {
 		voteMsg.Msg = "Signature verification failed"
 		voteMsg.Agree = false
-		voteMsg.Time = time.Now().UnixMilli()
 		return voteMsg, nil
 	}
-
 	voteMsg.Msg = "Passed the verification"
 	voteMsg.Agree = true
-	voteMsg.Time = time.Now().UnixMilli()
+	signed, err := sign(voteMsg)
+	if err != nil {
+		return nil, err
+	}
+	voteMsg.Sign = signed
 
+	return voteMsg, nil
+}
+
+func sign(voteMsg *network.VoteMsg) ([]byte, error) {
+	NodePrivateKey, _ := utils.GetNodeKeys()
+	if len(NodePrivateKey) < 1 {
+		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
+		return nil, errors.New(`node private key is empty`)
+	}
 	signStr := voteMsg.VerifyVoteForSign()
 	signed, err := crypto.SignString(NodePrivateKey, signStr)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("verify voting signature")
 		return nil, err
 	}
-	voteMsg.Sign = signed
 
-	return voteMsg, nil
+	return signed, nil
 }

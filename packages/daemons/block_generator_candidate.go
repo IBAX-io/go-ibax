@@ -244,11 +244,6 @@ func GetThisNodePosition(candidateNodes sqldb.CandidateNodes, prevBlock *sqldb.I
 					return candidateNodes[maxIndex], true
 				}
 			}
-			for i, node := range candidateNodes {
-				if NodePublicKey == node.NodePubKey {
-					return candidateNodes[i], true
-				}
-			}
 		}
 	}
 	return candidateNode, false
