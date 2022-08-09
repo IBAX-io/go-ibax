@@ -6,6 +6,7 @@
 package api
 
 import (
+	"github.com/shopspring/decimal"
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -19,6 +20,8 @@ import (
 type balanceResult struct {
 	Amount string `json:"amount"`
 	Money  string `json:"money"`
+	Total  string `json:"total"`
+	Utxo   string `json:"utxo"`
 }
 
 func (m Mode) getBalanceHandler(w http.ResponseWriter, r *http.Request) {
@@ -49,9 +52,21 @@ func (m Mode) getBalanceHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
+	accountAmount, _ := decimal.NewFromString(key.Amount)
+
+	sp := &sqldb.SpentInfo{}
+	utxoAmount, err := sp.GetBalance(nil, keyID, form.EcosystemID)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting UTXO Key for wallet")
+		errorResponse(w, err)
+		return
+	}
+	total := utxoAmount.Add(accountAmount)
 
 	jsonResponse(w, &balanceResult{
 		Amount: key.Amount,
-		Money:  converter.ChainMoney(key.Amount),
+		Money:  converter.ChainMoney(total.String()),
+		Total:  total.String(),
+		Utxo:   utxoAmount.String(),
 	})
 }

@@ -6,9 +6,10 @@
 package sqldb
 
 import (
+	"errors"
 	"fmt"
-
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -108,4 +109,18 @@ func GetBlockOutputs(dbTx *DbTransaction, blockID int64) ([]SpentInfo, error) {
 	var result []SpentInfo
 	err := GetDB(dbTx).Where("block_id = ?", blockID).Find(&result).Error
 	return result, err
+}
+
+func (si *SpentInfo) GetBalance(db *DbTransaction, keyId, ecosystem int64) (decimal.Decimal, error) {
+	var amount decimal.Decimal
+	f, err := isFound(GetDB(db).Table(si.TableName()).Select("coalesce(sum(output_value),'0') amount").
+		Where("input_tx_hash is NULL AND output_key_id = ? AND ecosystem = ?", keyId, ecosystem).Take(&amount))
+	if err != nil {
+		return decimal.Zero, err
+	}
+	if !f {
+		return decimal.Zero, errors.New("doesn't not exist UTXO output_key_id")
+	}
+
+	return amount, err
 }
