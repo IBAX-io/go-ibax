@@ -6,6 +6,7 @@ package types
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -141,5 +142,16 @@ func (txSmart *SmartTransaction) Validate() error {
 	if txSmart.NetworkID != conf.Config.LocalConf.NetworkID {
 		return fmt.Errorf("error networkid invalid")
 	}
+	if txSmart.UTXO != nil && len(txSmart.UTXO.Value) > 0 {
+		if ok, _ := regexp.MatchString("^\\d+$", txSmart.UTXO.Value); !ok {
+			return fmt.Errorf("error UTXO %s must integer", txSmart.UTXO.Value)
+		}
+	}
+	if txSmart.TransferSelf != nil && len(txSmart.TransferSelf.Value) > 0 {
+		if ok, _ := regexp.MatchString("^\\d+$", txSmart.TransferSelf.Value); !ok {
+			return fmt.Errorf("error TransferSelf %s must integer", txSmart.TransferSelf.Value)
+		}
+	}
+
 	return nil
 }
