@@ -65,8 +65,9 @@ type TransferSelf struct {
 
 // UTXO Transfer
 type UTXO struct {
-	ToID  int64
-	Value string
+	ToID    int64
+	Value   string
+	Comment string
 }
 
 // SmartTransaction is storing smart contract data
