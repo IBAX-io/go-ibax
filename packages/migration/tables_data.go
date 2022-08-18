@@ -34,7 +34,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "pub": "ContractAccess(\"@1NewUser\")",
             "amount": "ContractAccess(\"@1TokensTransfer\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\")",
             "maxpay": "ContractConditions(\"@1MainCondition\")",
-            "deleted": "ContractConditions(\"@1MainCondition\")",
+            "deleted": "ContractAccess(\"@1DeleteMember\")",
             "blocked": "ContractAccess(\"@1TokensLockoutMember\")",
             "account": "false",
             "ecosystem": "false",
@@ -44,7 +44,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     ),
     (next_id('1_tables'), 'history',
         '{
-            "insert": "ContractAccess(\"@1TokensTransfer\",\"@1NewUser\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1MembershipRequest\",\"@1MembershipDecide\",\"@1MembershipAdd\")",
+            "insert": "ContractAccess(\"@1TokensTransfer\",\"@1NewUser\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1MembershipRequest\",\"@1MembershipDecide\",\"@1MembershipAdd\",\"@1DeleteMember\")",
             "update": "ContractConditions(\"@1MainCondition\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',

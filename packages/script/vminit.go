@@ -48,22 +48,6 @@ type FieldInfo struct {
 	Tags     string
 }
 
-var ContractPrices = map[string]string{
-	`@1NewTable`:       `price_create_table`,
-	`@1NewContract`:    `price_create_contract`,
-	`@1NewEcosystem`:   `price_create_ecosystem`,
-	`@1NewMenu`:        `price_create_menu`,
-	`@1NewPage`:        `price_create_page`,
-	`@1NewColumn`:      `price_create_column`,
-	`@1NewApplication`: `price_create_application`,
-	`@1NewSnippet`:     `price_create_snippet`,
-	`@1NewView`:        `price_create_view`,
-	`@1NewToken`:       `price_create_token`,
-	`@1NewAsset`:       `price_create_asset`,
-	`@1NewLang`:        `price_create_lang`,
-	`@1NewSection`:     `price_create_section`,
-}
-
 // ContainsTag returns whether the tag is contained in this field
 func (fi *FieldInfo) ContainsTag(tag string) bool {
 	return strings.Contains(fi.Tags, tag)
