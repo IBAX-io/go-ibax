@@ -77,7 +77,7 @@ func (tr *Transaction) WithOption(
 	rand *rand.Rand,
 	txCheckLimits *Limits,
 	sqlDbSavePoint string,
-	outputsMap map[int64][]sqldb.SpentInfo,
+	outputsMap map[sqldb.KeyUTXO][]sqldb.SpentInfo,
 	opts ...TransactionOption) error {
 	in := &InToCxt{
 		SqlDbSavePoint: sqlDbSavePoint,

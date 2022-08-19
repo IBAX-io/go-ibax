@@ -86,9 +86,9 @@ type SmartContract struct {
 	taxes           bool
 	Penalty         bool
 	TokenEcosystems map[int64]any
-	OutputsMap      map[int64][]sqldb.SpentInfo
-	TxInputsMap     map[int64][]sqldb.SpentInfo
-	TxOutputsMap    map[int64][]sqldb.SpentInfo
+	OutputsMap      map[sqldb.KeyUTXO][]sqldb.SpentInfo
+	TxInputsMap     map[sqldb.KeyUTXO][]sqldb.SpentInfo
+	TxOutputsMap    map[sqldb.KeyUTXO][]sqldb.SpentInfo
 }
 
 // AppendStack adds an element to the stack of contract call or removes the top element when name is empty
@@ -305,8 +305,8 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 			return tablePermission, err
 		}
 		if !ret {
-			logger.WithFields(log.Fields{"action": action, "permissions": tablePermission[action], "type": consts.EvalError}).Error("access denied")
-			return tablePermission, errAccessDenied
+			logger.WithFields(log.Fields{"table": table, "action": action, "permissions": tablePermission[action], "type": consts.EvalError}).Error("access denied")
+			return tablePermission, fmt.Errorf("table: %w", errAccessDenied)
 		}
 	}
 	return tablePermission, nil
@@ -416,7 +416,8 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 				checked[name] = ret
 				if !ret {
 					if update {
-						return errAccessDenied
+						logger.WithFields(log.Fields{"table": table, "column": name, "condition": cond, "type": consts.EvalError}).Error("access denied")
+						return fmt.Errorf("column: %w", errAccessDenied)
 					}
 					colList[i] = ``
 					notaccess = true

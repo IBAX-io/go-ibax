@@ -6,6 +6,7 @@ package types
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -59,15 +60,15 @@ type Header struct {
 
 type TransferSelf struct {
 	Value  string
-	Asset  string
 	Source string
 	Target string
 }
 
 // UTXO Transfer
 type UTXO struct {
-	ToID  int64
-	Value string
+	ToID    int64
+	Value   string
+	Comment string
 }
 
 // SmartTransaction is storing smart contract data
@@ -141,5 +142,16 @@ func (txSmart *SmartTransaction) Validate() error {
 	if txSmart.NetworkID != conf.Config.LocalConf.NetworkID {
 		return fmt.Errorf("error networkid invalid")
 	}
+	if txSmart.UTXO != nil && len(txSmart.UTXO.Value) > 0 {
+		if ok, _ := regexp.MatchString("^\\d+$", txSmart.UTXO.Value); !ok {
+			return fmt.Errorf("error UTXO %s must integer", txSmart.UTXO.Value)
+		}
+	}
+	if txSmart.TransferSelf != nil && len(txSmart.TransferSelf.Value) > 0 {
+		if ok, _ := regexp.MatchString("^\\d+$", txSmart.TransferSelf.Value); !ok {
+			return fmt.Errorf("error TransferSelf %s must integer", txSmart.TransferSelf.Value)
+		}
+	}
+
 	return nil
 }

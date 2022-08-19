@@ -1,10 +1,20 @@
 // +prop AppID = '{{.AppID}}'
 // +prop Conditions = 'ContractConditions("MainCondition")'
 contract MainCondition {
+    func chooseControl(){
+        $control = DBFind("@1ecosystems").Where({"id":$ecosystem_id,"control_mode":{"$in":["1","2"]}}).Row()
+        if !$control{
+            warning "control mode error"
+        }
+    }
 	conditions {
+	    chooseControl()
+        if $control["control_mode"] == 2{
+            return
+        }
 		if EcosysParam("founder_account")!=$key_id
 		{
-			warning "Sorry, you do not have access to this action."
+			warning "MainCondition: Sorry, you do not have access to this action."
 		}
 	}
 }

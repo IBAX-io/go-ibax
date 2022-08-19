@@ -55,8 +55,8 @@ func (s *SmartTransactionParser) Init(t *InToCxt) error {
 	s.Rollback = true
 	s.SysUpdate = false
 	s.OutputsMap = t.OutputsMap
-	s.TxInputsMap = make(map[int64][]sqldb.SpentInfo)
-	s.TxOutputsMap = make(map[int64][]sqldb.SpentInfo)
+	s.TxInputsMap = make(map[sqldb.KeyUTXO][]sqldb.SpentInfo)
+	s.TxOutputsMap = make(map[sqldb.KeyUTXO][]sqldb.SpentInfo)
 	s.RollBackTx = make([]*types.RollbackTx, 0)
 	if s.GenBlock {
 		s.TimeLimit = syspar.GetMaxBlockGenerationTime()
@@ -116,7 +116,7 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 
 	_transferSelf := s.TxSmart.TransferSelf
 	if _transferSelf != nil {
-		_, err = smart.TransferSelf(s.SmartContract, _transferSelf.Value, _transferSelf.Asset, _transferSelf.Source, _transferSelf.Target)
+		_, err = smart.TransferSelf(s.SmartContract, _transferSelf.Value, _transferSelf.Source, _transferSelf.Target)
 		if err != nil {
 			return err
 		}
