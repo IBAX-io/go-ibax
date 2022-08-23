@@ -1,4 +1,4 @@
-//go:build (linux || freebsd || darwin) && (386 || amd64)
+//go:build (linux || freebsd || darwin) && (386 || amd64 || arm64)
 
 /*---------------------------------------------------------------------------------------------
  *  Copyright (c) IBAX. All rights reserved.
