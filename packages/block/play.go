@@ -171,15 +171,15 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 
 		walletAddress := make(map[int64]int64)
 		groupTransferSelfTxs(transactions, walletAddress)
-		for g, transactions := range transferSelfTxsGroupMap {
+		for _, transactions := range transferSelfTxsGroupMap {
 			wg.Add(1)
-			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _afters *types.AfterTxs, _processedTx *[][]byte, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
+			go func(_dbTx *sqldb.DbTransaction, _txBadChan chan badTxStruct, _transactions []*transaction.Transaction, _afters *types.AfterTxs, _processedTx *[][]byte, _lock *sync.RWMutex) {
 				defer wg.Done()
-				err := b.serialExecuteTxs(_dbTx, txBadChan, _afters, _processedTx, _transactions, _lock)
+				err := b.serialExecuteTxs(_dbTx, _txBadChan, _afters, _processedTx, _transactions, _lock)
 				if err != nil {
 					return
 				}
-			}(dbTx, g, transactions, afters, &processedTx, transferSelfTxsGroupMap, lock)
+			}(dbTx, txBadChan, transactions, afters, &processedTx, lock)
 		}
 		wg.Wait()
 		transferSelfTxsGroupMap = make(map[string][]*transaction.Transaction, 0)
@@ -197,15 +197,15 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		if len(txsMap[types.SmartContractTxType]) > 0 {
 			utxoTxsGroupMap[strconv.Itoa(0)] = txsMap[types.SmartContractTxType]
 		}
-		for g, transactions := range utxoTxsGroupMap {
+		for _, transactions := range utxoTxsGroupMap {
 			wg.Add(1)
-			go func(_dbTx *sqldb.DbTransaction, _g string, _transactions []*transaction.Transaction, _afters *types.AfterTxs, _processedTx *[][]byte, _utxoTxsGroupMap map[string][]*transaction.Transaction, _lock *sync.RWMutex) {
+			go func(_dbTx *sqldb.DbTransaction, _txBadChan chan badTxStruct, _transactions []*transaction.Transaction, _afters *types.AfterTxs, _processedTx *[][]byte, _lock *sync.RWMutex) {
 				defer wg.Done()
-				err := b.serialExecuteTxs(_dbTx, txBadChan, _afters, _processedTx, _transactions, _lock)
+				err := b.serialExecuteTxs(_dbTx, _txBadChan, _afters, _processedTx, _transactions, _lock)
 				if err != nil {
 					return
 				}
-			}(dbTx, g, transactions, afters, &processedTx, utxoTxsGroupMap, lock)
+			}(dbTx, txBadChan, transactions, afters, &processedTx, lock)
 		}
 		wg.Wait()
 		utxoTxsGroupMap = make(map[string][]*transaction.Transaction, 0)
