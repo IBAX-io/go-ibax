@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -56,6 +57,10 @@ func initVars(r *http.Request) *map[string]string {
 	vars["_full"] = "0"
 	vars["guest_key"] = consts.GuestKey
 	vars["guest_account"] = consts.GuestAddress
+	vars["black_hole_key"] = strconv.FormatInt(converter.HoleAddrMap[converter.BlackHoleAddr].K, 10)
+	vars["black_hole_account"] = converter.HoleAddrMap[converter.BlackHoleAddr].S
+	vars["white_hole_key"] = strconv.FormatInt(converter.HoleAddrMap[converter.WhiteHoleAddr].K, 10)
+	vars["white_hole_account"] = converter.HoleAddrMap[converter.WhiteHoleAddr].S
 	if client.KeyID != 0 {
 		vars["ecosystem_id"] = converter.Int64ToStr(client.EcosystemID)
 		vars["key_id"] = converter.Int64ToStr(client.KeyID)
