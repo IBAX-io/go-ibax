@@ -28,6 +28,10 @@ type compileState struct {
 	FuncHandle compileFunc // a handle function
 }
 
+func newCompileState(newState stateTypes, funcFlag int) compileState {
+	return compileState{NewState: newState, FuncFlag: funcFlag, FuncHandle: funcHandles[funcFlag]}
+}
+
 const (
 	mapConst = iota
 	mapVar
@@ -106,7 +110,7 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
 	if len(lexems) == 0 {
 		return root, nil
 	}
-	curState := stateTypes(0)
+	curState := stateRoot
 	stack := make([]stateTypes, 0, 64)
 	blockstack := make(CodeBlocks, 1, 64)
 	blockstack[0] = root
