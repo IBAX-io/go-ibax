@@ -22,18 +22,18 @@ import (
 // where the incoming text is divided into a sequence of lexemes.
 
 const (
-	//	lexUnknown = iota
-	// Here are all the created lexemes
-	lexSys     = iota + 1 // a system lexeme is different bracket, =, comma and so on.
-	lexOper               // Operator is +, -, *, /
-	lexNumber             // Number
-	lexIdent              // Identifier
-	lexNewLine            // Line translation
-	lexString             // String
-	lexComment            // Comment
-	lexKeyword            // Key word
-	lexType               // Name of the type
-	lexExtend             // Referring to an external variable or function - $myname
+	// Here are all the created lexemess
+	lexUnknown = iota
+	lexSys     // a system lexeme is different bracket, =, comma and so on.
+	lexOper    // Operator is +, -, *, /
+	lexNumber  // Number
+	lexIdent   // Identifier
+	lexNewLine // Line translation
+	lexString  // String
+	lexComment // Comment
+	lexKeyword // Key word
+	lexType    // Name of the type
+	lexExtend  // Referring to an external variable or function - $myname
 
 	lexError = 0xff
 	// flags of lexical states
@@ -197,6 +197,10 @@ type Lexem struct {
 	Column uint32 // Position inside the line
 }
 
+func NewLexem(t uint32, ext uint32, value any, line uint16, column uint32) *Lexem {
+	return &Lexem{Type: t, Ext: ext, Value: value, Line: line, Column: column}
+}
+
 // GetLogger returns logger
 func (l *Lexem) GetLogger() *log.Entry {
 	return log.WithFields(log.Fields{"lex_type": l.Type, "lex_line": l.Line, "lex_column": l.Column})
@@ -277,8 +281,7 @@ func lexParser(input []rune) (Lexems, error) {
 				name := string(input[lexOff:right])
 				if name != `else` && name != `elif` {
 					for i := 0; i < ifbuf[len(ifbuf)-1].count; i++ {
-						lexems = append(lexems, &Lexem{Type: lexSys | (uint32('}') << 8),
-							Value: uint32('}'), Line: uint16(line), Column: lexOff - offline + 1})
+						lexems = append(lexems, NewLexem(lexSys|(uint32('}')<<8), ext, uint32('}'), uint16(line), lexOff-offline+1))
 					}
 					ifbuf = ifbuf[:len(ifbuf)-1]
 				} else {
@@ -352,9 +355,9 @@ func lexParser(input []rune) (Lexems, error) {
 						value = keyID
 					case keyElif:
 						if len(ifbuf) > 0 {
-							lexems = append(lexems, &Lexem{Type: lexKeyword | (keyElse << 8),
-								Value: uint32(keyElse), Line: uint16(line), Column: lexOff - offline + 1},
-								&Lexem{Type: lexSys | ('{' << 8), Value: uint32('{'), Line: uint16(line), Column: lexOff - offline + 1})
+							lexems = append(lexems,
+								NewLexem(lexKeyword|(keyElse<<8), ext, uint32(keyElse), uint16(line), lexOff-offline+1),
+								NewLexem(lexSys|('{'<<8), ext, uint32('{'), uint16(line), lexOff-offline+1))
 							lexID = lexKeyword | (keyIf << 8)
 							value = uint32(keyIf)
 							ifbuf[len(ifbuf)-1].count++
@@ -363,8 +366,7 @@ func lexParser(input []rune) (Lexems, error) {
 						if len(lexems) > 0 {
 							lexf := *lexems[len(lexems)-1]
 							if lexf.Type&0xff != lexKeyword || lexf.Value.(uint32) != keyFunc {
-								lexems = append(lexems, &Lexem{Type: lexKeyword | (keyFunc << 8),
-									Value: keyFunc, Line: uint16(line), Column: lexOff - offline + 1})
+								lexems = append(lexems, NewLexem(lexKeyword|(keyFunc<<8), ext, uint32(keyFunc), uint16(line), lexOff-offline+1))
 							}
 						}
 						value = name
@@ -390,7 +392,7 @@ func lexParser(input []rune) (Lexems, error) {
 				}
 			}
 			if lexID != lexComment {
-				lexems = append(lexems, &Lexem{Type: lexID, Ext: ext, Value: value, Line: uint16(line), Column: lexOff - offline + 1})
+				lexems = append(lexems, NewLexem(lexID, ext, value, uint16(line), lexOff-offline+1))
 			}
 		}
 		if (flags & lexfPush) != 0 {

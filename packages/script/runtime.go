@@ -201,7 +201,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 					}
 				}
 				if reflect.TypeOf(rt.stack[len(rt.stack)-in+i]) != v {
-					log.WithFields(log.Fields{"type": consts.VMError}).Error(eTypeParam)
+					log.WithFields(log.Fields{"type": consts.VMError}).Error(fmt.Sprintf(eTypeParam, i+1))
 					return fmt.Errorf(eTypeParam, i+1)
 				}
 			}
