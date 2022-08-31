@@ -356,10 +356,15 @@ func fConstValue(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 }
 
 func fField(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	tx := buf.peek().Info.ContractInfo().Tx
+	info := buf.peek().Info.ContractInfo()
+	tx := info.Tx
 	if len(*tx) > 0 && (*tx)[len(*tx)-1].Type == reflect.TypeOf(nil) &&
 		(*tx)[len(*tx)-1].Tags != `_` {
 		return fmt.Errorf(eDataType, lexem.Line, lexem.Column)
+	}
+	if isSysVar(lexem.Value.(string)) {
+		lexem.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "contract": info.Name, "lex_value": lexem.Value.(string)}).Error("param variable in the data section of the contract collides with the 'builtin' variable")
+		return fmt.Errorf(eDataParamVarCollides, lexem.Value.(string), info.Name)
 	}
 	*tx = append(*tx, &FieldInfo{Name: lexem.Value.(string), Type: reflect.TypeOf(nil)})
 	return nil

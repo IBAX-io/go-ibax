@@ -25,23 +25,74 @@ const (
 )
 
 /*
-	Here we define the alphabet with which our language will work and describe the state machine that
-	passes from one state to another depending on the next received character.
-	This program converts the list of states into a numeric array and saves it as packages/script/lex_table.go
+Here we define the alphabet with which our language will work and describe the state machine that
+passes from one state to another depending on the next received character.
+This program converts the list of states into a numeric array and saves it as packages/script/lex_table.go
 */
 var (
 	table [][AlphaSize]uint32
-	lexem = map[string]uint32{``: 0, `sys`: 1, `oper`: 2, `number`: 3, `ident`: 4, `newline`: 5, `string`: 6,
-		`comment`: 7}
-	flags    = map[string]uint32{`next`: 1, `push`: 2, `pop`: 4, `skip`: 8}
-	alphabet = []byte{0x01, 0x0a, ' ', '`', '"', ';', '(', ')', '[', ']', '{', '}', '&',
-		//           default  n    s    q    Q
-		'|', '#', '.', ',', '<', '>', '=', '!', '*', '$', '@', ':',
-		'+', '-', '/', '\\', '0', '1', 'a', '_', 128}
+	lexem = map[string]uint32{
+		``:        0,
+		`sys`:     1,
+		`oper`:    2,
+		`number`:  3,
+		`ident`:   4,
+		`newline`: 5,
+		`string`:  6,
+		`comment`: 7,
+	}
+	flags = map[string]uint32{
+		`next`: 1,
+		`push`: 2,
+		`pop`:  4,
+		`skip`: 8,
+	}
+	alphabet = []byte{
+		0x01, //default
+		0x0a, //newline
+		' ',  //space
+		'`',  //back quotes
+		'"',  //double quotes
+		';',
+		'(',
+		')',
+		'[',
+		']',
+		'{',
+		'}',
+		'&',
+		'|',
+		'#',
+		'.',
+		',',
+		'<',
+		'>',
+		'=',
+		'!',
+		'*',
+		'$',
+		'@',
+		':',
+		'+',
+		'-',
+		'/',
+		'\\',
+		'0',
+		'1',
+		'a',
+		'_',
+		128,
+	}
 	/*
-		In states we have designated for d - all characters that are not specified in the state
-		n - 0x0a, s - space, q - back quotes `, Q - double quotes, r - characters> = 128
-		a - A-Z and a-z, 1 - 1-9
+		In states we have designated for
+		d - all characters that are not specified in the state
+		n - 0x0a,
+		s - space,
+		q - back quotes `,
+		Q - double quotes,
+		r - characters >= 128,
+		a - A-Z and a-z,
+		1 - 1-9
 		State names are used as keys, and possible character sets are listed in the value object
 		and then for each such set there is a new state where the transition should be made, then the name of the token,
 		if we need to return to the initial state and the service flags are the third parameter,
@@ -186,81 +237,81 @@ var (
 		data States
 	)
 	state2int := map[string]uint{`main`: 0}
-	if err := json.Unmarshal([]byte(states), &data); err == nil {
-		for key := range data {
-			if key != `main` {
-				state2int[key] = uint(len(state2int))
-			}
+	if err := json.Unmarshal([]byte(states), &data); err != nil {
+		fmt.Println(err)
+	}
+	for key := range data {
+		if key != `main` {
+			state2int[key] = uint(len(state2int))
 		}
-		table = make([][AlphaSize]uint32, len(state2int))
-		for key, istate := range data {
-			curstate := state2int[key]
-			for i := range table[curstate] {
-				table[curstate][i] = 0xFE0000
+	}
+	table = make([][AlphaSize]uint32, len(state2int))
+	for key, istate := range data {
+		curstate := state2int[key]
+		for i := range table[curstate] {
+			table[curstate][i] = 0xFE0000
+		}
+		fmt.Println(state2int)
+		for skey, sval := range istate {
+			var val uint32
+			if sval[0] == `error` {
+				val = 0xff0000
+			} else {
+				val = uint32(state2int[sval[0]] << 16) // new state
 			}
-
-			for skey, sval := range istate {
-				var val uint32
-				if sval[0] == `error` {
-					val = 0xff0000
-				} else {
-					val = uint32(state2int[sval[0]] << 16) // new state
-				}
-				val |= uint32(lexem[sval[1]] << 8) // lexem
-				cmds := strings.Split(sval[2], ` `)
-				var flag uint32
-				for _, icmd := range cmds {
-					flag |= flags[icmd]
-				}
-				val |= flag
-				for _, ch := range []byte(skey) {
-					var ind int
-					switch ch {
-					case 'd':
-						ind = 0
-					case 'n':
-						ind = 1
-					case 's':
-						ind = 2
-					case 'q':
-						ind = 3
-					case 'Q':
-						ind = 4
-					case 'r':
-						ind = AlphaSize - 1
-					default:
-						for k, ach := range alphabet {
-							if ach == ch {
-								ind = k
-								break
-							}
-						}
-					}
-					table[curstate][ind] = val
-					if ind == 0 { // default value
-						for i := range table[curstate] {
-							if table[curstate][i] == 0xFE0000 {
-								table[curstate][i] = val
-							}
+			val |= lexem[sval[1]] << 8 // lexem
+			cmds := strings.Split(sval[2], ` `)
+			var flag uint32
+			for _, icmd := range cmds {
+				flag |= flags[icmd]
+			}
+			val |= flag
+			for _, ch := range []byte(skey) {
+				var ind int
+				switch ch {
+				case 'd':
+					ind = 0
+				case 'n':
+					ind = 1
+				case 's':
+					ind = 2
+				case 'q':
+					ind = 3
+				case 'Q':
+					ind = 4
+				case 'r':
+					ind = AlphaSize - 1
+				default:
+					for k, ach := range alphabet {
+						if ach == ch {
+							ind = k
+							break
 						}
 					}
 				}
+				table[curstate][ind] = val
+				if ind == 0 { // default value
+					for i := range table[curstate] {
+						if table[curstate][i] == 0xFE0000 {
+							table[curstate][i] = val
+						}
+					}
+				}
 			}
 		}
-		out += "\t\tlexTable = [][" + fmt.Sprint(AlphaSize) + "]uint32{\r\n"
-		for _, line := range table {
-			out += "\t\t\t{"
-			for _, ival := range line {
-				out += fmt.Sprintf(" 0x%x,", ival)
-			}
-			out += "\r\n\t\t\t},\r\n"
+	}
+	out += "\t\tlexTable = [][" + fmt.Sprint(AlphaSize) + "]uint32{\r\n"
+	for _, line := range table {
+		out += "\t\t\t{"
+		for _, ival := range line {
+			out += fmt.Sprintf(" 0x%x,", ival)
 		}
-		out += "\t\t\t}\r\n)\r\n"
-		err = os.WriteFile("../lex_table.go", []byte(out), 0644)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-	} else {
+		out += "\r\n\t\t\t},\r\n"
+	}
+	out += "\t\t\t}\r\n)\r\n"
+	err := os.WriteFile("../lex_table.go", []byte(out), 0644)
+	if err != nil {
 		fmt.Println(err.Error())
 	}
+
 }

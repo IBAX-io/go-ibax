@@ -133,7 +133,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 		obj := rt.vm.Objects[`check_signature`]
 		finfo := obj.Value.ExtFuncInfo()
 		if err := finfo.Func.(func(map[string]any, string) error)(rt.extend, name); err != nil {
-			logger.WithFields(log.Fields{"error": err, "func_name": finfo.Name, "type": consts.ContractError}).Error("executing exended function")
+			logger.WithFields(log.Fields{"error": err, "func_name": finfo.Name, "type": consts.ContractError}).Error("executing extended function")
 			return nil, err
 		}
 	}
