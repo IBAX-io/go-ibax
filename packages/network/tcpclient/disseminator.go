@@ -153,6 +153,7 @@ func SendFullBlockToAll(ctx context.Context, hosts []string, block *sqldb.InfoBl
 	wg.Wait()
 
 	if int(errCount) == len(hosts) {
+		log.WithFields(log.Fields{"type": consts.NetworkError, "err_count": errCount}).Error(ErrNodesUnavailable)
 		return ErrNodesUnavailable
 	}
 
