@@ -31,8 +31,10 @@ func Disseminator(ctx context.Context, d *daemon) error {
 	DBLock()
 	defer DBUnlock()
 
-	isHonorNode := true
-	selectMode := SelectModel{}
+	var (
+		isHonorNode = true
+		selectMode  = SelectModel{}
+	)
 	myNodePosition, err := selectMode.GetThisNodePosition()
 
 	if err != nil {
@@ -64,7 +66,18 @@ func sendTransactions(ctx context.Context, logger *log.Entry) error {
 		return nil
 	}
 
-	hosts := syspar.GetDefaultRemoteHosts()
+	hosts := make([]string, 0)
+	if syspar.IsHonorNodeMode() {
+		hosts = syspar.GetDefaultRemoteHosts()
+	} else {
+		candidateNodes, err := GetCandidateNodes()
+		if err != nil {
+			return err
+		}
+		for _, node := range candidateNodes {
+			hosts = append(hosts, node.TcpAddress)
+		}
+	}
 
 	if err := tcpclient.SendTransacitionsToAll(ctx, hosts, *trs); err != nil {
 		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on sending transactions")
