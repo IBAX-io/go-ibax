@@ -66,7 +66,7 @@ func (m *CodeBlock) GetContractInfo() *ContractInfo {
 type ByteCode struct {
 	Cmd    uint16
 	Line   uint16
-	Lexeme Lexem
+	Lexeme Lexeme
 	Value  any
 }
 

@@ -106,7 +106,7 @@ func TestDBFindContract(t *testing.T) {
 			$result = Len(fm)
 		}}`}, "ApplicationId": {"1"}, `Conditions`: {`true`}}
 	assert.EqualError(t, postTx(`NewContract`, &form),
-		`{"type":"panic","error":"unexpected lexem; expecting string key [CreateContract @1NewContract:32]"}`)
+		`{"type":"panic","error":"unexpected lexeme; expecting string key [CreateContract @1NewContract:32]"}`)
 	form = url.Values{`Value`: {`contract ` + rnd + `2 {
 				data {
 				}
@@ -116,7 +116,7 @@ func TestDBFindContract(t *testing.T) {
 					   "app_id": 1,"id": {"$gt": 2},})
 				}}`}, "ApplicationId": {"1"}, `Conditions`: {`true`}}
 	assert.EqualError(t, postTx(`NewContract`, &form),
-		`{"type":"panic","error":"unexpected lexem; expecting string key [CreateContract @1NewContract:32]"}`)
+		`{"type":"panic","error":"unexpected lexeme; expecting string key [CreateContract @1NewContract:32]"}`)
 	form = url.Values{`Value`: {`contract ` + rnd + `3 {
 			data {
 			}
@@ -125,7 +125,7 @@ func TestDBFindContract(t *testing.T) {
 				fm = [1, 2, 3,]
 			}}`}, "ApplicationId": {"1"}, `Conditions`: {`true`}}
 	assert.EqualError(t, postTx(`NewContract`, &form),
-		`{"type":"panic","error":"unexpected lexem; expecting string, int value or variable [CreateContract @1NewContract:32]"}`)
+		`{"type":"panic","error":"unexpected lexeme; expecting string, int value or variable [CreateContract @1NewContract:32]"}`)
 
 	form = url.Values{`Value`: {`contract ` + rnd + ` {
 	   		    data {
@@ -648,7 +648,7 @@ var contracts = []smartContract{
 			$$$$$$$$result = "hello"
 		}
 	}`, []smartParams{
-		{nil, map[string]string{`error`: `{"type":"panic","error":"unknown lexem $ [Ln:5 Col:6]"}`}},
+		{nil, map[string]string{`error`: `{"type":"panic","error":"unknown lexeme $ [Ln:5 Col:6]"}`}},
 	}},
 	{`Price`, `contract Price {
 		action {

@@ -721,7 +721,7 @@ func TestVMCompile(t *testing.T) {
 }
 
 func TestContractList(t *testing.T) {
-	test := []TestLexem{{`contract NewContract {
+	test := []TestLexeme{{`contract NewContract {
 		conditions {
 			ValidateCondition($Conditions,$ecosystem_id)
 			while i < Len(list) {

@@ -30,8 +30,8 @@ passes from one state to another depending on the next received character.
 This program converts the list of states into a numeric array and saves it as packages/script/lex_table.go
 */
 var (
-	table [][AlphaSize]uint32
-	lexem = map[string]uint32{
+	table  [][AlphaSize]uint32
+	lexeme = map[string]uint32{
 		``:        0,
 		`sys`:     1,
 		`oper`:    2,
@@ -259,7 +259,7 @@ var (
 			} else {
 				val = uint32(state2int[sval[0]] << 16) // new state
 			}
-			val |= lexem[sval[1]] << 8 // lexem
+			val |= lexeme[sval[1]] << 8 // lexeme
 			cmds := strings.Split(sval[2], ` `)
 			var flag uint32
 			for _, icmd := range cmds {
