@@ -101,27 +101,30 @@ func fError(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 
 func fNameBlock(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 	var itype ObjectType
-
 	prev := (*buf)[len(*buf)-2]
 	fblock := buf.peek()
 	name := lexem.Value.(string)
 	switch state {
 	case stateBlock:
 		itype = ObjectType_Contract
-		name = StateName((*buf)[0].Info.Uint32(), name)
-		fblock.Info = newCodeBlockInfo(&ContractInfo{ID: uint32(len(prev.Children) - 1), Name: name,
-			Owner: (*buf)[0].Owner})
+		name = StateName((*buf)[0].Owner.StateID, name)
+		fblock.Info = &ContractInfo{ID: uint32(len(prev.Children) - 1), Name: name,
+			Owner: (*buf)[0].Owner}
 	default:
 		itype = ObjectType_Func
-		fblock.Info = newCodeBlockInfo(&FuncInfo{})
+		fblock.Info = &FuncInfo{}
 	}
 	fblock.Type = itype
-	prev.Objects[name] = &ObjInfo{Type: itype, Value: newObjInfoValue(fblock)}
+	if _, ok := prev.Objects[name]; ok {
+		lexem.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "contract": prev.GetContractInfo().Name, "lex_value": name}).Errorf("%s redeclared in this contract", itype)
+		return fmt.Errorf("%s '%s' redeclared in this contract '%s'", itype, name, prev.GetContractInfo().Name)
+	}
+	prev.Objects[name] = &ObjInfo{Type: itype, Value: fblock}
 	return nil
 }
 
 func fFuncResult(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	fblock := buf.peek().Info.FuncInfo()
+	fblock := buf.peek().GetFuncInfo()
 	(*fblock).Results = append((*fblock).Results, lexem.Value.(reflect.Type))
 	return nil
 }
@@ -139,7 +142,7 @@ func fCmdError(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 func fFparam(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 	block := buf.peek()
 	if block.Type == ObjectType_Func && (state == stateFParam || state == stateFParamTYPE) {
-		fblock := block.Info.FuncInfo()
+		fblock := block.GetFuncInfo()
 		if fblock.Names == nil {
 			fblock.Params = append(fblock.Params, reflect.TypeOf(nil))
 		} else {
@@ -157,7 +160,7 @@ func fFparam(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 	if block.Objects == nil {
 		block.Objects = make(map[string]*ObjInfo)
 	}
-	block.Objects[lexem.Value.(string)] = &ObjInfo{Type: ObjectType_Var, Value: newObjInfoValue(len(block.Vars))}
+	block.Objects[lexem.Value.(string)] = &ObjInfo{Type: ObjectType_Var, Value: &ObjInfo_Int{Int: len(block.Vars)}}
 	block.Vars = append(block.Vars, reflect.TypeOf(nil))
 	return nil
 }
@@ -165,7 +168,7 @@ func fFparam(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 func fFtype(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 	block := buf.peek()
 	if block.Type == ObjectType_Func && state == stateFParam {
-		fblock := block.Info.FuncInfo()
+		fblock := block.GetFuncInfo()
 		if fblock.Names == nil {
 			for pkey, param := range fblock.Params {
 				if param == reflect.TypeOf(nil) {
@@ -197,7 +200,7 @@ func fFtail(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 	var used bool
 	block := buf.peek()
 
-	fblock := block.Info.FuncInfo()
+	fblock := block.GetFuncInfo()
 	if fblock.Names == nil {
 		for pkey, param := range fblock.Params {
 			if param == reflect.TypeOf(nil) {
@@ -208,7 +211,7 @@ func fFtail(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 				used = true
 			}
 		}
-		block.Info.FuncInfo().Variadic = true
+		block.GetFuncInfo().Variadic = true
 	} else {
 		for key := range *fblock.Names {
 			if key[0] == '_' {
@@ -240,7 +243,7 @@ func fFtail(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 func fFNameParam(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 	block := buf.peek()
 
-	fblock := block.Info.FuncInfo()
+	fblock := block.GetFuncInfo()
 	if fblock.Names == nil {
 		names := make(map[string]FuncName)
 		fblock.Names = &names
@@ -287,12 +290,11 @@ func fAssignVar(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 			lexem.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexem.Value.(string)}).Error("modifying system variable")
 			return fmt.Errorf(eSysVar, lexem.Value.(string))
 		}
-		ivar = VarInfo{Obj: &ObjInfo{Type: ObjectType_ExtVar, Value: newObjInfoValue(lexem.Value.(string))}, Owner: nil}
+		ivar = VarInfo{Obj: &ObjInfo{Type: ObjectType_ExtVar, Value: &ObjInfo_Str{Str: lexem.Value.(string)}}, Owner: nil}
 	} else {
 		objInfo, tobj := findVar(lexem.Value.(string), buf)
 		if objInfo == nil || objInfo.Type != ObjectType_Var {
-			logger := lexem.GetLogger()
-			logger.WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexem.Value.(string)}).Error("unknown variable")
+			lexem.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexem.Value.(string)}).Error("unknown variable")
 			return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
 		}
 		ivar = VarInfo{Obj: objInfo, Owner: tobj}
@@ -323,7 +325,7 @@ func fTx(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 		logger.WithFields(log.Fields{"type": consts.ParseError, "contract_type": contract.Type, "lex_value": lexem.Value}).Error("data can only be in contract")
 		return fmt.Errorf(`data can only be in contract`)
 	}
-	(*contract).Info.ContractInfo().Tx = new([]*FieldInfo)
+	(*contract).GetContractInfo().Tx = new([]*FieldInfo)
 	return nil
 }
 
@@ -334,18 +336,18 @@ func fSettings(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 		logger.WithFields(log.Fields{"type": consts.ParseError, "contract_type": contract.Type, "lex_value": lexem.Value}).Error("data can only be in contract")
 		return fmt.Errorf(`data can only be in contract`)
 	}
-	(*contract).Info.ContractInfo().Settings = make(map[string]any)
+	(*contract).GetContractInfo().Settings = make(map[string]any)
 	return nil
 }
 
 func fConstName(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	sets := buf.peek().Info.ContractInfo().Settings
+	sets := buf.peek().GetContractInfo().Settings
 	sets[lexem.Value.(string)] = nil
 	return nil
 }
 
 func fConstValue(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	sets := buf.peek().Info.ContractInfo().Settings
+	sets := buf.peek().GetContractInfo().Settings
 	for key, val := range sets {
 		if val == nil {
 			sets[key] = lexem.Value
@@ -356,7 +358,7 @@ func fConstValue(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 }
 
 func fField(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	info := buf.peek().Info.ContractInfo()
+	info := buf.peek().GetContractInfo()
 	tx := info.Tx
 	if len(*tx) > 0 && (*tx)[len(*tx)-1].Type == reflect.TypeOf(nil) &&
 		(*tx)[len(*tx)-1].Tags != `_` {
@@ -371,7 +373,7 @@ func fField(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 }
 
 func fFields(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	tx := buf.peek().Info.ContractInfo().Tx
+	tx := buf.peek().GetContractInfo().Tx
 	if len(*tx) > 0 && (*tx)[len(*tx)-1].Type == nil {
 		return fmt.Errorf(eDataType, lexem.Line, lexem.Column)
 	}
@@ -379,7 +381,7 @@ func fFields(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 }
 
 func fFieldComma(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	tx := buf.peek().Info.ContractInfo().Tx
+	tx := buf.peek().GetContractInfo().Tx
 	if len(*tx) == 0 || (*tx)[len(*tx)-1].Type != nil {
 		return fmt.Errorf(eDataName, lexem.Line, lexem.Column)
 	}
@@ -388,7 +390,7 @@ func fFieldComma(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 }
 
 func fFieldLine(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	tx := buf.peek().Info.ContractInfo().Tx
+	tx := buf.peek().GetContractInfo().Tx
 	if len(*tx) > 0 && (*tx)[len(*tx)-1].Type == nil {
 		return fmt.Errorf(eDataType, lexem.Line, lexem.Column)
 	}
@@ -401,7 +403,7 @@ func fFieldLine(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 }
 
 func fFieldType(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	tx := buf.peek().Info.ContractInfo().Tx
+	tx := buf.peek().GetContractInfo().Tx
 	if len(*tx) == 0 || (*tx)[len(*tx)-1].Type != nil {
 		return fmt.Errorf(eDataName, lexem.Line, lexem.Column)
 	}
@@ -415,7 +417,7 @@ func fFieldType(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
 }
 
 func fFieldTag(buf *CodeBlocks, state stateTypes, lexem *Lexem) error {
-	tx := buf.peek().Info.ContractInfo().Tx
+	tx := buf.peek().GetContractInfo().Tx
 	if len(*tx) == 0 || (*tx)[len(*tx)-1].Type == nil || len((*tx)[len(*tx)-1].Tags) != 0 {
 		return fmt.Errorf(eDataTag, lexem.Line, lexem.Column)
 	}

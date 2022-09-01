@@ -164,7 +164,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 	}
 	if obj.Type == ObjectType_Func {
 		var imap map[string][]any
-		if obj.Value.CodeBlock().Info.FuncInfo().Names != nil {
+		if obj.GetCodeBlock().GetFuncInfo().Names != nil {
 			if rt.stack[size-1] != nil {
 				imap = rt.stack[size-1].(map[string][]any)
 			}
@@ -184,7 +184,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 			rt.stack = rt.stack[:shift]
 			rt.stack = append(rt.stack, pars)
 		}
-		finfo := obj.Value.CodeBlock().Info.FuncInfo()
+		finfo := obj.GetCodeBlock().GetFuncInfo()
 		if len(rt.stack) < len(finfo.Params) {
 			log.WithFields(log.Fields{"type": consts.VMError}).Error(errWrongCountPars.Error())
 			return errWrongCountPars
@@ -206,10 +206,10 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 				}
 			}
 		}
-		if obj.Value.CodeBlock().Info.FuncInfo().Names != nil {
+		if obj.GetCodeBlock().GetFuncInfo().Names != nil {
 			rt.stack = append(rt.stack, imap)
 		}
-		_, err = rt.RunCode(obj.Value.CodeBlock())
+		_, err = rt.RunCode(obj.GetCodeBlock())
 		return
 	}
 
@@ -218,7 +218,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		ok     bool
 		result []reflect.Value
 		limit  = 0
-		finfo  = obj.Value.ExtFuncInfo()
+		finfo  = obj.GetExtFuncInfo()
 		foo    = reflect.ValueOf(finfo.Func)
 		pars   = make([]reflect.Value, in)
 	)
@@ -502,7 +502,7 @@ func (rt *RunTime) getResultValue(item mapItem) (value any, err error) {
 		var i int
 		for i = len(rt.blocks) - 1; i >= 0; i-- {
 			if ivar.Owner == rt.blocks[i].Block {
-				value = rt.vars[rt.blocks[i].Offset+ivar.Obj.Value.Int()]
+				value = rt.vars[rt.blocks[i].Offset+ivar.Obj.GetInt()]
 				break
 			}
 		}
@@ -579,7 +579,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 		if err != nil && !strings.HasPrefix(err.Error(), `{`) {
 			var curContract, line string
 			if block.isParentContract() {
-				stack := block.Parent.Info.ContractInfo()
+				stack := block.Parent.GetContractInfo()
 				curContract = stack.Name
 			}
 			if stack, ok := rt.extend[Extend_stack].([]any); ok {
@@ -613,7 +613,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	top := make([]any, 8)
 	rt.blocks = append(rt.blocks, &blockStack{Block: block, Offset: len(rt.vars)})
 	var namemap map[string][]any
-	if block.Type == ObjectType_Func && block.Info.FuncInfo().Names != nil {
+	if block.Type == ObjectType_Func && block.GetFuncInfo().Names != nil {
 		if rt.stack[len(rt.stack)-1] != nil {
 			namemap = rt.stack[len(rt.stack)-1].(map[string][]any)
 		}
@@ -624,8 +624,8 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	for vkey, vpar := range block.Vars {
 		rt.cost--
 		var value any
-		if block.Type == ObjectType_Func && vkey < len(block.Info.FuncInfo().Params) {
-			value = rt.stack[start-len(block.Info.FuncInfo().Params)+vkey]
+		if block.Type == ObjectType_Func && vkey < len(block.GetFuncInfo().Params) {
+			value = rt.stack[start-len(block.GetFuncInfo().Params)+vkey]
 		} else {
 			value = reflect.New(vpar).Elem().Interface()
 			if vpar == reflect.TypeOf(&types.Map{}) {
@@ -638,7 +638,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	}
 	if namemap != nil {
 		for key, item := range namemap {
-			params := (*block.Info.FuncInfo().Names)[key]
+			params := (*block.GetFuncInfo().Names)[key]
 			for i, value := range item {
 				if params.Variadic && i >= len(params.Params)-1 {
 					off := varoff + params.Offset[len(params.Params)-1]
@@ -650,7 +650,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 		}
 	}
 	if block.Type == ObjectType_Func {
-		start -= len(block.Info.FuncInfo().Params)
+		start -= len(block.GetFuncInfo().Params)
 	}
 	var (
 		assign []*VarInfo
@@ -729,19 +729,19 @@ main:
 			for ivar, item := range assign {
 				if item.Owner == nil {
 					if (*item).Obj.Type == ObjectType_ExtVar {
-						if isSysVar((*item).Obj.Value.String()) {
-							err = fmt.Errorf(eSysVar, (*item).Obj.Value.String())
+						if isSysVar((*item).Obj.GetStr()) {
+							err = fmt.Errorf(eSysVar, (*item).Obj.GetStr())
 							rt.vm.logger.WithError(err).Error("modifying system variable")
 							break main
 						}
-						rt.setExtendVar((*item).Obj.Value.String(), rt.stack[len(rt.stack)-count+ivar])
+						rt.setExtendVar((*item).Obj.GetStr(), rt.stack[len(rt.stack)-count+ivar])
 					}
 				} else {
 					var i int
 					for i = len(rt.blocks) - 1; i >= 0; i-- {
 						if item.Owner == rt.blocks[i].Block {
-							k := rt.blocks[i].Offset + item.Obj.Value.Int()
-							switch rt.blocks[i].Block.Vars[item.Obj.Value.Int()].String() {
+							k := rt.blocks[i].Offset + item.Obj.GetInt()
+							switch rt.blocks[i].Block.Vars[item.Obj.GetInt()].String() {
 							case Decimal:
 								var v decimal.Decimal
 								v, err = ValueToDecimal(rt.stack[len(rt.stack)-count+ivar])
@@ -789,7 +789,7 @@ main:
 			continue
 		case cmdCallVari, cmdCall:
 			if cmd.Value.(*ObjInfo).Type == ObjectType_ExtFunc {
-				finfo := cmd.Value.(*ObjInfo).Value.ExtFuncInfo()
+				finfo := cmd.Value.(*ObjInfo).GetExtFuncInfo()
 				if rt.vm.ExtCost != nil {
 					cost := rt.vm.ExtCost(finfo.Name)
 					if cost > rt.cost {
@@ -810,7 +810,7 @@ main:
 			var i int
 			for i = len(rt.blocks) - 1; i >= 0; i-- {
 				if ivar.Owner == rt.blocks[i].Block {
-					rt.stack = append(rt.stack, rt.vars[rt.blocks[i].Offset+ivar.Obj.Value.Int()])
+					rt.stack = append(rt.stack, rt.vars[rt.blocks[i].Offset+ivar.Obj.GetInt()])
 					break
 				}
 			}
@@ -1326,7 +1326,7 @@ main:
 	rt.blocks = rt.blocks[:len(rt.blocks)-1]
 	if status == statusReturn {
 		if last.Block.Type == ObjectType_Func {
-			lastResults := last.Block.Info.FuncInfo().Results
+			lastResults := last.Block.GetFuncInfo().Results
 			if len(lastResults) > len(rt.stack) {
 				var keyNames []string
 				for i := 0; i < len(lastResults); i++ {
@@ -1360,7 +1360,7 @@ func (rt *RunTime) Run(block *CodeBlock, params []any, extend map[string]any) (r
 			err = fmt.Errorf(`runtime panic error,%v`, r)
 		}
 	}()
-	info := block.Info.FuncInfo()
+	info := block.GetFuncInfo()
 	rt.extend = extend
 	var (
 		genBlock bool

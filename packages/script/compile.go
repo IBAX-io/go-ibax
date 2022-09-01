@@ -102,7 +102,7 @@ func StateName(state uint32, name string) string {
 
 // CompileBlock compile the source code into the CodeBlock structure with a byte-code
 func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
-	root := &CodeBlock{Info: newCodeBlockInfo(owner.StateID), Owner: owner}
+	root := &CodeBlock{Owner: owner}
 	lexems, err := lexParser(input)
 	if err != nil {
 		return nil, err
@@ -199,8 +199,8 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
 	}
 	for _, item := range root.Objects {
 		if item.Type == ObjectType_Contract {
-			if cond, ok := item.Value.CodeBlock().Objects[`conditions`]; ok {
-				if cond.Type == ObjectType_Func && cond.Value.CodeBlock().Info.FuncInfo().CanWrite {
+			if cond, ok := item.GetCodeBlock().Objects[`conditions`]; ok {
+				if cond.Type == ObjectType_Func && cond.GetCodeBlock().GetFuncInfo().CanWrite {
 					return nil, errCondWrite
 				}
 			}
@@ -216,9 +216,9 @@ func (vm *VM) FlushBlock(root *CodeBlock) {
 		if cur, ok := vm.Objects[key]; ok {
 			switch item.Type {
 			case ObjectType_Contract:
-				root.Objects[key].Value.CodeBlock().Info.ContractInfo().ID = cur.Value.CodeBlock().Info.ContractInfo().ID + flushMark
+				root.Objects[key].GetCodeBlock().GetContractInfo().ID = cur.GetCodeBlock().GetContractInfo().ID + flushMark
 			case ObjectType_Func:
-				root.Objects[key].Value.CodeBlock().Info.FuncInfo().ID = cur.Value.CodeBlock().Info.FuncInfo().ID + flushMark
+				root.Objects[key].GetCodeBlock().GetFuncInfo().ID = cur.GetCodeBlock().GetFuncInfo().ID + flushMark
 				vm.Objects[key].Value = root.Objects[key].Value
 			}
 		}
@@ -227,23 +227,23 @@ func (vm *VM) FlushBlock(root *CodeBlock) {
 	for _, item := range root.Children {
 		switch item.Type {
 		case ObjectType_Contract:
-			if item.Info.ContractInfo().ID > flushMark {
-				item.Info.ContractInfo().ID -= flushMark
-				vm.Children[item.Info.ContractInfo().ID] = item
+			if item.GetContractInfo().ID > flushMark {
+				item.GetContractInfo().ID -= flushMark
+				vm.Children[item.GetContractInfo().ID] = item
 				shift--
 				continue
 			}
 			item.Parent = vm.CodeBlock
-			item.Info.ContractInfo().ID += uint32(shift)
+			item.GetContractInfo().ID += uint32(shift)
 		case ObjectType_Func:
-			if item.Info.FuncInfo().ID > flushMark {
-				item.Info.FuncInfo().ID -= flushMark
-				vm.Children[item.Info.FuncInfo().ID] = item
+			if item.GetFuncInfo().ID > flushMark {
+				item.GetFuncInfo().ID -= flushMark
+				vm.Children[item.GetFuncInfo().ID] = item
 				shift--
 				continue
 			}
 			item.Parent = vm.CodeBlock
-			item.Info.FuncInfo().ID += uint32(shift)
+			item.GetFuncInfo().ID += uint32(shift)
 		}
 		vm.Children = append(vm.Children, item)
 	}
@@ -277,7 +277,7 @@ func findVar(name string, block *CodeBlocks) (ret *ObjInfo, owner *CodeBlock) {
 }
 
 func (vm *VM) findObj(name string, block *CodeBlocks) (ret *ObjInfo, owner *CodeBlock) {
-	sname := StateName((*block)[0].Info.Uint32(), name)
+	sname := StateName((*block)[0].Owner.StateID, name)
 	ret, owner = findVar(name, block)
 	if ret != nil {
 		return
@@ -549,11 +549,11 @@ main:
 				var tail *ByteCode
 				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdCall || prev.Cmd == cmdCallVari {
 					objInfo := prev.Value.(*ObjInfo)
-					if (objInfo.Type == ObjectType_Func && objInfo.Value.CodeBlock().Info.FuncInfo().CanWrite) ||
-						(objInfo.Type == ObjectType_ExtFunc && objInfo.Value.ExtFuncInfo().CanWrite) {
+					if (objInfo.Type == ObjectType_Func && objInfo.GetCodeBlock().GetFuncInfo().CanWrite) ||
+						(objInfo.Type == ObjectType_ExtFunc && objInfo.GetExtFuncInfo().CanWrite) {
 						setWritable(block)
 					}
-					if objInfo.Type == ObjectType_Func && objInfo.Value.CodeBlock().Info.FuncInfo().Names != nil {
+					if objInfo.Type == ObjectType_Func && objInfo.GetCodeBlock().GetFuncInfo().Names != nil {
 						if len(bytecode) == 0 || bytecode[len(bytecode)-1].Cmd != cmdFuncName {
 							bytecode.push(newByteCode(cmdPush, lexem.Line, nil))
 						}
@@ -562,7 +562,7 @@ main:
 								log.WithFields(log.Fields{"type": consts.ParseError}).Error("must be the name of the tail")
 								return fmt.Errorf(`must be the name of the tail`)
 							}
-							names := prev.Value.(*ObjInfo).Value.CodeBlock().Info.FuncInfo().Names
+							names := prev.Value.(*ObjInfo).GetCodeBlock().GetFuncInfo().Names
 							if _, ok := (*names)[(*lexems)[i+2].Value.(string)]; !ok {
 
 								if i < len(*lexems)-5 && (*lexems)[i+3].Type == isLPar {
@@ -592,7 +592,7 @@ main:
 					parcount = parcount[:len(parcount)-1]
 					if prev.Value.(*ObjInfo).Type == ObjectType_ExtFunc {
 						var errtext string
-						extinfo := prev.Value.(*ObjInfo).Value.ExtFuncInfo()
+						extinfo := prev.Value.(*ObjInfo).GetExtFuncInfo()
 						wantlen := len(extinfo.Params)
 						for _, v := range extinfo.Auto {
 							if len(v) > 0 {
@@ -736,14 +736,14 @@ main:
 					}
 					if objInfo.Type == ObjectType_Contract {
 						if objInfo.Value != nil {
-							objContract = objInfo.Value.CodeBlock()
+							objContract = objInfo.GetCodeBlock()
 						}
 						objInfo, tobj = vm.findObj(`ExecContract`, block)
 						isContract = true
 					}
 					cmdCall := uint16(cmdCall)
-					if (objInfo.Type == ObjectType_ExtFunc && objInfo.Value.ExtFuncInfo().Variadic) ||
-						(objInfo.Type == ObjectType_Func && objInfo.Value.CodeBlock().Info.FuncInfo().Variadic) {
+					if (objInfo.Type == ObjectType_ExtFunc && objInfo.GetExtFuncInfo().Variadic) ||
+						(objInfo.Type == ObjectType_Func && objInfo.GetCodeBlock().GetFuncInfo().Variadic) {
 						cmdCall = cmdCallVari
 					}
 					count := 0
@@ -752,20 +752,20 @@ main:
 					}
 					buffer.push(newByteCode(cmdCall, lexem.Line, objInfo))
 					if isContract {
-						name := StateName((*block)[0].Info.Uint32(), lexem.Value.(string))
+						name := StateName((*block)[0].Owner.StateID, lexem.Value.(string))
 						for j := len(*block) - 1; j >= 0; j-- {
 							topblock := (*block)[j]
 							if topblock.Type == ObjectType_Contract {
-								if name == topblock.Info.ContractInfo().Name {
+								if name == topblock.GetContractInfo().Name {
 									return errRecursion
 								}
-								if topblock.Info.ContractInfo().Used == nil {
-									topblock.Info.ContractInfo().Used = make(map[string]bool)
+								if topblock.GetContractInfo().Used == nil {
+									topblock.GetContractInfo().Used = make(map[string]bool)
 								}
-								topblock.Info.ContractInfo().Used[name] = true
+								topblock.GetContractInfo().Used[name] = true
 							}
 						}
-						if objContract != nil && objContract.Info.ContractInfo().CanWrite {
+						if objContract != nil && objContract.GetContractInfo().CanWrite {
 							setWritable(block)
 						}
 						bytecode.push(newByteCode(cmdPush, lexem.Line, name))
@@ -778,7 +778,7 @@ main:
 					}
 					if lexem.Value.(string) == `CallContract` {
 						count++
-						bytecode.push(newByteCode(cmdPush, lexem.Line, (*block)[0].Info.Uint32()))
+						bytecode.push(newByteCode(cmdPush, lexem.Line, (*block)[0].Owner.StateID))
 					}
 					parcount = append(parcount, count)
 					call = true
@@ -788,7 +788,7 @@ main:
 						logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("unknown variable")
 						return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
 					}
-					buffer.push(newByteCode(cmdIndex, lexem.Line, &IndexInfo{VarOffset: objInfo.Value.Int(), Owner: tobj}))
+					buffer.push(newByteCode(cmdIndex, lexem.Line, &IndexInfo{VarOffset: objInfo.GetInt(), Owner: tobj}))
 				}
 			}
 			if !call {

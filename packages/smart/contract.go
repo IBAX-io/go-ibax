@@ -22,7 +22,7 @@ type Contract struct {
 }
 
 func (c *Contract) Info() *script.ContractInfo {
-	return c.Block.Info.ContractInfo()
+	return c.Block.GetContractInfo()
 }
 
 // LoadContracts reads and compiles contracts from smart_contracts tables
@@ -72,7 +72,7 @@ func VMGetContract(vm *script.VM, name string, state uint32) *Contract {
 	obj, ok := vm.Objects[name]
 
 	if ok && obj.Type == script.ObjectType_Contract {
-		return &Contract{Name: name, Block: obj.Value.CodeBlock()}
+		return &Contract{Name: name, Block: obj.GetCodeBlock()}
 	}
 	return nil
 }
@@ -90,10 +90,10 @@ func VMGetContractByID(vm *script.VM, id int32) *Contract {
 	if vm.Children[idcont] == nil || vm.Children[idcont].Type != script.ObjectType_Contract {
 		return nil
 	}
-	if tableID > 0 && vm.Children[idcont].Info.ContractInfo().Owner.TableID != tableID {
+	if tableID > 0 && vm.Children[idcont].GetContractInfo().Owner.TableID != tableID {
 		return nil
 	}
-	return &Contract{Name: vm.Children[idcont].Info.ContractInfo().Name,
+	return &Contract{Name: vm.Children[idcont].GetContractInfo().Name,
 		Block: vm.Children[idcont]}
 }
 
@@ -115,7 +115,7 @@ func GetContractByID(id int32) *Contract {
 // GetFunc returns the block of the specified function in the contract
 func (contract *Contract) GetFunc(name string) *script.CodeBlock {
 	if block, ok := (*contract).Block.Objects[name]; ok && block.Type == script.ObjectType_Func {
-		return block.Value.CodeBlock()
+		return block.GetCodeBlock()
 	}
 	return nil
 }
