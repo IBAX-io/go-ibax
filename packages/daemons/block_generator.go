@@ -173,7 +173,7 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 		}
 		done = time.After(endTime.Sub(st))
 	}
-	trs, err := sqldb.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount())
+	trs, err := sqldb.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount()-len(txs))
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unused transactions")
 		return nil, nil, err

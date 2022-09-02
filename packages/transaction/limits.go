@@ -14,7 +14,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/script"
-	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -88,9 +87,6 @@ func NewLimits(b LimitMode) (limits *Limits) {
 
 // CheckLimit calls each limiter
 func (limits *Limits) CheckLimit(t TransactionCaller) error {
-	if t.txType() != types.SmartContractTxType {
-		return nil
-	}
 	for _, limiter := range limits.Limiters {
 		if err := limiter.check(t, limits.Mode); err != nil {
 			return err
@@ -194,10 +190,11 @@ func (bl *txUserEcosysLimit) init() {
 
 func (bl *txUserEcosysLimit) check(t TransactionCaller, mode LimitMode) error {
 	keyID := t.txKeyID()
-	if t.txType() != types.SmartContractTxType {
+	smart, ok := t.(*SmartTransactionParser)
+	if !ok {
 		return nil
 	}
-	ecosystemID := t.(*SmartTransactionParser).TxSmart.EcosystemID
+	ecosystemID := smart.TxSmart.EcosystemID
 	if val, ok := bl.TxEcosys[ecosystemID]; ok {
 		if user, ok := val.TxUsers[keyID]; ok {
 			if user+1 > val.Limit && mode == letPreprocess {
@@ -259,10 +256,11 @@ func (bl *txMaxFuel) init() {
 }
 
 func (bl *txMaxFuel) check(t TransactionCaller, mode LimitMode) error {
-	if t.txType() != types.SmartContractTxType {
+	smart, ok := t.(*SmartTransactionParser)
+	if !ok {
 		return nil
 	}
-	fuel := t.(*SmartTransactionParser).TxFuel
+	fuel := smart.TxFuel
 	if fuel > bl.LimitTx {
 		return limitError(`txMaxFuel`, `Max fuel of tx %d > %d`, fuel, bl.LimitTx)
 	}
