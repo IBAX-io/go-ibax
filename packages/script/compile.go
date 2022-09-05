@@ -102,12 +102,12 @@ func StateName(state uint32, name string) string {
 
 // CompileBlock compile the source code into the CodeBlock structure with a byte-code
 func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
-	root := &CodeBlock{Info: newCodeBlockInfo(owner.StateID), Owner: owner}
-	lexems, err := lexParser(input)
+	root := &CodeBlock{Owner: owner}
+	lexemes, err := lexParser(input)
 	if err != nil {
 		return nil, err
 	}
-	if len(lexems) == 0 {
+	if len(lexemes) == 0 {
 		return root, nil
 	}
 	curState := stateRoot
@@ -116,13 +116,13 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
 	blockstack[0] = root
 	fork := 0
 
-	for i := 0; i < len(lexems); i++ {
+	for i := 0; i < len(lexemes); i++ {
 		var (
 			newState compileState
 			ok       bool
 		)
-		lexem := lexems[i]
-		if newState, ok = states[curState][int(lexem.Type)]; !ok {
+		lexeme := lexemes[i]
+		if newState, ok = states[curState][int(lexeme.Type)]; !ok {
 			newState = states[curState][0]
 		}
 		nextState := newState.NewState & 0xff
@@ -132,7 +132,7 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
 		if (newState.NewState & stateToFork) > 0 {
 			i = fork
 			fork = 0
-			lexem = lexems[i]
+			lexeme = lexemes[i]
 		}
 
 		if (newState.NewState & stateStay) > 0 {
@@ -142,10 +142,10 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
 		}
 		if nextState == stateEval {
 			if newState.NewState&stateLabel > 0 {
-				blockstack.peek().Code.push(newByteCode(cmdLabel, lexem.Line, 0))
+				blockstack.peek().Code.push(newByteCode(cmdLabel, lexeme.Line, 0))
 			}
 			curlen := len(blockstack.peek().Code)
-			if err := vm.compileEval(&lexems, &i, &blockstack); err != nil {
+			if err := vm.compileEval(&lexemes, &i, &blockstack); err != nil {
 				return nil, err
 			}
 			if (newState.NewState&stateMustEval) > 0 && curlen == len(blockstack.peek().Code) {
@@ -166,7 +166,7 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
 		}
 		if (newState.NewState & statePop) > 0 {
 			if len(stack) == 0 {
-				return nil, fError(&blockstack, errMustLCurly, lexem)
+				return nil, fError(&blockstack, errMustLCurly, lexeme)
 			}
 			nextState = stack[len(stack)-1]
 			stack = stack[:len(stack)-1]
@@ -176,7 +176,7 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
 				if len(prev.Code) > 0 && (*prev).Code[len((*prev).Code)-1].Cmd == cmdContinue {
 					(*prev).Code = (*prev).Code[:len((*prev).Code)-1]
 					prev = blockstack.peek()
-					(*prev).Code.push(newByteCode(cmdContinue, lexem.Line, 0))
+					(*prev).Code.push(newByteCode(cmdContinue, lexeme.Line, 0))
 				}
 			}
 			blockstack = blockstack[:len(blockstack)-1]
@@ -188,19 +188,19 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
 			nextState = stateBody
 		}
 		if newState.FuncFlag > 0 {
-			if err := funcHandles[newState.FuncFlag](&blockstack, nextState, lexem); err != nil {
+			if err := funcHandles[newState.FuncFlag](&blockstack, nextState, lexeme); err != nil {
 				return nil, err
 			}
 		}
 		curState = nextState
 	}
 	if len(stack) > 0 {
-		return nil, fError(&blockstack, errMustRCurly, lexems[len(lexems)-1])
+		return nil, fError(&blockstack, errMustRCurly, lexemes[len(lexemes)-1])
 	}
 	for _, item := range root.Objects {
 		if item.Type == ObjectType_Contract {
-			if cond, ok := item.Value.CodeBlock().Objects[`conditions`]; ok {
-				if cond.Type == ObjectType_Func && cond.Value.CodeBlock().Info.FuncInfo().CanWrite {
+			if cond, ok := item.GetCodeBlock().Objects[`conditions`]; ok {
+				if cond.Type == ObjectType_Func && cond.GetCodeBlock().GetFuncInfo().CanWrite {
 					return nil, errCondWrite
 				}
 			}
@@ -216,9 +216,9 @@ func (vm *VM) FlushBlock(root *CodeBlock) {
 		if cur, ok := vm.Objects[key]; ok {
 			switch item.Type {
 			case ObjectType_Contract:
-				root.Objects[key].Value.CodeBlock().Info.ContractInfo().ID = cur.Value.CodeBlock().Info.ContractInfo().ID + flushMark
+				root.Objects[key].GetCodeBlock().GetContractInfo().ID = cur.GetCodeBlock().GetContractInfo().ID + flushMark
 			case ObjectType_Func:
-				root.Objects[key].Value.CodeBlock().Info.FuncInfo().ID = cur.Value.CodeBlock().Info.FuncInfo().ID + flushMark
+				root.Objects[key].GetCodeBlock().GetFuncInfo().ID = cur.GetCodeBlock().GetFuncInfo().ID + flushMark
 				vm.Objects[key].Value = root.Objects[key].Value
 			}
 		}
@@ -227,23 +227,23 @@ func (vm *VM) FlushBlock(root *CodeBlock) {
 	for _, item := range root.Children {
 		switch item.Type {
 		case ObjectType_Contract:
-			if item.Info.ContractInfo().ID > flushMark {
-				item.Info.ContractInfo().ID -= flushMark
-				vm.Children[item.Info.ContractInfo().ID] = item
+			if item.GetContractInfo().ID > flushMark {
+				item.GetContractInfo().ID -= flushMark
+				vm.Children[item.GetContractInfo().ID] = item
 				shift--
 				continue
 			}
 			item.Parent = vm.CodeBlock
-			item.Info.ContractInfo().ID += uint32(shift)
+			item.GetContractInfo().ID += uint32(shift)
 		case ObjectType_Func:
-			if item.Info.FuncInfo().ID > flushMark {
-				item.Info.FuncInfo().ID -= flushMark
-				vm.Children[item.Info.FuncInfo().ID] = item
+			if item.GetFuncInfo().ID > flushMark {
+				item.GetFuncInfo().ID -= flushMark
+				vm.Children[item.GetFuncInfo().ID] = item
 				shift--
 				continue
 			}
 			item.Parent = vm.CodeBlock
-			item.Info.FuncInfo().ID += uint32(shift)
+			item.GetFuncInfo().ID += uint32(shift)
 		}
 		vm.Children = append(vm.Children, item)
 	}
@@ -277,7 +277,7 @@ func findVar(name string, block *CodeBlocks) (ret *ObjInfo, owner *CodeBlock) {
 }
 
 func (vm *VM) findObj(name string, block *CodeBlocks) (ret *ObjInfo, owner *CodeBlock) {
-	sname := StateName((*block)[0].Info.Uint32(), name)
+	sname := StateName((*block)[0].Owner.StateID, name)
 	ret, owner = findVar(name, block)
 	if ret != nil {
 		return
@@ -292,36 +292,36 @@ func (vm *VM) findObj(name string, block *CodeBlocks) (ret *ObjInfo, owner *Code
 	return
 }
 
-func (vm *VM) getInitValue(lexems *Lexems, ind *int, block *CodeBlocks) (value mapItem, err error) {
+func (vm *VM) getInitValue(lexemes *Lexemes, ind *int, block *CodeBlocks) (value mapItem, err error) {
 	var (
 		subArr []mapItem
 		subMap *types.Map
 	)
 	i := *ind
-	lexem := (*lexems)[i]
+	lexeme := (*lexemes)[i]
 
-	switch lexem.Type {
+	switch lexeme.Type {
 	case isLBrack:
-		subArr, err = vm.getInitArray(lexems, &i, block)
+		subArr, err = vm.getInitArray(lexemes, &i, block)
 		if err == nil {
 			value = mapItem{Type: mapArray, Value: subArr}
 		}
 	case isLCurly:
-		subMap, err = vm.getInitMap(lexems, &i, block, false)
+		subMap, err = vm.getInitMap(lexemes, &i, block, false)
 		if err == nil {
 			value = mapItem{Type: mapMap, Value: subMap}
 		}
 	case lexExtend:
-		value = mapItem{Type: mapExtend, Value: lexem.Value}
+		value = mapItem{Type: mapExtend, Value: lexeme.Value}
 	case lexIdent:
-		objInfo, tobj := vm.findObj(lexem.Value.(string), block)
+		objInfo, tobj := vm.findObj(lexeme.Value.(string), block)
 		if objInfo == nil {
-			err = fmt.Errorf(eUnknownIdent, lexem.Value.(string))
+			err = fmt.Errorf(eUnknownIdent, lexeme.Value.(string))
 		} else {
 			value = mapItem{Type: mapVar, Value: &VarInfo{Obj: objInfo, Owner: tobj}}
 		}
 	case lexNumber, lexString:
-		value = mapItem{Type: mapConst, Value: lexem.Value}
+		value = mapItem{Type: mapConst, Value: lexeme.Value}
 	default:
 		err = errUnexpValue
 	}
@@ -329,7 +329,7 @@ func (vm *VM) getInitValue(lexems *Lexems, ind *int, block *CodeBlocks) (value m
 	return
 }
 
-func (vm *VM) getInitMap(lexems *Lexems, ind *int, block *CodeBlocks, oneItem bool) (*types.Map, error) {
+func (vm *VM) getInitMap(lexemes *Lexemes, ind *int, block *CodeBlocks, oneItem bool) (*types.Map, error) {
 	var next int
 	if !oneItem {
 		next = 1
@@ -339,9 +339,9 @@ func (vm *VM) getInitMap(lexems *Lexems, ind *int, block *CodeBlocks, oneItem bo
 	ret := types.NewMap()
 	state := mustKey
 main:
-	for ; i < len(*lexems); i++ {
-		lexem := (*lexems)[i]
-		switch lexem.Type {
+	for ; i < len(*lexemes); i++ {
+		lexeme := (*lexemes)[i]
+		switch lexeme.Type {
 		case lexNewLine:
 			continue
 		case isRCurly:
@@ -354,28 +354,28 @@ main:
 		}
 		switch state {
 		case mustComma:
-			if lexem.Type != isComma {
+			if lexeme.Type != isComma {
 				return nil, errUnexpComma
 			}
 			state = mustKey
 		case mustColon:
-			if lexem.Type != isColon {
+			if lexeme.Type != isColon {
 				return nil, errUnexpColon
 			}
 			state = mustValue
 		case mustKey:
-			switch lexem.Type & 0xff {
+			switch lexeme.Type & 0xff {
 			case lexIdent:
-				key = lexem.Value.(string)
+				key = lexeme.Value.(string)
 			case lexExtend:
-				key = `$` + lexem.Value.(string)
+				key = `$` + lexeme.Value.(string)
 			case lexString:
-				key = lexem.Value.(string)
+				key = lexeme.Value.(string)
 			case lexKeyword:
 				for ikey, v := range keywords {
-					if fmt.Sprint(v) == fmt.Sprint(lexem.Value) {
+					if fmt.Sprint(v) == fmt.Sprint(lexeme.Value) {
 						key = ikey
-						if v == keyFunc && i < len(*lexems)-1 && (*lexems)[i+1].Type&0xff == lexIdent {
+						if v == keyFunc && i < len(*lexemes)-1 && (*lexemes)[i+1].Type&0xff == lexIdent {
 							continue main
 						}
 						break
@@ -386,7 +386,7 @@ main:
 			}
 			state = mustColon
 		case mustValue:
-			mapi, err := vm.getInitValue(lexems, &i, block)
+			mapi, err := vm.getInitValue(lexemes, &i, block)
 			if err != nil {
 				return nil, err
 			}
@@ -397,21 +397,21 @@ main:
 	if ret.IsEmpty() && state == mustKey {
 		return nil, errUnexpKey
 	}
-	if i == len(*lexems) {
+	if i == len(*lexemes) {
 		return nil, errUnclosedMap
 	}
 	*ind = i
 	return ret, nil
 }
 
-func (vm *VM) getInitArray(lexems *Lexems, ind *int, block *CodeBlocks) ([]mapItem, error) {
+func (vm *VM) getInitArray(lexemes *Lexemes, ind *int, block *CodeBlocks) ([]mapItem, error) {
 	i := *ind + 1
 	ret := make([]mapItem, 0)
 	state := mustValue
 main:
-	for ; i < len(*lexems); i++ {
-		lexem := (*lexems)[i]
-		switch lexem.Type {
+	for ; i < len(*lexemes); i++ {
+		lexeme := (*lexemes)[i]
+		switch lexeme.Type {
 		case lexNewLine:
 			continue
 		case isRBrack:
@@ -419,19 +419,19 @@ main:
 		}
 		switch state {
 		case mustComma:
-			if lexem.Type != isComma {
+			if lexeme.Type != isComma {
 				return nil, errUnexpComma
 			}
 			state = mustValue
 		case mustValue:
-			if i+1 < len(*lexems) && (*lexems)[i+1].Type == isColon {
-				subMap, err := vm.getInitMap(lexems, &i, block, true)
+			if i+1 < len(*lexemes) && (*lexemes)[i+1].Type == isColon {
+				subMap, err := vm.getInitMap(lexemes, &i, block, true)
 				if err != nil {
 					return nil, err
 				}
 				ret = append(ret, mapItem{Type: mapMap, Value: subMap})
 			} else {
-				arri, err := vm.getInitValue(lexems, &i, block)
+				arri, err := vm.getInitValue(lexemes, &i, block)
 				if err != nil {
 					return nil, err
 				}
@@ -443,7 +443,7 @@ main:
 	if len(ret) > 0 && state == mustValue {
 		return nil, errUnexpValue
 	}
-	if i == len(*lexems) {
+	if i == len(*lexemes) {
 		return nil, errUnclosedArray
 	}
 	*ind = i
@@ -451,7 +451,7 @@ main:
 }
 
 // This function is responsible for the compilation of expressions
-func (vm *VM) compileEval(lexems *Lexems, ind *int, block *CodeBlocks) error {
+func (vm *VM) compileEval(lexemes *Lexemes, ind *int, block *CodeBlocks) error {
 	var indexInfo *IndexInfo
 
 	i := *ind
@@ -464,32 +464,32 @@ func (vm *VM) compileEval(lexems *Lexems, ind *int, block *CodeBlocks) error {
 	noMap := false
 	prevLex := uint32(0)
 main:
-	for ; i < len(*lexems); i++ {
+	for ; i < len(*lexemes); i++ {
 		var cmd *ByteCode
 		var call bool
-		lexem := (*lexems)[i]
-		logger := lexem.GetLogger()
+		lexeme := (*lexemes)[i]
+		logger := lexeme.GetLogger()
 		if !noMap {
-			if lexem.Type == isLCurly {
-				pMap, err := vm.getInitMap(lexems, &i, block, false)
+			if lexeme.Type == isLCurly {
+				pMap, err := vm.getInitMap(lexemes, &i, block, false)
 				if err != nil {
 					return err
 				}
-				bytecode.push(newByteCode(cmdMapInit, lexem.Line, pMap))
+				bytecode.push(newByteCode(cmdMapInit, lexeme.Line, pMap))
 				continue
 			}
-			if lexem.Type == isLBrack {
-				pArray, err := vm.getInitArray(lexems, &i, block)
+			if lexeme.Type == isLBrack {
+				pArray, err := vm.getInitArray(lexemes, &i, block)
 				if err != nil {
 					return err
 				}
-				bytecode.push(newByteCode(cmdArrayInit, lexem.Line, pArray))
+				bytecode.push(newByteCode(cmdArrayInit, lexeme.Line, pArray))
 				continue
 			}
 		}
 		noMap = false
 
-		switch lexem.Type {
+		switch lexeme.Type {
 		case isRCurly, isLCurly:
 			i--
 			if prevLex == isComma || prevLex == lexOper {
@@ -497,7 +497,7 @@ main:
 			}
 			break main
 		case lexNewLine:
-			if i > 0 && ((*lexems)[i-1].Type == isComma || (*lexems)[i-1].Type == lexOper) {
+			if i > 0 && ((*lexemes)[i-1].Type == isComma || (*lexemes)[i-1].Type == lexOper) {
 				continue main
 			}
 			for k := len(buffer) - 1; k >= 0; k-- {
@@ -507,9 +507,9 @@ main:
 			}
 			break main
 		case isLPar:
-			buffer.push(newByteCode(cmdSys, lexem.Line, uint16(0xff)))
+			buffer.push(newByteCode(cmdSys, lexeme.Line, uint16(0xff)))
 		case isLBrack:
-			buffer.push(newByteCode(cmdSys, lexem.Line, uint16(0xff)))
+			buffer.push(newByteCode(cmdSys, lexeme.Line, uint16(0xff)))
 		case isComma:
 			if len(parcount) > 0 {
 				parcount[len(parcount)-1]++
@@ -527,7 +527,7 @@ main:
 			noMap = true
 			for {
 				if len(buffer) == 0 {
-					logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("there is not pair")
+					logger.WithFields(log.Fields{"lex_value": lexeme.Value.(string), "type": consts.ParseError}).Error("there is not pair")
 					return fmt.Errorf(`there is not pair`)
 				}
 				prev := buffer[len(buffer)-1]
@@ -549,37 +549,37 @@ main:
 				var tail *ByteCode
 				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdCall || prev.Cmd == cmdCallVari {
 					objInfo := prev.Value.(*ObjInfo)
-					if (objInfo.Type == ObjectType_Func && objInfo.Value.CodeBlock().Info.FuncInfo().CanWrite) ||
-						(objInfo.Type == ObjectType_ExtFunc && objInfo.Value.ExtFuncInfo().CanWrite) {
+					if (objInfo.Type == ObjectType_Func && objInfo.GetCodeBlock().GetFuncInfo().CanWrite) ||
+						(objInfo.Type == ObjectType_ExtFunc && objInfo.GetExtFuncInfo().CanWrite) {
 						setWritable(block)
 					}
-					if objInfo.Type == ObjectType_Func && objInfo.Value.CodeBlock().Info.FuncInfo().Names != nil {
+					if objInfo.Type == ObjectType_Func && objInfo.GetCodeBlock().GetFuncInfo().Names != nil {
 						if len(bytecode) == 0 || bytecode[len(bytecode)-1].Cmd != cmdFuncName {
-							bytecode.push(newByteCode(cmdPush, lexem.Line, nil))
+							bytecode.push(newByteCode(cmdPush, lexeme.Line, nil))
 						}
-						if i < len(*lexems)-4 && (*lexems)[i+1].Type == isDot {
-							if (*lexems)[i+2].Type != lexIdent {
+						if i < len(*lexemes)-4 && (*lexemes)[i+1].Type == isDot {
+							if (*lexemes)[i+2].Type != lexIdent {
 								log.WithFields(log.Fields{"type": consts.ParseError}).Error("must be the name of the tail")
 								return fmt.Errorf(`must be the name of the tail`)
 							}
-							names := prev.Value.(*ObjInfo).Value.CodeBlock().Info.FuncInfo().Names
-							if _, ok := (*names)[(*lexems)[i+2].Value.(string)]; !ok {
+							names := prev.Value.(*ObjInfo).GetCodeBlock().GetFuncInfo().Names
+							if _, ok := (*names)[(*lexemes)[i+2].Value.(string)]; !ok {
 
-								if i < len(*lexems)-5 && (*lexems)[i+3].Type == isLPar {
-									objInfo, _ := vm.findObj((*lexems)[i+2].Value.(string), block)
+								if i < len(*lexemes)-5 && (*lexemes)[i+3].Type == isLPar {
+									objInfo, _ := vm.findObj((*lexemes)[i+2].Value.(string), block)
 									if objInfo != nil && objInfo.Type == ObjectType_Func || objInfo.Type == ObjectType_ExtFunc {
-										tail = newByteCode(uint16(cmdCall), lexem.Line, objInfo)
+										tail = newByteCode(uint16(cmdCall), lexeme.Line, objInfo)
 									}
 								}
 								if tail == nil {
-									log.WithFields(log.Fields{"type": consts.ParseError, "tail": (*lexems)[i+2].Value.(string)}).Error("unknown function tail")
-									return fmt.Errorf(`unknown function tail %s`, (*lexems)[i+2].Value.(string))
+									log.WithFields(log.Fields{"type": consts.ParseError, "tail": (*lexemes)[i+2].Value.(string)}).Error("unknown function tail")
+									return fmt.Errorf(`unknown function tail %s`, (*lexemes)[i+2].Value.(string))
 								}
 							}
 							if tail == nil {
-								buffer.push(newByteCode(cmdFuncName, lexem.Line, FuncNameCmd{Name: (*lexems)[i+2].Value.(string)}))
+								buffer.push(newByteCode(cmdFuncName, lexeme.Line, FuncNameCmd{Name: (*lexemes)[i+2].Value.(string)}))
 								count := 0
-								if (*lexems)[i+3].Type != isRPar {
+								if (*lexemes)[i+3].Type != isRPar {
 									count++
 								}
 								parcount = append(parcount, count)
@@ -592,7 +592,7 @@ main:
 					parcount = parcount[:len(parcount)-1]
 					if prev.Value.(*ObjInfo).Type == ObjectType_ExtFunc {
 						var errtext string
-						extinfo := prev.Value.(*ObjInfo).Value.ExtFuncInfo()
+						extinfo := prev.Value.(*ObjInfo).GetExtFuncInfo()
 						wantlen := len(extinfo.Params)
 						for _, v := range extinfo.Auto {
 							if len(v) > 0 {
@@ -606,7 +606,7 @@ main:
 						}
 					}
 					if prev.Cmd == cmdCallVari {
-						bytecode.push(newByteCode(cmdPush, lexem.Line, count))
+						bytecode.push(newByteCode(cmdPush, lexeme.Line, count))
 					}
 					buffer = buffer[:len(buffer)-1]
 					bytecode.push(prev)
@@ -621,7 +621,7 @@ main:
 			noMap = true
 			for {
 				if len(buffer) == 0 {
-					logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("there is not pair")
+					logger.WithFields(log.Fields{"lex_value": lexeme.Value.(string), "type": consts.ParseError}).Error("there is not pair")
 					return fmt.Errorf(`there is not pair`)
 				}
 				prev := buffer[len(buffer)-1]
@@ -635,7 +635,7 @@ main:
 			if len(buffer) > 0 {
 				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdIndex {
 					buffer = buffer[:len(buffer)-1]
-					if i < len(*lexems)-1 && (*lexems)[i+1].Type == isEq {
+					if i < len(*lexemes)-1 && (*lexemes)[i+1].Type == isEq {
 						i++
 						setIndex = true
 						indexInfo = prev.Value.(*IndexInfo)
@@ -645,14 +645,14 @@ main:
 					bytecode.push(prev)
 				}
 			}
-			if (*lexems)[i+1].Type == isLBrack {
+			if (*lexemes)[i+1].Type == isLBrack {
 				return errMultiIndex
 			}
 		case lexOper:
-			if oper, ok := opers[lexem.Value.(uint32)]; ok {
+			if oper, ok := opers[lexeme.Value.(uint32)]; ok {
 				var prevType uint32
 				if i > 0 {
-					prevType = (*lexems)[i-1].Type
+					prevType = (*lexemes)[i-1].Type
 				}
 				if oper.Cmd == cmdSub && (i == 0 || (prevType != lexNumber && prevType != lexIdent &&
 					prevType != lexExtend && prevType != lexString && prevType != isRCurly &&
@@ -662,7 +662,7 @@ main:
 				} else if prevLex == lexOper && oper.Priority != cmdUnary {
 					return errOper
 				}
-				byteOper := newByteCode(oper.Cmd, lexem.Line, oper.Priority)
+				byteOper := newByteCode(oper.Cmd, lexeme.Line, oper.Priority)
 
 				for {
 					if len(buffer) == 0 {
@@ -688,40 +688,40 @@ main:
 					}
 				}
 			} else {
-				logger.WithFields(log.Fields{"lex_value": strconv.FormatUint(uint64(lexem.Value.(uint32)), 10), "type": consts.ParseError}).Error("unknown operator")
-				return fmt.Errorf(`unknown operator %d`, lexem.Value.(uint32))
+				logger.WithFields(log.Fields{"lex_value": strconv.FormatUint(uint64(lexeme.Value.(uint32)), 10), "type": consts.ParseError}).Error("unknown operator")
+				return fmt.Errorf(`unknown operator %d`, lexeme.Value.(uint32))
 			}
 		case lexNumber, lexString:
 			noMap = true
-			cmd = newByteCode(cmdPush, lexem.Line, lexem.Value)
+			cmd = newByteCode(cmdPush, lexeme.Line, lexeme.Value)
 		case lexExtend:
 			noMap = true
-			if i < len(*lexems)-2 {
-				if (*lexems)[i+1].Type == isLPar {
+			if i < len(*lexemes)-2 {
+				if (*lexemes)[i+1].Type == isLPar {
 					count := 0
-					if (*lexems)[i+2].Type != isRPar {
+					if (*lexemes)[i+2].Type != isRPar {
 						count++
 					}
 					parcount = append(parcount, count)
-					buffer.push(newByteCode(cmdCallExtend, lexem.Line, lexem.Value.(string)))
+					buffer.push(newByteCode(cmdCallExtend, lexeme.Line, lexeme.Value.(string)))
 					call = true
 				}
 			}
 			if !call {
-				cmd = newByteCode(cmdExtend, lexem.Line, lexem.Value.(string))
-				if i < len(*lexems)-1 && (*lexems)[i+1].Type == isLBrack {
-					buffer.push(newByteCode(cmdIndex, lexem.Line, &IndexInfo{Extend: lexem.Value.(string)}))
+				cmd = newByteCode(cmdExtend, lexeme.Line, lexeme.Value.(string))
+				if i < len(*lexemes)-1 && (*lexemes)[i+1].Type == isLBrack {
+					buffer.push(newByteCode(cmdIndex, lexeme.Line, &IndexInfo{Extend: lexeme.Value.(string)}))
 				}
 			}
 		case lexIdent:
 			noMap = true
-			objInfo, tobj := vm.findObj(lexem.Value.(string), block)
-			if objInfo == nil && (!vm.Extern || i > *ind || i >= len(*lexems)-2 || (*lexems)[i+1].Type != isLPar) {
-				logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("unknown identifier")
-				return fmt.Errorf(eUnknownIdent, lexem.Value.(string))
+			objInfo, tobj := vm.findObj(lexeme.Value.(string), block)
+			if objInfo == nil && (!vm.Extern || i > *ind || i >= len(*lexemes)-2 || (*lexemes)[i+1].Type != isLPar) {
+				logger.WithFields(log.Fields{"lex_value": lexeme.Value.(string), "type": consts.ParseError}).Error("unknown identifier")
+				return fmt.Errorf(eUnknownIdent, lexeme.Value.(string))
 			}
-			if i < len(*lexems)-2 {
-				if (*lexems)[i+1].Type == isLPar {
+			if i < len(*lexemes)-2 {
+				if (*lexemes)[i+1].Type == isLPar {
 					var (
 						isContract  bool
 						objContract *CodeBlock
@@ -731,79 +731,79 @@ main:
 					}
 					if objInfo == nil || (objInfo.Type != ObjectType_ExtFunc && objInfo.Type != ObjectType_Func &&
 						objInfo.Type != ObjectType_Contract) {
-						logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("unknown function")
-						return fmt.Errorf(`unknown function %s`, lexem.Value.(string))
+						logger.WithFields(log.Fields{"lex_value": lexeme.Value.(string), "type": consts.ParseError}).Error("unknown function")
+						return fmt.Errorf(`unknown function %s`, lexeme.Value.(string))
 					}
 					if objInfo.Type == ObjectType_Contract {
 						if objInfo.Value != nil {
-							objContract = objInfo.Value.CodeBlock()
+							objContract = objInfo.GetCodeBlock()
 						}
 						objInfo, tobj = vm.findObj(`ExecContract`, block)
 						isContract = true
 					}
 					cmdCall := uint16(cmdCall)
-					if (objInfo.Type == ObjectType_ExtFunc && objInfo.Value.ExtFuncInfo().Variadic) ||
-						(objInfo.Type == ObjectType_Func && objInfo.Value.CodeBlock().Info.FuncInfo().Variadic) {
+					if (objInfo.Type == ObjectType_ExtFunc && objInfo.GetExtFuncInfo().Variadic) ||
+						(objInfo.Type == ObjectType_Func && objInfo.GetCodeBlock().GetFuncInfo().Variadic) {
 						cmdCall = cmdCallVari
 					}
 					count := 0
-					if (*lexems)[i+2].Type != isRPar {
+					if (*lexemes)[i+2].Type != isRPar {
 						count++
 					}
-					buffer.push(newByteCode(cmdCall, lexem.Line, objInfo))
+					buffer.push(newByteCode(cmdCall, lexeme.Line, objInfo))
 					if isContract {
-						name := StateName((*block)[0].Info.Uint32(), lexem.Value.(string))
+						name := StateName((*block)[0].Owner.StateID, lexeme.Value.(string))
 						for j := len(*block) - 1; j >= 0; j-- {
 							topblock := (*block)[j]
 							if topblock.Type == ObjectType_Contract {
-								if name == topblock.Info.ContractInfo().Name {
+								if name == topblock.GetContractInfo().Name {
 									return errRecursion
 								}
-								if topblock.Info.ContractInfo().Used == nil {
-									topblock.Info.ContractInfo().Used = make(map[string]bool)
+								if topblock.GetContractInfo().Used == nil {
+									topblock.GetContractInfo().Used = make(map[string]bool)
 								}
-								topblock.Info.ContractInfo().Used[name] = true
+								topblock.GetContractInfo().Used[name] = true
 							}
 						}
-						if objContract != nil && objContract.Info.ContractInfo().CanWrite {
+						if objContract != nil && objContract.GetContractInfo().CanWrite {
 							setWritable(block)
 						}
-						bytecode.push(newByteCode(cmdPush, lexem.Line, name))
+						bytecode.push(newByteCode(cmdPush, lexeme.Line, name))
 						if count == 0 {
 							count = 2
-							bytecode.push(newByteCode(cmdPush, lexem.Line, ""))
-							bytecode.push(newByteCode(cmdPush, lexem.Line, ""))
+							bytecode.push(newByteCode(cmdPush, lexeme.Line, ""))
+							bytecode.push(newByteCode(cmdPush, lexeme.Line, ""))
 						}
 						count++
 					}
-					if lexem.Value.(string) == `CallContract` {
+					if lexeme.Value.(string) == `CallContract` {
 						count++
-						bytecode.push(newByteCode(cmdPush, lexem.Line, (*block)[0].Info.Uint32()))
+						bytecode.push(newByteCode(cmdPush, lexeme.Line, (*block)[0].Owner.StateID))
 					}
 					parcount = append(parcount, count)
 					call = true
 				}
-				if (*lexems)[i+1].Type == isLBrack {
+				if (*lexemes)[i+1].Type == isLBrack {
 					if objInfo == nil || objInfo.Type != ObjectType_Var {
-						logger.WithFields(log.Fields{"lex_value": lexem.Value.(string), "type": consts.ParseError}).Error("unknown variable")
-						return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
+						logger.WithFields(log.Fields{"lex_value": lexeme.Value.(string), "type": consts.ParseError}).Error("unknown variable")
+						return fmt.Errorf(`unknown variable %s`, lexeme.Value.(string))
 					}
-					buffer.push(newByteCode(cmdIndex, lexem.Line, &IndexInfo{VarOffset: objInfo.Value.Int(), Owner: tobj}))
+					buffer.push(newByteCode(cmdIndex, lexeme.Line, &IndexInfo{VarOffset: objInfo.GetInt(), Owner: tobj}))
 				}
 			}
 			if !call {
 				if objInfo.Type != ObjectType_Var {
-					return fmt.Errorf(`unknown variable %s`, lexem.Value.(string))
+					return fmt.Errorf(`unknown variable %s`, lexeme.Value.(string))
 				}
-				cmd = newByteCode(cmdVar, lexem.Line, &VarInfo{Obj: objInfo, Owner: tobj})
+				cmd = newByteCode(cmdVar, lexeme.Line, &VarInfo{Obj: objInfo, Owner: tobj})
 			}
 		}
-		if lexem.Type != lexNewLine {
-			prevLex = lexem.Type
+		if lexeme.Type != lexNewLine {
+			prevLex = lexeme.Type
 		}
-		if lexem.Type&0xff == lexKeyword {
-			if lexem.Value.(uint32) == keyTail {
-				cmd = newByteCode(cmdUnwrapArr, lexem.Line, 0)
+		if lexeme.Type&0xff == lexKeyword {
+			if lexeme.Value.(uint32) == keyTail {
+				cmd = newByteCode(cmdUnwrapArr, lexeme.Line, 0)
 			}
 		}
 		if cmd != nil {
@@ -831,21 +831,21 @@ main:
 // ContractsList returns list of contracts names from source of code
 func ContractsList(value string) ([]string, error) {
 	names := make([]string, 0)
-	lexems, err := lexParser([]rune(value))
+	lexemes, err := lexParser([]rune(value))
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("getting contract list")
 		return names, err
 	}
 	var level int
-	for i, lexem := range lexems {
-		switch lexem.Type {
+	for i, lexeme := range lexemes {
+		switch lexeme.Type {
 		case isLCurly:
 			level++
 		case isRCurly:
 			level--
 		case lexKeyword | (keyContract << 8), lexKeyword | (keyFunc << 8):
-			if level == 0 && i+1 < len(lexems) && lexems[i+1].Type == lexIdent {
-				names = append(names, lexems[i+1].Value.(string))
+			if level == 0 && i+1 < len(lexemes) && lexemes[i+1].Type == lexIdent {
+				names = append(names, lexemes[i+1].Value.(string))
 			}
 		}
 	}

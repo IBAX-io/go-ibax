@@ -22,11 +22,11 @@ const (
 type Notification struct {
 	ecosystem           int64
 	ID                  int64  `gorm:"primary_key;not null"`
-	Recipient           string `gorm:"type:jsonb`
-	Sender              string `gorm:"type:jsonb`
-	Notification        string `gorm:"type:jsonb`
-	PageParams          string `gorm:"type:jsonb`
-	ProcessingInfo      string `gorm:"type:jsonb`
+	Recipient           string `gorm:"type:jsonb"`
+	Sender              string `gorm:"type:jsonb"`
+	Notification        string `gorm:"type:jsonb"`
+	PageParams          string `gorm:"type:jsonb"`
+	ProcessingInfo      string `gorm:"type:jsonb"`
 	PageName            string `gorm:"size:255"`
 	DateCreated         int64
 	DateStartProcessing int64

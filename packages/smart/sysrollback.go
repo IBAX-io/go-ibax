@@ -112,8 +112,8 @@ func SysFlushContract(iroot any, id int64, active bool) error {
 	}
 	for i, item := range root.Children {
 		if item.Type == script.ObjectType_Contract {
-			root.Children[i].Info.ContractInfo().Owner.TableID = id
-			root.Children[i].Info.ContractInfo().Owner.Active = active
+			root.Children[i].GetContractInfo().Owner.TableID = id
+			root.Children[i].GetContractInfo().Owner.Active = active
 		}
 	}
 	script.VMFlushBlock(script.GetVM(), root)
@@ -124,9 +124,9 @@ func SysFlushContract(iroot any, id int64, active bool) error {
 func SysSetContractWallet(tblid, state int64, wallet int64) error {
 	for i, item := range script.GetVM().CodeBlock.Children {
 		if item != nil && item.Type == script.ObjectType_Contract {
-			cinfo := item.Info.ContractInfo()
+			cinfo := item.GetContractInfo()
 			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
-				script.GetVM().Children[i].Info.ContractInfo().Owner.WalletID = wallet
+				script.GetVM().Children[i].GetContractInfo().Owner.WalletID = wallet
 			}
 		}
 	}
@@ -146,10 +146,10 @@ func SysRollbackEditContract(transaction *sqldb.DbTransaction, sysData SysRollDa
 		var owner *script.OwnerInfo
 		for i, item := range script.GetVM().CodeBlock.Children {
 			if item != nil && item.Type == script.ObjectType_Contract {
-				cinfo := item.Info.ContractInfo()
+				cinfo := item.GetContractInfo()
 				if cinfo.Owner.TableID == sysData.ID &&
 					cinfo.Owner.StateID == uint32(converter.StrToInt64(EcosystemID)) {
-					owner = script.GetVM().Children[i].Info.ContractInfo().Owner
+					owner = script.GetVM().Children[i].GetContractInfo().Owner
 					break
 				}
 			}
@@ -203,7 +203,7 @@ func SysRollbackEcosystem(dbTx *sqldb.DbTransaction, sysData SysRollData) error 
 	} else {
 		vm := script.GetVM()
 		for vm.Children[len(vm.Children)-1].Type == script.ObjectType_Contract {
-			cinfo := vm.Children[len(vm.Children)-1].Info.ContractInfo()
+			cinfo := vm.Children[len(vm.Children)-1].GetContractInfo()
 			if int64(cinfo.Owner.StateID) != sysData.ID {
 				break
 			}

@@ -126,7 +126,7 @@ func NewVM() *VM {
 }
 
 func getNameByObj(obj *ObjInfo) (name string) {
-	block := obj.Value.CodeBlock()
+	block := obj.GetCodeBlock()
 	for key, val := range block.Parent.Objects {
 		if val == obj {
 			name = key
@@ -157,10 +157,10 @@ func (vm *VM) Call(name string, params []any, extend map[string]any) (ret []any,
 			cost = syspar.GetMaxCost()
 		}
 		rt := NewRunTime(vm, cost)
-		ret, err = rt.Run(obj.Value.CodeBlock(), params, extend)
+		ret, err = rt.Run(obj.GetCodeBlock(), params, extend)
 		extend[Extend_txcost] = rt.Cost()
 	case ObjectType_ExtFunc:
-		finfo := obj.Value.ExtFuncInfo()
+		finfo := obj.GetExtFuncInfo()
 		foo := reflect.ValueOf(finfo.Func)
 		var result []reflect.Value
 		pars := make([]reflect.Value, len(finfo.Params))

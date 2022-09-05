@@ -168,9 +168,9 @@ func GetAllContracts() (string, error) {
 func ActivateContract(tblid, state int64, active bool) {
 	for i, item := range script.GetVM().CodeBlock.Children {
 		if item != nil && item.Type == script.ObjectType_Contract {
-			cinfo := item.Info.ContractInfo()
+			cinfo := item.GetContractInfo()
 			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
-				script.GetVM().Children[i].Info.ContractInfo().Owner.Active = active
+				script.GetVM().Children[i].GetContractInfo().Owner.Active = active
 			}
 		}
 	}
@@ -183,9 +183,9 @@ func SetContractWallet(sc *SmartContract, tblid, state int64, wallet int64) erro
 	}
 	for i, item := range script.GetVM().CodeBlock.Children {
 		if item != nil && item.Type == script.ObjectType_Contract {
-			cinfo := item.Info.ContractInfo()
+			cinfo := item.GetContractInfo()
 			if cinfo.Owner.TableID == tblid && cinfo.Owner.StateID == uint32(state) {
-				script.GetVM().Children[i].Info.ContractInfo().Owner.WalletID = wallet
+				script.GetVM().Children[i].GetContractInfo().Owner.WalletID = wallet
 			}
 		}
 	}

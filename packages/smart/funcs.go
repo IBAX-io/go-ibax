@@ -1109,7 +1109,7 @@ func FlushContract(sc *SmartContract, iroot any, id int64) error {
 	}
 	for i, item := range root.Children {
 		if item.Type == script.ObjectType_Contract {
-			root.Children[i].Info.ContractInfo().Owner.TableID = id
+			root.Children[i].GetContractInfo().Owner.TableID = id
 		}
 	}
 	for key, item := range root.Objects {
@@ -1117,9 +1117,9 @@ func FlushContract(sc *SmartContract, iroot any, id int64) error {
 			var id uint32
 			switch item.Type {
 			case script.ObjectType_Contract:
-				id = cur.Value.CodeBlock().Info.ContractInfo().ID
+				id = cur.GetCodeBlock().GetContractInfo().ID
 			case script.ObjectType_Func:
-				id = cur.Value.CodeBlock().Info.FuncInfo().ID
+				id = cur.GetCodeBlock().GetFuncInfo().ID
 			}
 			sc.FlushRollback = append(sc.FlushRollback, &FlushInfo{
 				ID:   id,

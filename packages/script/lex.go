@@ -188,21 +188,21 @@ func GetFieldDefaultValue(fieldType uint32) any {
 	return nil
 }
 
-// Lexem contains information about language item
-type Lexem struct {
-	Type   uint32 // Type of the lexem
+// Lexeme contains information about language item
+type Lexeme struct {
+	Type   uint32 // Type of the lexeme
 	Ext    uint32
-	Value  any    // Value of lexem
-	Line   uint16 // Line of the lexem
+	Value  any    // Value of lexeme
+	Line   uint16 // Line of the lexeme
 	Column uint32 // Position inside the line
 }
 
-func NewLexem(t uint32, ext uint32, value any, line uint16, column uint32) *Lexem {
-	return &Lexem{Type: t, Ext: ext, Value: value, Line: line, Column: column}
+func NewLexeme(t uint32, ext uint32, value any, line uint16, column uint32) *Lexeme {
+	return &Lexeme{Type: t, Ext: ext, Value: value, Line: line, Column: column}
 }
 
 // GetLogger returns logger
-func (l *Lexem) GetLogger() *log.Entry {
+func (l *Lexeme) GetLogger() *log.Entry {
 	return log.WithFields(log.Fields{"lex_type": l.Type, "lex_line": l.Line, "lex_column": l.Column})
 }
 
@@ -212,21 +212,21 @@ type ifBuf struct {
 	stop  bool
 }
 
-// Lexems is a slice of lexems
-type Lexems []*Lexem
+// Lexemes is a slice of lexemes
+type Lexemes []*Lexeme
 
 // The lexical analysis is based on the finite machine which is described in the file
 // tools/lextable/lextable.go. lextable.go generates a representation of a finite machine as an array
 // and records it in the file lex_table.go. In fact, the lexTable array is a set of states and
 // depending on the next sign, the machine goes into a new state.
 // lexParser parsers the input language source code
-func lexParser(input []rune) (Lexems, error) {
+func lexParser(input []rune) (Lexemes, error) {
 	var (
 		curState                                        uint8
 		length, line, off, offline, flags, start, lexID uint32
 	)
 
-	lexems := make(Lexems, 0, len(input)/4)
+	lexemes := make(Lexemes, 0, len(input)/4)
 	irune := len(alphabet) - 1
 
 	// This function according to the next symbol looks with help of lexTable what new state we will have,
@@ -255,7 +255,7 @@ func lexParser(input []rune) (Lexems, error) {
 			todo(input[off])
 		}
 		if curState == lexError {
-			return nil, fmt.Errorf(`unknown lexem %s [Ln:%d Col:%d]`,
+			return nil, fmt.Errorf(`unknown lexeme %s [Ln:%d Col:%d]`,
 				string(input[off:off+1]), line, off-offline+1)
 		}
 		if (flags & lexfSkip) != 0 {
@@ -281,7 +281,7 @@ func lexParser(input []rune) (Lexems, error) {
 				name := string(input[lexOff:right])
 				if name != `else` && name != `elif` {
 					for i := 0; i < ifbuf[len(ifbuf)-1].count; i++ {
-						lexems = append(lexems, NewLexem(lexSys|(uint32('}')<<8), ext, uint32('}'), uint16(line), lexOff-offline+1))
+						lexemes = append(lexemes, NewLexeme(lexSys|(uint32('}')<<8), ext, uint32('}'), uint16(line), lexOff-offline+1))
 					}
 					ifbuf = ifbuf[:len(ifbuf)-1]
 				} else {
@@ -355,18 +355,18 @@ func lexParser(input []rune) (Lexems, error) {
 						value = keyID
 					case keyElif:
 						if len(ifbuf) > 0 {
-							lexems = append(lexems,
-								NewLexem(lexKeyword|(keyElse<<8), ext, uint32(keyElse), uint16(line), lexOff-offline+1),
-								NewLexem(lexSys|('{'<<8), ext, uint32('{'), uint16(line), lexOff-offline+1))
+							lexemes = append(lexemes,
+								NewLexeme(lexKeyword|(keyElse<<8), ext, uint32(keyElse), uint16(line), lexOff-offline+1),
+								NewLexeme(lexSys|('{'<<8), ext, uint32('{'), uint16(line), lexOff-offline+1))
 							lexID = lexKeyword | (keyIf << 8)
 							value = uint32(keyIf)
 							ifbuf[len(ifbuf)-1].count++
 						}
 					case keyAction, keyCond:
-						if len(lexems) > 0 {
-							lexf := *lexems[len(lexems)-1]
+						if len(lexemes) > 0 {
+							lexf := *lexemes[len(lexemes)-1]
 							if lexf.Type&0xff != lexKeyword || lexf.Value.(uint32) != keyFunc {
-								lexems = append(lexems, NewLexem(lexKeyword|(keyFunc<<8), ext, uint32(keyFunc), uint16(line), lexOff-offline+1))
+								lexemes = append(lexemes, NewLexeme(lexKeyword|(keyFunc<<8), ext, uint32(keyFunc), uint16(line), lexOff-offline+1))
 							}
 						}
 						value = name
@@ -392,7 +392,7 @@ func lexParser(input []rune) (Lexems, error) {
 				}
 			}
 			if lexID != lexComment {
-				lexems = append(lexems, NewLexem(lexID, ext, value, uint16(line), lexOff-offline+1))
+				lexemes = append(lexemes, NewLexeme(lexID, ext, value, uint16(line), lexOff-offline+1))
 			}
 		}
 		if (flags & lexfPush) != 0 {
@@ -402,7 +402,7 @@ func lexParser(input []rune) (Lexems, error) {
 			off++
 		}
 	}
-	return lexems, nil
+	return lexemes, nil
 }
 
 func OriginalToString(original uint32) string {
