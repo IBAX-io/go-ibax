@@ -58,7 +58,10 @@ func UnmarshallTransaction(buffer *bytes.Buffer) (*Transaction, error) {
 	tx := &Transaction{}
 	var err error
 	defer func() {
-		if err != nil && tx != nil && tx.Hash() != nil {
+		if err != nil && tx != nil {
+			if tx.Inner == nil {
+				return
+			}
 			_ = MarkTransactionBad(tx.Hash(), err.Error())
 		}
 	}()

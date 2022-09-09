@@ -67,9 +67,9 @@ type loginResult struct {
 	KeyID       string        `json:"key_id,omitempty"`
 	Account     string        `json:"account,omitempty"`
 	NotifyKey   string        `json:"notify_key,omitempty"`
-	IsNode      bool          `json:"isnode,omitempty"`
-	IsOwner     bool          `json:"isowner,omitempty"`
-	IsCLB       bool          `json:"clb,omitempty"`
+	IsNode      bool          `json:"isnode"`
+	IsOwner     bool          `json:"isowner"`
+	IsCLB       bool          `json:"clb"`
 	Timestamp   string        `json:"timestamp,omitempty"`
 	Roles       []rolesResult `json:"roles,omitempty"`
 }

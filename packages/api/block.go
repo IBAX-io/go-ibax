@@ -152,7 +152,9 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if tx.IsSmartContract() {
-				txInfo.ContractName = tx.SmartContract().TxContract.Name
+				if tx.SmartContract().TxContract != nil {
+					txInfo.ContractName = tx.SmartContract().TxContract.Name
+				}
 				txInfo.Params = tx.SmartContract().TxData
 			}
 
@@ -258,7 +260,9 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			if tx.IsSmartContract() {
-				txDetailedInfo.ContractName = tx.SmartContract().TxContract.Name
+				if tx.SmartContract().TxContract != nil {
+					txDetailedInfo.ContractName = tx.SmartContract().TxContract.Name
+				}
 				txDetailedInfo.Params = tx.SmartContract().TxData
 			}
 
