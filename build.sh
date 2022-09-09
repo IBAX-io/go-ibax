@@ -10,7 +10,7 @@ function buildpkg() {
     buildBranch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
     buildDate=$(date -u "+%Y-%m-%d-%H:%M:%S(UTC)")
     commitHash=$(git rev-parse --short HEAD 2>/dev/null || echo unknown)
-    go build -o "$buildBin" -ldflags "-X $buildModule/cmd.buildBranch=$buildBranch -X $buildModule/cmd.buildDate=$buildDate -X $buildModule/cmd.commitHash=$commitHash" "$buildFile"
+    go build -o "$buildBin" -ldflags "-s -w -X $buildModule/cmd.buildBranch=$buildBranch -X $buildModule/cmd.buildDate=$buildDate -X $buildModule/cmd.commitHash=$commitHash" "$buildFile"
 }
 
 buildpkg go-ibax "github.com/IBAX-io/go-ibax" "$HOMEDIR/main.go"

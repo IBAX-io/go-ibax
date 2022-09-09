@@ -97,7 +97,7 @@ func GetCandidateNodes() (sqldb.CandidateNodes, error) {
 	}
 	ret := make(sqldb.CandidateNodes, 0)
 	for _, node := range candidateNodes {
-		if nodePublicKey != node.NodePubKey {
+		if "04"+nodePublicKey != node.NodePubKey {
 			ret = append(ret, node)
 		}
 	}

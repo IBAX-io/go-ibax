@@ -13,9 +13,9 @@ import (
 type RolesParticipants struct {
 	ecosystem   int64
 	Id          int64
-	Role        string `gorm:"type":jsonb`
-	Member      string `gorm:"type":jsonb`
-	Appointed   string `gorm:"type":jsonb`
+	Role        string `gorm:"type:jsonb"`
+	Member      string `gorm:"type:jsonb"`
+	Appointed   string `gorm:"type:jsonb"`
 	DateCreated int64
 	DateDeleted int64
 	Deleted     bool
