@@ -36,11 +36,13 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 	result := new(getUIDResult)
 	result.NetworkID = converter.Int64ToStr(conf.Config.LocalConf.NetworkID)
 	token := getToken(r)
+	result.Cryptoer, result.Hasher = conf.Config.CryptoSettings.Cryptoer, conf.Config.CryptoSettings.Hasher
 	if token != nil {
 		if claims, ok := token.Claims.(*JWTClaims); ok && len(claims.KeyID) > 0 {
 			result.EcosystemID = claims.EcosystemID
 			result.Expire = claims.ExpiresAt.Sub(time.Now()).String()
 			result.KeyID = claims.KeyID
+			result.Address = converter.AddressToString(converter.StrToInt64(claims.KeyID))
 			jsonResponse(w, result)
 			return
 		}
@@ -62,7 +64,6 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-	result.Cryptoer, result.Hasher = conf.Config.CryptoSettings.Cryptoer, conf.Config.CryptoSettings.Hasher
 
 	jsonResponse(w, result)
 }
