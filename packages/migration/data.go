@@ -94,9 +94,9 @@ var (
 
 	{{head "spent_info"}}
 		t.Column("input_tx_hash", "bytea", {"null": true})
-		t.Column("input_index", "smallint", {"null": true})
+		t.Column("input_index", "integer", {"null": true})
 		t.Column("output_tx_hash", "bytea")
-		t.Column("output_index", "smallint")
+		t.Column("output_index", "integer")
 		t.Column("output_key_id", "bigint")
 		t.Column("output_value", "decimal(30)", {"default_raw": "'0' CHECK (output_value >= 0)"})
 		t.Column("ecosystem", "bigint", {"default": "1"})

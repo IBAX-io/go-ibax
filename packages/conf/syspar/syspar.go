@@ -128,6 +128,14 @@ func ReadNodeKeys() (err error) {
 	return
 }
 
+func GetSysParCache() map[string]string {
+	var cp = make(map[string]string, len(cache))
+	for k, v := range cache {
+		cp[k] = v
+	}
+	return cp
+}
+
 func GetNodePubKey() []byte {
 	return nodePubKey
 }
@@ -464,7 +472,7 @@ func GetGapsBetweenBlocks() int64 {
 	return converter.StrToInt64(SysString(GapsBetweenBlocks))
 }
 
-//GetMaxBlockTimeDuration return max block time duration
+// GetMaxBlockTimeDuration return max block time duration
 func GetMaxBlockTimeDuration() time.Duration {
 	return time.Millisecond*time.Duration(GetMaxBlockGenerationTime()) + time.Second*time.Duration(GetGapsBetweenBlocks())
 }

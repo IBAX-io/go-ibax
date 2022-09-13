@@ -9,9 +9,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"strconv"
-	"sync"
-
 	"github.com/IBAX-io/go-ibax/packages/common/random"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -23,6 +20,8 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
+	"strconv"
+	"sync"
 )
 
 // PlaySafe is inserting block safely
@@ -124,7 +123,8 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	}
 	b.OutputsMap = make(map[sqldb.KeyUTXO][]sqldb.SpentInfo)
 	sqldb.PutAllOutputsMap(outputs, b.OutputsMap)
-
+	// UTXO multiple ecosystem fuelRate
+	b.PrevSysPar = syspar.GetSysParCache()
 	var wg sync.WaitGroup
 
 	// StopNetworkTxType
@@ -231,7 +231,7 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
 		}
-		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap)
+		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar)
 		if err != nil {
 			return err
 		}
@@ -307,8 +307,8 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 		//afters.TxBinLogSql = append(afters.TxBinLogSql, t.DbTransaction.BinLogSql...)
 		*processedTx = append(*processedTx, t.FullData)
 
-		sqldb.UpdateTxInputs(t.Hash(), t.TxInputs, b.OutputsMap)
-		sqldb.InsertTxOutputs(t.Hash(), t.TxOutputs, b.OutputsMap)
+		sqldb.UpdateTxInputs(t.Hash(), t.TxInputsMap, b.OutputsMap)
+		sqldb.InsertTxOutputs(t.Hash(), t.TxOutputsMap, b.OutputsMap)
 	}
 
 	return nil

@@ -663,9 +663,7 @@ func (sc *SmartContract) prepareMultiPay() error {
 
 func (sc *SmartContract) appendTokens(nums ...int64) error {
 	sc.TokenEcosystems = make(map[int64]any)
-	if len(sc.TokenEcosystems) == 0 {
-		sc.TokenEcosystems[consts.DefaultTokenEcosystem] = nil
-	}
+	sc.TokenEcosystems[consts.DefaultTokenEcosystem] = nil
 
 	for i := 0; i < len(nums); i++ {
 		num := nums[i]

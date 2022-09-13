@@ -510,7 +510,7 @@ func (dbTx *DbTransaction) GetSumColumn(table, column, where string) (result str
 	return
 }
 
-//GetSumColumnCount returns the value of the column from the table by id
+// GetSumColumnCount returns the value of the column from the table by id
 func (dbTx *DbTransaction) GetSumColumnCount(table, column, where string) (result int, err error) {
 	err = GetDB(dbTx).Table(table).Select("count(*)").Where(where).Row().Scan(&result)
 	if err != nil {

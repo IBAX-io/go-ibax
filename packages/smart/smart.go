@@ -89,6 +89,7 @@ type SmartContract struct {
 	OutputsMap      map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	TxInputsMap     map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	TxOutputsMap    map[sqldb.KeyUTXO][]sqldb.SpentInfo
+	PrevSysPar      map[string]string
 }
 
 // AppendStack adds an element to the stack of contract call or removes the top element when name is empty

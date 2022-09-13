@@ -709,7 +709,7 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 	outputsMap := sc.OutputsMap
 	txInputsMap := sc.TxInputsMap
 	txOutputsMap := sc.TxOutputsMap
-	txHash := sc.Hash
+	//txHash := sc.Hash
 	ecosystem := sc.TxSmart.EcosystemID
 	blockId := sc.BlockHeader.BlockId
 	//dbTx := sc.DbTransaction
@@ -717,68 +717,42 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 	//sum, _ := decimal.NewFromString(value)
 	payValue, _ := decimal.NewFromString(value)
 	if strings.EqualFold("UTXO", source) && strings.EqualFold("Account", target) {
-		inputChange := sqldb.GetChangeOutputsMap(keyUTXO, txOutputsMap)
-		if inputChange != nil {
-			totalAmount := decimal.Zero
 
-			outputValue, _ := decimal.NewFromString(inputChange.OutputValue)
+		txInputs := sqldb.GetUnusedOutputsMap(keyUTXO, outputsMap)
+
+		if len(txInputs) == 0 {
+			return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
+		}
+
+		totalAmount := decimal.Zero
+		for _, input := range txInputs {
+			outputValue, _ := decimal.NewFromString(input.OutputValue)
 			totalAmount = totalAmount.Add(outputValue)
+		}
 
-			if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
-				flag = true // The transfer was successful
-				//txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
-				totalAmount = totalAmount.Sub(payValue)
-				if _, _, err = sc.updateWhere([]string{"+amount"}, []any{payValue}, "1_keys", types.LoadMap(map[string]any{"id": fromID, "ecosystem": ecosystem})); err != nil {
-					return false, err
-				}
-
-			} else {
-				return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
-			}
-			// The change
-			var txOutputs []sqldb.SpentInfo
-			if totalAmount.GreaterThan(decimal.Zero) {
-				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
-			}
-			if len(txOutputs) > 0 {
-				sqldb.InsertTxOutputsChange(txHash, *inputChange, txOutputs, txOutputsMap)
+		if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
+			flag = true // The transfer was successful
+			//txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
+			totalAmount = totalAmount.Sub(payValue)
+			if _, _, err := sc.updateWhere([]string{"+amount"}, []any{payValue}, "1_keys", types.LoadMap(map[string]any{"id": fromID, "ecosystem": ecosystem})); err != nil {
+				return false, err
 			}
 		} else {
-			txInputs := sqldb.GetUnusedOutputsMap(keyUTXO, outputsMap)
-
-			if len(txInputs) == 0 {
-				return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
-			}
-
-			totalAmount := decimal.Zero
-			for _, input := range txInputs {
-				outputValue, _ := decimal.NewFromString(input.OutputValue)
-				totalAmount = totalAmount.Add(outputValue)
-			}
-
-			if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
-				flag = true // The transfer was successful
-				//txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
-				totalAmount = totalAmount.Sub(payValue)
-				if _, _, err := sc.updateWhere([]string{"+amount"}, []any{payValue}, "1_keys", types.LoadMap(map[string]any{"id": fromID, "ecosystem": ecosystem})); err != nil {
-					return false, err
-				}
-			} else {
-				return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
-			}
-
-			// The change
-			var txOutputs []sqldb.SpentInfo
-			if totalAmount.GreaterThan(decimal.Zero) {
-				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
-			}
-			if len(txInputs) > 0 {
-				sqldb.PutAllOutputsMap(txInputs, txInputsMap)
-			}
-			if len(txOutputs) > 0 {
-				sqldb.PutAllOutputsMap(txOutputs, txOutputsMap)
-			}
+			return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
 		}
+
+		// The change
+		var txOutputs []sqldb.SpentInfo
+		if totalAmount.GreaterThan(decimal.Zero) {
+			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem}) // The change
+		}
+		if len(txInputs) > 0 {
+			sqldb.PutAllOutputsMap(txInputs, txInputsMap)
+		}
+		if len(txOutputs) > 0 {
+			sqldb.PutAllOutputsMap(txOutputs, txOutputsMap)
+		}
+
 		sc.TxInputsMap = txInputsMap
 		sc.TxOutputsMap = txOutputsMap
 		return true, nil
@@ -811,66 +785,225 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 }
 
 func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err error) {
+
+	cache := sc.PrevSysPar
+	getParams := func(name string) (map[int64]string, error) {
+		res := make(map[int64]string)
+		if len(cache[name]) > 0 {
+			ifuels := make([][]string, 0)
+			err = json.Unmarshal([]byte(cache[name]), &ifuels)
+			if err != nil {
+				log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling params from json")
+				return res, err
+			}
+			for _, item := range ifuels {
+				if len(item) < 2 {
+					continue
+				}
+				res[converter.StrToInt64(item[0])] = item[1]
+			}
+		}
+		return res, nil
+	}
+	var fuels = make(map[int64]string)
+	var wallets = make(map[int64]string)
+
+	fuels, err = getParams(syspar.FuelRate)
+	wallets, err = getParams(syspar.TaxesWallet)
+
 	fromID := sc.TxSmart.KeyID
 	outputsMap := sc.OutputsMap
 	txInputsMap := sc.TxInputsMap
 	txOutputsMap := sc.TxOutputsMap
-	txHash := sc.Hash
+	//txHash := sc.Hash
 	ecosystem := sc.TxSmart.EcosystemID
 	blockId := sc.BlockHeader.BlockId
 	//dbTx := sc.DbTransaction
 	keyUTXO := sqldb.KeyUTXO{Ecosystem: ecosystem, KeyId: fromID}
-	inputChange := sqldb.GetChangeOutputsMap(keyUTXO, txOutputsMap)
-	if inputChange != nil {
-		totalAmount := decimal.Zero
-		var txOutputs []sqldb.SpentInfo
-		outputValue, _ := decimal.NewFromString(inputChange.OutputValue)
+
+	txInputs := sqldb.GetUnusedOutputsMap(keyUTXO, outputsMap)
+	if len(txInputs) == 0 {
+		return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
+	}
+
+	totalAmount := decimal.Zero
+
+	var txOutputs []sqldb.SpentInfo
+
+	for _, input := range txInputs {
+		outputValue, _ := decimal.NewFromString(input.OutputValue)
 		totalAmount = totalAmount.Add(outputValue)
-		payValue, _ := decimal.NewFromString(value)
-		if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
-			flag = true // The transfer was successful
-			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
-			totalAmount = totalAmount.Sub(payValue)
-		} else {
-			flag = false
-			err = fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
+	}
+
+	var outputIndex int32 = 0
+
+	// taxes_size = 3
+	TaxesSize := syspar.SysInt64(syspar.TaxesSize)
+
+	// if : ecosystem = 2 ,rule : taxes ecosystem 1 and 2
+	if ecosystem != consts.DefaultTokenEcosystem {
+		// rule : taxes ecosystem 1
+		{
+			var txOutputs1 []sqldb.SpentInfo
+			ecosystem1 := int64(consts.DefaultTokenEcosystem)
+			keyUTXO1 := sqldb.KeyUTXO{Ecosystem: ecosystem1, KeyId: fromID}
+			txInputs1 := sqldb.GetUnusedOutputsMap(keyUTXO1, outputsMap)
+			if len(txInputs1) == 0 {
+				return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem1)
+			}
+			totalAmount1 := decimal.Zero
+
+			for _, input1 := range txInputs1 {
+				outputValue1, _ := decimal.NewFromString(input1.OutputValue)
+				totalAmount1 = totalAmount1.Add(outputValue1)
+			}
+			var money1 = decimal.Zero
+			var fuelRate1 = decimal.Zero
+			var taxes1 = decimal.Zero
+			if ret, ok := fuels[ecosystem1]; ok {
+
+				fuelRate1, err = decimal.NewFromString(ret)
+				if err != nil {
+					return false, err
+				}
+				//	ecosystem fuelRate /10 *( bit + len(input))
+				money1 = fuelRate1.Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs1)))))
+
+				if money1.GreaterThan(totalAmount1) {
+					money1 = totalAmount1
+				}
+
+				taxes1 = money1.Mul(decimal.NewFromInt(TaxesSize)).Div(decimal.New(100, 0)).Floor()
+
+			}
+			if money1.GreaterThan(decimal.Zero) && taxes1.GreaterThan(decimal.Zero) {
+				if taxesWallet, ok := wallets[ecosystem1]; ok {
+					taxesID := converter.StrToInt64(taxesWallet)
+
+					flag = true
+					// 97%
+					txOutputs1 = append(txOutputs1, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: sc.BlockHeader.KeyId, OutputValue: money1.Sub(taxes1).String(),
+						BlockId: blockId, Ecosystem: ecosystem1})
+					outputIndex++
+					// 3%
+					txOutputs1 = append(txOutputs1, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: taxesID, OutputValue: taxes1.String(),
+						BlockId: blockId, Ecosystem: ecosystem1})
+					outputIndex++
+					totalAmount1 = totalAmount1.Sub(money1)
+				}
+			}
+
+			if totalAmount1.GreaterThan(decimal.Zero) {
+				txOutputs1 = append(txOutputs1, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: fromID, OutputValue: totalAmount1.String(), BlockId: blockId, Ecosystem: ecosystem1}) // The change
+				outputIndex++
+			}
+
+			if len(txInputs1) > 0 && len(txOutputs1) > 0 {
+				sqldb.PutAllOutputsMap(txInputs1, txInputsMap)
+				sqldb.PutAllOutputsMap(txOutputs1, txOutputsMap)
+			}
+
 		}
-		// The change
-		if totalAmount.GreaterThan(decimal.Zero) {
-			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 1, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
-		}
-		if len(txOutputs) > 0 {
-			sqldb.InsertTxOutputsChange(txHash, *inputChange, txOutputs, txOutputsMap)
-		}
-	} else {
-		txInputs := sqldb.GetUnusedOutputsMap(keyUTXO, outputsMap)
-		if len(txInputs) == 0 {
-			return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
+		// rule : taxes ecosystem 2
+		{
+			ecosystem2 := ecosystem
+			var money2 = decimal.Zero
+			var fuelRate2 = decimal.Zero
+			var taxes2 = decimal.Zero
+			if ret, ok := fuels[ecosystem2]; ok {
+
+				fuelRate2, err = decimal.NewFromString(ret)
+				if err != nil {
+					return false, err
+				}
+				//	ecosystem fuelRate /10 *( bit + len(input))
+				money2 = fuelRate2.Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs)))))
+
+				if money2.GreaterThan(totalAmount) {
+					money2 = totalAmount
+				}
+				taxes2 = money2.Mul(decimal.NewFromInt(TaxesSize)).Div(decimal.New(100, 0)).Floor()
+			}
+			if money2.GreaterThan(decimal.Zero) && taxes2.GreaterThan(decimal.Zero) {
+				if taxesWallet, ok := wallets[ecosystem2]; ok {
+					taxesID := converter.StrToInt64(taxesWallet)
+
+					flag = true
+					// 97%
+					txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: sc.BlockHeader.KeyId, OutputValue: money2.Sub(taxes2).String(),
+						BlockId: blockId, Ecosystem: ecosystem2})
+					outputIndex++
+					// 3%
+					txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: taxesID, OutputValue: taxes2.String(),
+						BlockId: blockId, Ecosystem: ecosystem2})
+					outputIndex++
+					totalAmount = totalAmount.Sub(money2)
+
+				}
+			}
 		}
 
-		totalAmount := decimal.Zero
-		var txOutputs []sqldb.SpentInfo
-		for _, input := range txInputs {
-			outputValue, _ := decimal.NewFromString(input.OutputValue)
-			totalAmount = totalAmount.Add(outputValue)
+	}
+
+	// if : ecosystem = 1 , rule : taxes ecosystem 1
+	if ecosystem == consts.DefaultTokenEcosystem {
+		ecosystem1 := int64(consts.DefaultTokenEcosystem)
+		var money1 = decimal.Zero
+		var fuelRate1 = decimal.Zero
+		var taxes1 = decimal.Zero
+		if ret, ok := fuels[ecosystem1]; ok {
+
+			fuelRate1, err = decimal.NewFromString(ret)
+			if err != nil {
+				return false, err
+			} else {
+				//	ecosystem fuelRate /10 *( bit + len(input))
+				money1 = fuelRate1.Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs)))))
+				if money1.GreaterThan(totalAmount) {
+					money1 = totalAmount
+				}
+				taxes1 = money1.Mul(decimal.NewFromInt(TaxesSize)).Div(decimal.New(100, 0)).Floor()
+			}
 		}
-		payValue, _ := decimal.NewFromString(value)
-		if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
-			flag = true // The transfer was successful
-			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
-			totalAmount = totalAmount.Sub(payValue)
-		} else {
-			flag = false
-			err = fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
+		if money1.GreaterThan(decimal.Zero) && taxes1.GreaterThan(decimal.Zero) {
+			if taxesWallet, ok := wallets[ecosystem1]; ok {
+				taxesID := converter.StrToInt64(taxesWallet)
+
+				flag = true
+				// 97%
+				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: sc.BlockHeader.KeyId, OutputValue: money1.Sub(taxes1).String(),
+					BlockId: blockId, Ecosystem: ecosystem1})
+				outputIndex++
+				// 3%
+				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: taxesID, OutputValue: taxes1.String(),
+					BlockId: blockId, Ecosystem: ecosystem1})
+				outputIndex++
+				totalAmount = totalAmount.Sub(money1)
+
+			}
 		}
-		// The change
-		if totalAmount.GreaterThan(decimal.Zero) {
-			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 1, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Action: "change"}) // The change
-		}
-		if len(txInputs) > 0 && len(txOutputs) > 0 {
-			sqldb.PutAllOutputsMap(txInputs, txInputsMap)
-			sqldb.PutAllOutputsMap(txOutputs, txOutputsMap)
-		}
+
+	}
+
+	payValue, _ := decimal.NewFromString(value)
+	if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
+		flag = true // The transfer was successful
+		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
+		outputIndex++
+		totalAmount = totalAmount.Sub(payValue)
+	} else {
+		flag = false
+		err = fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
+	}
+
+	// The change
+	if totalAmount.GreaterThan(decimal.Zero) {
+		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem}) // The change
+		outputIndex++
+	}
+	if len(txInputs) > 0 && len(txOutputs) > 0 {
+		sqldb.PutAllOutputsMap(txInputs, txInputsMap)
+		sqldb.PutAllOutputsMap(txOutputs, txOutputsMap)
 	}
 	sc.TxInputsMap = txInputsMap
 	sc.TxOutputsMap = txOutputsMap
