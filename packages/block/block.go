@@ -29,6 +29,7 @@ type Block struct {
 	Notifications     []types.Notifications
 	OutputsMap        map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	ClassifyTxsMap    map[int][]*transaction.Transaction
+	PrevSysPar        map[string]string
 }
 
 // GetLogger is returns logger

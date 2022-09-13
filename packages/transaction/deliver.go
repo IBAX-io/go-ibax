@@ -29,14 +29,15 @@ type InToCxt struct {
 	Rand           *rand.Rand
 	TxCheckLimits  *Limits
 	OutputsMap     map[sqldb.KeyUTXO][]sqldb.SpentInfo
+	PrevSysPar     map[string]string
 }
 
 type OutCtx struct {
-	SysUpdate  bool
-	RollBackTx []*types.RollbackTx
-	TxResult   *pbgo.TxResult
-	TxOutputs  []sqldb.SpentInfo
-	TxInputs   []sqldb.SpentInfo
+	SysUpdate    bool
+	RollBackTx   []*types.RollbackTx
+	TxResult     *pbgo.TxResult
+	TxOutputsMap map[sqldb.KeyUTXO][]sqldb.SpentInfo
+	TxInputsMap  map[sqldb.KeyUTXO][]sqldb.SpentInfo
 }
 
 type OutCtxOption func(b *OutCtx)
@@ -71,20 +72,12 @@ func WithOutCtxRollBackTx(ret []*types.RollbackTx) OutCtxOption {
 
 func WithOutCtxTxOutputs(txOutputsMap map[sqldb.KeyUTXO][]sqldb.SpentInfo) OutCtxOption {
 	return func(b *OutCtx) {
-		var list []sqldb.SpentInfo
-		for _, txOutputs := range txOutputsMap {
-			list = append(list, txOutputs...)
-		}
-		b.TxOutputs = list
+		b.TxOutputsMap = txOutputsMap
 	}
 }
 
 func WithOutCtxTxInputs(txInputsMap map[sqldb.KeyUTXO][]sqldb.SpentInfo) OutCtxOption {
 	return func(b *OutCtx) {
-		var list []sqldb.SpentInfo
-		for _, txInputs := range txInputsMap {
-			list = append(list, txInputs...)
-		}
-		b.TxInputs = list
+		b.TxInputsMap = txInputsMap
 	}
 }

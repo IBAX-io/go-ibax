@@ -73,7 +73,7 @@ var sqlFirstEcosystemCommon = `
 		t.Column("ecosystem", "bigint", {"default": "1"})
 		t.Column("account", "char(24)", {})
 		t.PrimaryKey("ecosystem", "id")
-	{{footer "index(account)"}}
+	{{footer "index(account)" "unique(ecosystem, account)"}}
 
 	{{head "1_menu"}}
 		t.Column("id", "bigint", {"default": "0"})

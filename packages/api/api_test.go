@@ -735,7 +735,6 @@ func postUTXOTxMultipart(form *url.Values) error {
 	return err
 }
 
-
 func postTransferSelfTxResult(form getter) (id int64, msg string, err error) {
 
 	var privateKey, publicKey []byte
@@ -755,8 +754,8 @@ func postTransferSelfTxResult(form getter) (id int64, msg string, err error) {
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		TransferSelf: &types.TransferSelf{
-			Value:  "1000000000000000000",
-			Asset:  "IBAX",
+			Value: "1000000000000000000",
+			//Asset:  "IBAX",
 			Source: "UTXO",
 			Target: "Account",
 		},

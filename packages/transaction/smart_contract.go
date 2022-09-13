@@ -55,6 +55,7 @@ func (s *SmartTransactionParser) Init(t *InToCxt) error {
 	s.Rollback = true
 	s.SysUpdate = false
 	s.OutputsMap = t.OutputsMap
+	s.PrevSysPar = t.PrevSysPar
 	s.TxInputsMap = make(map[sqldb.KeyUTXO][]sqldb.SpentInfo)
 	s.TxOutputsMap = make(map[sqldb.KeyUTXO][]sqldb.SpentInfo)
 	s.RollBackTx = make([]*types.RollbackTx, 0)
