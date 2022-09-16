@@ -27,6 +27,8 @@ func NewExtendData() *ExtendData {
 			"CallContract": ExContract,
 			"Settings":     GetSettings,
 			"MemoryUsage":  MemoryUsage,
+			"Println":      fmt.Println,
+			"Sprintf":      fmt.Sprintf,
 		},
 		AutoPars: map[string]string{
 			`*script.RunTime`: `rt`,

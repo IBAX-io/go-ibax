@@ -29,7 +29,7 @@ const (
 	TagOptional  = "optional"
 )
 
-// ExtFuncInfo is the structure for the extrended function
+// ExtFuncInfo is the structure for the extended function
 type ExtFuncInfo struct {
 	Name     string
 	Params   []reflect.Type

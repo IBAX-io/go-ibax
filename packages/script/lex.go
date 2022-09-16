@@ -22,7 +22,7 @@ import (
 // where the incoming text is divided into a sequence of lexemes.
 
 const (
-	// Here are all the created lexemess
+	// Here are all the created lexemes
 	lexUnknown = iota
 	lexSys     // a system lexeme is different bracket, =, comma and so on.
 	lexOper    // Operator is +, -, *, /
@@ -250,12 +250,12 @@ func lexParser(input []rune) (Lexemes, error) {
 	for off < length {
 		// Here we go through the symbols one by one
 		if off == length-1 {
-			todo(rune(' '))
+			todo(' ')
 		} else {
 			todo(input[off])
 		}
 		if curState == lexError {
-			return nil, fmt.Errorf(`unknown lexeme %s [Ln:%d Col:%d]`,
+			return nil, fmt.Errorf(`unknown lexeme '%s' [Ln:%d Col:%d]`,
 				string(input[off:off+1]), line, off-offline+1)
 		}
 		if (flags & lexfSkip) != 0 {
@@ -311,14 +311,14 @@ func lexParser(input []rune) (Lexemes, error) {
 					}
 				}
 			case lexString, lexComment:
-				value = string(input[lexOff+1 : right-1])
+				val := string(input[lexOff+1 : right-1])
 				if lexID == lexString && skip {
 					skip = false
-					value = strings.Replace(value.(string), `\"`, `"`, -1)
-					value = strings.Replace(value.(string), `\t`, "\t", -1)
-					value = strings.Replace(strings.Replace(value.(string), `\r`, "\r", -1), `\n`, "\n", -1)
+					val = strings.Replace(strings.Replace(val, `\"`, `"`, -1), `\t`, "\t", -1)
+					val = strings.Replace(strings.Replace(val, `\r`, "\r", -1), `\n`, "\n", -1)
 				}
-				for i, ch := range value.(string) {
+				value = val
+				for i, ch := range val {
 					if ch == 0xa {
 						line++
 						offline = off + uint32(i) + 1
