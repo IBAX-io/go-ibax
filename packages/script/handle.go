@@ -170,6 +170,13 @@ func fFparam(buf *CodeBlocks, state stateTypes, lexeme *Lexeme) error {
 		}
 		return fmt.Errorf("identifier expected, got '%s'", val)
 	}
+	if _, ok := block.Objects[lexeme.Value.(string)]; ok {
+		if state == stateFParamTYPE {
+			return fmt.Errorf("duplicate argument '%s'", lexeme.Value.(string))
+		} else if state == stateVarType {
+			return fmt.Errorf("'%s' redeclared in this code block", lexeme.Value.(string))
+		}
+	}
 	block.Objects[lexeme.Value.(string)] = &ObjInfo{Type: ObjectType_Var, Value: &ObjInfo_IndexOfVars{Index: len(block.Vars)}}
 	block.Vars = append(block.Vars, reflect.TypeOf(nil))
 	return nil
