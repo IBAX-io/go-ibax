@@ -64,6 +64,17 @@ type ContractInfo struct {
 	CanWrite bool // If the function can update DB
 }
 
+func (c *ContractInfo) TxMap() map[string]*FieldInfo {
+	if c == nil {
+		return nil
+	}
+	var m = make(map[string]*FieldInfo)
+	for _, n := range *c.Tx {
+		m[n.Name] = nil
+	}
+	return m
+}
+
 // FuncNameCmd for cmdFuncName
 type FuncNameCmd struct {
 	Name  string
