@@ -6,7 +6,6 @@ package script
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -189,6 +188,7 @@ func (vm *VM) CompileBlock(input []rune, owner *OwnerInfo) (*CodeBlock, error) {
 		}
 		if newState.FuncFlag > 0 {
 			if err := funcHandles[newState.FuncFlag](&blockstack, nextState, lexeme); err != nil {
+				lexeme.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "nextState": nextState, "flag": newState.FuncFlag, "err": err, "lex_value": lexeme.Value}).Errorf("func handles")
 				return nil, err
 			}
 		}
@@ -365,12 +365,10 @@ main:
 			state = mustValue
 		case mustKey:
 			switch lexeme.Type & 0xff {
-			case lexIdent:
+			case lexIdent, lexString:
 				key = lexeme.Value.(string)
 			case lexExtend:
 				key = `$` + lexeme.Value.(string)
-			case lexString:
-				key = lexeme.Value.(string)
 			case lexKeyword:
 				for ikey, v := range keywords {
 					if fmt.Sprint(v) == fmt.Sprint(lexeme.Value) {
@@ -527,7 +525,7 @@ main:
 			noMap = true
 			for {
 				if len(buffer) == 0 {
-					logger.WithFields(log.Fields{"lex_value": lexeme.Value.(string), "type": consts.ParseError}).Error("there is not pair")
+					logger.WithFields(log.Fields{"lex_value": lexeme.Value, "type": consts.ParseError}).Error("there is not pair")
 					return fmt.Errorf(`there is not pair`)
 				}
 				prev := buffer[len(buffer)-1]
@@ -547,7 +545,7 @@ main:
 					bytecode.push(prev)
 				}
 				var tail *ByteCode
-				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdCall || prev.Cmd == cmdCallVari {
+				if prev := buffer[len(buffer)-1]; prev.Cmd == cmdCall || prev.Cmd == cmdCallVariadic {
 					objInfo := prev.Value.(*ObjInfo)
 					if (objInfo.Type == ObjectType_Func && objInfo.GetCodeBlock().GetFuncInfo().CanWrite) ||
 						(objInfo.Type == ObjectType_ExtFunc && objInfo.GetExtFuncInfo().CanWrite) {
@@ -605,7 +603,7 @@ main:
 							return fmt.Errorf(errtext)
 						}
 					}
-					if prev.Cmd == cmdCallVari {
+					if prev.Cmd == cmdCallVariadic {
 						bytecode.push(newByteCode(cmdPush, lexeme.Line, count))
 					}
 					buffer = buffer[:len(buffer)-1]
@@ -621,7 +619,7 @@ main:
 			noMap = true
 			for {
 				if len(buffer) == 0 {
-					logger.WithFields(log.Fields{"lex_value": lexeme.Value.(string), "type": consts.ParseError}).Error("there is not pair")
+					logger.WithFields(log.Fields{"lex_value": lexeme.Value, "type": consts.ParseError}).Error("there is not pair")
 					return fmt.Errorf(`there is not pair`)
 				}
 				prev := buffer[len(buffer)-1]
@@ -688,7 +686,7 @@ main:
 					}
 				}
 			} else {
-				logger.WithFields(log.Fields{"lex_value": strconv.FormatUint(uint64(lexeme.Value.(uint32)), 10), "type": consts.ParseError}).Error("unknown operator")
+				logger.WithFields(log.Fields{"lex_value": lexeme.Value, "type": consts.ParseError}).Error("unknown operator")
 				return fmt.Errorf(`unknown operator %d`, lexeme.Value.(uint32))
 			}
 		case lexNumber, lexString:
@@ -717,7 +715,7 @@ main:
 			noMap = true
 			objInfo, tobj := vm.findObj(lexeme.Value.(string), block)
 			if objInfo == nil && (!vm.Extern || i > *ind || i >= len(*lexemes)-2 || (*lexemes)[i+1].Type != isLPar) {
-				logger.WithFields(log.Fields{"lex_value": lexeme.Value.(string), "type": consts.ParseError}).Error("unknown identifier")
+				logger.WithFields(log.Fields{"lex_value": lexeme.Value, "type": consts.ParseError}).Error("unknown identifier")
 				return fmt.Errorf(eUnknownIdent, lexeme.Value.(string))
 			}
 			if i < len(*lexemes)-2 {
@@ -731,7 +729,7 @@ main:
 					}
 					if objInfo == nil || (objInfo.Type != ObjectType_ExtFunc && objInfo.Type != ObjectType_Func &&
 						objInfo.Type != ObjectType_Contract) {
-						logger.WithFields(log.Fields{"lex_value": lexeme.Value.(string), "type": consts.ParseError}).Error("unknown function")
+						logger.WithFields(log.Fields{"lex_value": lexeme.Value, "type": consts.ParseError}).Error("unknown function")
 						return fmt.Errorf(`unknown function %s`, lexeme.Value.(string))
 					}
 					if objInfo.Type == ObjectType_Contract {
@@ -744,7 +742,7 @@ main:
 					cmdCall := uint16(cmdCall)
 					if (objInfo.Type == ObjectType_ExtFunc && objInfo.GetExtFuncInfo().Variadic) ||
 						(objInfo.Type == ObjectType_Func && objInfo.GetCodeBlock().GetFuncInfo().Variadic) {
-						cmdCall = cmdCallVari
+						cmdCall = cmdCallVariadic
 					}
 					count := 0
 					if (*lexemes)[i+2].Type != isRPar {
@@ -785,10 +783,10 @@ main:
 				}
 				if (*lexemes)[i+1].Type == isLBrack {
 					if objInfo == nil || objInfo.Type != ObjectType_Var {
-						logger.WithFields(log.Fields{"lex_value": lexeme.Value.(string), "type": consts.ParseError}).Error("unknown variable")
+						logger.WithFields(log.Fields{"lex_value": lexeme.Value, "type": consts.ParseError}).Error("unknown variable")
 						return fmt.Errorf(`unknown variable %s`, lexeme.Value.(string))
 					}
-					buffer.push(newByteCode(cmdIndex, lexeme.Line, &IndexInfo{VarOffset: objInfo.GetInt(), Owner: tobj}))
+					buffer.push(newByteCode(cmdIndex, lexeme.Line, &IndexInfo{VarOffset: objInfo.GetIndex(), Owner: tobj}))
 				}
 			}
 			if !call {

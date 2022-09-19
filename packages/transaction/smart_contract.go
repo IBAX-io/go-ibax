@@ -227,6 +227,11 @@ func (s *SmartTransactionParser) parseFromContract(fillData bool) error {
 
 	if txInfo != nil {
 		if fillData {
+			for k := range smartTx.Params {
+				if _, ok := contract.Info().TxMap()[k]; !ok {
+					return fmt.Errorf("'%s' parameter is not required", k)
+				}
+			}
 			if s.TxData, err = smart.FillTxData(*txInfo, smartTx.Params); err != nil {
 				return errors.Wrap(err, fmt.Sprintf("contract '%s'", contract.Name))
 			}

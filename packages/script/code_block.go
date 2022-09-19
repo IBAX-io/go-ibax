@@ -24,9 +24,12 @@ nesting goes further according to nesting of bracketed. Tree nodes are structure
 
 // CodeBlock contains all information about compiled block {...} and its children
 type CodeBlock struct {
-	Objects  map[string]*ObjInfo
-	Type     ObjectType
-	Owner    *OwnerInfo
+	Objects map[string]*ObjInfo
+	Type    ObjectType
+	Owner   *OwnerInfo
+	// Types that are valid to be assigned to Info:
+	//	*FuncInfo
+	//	*ContractInfo
 	Info     isCodeBlockInfo
 	Parent   *CodeBlock
 	Vars     []reflect.Type
@@ -122,24 +125,30 @@ type OwnerInfo struct {
 
 // ObjInfo is the common object type
 type ObjInfo struct {
-	Type  ObjectType
+	Type ObjectType
+	// Types that are valid to be assigned to Value:
+	//	*CodeBlock
+	//	*ExtFuncInfo
+	//	*ObjInfo_IndexOfVars
+	//	*ObjInfo_ExtVarName
 	Value isObjInfoValue
 }
 
 type isObjInfoValue interface {
 	isObjInfoValue()
 }
-type ObjInfo_Int struct {
-	Int int
+type ObjInfo_IndexOfVars struct {
+	Index int
 }
-type ObjInfo_Str struct {
-	Str string
+type ObjInfo_ExtVarName struct {
+	//object variable name
+	Name string
 }
 
-func (*CodeBlock) isObjInfoValue()   {}
-func (*ExtFuncInfo) isObjInfoValue() {}
-func (*ObjInfo_Int) isObjInfoValue() {}
-func (*ObjInfo_Str) isObjInfoValue() {}
+func (*CodeBlock) isObjInfoValue()           {}
+func (*ExtFuncInfo) isObjInfoValue()         {}
+func (*ObjInfo_IndexOfVars) isObjInfoValue() {}
+func (*ObjInfo_ExtVarName) isObjInfoValue()  {}
 
 func (m *ObjInfo) GetValue() isObjInfoValue {
 	if m != nil {
@@ -162,16 +171,16 @@ func (m *ObjInfo) GetExtFuncInfo() *ExtFuncInfo {
 	return nil
 }
 
-func (m *ObjInfo) GetInt() int {
-	if x, ok := m.GetValue().(*ObjInfo_Int); ok {
-		return x.Int
+func (m *ObjInfo) GetIndex() int {
+	if x, ok := m.GetValue().(*ObjInfo_IndexOfVars); ok {
+		return x.Index
 	}
 	return 0
 }
 
-func (m *ObjInfo) GetStr() string {
-	if x, ok := m.GetValue().(*ObjInfo_Str); ok {
-		return x.Str
+func (m *ObjInfo) GetName() string {
+	if x, ok := m.GetValue().(*ObjInfo_ExtVarName); ok {
+		return x.Name
 	}
 	return ""
 }

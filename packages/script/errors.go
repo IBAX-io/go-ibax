@@ -9,6 +9,7 @@ import "errors"
 const (
 	eContractLoop         = `there is loop in %s contract`
 	eSysVar               = `system variable $%s cannot be changed`
+	eSysFunc              = `system function '%s' cannot be changed`
 	eDataParamVarCollides = `param variable '%s' in the data section of the contract '%s' collides with the 'builtin' variable`
 	eTypeParam            = `parameter %d has wrong type`
 	eUndefinedParam       = `%s is not defined`

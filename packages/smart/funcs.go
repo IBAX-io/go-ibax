@@ -237,8 +237,6 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"GetMapKeys":               GetMapKeys,
 		"SortedKeys":               SortedKeys,
 		"Append":                   Append,
-		"Println":                  fmt.Println,
-		"Sprintf":                  fmt.Sprintf,
 		"GetHistory":               GetHistory,
 		"GetHistoryRow":            GetHistoryRow,
 		"GetDataFromXLSX":          GetDataFromXLSX,

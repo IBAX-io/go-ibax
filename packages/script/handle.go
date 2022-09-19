@@ -3,6 +3,7 @@ package script
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	log "github.com/sirupsen/logrus"
@@ -11,8 +12,7 @@ import (
 type compileFunc func(*CodeBlocks, stateTypes, *Lexeme) error
 
 const (
-	// This is a list of identifiers for functions that will generate a bytecode for
-	// the corresponding cases
+	// This is a list of identifiers for functions that will generate a bytecode for the corresponding cases.
 	// Indexes of handle functions funcHandles = compileFunc[]
 	cfNothing = iota
 	cfError
@@ -44,6 +44,9 @@ const (
 
 	//	cfEval
 )
+
+// VarRegexp letter { letter | unicode_digit }
+var VarRegexp = `^[a-zA-Z][a-zA-Z0-9_]*$`
 
 var (
 	// The array of functions corresponding to the constants cf...
@@ -160,7 +163,21 @@ func fFparam(buf *CodeBlocks, state stateTypes, lexeme *Lexeme) error {
 	if block.Objects == nil {
 		block.Objects = make(map[string]*ObjInfo)
 	}
-	block.Objects[lexeme.Value.(string)] = &ObjInfo{Type: ObjectType_Var, Value: &ObjInfo_Int{Int: len(block.Vars)}}
+	if !regexp.MustCompile(VarRegexp).MatchString(lexeme.Value.(string)) {
+		var val = lexeme.Value.(string)
+		if len(val) > 20 {
+			val = val[:20] + "..."
+		}
+		return fmt.Errorf("identifier expected, got '%s'", val)
+	}
+	if _, ok := block.Objects[lexeme.Value.(string)]; ok {
+		if state == stateFParamTYPE {
+			return fmt.Errorf("duplicate argument '%s'", lexeme.Value.(string))
+		} else if state == stateVarType {
+			return fmt.Errorf("'%s' redeclared in this code block", lexeme.Value.(string))
+		}
+	}
+	block.Objects[lexeme.Value.(string)] = &ObjInfo{Type: ObjectType_Var, Value: &ObjInfo_IndexOfVars{Index: len(block.Vars)}}
 	block.Vars = append(block.Vars, reflect.TypeOf(nil))
 	return nil
 }
@@ -254,7 +271,6 @@ func fFNameParam(buf *CodeBlocks, state stateTypes, lexeme *Lexeme) error {
 		}
 	}
 	(*fblock.Names)[`_`+lexeme.Value.(string)] = FuncName{}
-
 	return nil
 }
 
@@ -287,15 +303,15 @@ func fAssignVar(buf *CodeBlocks, state stateTypes, lexeme *Lexeme) error {
 	)
 	if lexeme.Type == lexExtend {
 		if isSysVar(lexeme.Value.(string)) {
-			lexeme.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexeme.Value.(string)}).Error("modifying system variable")
+			lexeme.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexeme.Value}).Error("modifying system variable")
 			return fmt.Errorf(eSysVar, lexeme.Value.(string))
 		}
-		ivar = VarInfo{Obj: &ObjInfo{Type: ObjectType_ExtVar, Value: &ObjInfo_Str{Str: lexeme.Value.(string)}}, Owner: nil}
+		ivar = VarInfo{Obj: &ObjInfo{Type: ObjectType_ExtVar, Value: &ObjInfo_ExtVarName{Name: lexeme.Value.(string)}}, Owner: nil}
 	} else {
 		objInfo, tobj := findVar(lexeme.Value.(string), buf)
 		if objInfo == nil || objInfo.Type != ObjectType_Var {
-			lexeme.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexeme.Value.(string)}).Error("unknown variable")
-			return fmt.Errorf(`unknown variable %s`, lexeme.Value.(string))
+			lexeme.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexeme.Value}).Error("unknown variable")
+			return fmt.Errorf(`unknown variable '%s'`, lexeme.Value.(string))
 		}
 		ivar = VarInfo{Obj: objInfo, Owner: tobj}
 	}
@@ -334,7 +350,7 @@ func fSettings(buf *CodeBlocks, state stateTypes, lexeme *Lexeme) error {
 	if contract.Type != ObjectType_Contract {
 		logger := lexeme.GetLogger()
 		logger.WithFields(log.Fields{"type": consts.ParseError, "contract_type": contract.Type, "lex_value": lexeme.Value}).Error("data can only be in contract")
-		return fmt.Errorf(`data can only be in contract`)
+		return fmt.Errorf(`settings can only be in contract`)
 	}
 	(*contract).GetContractInfo().Settings = make(map[string]any)
 	return nil
@@ -364,6 +380,15 @@ func fField(buf *CodeBlocks, state stateTypes, lexeme *Lexeme) error {
 		(*tx)[len(*tx)-1].Tags != `_` {
 		return fmt.Errorf(eDataType, lexeme.Line, lexeme.Column)
 	}
+
+	if !regexp.MustCompile(VarRegexp).MatchString(lexeme.Value.(string)) {
+		var val = lexeme.Value.(string)
+		if len(val) > 20 {
+			val = val[:20] + "..."
+		}
+		return fmt.Errorf("identifier expected, got '%s'", val)
+	}
+
 	if isSysVar(lexeme.Value.(string)) {
 		lexeme.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "contract": info.Name, "lex_value": lexeme.Value.(string)}).Error("param variable in the data section of the contract collides with the 'builtin' variable")
 		return fmt.Errorf(eDataParamVarCollides, lexeme.Value.(string), info.Name)

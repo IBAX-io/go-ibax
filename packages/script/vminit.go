@@ -29,7 +29,7 @@ const (
 	TagOptional  = "optional"
 )
 
-// ExtFuncInfo is the structure for the extrended function
+// ExtFuncInfo is the structure for the extended function
 type ExtFuncInfo struct {
 	Name     string
 	Params   []reflect.Type
@@ -62,6 +62,17 @@ type ContractInfo struct {
 	Tx       *[]*FieldInfo
 	Settings map[string]any
 	CanWrite bool // If the function can update DB
+}
+
+func (c *ContractInfo) TxMap() map[string]*FieldInfo {
+	if c == nil {
+		return nil
+	}
+	var m = make(map[string]*FieldInfo)
+	for _, n := range *c.Tx {
+		m[n.Name] = nil
+	}
+	return m
 }
 
 // FuncNameCmd for cmdFuncName
