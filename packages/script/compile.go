@@ -562,16 +562,15 @@ main:
 							}
 							names := prev.Value.(*ObjInfo).GetCodeBlock().GetFuncInfo().Names
 							if _, ok := (*names)[(*lexemes)[i+2].Value.(string)]; !ok {
-
 								if i < len(*lexemes)-5 && (*lexemes)[i+3].Type == isLPar {
 									objInfo, _ := vm.findObj((*lexemes)[i+2].Value.(string), block)
-									if objInfo != nil && objInfo.Type == ObjectType_Func || objInfo.Type == ObjectType_ExtFunc {
+									if objInfo != nil && (objInfo.Type == ObjectType_Func || objInfo.Type == ObjectType_ExtFunc) {
 										tail = newByteCode(uint16(cmdCall), lexeme.Line, objInfo)
 									}
 								}
 								if tail == nil {
 									log.WithFields(log.Fields{"type": consts.ParseError, "tail": (*lexemes)[i+2].Value.(string)}).Error("unknown function tail")
-									return fmt.Errorf(`unknown function tail %s`, (*lexemes)[i+2].Value.(string))
+									return fmt.Errorf(`unknown function tail '%s'`, (*lexemes)[i+2].Value.(string))
 								}
 							}
 							if tail == nil {
