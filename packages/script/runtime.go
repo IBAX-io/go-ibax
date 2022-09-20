@@ -170,6 +170,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 				imap = rt.stack[size-1].(map[string][]any)
 			}
 			rt.stack = rt.stack[:size-1]
+			size = len(rt.stack)
 		}
 		if cmd == cmdCallVariadic {
 			parcount := count + 1 - in
@@ -796,7 +797,6 @@ main:
 			}
 			rt.stack[mapoff].(map[string][]any)[ifunc.Name] = params
 			rt.stack = rt.stack[:mapoff+1]
-			continue
 		case cmdCallVariadic, cmdCall:
 			if cmd.Value.(*ObjInfo).Type == ObjectType_ExtFunc {
 				finfo := cmd.Value.(*ObjInfo).GetExtFuncInfo()
