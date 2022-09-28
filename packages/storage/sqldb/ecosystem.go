@@ -83,6 +83,36 @@ func GetAllSystemStatesIDs() ([]int64, []string, error) {
 	return ids, names, nil
 }
 
+// GetCombustionPercents is ecosystem combustion percent
+func GetCombustionPercents(db *DbTransaction, ids []int64) (map[int64]int64, error) {
+	//select id, (fee_mode_info::json #>> '{combustion,percent}')::int as percent  from "1_ecosystems" where  (fee_mode_info::json #>> '{combustion,flag}')::int = 2 and id in
+	//select id,(fee_mode_info -> 'combustion' ->> 'percent')::int as percent from "1_ecosystems" where (fee_mode_info -> 'combustion' ->> 'flag')::int = 2 and id in
+	query :=
+		`
+		select id,(fee_mode_info::json#>>'{combustion,percent}')::int as percent  
+		from "1_ecosystems" 
+		where (fee_mode_info::json#>>'{combustion,flag}')::int=2 and id IN ?
+	 `
+
+	type Combustion struct {
+		Id      int64
+		Percent int64
+	}
+
+	var ret []Combustion
+	if len(ids) > 0 {
+		err := GetDB(db).Debug().Raw(query, ids).Scan(&ret).Error
+		if err != nil {
+			return nil, err
+		}
+	}
+	var result = make(map[int64]int64)
+	for _, combustion := range ret {
+		result[combustion.Id] = combustion.Percent
+	}
+	return result, nil
+}
+
 // Get is fill receiver from db
 func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
 	return isFound(GetDB(dbTx).First(sys, "id = ?", id))
