@@ -9,6 +9,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"strconv"
+	"sync"
+
 	"github.com/IBAX-io/go-ibax/packages/common/random"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -20,8 +23,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
-	"strconv"
-	"sync"
 )
 
 // PlaySafe is inserting block safely
@@ -113,16 +114,33 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	//}
 
 	var keyIds []int64
+	var keyIdsMap = make(map[int64]bool)
+	var ecosystemIds []int64
+	var ecosystemIdsMap = make(map[int64]bool)
 	for indexTx := 0; indexTx < len(b.Transactions); indexTx++ {
 		t := b.Transactions[indexTx]
-		keyIds = append(keyIds, t.KeyID())
+		if !keyIdsMap[t.KeyID()] {
+			keyIdsMap[t.KeyID()] = true
+			keyIds = append(keyIds, t.KeyID())
+		}
+		if t.IsSmartContract() && !ecosystemIdsMap[t.SmartContract().TxSmart.EcosystemID] {
+			ecosystemIdsMap[t.SmartContract().TxSmart.EcosystemID] = true
+			ecosystemIds = append(ecosystemIds, t.SmartContract().TxSmart.EcosystemID)
+		}
 	}
+	// query all keys utxo
 	outputs, err := sqldb.GetTxOutputs(dbTx, keyIds)
 	if err != nil {
 		return err
 	}
 	b.OutputsMap = make(map[sqldb.KeyUTXO][]sqldb.SpentInfo)
 	sqldb.PutAllOutputsMap(outputs, b.OutputsMap)
+	// query all ecosystems combination percent
+	comPercents, err := sqldb.GetCombustionPercents(dbTx, ecosystemIds)
+	if err != nil {
+		return err
+	}
+	b.ComPercents = comPercents
 	// UTXO multiple ecosystem fuelRate
 	b.PrevSysPar = syspar.GetSysParCache()
 	var wg sync.WaitGroup
@@ -231,7 +249,7 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
 		}
-		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar)
+		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar, b.ComPercents)
 		if err != nil {
 			return err
 		}

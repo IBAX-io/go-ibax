@@ -30,6 +30,7 @@ type Block struct {
 	OutputsMap        map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	ClassifyTxsMap    map[int][]*transaction.Transaction
 	PrevSysPar        map[string]string
+	ComPercents       map[int64]int64 // combustion percent for each ecosystem
 }
 
 // GetLogger is returns logger
