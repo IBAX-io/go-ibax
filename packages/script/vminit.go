@@ -90,8 +90,10 @@ type FuncName struct {
 
 // FuncInfo contains the function information
 type FuncInfo struct {
-	Params   []reflect.Type
-	Results  []reflect.Type
+	Name    string
+	Params  []reflect.Type
+	Results []reflect.Type
+	//tail function
 	Names    *map[string]FuncName
 	Variadic bool
 	ID       uint32

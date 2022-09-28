@@ -129,26 +129,27 @@ type ObjInfo struct {
 	// Types that are valid to be assigned to Value:
 	//	*CodeBlock
 	//	*ExtFuncInfo
-	//	*ObjInfo_IndexOfVars
-	//	*ObjInfo_ExtVarName
+	//	*ObjInfo_Variable
+	//	*ObjInfo_ExtendVariable
 	Value isObjInfoValue
 }
 
 type isObjInfoValue interface {
 	isObjInfoValue()
 }
-type ObjInfo_IndexOfVars struct {
+type ObjInfo_Variable struct {
+	Name  string
 	Index int
 }
-type ObjInfo_ExtVarName struct {
-	//object variable name
+type ObjInfo_ExtendVariable struct {
+	//object extend variable name
 	Name string
 }
 
-func (*CodeBlock) isObjInfoValue()           {}
-func (*ExtFuncInfo) isObjInfoValue()         {}
-func (*ObjInfo_IndexOfVars) isObjInfoValue() {}
-func (*ObjInfo_ExtVarName) isObjInfoValue()  {}
+func (*CodeBlock) isObjInfoValue()              {}
+func (*ExtFuncInfo) isObjInfoValue()            {}
+func (*ObjInfo_Variable) isObjInfoValue()       {}
+func (*ObjInfo_ExtendVariable) isObjInfoValue() {}
 
 func (m *ObjInfo) GetValue() isObjInfoValue {
 	if m != nil {
@@ -171,18 +172,18 @@ func (m *ObjInfo) GetExtFuncInfo() *ExtFuncInfo {
 	return nil
 }
 
-func (m *ObjInfo) GetIndex() int {
-	if x, ok := m.GetValue().(*ObjInfo_IndexOfVars); ok {
-		return x.Index
+func (m *ObjInfo) GetVariable() *ObjInfo_Variable {
+	if x, ok := m.GetValue().(*ObjInfo_Variable); ok {
+		return x
 	}
-	return 0
+	return nil
 }
 
-func (m *ObjInfo) GetName() string {
-	if x, ok := m.GetValue().(*ObjInfo_ExtVarName); ok {
-		return x.Name
+func (m *ObjInfo) GetExtendVariable() *ObjInfo_ExtendVariable {
+	if x, ok := m.GetValue().(*ObjInfo_ExtendVariable); ok {
+		return x
 	}
-	return ""
+	return nil
 }
 
 func NewCodeBlock() *CodeBlock {

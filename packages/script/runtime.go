@@ -142,22 +142,22 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		rt.callDepth--
 	}()
 
-	size := len(rt.stack)
+	size := rt.len()
 	in = obj.getInParams()
 	if rt.unwrap && cmd == cmdCallVariadic && size > 1 &&
 		reflect.TypeOf(rt.stack[size-2]).String() == `[]interface {}` {
-		count = rt.stack[size-1].(int)
-		arr := rt.stack[size-2].([]any)
-		rt.stack = rt.stack[:size-2]
+		count = rt.getStack(size - 1).(int)
+		arr := rt.getStack(size - 2).([]any)
+		rt.resetByIdx(size - 2)
 		for _, item := range arr {
-			rt.stack = append(rt.stack, item)
+			rt.push(item)
 		}
-		rt.stack = append(rt.stack, count-1+len(arr))
-		size = len(rt.stack)
+		rt.push(count - 1 + len(arr))
+		size = rt.len()
 	}
 	rt.unwrap = false
 	if cmd == cmdCallVariadic {
-		count = rt.stack[size-1].(int)
+		count = rt.getStack(size - 1).(int)
 		size--
 	} else {
 		count = in
@@ -166,11 +166,11 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		var imap map[string][]any
 		finfo := obj.GetCodeBlock().GetFuncInfo()
 		if finfo.Names != nil {
-			if rt.stack[size-1] != nil {
-				imap = rt.stack[size-1].(map[string][]any)
+			if rt.getStack(size-1) != nil {
+				imap = rt.getStack(size - 1).(map[string][]any)
 			}
-			rt.stack = rt.stack[:size-1]
-			size = len(rt.stack)
+			rt.resetByIdx(size - 1)
+			size = rt.len()
 		}
 		if cmd == cmdCallVariadic {
 			parcount := count + 1 - in
@@ -183,17 +183,17 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 			for i := parcount; i > 0; i-- {
 				pars[i-1] = rt.stack[size+i-parcount-1]
 			}
-			rt.stack = rt.stack[:shift]
-			rt.stack = append(rt.stack, pars)
+			rt.resetByIdx(shift)
+			rt.push(pars)
 		}
-		if len(rt.stack) < len(finfo.Params) {
+		if rt.len() < len(finfo.Params) {
 			log.WithFields(log.Fields{"type": consts.VMError}).Error(errWrongCountPars)
 			return errWrongCountPars
 		}
 		for i, v := range finfo.Params {
 			switch v.Kind() {
 			case reflect.String, reflect.Int64:
-				offset := len(rt.stack) - in + i
+				offset := rt.len() - in + i
 				if v.Kind() == reflect.Int64 {
 					rv := reflect.ValueOf(rt.stack[offset])
 					switch rv.Kind() {
@@ -209,7 +209,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 			}
 		}
 		if finfo.Names != nil {
-			rt.stack = append(rt.stack, imap)
+			rt.push(imap)
 		}
 		_, err = rt.RunCode(obj.GetCodeBlock())
 		return
@@ -265,7 +265,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 	} else {
 		result = foo.Call(pars)
 	}
-	rt.stack = rt.stack[:shift]
+	rt.resetByIdx(shift)
 	if stack != nil {
 		stack.PopStack(finfo.Name)
 	}
@@ -291,7 +291,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 				return iret.Interface().(error)
 			}
 		} else {
-			rt.stack = append(rt.stack, iret.Interface())
+			rt.push(iret.Interface())
 		}
 	}
 	return
@@ -302,10 +302,10 @@ func (rt *RunTime) extendFunc(name string) error {
 		ok bool
 		f  any
 	)
-	if f, ok = rt.extend[name]; !ok || reflect.ValueOf(f).Kind().String() != `func` {
+	if f, ok = rt.extend[name]; !ok || reflect.ValueOf(f).Kind() != reflect.Func {
 		return fmt.Errorf(`unknown function %s`, name)
 	}
-	size := len(rt.stack)
+	size := rt.len()
 	foo := reflect.ValueOf(f)
 
 	count := foo.Type().NumIn()
@@ -315,14 +315,14 @@ func (rt *RunTime) extendFunc(name string) error {
 	}
 	result := foo.Call(pars)
 
-	rt.stack = rt.stack[:size-count]
+	rt.resetByIdx(size - count)
 	for i, iret := range result {
 		if foo.Type().Out(i).String() == `error` {
 			if iret.Interface() != nil {
 				return iret.Interface().(error)
 			}
 		} else {
-			rt.stack = append(rt.stack, iret.Interface())
+			rt.push(iret.Interface())
 		}
 	}
 	return nil
@@ -504,7 +504,7 @@ func (rt *RunTime) getResultValue(item mapItem) (value any, err error) {
 		var i int
 		for i = len(rt.blocks) - 1; i >= 0; i-- {
 			if ivar.Owner == rt.blocks[i].Block {
-				value = rt.vars[rt.blocks[i].Offset+ivar.Obj.GetIndex()]
+				value = rt.vars[rt.blocks[i].Offset+ivar.Obj.GetVariable().Index]
 				break
 			}
 		}
@@ -616,12 +616,12 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	rt.blocks = append(rt.blocks, &blockStack{Block: block, Offset: len(rt.vars)})
 	var namemap map[string][]any
 	if block.Type == ObjectType_Func && block.GetFuncInfo().Names != nil {
-		if rt.stack[len(rt.stack)-1] != nil {
-			namemap = rt.stack[len(rt.stack)-1].(map[string][]any)
+		if rt.peek() != nil {
+			namemap = rt.peek().(map[string][]any)
 		}
-		rt.stack = rt.stack[:len(rt.stack)-1]
+		rt.resetByIdx(rt.len() - 1)
 	}
-	start := len(rt.stack)
+	start := rt.len()
 	varoff := len(rt.vars)
 	for vkey, vpar := range block.Vars {
 		rt.cost--
@@ -679,7 +679,7 @@ main:
 
 		cmd = block.Code[ci]
 		var bin any
-		size := len(rt.stack)
+		size := rt.len()
 		if size < int(cmd.Cmd>>8) {
 			rt.vm.logger.WithFields(log.Fields{"type": consts.VMError}).Error("stack is empty")
 			err = fmt.Errorf(`stack is empty`)
@@ -690,20 +690,20 @@ main:
 		}
 		switch cmd.Cmd {
 		case cmdPush:
-			rt.stack = append(rt.stack, cmd.Value)
+			rt.push(cmd.Value)
 		case cmdPushStr:
-			rt.stack = append(rt.stack, cmd.Value.(string))
+			rt.push(cmd.Value.(string))
 		case cmdIf:
-			if valueToBool(rt.stack[len(rt.stack)-1]) {
+			if valueToBool(rt.peek()) {
 				status, err = rt.RunCode(cmd.Value.(*CodeBlock))
 			}
 		case cmdElse:
-			if !valueToBool(rt.stack[len(rt.stack)-1]) {
+			if !valueToBool(rt.peek()) {
 				status, err = rt.RunCode(cmd.Value.(*CodeBlock))
 			}
 		case cmdWhile:
-			val := rt.stack[len(rt.stack)-1]
-			rt.stack = rt.stack[:len(rt.stack)-1]
+			val := rt.peek()
+			rt.resetByIdx(rt.len() - 1)
 			if valueToBool(val) {
 				status, err = rt.RunCode(cmd.Value.(*CodeBlock))
 				newci := labels[len(labels)-1]
@@ -729,26 +729,26 @@ main:
 		case cmdAssign:
 			count := len(assign)
 			for ivar, item := range assign {
-				val := rt.stack[len(rt.stack)-count+ivar]
+				val := rt.stack[rt.len()-count+ivar]
 				if item.Owner == nil {
 					if item.Obj.Type == ObjectType_ExtVar {
-						if isSysVar(item.Obj.GetName()) {
-							err = fmt.Errorf(eSysVar, item.Obj.GetName())
+						var n = item.Obj.GetExtendVariable().Name
+						if isSysVar(n) {
+							err = fmt.Errorf(eSysVar, n)
 							rt.vm.logger.WithError(err).Error("modifying system variable")
 							break main
 						}
-						if v, ok := rt.extend[item.Obj.GetName()]; ok && reflect.TypeOf(v).String() != reflect.TypeOf(val).String() {
-							err = fmt.Errorf("type %s cannot be represented by the type %s", reflect.TypeOf(val).String(), reflect.TypeOf(v).String())
+						if v, ok := rt.extend[n]; ok && reflect.TypeOf(v).String() != reflect.TypeOf(val).String() {
+							err = fmt.Errorf("$%s (type %s) cannot be represented by the type %s", n, reflect.TypeOf(val).String(), reflect.TypeOf(v).String())
 							break
 						}
-						rt.setExtendVar(item.Obj.GetName(), val)
+						rt.setExtendVar(n, val)
 					}
 				} else {
-					var i int
-					for i = len(rt.blocks) - 1; i >= 0; i-- {
+					for i := len(rt.blocks) - 1; i >= 0; i-- {
 						if item.Owner == rt.blocks[i].Block {
-							k := rt.blocks[i].Offset + item.Obj.GetIndex()
-							switch v := rt.blocks[i].Block.Vars[item.Obj.GetIndex()].String(); v {
+							k := rt.blocks[i].Offset + item.Obj.GetVariable().Index
+							switch v := rt.blocks[i].Block.Vars[item.Obj.GetVariable().Index].String(); v {
 							case Decimal:
 								var v decimal.Decimal
 								v, err = ValueToDecimal(val)
@@ -758,7 +758,7 @@ main:
 								rt.setVar(k, v)
 							default:
 								if v != reflect.TypeOf(val).String() {
-									err = fmt.Errorf("type %s cannot be represented by the type %s", reflect.TypeOf(val).String(), v)
+									err = fmt.Errorf("variable '%v' (type %s) cannot be represented by the type %s", item.Obj.GetVariable().Name, reflect.TypeOf(val).String(), v)
 									break
 								}
 								rt.setVar(k, val)
@@ -777,10 +777,10 @@ main:
 			} else if cmd.Value.(uint32) == keyInfo {
 				eType = msgInfo
 			}
-			err = SetVMError(eType, rt.stack[len(rt.stack)-1])
+			err = SetVMError(eType, rt.peek())
 		case cmdFuncName:
 			ifunc := cmd.Value.(FuncNameCmd)
-			mapoff := len(rt.stack) - 1 - ifunc.Count
+			mapoff := rt.len() - 1 - ifunc.Count
 			if rt.stack[mapoff] == nil {
 				rt.stack[mapoff] = make(map[string][]any)
 			}
@@ -796,7 +796,8 @@ main:
 				}
 			}
 			rt.stack[mapoff].(map[string][]any)[ifunc.Name] = params
-			rt.stack = rt.stack[:mapoff+1]
+			rt.resetByIdx(mapoff + 1)
+			continue
 		case cmdCallVariadic, cmdCall:
 			if cmd.Value.(*ObjInfo).Type == ObjectType_ExtFunc {
 				finfo := cmd.Value.(*ObjInfo).GetExtFuncInfo()
@@ -820,7 +821,7 @@ main:
 			var i int
 			for i = len(rt.blocks) - 1; i >= 0; i-- {
 				if ivar.Owner == rt.blocks[i].Block {
-					rt.stack = append(rt.stack, rt.vars[rt.blocks[i].Offset+ivar.Obj.GetIndex()])
+					rt.push(rt.vars[rt.blocks[i].Offset+ivar.Obj.GetVariable().Index])
 					break
 				}
 			}
@@ -836,7 +837,7 @@ main:
 					err = rt.extendFunc(cmd.Value.(string))
 					if err != nil {
 						rt.vm.logger.WithFields(log.Fields{"error": err, "cmd": cmd.Value.(string)}).Error("executing extended function")
-						err = fmt.Errorf(`extend function %s %s`, cmd.Value.(string), err.Error())
+						err = fmt.Errorf(`extend function %s %s`, cmd.Value.(string), err)
 						break main
 					}
 				} else {
@@ -844,7 +845,7 @@ main:
 					case int:
 						val = int64(varVal)
 					}
-					rt.stack = append(rt.stack, val)
+					rt.push(val)
 				}
 			} else {
 				rt.vm.logger.WithFields(log.Fields{"cmd": cmd.Value}).Error("unknown extend identifier")
@@ -856,29 +857,29 @@ main:
 
 			switch {
 			case itype == `*types.Map`:
-				if reflect.TypeOf(rt.stack[size-1]).String() != `string` {
-					err = fmt.Errorf(eMapIndex, reflect.TypeOf(rt.stack[size-1]).String())
+				if reflect.TypeOf(rt.getStack(size-1)).String() != `string` {
+					err = fmt.Errorf(eMapIndex, reflect.TypeOf(rt.getStack(size-1)).String())
 					break
 				}
-				v, found := rt.stack[size-2].(*types.Map).Get(rt.stack[size-1].(string))
+				v, found := rt.stack[size-2].(*types.Map).Get(rt.getStack(size - 1).(string))
 				if found {
 					rt.stack[size-2] = v
 				} else {
 					rt.stack[size-2] = nil
 				}
-				rt.stack = rt.stack[:size-1]
+				rt.resetByIdx(size - 1)
 			case itype[:2] == brackets:
-				if reflect.TypeOf(rt.stack[size-1]).String() != `int64` {
-					err = fmt.Errorf(eArrIndex, reflect.TypeOf(rt.stack[size-1]).String())
+				if reflect.TypeOf(rt.getStack(size-1)).String() != `int64` {
+					err = fmt.Errorf(eArrIndex, reflect.TypeOf(rt.getStack(size-1)).String())
 					break
 				}
-				v := rv.Index(int(rt.stack[size-1].(int64)))
+				v := rv.Index(int(rt.getStack(size - 1).(int64)))
 				if v.IsValid() {
 					rt.stack[size-2] = v.Interface()
 				} else {
 					rt.stack[size-2] = nil
 				}
-				rt.stack = rt.stack[:size-1]
+				rt.resetByIdx(size - 1)
 			default:
 				itype := reflect.TypeOf(rt.stack[size-2]).String()
 				rt.vm.logger.WithFields(log.Fields{"vm_type": itype}).Error("type does not support indexing")
@@ -896,7 +897,7 @@ main:
 					}
 				}
 			}
-			if isSelfAssignment(rt.stack[size-3], rt.stack[size-1]) {
+			if isSelfAssignment(rt.stack[size-3], rt.getStack(size-1)) {
 				err = errSelfAssignment
 				break main
 			}
@@ -912,8 +913,8 @@ main:
 					break
 				}
 				rt.stack[size-3].(*types.Map).Set(rt.stack[size-2].(string),
-					reflect.ValueOf(rt.stack[size-1]).Interface())
-				rt.stack = rt.stack[:size-2]
+					reflect.ValueOf(rt.getStack(size-1)).Interface())
+				rt.resetByIdx(size - 2)
 			case itype[:2] == brackets:
 				if reflect.TypeOf(rt.stack[size-2]).String() != `int64` {
 					err = fmt.Errorf(eArrIndex, reflect.TypeOf(rt.stack[size-2]).String())
@@ -936,12 +937,12 @@ main:
 						}
 						rt.stack[size-3] = slice
 					}
-					slice[ind] = rt.stack[size-1]
+					slice[ind] = rt.getStack(size - 1)
 				} else {
-					slice := rt.stack[size-3].([]map[string]string)
-					slice[ind] = rt.stack[size-1].(map[string]string)
+					slice := rt.getStack(size - 3).([]map[string]string)
+					slice[ind] = rt.getStack(size - 1).(map[string]string)
 				}
-				rt.stack = rt.stack[:size-2]
+				rt.resetByIdx(size - 2)
 			default:
 				rt.vm.logger.WithFields(log.Fields{"vm_type": itype}).Error("type does not support indexing")
 				err = fmt.Errorf(`type %s doesn't support indexing`, itype)
@@ -953,7 +954,7 @@ main:
 				rt.recalcMemVar(indexKey)
 			}
 		case cmdUnwrapArr:
-			if reflect.TypeOf(rt.stack[size-1]).String() == `[]interface {}` {
+			if reflect.TypeOf(rt.getStack(size-1)).String() == `[]interface {}` {
 				rt.unwrap = true
 			}
 		case cmdSign:
@@ -1308,14 +1309,14 @@ main:
 			if err != nil {
 				break main
 			}
-			rt.stack = append(rt.stack, initArray)
+			rt.push(initArray)
 		case cmdMapInit:
 			var initMap *types.Map
 			initMap, err = rt.getResultMap(cmd.Value.(*types.Map))
 			if err != nil {
 				break main
 			}
-			rt.stack = append(rt.stack, initMap)
+			rt.push(initMap)
 		default:
 			rt.vm.logger.WithFields(log.Fields{"vm_cmd": cmd.Cmd}).Error("Unknown command")
 			err = fmt.Errorf(`Unknown command %d`, cmd.Cmd)
@@ -1329,32 +1330,41 @@ main:
 		}
 		if (cmd.Cmd >> 8) == 2 {
 			rt.stack[size-2] = bin
-			rt.stack = rt.stack[:size-1]
+			rt.resetByIdx(size - 1)
 		}
 	}
-	last := rt.blocks[len(rt.blocks)-1]
-	rt.blocks = rt.blocks[:len(rt.blocks)-1]
+	last := rt.popBlock()
 	if status == statusReturn {
 		if last.Block.Type == ObjectType_Func {
 			lastResults := last.Block.GetFuncInfo().Results
-			if len(lastResults) > len(rt.stack) {
+			if len(lastResults) > rt.len() {
 				var keyNames []string
 				for i := 0; i < len(lastResults); i++ {
 					keyNames = append(keyNames, lastResults[i].String())
 				}
-				err = fmt.Errorf("not enough arguments to return, need [%s]", strings.Join(keyNames, "|"))
+				err = fmt.Errorf("func '%s' not enough arguments to return, need [%s]", last.Block.GetFuncInfo().Name, strings.Join(keyNames, "|"))
 				return
 			}
+			stackCpy := make([]any, rt.len())
+			copy(stackCpy, rt.stack)
+			var index int
 			for count := len(lastResults); count > 0; count-- {
-				rt.stack[start] = rt.stack[len(rt.stack)-count]
+				val := stackCpy[len(stackCpy)-1-index]
+				if val != nil && lastResults[count-1] != reflect.TypeOf(val) {
+					err = fmt.Errorf("function '%s' return index[%d] (type %s) cannot be represented by the type %s", last.Block.GetFuncInfo().Name, count-1, reflect.TypeOf(val).String(), lastResults[count-1].String())
+					return
+				}
+				rt.stack[start] = rt.stack[rt.len()-count]
 				start++
+				index++
 			}
 			status = statusNormal
 		} else {
 			return
 		}
 	}
-	rt.stack = rt.stack[:start]
+
+	rt.resetByIdx(start)
 	if rt.cost <= 0 {
 		rt.vm.logger.WithFields(log.Fields{"type": consts.VMError}).Warn("runtime cost limit overflow")
 		err = fmt.Errorf(`runtime cost limit overflow`)
@@ -1386,8 +1396,15 @@ func (rt *RunTime) Run(block *CodeBlock, params []any, extend map[string]any) (r
 		timer = time.AfterFunc(time.Millisecond*time.Duration(extend[Extend_time_limit].(int64)), timeOver)
 	}
 	if _, err = rt.RunCode(block); err == nil {
-		off := len(rt.stack) - len(info.Results)
-		for i := 0; i < len(info.Results); i++ {
+		if rt.len() < len(info.Results) {
+			var keyNames []string
+			for i := 0; i < len(info.Results); i++ {
+				keyNames = append(keyNames, info.Results[i].String())
+			}
+			err = fmt.Errorf("not enough arguments to return, need [%s]", strings.Join(keyNames, "|"))
+		}
+		off := rt.len() - len(info.Results)
+		for i := 0; i < len(info.Results) && off >= 0; i++ {
 			ret = append(ret, rt.stack[off+i])
 		}
 	}
