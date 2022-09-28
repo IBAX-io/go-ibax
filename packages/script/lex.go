@@ -124,7 +124,7 @@ type typeInfo struct {
 }
 
 var (
-	// The list of key words
+	// The list of keywords
 	keywords = map[string]uint32{
 		`contract`:   keyContract,
 		`func`:       keyFunc,

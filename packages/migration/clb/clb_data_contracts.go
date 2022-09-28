@@ -142,9 +142,44 @@ VALUES
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
 	(next_id('1_contracts'), 'CheckNodesBan', 'contract CheckNodesBan {
-	action {
-		UpdateNodesBan($block_time)
-	}
+    func getPermission() {
+        var array_permissions array result i int prevContract string
+        array_permissions = ["@1CheckNodesBan"]
+
+        prevContract = $stack[0]
+        if Len($stack) > 2 {
+            prevContract = $stack[Len($stack) - 2]
+        }
+        while i < Len(array_permissions) {
+            var contract_name string
+            contract_name = array_permissions[i]
+            if contract_name == prevContract {
+                result = 1
+            }
+            i = i + 1
+        }
+
+        if result == 0 {
+            warning LangRes("@1contract_chain_distorted")
+        }
+    }
+    conditions {
+        getPermission()
+        HonorNodeCondition()
+        var rows array
+        rows = DBFind("@1delayed_contracts").Where({"contract": "@1CheckNodesBan", "deleted": 0})
+        if !Len(rows) {
+            warning Sprintf(LangRes("@1template_delayed_contract_not_exist"), $Id)
+        }
+        $cur = rows[0]
+        $counter = Int($cur["counter"]) + 1
+        $Id = Int($cur["id"])
+    }
+    action {
+        DBUpdateExt("@1delayed_contracts", {"id":$Id}, {"counter": $counter})
+
+        UpdateNodesBan($block_time)
+    }
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
 	(next_id('1_contracts'), 'EditAppParam', 'contract EditAppParam {
@@ -534,9 +569,9 @@ VALUES
         if app_map {
             var app_id int ival string
             ival = Str(app_map["value.app_name"])
-            app_id = DBFind("@1applications").Columns("id").Where({"name": ival, "ecosystem": $ecosystem_id}).One("id")
+            app_id = Int(DBFind("@1applications").Columns("id").Where({"name": ival, "ecosystem": $ecosystem_id}).One("id"))
             if app_id {
-                $ApplicationId = Int(app_id)
+                $ApplicationId = app_id
             }
         }
     }
@@ -616,28 +651,26 @@ VALUES
         Data file
     }
     conditions {
-        $Data = BytesToString($Data["Body"])
+        $Body = BytesToString($Data["Body"])
         $limit = 10 // data piece size of import
     }
     action {
         // init buffer_data, cleaning old buffer
         var initJson map
-        $import_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "import", "ecosystem": $ecosystem_id}).One("id")
+        $import_id = Int(DBFind("@1buffer_data").Where({"account": $account_id, "key": "import", "ecosystem": $ecosystem_id}).One("id"))
         if $import_id {
-            $import_id = Int($import_id)
-            DBUpdate("@1buffer_data", $import_id, {"value": initJson})
+             DBUpdate("@1buffer_data", $import_id, {"value": initJson})
         } else {
             $import_id = DBInsert("@1buffer_data", {"account": $account_id, "key": "import", "value": initJson, "ecosystem": $ecosystem_id})
         }
-        $info_id = DBFind("@1buffer_data").Where({"account": $account_id, "key": "import_info", "ecosystem": $ecosystem_id}).One("id")
+        $info_id = Int(DBFind("@1buffer_data").Where({"account": $account_id, "key": "import_info", "ecosystem": $ecosystem_id}).One("id"))
         if $info_id {
-            $info_id = Int($info_id)
             DBUpdate("@1buffer_data", $info_id, {"value": initJson})
         } else {
             $info_id = DBInsert("@1buffer_data", {"account": $account_id, "key": "import_info", "value": initJson, "ecosystem": $ecosystem_id})
         }
         var input map arrData array
-        input = JSONDecode($Data)
+        input = JSONDecode($Body)
         arrData = input["data"]
         var pages_arr blocks_arr menu_arr parameters_arr languages_arr contracts_arr tables_arr array
         // IMPORT INFO
@@ -1130,7 +1163,7 @@ VALUES
                 }
                 i = i + 1
             }
-            warning "Sorry, you do not have access to this action."
+            warning "NodeOwnerCondition: Sorry, you do not have access to this action."
         }
 	}
 }

@@ -159,8 +159,6 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 	}
 	rt.extend[Extend_parent] = prevparent
 	rt.extend[Extend_this_contract] = prevthis
-
-	result := rt.extend[Extend_result]
 	for key := range rt.extend {
 		if isSysVar(key) {
 			continue
@@ -171,7 +169,10 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 	for key, item := range prevExtend {
 		rt.extend[key] = item
 	}
-
+	result, ok := rt.extend[Extend_result]
+	if !ok {
+		return "", nil
+	}
 	return result, nil
 }
 

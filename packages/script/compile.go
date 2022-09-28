@@ -785,7 +785,7 @@ main:
 						logger.WithFields(log.Fields{"lex_value": lexeme.Value, "type": consts.ParseError}).Error("unknown variable")
 						return fmt.Errorf(`unknown variable %s`, lexeme.Value.(string))
 					}
-					buffer.push(newByteCode(cmdIndex, lexeme.Line, &IndexInfo{VarOffset: objInfo.GetIndex(), Owner: tobj}))
+					buffer.push(newByteCode(cmdIndex, lexeme.Line, &IndexInfo{VarOffset: objInfo.GetVariable().Index, Owner: tobj}))
 				}
 			}
 			if !call {

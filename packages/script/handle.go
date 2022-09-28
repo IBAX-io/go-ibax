@@ -115,7 +115,7 @@ func fNameBlock(buf *CodeBlocks, state stateTypes, lexeme *Lexeme) error {
 			Owner: (*buf)[0].Owner}
 	default:
 		itype = ObjectType_Func
-		fblock.Info = &FuncInfo{}
+		fblock.Info = &FuncInfo{Name: name}
 	}
 	fblock.Type = itype
 	if _, ok := prev.Objects[name]; ok {
@@ -177,7 +177,7 @@ func fFparam(buf *CodeBlocks, state stateTypes, lexeme *Lexeme) error {
 			return fmt.Errorf("'%s' redeclared in this code block", lexeme.Value.(string))
 		}
 	}
-	block.Objects[lexeme.Value.(string)] = &ObjInfo{Type: ObjectType_Var, Value: &ObjInfo_IndexOfVars{Index: len(block.Vars)}}
+	block.Objects[lexeme.Value.(string)] = &ObjInfo{Type: ObjectType_Var, Value: &ObjInfo_Variable{Name: lexeme.Value.(string), Index: len(block.Vars)}}
 	block.Vars = append(block.Vars, reflect.TypeOf(nil))
 	return nil
 }
@@ -306,7 +306,7 @@ func fAssignVar(buf *CodeBlocks, state stateTypes, lexeme *Lexeme) error {
 			lexeme.GetLogger().WithFields(log.Fields{"type": consts.ParseError, "lex_value": lexeme.Value}).Error("modifying system variable")
 			return fmt.Errorf(eSysVar, lexeme.Value.(string))
 		}
-		ivar = VarInfo{Obj: &ObjInfo{Type: ObjectType_ExtVar, Value: &ObjInfo_ExtVarName{Name: lexeme.Value.(string)}}, Owner: nil}
+		ivar = VarInfo{Obj: &ObjInfo{Type: ObjectType_ExtVar, Value: &ObjInfo_ExtendVariable{Name: lexeme.Value.(string)}}, Owner: nil}
 	} else {
 		objInfo, tobj := findVar(lexeme.Value.(string), buf)
 		if objInfo == nil || objInfo.Type != ObjectType_Var {

@@ -138,6 +138,9 @@ func VMFlushBlock(vm *VM, root *CodeBlock) {
 }
 
 func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any, hash []byte) (ret []any, err error) {
+	if block == nil {
+		return nil, fmt.Errorf(`code block is nil`)
+	}
 	var cost int64
 	if ecost, ok := extend[Extend_txcost]; ok {
 		cost = ecost.(int64)
@@ -253,9 +256,9 @@ func One(list array, name string) string {
 		   }
 		   return val
 	   }
-	   return row[name]
+	   return Str(row[name])
    }
-   return nil
+   return ""
 }
 
 func Row(list array) map {
