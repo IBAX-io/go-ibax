@@ -101,7 +101,7 @@ func GetCombustionPercents(db *DbTransaction, ids []int64) (map[int64]int64, err
 
 	var ret []Combustion
 	if len(ids) > 0 {
-		err := GetDB(db).Debug().Raw(query, ids).Scan(&ret).Error
+		err := GetDB(db).Raw(query, ids).Scan(&ret).Error
 		if err != nil {
 			return nil, err
 		}
