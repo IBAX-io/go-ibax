@@ -125,8 +125,8 @@ func (sc *SmartContract) isAllowStack(fn string) bool {
 }
 
 func InitVM() {
-	script.ExtendCost(getCost)
-	script.FuncCallsDB(funcCallsDBP)
+	script.GetVM().SetExtendCost(getCost)
+	script.GetVM().SetFuncCallsDB(funcCallsDBP)
 	script.GetVM().Extend(&script.ExtendData{
 		Objects: EmbedFuncs(defineVMType()), AutoPars: map[string]string{
 			`*smart.SmartContract`: `sc`,
@@ -496,7 +496,7 @@ func (sc *SmartContract) AccessRights(condition string, iscondition bool) error 
 
 // EvalIf counts and returns the logical value of the specified expression
 func (sc *SmartContract) EvalIf(conditions string) (bool, error) {
-	return script.VMEvalIf(sc.VM, conditions, uint32(sc.TxSmart.EcosystemID), sc.getExtend())
+	return sc.VM.EvalIf(conditions, uint32(sc.TxSmart.EcosystemID), sc.getExtend())
 }
 
 // GetContractLimit returns the default maximal cost of contract

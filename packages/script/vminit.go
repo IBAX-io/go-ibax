@@ -133,6 +133,7 @@ type Stacker interface {
 func NewVM() *VM {
 	vm := &VM{
 		CodeBlock: NewCodeBlock(),
+		Extern:    true,
 	}
 	vm.logger = log.WithFields(log.Fields{"type": consts.VMError, "extern": vm.Extern, "vm_block_type": vm.CodeBlock.Type})
 	return vm

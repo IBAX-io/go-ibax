@@ -116,7 +116,7 @@ func SysFlushContract(iroot any, id int64, active bool) error {
 			root.Children[i].GetContractInfo().Owner.Active = active
 		}
 	}
-	script.VMFlushBlock(script.GetVM(), root)
+	script.GetVM().FlushBlock(root)
 	return nil
 }
 
@@ -163,7 +163,7 @@ func SysRollbackEditContract(transaction *sqldb.DbTransaction, sysData SysRollDa
 		if len(fields["wallet_id"]) > 0 {
 			wallet = converter.StrToInt64(fields["wallet_id"])
 		}
-		root, err := script.VMCompileBlock(script.GetVM(), fields["value"],
+		root, err := script.GetVM().CompileBlock([]rune(fields["value"]),
 			&script.OwnerInfo{StateID: uint32(owner.StateID), WalletID: wallet, TokenID: owner.TokenID})
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.VMError, "error": err}).Error("compiling contract")

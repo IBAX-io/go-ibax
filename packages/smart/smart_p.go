@@ -167,7 +167,7 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 		values = append(values, value)
 	}
 	if len(conditions) > 0 {
-		if err := script.CompileEval(conditions, 0); err != nil {
+		if err := script.VMCompileEval(sc.VM, conditions, 0); err != nil {
 			return 0, logErrorValue(err, consts.EvalError, "compiling eval", conditions)
 		}
 		fields = append(fields, "conditions")

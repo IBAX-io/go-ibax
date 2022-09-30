@@ -18,7 +18,7 @@ import (
 )
 
 type GlobalVm struct {
-	mu      *sync.Mutex
+	mu      sync.Mutex
 	smartVM *VM
 }
 
@@ -32,10 +32,8 @@ var (
 
 func newVM() *GlobalVm {
 	vm := NewVM()
-	vm.Extern = true
 	return &GlobalVm{
 		smartVM: vm,
-		mu:      &sync.Mutex{},
 	}
 }
 
@@ -70,19 +68,6 @@ func RollbackSmartVMObjects() {
 func ReleaseSmartVMObjects() {
 	smartObjects = nil
 	children = 0
-}
-
-func vmExternOff(vm *VM) {
-	vm.FlushExtern()
-}
-
-func vmCompile(vm *VM, src string, owner *OwnerInfo) error {
-	return vm.Compile([]rune(src), owner)
-}
-
-// VMCompileBlock is compiling block
-func VMCompileBlock(vm *VM, src string, owner *OwnerInfo) (*CodeBlock, error) {
-	return vm.CompileBlock([]rune(src), owner)
 }
 
 func VMCompileEval(vm *VM, src string, prefix uint32) error {
@@ -129,14 +114,7 @@ func getContractList(src string) (list []string) {
 	return
 }
 
-func VMEvalIf(vm *VM, src string, state uint32, extend map[string]any) (bool, error) {
-	return vm.EvalIf(src, state, extend)
-}
-
-func VMFlushBlock(vm *VM, root *CodeBlock) {
-	vm.FlushBlock(root)
-}
-
+// VMRun executes CodeBlock in vm
 func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any, hash []byte) (ret []any, err error) {
 	if block == nil {
 		return nil, fmt.Errorf(`code block is nil`)
@@ -166,56 +144,14 @@ func VMObjectExists(vm *VM, name string, state uint32) bool {
 	return ok
 }
 
-func vmExtendCost(vm *VM, ext func(string) int64) {
+// SetExtendCost sets the cost of calling extended obj in vm
+func (vm *VM) SetExtendCost(ext func(string) int64) {
 	vm.ExtCost = ext
 }
 
-func vmFuncCallsDB(vm *VM, funcCallsDB map[string]struct{}) {
+// SetFuncCallsDB Set up functions that can edit the database in vm
+func (vm *VM) SetFuncCallsDB(funcCallsDB map[string]struct{}) {
 	vm.FuncCallsDB = funcCallsDB
-}
-
-// ExternOff switches off the extern compiling mode in GetVM()
-func ExternOff() {
-	vmExternOff(GetVM())
-}
-
-// Compile compiles contract source code in GetVM()
-func Compile(src string, owner *OwnerInfo) error {
-	return vmCompile(GetVM(), src, owner)
-}
-
-// CompileBlock calls CompileBlock for GetVM()
-func CompileBlock(src string, owner *OwnerInfo) (*CodeBlock, error) {
-	return VMCompileBlock(GetVM(), src, owner)
-}
-
-// CompileEval calls CompileEval for GetVM()
-func CompileEval(src string, prefix uint32) error {
-	return VMCompileEval(GetVM(), src, prefix)
-}
-
-// EvalIf calls EvalIf for GetVM()
-func EvalIf(src string, state uint32, extend map[string]any) (bool, error) {
-	return VMEvalIf(GetVM(), src, state, extend)
-}
-
-// FlushBlock calls FlushBlock for GetVM()
-func FlushBlock(root *CodeBlock) {
-	VMFlushBlock(GetVM(), root)
-}
-
-// ExtendCost sets the cost of calling extended obj in GetVM()
-func ExtendCost(ext func(string) int64) {
-	vmExtendCost(GetVM(), ext)
-}
-
-func FuncCallsDB(funcCallsDB map[string]struct{}) {
-	vmFuncCallsDB(GetVM(), funcCallsDB)
-}
-
-// Run executes CodeBlock in GetVM()
-func Run(block *CodeBlock, params []any, extend map[string]any) (ret []any, err error) {
-	return VMRun(GetVM(), block, params, extend, nil)
 }
 
 func LoadSysFuncs(vm *VM, state int) error {
@@ -305,5 +241,5 @@ func CurrentKeyFromAccount(account string) int {
 	}
 	return 0
 }`
-	return vmCompile(vm, code, &OwnerInfo{StateID: uint32(state)})
+	return vm.Compile([]rune(code), &OwnerInfo{StateID: uint32(state)})
 }
