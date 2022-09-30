@@ -318,7 +318,7 @@ func CompileContract(sc *SmartContract, code string, state, id, token int64) (an
 	if err := validateAccess(sc, "CompileContract"); err != nil {
 		return nil, err
 	}
-	return script.VMCompileBlock(sc.VM, code, &script.OwnerInfo{StateID: uint32(state), WalletID: id, TokenID: token})
+	return sc.VM.CompileBlock([]rune(code), &script.OwnerInfo{StateID: uint32(state), WalletID: id, TokenID: token})
 }
 
 // ContractAccess checks whether the name of the executable contract matches one of the names listed in the parameters.
@@ -1004,8 +1004,7 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 		result = append(result, reflect.ValueOf(row).Interface())
 	}
 	if perm != nil && len(perm[`filter`]) > 0 {
-		fltResult, err := script.VMEvalIf(
-			sc.VM, perm[`filter`], uint32(sc.TxSmart.EcosystemID),
+		fltResult, err := sc.VM.EvalIf(perm[`filter`], uint32(sc.TxSmart.EcosystemID),
 			sc.getExtend(),
 		)
 		if err != nil {
@@ -1135,7 +1134,7 @@ func FlushContract(sc *SmartContract, iroot any, id int64) error {
 		}
 
 	}
-	script.VMFlushBlock(sc.VM, root)
+	sc.VM.FlushBlock(root)
 	return nil
 }
 

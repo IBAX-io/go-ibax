@@ -5,9 +5,10 @@
 package smart
 
 import (
+	"testing"
+
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 type TestSmart struct {
@@ -46,13 +47,13 @@ func TestNewContract(t *testing.T) {
 	}
 	InitVM()
 	for _, item := range test {
-		if err := script.Compile(item.Input, &owner); err != nil {
+		if err := script.GetVM().Compile([]rune(item.Input), &owner); err != nil {
 			t.Error(err)
 		}
 	}
 	cnt := GetContract(`NewCitizen`, 1)
 	cfunc := cnt.GetFunc(`conditions`)
-	_, err := script.Run(cfunc, nil, map[string]any{})
+	_, err := script.VMRun(script.GetVM(), cfunc, nil, map[string]any{}, nil)
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,11 +76,11 @@ func TestCheckAppend(t *testing.T) {
 		TokenID:  0,
 	}
 
-	require.NoError(t, script.Compile(appendTestContract, &owner))
+	require.NoError(t, script.GetVM().Compile([]rune(appendTestContract), &owner))
 
 	cnt := GetContract("AppendTest", 1)
 	cfunc := cnt.GetFunc("action")
 
-	_, err := script.Run(cfunc, nil, map[string]any{})
+	_, err := script.VMRun(script.GetVM(), cfunc, nil, map[string]any{}, nil)
 	require.NoError(t, err)
 }

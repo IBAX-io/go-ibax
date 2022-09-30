@@ -15,8 +15,6 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
-	"github.com/IBAX-io/go-ibax/packages/script"
-
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -868,7 +866,7 @@ func dbfindTag(par parFunc) string {
 			}
 			result[i] = reflect.ValueOf(row).Interface()
 		}
-		fltResult, err := script.VMEvalIf(sc.VM, perm[`filter`], uint32(sc.TxSmart.EcosystemID),
+		fltResult, err := sc.VM.EvalIf(perm[`filter`], uint32(sc.TxSmart.EcosystemID),
 			map[string]any{
 				`data`:         result,
 				`ecosystem_id`: sc.TxSmart.EcosystemID,

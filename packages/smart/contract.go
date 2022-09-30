@@ -33,7 +33,7 @@ func LoadContracts() error {
 		return logErrorDB(err, "getting count of contracts")
 	}
 
-	defer script.ExternOff()
+	defer script.GetVM().FlushExtern()
 	var offset int
 	listCount := consts.ContractList
 	for ; int64(offset) < count; offset += listCount {
@@ -53,7 +53,7 @@ func LoadContract(transaction *sqldb.DbTransaction, ecosystem int64) (err error)
 
 	contract := &sqldb.Contract{}
 
-	defer script.ExternOff()
+	defer script.GetVM().FlushExtern()
 	list, err := contract.GetFromEcosystem(transaction, ecosystem)
 	if err != nil {
 		return logErrorDB(err, "selecting all contracts from ecosystem")
@@ -138,7 +138,7 @@ func loadContractList(list []sqldb.Contract) error {
 			WalletID: item.WalletID,
 			TokenID:  item.TokenID,
 		}
-		if err = script.Compile(item.Value, &owner); err != nil {
+		if err = script.GetVM().Compile([]rune(item.Value), &owner); err != nil {
 			logErrorValue(err, consts.EvalError, "Load Contract", strings.Join(clist, `,`))
 		}
 	}

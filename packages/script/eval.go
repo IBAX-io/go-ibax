@@ -24,13 +24,12 @@ var (
 func (vm *VM) CompileEval(input string, state uint32) error {
 	source := `func eval bool { return ` + input + `}`
 	block, err := vm.CompileBlock([]rune(source), &OwnerInfo{StateID: state})
-	if err == nil {
-		crc := crypto.CalcChecksum([]byte(input))
-		evals[crc] = &evalCode{Source: input, Code: block}
-		return nil
+	if err != nil {
+		return err
 	}
-	return err
-
+	crc := crypto.CalcChecksum([]byte(input))
+	evals[crc] = &evalCode{Source: input, Code: block}
+	return nil
 }
 
 // EvalIf runs the conditional expression. It compiles the source code before that if that's necessary.
