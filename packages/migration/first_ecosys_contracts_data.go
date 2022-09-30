@@ -1016,31 +1016,88 @@ VALUES
 }
 ', '1', 'ContractConditions("MainCondition")', '1', '1'),
 	(next_id('1_contracts'), 'NewUser', 'contract NewUser {
-	data {
-		NewPubkey string
-	}
-	conditions {
-		$id = PubToID($NewPubkey)
-		if $id == 0 {
-			error "Wrong pubkey"
-		}
-		if DBFind("keys").Columns("id").WhereId($id).One("id") {
-			error "User already exists"
-		}
-	}
-	action {
-		$pub = HexToPub($NewPubkey)
-		$account = IdToAddress($id)
-		$amount = Money(0)
+    data {
+        NewPubkey string "optional"
+        Ecosystem int "optional"
+    }
+    func getEcosystem() {
+        $e_id = Int($Ecosystem)
+        if $e_id == 0 {
+            $e_id = $ecosystem_id
+        }
+        $eco = DBFind("@1ecosystems").Where({"id": $e_id}).Row()
+        if !$eco {
+            warning Sprintf(LangRes("@1ecosystem_not_found"), $e_id)
+        }
+    }
+    func canOpt() bool {
+        return $free_membership == 1 || $e_id == 1
+    }
+    conditions {
+        getEcosystem()
+        $newId = PubToID($NewPubkey)
 
-		DBInsert("keys", {
-			"id": $id,
-			"account": $account,
-			"pub": $pub,
-			"amount": $amount,
-			"ecosystem": 1
-		})
-	}
+        if $newId == 0 {
+            warning LangRes("@1wrong_pub")
+        }
+        if Size($NewPubkey) == 0 {
+            warning "You did not enter the public key"
+        }
+        $pub = HexToPub($NewPubkey)
+        $account = IdToAddress($newId)
+
+        $k = DBFind("@1keys").Where({"id": $newId, "account": $account, "ecosystem": $e_id}).Row()
+
+        $free_membership = Int(DBFind("@1parameters").Where({"ecosystem": $e_id, "name": "free_membership"}).One("value"))
+    }
+
+    action {
+        var iscan bool
+        iscan = canOpt()
+        if !iscan {
+            warning Sprintf(LangRes("@1eco_no_open_new_user"), $eco["name"], $e_id)
+        }
+        if $k {
+            var kid int kpub string
+            kid = Int($k["id"])
+            kpub = $k["pub"]
+            if Size(kpub) != 0 {
+                warning Sprintf(LangRes("@1template_user_exists"), IdToAddress($newId))
+            }
+            DBUpdateExt("@1keys", {"id": kid, "ecosystem": $e_id}, {"pub": $pub})
+            $result = $account
+        }else{
+            DBInsert("@1keys", {"id": $newId, "account": $account, "pub": $pub, "ecosystem": $e_id})
+            if !DBFind("@1keys").Where({"ecosystem": 1, "account": $account}).Row() {
+                DBInsert("@1keys", {"id": $newId, "account": $account, "pub": $pub, "ecosystem": 1})
+                var h map
+                $whiteHoleBalance = DBFind("@1keys").Where({"account": $white_hole_account,"ecosystem":1}).Columns("amount").One("amount")
+                h["sender_id"] =$white_hole_key
+                h["sender_balance"] = $whiteHoleBalance
+                h["recipient_id"] = $newId
+                h["comment"] = "New User"
+                h["block_id"] = $block
+                h["txhash"] = $txhash
+                h["ecosystem"] = 1
+                h["type"] = 4
+                h["created_at"] = $time
+                DBInsert("@1history", h)
+            }
+            $result = $account
+        }
+        var h map
+        $whiteHoleBalance = DBFind("@1keys").Where({"account": $white_hole_account,"ecosystem":$ecosystem_id}).Columns("amount").One("amount")
+        h["sender_id"] =$white_hole_key
+        h["sender_balance"] = $whiteHoleBalance
+        h["recipient_id"] = $newId
+        h["comment"] = "New User"
+        h["block_id"] = $block
+        h["txhash"] = $txhash
+        h["ecosystem"] = $ecosystem_id
+        h["type"] = 4
+        h["created_at"] = $time
+        DBInsert("@1history", h)
+    }
 }
 ', '1', 'ContractConditions("NodeOwnerCondition")', '1', '1'),
 	(next_id('1_contracts'), 'NodeOwnerCondition', 'contract NodeOwnerCondition {

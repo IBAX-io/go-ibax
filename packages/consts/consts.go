@@ -120,9 +120,9 @@ const (
 	ContractList = 200
 
 	// Guest key
-	GuestPublic  = "489347a1205c818d9a02f285faaedd0122a56138e3d985f5e1b4f6a9470f90f692a00a3453771dd7feea388ceb7aefeaf183e299c70ad1aecb7f870bfada3b86"
-	GuestKey     = "4544233900443112470"
-	GuestAddress = "0454-4233-9004-4311-2470"
+	GuestPublic  = "ef0ab117793962b7b3ee8d2ae94b58bbd7db1aa856a7dc623fdb28ad530090b0bcf5cb81b4d6912a249f1ab30921f414ad88383208cd8ba26ae2a9c3eb543772"
+	GuestKey     = "-110277540701013350"
+	GuestAddress = "1833-6466-5330-0853-8266"
 
 	// StatusMainPage is a status for Main Page
 	StatusMainPage = `2`

@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -198,15 +197,15 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 			if !conf.Config.IsSupportingCLB() {
 				gt := 3 * syspar.GetMaxBlockGenerationTime()
-				his := &sqldb.History{}
+				l := &sqldb.LogTransaction{}
 				for i := 0; i < 2; i++ {
-					found, err := his.Get(stp.Hash)
+					found, err := l.GetByHash(stp.Hash)
 					if err != nil {
 						errorResponse(w, err)
 						return
 					}
-					if found && his.BlockID > 0 {
-						if strings.Contains(his.Comment, "(error)") {
+					if found {
+						if l.Status != 0 {
 							errorResponse(w, errors.New(`encountered some problems when login account`))
 							return
 						} else {
@@ -217,7 +216,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 					time.Sleep(time.Duration(gt) * time.Millisecond)
 				}
 
-				if his.BlockID == 0 {
+				if l.Block == 0 {
 					errorResponse(w, errNewUser)
 					return
 				}
@@ -261,7 +260,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	verify, err := crypto.Verify(publicKey, []byte(nonceSalt()+uid), form.Signature.Bytes())
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.CryptoError, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Error("checking signature")
+		logger.WithFields(log.Fields{"type": consts.CryptoError, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Info("checking signature")
 		errorResponse(w, err)
 		return
 	}
