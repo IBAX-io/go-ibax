@@ -39,7 +39,6 @@ func NewExtendData() *ExtendData {
 // ExecContract runs the name contract where txs contains the list of parameters and
 // params are the values of parameters
 func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
-
 	contract, ok := rt.vm.Objects[name]
 	if !ok {
 		log.WithFields(log.Fields{"contract_name": name, "type": consts.ContractError}).Error("unknown contract")
@@ -159,6 +158,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 	}
 	rt.extend[Extend_parent] = prevparent
 	rt.extend[Extend_this_contract] = prevthis
+	result := rt.extend[Extend_result]
 	for key := range rt.extend {
 		if isSysVar(key) {
 			continue
@@ -169,16 +169,11 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 	for key, item := range prevExtend {
 		rt.extend[key] = item
 	}
-	result, ok := rt.extend[Extend_result]
-	if !ok {
-		return "", nil
-	}
 	return result, nil
 }
 
 // ExContract executes the name contract in the state with specified parameters
 func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (any, error) {
-
 	name = StateName(state, name)
 	contract, ok := rt.vm.Objects[name]
 	if !ok {
