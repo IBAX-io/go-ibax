@@ -829,7 +829,6 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	if expediteFee, err = sc.expediteFee(); err != nil {
 		return false, err
 	}
-	fmt.Println("expediteFee", expediteFee.String())
 	totalAmount := decimal.Zero
 
 	var txOutputs []sqldb.SpentInfo

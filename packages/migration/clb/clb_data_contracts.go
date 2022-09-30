@@ -1129,7 +1129,7 @@ VALUES
 		if $id == 0 {
 			error "Wrong pubkey"
 		}
-		if DBFind("keys").Columns("id").WhereId($id).One("id") != nil {
+		if DBFind("keys").Columns("id").WhereId($id).One("id") {
 			error "User already exists"
 		}
 	}
