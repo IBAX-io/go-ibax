@@ -738,8 +738,8 @@ main:
 							rt.vm.logger.WithError(err).Error("modifying system variable")
 							break main
 						}
-						if v, ok := rt.extend[n]; ok && reflect.TypeOf(v).String() != reflect.TypeOf(val).String() {
-							err = fmt.Errorf("$%s (type %s) cannot be represented by the type %s", n, reflect.TypeOf(val).String(), reflect.TypeOf(v).String())
+						if v, ok := rt.extend[n]; ok && v != nil && reflect.TypeOf(v) != reflect.TypeOf(val) {
+							err = fmt.Errorf("$%s (type %s) cannot be represented by the type %s", n, reflect.TypeOf(val), reflect.TypeOf(v))
 							break
 						}
 						rt.setExtendVar(n, val)
@@ -748,7 +748,7 @@ main:
 					for i := len(rt.blocks) - 1; i >= 0; i-- {
 						if item.Owner == rt.blocks[i].Block {
 							k := rt.blocks[i].Offset + item.Obj.GetVariable().Index
-							switch v := rt.blocks[i].Block.Vars[item.Obj.GetVariable().Index].String(); v {
+							switch v := rt.blocks[i].Block.Vars[item.Obj.GetVariable().Index]; v.String() {
 							case Decimal:
 								var v decimal.Decimal
 								v, err = ValueToDecimal(val)
@@ -757,8 +757,8 @@ main:
 								}
 								rt.setVar(k, v)
 							default:
-								if v != reflect.TypeOf(val).String() {
-									err = fmt.Errorf("variable '%v' (type %s) cannot be represented by the type %s", item.Obj.GetVariable().Name, reflect.TypeOf(val).String(), v)
+								if val != nil && v != reflect.TypeOf(val) {
+									err = fmt.Errorf("variable '%v' (type %s) cannot be represented by the type %s", item.Obj.GetVariable().Name, reflect.TypeOf(val), v)
 									break
 								}
 								rt.setVar(k, val)
@@ -1351,7 +1351,7 @@ main:
 			for count := len(lastResults); count > 0; count-- {
 				val := stackCpy[len(stackCpy)-1-index]
 				if val != nil && lastResults[count-1] != reflect.TypeOf(val) {
-					err = fmt.Errorf("function '%s' return index[%d] (type %s) cannot be represented by the type %s", last.Block.GetFuncInfo().Name, count-1, reflect.TypeOf(val).String(), lastResults[count-1].String())
+					err = fmt.Errorf("function '%s' return index[%d] (type %s) cannot be represented by the type %s", last.Block.GetFuncInfo().Name, count-1, reflect.TypeOf(val), lastResults[count-1])
 					return
 				}
 				rt.stack[start] = rt.stack[rt.len()-count]
