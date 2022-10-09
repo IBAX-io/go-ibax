@@ -101,6 +101,7 @@ var (
 		t.Column("output_value", "decimal(30)", {"default_raw": "'0' CHECK (output_value >= 0)"})
 		t.Column("ecosystem", "bigint", {"default": "1"})
 		t.Column("block_id", "bigint")
+		t.Column("type", "bigint")
 	{{footer "primary(output_tx_hash,output_key_id,output_index)" "index(block_id)" "index(input_tx_hash)" "index(output_key_id)" "index(output_tx_hash)"}}
 
 	{{head "transactions"}}

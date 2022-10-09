@@ -130,3 +130,4 @@ initDatabase.txt
 docker-compose.yml
 Dockerfile
 Dockerfile_src
+test.log
