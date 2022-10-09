@@ -744,7 +744,7 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 		// The change
 		var txOutputs []sqldb.SpentInfo
 		if totalAmount.GreaterThan(decimal.Zero) {
-			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Type: 11}) // The change
+			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Type: consts.UTXO_Type_Self_UTXO}) // The change
 		}
 		if len(txInputs) > 0 {
 			sqldb.PutAllOutputsMap(txInputs, txInputsMap)
@@ -765,7 +765,7 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 		}
 		if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
 			flag = true // The transfer was successful
-			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem, Type: 12})
+			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem, Type: consts.UTXO_Type_Self_Account})
 			totalAmount = totalAmount.Sub(payValue)
 			if _, _, err = sc.updateWhere([]string{`-amount`}, []any{payValue}, "1_keys", types.LoadMap(map[string]any{`id`: fromID, `ecosystem`: ecosystem})); err != nil {
 				return false, err
@@ -886,17 +886,17 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 
 					flag = true
 					// 97%
-					txOutputs1 = append(txOutputs1, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: sc.BlockHeader.KeyId, OutputValue: money1.Sub(taxes1).String(), BlockId: blockId, Ecosystem: ecosystem1, Type: 20})
+					txOutputs1 = append(txOutputs1, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: sc.BlockHeader.KeyId, OutputValue: money1.Sub(taxes1).String(), BlockId: blockId, Ecosystem: ecosystem1, Type: consts.UTXO_Type_Packaging})
 					outputIndex++
 					// 3%
-					txOutputs1 = append(txOutputs1, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: taxesID, OutputValue: taxes1.String(), BlockId: blockId, Ecosystem: ecosystem1, Type: 21})
+					txOutputs1 = append(txOutputs1, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: taxesID, OutputValue: taxes1.String(), BlockId: blockId, Ecosystem: ecosystem1, Type: consts.UTXO_Type_Taxes})
 					outputIndex++
 					totalAmount1 = totalAmount1.Sub(money1)
 				}
 			}
 
 			if totalAmount1.GreaterThan(decimal.Zero) {
-				txOutputs1 = append(txOutputs1, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: fromID, OutputValue: totalAmount1.String(), BlockId: blockId, Ecosystem: ecosystem1, Type: 22}) // The change
+				txOutputs1 = append(txOutputs1, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: fromID, OutputValue: totalAmount1.String(), BlockId: blockId, Ecosystem: ecosystem1, Type: consts.UTXO_Type_Output}) // The change
 				outputIndex++
 			}
 
@@ -928,7 +928,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 				if percent, hasPercent := comPercents[ecosystem2]; hasPercent && percent > 0 && money2.GreaterThan(decimal.Zero) {
 					percentMoney2 = money2.Mul(decimal.NewFromInt(percent)).Div(decimal.New(100, 0)).Floor()
 					if percentMoney2.GreaterThan(decimal.Zero) {
-						txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: 0, OutputValue: percentMoney2.String(), BlockId: blockId, Ecosystem: ecosystem2, Type: 23})
+						txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: 0, OutputValue: percentMoney2.String(), BlockId: blockId, Ecosystem: ecosystem2, Type: consts.UTXO_Type_Combustion})
 						outputIndex++
 						money2 = money2.Sub(percentMoney2)
 						totalAmount = totalAmount.Sub(percentMoney2)
@@ -942,10 +942,10 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 
 					flag = true
 					// 97%
-					txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: sc.BlockHeader.KeyId, OutputValue: money2.Sub(taxes2).String(), BlockId: blockId, Ecosystem: ecosystem2, Type: 20})
+					txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: sc.BlockHeader.KeyId, OutputValue: money2.Sub(taxes2).String(), BlockId: blockId, Ecosystem: ecosystem2, Type: consts.UTXO_Type_Packaging})
 					outputIndex++
 					// 3%
-					txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: taxesID, OutputValue: taxes2.String(), BlockId: blockId, Ecosystem: ecosystem2, Type: 21})
+					txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: taxesID, OutputValue: taxes2.String(), BlockId: blockId, Ecosystem: ecosystem2, Type: consts.UTXO_Type_Taxes})
 					outputIndex++
 					totalAmount = totalAmount.Sub(money2)
 
@@ -983,10 +983,10 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 
 				flag = true
 				// 97%
-				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: sc.BlockHeader.KeyId, OutputValue: money1.Sub(taxes1).String(), BlockId: blockId, Ecosystem: ecosystem1, Type: 20})
+				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: sc.BlockHeader.KeyId, OutputValue: money1.Sub(taxes1).String(), BlockId: blockId, Ecosystem: ecosystem1, Type: consts.UTXO_Type_Packaging})
 				outputIndex++
 				// 3%
-				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: taxesID, OutputValue: taxes1.String(), BlockId: blockId, Ecosystem: ecosystem1, Type: 21})
+				txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: taxesID, OutputValue: taxes1.String(), BlockId: blockId, Ecosystem: ecosystem1, Type: consts.UTXO_Type_Taxes})
 				outputIndex++
 				totalAmount = totalAmount.Sub(money1)
 
@@ -998,7 +998,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	payValue, _ := decimal.NewFromString(value)
 	if totalAmount.GreaterThanOrEqual(payValue) && payValue.GreaterThan(decimal.Zero) {
 		flag = true // The transfer was successful
-		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem, Type: 26})
+		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem, Type: consts.UTXO_Type_Transfer})
 		outputIndex++
 		totalAmount = totalAmount.Sub(payValue)
 	} else {
@@ -1008,7 +1008,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 
 	// The change
 	if totalAmount.GreaterThan(decimal.Zero) {
-		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Type: 22}) // The change
+		txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: fromID, OutputValue: totalAmount.String(), BlockId: blockId, Ecosystem: ecosystem, Type: consts.UTXO_Type_Output}) // The change
 		outputIndex++
 	}
 	if len(txInputs) > 0 && len(txOutputs) > 0 {

@@ -123,7 +123,7 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	}
 
 	err = sqldb.GetDB(dbTx).Exec(`insert into "spent_info" (output_index,output_tx_hash,output_key_id,output_value,ecosystem,block_id,type) values(?,?,?,?,?,?,?)`,
-		0, f.TxHash, keyID, amount, 1, 1, 1).Error
+		0, f.TxHash, keyID, amount, 1, 1, consts.UTXO_Type_First_Block).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting spent info")
 		return err
