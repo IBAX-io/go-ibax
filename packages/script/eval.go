@@ -23,6 +23,17 @@ var (
 // CompileEval compiles conditional expression
 func (vm *VM) CompileEval(input string, state uint32) error {
 	source := `func eval bool { return ` + input + `}`
+	if input == `1` || input == `0` {
+		source = `
+		func eval bool { 
+			if ` + input + ` == 1 {
+				return true
+			} else {
+				return false
+			}
+		}`
+	}
+
 	block, err := vm.CompileBlock([]rune(source), &OwnerInfo{StateID: state})
 	if err != nil {
 		return err
