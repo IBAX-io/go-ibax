@@ -301,10 +301,10 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 			continue
 		}
 		if pay.Combustion.Flag == 2 && pay.TokenEco != consts.DefaultTokenEcosystem {
-			if err := sc.payTaxes(pay, money, GasScenesType_Combustion, comment, status); err != nil {
+			combustion := pay.Combustion.Fees(money)
+			if err := sc.payTaxes(pay, combustion, GasScenesType_Combustion, comment, status); err != nil {
 				return err
 			}
-			combustion := money.Mul(decimal.NewFromInt(pay.Combustion.Percent)).Div(decimal.New(100, 0)).Floor()
 			money = money.Sub(combustion)
 		}
 		taxes := money.Mul(decimal.NewFromInt(pay.TaxesSize)).Div(decimal.New(100, 0)).Floor()
@@ -399,7 +399,6 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 		values.Set("value_detail", pay.Detail())
 	}
 	if t == GasScenesType_Combustion {
-		values.Set("amount", pay.Combustion.Fees(sum))
 		values.Set("value_detail", pay.DetailCombustion())
 	}
 	_, _, err = sc.insert(values.Keys(), values.Values(), `1_history`)
