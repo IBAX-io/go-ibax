@@ -146,3 +146,14 @@ func Version() string {
 func SetSavePointMarkBlock(idTx string) string {
 	return fmt.Sprintf("\"%s-%s\";", SavePointMarkBlock, idTx)
 }
+
+const (
+	UTXO_Type_First_Block  = 1 //Initialize the first block
+	UTXO_Type_Self_UTXO    = 11
+	UTXO_Type_Self_Account = 12
+	UTXO_Type_Packaging    = 20
+	UTXO_Type_Taxes        = 21
+	UTXO_Type_Output       = 22
+	UTXO_Type_Combustion   = 23
+	UTXO_Type_Transfer     = 26
+)

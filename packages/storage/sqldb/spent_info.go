@@ -8,6 +8,7 @@ package sqldb
 import (
 	"errors"
 	"fmt"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -25,7 +26,7 @@ type SpentInfo struct {
 	OutputValue  string `gorm:"not null"`
 	Ecosystem    int64
 	BlockId      int64
-	Action       string `gorm:"-"` // UTXO operation control : change
+	Type         int32
 }
 
 type KeyUTXO struct {
