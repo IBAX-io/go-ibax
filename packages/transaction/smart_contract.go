@@ -94,6 +94,7 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		}
 		out.Apply(
 			WithOutCtxTxResult(ret),
+			WithOutCtxSysUpdate(s.SysUpdate),
 			WithOutCtxRollBackTx(s.RollBackTx),
 		)
 		if err != nil || s.Penalty {
@@ -109,7 +110,6 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		ret.BlockId = s.BlockHeader.BlockId
 		out.Apply(
 			WithOutCtxTxResult(ret),
-			WithOutCtxSysUpdate(s.SysUpdate),
 			WithOutCtxTxOutputs(s.TxOutputsMap),
 			WithOutCtxTxInputs(s.TxInputsMap),
 		)

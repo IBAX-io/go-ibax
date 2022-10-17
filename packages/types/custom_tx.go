@@ -5,6 +5,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -142,14 +143,20 @@ func (txSmart *SmartTransaction) Validate() error {
 	if txSmart.NetworkID != conf.Config.LocalConf.NetworkID {
 		return fmt.Errorf("error networkid invalid")
 	}
-	if txSmart.UTXO != nil && len(txSmart.UTXO.Value) > 0 {
+	if txSmart.UTXO != nil {
 		if ok, _ := regexp.MatchString("^\\d+$", txSmart.UTXO.Value); !ok {
-			return fmt.Errorf("error UTXO %s must integer", txSmart.UTXO.Value)
+			return errors.New("error UTXO Value must be a positive integer")
+		}
+		if value, err := decimal.NewFromString(txSmart.UTXO.Value); err != nil || value.LessThanOrEqual(decimal.Zero) {
+			return errors.New("error UTXO Value must be greater than zero")
 		}
 	}
-	if txSmart.TransferSelf != nil && len(txSmart.TransferSelf.Value) > 0 {
+	if txSmart.TransferSelf != nil {
 		if ok, _ := regexp.MatchString("^\\d+$", txSmart.TransferSelf.Value); !ok {
-			return fmt.Errorf("error TransferSelf %s must integer", txSmart.TransferSelf.Value)
+			return errors.New("error TransferSelf Value must be a positive integer")
+		}
+		if value, err := decimal.NewFromString(txSmart.TransferSelf.Value); err != nil || value.LessThanOrEqual(decimal.Zero) {
+			return errors.New("error TransferSelf Value must be greater than zero")
 		}
 	}
 

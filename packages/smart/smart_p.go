@@ -912,7 +912,9 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 			var money2 = decimal.Zero
 			var fuelRate2 = decimal.Zero
 			var taxes2 = decimal.Zero
-			if ret, ok := fuels[ecosystem2]; ok {
+			ret, ok := fuels[ecosystem2]
+			percent, hasPercent := comPercents[ecosystem2]
+			if ok && hasPercent {
 
 				fuelRate2, err = decimal.NewFromString(ret)
 				if err != nil {
@@ -925,7 +927,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 					money2 = totalAmount
 				}
 				percentMoney2 := decimal.Zero
-				if percent, hasPercent := comPercents[ecosystem2]; hasPercent && percent > 0 && money2.GreaterThan(decimal.Zero) {
+				if percent > 0 && money2.GreaterThan(decimal.Zero) {
 					percentMoney2 = money2.Mul(decimal.NewFromInt(percent)).Div(decimal.New(100, 0)).Floor()
 					if percentMoney2.GreaterThan(decimal.Zero) {
 						txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: outputIndex, OutputKeyId: 0, OutputValue: percentMoney2.String(), BlockId: blockId, Ecosystem: ecosystem2, Type: consts.UTXO_Type_Combustion})
