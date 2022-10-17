@@ -85,14 +85,13 @@ func GetAllSystemStatesIDs() ([]int64, []string, error) {
 
 // GetCombustionPercents is ecosystem combustion percent
 func GetCombustionPercents(db *DbTransaction, ids []int64) (map[int64]int64, error) {
-	//select id, (fee_mode_info::json #>> '{combustion,percent}')::int as percent  from "1_ecosystems" where  (fee_mode_info::json #>> '{combustion,flag}')::int = 2 and id in
-	//select id,(fee_mode_info -> 'combustion' ->> 'percent')::int as percent from "1_ecosystems" where (fee_mode_info -> 'combustion' ->> 'flag')::int = 2 and id in
 	query :=
 		`
-		select id,(fee_mode_info::json#>>'{combustion,percent}')::int as percent  
-		from "1_ecosystems" 
-		where (fee_mode_info::json#>>'{combustion,flag}')::int=2 and id IN ?
-	 `
+			SELECT eco.id,(eco.fee_mode_info::json#>>'{combustion,percent}')::int as percent  
+			FROM "1_parameters" as par
+			LEFT JOIN "1_ecosystems" as eco ON par.ecosystem = eco.id 
+			WHERE par.name = 'utxo_fee' and par.value = '1' and par.ecosystem IN ?
+		`
 
 	type Combustion struct {
 		Id      int64
