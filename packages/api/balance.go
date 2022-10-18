@@ -18,10 +18,11 @@ import (
 )
 
 type balanceResult struct {
-	Amount string `json:"amount"`
-	Money  string `json:"money"`
-	Total  string `json:"total"`
-	Utxo   string `json:"utxo"`
+	Amount      string `json:"amount"`
+	Money       string `json:"money"`
+	Total       string `json:"total"`
+	Utxo        string `json:"utxo"`
+	TokenSymbol string `json:"token_symbol"`
 }
 
 func (m Mode) getBalanceHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,10 +64,18 @@ func (m Mode) getBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	total := utxoAmount.Add(accountAmount)
 
+	eco := sqldb.Ecosystem{}
+	_, err = eco.GetTokenSymbol(nil, form.EcosystemID)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting key balance token symbol")
+		errorResponse(w, err)
+		return
+	}
 	jsonResponse(w, &balanceResult{
-		Amount: key.Amount,
-		Money:  converter.ChainMoney(total.String()),
-		Total:  total.String(),
-		Utxo:   utxoAmount.String(),
+		Amount:      key.Amount,
+		Money:       converter.ChainMoney(total.String()),
+		Total:       total.String(),
+		Utxo:        utxoAmount.String(),
+		TokenSymbol: eco.TokenSymbol,
 	})
 }
