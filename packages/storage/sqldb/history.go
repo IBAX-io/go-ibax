@@ -7,6 +7,7 @@ package sqldb
 
 import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"gorm.io/gorm"
 
 	"github.com/shopspring/decimal"
 )
@@ -48,7 +49,7 @@ type MoneyTransfer struct {
 	Amount      decimal.Decimal
 }
 
-//SenderTxCount struct to scan query result
+// SenderTxCount struct to scan query result
 type SenderTxCount struct {
 	SenderID int64
 	TxCount  int64
@@ -99,30 +100,26 @@ func GetExcessTokenMovementQtyPerBlock(tx *DbTransaction, blockID int64) (excess
 	return excess, err
 }
 
-func GetWalletRecordHistory(tx *DbTransaction, keyId string, searchType string, limit, offset int) (histories []History, err error) {
+func GetWalletRecordHistory(tx *DbTransaction, keyId string, searchType string, limit, offset int) (histories []History, total int64, err error) {
 	db := GetDB(tx)
+	var query *gorm.DB
 	if searchType == "income" {
-		err = db.Table("1_history").
-			Where("recipient_id = ?", keyId).
-			Order("id desc").
-			Limit(limit).
-			Offset(offset).
-			Scan(&histories).Error
+		query = db.Table("1_history").
+			Where("recipient_id = ?", keyId)
 	} else if searchType == "outcome" {
-		err = db.Table("1_history").
-			Where("sender_id = ?", keyId).
-			Order("id desc").
-			Limit(limit).
-			Offset(offset).
-			Scan(&histories).Error
+		query = db.Table("1_history").
+			Where("sender_id = ?", keyId)
 	} else {
-		err = db.Table("1_history").
-			Where("recipient_id = ? OR sender_id = ?", keyId, keyId).
-			Order("id desc").
-			Limit(limit).
-			Offset(offset).
-			Scan(&histories).Error
+		query = db.Table("1_history").
+			Where("recipient_id = ? OR sender_id = ?", keyId, keyId)
 	}
-	return histories, err
-
+	err = query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+	err = query.
+		Order("id desc").
+		Limit(limit).
+		Offset(offset).Scan(&histories).Error
+	return
 }
