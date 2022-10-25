@@ -297,7 +297,7 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 
 		var (
 			after    = &types.AfterTx{}
-			eco      int64
+			eco      = int64(1)
 			contract string
 			code     pbgo.TxInvokeStatusCode
 		)
