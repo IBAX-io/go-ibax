@@ -24,5 +24,6 @@ func DoZlibUnCompress(compressSrc []byte) []byte {
 	var out bytes.Buffer
 	r, _ := zlib.NewReader(b)
 	io.Copy(&out, r)
+	r.Close()
 	return out.Bytes()
 }

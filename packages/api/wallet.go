@@ -16,19 +16,25 @@ import (
 )
 
 // History represent record of history table
-type WalletHistory struct {
-	tableName    string
-	ID           int64
-	SenderID     int64
-	SenderAdd    string
-	RecipientID  int64
-	RecipientAdd string
-	Amount       decimal.Decimal
-	Comment      string
-	BlockID      int64
-	TxHash       string
-	CreatedAt    int64
-	Money        string
+type walletHistory struct {
+	ID           int64           `json:"id"`
+	SenderID     int64           `json:"sender_id"`
+	SenderAdd    string          `json:"sender_add"`
+	RecipientID  int64           `json:"recipient_id"`
+	RecipientAdd string          `json:"recipient_add"`
+	Amount       decimal.Decimal `json:"amount"`
+	Comment      string          `json:"comment"`
+	BlockID      int64           `json:"block_id"`
+	TxHash       string          `json:"tx_hash"`
+	CreatedAt    int64           `json:"created_at"`
+	Money        string          `json:"money"`
+}
+
+type WalletHistoryResponse struct {
+	Page  int             `json:"page"`
+	Limit int             `json:"limit"`
+	Total int64           `json:"total"`
+	List  []walletHistory `json:"list"`
 }
 
 type walletHistoryForm struct {
@@ -46,50 +52,58 @@ func (f *walletHistoryForm) Validate(r *http.Request) error {
 func getWalletHistory(w http.ResponseWriter, r *http.Request) {
 	form := &walletHistoryForm{}
 	token := getToken(r)
-	var err error
+	var (
+		err  error
+		rets WalletHistoryResponse
+	)
 
 	if err = parseForm(r, form); err != nil {
 		errorResponse(w, err, http.StatusBadRequest)
 		return
 	}
 
-	if form.Limit == 0 {
+	if form.Limit <= 0 {
 		form.Limit = 20
+	} else if form.Limit > 500 {
+		form.Limit = 500
 	}
-	if form.Page == 0 {
+	if form.Page <= 0 {
 		form.Page = 1
 	}
+	rets.Page = form.Page
+	rets.Limit = form.Limit
 	form.Page = (form.Page - 1) * form.Limit
 
 	if token != nil && token.Valid {
 		if claims, ok := token.Claims.(*JWTClaims); ok {
 			keyId := claims.KeyID
 			var (
-				histories       []sqldb.History
-				walletHistories []WalletHistory
+				histories []sqldb.History
+				total     int64
 			)
-			histories, err = sqldb.GetWalletRecordHistory(nil, keyId, form.SearchType, form.Limit, form.Page)
+			histories, total, err = sqldb.GetWalletRecordHistory(nil, keyId, form.SearchType, form.Limit, form.Page)
 			if err == nil {
-				if len(histories) > 0 {
-					for _, history := range histories {
-						var walletHistory WalletHistory
-						walletHistory.Amount = history.Amount
-						walletHistory.Money = converter.ChainMoney(history.Amount.String())
-						walletHistory.BlockID = history.BlockID
-						walletHistory.SenderID = history.SenderID
-						walletHistory.RecipientID = history.RecipientID
-						walletHistory.TxHash = hex.EncodeToString(history.TxHash)
-						walletHistory.Comment = history.Comment
-						walletHistory.CreatedAt = history.CreatedAt
-						walletHistory.ID = history.ID
-						walletHistory.SenderAdd = converter.IDToAddress(history.SenderID)
-						walletHistory.RecipientAdd = converter.IDToAddress(history.RecipientID)
-						walletHistories = append(walletHistories, walletHistory)
-					}
-					jsonResponse(w, walletHistories)
-				} else {
-					jsonResponse(w, make([]string, 0, 0))
+				rets.Total = total
+				for _, history := range histories {
+					var hy walletHistory
+					hy.Amount = history.Amount
+					hy.Money = converter.ChainMoney(history.Amount.String())
+					hy.BlockID = history.BlockID
+					hy.SenderID = history.SenderID
+					hy.RecipientID = history.RecipientID
+					hy.TxHash = hex.EncodeToString(history.TxHash)
+					hy.Comment = history.Comment
+					hy.CreatedAt = history.CreatedAt
+					hy.ID = history.ID
+					hy.SenderAdd = converter.IDToAddress(history.SenderID)
+					hy.RecipientAdd = converter.IDToAddress(history.RecipientID)
+					rets.List = append(rets.List, hy)
 				}
+				if rets.List == nil {
+					rets.List = make([]walletHistory, 0)
+				}
+				jsonResponse(w, rets)
+				return
 			}
 		}
 		errorResponse(w, err, http.StatusBadRequest)

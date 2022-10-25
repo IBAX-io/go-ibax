@@ -6,7 +6,9 @@
 package sqldb
 
 import (
+	"database/sql"
 	"reflect"
+	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
@@ -23,11 +25,27 @@ func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []any, err error
 	}
 	for _, rtx := range rollbackTxs {
 		id := rtx.TableID
+		var ecosystem string
 		tableName := rtx.NameTable
-		if tableName == `1_keys` {
+		if tableName == `1_keys` || tableName == "@system" {
 			continue
 		}
-		rows, err := db.Table(tableName).Exec(`select * from "` + tableName + `" where id = ` + id).Rows()
+		if strings.Contains(id, ",") {
+			ids := strings.Split(id, ",")
+			if len(ids) == 2 {
+				id, ecosystem = ids[0], ids[1]
+			}
+
+		}
+		var (
+			rows *sql.Rows
+			err  error
+		)
+		if ecosystem == "" {
+			rows, err = db.Raw(`select * from "` + tableName + `" where id = ` + id).Rows()
+		} else {
+			rows, err = db.Raw(`select * from "` + tableName + `" where id = ` + id + " AND ecosystem = " + ecosystem).Rows()
+		}
 		defer rows.Close()
 		if err == nil {
 			cols, er := rows.Columns()

@@ -134,3 +134,8 @@ func (sys *Ecosystem) FeeMode() (*FeeModeInfo, error) {
 	}
 	return info, nil
 }
+
+// GetTokenSymbol is get ecosystem token symbol
+func (sys *Ecosystem) GetTokenSymbol(dbTx *DbTransaction, id int64) (bool, error) {
+	return isFound(GetDB(dbTx).Select("token_symbol").First(sys, "id = ?", id))
+}
