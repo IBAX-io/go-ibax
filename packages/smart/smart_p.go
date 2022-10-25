@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/pbgo"
+
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -716,6 +718,9 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 	keyUTXO := sqldb.KeyUTXO{Ecosystem: ecosystem, KeyId: fromID}
 	//sum, _ := decimal.NewFromString(value)
 	payValue, _ := decimal.NewFromString(value)
+	status := pbgo.TxInvokeStatusCode_SUCCESS
+	var values *types.Map
+	var balance decimal.Decimal
 	if strings.EqualFold("UTXO", source) && strings.EqualFold("Account", target) {
 
 		txInputs := sqldb.GetUnusedOutputsMap(keyUTXO, outputsMap)
@@ -737,6 +742,9 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 			if _, _, err := sc.updateWhere([]string{"+amount"}, []any{payValue}, "1_keys", types.LoadMap(map[string]any{"id": fromID, "ecosystem": ecosystem})); err != nil {
 				return false, err
 			}
+			if balance, err = sc.accountBalanceSingle(ecosystem, fromID); err != nil {
+				return false, err
+			}
 		} else {
 			return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
 		}
@@ -752,7 +760,24 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 		if len(txOutputs) > 0 {
 			sqldb.PutAllOutputsMap(txOutputs, txOutputsMap)
 		}
-
+		values = types.LoadMap(map[string]any{
+			"sender_id":         fromID,
+			"sender_balance":    balance,
+			"recipient_id":      fromID,
+			"recipient_balance": balance,
+			"amount":            payValue,
+			"comment":           source,
+			"status":            int64(status),
+			"block_id":          sc.BlockHeader.BlockId,
+			"txhash":            sc.Hash,
+			"ecosystem":         ecosystem,
+			"type":              int64(GasScenesType_TransferSelf),
+			"created_at":        sc.Timestamp,
+		})
+		_, _, err = sc.insert(values.Keys(), values.Values(), `1_history`)
+		if err != nil {
+			return false, err
+		}
 		sc.TxInputsMap = txInputsMap
 		sc.TxOutputsMap = txOutputsMap
 		return true, nil
@@ -770,13 +795,33 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 			if _, _, err = sc.updateWhere([]string{`-amount`}, []any{payValue}, "1_keys", types.LoadMap(map[string]any{`id`: fromID, `ecosystem`: ecosystem})); err != nil {
 				return false, err
 			}
+			if balance, err = sc.accountBalanceSingle(ecosystem, fromID); err != nil {
+				return false, err
+			}
 		} else {
 			return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
 		}
 		if len(txOutputs) > 0 {
 			sqldb.PutAllOutputsMap(txOutputs, txOutputsMap)
 		}
-
+		values = types.LoadMap(map[string]any{
+			"sender_id":         fromID,
+			"sender_balance":    balance,
+			"recipient_id":      fromID,
+			"recipient_balance": balance,
+			"amount":            payValue,
+			"comment":           source,
+			"status":            int64(status),
+			"block_id":          sc.BlockHeader.BlockId,
+			"txhash":            sc.Hash,
+			"ecosystem":         ecosystem,
+			"type":              int64(GasScenesType_TransferSelf),
+			"created_at":        sc.Timestamp,
+		})
+		_, _, err = sc.insert(values.Keys(), values.Values(), `1_history`)
+		if err != nil {
+			return false, err
+		}
 		sc.TxInputsMap = txInputsMap
 		sc.TxOutputsMap = txOutputsMap
 		return true, nil

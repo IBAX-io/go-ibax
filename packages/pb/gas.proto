@@ -17,6 +17,7 @@ enum GasScenesType {
   Taxes = 2;
   Direct = 15;
   Combustion = 16;
+  TransferSelf =  24;
 }
 
 enum GasPayAbleType {
