@@ -122,26 +122,6 @@ func SetOtherCommonRoutes(api *mux.Router, m Mode) {
 
 }
 
-func (m Mode) SetGafsRoutes(r Router) {
-
-	gafs := r.GetAPIVersion("/api/v2").PathPrefix("/gafs").Subrouter()
-
-	gafs.HandleFunc("/file_pre", authRequire(filePre)).Methods("POST")
-	gafs.HandleFunc("/add", authRequire(add)).Methods("POST")
-	//gafs.HandleFunc("/add_dir", authRequire(addDir)).Methods("POST")
-	gafs.HandleFunc("/cat/{hash}", authRequire(cat)).Methods("GET")
-
-	gafs.HandleFunc("/files/mkdir", authRequire(filesMkdir)).Methods("POST")
-	gafs.HandleFunc("/files/stat", authRequire(filesStat)).Methods("POST")
-	gafs.HandleFunc("/files/rm", authRequire(filesRm)).Methods("POST")
-	gafs.HandleFunc("/files/mv", authRequire(filesMv)).Methods("POST")
-	gafs.HandleFunc("/files/cp/{hash}", authRequire(filesCp)).Methods("POST")
-
-	gafs.HandleFunc("/files/ls", authRequire(filesLs)).Methods("POST")
-	//gafs.HandleFunc("/file/ls/{hash}", authRequire(fileLs)).Methods("GET")
-	//gafs.HandleFunc("/ls/{hash}", authRequire(ls)).Methods("GET")
-}
-
 func setOtherBlockChainRoutes(api *mux.Router, m Mode) {
 	api.HandleFunc("/myBalance", authRequire(m.getMyBalanceHandler)).Methods("GET")
 	api.HandleFunc("/walletHistory", authRequire(getWalletHistory)).Methods("GET")

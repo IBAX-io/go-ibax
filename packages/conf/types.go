@@ -75,11 +75,6 @@ type (
 		BadTx   int // maximum bad tx during badTime minutes
 	}
 
-	IpfsConfig struct {
-		Enabled bool
-		Host    string
-	}
-
 	TLSConfig struct {
 		Enabled bool   // TLS is on/off. It is required for https
 		TLSCert string // TLSCert is a filepath of the fullchain of certificate.
@@ -133,7 +128,6 @@ type (
 		Log             LogConfig
 		TokenMovement   TokenMovementConfig
 		BanKey          BanKeyConfig
-		IpfsConf        IpfsConfig
 		CryptoSettings  CryptoSettings
 		BlockSyncMethod BlockSyncMethod
 	}

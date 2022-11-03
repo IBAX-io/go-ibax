@@ -2,8 +2,6 @@ package hashalgo
 
 import (
 	"crypto/hmac"
-
-	keccak "github.com/ethereum/go-ethereum/crypto"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -24,6 +22,7 @@ func (k *Keccak256) DoubleHash(msg []byte) []byte {
 }
 
 func (k *Keccak256) usingKeccak256(data []byte) []byte {
-	hashed := keccak.Keccak256(data)
-	return hashed[:]
+	d := sha3.NewLegacyKeccak256()
+	d.Write(data)
+	return d.Sum(nil)
 }

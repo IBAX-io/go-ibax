@@ -164,14 +164,6 @@ func FillRuntimeKey() error {
 	return nil
 }
 
-func IpfsEnabled() bool {
-	return Config.IpfsConf.Enabled
-}
-
-func IpfsHost() string {
-	return Config.IpfsConf.Host
-}
-
 // GetNodesAddr returns address of nodes
 func GetNodesAddr() []string {
 	return Config.BootNodes.NodesAddr[:]
