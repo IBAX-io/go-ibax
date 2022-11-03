@@ -22,9 +22,7 @@ func RegisterRoutes() http.Handler {
 	if !conf.Config.IsSupportingCLB() {
 		m.SetBlockchainRoutes(r)
 	}
-	if conf.IpfsEnabled() {
-		m.SetGafsRoutes(r)
-	}
+
 	if conf.Config.IsSubNode() {
 		m.SetSubNodeRoutes(r)
 	}
