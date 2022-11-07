@@ -50,7 +50,7 @@ func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64, updBlockMsg []*pbgo.
 	}
 	var (
 		upErrStr, upBlockIdStr string
-		hashArr                [][]byte
+		hashArr                []string
 		header                 = "UPDATE transactions_status SET"
 		colErr, colBlockId     = "error = CASE hash", "block_id = CASE hash"
 	)
@@ -59,7 +59,7 @@ func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64, updBlockMsg []*pbgo.
 		if s == nil {
 			continue
 		}
-		hashArr = append(hashArr, s.Hash)
+		hashArr = append(hashArr, fmt.Sprintf("decode('%x','hex')", s.Hash))
 		upErrStr += fmt.Sprintf("WHEN decode('%x','hex') THEN '%s' ", s.Hash, strings.Replace(s.Result, `'`, `''`, -1))
 		upBlockIdStr += fmt.Sprintf("WHEN decode('%x','hex') THEN %d ", s.Hash, newBlockID)
 	}
@@ -69,8 +69,8 @@ func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64, updBlockMsg []*pbgo.
 	sqlStr := fmt.Sprintf("%s ", header)
 	sqlStr += fmt.Sprintf(" %s %s END,", colErr, upErrStr)
 	sqlStr += fmt.Sprintf(" %s %s END", colBlockId, upBlockIdStr)
-	sqlStr += fmt.Sprint(" WHERE hash in(?)")
-	return dbTx.Exec(sqlStr, hashArr).Error
+	sqlStr += fmt.Sprintf(" WHERE hash in(%s)", strings.Join(hashArr, ","))
+	return dbTx.Exec(sqlStr).Error
 }
 
 // SetError is updating transaction status error
