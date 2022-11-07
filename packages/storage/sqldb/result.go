@@ -27,7 +27,7 @@ func (dbTx *DbTransaction) Single(query string, args ...any) *SingleResult {
 	case err == sql.ErrNoRows:
 		return &SingleResult{[]byte(""), nil}
 	case err != nil:
-		return &SingleResult{[]byte(""), fmt.Errorf("%s in query %s %s", err, query, args)}
+		return &SingleResult{[]byte(""), err}
 	}
 	return &SingleResult{result, nil}
 }
