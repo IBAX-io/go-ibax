@@ -80,10 +80,9 @@ func EncodeLenByte(out *[]byte, buf []byte) *[]byte {
 // EncodeLength encodes int64 number to []byte. If it is less than 128 then it returns []byte{length}.
 // Otherwise, it returns (0x80 | len of int64) + int64 as BigEndian []byte
 //
-//   67 => 0x43
-//   1024 => 0x820400
-//   1000000 => 0x830f4240
-//
+//	67 => 0x43
+//	1024 => 0x820400
+//	1000000 => 0x830f4240
 func EncodeLength(length int64) []byte {
 	if length >= 0 && length <= 127 {
 		return []byte{byte(length)}
@@ -140,10 +139,9 @@ func DecodeLenInt64Buf(buf *bytes.Buffer) (int64, error) {
 
 // DecodeLength decodes []byte to int64 and shifts buf. Bytes must be encoded with EncodeLength function.
 //
-//   0x43 => 67
-//   0x820400 => 1024
-//   0x830f4240 => 1000000
-//
+//	0x43 => 67
+//	0x820400 => 1024
+//	0x830f4240 => 1000000
 func DecodeLength(buf *[]byte) (ret int64, err error) {
 	if len(*buf) == 0 {
 		return
@@ -807,7 +805,6 @@ func ParseTable(tblname string, defaultEcosystem int64) string {
 	return strings.ToLower(fmt.Sprintf(`%d_%s`, ecosystem, Sanitize(name, ``)))
 }
 
-//
 func SubNodeParseTable(tblname string, defaultEcosystem int64) string {
 	ecosystem, name := ParseName(tblname)
 	if ecosystem == 0 {
@@ -986,6 +983,8 @@ func ValueToInt(v any) (ret int64, err error) {
 		}
 	case decimal.Decimal:
 		ret = val.IntPart()
+	case json.Number:
+		ret, err = val.Int64()
 	default:
 		if v == nil {
 			return 0, nil
