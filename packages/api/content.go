@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -55,6 +56,7 @@ func initVars(r *http.Request) *map[string]string {
 		vars[name] = r.FormValue(name)
 	}
 	vars["_full"] = "0"
+	vars["current_time"] = fmt.Sprintf("%d", time.Now().Unix())
 	vars["guest_key"] = consts.GuestKey
 	vars["guest_account"] = consts.GuestAddress
 	vars["black_hole_key"] = strconv.FormatInt(converter.HoleAddrMap[converter.BlackHoleAddr].K, 10)
