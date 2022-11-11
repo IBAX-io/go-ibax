@@ -196,6 +196,8 @@ func GetWhere(inWhere *types.Map) (string, error) {
 					}
 					cond = append(cond, fmt.Sprintf(`(%s %s)`, key, ret))
 				}
+			case []byte:
+				cond = append(cond, fmt.Sprintf(`%s = %s`, key, fmt.Sprintf(" decode('%x','HEX')", value)))
 			default:
 				ival := escape(value)
 				if ival == `$isnull` {
