@@ -48,7 +48,6 @@ func getNetworkHandler(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, &NetworkResult{
 		NetworkID:     converter.Int64ToStr(conf.Config.LocalConf.NetworkID),
 		CentrifugoURL: conf.Config.Centrifugo.URL,
-		Test:          syspar.IsTestMode(),
 		Private:       syspar.IsPrivateBlockchain(),
 		HonorNodes:    GetNodesJSON(),
 	})
