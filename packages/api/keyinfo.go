@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -108,7 +107,7 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// in test mode, registration is open in the first ecosystem
-	if len(keysList) == 0 && syspar.IsTestMode() {
+	if len(keysList) == 0 {
 		account = converter.AddressToString(keyID)
 		notify := make([]notifyInfo, 0)
 		notify = append(notify, notifyInfo{})
