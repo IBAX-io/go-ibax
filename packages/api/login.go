@@ -387,5 +387,5 @@ func allowCreateUser(c *Client) bool {
 		return true
 	}
 
-	return syspar.IsTestMode()
+	return true
 }
