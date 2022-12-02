@@ -114,12 +114,6 @@ func SetOtherCommonRoutes(api *mux.Router, m Mode) {
 	api.HandleFunc("/nodelistWhere/{name}", authRequire(getnodeListWhereHandler)).Methods("POST")
 	api.HandleFunc("/sumWhere/{name}", authRequire(getsumWhereHandler)).Methods("POST")
 	api.HandleFunc("/metrics/blockper/{node}", blocksCountByNodeHandler).Methods("GET")
-	// Open database data APIS
-	api.HandleFunc("/open/databaseInfo", getOpenDatabaseInfoHandler).Methods("POST")
-	api.HandleFunc("/open/tablesInfo", getOpenTablesInfoHandler).Methods("POST")
-	api.HandleFunc("/open/columnsInfo", getOpenColumnsInfoHandler).Methods("POST")
-	api.HandleFunc("/open/rowsInfo", getOpenRowsInfoHandler).Methods("POST")
-
 }
 
 func setOtherBlockChainRoutes(api *mux.Router, m Mode) {
