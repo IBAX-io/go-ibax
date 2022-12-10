@@ -50,7 +50,7 @@ func DisseminateTxs(rw io.ReadWriter) error {
 		}
 
 		rtx := &transaction.Transaction{}
-		if err = rtx.Unmarshall(bytes.NewBuffer(tran)); err != nil {
+		if err = rtx.Unmarshall(bytes.NewBuffer(tran), true); err != nil {
 			return err
 		}
 		rtxs = append(rtxs, rtx.SetRawTx())

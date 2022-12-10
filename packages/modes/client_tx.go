@@ -26,7 +26,7 @@ func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key i
 	var rtxs []*sqldb.RawTx
 	for _, txData := range txDatas {
 		rtx := &transaction.Transaction{}
-		if err = rtx.Unmarshall(bytes.NewBuffer(txData)); err != nil {
+		if err = rtx.Unmarshall(bytes.NewBuffer(txData), true); err != nil {
 			return nil, err
 		}
 		rtxs = append(rtxs, rtx.SetRawTx())

@@ -44,7 +44,7 @@ func CreateContract(contractName string, keyID int64, params map[string]any,
 	txData, _, err := NewTransactionInProc(sc, privateKey)
 	if err == nil {
 		rtx := &Transaction{}
-		if err = rtx.Unmarshall(bytes.NewBuffer(txData)); err == nil {
+		if err = rtx.Unmarshall(bytes.NewBuffer(txData), true); err == nil {
 			//err = sqldb.SendTx(rtx, sc.KeyId)
 			err = sqldb.SendTxBatches([]*sqldb.RawTx{rtx.SetRawTx()})
 		}

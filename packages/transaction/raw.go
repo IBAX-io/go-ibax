@@ -18,7 +18,7 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer) error {
+func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer, fill bool) error {
 	if buffer.Len() == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("empty transaction buffer")
 		return fmt.Errorf("empty transaction buffer")
@@ -39,7 +39,7 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer) error {
 			SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 		}
 		inner = itx
-		if err = itx.Unmarshal(buffer); err != nil {
+		if err = itx.Unmarshal(buffer, fill); err != nil {
 			return err
 		}
 	case byte(128): //reset unmarshal client buf
@@ -61,7 +61,7 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer) error {
 		if err != nil {
 			return err
 		}
-		if err = itx.Unmarshal(bytes.NewBuffer(newbuf)); err != nil {
+		if err = itx.Unmarshal(bytes.NewBuffer(newbuf), fill); err != nil {
 			return err
 		}
 
