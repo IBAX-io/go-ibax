@@ -7,17 +7,15 @@ package api
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 
-	"github.com/IBAX-io/go-ibax/packages/common"
-
 	"github.com/IBAX-io/go-ibax/packages/block"
+	"github.com/IBAX-io/go-ibax/packages/common"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-
-	"errors"
-
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )
@@ -138,7 +136,7 @@ func getBlocksTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	result := map[int64][]TxInfo{}
 	for _, blockModel := range blocks {
-		blck, err := block.UnmarshallBlock(bytes.NewBuffer(blockModel.Data))
+		blck, err := block.UnmarshallBlock(bytes.NewBuffer(blockModel.Data), false)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err, "bolck_id": blockModel.ID}).Error("on unmarshalling block")
 			errorResponse(w, err)
@@ -242,7 +240,7 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	result := map[int64]BlockDetailedInfo{}
 	for _, blockModel := range blocks {
-		blck, err := block.UnmarshallBlock(bytes.NewBuffer(blockModel.Data))
+		blck, err := block.UnmarshallBlock(bytes.NewBuffer(blockModel.Data), false)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err, "block_id": blockModel.ID}).Error("on unmarshalling block")
 			errorResponse(w, err)
@@ -264,6 +262,14 @@ func getBlocksDetailedInfoHandler(w http.ResponseWriter, r *http.Request) {
 					txDetailedInfo.ContractName = tx.SmartContract().TxContract.Name
 				}
 				txDetailedInfo.Params = tx.SmartContract().TxData
+				if tx.Type() == types.TransferSelfTxType {
+					txDetailedInfo.Params = make(map[string]any)
+					txDetailedInfo.Params["TransferSelf"] = tx.SmartContract().TxSmart.TransferSelf
+				}
+				if tx.Type() == types.UtxoTxType {
+					txDetailedInfo.Params = make(map[string]any)
+					txDetailedInfo.Params["UTXO"] = tx.SmartContract().TxSmart.UTXO
+				}
 			}
 
 			txDetailedInfoCollection = append(txDetailedInfoCollection, txDetailedInfo)

@@ -22,7 +22,7 @@ var (
 
 // RollbackBlock is blocking rollback
 func RollbackBlock(data []byte) error {
-	bl, err := block.UnmarshallBlock(bytes.NewBuffer(data))
+	bl, err := block.UnmarshallBlock(bytes.NewBuffer(data), true)
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func RollbackBlock(data []byte) error {
 		return err
 	}
 
-	bl, err = block.UnmarshallBlock(bytes.NewBuffer(b.Data))
+	bl, err = block.UnmarshallBlock(bytes.NewBuffer(b.Data), false)
 	if err != nil {
 		dbTx.Rollback()
 		return err
@@ -126,7 +126,7 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 			return err
 		}
 	}
-	
+
 	err := sqldb.RollbackOutputs(block.Header.BlockId, dbTx, logger)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating outputs by block id")

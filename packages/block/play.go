@@ -160,7 +160,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	if b.IsGenesis() {
 		transactions := make([]*transaction.Transaction, 0)
 		for _, tx := range b.Transactions {
-			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(tx.FullData))
+			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(tx.FullData), false)
 			if err != nil {
 				return err
 			}
@@ -249,7 +249,8 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
 		}
-		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits, consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar, b.ComPercents)
+		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits,
+			consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar, b.ComPercents)
 		if err != nil {
 			return err
 		}

@@ -252,7 +252,7 @@ func saveNewTransactions(binaryTxs []byte) error {
 		}
 
 		rtx := transaction.Transaction{}
-		if err = rtx.Unmarshall(bytes.NewBuffer(txBinData)); err != nil {
+		if err = rtx.Unmarshall(bytes.NewBuffer(txBinData), true); err != nil {
 			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("unmarshalling transaction")
 			return err
 		}

@@ -199,7 +199,7 @@ func (s *SmartTransactionParser) BinMarshalWithPrivate(smartTx *types.SmartTrans
 	return s.Marshal()
 }
 
-func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer) error {
+func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer, fill bool) error {
 	buffer.UnreadByte()
 	if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
 		return err
@@ -207,7 +207,7 @@ func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer) error {
 	if s.SmartContract.TxSmart.UTXO != nil || s.SmartContract.TxSmart.TransferSelf != nil {
 		return nil
 	}
-	if err := s.parseFromContract(true); err != nil {
+	if err := s.parseFromContract(fill); err != nil {
 		return err
 	}
 	return nil

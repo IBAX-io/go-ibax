@@ -32,7 +32,7 @@ func ProcessBlockByBinData(data []byte, checkSize bool) (*Block, error) {
 		log.WithFields(log.Fields{"check_size": checkSize, "size": len(data), "max_size": syspar.GetMaxBlockSize(), "type": consts.ParameterExceeded}).Error("binary block size exceeds max block size")
 		return nil, types.ErrMaxBlockSize(syspar.GetMaxBlockSize(), len(data))
 	}
-	block, err := UnmarshallBlock(bytes.NewBuffer(data))
+	block, err := UnmarshallBlock(bytes.NewBuffer(data), true)
 	if err != nil {
 		return nil, errors.Wrap(types.ErrUnmarshallBlock, err.Error())
 	}
@@ -182,7 +182,7 @@ func GetDataFromFirstBlock() (data *types.FirstBlock, ok bool) {
 		return
 	}
 
-	pb, err := UnmarshallBlock(bytes.NewBuffer(block.Data))
+	pb, err := UnmarshallBlock(bytes.NewBuffer(block.Data), true)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.ParserError, "error": err}).Error("parsing data of first block")
 		return

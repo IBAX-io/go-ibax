@@ -228,7 +228,7 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 			}
 		}
 		bufTransaction := bytes.NewBuffer(txItem.Data)
-		tr, err := transaction.UnmarshallTransaction(bufTransaction)
+		tr, err := transaction.UnmarshallTransaction(bufTransaction, true)
 		if err != nil {
 			if tr != nil {
 				txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
