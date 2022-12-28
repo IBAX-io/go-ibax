@@ -37,7 +37,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 const (
@@ -222,61 +221,54 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"EditLanguage":                 EditLanguage,
 		"BndWallet":                    BndWallet,
 		"UnbndWallet":                  UnbndWallet,
-		//"CheckSignature":               CheckSignature,
-		"RowConditions":            RowConditions,
-		"DecodeBase64":             DecodeBase64,
-		"EncodeBase64":             EncodeBase64,
-		"Hash":                     Hash,
-		"DoubleHash":               crypto.DoubleHash,
-		"EditEcosysName":           EditEcosysName,
-		"GetColumnType":            GetColumnType,
-		"GetType":                  GetType,
-		"AllowChangeCondition":     AllowChangeCondition,
-		"StringToBytes":            StringToBytes,
-		"BytesToString":            BytesToString,
-		"GetMapKeys":               GetMapKeys,
-		"SortedKeys":               SortedKeys,
-		"Append":                   Append,
-		"GetHistory":               GetHistory,
-		"GetHistoryRow":            GetHistoryRow,
-		"GetDataFromXLSX":          GetDataFromXLSX,
-		"GetRowsCountXLSX":         GetRowsCountXLSX,
-		"BlockTime":                BlockTime,
-		"IsObject":                 IsObject,
-		"DateTime":                 DateTime,
-		"UnixDateTime":             UnixDateTime,
-		"DateTimeLocation":         DateTimeLocation,
-		"UnixDateTimeLocation":     UnixDateTimeLocation,
-		"UpdateNotifications":      UpdateNotifications,
-		"UpdateRolesNotifications": UpdateRolesNotifications,
-		"TransactionInfo":          TransactionInfo,
-		"DelTable":                 DelTable,
-		"DelColumn":                DelColumn,
-		"HexToPub":                 crypto.HexToPub,
-		"PubToHex":                 PubToHex,
-		"UpdateNodesBan":           UpdateNodesBan,
-		//"DBSelectMetrics":              DBSelectMetrics,
-		//"DBCollectMetrics":             DBCollectMetrics,
-		"Log":            Log,
-		"Log10":          Log10,
-		"Pow":            Pow,
-		"Sqrt":           Sqrt,
-		"Round":          Round,
-		"Floor":          Floor,
-		"CheckCondition": CheckCondition,
-		//"SendExternalTransaction": SendExternalTransaction,
-		"IsHonorNodeKey": IsHonorNodeKey,
-
-		"MoneyDiv": MoneyDiv,
-		//"UpdateReward":     UpdateReward,
-		"CheckSign":        CheckSign,
-		"CheckNumberChars": CheckNumberChars,
-		"DateFormat":       Date,
-		"RegexpMatch":      RegexpMatch,
-		"DBCount":          DBCount,
-		"MathMod":          MathMod,
-		"MathModDecimal":   MathModDecimal,
-		"CreateView":       CreateView,
+		"RowConditions":                RowConditions,
+		"DecodeBase64":                 DecodeBase64,
+		"EncodeBase64":                 EncodeBase64,
+		"Hash":                         Hash,
+		"DoubleHash":                   crypto.DoubleHash,
+		"EditEcosysName":               EditEcosysName,
+		"GetColumnType":                GetColumnType,
+		"GetType":                      GetType,
+		"AllowChangeCondition":         AllowChangeCondition,
+		"StringToBytes":                StringToBytes,
+		"BytesToString":                BytesToString,
+		"GetMapKeys":                   GetMapKeys,
+		"SortedKeys":                   SortedKeys,
+		"Append":                       Append,
+		"GetHistory":                   GetHistory,
+		"GetHistoryRow":                GetHistoryRow,
+		"GetDataFromXLSX":              GetDataFromXLSX,
+		"GetRowsCountXLSX":             GetRowsCountXLSX,
+		"BlockTime":                    BlockTime,
+		"IsObject":                     IsObject,
+		"DateTime":                     DateTime,
+		"UnixDateTime":                 UnixDateTime,
+		"DateTimeLocation":             DateTimeLocation,
+		"UnixDateTimeLocation":         UnixDateTimeLocation,
+		"UpdateNotifications":          UpdateNotifications,
+		"UpdateRolesNotifications":     UpdateRolesNotifications,
+		"DelTable":                     DelTable,
+		"DelColumn":                    DelColumn,
+		"HexToPub":                     crypto.HexToPub,
+		"PubToHex":                     PubToHex,
+		"UpdateNodesBan":               UpdateNodesBan,
+		"Log":                          Log,
+		"Log10":                        Log10,
+		"Pow":                          Pow,
+		"Sqrt":                         Sqrt,
+		"Round":                        Round,
+		"Floor":                        Floor,
+		"CheckCondition":               CheckCondition,
+		"IsHonorNodeKey":               IsHonorNodeKey,
+		"MoneyDiv":                     MoneyDiv,
+		"CheckSign":                    CheckSign,
+		"CheckNumberChars":             CheckNumberChars,
+		"DateFormat":                   Date,
+		"RegexpMatch":                  RegexpMatch,
+		"DBCount":                      DBCount,
+		"MathMod":                      MathMod,
+		"MathModDecimal":               MathModDecimal,
+		"CreateView":                   CreateView,
 	}
 	switch vt {
 	case script.VMType_CLB:
@@ -2023,98 +2015,6 @@ func UpdateRolesNotifications(sc *SmartContract, ecosystemID int64, roles ...any
 	}
 	sc.Notifications.AddRoles(ecosystemID, rolesList...)
 }
-
-func TransactionData(blockId int64, hash []byte) (data *TxInfo, err error) {
-	var (
-		blockOwner      sqldb.BlockChain
-		found           bool
-		transactionSize int
-	)
-
-	found, err = blockOwner.Get(blockId)
-	if err != nil || !found {
-		return
-	}
-	data = &TxInfo{}
-	data.Block = converter.Int64ToStr(blockId)
-	blockBuffer := bytes.NewBuffer(blockOwner.Data)
-	_, err = types.ParseBlockHeader(blockBuffer, syspar.GetMaxBlockSize())
-	if err != nil {
-		return
-	}
-	for blockBuffer.Len() > 0 {
-		transactionSize, err = converter.DecodeLengthBuf(blockBuffer)
-		if err != nil {
-			return
-		}
-		if blockBuffer.Len() < int(transactionSize) || transactionSize == 0 {
-			err = errParseTransaction
-			return
-		}
-		bufTransaction := bytes.NewBuffer(blockBuffer.Next(int(transactionSize)))
-		if bufTransaction.Len() == 0 {
-			err = errParseTransaction
-			return
-		}
-
-		b, errRead := bufTransaction.ReadByte()
-		if errRead != nil {
-			err = errParseTransaction
-			return
-		}
-		if int64(b) != contractTxType && b != types.SmartContractTxType {
-			continue
-		}
-
-		var txData, txHash []byte
-		if err = converter.BinUnmarshalBuff(bufTransaction, &txData); err != nil {
-			return
-		}
-
-		txHash = crypto.DoubleHash(txData)
-		if bytes.Equal(txHash, hash) {
-			smartTx := types.SmartTransaction{}
-			if err = msgpack.Unmarshal(txData, &smartTx); err != nil {
-				return
-			}
-			contract := GetContractByID(int32(smartTx.ID))
-			if contract == nil {
-				err = errParseTransaction
-				return
-			}
-			data.Contract = contract.Name
-			txInfo := contract.Info().Tx
-			if txInfo != nil {
-				data.Params = smartTx.Params
-			}
-			break
-		}
-	}
-	return
-}
-
-func TransactionInfo(txHash string) (string, error) {
-	var out []byte
-	hash, err := hex.DecodeString(txHash)
-	if err != nil {
-		return ``, err
-	}
-	ltx := &sqldb.LogTransaction{Hash: hash}
-	found, err := ltx.GetByHash(hash)
-	if err != nil {
-		return ``, err
-	}
-	if !found {
-		return ``, nil
-	}
-	data, err := TransactionData(ltx.Block, hash)
-	if err != nil {
-		return ``, err
-	}
-	out, err = json.Marshal(data)
-	return string(out), err
-}
-
 func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 	var (
 		count   int64

@@ -22,8 +22,8 @@ type LogTransaction struct {
 }
 
 // GetByHash returns LogTransactions existence by hash
-func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
-	return isFound(DBConn.Where("hash = ?", hash).First(lt))
+func (lt *LogTransaction) GetByHash(dbTx *DbTransaction, hash []byte) (bool, error) {
+	return isFound(GetDB(dbTx).Where("hash = ?", hash).First(lt))
 }
 
 // Create is creating record of model

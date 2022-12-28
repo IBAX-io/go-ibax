@@ -316,7 +316,7 @@ func (vm *VM) getInitValue(lexemes *Lexemes, ind *int, block *CodeBlocks) (value
 	case lexIdent:
 		objInfo, tobj := vm.findObj(lexeme.Value.(string), block)
 		if objInfo == nil {
-			err = fmt.Errorf(eUnknownIdent, lexeme.Value.(string))
+			err = fmt.Errorf(eUnknownIdent, lexeme.Value)
 		} else {
 			value = mapItem{Type: mapVar, Value: &VarInfo{Obj: objInfo, Owner: tobj}}
 		}
@@ -715,7 +715,7 @@ main:
 			objInfo, tobj := vm.findObj(lexeme.Value.(string), block)
 			if objInfo == nil && (!vm.Extern || i > *ind || i >= len(*lexemes)-2 || (*lexemes)[i+1].Type != isLPar) {
 				logger.WithFields(log.Fields{"lex_value": lexeme.Value, "type": consts.ParseError}).Error("unknown identifier")
-				return fmt.Errorf(eUnknownIdent, lexeme.Value.(string))
+				return fmt.Errorf(eUnknownIdent, lexeme.Value)
 			}
 			if i < len(*lexemes)-2 {
 				if (*lexemes)[i+1].Type == isLPar {
