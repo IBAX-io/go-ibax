@@ -199,7 +199,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 				gt := 3 * syspar.GetMaxBlockGenerationTime()
 				l := &sqldb.LogTransaction{}
 				for i := 0; i < 2; i++ {
-					found, err := l.GetByHash(stp.Hash)
+					found, err := l.GetByHash(nil, stp.Hash)
 					if err != nil {
 						errorResponse(w, err)
 						return

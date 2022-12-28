@@ -41,7 +41,7 @@ var (
 // And it would have successfully passed a frontal test
 func CheckLogTx(txHash []byte, logger *log.Entry) error {
 	logTx := &sqldb.LogTransaction{}
-	found, err := logTx.GetByHash(txHash)
+	found, err := logTx.GetByHash(nil, txHash)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting log transaction by hash")
 		return err
