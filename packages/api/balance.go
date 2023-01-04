@@ -6,20 +6,19 @@
 package api
 
 import (
-	"github.com/shopspring/decimal"
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-
 	"github.com/gorilla/mux"
+	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
 
 type balanceResult struct {
 	Amount      string `json:"amount"`
-	Money       string `json:"money"`
+	Digits      int64  `json:"digits"`
 	Total       string `json:"total"`
 	Utxo        string `json:"utxo"`
 	TokenSymbol string `json:"token_symbol"`
@@ -65,7 +64,7 @@ func (m Mode) getBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	total := utxoAmount.Add(accountAmount)
 
 	eco := sqldb.Ecosystem{}
-	_, err = eco.GetTokenSymbol(nil, form.EcosystemID)
+	_, err = eco.Get(nil, form.EcosystemID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting key balance token symbol")
 		errorResponse(w, err)
@@ -73,7 +72,7 @@ func (m Mode) getBalanceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonResponse(w, &balanceResult{
 		Amount:      key.Amount,
-		Money:       converter.ChainMoney(total.String()),
+		Digits:      eco.Digits,
 		Total:       total.String(),
 		Utxo:        utxoAmount.String(),
 		TokenSymbol: eco.TokenSymbol,

@@ -25,6 +25,7 @@ type Ecosystem struct {
 	TokenName      string
 	TypeEmission   int64
 	TypeWithdraw   int64
+	Digits         int64
 	Info           string `gorm:"type:jsonb"`
 	FeeModeInfo    string `json:"fee_mode_info" gorm:"type:jsonb"`
 }

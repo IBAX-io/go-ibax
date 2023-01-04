@@ -670,12 +670,6 @@ func Append(slice []any, val any) []any {
 	return append(slice, val)
 }
 
-func StringToAmount(amount string) decimal.Decimal {
-	f, _ := strconv.ParseFloat(amount, 64)
-	am, _ := Money(math.Pow10(consts.MoneyDigits) * f)
-	return am
-}
-
 // RegexpMatch validates regexp
 func RegexpMatch(str, reg string) bool {
 	if strings.Contains(reg, `\u`) || strings.Contains(reg, `\U`) {

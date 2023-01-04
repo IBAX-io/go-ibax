@@ -759,14 +759,25 @@ func EncodeLengthPlusData(idata any) []byte {
 	return append(EncodeLength(int64(len(data))), data...)
 }
 
-// ChainMoney converts minimal unit to legibility unit. For example, 123455000000000 => 123.455
-func ChainMoney(money string) string {
-	digit := consts.MoneyDigits
-	if len(money) < digit+1 {
-		money = strings.Repeat(`0`, digit+1-len(money)) + money
+// FormatMoney converts minimal unit to legibility unit. For example, value * 10 ^ -digit
+func FormatMoney(exp string, digit int32) (string, error) {
+	if len(exp) == 0 {
+		return `0`, nil
 	}
-	money = money[:len(money)-digit] + `.` + money[len(money)-digit:]
-	return strings.TrimRight(strings.TrimRight(money, `0`), `.`)
+	if strings.IndexByte(exp, '.') >= 0 {
+		return `0`, fmt.Errorf(`wrong money format %s`, exp)
+	}
+	if digit < 0 {
+		return `0`, fmt.Errorf(`digit must be positive`)
+	}
+	if len(exp) > consts.MoneyLength {
+		return `0`, fmt.Errorf(`too long money`)
+	}
+	retDec, err := decimal.NewFromString(exp)
+	if err != nil {
+		return `0`, err
+	}
+	return retDec.Shift(-digit).String(), nil
 }
 
 // EscapeForJSON replaces quote to slash and quote
