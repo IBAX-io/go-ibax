@@ -244,7 +244,13 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	estimate := f.GetEstimate()
 	amount := f.PayWallet.CapableAmount()
 	if amount.LessThan(estimate) {
-		difference, _ := FormatMoney(sc, estimate.Sub(amount).String(), consts.MoneyDigits)
+		sp := &sqldb.Ecosystem{}
+		_, err := sp.Get(sc.DbTransaction, eco)
+		if err != nil {
+			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting ecosystem")
+			return err
+		}
+		difference, _ := converter.FormatMoney(estimate.Sub(amount).String(), int32(sp.Digits))
 		sc.GetLogger().WithFields(log.Fields{"type": consts.NoFunds, "token_eco": eco, "difference": difference}).Error("current balance is not enough")
 		return fmt.Errorf(eEcoCurrentBalanceDiff, f.PayWallet.AccountID, eco, difference)
 	}

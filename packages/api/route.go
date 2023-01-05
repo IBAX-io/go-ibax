@@ -117,8 +117,6 @@ func SetOtherCommonRoutes(api *mux.Router, m Mode) {
 }
 
 func setOtherBlockChainRoutes(api *mux.Router, m Mode) {
-	api.HandleFunc("/myBalance", authRequire(m.getMyBalanceHandler)).Methods("GET")
-	api.HandleFunc("/walletHistory", authRequire(getWalletHistory)).Methods("GET")
 	api.HandleFunc("/tx_record/{hashes}", getTxRecord).Methods("GET")
 }
 

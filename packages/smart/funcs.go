@@ -260,7 +260,6 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"Floor":                        Floor,
 		"CheckCondition":               CheckCondition,
 		"IsHonorNodeKey":               IsHonorNodeKey,
-		"MoneyDiv":                     MoneyDiv,
 		"CheckSign":                    CheckSign,
 		"CheckNumberChars":             CheckNumberChars,
 		"DateFormat":                   Date,
@@ -2163,37 +2162,18 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 }
 
 func FormatMoney(sc *SmartContract, exp string, digit int64) (string, error) {
-	var (
-		cents int64
-	)
-	if len(exp) == 0 {
-		return `0`, nil
-	}
-	if strings.IndexByte(exp, '.') >= 0 {
-		return ``, errInvalidValue
-	}
+	var cents int64
 	if digit != 0 {
 		cents = digit
 	} else {
-		sp := &sqldb.StateParameter{}
-		sp.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
-		_, err := sp.Get(sc.DbTransaction, `money_digit`)
+		sp := &sqldb.Ecosystem{}
+		_, err := sp.Get(sc.DbTransaction, sc.TxSmart.EcosystemID)
 		if err != nil {
-			return ``, logErrorDB(err, "getting money_digit param")
+			return `0`, logErrorDB(err, "getting money_digit param")
 		}
-		cents = converter.StrToInt64(sp.Value)
+		cents = sp.Digits
 	}
-	if len(exp) > consts.MoneyLength {
-		return ``, errInvalidValue
-	}
-	if cents != 0 {
-		retDec, err := decimal.NewFromString(exp)
-		if err != nil {
-			return ``, logError(err, consts.ConversionError, "converting money")
-		}
-		exp = retDec.Shift(int32(-cents)).String()
-	}
-	return exp, nil
+	return converter.FormatMoney(exp, int32(cents))
 }
 
 func PubToHex(in any) (ret string) {

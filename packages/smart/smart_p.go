@@ -223,12 +223,6 @@ func Money(v any) (decimal.Decimal, error) {
 	return script.ValueToDecimal(v)
 }
 
-func MoneyDiv(d1, d2 any) string {
-	val1, _ := script.ValueToDecimal(d1)
-	val2, _ := script.ValueToDecimal(d2)
-	return val1.Div(val2).Mul(decimal.New(1, 2)).StringFixed(0)
-}
-
 // Float converts the value to float64
 func Float(v any) (ret float64) {
 	return script.ValueToFloat(v)
@@ -668,12 +662,6 @@ func JSONEncode(input any) (string, error) {
 // Append syn for golang 'append' function
 func Append(slice []any, val any) []any {
 	return append(slice, val)
-}
-
-func StringToAmount(amount string) decimal.Decimal {
-	f, _ := strconv.ParseFloat(amount, 64)
-	am, _ := Money(math.Pow10(consts.MoneyDigits) * f)
-	return am
 }
 
 // RegexpMatch validates regexp
