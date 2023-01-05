@@ -260,7 +260,6 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"Floor":                        Floor,
 		"CheckCondition":               CheckCondition,
 		"IsHonorNodeKey":               IsHonorNodeKey,
-		"MoneyDiv":                     MoneyDiv,
 		"CheckSign":                    CheckSign,
 		"CheckNumberChars":             CheckNumberChars,
 		"DateFormat":                   Date,
