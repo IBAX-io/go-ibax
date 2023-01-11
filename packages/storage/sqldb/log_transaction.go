@@ -52,3 +52,12 @@ func GetLogTransactionsCount(hash []byte) (int64, error) {
 	}
 	return rowsCount, nil
 }
+
+// GetLogTxCount count records by ecosystemID
+func GetLogTxCount(dbTx *DbTransaction, ecosystemID int64) (int64, error) {
+	var rowsCount int64
+	if err := GetDB(dbTx).Table("log_transactions").Where("ecosystem_id = ? and status = 0", ecosystemID).Count(&rowsCount).Error; err != nil {
+		return -1, err
+	}
+	return rowsCount, nil
+}

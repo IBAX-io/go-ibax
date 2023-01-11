@@ -21,8 +21,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/IBAX-io/go-ibax/packages/clbmanager"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/hashalgo"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -235,6 +238,8 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"GetMapKeys":                   GetMapKeys,
 		"SortedKeys":                   SortedKeys,
 		"Append":                       Append,
+		"EthereumAddress":              EthereumAddress,
+		"GetLogTxCount":                GetLogTxCount,
 		"GetHistory":                   GetHistory,
 		"GetHistoryRow":                GetHistoryRow,
 		"GetDataFromXLSX":              GetDataFromXLSX,
@@ -1957,6 +1962,56 @@ func GetHistoryRaw(dbTx *sqldb.DbTransaction, ecosystem int64, tableName string,
 	return rollbackList, nil
 }
 
+const (
+	// AddressLength is the expected length of the address
+	AddressLength = 20
+)
+
+type Address [AddressLength]byte
+
+func (a Address) Hex() string {
+	return string(a.checksumHex())
+}
+
+func (a *Address) checksumHex() []byte {
+	buf := a.hex()
+
+	// compute checksum
+	sha := sha3.NewLegacyKeccak256()
+	sha.Write(buf[2:])
+	hash := sha.Sum(nil)
+	for i := 2; i < len(buf); i++ {
+		hashByte := hash[(i-2)/2]
+		if i%2 == 0 {
+			hashByte = hashByte >> 4
+		} else {
+			hashByte &= 0xf
+		}
+		if buf[i] > '9' && hashByte > 7 {
+			buf[i] -= 32
+		}
+	}
+	return buf[:]
+}
+
+func (a Address) hex() []byte {
+	var buf [len(a)*2 + 2]byte
+	copy(buf[:2], "0x")
+	hex.Encode(buf[2:], a[:])
+	return buf[:]
+}
+
+func EthereumAddress(pub []byte) string {
+	var addr Address
+	keccak256 := &hashalgo.Keccak256{}
+	copy(addr[:], keccak256.GetHash(pub[:])[12:])
+	return addr.Hex()
+}
+
+func GetLogTxCount(sc *SmartContract, ecosystemID int64) (int64, error) {
+	return sqldb.GetLogTxCount(sc.DbTransaction, ecosystemID)
+}
+
 func GetHistory(sc *SmartContract, tableName string, id int64) ([]any, error) {
 	return GetHistoryRaw(sc.DbTransaction, sc.TxSmart.EcosystemID, tableName, id, 0)
 }
@@ -1975,10 +2030,6 @@ func GetHistoryRow(sc *SmartContract, tableName string, id, idRollback int64) (*
 		}
 	}
 	return result, nil
-}
-
-func StackOverflow(sc *SmartContract) {
-	StackOverflow(sc)
 }
 
 func UpdateNotifications(sc *SmartContract, ecosystemID int64, accounts ...any) {
