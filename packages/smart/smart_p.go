@@ -859,7 +859,8 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	if len(txInputs) == 0 {
 		return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
 	}
-	if expediteFee, err = sc.expediteFee(); err != nil {
+
+	if expediteFee, err = expediteFeeBy(sc.TxSmart.Expedite, consts.MoneyDigits); err != nil {
 		return false, err
 	}
 	totalAmount := decimal.Zero
