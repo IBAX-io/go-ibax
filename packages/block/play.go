@@ -141,6 +141,14 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		return err
 	}
 	b.ComPercents = comPercents
+
+	// query all ecosystems digits
+	ecoDigits, err := sqldb.GetEcoDigits(dbTx, ecosystemIds)
+	if err != nil {
+		return err
+	}
+	b.EcoDigits = ecoDigits
+
 	// UTXO multiple ecosystem fuelRate
 	b.PrevSysPar = syspar.GetSysParCache()
 	var wg sync.WaitGroup
@@ -250,7 +258,7 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 			return err
 		}
 		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits,
-			consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar, b.ComPercents)
+			consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar, b.ComPercents, b.EcoDigits)
 		if err != nil {
 			return err
 		}

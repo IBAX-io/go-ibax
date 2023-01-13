@@ -94,12 +94,12 @@ func GetCombustionPercents(db *DbTransaction, ids []int64) (map[int64]int64, err
 			WHERE par.name = 'utxo_fee' and par.value = '1' and par.ecosystem IN ?
 		`
 
-	type Combustion struct {
+	type Combustion1 struct {
 		Id      int64
 		Percent int64
 	}
 
-	var ret []Combustion
+	var ret []Combustion1
 	if len(ids) > 0 {
 		err := GetDB(db).Raw(query, ids).Scan(&ret).Error
 		if err != nil {
@@ -109,6 +109,31 @@ func GetCombustionPercents(db *DbTransaction, ids []int64) (map[int64]int64, err
 	var result = make(map[int64]int64)
 	for _, combustion := range ret {
 		result[combustion.Id] = combustion.Percent
+	}
+	return result, nil
+}
+
+// GetEcoDigits is ecosystem digits
+func GetEcoDigits(db *DbTransaction, ids []int64) (map[int64]int32, error) {
+	query :=
+		`
+			SELECT eco.id,eco.digits FROM "1_ecosystems" AS eco WHERE eco.id IN ?
+		`
+	type EcoDigits struct {
+		Id     int64
+		Digits int32
+	}
+
+	var ret []EcoDigits
+	if len(ids) > 0 {
+		err := GetDB(db).Raw(query, ids).Scan(&ret).Error
+		if err != nil {
+			return nil, err
+		}
+	}
+	var result = make(map[int64]int32)
+	for _, ecoDigits := range ret {
+		result[ecoDigits.Id] = ecoDigits.Digits
 	}
 	return result, nil
 }
