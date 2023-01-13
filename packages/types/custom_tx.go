@@ -132,7 +132,10 @@ func (t SmartTransaction) Hash() ([]byte, error) {
 
 func (txSmart *SmartTransaction) Validate() error {
 	if len(txSmart.Expedite) > 0 {
-		expedite, _ := decimal.NewFromString(txSmart.Expedite)
+		expedite, err := decimal.NewFromString(txSmart.Expedite)
+		if err != nil {
+			return fmt.Errorf("wrong expedite format")
+		}
 		if expedite.LessThan(decimal.Zero) {
 			return fmt.Errorf("expedite fee %s must be greater than 0", expedite)
 		}
