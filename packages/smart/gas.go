@@ -71,7 +71,7 @@ func NewFuelCategory(fuelType FuelType, decimal decimal.Decimal, flag GasPayAble
 }
 
 func (f *FuelCategory) writeFuelType(fuelType FuelType)      { f.FuelType = fuelType }
-func (f *FuelCategory) writeDecimal(decimal decimal.Decimal) { f.Decimal = decimal.Floor() }
+func (f *FuelCategory) writeDecimal(decimal decimal.Decimal) { f.Decimal = decimal }
 func (f *FuelCategory) writeArithmetic(a Arithmetic)         { f.Arithmetic = a }
 func (f *FuelCategory) resetArithmetic()                     { f.Arithmetic = Arithmetic_NATIVE }
 func (f *FuelCategory) writeFlag(tf GasPayAbleType) {
@@ -601,13 +601,11 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 				continue
 			}
 			category := NewFuelCategory(FuelType(FuelType_value[k]), categoryFee, GasPayAbleType(flag.FlagToInt()), flag.ConversionRateToFloat())
-			var div = category.Decimal.Div(decimal.NewFromFloat(feeMode.FollowFuel))
+
 			switch category.Flag {
 			case GasPayAbleType_Unable:
+				category.writeDecimal(category.Decimal.Shift(int32(cpyPlatCaller.Ecosystem.Digits - curPay.Ecosystem.Digits)))
 				cpyPlatCaller.PushFuelCategories(category)
-				if category.FuelType == FuelType_expedite_fee {
-					cpyPlatCaller.SetDecimalByType(category.FuelType, div)
-				}
 			case GasPayAbleType_Capable:
 				// exclude FuelType_expedite_fee
 				if category.FuelType != FuelType_expedite_fee {
@@ -616,14 +614,11 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 				}
 				indirectPay.PushFuelCategories(category)
 				category.resetArithmetic()
+				category.writeDecimal(category.Decimal.Shift(int32(cpyPlatIndirect.Ecosystem.Digits - curPay.Ecosystem.Digits)))
 				if category.FuelType == FuelType_expedite_fee {
-					category.writeArithmetic(Arithmetic_DIV)
+					category.writeDecimal(category.Decimal.Div(decimal.NewFromFloat(feeMode.FollowFuel)))
 				}
 				cpyPlatIndirect.PushFuelCategories(category)
-				if category.FuelType == FuelType_expedite_fee {
-					cpyPlatIndirect.SetDecimalByType(category.FuelType, div)
-					indirectPay.SetDecimalByType(category.FuelType, div)
-				}
 			}
 		}
 		pays = append(pays, cpyPlatCaller, cpyPlatIndirect, indirectPay, curPay)
