@@ -7,8 +7,8 @@ package api
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/smart"
@@ -33,14 +33,14 @@ type multiTxInfoResult struct {
 	Results map[string]*txinfoResult `json:"results"`
 }
 
-func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, error) {
+func getTxInfo(r *http.Request, txHash string) (*txinfoResult, error) {
 	var status txinfoResult
 	hash, err := hex.DecodeString(txHash)
 	if err != nil {
 		return nil, errHashWrong
 	}
 	ltx := &sqldb.LogTransaction{Hash: hash}
-	found, err := ltx.GetByHash(hash)
+	found, err := ltx.GetByHash(nil, hash)
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +56,7 @@ func getTxInfo(r *http.Request, txHash string, cntInfo bool) (*txinfoResult, err
 	if found {
 		status.Confirm = int(confirm.Good)
 	}
-	if cntInfo {
-		status.Data, err = smart.TransactionData(ltx.Block, hash)
-		if err != nil {
-			return nil, err
-		}
-	}
+
 	return &status, nil
 }
 
@@ -73,7 +68,7 @@ func getTxInfoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	params := mux.Vars(r)
-	status, err := getTxInfo(r, params["hash"], form.ContractInfo)
+	status, err := getTxInfo(r, params["hash"])
 	if err != nil {
 		errorResponse(w, err)
 		return
@@ -91,15 +86,9 @@ func getTxInfoMultiHandler(w http.ResponseWriter, r *http.Request) {
 
 	result := &multiTxInfoResult{}
 	result.Results = map[string]*txinfoResult{}
-	var request struct {
-		Hashes []string `json:"hashes"`
-	}
-	if err := json.Unmarshal([]byte(form.Data), &request); err != nil {
-		errorResponse(w, errHashWrong)
-		return
-	}
-	for _, hash := range request.Hashes {
-		status, err := getTxInfo(r, hash, form.ContractInfo)
+	hashes := strings.Split(form.Data, ",")
+	for _, hash := range hashes {
+		status, err := getTxInfo(r, hash)
 		if err != nil {
 			errorResponse(w, err)
 			return

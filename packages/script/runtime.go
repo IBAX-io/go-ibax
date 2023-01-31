@@ -505,7 +505,12 @@ func (rt *RunTime) getResultValue(item mapItem) (value any, err error) {
 	case mapConst:
 		value = item.Value
 	case mapExtend:
-		value = rt.extend[item.Value.(string)]
+		var ok bool
+		value, ok = rt.extend[item.Value.(string)]
+		if !ok {
+			rt.vm.logger.WithFields(log.Fields{"cmd": item.Value}).Error("unknown extend identifier")
+			err = fmt.Errorf(`unknown extend identifier %s`, item.Value)
+		}
 	case mapVar:
 		ivar := item.Value.(*VarInfo)
 		var i int
@@ -583,7 +588,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	var cmd *ByteCode
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New(fmt.Sprintf(`%v`, r))
+			err = errors.Errorf(`runtime run code crashed: %v`, r)
 		}
 		if err != nil && !strings.HasPrefix(err.Error(), `{`) {
 			var curContract, line string
@@ -1312,7 +1317,8 @@ main:
 				bin = !bin.(bool)
 			}
 		case cmdArrayInit:
-			initArray, err := rt.getResultArray(cmd.Value.([]mapItem))
+			var initArray []any
+			initArray, err = rt.getResultArray(cmd.Value.([]mapItem))
 			if err != nil {
 				break main
 			}
@@ -1326,7 +1332,7 @@ main:
 			rt.push(initMap)
 		default:
 			rt.vm.logger.WithFields(log.Fields{"vm_cmd": cmd.Cmd}).Error("Unknown command")
-			err = fmt.Errorf(`Unknown command %d`, cmd.Cmd)
+			err = fmt.Errorf(`unknown command %d`, cmd.Cmd)
 		}
 		if err != nil {
 			rt.err = err

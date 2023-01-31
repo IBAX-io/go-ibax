@@ -22,8 +22,8 @@ type LogTransaction struct {
 }
 
 // GetByHash returns LogTransactions existence by hash
-func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
-	return isFound(DBConn.Where("hash = ?", hash).First(lt))
+func (lt *LogTransaction) GetByHash(dbTx *DbTransaction, hash []byte) (bool, error) {
+	return isFound(GetDB(dbTx).Where("hash = ?", hash).First(lt))
 }
 
 // Create is creating record of model
@@ -48,6 +48,15 @@ func DeleteLogTransactionsByHash(dbTx *DbTransaction, hash []byte) (int64, error
 func GetLogTransactionsCount(hash []byte) (int64, error) {
 	var rowsCount int64
 	if err := DBConn.Table("log_transactions").Where("hash = ?", hash).Count(&rowsCount).Error; err != nil {
+		return -1, err
+	}
+	return rowsCount, nil
+}
+
+// GetLogTxCount count records by ecosystemID
+func GetLogTxCount(dbTx *DbTransaction, ecosystemID int64) (int64, error) {
+	var rowsCount int64
+	if err := GetDB(dbTx).Table("log_transactions").Where("ecosystem_id = ? and status = 0", ecosystemID).Count(&rowsCount).Error; err != nil {
 		return -1, err
 	}
 	return rowsCount, nil

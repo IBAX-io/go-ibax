@@ -21,8 +21,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/IBAX-io/go-ibax/packages/clbmanager"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/hashalgo"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -37,7 +40,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	"github.com/vmihailenco/msgpack/v5"
 )
 
 const (
@@ -222,61 +224,55 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"EditLanguage":                 EditLanguage,
 		"BndWallet":                    BndWallet,
 		"UnbndWallet":                  UnbndWallet,
-		//"CheckSignature":               CheckSignature,
-		"RowConditions":            RowConditions,
-		"DecodeBase64":             DecodeBase64,
-		"EncodeBase64":             EncodeBase64,
-		"Hash":                     Hash,
-		"DoubleHash":               crypto.DoubleHash,
-		"EditEcosysName":           EditEcosysName,
-		"GetColumnType":            GetColumnType,
-		"GetType":                  GetType,
-		"AllowChangeCondition":     AllowChangeCondition,
-		"StringToBytes":            StringToBytes,
-		"BytesToString":            BytesToString,
-		"GetMapKeys":               GetMapKeys,
-		"SortedKeys":               SortedKeys,
-		"Append":                   Append,
-		"GetHistory":               GetHistory,
-		"GetHistoryRow":            GetHistoryRow,
-		"GetDataFromXLSX":          GetDataFromXLSX,
-		"GetRowsCountXLSX":         GetRowsCountXLSX,
-		"BlockTime":                BlockTime,
-		"IsObject":                 IsObject,
-		"DateTime":                 DateTime,
-		"UnixDateTime":             UnixDateTime,
-		"DateTimeLocation":         DateTimeLocation,
-		"UnixDateTimeLocation":     UnixDateTimeLocation,
-		"UpdateNotifications":      UpdateNotifications,
-		"UpdateRolesNotifications": UpdateRolesNotifications,
-		"TransactionInfo":          TransactionInfo,
-		"DelTable":                 DelTable,
-		"DelColumn":                DelColumn,
-		"HexToPub":                 crypto.HexToPub,
-		"PubToHex":                 PubToHex,
-		"UpdateNodesBan":           UpdateNodesBan,
-		//"DBSelectMetrics":              DBSelectMetrics,
-		//"DBCollectMetrics":             DBCollectMetrics,
-		"Log":            Log,
-		"Log10":          Log10,
-		"Pow":            Pow,
-		"Sqrt":           Sqrt,
-		"Round":          Round,
-		"Floor":          Floor,
-		"CheckCondition": CheckCondition,
-		//"SendExternalTransaction": SendExternalTransaction,
-		"IsHonorNodeKey": IsHonorNodeKey,
-
-		"MoneyDiv": MoneyDiv,
-		//"UpdateReward":     UpdateReward,
-		"CheckSign":        CheckSign,
-		"CheckNumberChars": CheckNumberChars,
-		"DateFormat":       Date,
-		"RegexpMatch":      RegexpMatch,
-		"DBCount":          DBCount,
-		"MathMod":          MathMod,
-		"MathModDecimal":   MathModDecimal,
-		"CreateView":       CreateView,
+		"RowConditions":                RowConditions,
+		"DecodeBase64":                 DecodeBase64,
+		"EncodeBase64":                 EncodeBase64,
+		"Hash":                         Hash,
+		"DoubleHash":                   crypto.DoubleHash,
+		"EditEcosysName":               EditEcosysName,
+		"GetColumnType":                GetColumnType,
+		"GetType":                      GetType,
+		"AllowChangeCondition":         AllowChangeCondition,
+		"StringToBytes":                StringToBytes,
+		"BytesToString":                BytesToString,
+		"GetMapKeys":                   GetMapKeys,
+		"SortedKeys":                   SortedKeys,
+		"Append":                       Append,
+		"EthereumAddress":              EthereumAddress,
+		"GetLogTxCount":                GetLogTxCount,
+		"GetHistory":                   GetHistory,
+		"GetHistoryRow":                GetHistoryRow,
+		"GetDataFromXLSX":              GetDataFromXLSX,
+		"GetRowsCountXLSX":             GetRowsCountXLSX,
+		"BlockTime":                    BlockTime,
+		"IsObject":                     IsObject,
+		"DateTime":                     DateTime,
+		"UnixDateTime":                 UnixDateTime,
+		"DateTimeLocation":             DateTimeLocation,
+		"UnixDateTimeLocation":         UnixDateTimeLocation,
+		"UpdateNotifications":          UpdateNotifications,
+		"UpdateRolesNotifications":     UpdateRolesNotifications,
+		"DelTable":                     DelTable,
+		"DelColumn":                    DelColumn,
+		"HexToPub":                     crypto.HexToPub,
+		"PubToHex":                     PubToHex,
+		"UpdateNodesBan":               UpdateNodesBan,
+		"Log":                          Log,
+		"Log10":                        Log10,
+		"Pow":                          Pow,
+		"Sqrt":                         Sqrt,
+		"Round":                        Round,
+		"Floor":                        Floor,
+		"CheckCondition":               CheckCondition,
+		"IsHonorNodeKey":               IsHonorNodeKey,
+		"CheckSign":                    CheckSign,
+		"CheckNumberChars":             CheckNumberChars,
+		"DateFormat":                   Date,
+		"RegexpMatch":                  RegexpMatch,
+		"DBCount":                      DBCount,
+		"MathMod":                      MathMod,
+		"MathModDecimal":               MathModDecimal,
+		"CreateView":                   CreateView,
 	}
 	switch vt {
 	case script.VMType_CLB:
@@ -1966,6 +1962,56 @@ func GetHistoryRaw(dbTx *sqldb.DbTransaction, ecosystem int64, tableName string,
 	return rollbackList, nil
 }
 
+const (
+	// AddressLength is the expected length of the address
+	AddressLength = 20
+)
+
+type Address [AddressLength]byte
+
+func (a Address) Hex() string {
+	return string(a.checksumHex())
+}
+
+func (a *Address) checksumHex() []byte {
+	buf := a.hex()
+
+	// compute checksum
+	sha := sha3.NewLegacyKeccak256()
+	sha.Write(buf[2:])
+	hash := sha.Sum(nil)
+	for i := 2; i < len(buf); i++ {
+		hashByte := hash[(i-2)/2]
+		if i%2 == 0 {
+			hashByte = hashByte >> 4
+		} else {
+			hashByte &= 0xf
+		}
+		if buf[i] > '9' && hashByte > 7 {
+			buf[i] -= 32
+		}
+	}
+	return buf[:]
+}
+
+func (a Address) hex() []byte {
+	var buf [len(a)*2 + 2]byte
+	copy(buf[:2], "0x")
+	hex.Encode(buf[2:], a[:])
+	return buf[:]
+}
+
+func EthereumAddress(pub []byte) string {
+	var addr Address
+	keccak256 := &hashalgo.Keccak256{}
+	copy(addr[:], keccak256.GetHash(pub[:])[12:])
+	return addr.Hex()
+}
+
+func GetLogTxCount(sc *SmartContract, ecosystemID int64) (int64, error) {
+	return sqldb.GetLogTxCount(sc.DbTransaction, ecosystemID)
+}
+
 func GetHistory(sc *SmartContract, tableName string, id int64) ([]any, error) {
 	return GetHistoryRaw(sc.DbTransaction, sc.TxSmart.EcosystemID, tableName, id, 0)
 }
@@ -1984,10 +2030,6 @@ func GetHistoryRow(sc *SmartContract, tableName string, id, idRollback int64) (*
 		}
 	}
 	return result, nil
-}
-
-func StackOverflow(sc *SmartContract) {
-	StackOverflow(sc)
 }
 
 func UpdateNotifications(sc *SmartContract, ecosystemID int64, accounts ...any) {
@@ -2023,98 +2065,6 @@ func UpdateRolesNotifications(sc *SmartContract, ecosystemID int64, roles ...any
 	}
 	sc.Notifications.AddRoles(ecosystemID, rolesList...)
 }
-
-func TransactionData(blockId int64, hash []byte) (data *TxInfo, err error) {
-	var (
-		blockOwner      sqldb.BlockChain
-		found           bool
-		transactionSize int
-	)
-
-	found, err = blockOwner.Get(blockId)
-	if err != nil || !found {
-		return
-	}
-	data = &TxInfo{}
-	data.Block = converter.Int64ToStr(blockId)
-	blockBuffer := bytes.NewBuffer(blockOwner.Data)
-	_, err = types.ParseBlockHeader(blockBuffer, syspar.GetMaxBlockSize())
-	if err != nil {
-		return
-	}
-	for blockBuffer.Len() > 0 {
-		transactionSize, err = converter.DecodeLengthBuf(blockBuffer)
-		if err != nil {
-			return
-		}
-		if blockBuffer.Len() < int(transactionSize) || transactionSize == 0 {
-			err = errParseTransaction
-			return
-		}
-		bufTransaction := bytes.NewBuffer(blockBuffer.Next(int(transactionSize)))
-		if bufTransaction.Len() == 0 {
-			err = errParseTransaction
-			return
-		}
-
-		b, errRead := bufTransaction.ReadByte()
-		if errRead != nil {
-			err = errParseTransaction
-			return
-		}
-		if int64(b) != contractTxType && b != types.SmartContractTxType {
-			continue
-		}
-
-		var txData, txHash []byte
-		if err = converter.BinUnmarshalBuff(bufTransaction, &txData); err != nil {
-			return
-		}
-
-		txHash = crypto.DoubleHash(txData)
-		if bytes.Equal(txHash, hash) {
-			smartTx := types.SmartTransaction{}
-			if err = msgpack.Unmarshal(txData, &smartTx); err != nil {
-				return
-			}
-			contract := GetContractByID(int32(smartTx.ID))
-			if contract == nil {
-				err = errParseTransaction
-				return
-			}
-			data.Contract = contract.Name
-			txInfo := contract.Info().Tx
-			if txInfo != nil {
-				data.Params = smartTx.Params
-			}
-			break
-		}
-	}
-	return
-}
-
-func TransactionInfo(txHash string) (string, error) {
-	var out []byte
-	hash, err := hex.DecodeString(txHash)
-	if err != nil {
-		return ``, err
-	}
-	ltx := &sqldb.LogTransaction{Hash: hash}
-	found, err := ltx.GetByHash(hash)
-	if err != nil {
-		return ``, err
-	}
-	if !found {
-		return ``, nil
-	}
-	data, err := TransactionData(ltx.Block, hash)
-	if err != nil {
-		return ``, err
-	}
-	out, err = json.Marshal(data)
-	return string(out), err
-}
-
 func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 	var (
 		count   int64
@@ -2263,37 +2213,18 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 }
 
 func FormatMoney(sc *SmartContract, exp string, digit int64) (string, error) {
-	var (
-		cents int64
-	)
-	if len(exp) == 0 {
-		return `0`, nil
-	}
-	if strings.IndexByte(exp, '.') >= 0 {
-		return ``, errInvalidValue
-	}
+	var cents int64
 	if digit != 0 {
 		cents = digit
 	} else {
-		sp := &sqldb.StateParameter{}
-		sp.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
-		_, err := sp.Get(sc.DbTransaction, `money_digit`)
+		sp := &sqldb.Ecosystem{}
+		_, err := sp.Get(sc.DbTransaction, sc.TxSmart.EcosystemID)
 		if err != nil {
-			return ``, logErrorDB(err, "getting money_digit param")
+			return `0`, logErrorDB(err, "getting money_digit param")
 		}
-		cents = converter.StrToInt64(sp.Value)
+		cents = sp.Digits
 	}
-	if len(exp) > consts.MoneyLength {
-		return ``, errInvalidValue
-	}
-	if cents != 0 {
-		retDec, err := decimal.NewFromString(exp)
-		if err != nil {
-			return ``, logError(err, consts.ConversionError, "converting money")
-		}
-		exp = retDec.Shift(int32(-cents)).String()
-	}
-	return exp, nil
+	return converter.FormatMoney(exp, int32(cents))
 }
 
 func PubToHex(in any) (ret string) {

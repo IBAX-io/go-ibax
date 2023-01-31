@@ -223,12 +223,6 @@ func Money(v any) (decimal.Decimal, error) {
 	return script.ValueToDecimal(v)
 }
 
-func MoneyDiv(d1, d2 any) string {
-	val1, _ := script.ValueToDecimal(d1)
-	val2, _ := script.ValueToDecimal(d2)
-	return val1.Div(val2).Mul(decimal.New(1, 2)).StringFixed(0)
-}
-
 // Float converts the value to float64
 func Float(v any) (ret float64) {
 	return script.ValueToFloat(v)
@@ -670,12 +664,6 @@ func Append(slice []any, val any) []any {
 	return append(slice, val)
 }
 
-func StringToAmount(amount string) decimal.Decimal {
-	f, _ := strconv.ParseFloat(amount, 64)
-	am, _ := Money(math.Pow10(consts.MoneyDigits) * f)
-	return am
-}
-
 // RegexpMatch validates regexp
 func RegexpMatch(str, reg string) bool {
 	if strings.Contains(reg, `\u`) || strings.Contains(reg, `\U`) {
@@ -861,6 +849,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	txInputsMap := sc.TxInputsMap
 	txOutputsMap := sc.TxOutputsMap
 	comPercents := sc.ComPercents
+	ecoDigits := sc.EcoDigits
 	//txHash := sc.Hash
 	ecosystem := sc.TxSmart.EcosystemID
 	blockId := sc.BlockHeader.BlockId
@@ -871,7 +860,12 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	if len(txInputs) == 0 {
 		return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
 	}
-	if expediteFee, err = sc.expediteFee(); err != nil {
+
+	digits, ok1 := ecoDigits[ecosystem]
+	if !ok1 {
+		return false, errors.New("ecosystem not found")
+	}
+	if expediteFee, err = expediteFeeBy(sc.TxSmart.Expedite, digits); err != nil {
 		return false, err
 	}
 	totalAmount := decimal.Zero
@@ -917,7 +911,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 				//	ecosystem fuelRate /10 *( bit + len(input))
 				money1 = fuelRate1.Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs1)))))
 				// utxo ecosystem 1 expediteFee
-				money1 = money1.Add(expediteFee.Mul(fuelRate1))
+				money1 = money1.Add(expediteFee)
 				if money1.GreaterThan(totalAmount1) {
 					money1 = totalAmount1
 				}
@@ -1017,7 +1011,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 				//	ecosystem fuelRate /10 *( bit + len(input))
 				money1 = fuelRate1.Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs)))))
 				// utxo ecosystem 1 expediteFee
-				money1 = money1.Add(expediteFee.Mul(fuelRate1))
+				money1 = money1.Add(expediteFee)
 				if money1.GreaterThan(totalAmount) {
 					money1 = totalAmount
 				}

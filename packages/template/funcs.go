@@ -26,7 +26,6 @@ import (
 
 	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 
-	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -109,7 +108,6 @@ func init() {
 	funcs[`Map`] = tplFunc{defaultTag, defaultTag, "map", "@Value,MapType,Hmap"}
 	funcs[`Binary`] = tplFunc{binaryTag, defaultTag, "binary", "AppID,Name,Account"}
 	funcs[`GetColumnType`] = tplFunc{columntypeTag, defaultTag, `columntype`, `Table,Column`}
-	funcs[`TransactionInfo`] = tplFunc{txinfoTag, defaultTag, `txinfo`, `Hash`}
 	funcs[`VarAsIs`] = tplFunc{varasisTag, defaultTag, `varasis`, `Name,Value`}
 
 	tails[`addtoolbutton`] = forTails{map[string]tailInfo{
@@ -201,32 +199,24 @@ func lowerTag(par parFunc) string {
 }
 
 func moneyTag(par parFunc) string {
-	var cents int
-
-	ret := macro((*par.Pars)[`Exp`], par.Workspace.Vars)
-	if ret == `NULL` || len(ret) == 0 {
-		ret = `0`
-	}
-	if strings.IndexByte(ret, '.') >= 0 {
-		return `wrong money`
-	}
+	var cents int64
 	if len((*par.Pars)[`Digit`]) > 0 {
-		cents = converter.StrToInt(macro((*par.Pars)[`Digit`], par.Workspace.Vars))
+		cents = converter.StrToInt64(macro((*par.Pars)[`Digit`], par.Workspace.Vars))
 	} else {
-		cents = consts.MoneyDigits
-	}
-	if len(ret) > consts.MoneyLength {
-		return `invalid money value`
-	}
-	if cents != 0 {
-		retDec, err := decimal.NewFromString(ret)
+		ecosystem := getVar(par.Workspace, `ecosystem_id`)
+		sp := &sqldb.Ecosystem{}
+		_, err := sp.Get(nil, converter.StrToInt64(ecosystem))
 		if err != nil {
-			log.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("converting money")
-			return `wrong money`
+			return `0`
 		}
-		ret = retDec.Shift(int32(-cents)).String()
+		cents = sp.Digits
 	}
-	return ret
+	exp := macro((*par.Pars)[`Exp`], par.Workspace.Vars)
+	m, err := converter.FormatMoney(exp, int32(cents))
+	if err != nil {
+		return `0`
+	}
+	return m
 }
 
 func menugroupTag(par parFunc) string {
@@ -497,18 +487,6 @@ func defaultTailFull(par parFunc) string {
 	setAllAttr(par)
 	par.Owner.Tail = append(par.Owner.Tail, par.Node)
 	return ``
-}
-
-func txinfoTag(par parFunc) (out string) {
-	setAllAttr(par)
-	if par.Node.Attr[`hash`] != nil {
-		var err error
-		out, err = smart.TransactionInfo(par.Node.Attr[`hash`].(string))
-		if err != nil {
-			out = err.Error()
-		}
-	}
-	return
 }
 
 func dataTag(par parFunc) string {

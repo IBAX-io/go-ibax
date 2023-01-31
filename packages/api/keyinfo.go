@@ -34,6 +34,7 @@ type keyInfoResult struct {
 type keyEcosystemInfo struct {
 	Ecosystem     string       `json:"ecosystem"`
 	Name          string       `json:"name"`
+	Digits        int64        `json:"digits"`
 	Roles         []roleInfo   `json:"roles,omitempty"`
 	Notifications []notifyInfo `json:"notifications,omitempty"`
 }
@@ -76,10 +77,16 @@ func (m Mode) getKeyInfoHandler(w http.ResponseWriter, r *http.Request) {
 		if len(account) == 0 {
 			account = key.AccountID
 		}
-
+		eco := sqldb.Ecosystem{}
+		_, err = eco.Get(nil, ecosystemID)
+		if err != nil {
+			errorResponse(w, err)
+			return
+		}
 		keyRes := &keyEcosystemInfo{
 			Ecosystem: converter.Int64ToStr(ecosystemID),
 			Name:      names[i],
+			Digits:    eco.Digits,
 		}
 		ra := &sqldb.RolesParticipants{}
 		roles, err := ra.SetTablePrefix(ecosystemID).GetActiveMemberRoles(key.AccountID)

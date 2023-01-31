@@ -20,8 +20,8 @@ import (
 )
 
 func init() {
-	crypto.InitAsymAlgo("ECC_P256")
-	crypto.InitHashAlgo("SHA256")
+	crypto.InitAsymAlgo("ECC_Secp256k1")
+	crypto.InitHashAlgo("KECCAK256")
 }
 func TestBin(t *testing.T) {
 	assert.NoError(t, keyLogin(1))
