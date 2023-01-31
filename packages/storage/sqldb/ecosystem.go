@@ -113,31 +113,6 @@ func GetCombustionPercents(db *DbTransaction, ids []int64) (map[int64]int64, err
 	return result, nil
 }
 
-// GetEcoDigits is ecosystem digits
-func GetEcoDigits(db *DbTransaction, ids []int64) (map[int64]int32, error) {
-	query :=
-		`
-			SELECT eco.id,eco.digits FROM "1_ecosystems" AS eco WHERE eco.id IN ?
-		`
-	type EcoDigits struct {
-		Id     int64
-		Digits int32
-	}
-
-	var ret []EcoDigits
-	if len(ids) > 0 {
-		err := GetDB(db).Raw(query, ids).Scan(&ret).Error
-		if err != nil {
-			return nil, err
-		}
-	}
-	var result = make(map[int64]int32)
-	for _, ecoDigits := range ret {
-		result[ecoDigits.Id] = ecoDigits.Digits
-	}
-	return result, nil
-}
-
 // Get is fill receiver from db
 func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
 	return isFound(GetDB(dbTx).First(sys, "id = ?", id))

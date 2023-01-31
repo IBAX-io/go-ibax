@@ -31,7 +31,6 @@ type Block struct {
 	ClassifyTxsMap    map[int][]*transaction.Transaction
 	PrevSysPar        map[string]string
 	ComPercents       map[int64]int64 // combustion percent for each ecosystem
-	EcoDigits         map[int64]int32 // number of digits after the decimal point for each ecosystem
 }
 
 // GetLogger is returns logger

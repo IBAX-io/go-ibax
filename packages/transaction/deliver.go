@@ -31,7 +31,6 @@ type InToCxt struct {
 	OutputsMap     map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	PrevSysPar     map[string]string
 	ComPercents    map[int64]int64
-	EcoDigits      map[int64]int32
 }
 
 type OutCtx struct {
