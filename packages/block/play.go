@@ -88,7 +88,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	txBadChan := processBadTx()
 	defer func() {
 		close(txBadChan)
-		if b.IsGenesis() || b.GenBlock {
+		if b.IsGenesis() || b.GenBlock || b.AfterTxs != nil {
 			b.AfterTxs = afters
 		}
 		if b.GenBlock {
