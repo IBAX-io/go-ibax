@@ -30,8 +30,7 @@ enum FuelType {
   UNKNOWN = 0;
   vmCost_fee = 1;
   storage_fee = 2;
-  element_fee = 3;
-  expedite_fee = 4;
+  expedite_fee = 3;
 }
 enum Arithmetic {
   NATIVE = 0;
