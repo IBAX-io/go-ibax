@@ -849,7 +849,6 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	txInputsMap := sc.TxInputsMap
 	txOutputsMap := sc.TxOutputsMap
 	comPercents := sc.ComPercents
-	ecoDigits := sc.EcoDigits
 	//txHash := sc.Hash
 	ecosystem := sc.TxSmart.EcosystemID
 	blockId := sc.BlockHeader.BlockId
@@ -861,11 +860,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 		return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
 	}
 
-	digits, ok1 := ecoDigits[ecosystem]
-	if !ok1 {
-		return false, errors.New("ecosystem not found")
-	}
-	if expediteFee, err = expediteFeeBy(sc.TxSmart.Expedite, digits); err != nil {
+	if expediteFee, err = expediteFeeBy(sc.TxSmart.Expedite, consts.MoneyDigits); err != nil {
 		return false, err
 	}
 	totalAmount := decimal.Zero
