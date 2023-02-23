@@ -286,7 +286,7 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 		wltAmount := pay.PayWallet.CapableAmount()
 		if wltAmount.Cmp(money) < 0 {
 			if !errNeedPay {
-				return errTaxes
+				return fmt.Errorf("%s not enough fee for taxes in ecosystem %d", pay.PayWallet.AccountID, pay.TokenEco)
 			}
 			money = wltAmount
 		}
@@ -359,7 +359,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 				`id`:        pay.FromID,
 				`ecosystem`: pay.TokenEco,
 			})); err != nil {
-			return errTaxes
+			return err
 		}
 		if _, _, err := sc.updateWhere(
 			[]string{"+amount"}, []any{sum}, "1_keys",
