@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -214,22 +215,27 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, e
 			expressions = append(expressions, `"`+b.Fields[i]+`"='`+escapeSingleQuotes(b.stringValues[i])+`'`)
 		}
 	}
-
-	for colname, colvals := range jsonFields {
+	var jsonColumnArr []string
+	for name := range jsonFields {
+		jsonColumnArr = append(jsonColumnArr, name)
+	}
+	sort.Strings(jsonColumnArr)
+	for _, name := range jsonColumnArr {
+		val := jsonFields[name]
 		var initial string
-		out, err := json.Marshal(colvals)
+		out, err := json.Marshal(val)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "type": consts.JSONMarshallError}).Error("marshalling update columns for jsonb")
 			return "", err
 		}
 
-		if len(logData[colname]) > 0 && logData[colname] != `NULL` {
-			initial = colname
+		if len(logData[name]) > 0 && logData[name] != `NULL` {
+			initial = name
 		} else {
 			initial = `'{}'`
 		}
 
-		expressions = append(expressions, fmt.Sprintf(`%s=%s::jsonb || '%s'::jsonb`, colname, initial, string(out)))
+		expressions = append(expressions, fmt.Sprintf(`%s=%s::jsonb || '%s'::jsonb`, name, initial, string(out)))
 	}
 
 	return strings.Join(expressions, ","), nil
@@ -266,14 +272,19 @@ func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, erro
 		insValues = append(insValues, b.toSQLValue(b.stringValues[i], b.Fields[i]))
 	}
 
-	for colname, colvals := range jsonFields {
-		out, err := json.Marshal(colvals)
+	var jsonColumnArr []string
+	for name := range jsonFields {
+		jsonColumnArr = append(jsonColumnArr, name)
+	}
+	sort.Strings(jsonColumnArr)
+	for _, name := range jsonColumnArr {
+		val := jsonFields[name]
+		out, err := json.Marshal(val)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "type": consts.JSONMarshallError}).Error("marshalling update columns for jsonb")
 			return "", err
 		}
-
-		insFields = append(insFields, colname)
+		insFields = append(insFields, name)
 		insValues = append(insValues, fmt.Sprintf(`'%s'::jsonb`, string(out)))
 	}
 
