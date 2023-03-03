@@ -281,7 +281,7 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	for i := 0; i < len(sc.multiPays); i++ {
 		pay := sc.multiPays[i]
 		pay.Penalty = sc.Penalty
-		pay.SetDecimalByType(FuelType_vmCost_fee, sc.TxUsedCost.Mul(pay.FuelRate))
+		pay.SetDecimalByType(FuelType_vmCost_fee, sc.TxUsedCost.Mul(pay.FuelRate).Mul(decimal.New(1, int32(pay.Ecosystem.Digits-sc.multiPays[0].Ecosystem.Digits))))
 		money := pay.GetPayMoney()
 		wltAmount := pay.PayWallet.CapableAmount()
 		if wltAmount.Cmp(money) < 0 {
