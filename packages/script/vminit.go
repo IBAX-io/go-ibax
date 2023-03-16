@@ -132,8 +132,9 @@ type Stacker interface {
 // NewVM creates a new virtual machine
 func NewVM() *VM {
 	vm := &VM{
-		CodeBlock: NewCodeBlock(),
-		Extern:    true,
+		CodeBlock:   NewCodeBlock(),
+		Extern:      true,
+		FuncCallsDB: make(map[string]struct{}),
 	}
 	vm.logger = log.WithFields(log.Fields{"type": consts.VMError, "extern": vm.Extern, "vm_block_type": vm.CodeBlock.Type})
 	return vm

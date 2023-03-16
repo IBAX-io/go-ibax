@@ -10,12 +10,14 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack/v5"
+
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
 // Transaction types.
@@ -137,11 +139,14 @@ func (txSmart *SmartTransaction) Validate() error {
 			return fmt.Errorf("wrong expedite format")
 		}
 		if expedite.LessThan(decimal.Zero) {
-			return fmt.Errorf("expedite fee %s must be greater than 0", expedite)
+			return fmt.Errorf("expedite fee must be greater than 0")
 		}
 	}
 	if len(strings.TrimSpace(txSmart.Lang)) > 2 {
 		return fmt.Errorf(`localization size is greater than 2`)
+	}
+	if len(txSmart.MaxSum) > 0 && converter.StrToInt64(txSmart.MaxSum) <= 0 {
+		return fmt.Errorf(`maxsum must be greater than 0`)
 	}
 	if txSmart.NetworkID != conf.Config.LocalConf.NetworkID {
 		return fmt.Errorf("error networkid invalid")
