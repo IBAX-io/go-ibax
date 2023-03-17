@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"fmt"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 )
 
 type ErrorCode int
@@ -13,17 +14,27 @@ type Error struct {
 }
 
 const (
-	ErrCodeParseError          = -32700
-	ErrCodeInvalidRequest      = -32600
-	ErrCodeMethodNotFound      = -32601
-	ErrCodeInvalidParams       = -32602
-	ErrCodeInternalError       = -32603
-	ErrCodeInvalidInput        = -32000
-	ErrCodeResourceNotFound    = -32001
-	ErrCodeResourceUnavailable = -32002
-	ErrCodeTransactionRejected = -32003
-	ErrCodeMethodNotSupported  = -32004
-	ErrCodeLimitExceeded       = -32005
+	ErrCodeDefault             = -32000
+	ErrCodeInvalidInput        = -32001
+	ErrCodeResourceNotFound    = -32002
+	ErrCodeResourceUnavailable = -32003
+	ErrCodeTransactionRejected = -32004
+	ErrCodeMethodNotSupported  = -32005
+	ErrCodeLimitExceeded       = -32006
+	ErrCodeParseError          = -32007
+	ErrCodeInvalidRequest      = -32008
+	ErrCodeMethodNotFound      = -32009
+	ErrCodeInvalidParams       = -32010
+	ErrCodeInternalError       = -32011
+	ErrCodeNotFound            = -32012
+	ErrCodeUnknownUID          = -32013
+	ErrCodeUnauthorized        = -32014
+	ErrCodeParamsInvalid       = -32015
+)
+
+const (
+	paramsEmpty   = "params can not be empty"
+	invalidParams = "params %s invalid"
 )
 
 func (e *Error) Error() string {
@@ -43,6 +54,13 @@ func NewError(code ErrorCode, message string, data ...map[string]any) *Error {
 	return &e
 }
 
+func DefaultError(message string) *Error {
+	return &Error{
+		Code:    ErrCodeDefault,
+		Message: message,
+	}
+}
+
 func ParseError(message string) *Error {
 	return &Error{
 		Code:    ErrCodeParseError,
@@ -54,12 +72,12 @@ func InvalidRequest(message string, data ...map[string]any) *Error {
 	return NewError(ErrCodeInvalidRequest, message, data...)
 }
 
-func MethodNotFound(request *Request, data ...map[string]any) *Error {
-	message := fmt.Sprintf("The method %s does not exist/is not available", request.Method)
+func MethodNotFound(method string, data ...map[string]any) *Error {
+	message := fmt.Sprintf("The method %s does not exist/is not available", method)
 	return NewError(ErrCodeMethodNotFound, message, data...)
 }
 
-func InvalidParams(message string, data ...map[string]any) *Error {
+func InvalidParamsError(message string, data ...map[string]any) *Error {
 	return NewError(ErrCodeInvalidParams, message, data...)
 }
 
@@ -83,11 +101,23 @@ func TransactionRejected(message string, data ...map[string]any) *Error {
 	return NewError(ErrCodeTransactionRejected, message, data...)
 }
 
-func MethodNotSupported(request *Request, data ...map[string]any) *Error {
-	message := fmt.Sprintf("method not supported %s", request.Method)
+func MethodNotSupported(method string, data ...map[string]any) *Error {
+	message := fmt.Sprintf("method not supported %s", method)
 	return NewError(ErrCodeMethodNotSupported, message, data...)
 }
 
 func LimitExceeded(message string, data ...map[string]any) *Error {
 	return NewError(ErrCodeLimitExceeded, message, data...)
+}
+
+func NotFoundError() *Error {
+	return NewError(ErrCodeNotFound, consts.NotFound)
+}
+
+func UnauthorizedError() *Error {
+	return NewError(ErrCodeUnauthorized, "Unauthorized")
+}
+
+func UnUnknownUIDError() *Error {
+	return NewError(ErrCodeUnknownUID, "Unknown uid")
 }

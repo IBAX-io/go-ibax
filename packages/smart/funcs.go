@@ -68,9 +68,17 @@ type permColumn struct {
 }
 
 type TxInfo struct {
-	Block    string         `json:"block,omitempty"`
-	Contract string         `json:"contract,omitempty"`
-	Params   map[string]any `json:"params,omitempty"`
+	BlockId      int64          `json:"block_id"`
+	BlockHash    string         `json:"block_hash"`
+	Address      string         `json:"address"`
+	Ecosystem    int64          `json:"ecosystem"`
+	Hash         string         `json:"hash"`
+	Expedite     string         `json:"expedite"`
+	ContractName string         `json:"contract_name"`
+	Params       map[string]any `json:"params"`
+	CreatedAt    int64          `json:"created_at"`
+	Size         string         `json:"size"`
+	Status       int64          `json:"status"` //0:success 1:penalty
 }
 
 type TableInfo struct {

@@ -1,10 +1,13 @@
 package jsonrpc
 
 import (
+	"bytes"
 	"encoding/json"
-
 	"github.com/pkg/errors"
+	"io"
 )
+
+const JsonRPCVersion = "2.0"
 
 type Request struct {
 	JSONRPC string `json:"jsonrpc"`
@@ -21,7 +24,7 @@ type RequestWithNetwork struct {
 }
 
 func NewRequest() *Request {
-	return &Request{JSONRPC: "2.0", ID: ID{Num: 1}}
+	return &Request{JSONRPC: JsonRPCVersion, ID: ID{Num: 1}}
 }
 
 // MakeRequest builds a Request from all its parts, but returns an error if the
@@ -33,7 +36,7 @@ func MakeRequest(id int, method string, params ...any) (*Request, error) {
 	}
 
 	return &Request{
-		JSONRPC: "2.0",
+		JSONRPC: JsonRPCVersion,
 		ID:      ID{Num: uint64(id)},
 		Method:  method,
 		Params:  p,
@@ -62,7 +65,7 @@ func (r Request) MarshalJSON() ([]byte, error) {
 	}{
 		Method:  r.Method,
 		Params:  r.Params,
-		JSONRPC: "2.0",
+		JSONRPC: JsonRPCVersion,
 	}
 	r2.ID = &r.ID
 	return json.Marshal(r2)
@@ -106,8 +109,55 @@ func (r *Request) UnmarshalJSON(data []byte) error {
 		r.ID = *r2.ID
 	}
 
-	r.JSONRPC = "2.0"
+	r.JSONRPC = JsonRPCVersion
 	return nil
+}
+
+func getBatch(r io.ReadCloser, ctxer func(json.RawMessage)) (reqs []*Request, batch bool, err error) {
+	body := io.LimitReader(r, maxRequestContentLength)
+	dec := json.NewDecoder(body)
+	dec.UseNumber()
+
+	var raw json.RawMessage
+	err = dec.Decode(&raw)
+	if err != nil {
+		return nil, false, err
+	}
+	ctxer(raw)
+	reqs, batch = parseRequest(raw)
+	for k, req := range reqs {
+		if req == nil {
+			reqs[k] = &Request{}
+		}
+	}
+	return reqs, batch, nil
+}
+
+func parseRequest(raw json.RawMessage) ([]*Request, bool) {
+	if !isBatch(raw) {
+		reqs := []*Request{{}}
+		json.Unmarshal(raw, &reqs[0])
+		return reqs, false
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.Token() // skip '['
+	var reqs []*Request
+	for dec.More() {
+		reqs = append(reqs, new(Request))
+		dec.Decode(&reqs[len(reqs)-1])
+	}
+	return reqs, true
+}
+
+func isBatch(raw json.RawMessage) bool {
+	for _, c := range raw {
+		// skip insignificant whitespace (http://www.ietf.org/rfc/rfc4627.txt)
+		if c == 0x20 || c == 0x09 || c == 0x0a || c == 0x0d {
+			continue
+		}
+		return c == '['
+	}
+	return false
 }
 
 // MarshalJSON implements json.Marshaler and adds the "jsonrpc":"2.0"
@@ -123,7 +173,7 @@ func (r RequestWithNetwork) MarshalJSON() ([]byte, error) {
 		Method:  r.Method,
 		Params:  r.Params,
 		Network: r.Network,
-		JSONRPC: "2.0",
+		JSONRPC: JsonRPCVersion,
 	}
 	r2.ID = &r.ID
 	return json.Marshal(r2)

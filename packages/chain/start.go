@@ -118,6 +118,7 @@ func Start() {
 	daemons.WaitForSignals()
 
 	initRoutes(conf.Config.HTTP.Str())
+	initJsonRPC(conf.Config.JsonRPC.Str())
 
 	select {}
 }
@@ -218,4 +219,8 @@ func initRoutes(listenHost string) {
 	}
 
 	httpListener(listenHost, handler)
+}
+
+func initJsonRPC(host string) {
+	modes.RegisterJsonRPC(host)
 }

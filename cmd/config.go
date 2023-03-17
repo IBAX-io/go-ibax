@@ -89,6 +89,12 @@ func init() {
 	cmdFlags.StringVar(&conf.Config.HTTP.Host, "httpHost", "127.0.0.1", "Node HTTP host")
 	cmdFlags.IntVar(&conf.Config.HTTP.Port, "httpPort", 7079, "Node HTTP port")
 
+	// JSON-RPC Server
+	cmdFlags.BoolVar(&conf.Config.JsonRPC.Enabled, "jsonRPCEnabled", false, "Node Json-RPC Enabled")
+	cmdFlags.StringVar(&conf.Config.JsonRPC.Host, "jsonRPCHost", "127.0.0.1", "Node JSON-RPC host")
+	cmdFlags.IntVar(&conf.Config.JsonRPC.Port, "jsonRPCPort", 8384, "Node JSON-RPC port")
+	cmdFlags.StringVar(&conf.Config.JsonRPC.Methods, "jsonRPCMethods", "ibax,net", "Node Json-RPC Methods")
+
 	// DB
 	cmdFlags.StringVar(&conf.Config.DB.Host, "dbHost", "127.0.0.1", "DB host")
 	cmdFlags.IntVar(&conf.Config.DB.Port, "dbPort", 5432, "DB port")

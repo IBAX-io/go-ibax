@@ -5,6 +5,8 @@
 package modes
 
 import (
+	"fmt"
+	"github.com/IBAX-io/go-ibax/packages/service/jsonrpc"
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/api"
@@ -31,4 +33,16 @@ func RegisterRoutes() http.Handler {
 	}
 
 	return r.GetAPI()
+}
+
+func RegisterJsonRPC(host string) {
+	m := jsonrpc.Mode{
+		EcosystemGetter:   GetEcosystemGetter(),
+		ContractRunner:    GetSmartContractRunner(),
+		ClientTxProcessor: GetClientTxPreprocessor(),
+	}
+	err := startRPC(host, m)
+	if err != nil {
+		panic(fmt.Sprintf("start RPC failed:%s", err.Error()))
+	}
 }

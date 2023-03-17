@@ -31,7 +31,7 @@ func (r Response) MarshalJSON() ([]byte, error) {
 			ID      ID     `json:"id"`
 			Error   any    `json:"error,omitempty"`
 		}{
-			JSONRPC: "2.0",
+			JSONRPC: JsonRPCVersion,
 			ID:      r.ID,
 			Error:   r.Error,
 		}
@@ -43,7 +43,7 @@ func (r Response) MarshalJSON() ([]byte, error) {
 			ID      ID     `json:"id"`
 			Result  any    `json:"result,omitempty"`
 		}{
-			JSONRPC: "2.0",
+			JSONRPC: JsonRPCVersion,
 			ID:      r.ID,
 			Result:  r.Result,
 		}

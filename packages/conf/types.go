@@ -111,16 +111,21 @@ type (
 	}
 	// GlobalConfig is storing all startup config as global struct
 	GlobalConfig struct {
-		KeyID           int64  `toml:"-"`
-		ConfigPath      string `toml:"-"`
-		TestRollBack    bool   `toml:"-"`
-		FuncBench       bool   `toml:"-"`
-		LocalConf       LocalConfig
-		DirPathConf     DirectoryConfig
-		BootNodes       BootstrapNodeConfig
-		TLSConf         TLSConfig
-		TCPServer       HostPort
-		HTTP            HostPort
+		KeyID        int64  `toml:"-"`
+		ConfigPath   string `toml:"-"`
+		TestRollBack bool   `toml:"-"`
+		FuncBench    bool   `toml:"-"`
+		LocalConf    LocalConfig
+		DirPathConf  DirectoryConfig
+		BootNodes    BootstrapNodeConfig
+		TLSConf      TLSConfig
+		TCPServer    HostPort
+		HTTP         HostPort
+		JsonRPC      struct {
+			Enabled bool
+			HostPort
+			Methods string
+		}
 		DB              DBConfig
 		Redis           RedisConfig
 		StatsD          StatsDConfig

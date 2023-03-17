@@ -283,7 +283,8 @@ func getnodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 	err = q.Count(&result.Count).Error
 
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
+			Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
 		errorResponse(w, errTableNotFound.Errorf(table))
 		return
 	}
@@ -384,7 +385,8 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 	if count > 0 {
 		sum, err := sqldb.NewDbTransaction(nil).GetSumColumn(table, form.Column, where)
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
+				Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
 			errorResponse(w, errTableNotFound.Errorf(table))
 			return
 		}

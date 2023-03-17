@@ -80,7 +80,12 @@ func blocksCountByNodeHandler(w http.ResponseWriter, r *http.Request) {
 	b := &sqldb.BlockChain{}
 	logger := getLogger(r)
 	params := mux.Vars(r)
-	Node := converter.StrToInt64(params["node"])
+	nodeId := converter.StrToInt64(params["node"])
+	mode := converter.StrToInt64(params["mode"])
+	if mode != consts.CandidateNodeMode && mode != consts.HonorNodeMode {
+		errorResponse(w, errParamNotFound.Errorf("mode"))
+		return
+	}
 
 	found, err := b.GetMaxBlock()
 	if err != nil {
@@ -94,7 +99,7 @@ func blocksCountByNodeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c, err := sqldb.GetBlockCountByNode(Node)
+	c, err := sqldb.GetBlockCountByNode(nodeId, int32(mode))
 	if err != nil {
 		logger := getLogger(r)
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on getting block count by node")
@@ -119,8 +124,8 @@ func txCountHandler(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, txMetric{Count: c})
 }
 
-func (m Mode) ecosysCountHandler(w http.ResponseWriter, r *http.Request) {
-	ids, _, err := m.EcosystemGetter.GetEcosystemLookup()
+func ecosysCountHandler(w http.ResponseWriter, r *http.Request) {
+	total, err := sqldb.GetAllSystemCount()
 	if err != nil {
 		logger := getLogger(r)
 		logger.WithError(err).Error("on getting ecosystem count")
@@ -128,7 +133,7 @@ func (m Mode) ecosysCountHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonResponse(w, ecosysMetric{Count: int64(len(ids))})
+	jsonResponse(w, ecosysMetric{Count: total})
 }
 
 func keysCountHandler(w http.ResponseWriter, r *http.Request) {

@@ -803,6 +803,9 @@ func ParseName(in string) (id int64, name string) {
 	return
 }
 
+// ParseTable return
+// format 1:@[id]tblname -> parse id_tblname
+// format 2:[defaultEcosystem]_tblname
 func ParseTable(tblname string, defaultEcosystem int64) string {
 	ecosystem, name := ParseName(tblname)
 	if ecosystem == 0 {

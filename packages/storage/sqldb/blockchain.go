@@ -39,6 +39,11 @@ func (b *BlockChain) Get(blockID int64) (bool, error) {
 	return isFound(DBConn.Where("id = ?", blockID).First(b))
 }
 
+// GetByHash is retrieving model from database
+func (b *BlockChain) GetByHash(BlockHash []byte) (bool, error) {
+	return isFound(DBConn.Where("hash = ?", BlockHash).First(b))
+}
+
 // GetMaxBlock returns last block existence
 func (b *BlockChain) GetMaxBlock() (bool, error) {
 	return isFound(DBConn.Last(b))
@@ -120,9 +125,10 @@ func GetTxCount() (int64, error) {
 	return txCount, err
 }
 
-func GetBlockCountByNode(NodePosition int64) (int64, error) {
+func GetBlockCountByNode(NodePosition int64, consensusMode int32) (int64, error) {
 	var BlockCount int64
-	row := DBConn.Raw("SELECT count(*) block_count FROM block_chain where node_Position = ?", NodePosition).Select("block_count").Row()
+	row := DBConn.Raw("SELECT count(*) block_count FROM block_chain where node_Position = ? AND consensus_mode = ?",
+		NodePosition, consensusMode).Select("block_count").Row()
 	err := row.Scan(&BlockCount)
 
 	return BlockCount, err

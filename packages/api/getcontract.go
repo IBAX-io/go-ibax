@@ -39,7 +39,7 @@ func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	contract := getContract(r, params["name"])
 	if contract == nil {
-		logger.WithFields(log.Fields{"type": consts.ContractError, "contract_name": params["contract"]}).Debug("contract name")
+		logger.WithFields(log.Fields{"type": consts.ContractError, "contract_name": params["name"]}).Debug("contract name")
 		errorResponse(w, errContract.Errorf(params["name"]))
 		return
 	}

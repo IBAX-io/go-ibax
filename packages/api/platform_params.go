@@ -6,6 +6,7 @@
 package api
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/converter"
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -37,6 +38,7 @@ func getPlatformParamsHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		result.List = append(result.List, paramResult{
+			ID:         converter.Int64ToStr(item.ID),
 			Name:       item.Name,
 			Value:      item.Value,
 			Conditions: item.Conditions,

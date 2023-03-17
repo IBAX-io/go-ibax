@@ -24,7 +24,7 @@ func (r RawResponse) MarshalJSON() ([]byte, error) {
 			ID      ID              `json:"id"`
 			Error   json.RawMessage `json:"error,omitempty"`
 		}{
-			JSONRPC: "2.0",
+			JSONRPC: JsonRPCVersion,
 			ID:      r.ID,
 			Error:   *r.Error,
 		}
@@ -36,7 +36,7 @@ func (r RawResponse) MarshalJSON() ([]byte, error) {
 			ID      ID              `json:"id"`
 			Result  json.RawMessage `json:"result,omitempty"`
 		}{
-			JSONRPC: "2.0",
+			JSONRPC: JsonRPCVersion,
 			ID:      r.ID,
 			Result:  r.Result,
 		}
