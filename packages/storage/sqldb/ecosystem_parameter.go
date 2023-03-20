@@ -5,7 +5,9 @@
 
 package sqldb
 
-import "github.com/IBAX-io/go-ibax/packages/converter"
+import (
+	"github.com/IBAX-io/go-ibax/packages/converter"
+)
 
 var (
 	EcosystemWallet = "ecosystem_wallet"
@@ -40,9 +42,23 @@ func (sp *StateParameter) Get(dbTx *DbTransaction, name string) (bool, error) {
 }
 
 // GetAllStateParameters is returning all state parameters
-func (sp *StateParameter) GetAllStateParameters() ([]StateParameter, error) {
+func (sp *StateParameter) GetAllStateParameters(offset, limit *int, names []string) ([]StateParameter, error) {
 	parameters := make([]StateParameter, 0)
-	err := DBConn.Table(sp.TableName()).Where(`ecosystem = ?`, sp.ecosystem).Find(&parameters).Error
+	q := DBConn.Table(sp.TableName()).Where(`ecosystem = ?`, sp.ecosystem)
+
+	if len(names) > 0 {
+		//if any select names,then all return
+		q.Where("name IN ?", names)
+	} else {
+		if offset != nil {
+			q = q.Offset(*offset)
+		}
+		if limit != nil {
+			q = q.Limit(*limit)
+		}
+	}
+
+	err := q.Find(&parameters).Error
 	if err != nil {
 		return nil, err
 	}

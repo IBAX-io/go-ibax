@@ -19,9 +19,11 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/template"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"strings"
@@ -328,8 +330,12 @@ func checkAccess(tableName, columns string, client *UserClient) (table string, c
 	return
 }
 
-func (c *commonApi) GetList(ctx RequestContext, auth Auth, form *ListForm) (*ListResult, *Error) {
+func (c *commonApi) GetList(ctx RequestContext, auth Auth, form *ListWhereForm) (*ListResult, *Error) {
 	r := ctx.HTTPRequest()
+	if form == nil {
+		return nil, InvalidParamsError(paramsEmpty)
+	}
+
 	if err := parameterValidator(r, form); err != nil {
 		return nil, InvalidParamsError(err.Error())
 	}
@@ -338,35 +344,73 @@ func (c *commonApi) GetList(ctx RequestContext, auth Auth, form *ListForm) (*Lis
 	logger := getLogger(r)
 
 	var (
-		err   error
-		table string
+		err          error
+		table, where string
 	)
 	table, form.Columns, err = checkAccess(form.Name, form.Columns, client)
 	if err != nil {
 		return nil, DefaultError(err.Error())
 	}
-	q := sqldb.GetTableQuery(form.Name, client.EcosystemID)
+	var q *gorm.DB
+	q = sqldb.GetTableListQuery(form.Name, client.EcosystemID)
 
 	if len(form.Columns) > 0 {
-		q = q.Select("id," + form.Columns)
+		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
+	}
+
+	if form.Where != nil {
+		switch v := form.Where.(type) {
+		case string:
+			if len(v) == 0 {
+				where = `true`
+			} else {
+				return nil, DefaultError("Where has wrong format")
+			}
+		case map[string]any:
+			where, err = qb.GetWhere(types.LoadMap(v))
+			if err != nil {
+				return nil, DefaultError(err.Error())
+			}
+		case *types.Map:
+			where, err = qb.GetWhere(v)
+			if err != nil {
+				return nil, DefaultError(err.Error())
+			}
+		default:
+			return nil, DefaultError("Where has wrong format")
+		}
+		q = q.Where(where)
 	}
 
 	result := new(ListResult)
 	err = q.Count(&result.Count).Error
+
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting table records count")
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
+			Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
 		return nil, DefaultError(fmt.Sprintf("Table %s has not been found", table))
 	}
 
-	rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-		return nil, DefaultError(err.Error())
-	}
-
-	result.List, err = sqldb.GetResult(rows)
-	if err != nil {
-		return nil, DefaultError(err.Error())
+	if len(form.Order) > 0 {
+		rows, err := q.Order(form.Order).Offset(form.Offset).Limit(form.Limit).Rows()
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
+			return nil, DefaultError(err.Error())
+		}
+		result.List, err = sqldb.GetResult(rows)
+		if err != nil {
+			return nil, DefaultError(err.Error())
+		}
+	} else {
+		rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
+			return nil, DefaultError(err.Error())
+		}
+		result.List, err = sqldb.GetResult(rows)
+		if err != nil {
+			return nil, DefaultError(err.Error())
+		}
 	}
 
 	return result, nil
@@ -697,12 +741,12 @@ type tableInfo struct {
 	Count string `json:"count"`
 }
 
-type TablesResult struct {
+type TableCountResult struct {
 	Count int64       `json:"count"`
 	List  []tableInfo `json:"list"`
 }
 
-func (c *commonApi) GetTables(ctx RequestContext, auth Auth, offset, limit *int) (*TablesResult, *Error) {
+func (c *commonApi) GetTableCount(ctx RequestContext, auth Auth, offset, limit *int) (*TableCountResult, *Error) {
 	r := ctx.HTTPRequest()
 
 	form := &paginatorForm{}
@@ -741,7 +785,7 @@ func (c *commonApi) GetTables(ctx RequestContext, auth Auth, offset, limit *int)
 		return nil, DefaultError(err.Error())
 	}
 
-	result := &TablesResult{
+	result := &TableCountResult{
 		Count: count,
 		List:  make([]tableInfo, len(list)),
 	}
@@ -771,31 +815,37 @@ func replaceHttpSchemeToWs(centrifugoURL string) string {
 	return centrifugoURL
 }
 
-func centrifugoAddressHandler(r *http.Request) (string, *Error) {
+func centrifugoAddressHandler(r *http.Request) (string, error) {
 	logger := getLogger(r)
 
 	if _, err := publisher.GetStats(); err != nil {
 		logger.WithFields(log.Fields{"type": consts.CentrifugoError, "error": err}).Warn("on getting centrifugo stats")
-		return "", DefaultError(err.Error())
+		return "", err
 	}
 
 	return replaceHttpSchemeToWs(conf.Config.Centrifugo.URL), nil
 }
 
-func (c *commonApi) GetConfig(ctx RequestContext, option string) (string, *Error) {
+func (c *commonApi) GetConfig(ctx RequestContext, option string) (map[string]any, *Error) {
 	r := ctx.HTTPRequest()
 	logger := getLogger(r)
 	if option == "" {
 		logger.WithFields(log.Fields{"type": consts.EmptyObject, "error": "option not specified"}).Error("on getting option in config handler")
-		return "", NotFoundError()
+		return nil, NotFoundError()
 	}
 
+	rets := make(map[string]any)
+	var err error
 	switch option {
 	case "centrifugo":
-		return centrifugoAddressHandler(r)
+		rets[option], err = centrifugoAddressHandler(r)
+		if err != nil {
+			return nil, DefaultError(err.Error())
+		}
+		return rets, nil
 	}
 
-	return "", NotFoundError()
+	return nil, NotFoundError()
 }
 
 func parseEcosystem(in string) (string, string) {
@@ -851,13 +901,6 @@ func (c *commonApi) GetPageValidatorsCount(ctx RequestContext, name string) (*ma
 	return &res, nil
 }
 
-func isMobileValue(v bool) string {
-	if v {
-		return "1"
-	}
-	return "0"
-}
-
 func initVars(r *http.Request, vals *map[string]string) *map[string]string {
 	client := getClient(r)
 
@@ -879,7 +922,6 @@ func initVars(r *http.Request, vals *map[string]string) *map[string]string {
 		vars["ecosystem_id"] = converter.Int64ToStr(client.EcosystemID)
 		vars["key_id"] = converter.Int64ToStr(client.KeyID)
 		vars["account_id"] = client.AccountID
-		vars["isMobile"] = isMobileValue(client.IsMobile)
 		vars["role_id"] = converter.Int64ToStr(client.RoleID)
 		vars["ecosystem_name"] = client.EcosystemName
 	} else {
@@ -896,9 +938,6 @@ func initVars(r *http.Request, vals *map[string]string) *map[string]string {
 			vars["role_id"] = vars["roleID"]
 		} else {
 			vars["role_id"] = "0"
-		}
-		if len(vars["isMobile"]) == 0 {
-			vars["isMobile"] = "0"
 		}
 		if len(vars["ecosystem_id"]) != 0 {
 			ecosystems := sqldb.Ecosystem{}

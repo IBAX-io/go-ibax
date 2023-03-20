@@ -138,7 +138,6 @@ type loginForm struct {
 	KeyID       string         `json:"key_id"`
 	Signature   hexValue       `json:"signature"`
 	RoleID      int64          `json:"role_id"`
-	IsMobile    bool           `json:"is_mobile"`
 }
 
 type publicKeyValue struct {
@@ -370,7 +369,6 @@ func (a authApi) Login(ctx RequestContext, form *loginForm) (*LoginResult, *Erro
 		KeyID:       result.KeyID,
 		AccountID:   account.AccountID,
 		EcosystemID: result.EcosystemID,
-		IsMobile:    form.IsMobile,
 		RoleID:      converter.Int64ToStr(form.RoleID),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(time.Second * time.Duration(form.Expire))},

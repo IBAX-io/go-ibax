@@ -188,10 +188,6 @@ func GetResult(rows *sql.Rows) ([]map[string]string, error) {
 	return getResult(rows, -1)
 }
 
-func GetNodeResult(rows *sql.Rows) ([]map[string]string, error) {
-	return getnodeResult(rows, -1)
-}
-
 // ListResult is a structure for the list result
 type ListResult struct {
 	result []string
@@ -222,59 +218,6 @@ func (dbTx *DbTransaction) GetList(query string, args ...any) *ListResult {
 }
 
 func getResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
-	var result []map[string]string
-	defer rows.Close()
-	// Get column names
-	columns, err := rows.Columns()
-	if err != nil {
-		return nil, err
-	}
-	// Make a slice for the values
-	values := make([][]byte /*sql.RawBytes*/, len(columns))
-
-	// rows.Scan wants '[]interface{}' as an argument, so we must copy the
-	// references into such a slice
-	// See http://code.google.com/p/go-wiki/wiki/InterfaceSlice for details
-	scanArgs := make([]any, len(values))
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
-
-	r := 0
-	// Fetch rows
-	for rows.Next() {
-		// get RawBytes from data
-		err = rows.Scan(scanArgs...)
-		if err != nil {
-			return nil, err
-		}
-
-		// Now do something with the data.
-		// Here we just print each column as a string.
-		var value string
-		rez := make(map[string]string)
-		for i, col := range values {
-			// Here we can check if the value is nil (NULL value)
-			if col == nil {
-				value = "NULL"
-			} else {
-				value = string(col)
-			}
-			rez[columns[i]] = value
-		}
-		result = append(result, rez)
-		r++
-		if countRows != -1 && r >= countRows {
-			break
-		}
-	}
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-func getnodeResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
 	var result []map[string]string
 	defer rows.Close()
 	//rows.ColumnTypes()

@@ -38,9 +38,21 @@ func (sp *AppParam) Get(dbTx *DbTransaction, app int64, name string) (bool, erro
 }
 
 // GetAllAppParameters is returning all state parameters
-func (sp *AppParam) GetAllAppParameters(app int64) ([]AppParam, error) {
+func (sp *AppParam) GetAllAppParameters(app int64, offset, limit *int, names []string) ([]AppParam, error) {
 	parameters := make([]AppParam, 0)
-	err := DBConn.Table(sp.TableName()).Where(`ecosystem = ?`, sp.ecosystem).Where(`app_id = ?`, app).Find(&parameters).Error
+	q := DBConn.Table(sp.TableName()).Where(`ecosystem = ?`, sp.ecosystem).Where(`app_id = ?`, app)
+	if len(names) > 0 {
+		//if any select names,then all return
+		q = q.Where("name IN ?", names)
+	} else {
+		if offset != nil {
+			q = q.Offset(*offset)
+		}
+		if limit != nil {
+			q = q.Limit(*limit)
+		}
+	}
+	err := q.Find(&parameters).Error
 	if err != nil {
 		return nil, err
 	}

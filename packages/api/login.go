@@ -39,7 +39,6 @@ type loginForm struct {
 	KeyID       string         `schema:"key_id"`
 	Signature   hexValue       `schema:"signature"`
 	RoleID      int64          `schema:"role_id"`
-	IsMobile    bool           `schema:"mobile"`
 }
 
 type publicKeyValue struct {
@@ -293,7 +292,6 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		KeyID:       result.KeyID,
 		AccountID:   account.AccountID,
 		EcosystemID: result.EcosystemID,
-		IsMobile:    form.IsMobile,
 		RoleID:      converter.Int64ToStr(form.RoleID),
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(time.Second * time.Duration(form.Expire))},

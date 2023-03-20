@@ -17,11 +17,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"strings"
@@ -92,50 +90,21 @@ func (b *blockChainApi) HonorNodesCount() (*int64, *Error) {
 	return &count, nil
 }
 
-func (b *blockChainApi) AppParam(ctx RequestContext, auth Auth, appId int64, name string, ecosystem *int64) (*ParamResult, *Error) {
-	r := ctx.HTTPRequest()
-	logger := getLogger(r)
-
-	form := &ecosystemForm{
-		Validator: auth.EcosystemGetter,
-	}
-	if ecosystem != nil {
-		form.EcosystemID = *ecosystem
-	}
-	if err := parameterValidator(r, form); err != nil {
-		return nil, DefaultError(err.Error())
-	}
-
-	ap := &sqldb.AppParam{}
-	ap.SetTablePrefix(form.EcosystemPrefix)
-	found, err := ap.Get(nil, appId, name)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting app parameter by name")
-		return nil, DefaultError(err.Error())
-	}
-	if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound, "key": name}).Debug("app parameter not found")
-		return nil, NotFoundError()
-	}
-
-	return &ParamResult{
-		ID:         converter.Int64ToStr(ap.ID),
-		Name:       ap.Name,
-		Value:      ap.Value,
-		Conditions: ap.Conditions,
-	}, nil
-}
-
 type AppParamsForm struct {
 	ecosystemForm
 	paramsForm
+	paginatorForm
 }
 
 func (f *AppParamsForm) Validate(r *http.Request) error {
 	if f == nil {
 		return errors.New(paramsEmpty)
 	}
-	return f.ecosystemForm.Validate(r)
+	err := f.ecosystemForm.Validate(r)
+	if err != nil {
+		return err
+	}
+	return f.paginatorForm.Validate(r)
 }
 
 type AppParamsResult struct {
@@ -143,8 +112,7 @@ type AppParamsResult struct {
 	List []ParamResult `json:"list"`
 }
 
-func (b *blockChainApi) AppParams(ctx RequestContext, auth Auth, appId int64, ecosystem *int64, names *string) (*AppParamsResult, *Error) {
-
+func (b *blockChainApi) AppParams(ctx RequestContext, auth Auth, appId int64, ecosystem *int64, names *string, offset, limit *int) (*AppParamsResult, *Error) {
 	form := &AppParamsForm{
 		ecosystemForm: ecosystemForm{
 			Validator: auth.EcosystemGetter,
@@ -154,7 +122,13 @@ func (b *blockChainApi) AppParams(ctx RequestContext, auth Auth, appId int64, ec
 		form.EcosystemID = *ecosystem
 	}
 	if names != nil {
-		form.Names = *names
+		form.AcceptNames(*names)
+	}
+	if offset != nil {
+		form.Offset = *offset
+	}
+	if limit != nil {
+		form.Limit = *limit
 	}
 
 	r := ctx.HTTPRequest()
@@ -166,7 +140,7 @@ func (b *blockChainApi) AppParams(ctx RequestContext, auth Auth, appId int64, ec
 	ap := &sqldb.AppParam{}
 	ap.SetTablePrefix(form.EcosystemPrefix)
 
-	list, err := ap.GetAllAppParameters(appId)
+	list, err := ap.GetAllAppParameters(appId, &form.Offset, &form.Limit, form.Names)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all app parameters")
 	}
@@ -176,11 +150,7 @@ func (b *blockChainApi) AppParams(ctx RequestContext, auth Auth, appId int64, ec
 		List: make([]ParamResult, 0),
 	}
 
-	acceptNames := form.AcceptNames()
 	for _, item := range list {
-		if len(acceptNames) > 0 && !acceptNames[item.Name] {
-			continue
-		}
 		result.List = append(result.List, ParamResult{
 			ID:         converter.Int64ToStr(item.ID),
 			Name:       item.Name,
@@ -576,19 +546,6 @@ func (bh *BlockIdOrHash) UnmarshalJSON(data []byte) error {
 	}
 }
 
-func checkNumberChars(data string) bool {
-	dat := []byte(data)
-	dl := len(dat)
-	for i := 0; i < dl; i++ {
-		d := dat[i]
-		if (d >= 0x30 && d <= 0x39) || (d == 0x2d) {
-		} else {
-			return false
-		}
-	}
-	return true
-}
-
 func (b *blockChainApi) DetailedBlock(ctx RequestContext, bh *BlockIdOrHash) (*BlockDetailedInfo, *Error) {
 	r := ctx.HTTPRequest()
 
@@ -709,16 +666,23 @@ func (b *blockChainApi) GetTransactionCount(ctx RequestContext, bh *BlockIdOrHas
 	return &bk.Tx, nil
 }
 
-func (b *blockChainApi) GetEcosystemParams(ctx RequestContext, auth Auth, ecosystem *int64, names *string) (*ParamsResult, *Error) {
+func (b *blockChainApi) GetEcosystemParams(ctx RequestContext, auth Auth, ecosystem *int64, names *string, offset, limit *int) (*ParamsResult, *Error) {
 	r := ctx.HTTPRequest()
-	form := &AppParamsForm{ecosystemForm: ecosystemForm{
-		Validator: auth.EcosystemGetter,
-	}}
+	form := &AppParamsForm{
+		ecosystemForm: ecosystemForm{
+			Validator: auth.EcosystemGetter,
+		}}
 	if ecosystem != nil {
 		form.EcosystemID = *ecosystem
 	}
 	if names != nil {
-		form.Names = *names
+		form.AcceptNames(*names)
+	}
+	if limit != nil {
+		form.Limit = *limit
+	}
+	if offset != nil {
+		form.Offset = *offset
 	}
 	if err := parameterValidator(r, form); err != nil {
 		return nil, DefaultError(err.Error())
@@ -728,7 +692,7 @@ func (b *blockChainApi) GetEcosystemParams(ctx RequestContext, auth Auth, ecosys
 
 	sp := &sqldb.StateParameter{}
 	sp.SetTablePrefix(form.EcosystemPrefix)
-	list, err := sp.GetAllStateParameters()
+	list, err := sp.GetAllStateParameters(&form.Offset, &form.Limit, form.Names)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all state parameters")
 	}
@@ -737,11 +701,7 @@ func (b *blockChainApi) GetEcosystemParams(ctx RequestContext, auth Auth, ecosys
 		List: make([]ParamResult, 0),
 	}
 
-	acceptNames := form.AcceptNames()
 	for _, item := range list {
-		if len(acceptNames) > 0 && !acceptNames[item.Name] {
-			continue
-		}
 		result.List = append(result.List, ParamResult{
 			ID:         converter.Int64ToStr(item.ID),
 			Name:       item.Name,
@@ -751,40 +711,6 @@ func (b *blockChainApi) GetEcosystemParams(ctx RequestContext, auth Auth, ecosys
 	}
 
 	return result, nil
-}
-
-func (b *blockChainApi) GetEcosystemParam(ctx RequestContext, auth Auth, name string, ecosystemId *int64) (*ParamResult, *Error) {
-	r := ctx.HTTPRequest()
-	logger := getLogger(r)
-
-	form := &ecosystemForm{
-		Validator: auth.EcosystemGetter,
-	}
-	if ecosystemId != nil {
-		form.EcosystemID = *ecosystemId
-	}
-
-	if err := parameterValidator(r, form); err != nil {
-		return nil, InvalidParamsError(err.Error())
-	}
-
-	sp := &sqldb.StateParameter{}
-	sp.SetTablePrefix(form.EcosystemPrefix)
-
-	if found, err := sp.Get(nil, name); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting state parameter by name")
-		return nil, DefaultError(err.Error())
-	} else if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound, "key": name}).Debug("state parameter not found")
-		return nil, NotFoundError()
-	}
-
-	return &ParamResult{
-		ID:         converter.Int64ToStr(sp.ID),
-		Name:       sp.Name,
-		Value:      sp.Value,
-		Conditions: sp.Conditions,
-	}, nil
 }
 
 type EcosystemInfo struct {
@@ -907,7 +833,7 @@ func (b *blockChainApi) EcosystemInfo(ctx RequestContext, ecosystemId int64) (*E
 	return info, nil
 }
 
-func (b *blockChainApi) SystemParams(ctx RequestContext, auth Auth, names *string, ecosystemId *int64) (*ParamsResult, *Error) {
+func (b *blockChainApi) SystemParams(ctx RequestContext, auth Auth, ecosystemId *int64, names *string, offset, limit *int) (*ParamsResult, *Error) {
 	r := ctx.HTTPRequest()
 	form := &AppParamsForm{
 		ecosystemForm: ecosystemForm{
@@ -918,7 +844,13 @@ func (b *blockChainApi) SystemParams(ctx RequestContext, auth Auth, names *strin
 		form.EcosystemID = *ecosystemId
 	}
 	if names != nil {
-		form.Names = *names
+		form.AcceptNames(*names)
+	}
+	if offset != nil {
+		form.Offset = *offset
+	}
+	if limit != nil {
+		form.Limit = *limit
 	}
 	if err := parameterValidator(r, form); err != nil {
 		return nil, DefaultError(err.Error())
@@ -926,7 +858,7 @@ func (b *blockChainApi) SystemParams(ctx RequestContext, auth Auth, names *strin
 
 	logger := getLogger(r)
 
-	list, err := sqldb.GetAllPlatformParameters(nil)
+	list, err := sqldb.GetAllPlatformParameters(nil, &form.Offset, &form.Limit, form.Names)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all platform parameters")
 	}
@@ -935,11 +867,7 @@ func (b *blockChainApi) SystemParams(ctx RequestContext, auth Auth, names *strin
 		List: make([]ParamResult, 0),
 	}
 
-	acceptNames := form.AcceptNames()
 	for _, item := range list {
-		if len(acceptNames) > 0 && !acceptNames[item.Name] {
-			continue
-		}
 		result.List = append(result.List, ParamResult{
 			ID:         converter.Int64ToStr(item.ID),
 			Name:       item.Name,
@@ -1008,195 +936,6 @@ func (f *ListWhereForm) Validate(r *http.Request) error {
 		return errors.New(paramsEmpty)
 	}
 	return f.ListForm.Validate(r)
-}
-
-type SumWhereForm struct {
-	Name   string `json:"name"` //table name
-	Column string `json:"column"`
-	Where  any    `json:"where"`
-}
-
-func (f *SumWhereForm) Validate(r *http.Request) error {
-	if f == nil || f.Column == "" {
-		return errors.New(paramsEmpty)
-	}
-	if len(f.Column) > 0 {
-		f.Column = converter.EscapeName(f.Column)
-	}
-	return nil
-}
-
-func getListWhereMux(ctx RequestContext, form *ListWhereForm, isNode bool) (*ListResult, *Error) {
-	r := ctx.HTTPRequest()
-	if form == nil {
-		return nil, InvalidParamsError(paramsEmpty)
-	}
-
-	if err := parameterValidator(r, form); err != nil {
-		return nil, InvalidParamsError(err.Error())
-	}
-
-	client := getClient(r)
-	logger := getLogger(r)
-
-	var (
-		err          error
-		table, where string
-	)
-	table, form.Columns, err = checkAccess(form.Name, form.Columns, client)
-	if err != nil {
-		return nil, DefaultError(err.Error())
-	}
-	var q *gorm.DB
-	if isNode {
-		q = sqldb.GetTableListQuery(form.Name, client.EcosystemID)
-	} else {
-		q = sqldb.GetTableQuery(form.Name, client.EcosystemID)
-	}
-
-	if len(form.Columns) > 0 {
-		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
-	}
-
-	if form.Where != nil {
-		switch v := form.Where.(type) {
-		case string:
-			if len(v) == 0 {
-				where = `true`
-			} else {
-				return nil, DefaultError("Where has wrong format")
-			}
-		case map[string]any:
-			where, err = qb.GetWhere(types.LoadMap(v))
-			if err != nil {
-				return nil, DefaultError(err.Error())
-			}
-		case *types.Map:
-			where, err = qb.GetWhere(v)
-			if err != nil {
-				return nil, DefaultError(err.Error())
-			}
-		default:
-			return nil, DefaultError("Where has wrong format")
-		}
-		q = q.Where(where)
-	}
-
-	result := new(ListResult)
-	err = q.Count(&result.Count).Error
-
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
-			Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
-		return nil, DefaultError(fmt.Sprintf("Table %s has not been found", table))
-	}
-
-	if len(form.Order) > 0 {
-		rows, err := q.Order(form.Order).Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			return nil, DefaultError(err.Error())
-		}
-		if isNode {
-			result.List, err = sqldb.GetNodeResult(rows)
-		} else {
-			result.List, err = sqldb.GetResult(rows)
-		}
-		if err != nil {
-			return nil, DefaultError(err.Error())
-		}
-	} else {
-		rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			return nil, DefaultError(err.Error())
-		}
-		if isNode {
-			result.List, err = sqldb.GetNodeResult(rows)
-		} else {
-			result.List, err = sqldb.GetResult(rows)
-		}
-		if err != nil {
-			return nil, DefaultError(err.Error())
-		}
-	}
-
-	return result, nil
-}
-
-func (b *blockChainApi) GetListWhere(ctx RequestContext, auth Auth, form *ListWhereForm) (*ListResult, *Error) {
-	return getListWhereMux(ctx, form, false)
-}
-
-func (b *blockChainApi) GetNodeListWhere(ctx RequestContext, auth Auth, form *ListWhereForm) (*ListResult, *Error) {
-	return getListWhereMux(ctx, form, true)
-}
-
-type sumResult struct {
-	Sum string `json:"sum"`
-}
-
-func (b *blockChainApi) GetSumWhere(ctx RequestContext, auth Auth, form *SumWhereForm) (*sumResult, *Error) {
-	var (
-		err          error
-		table, where string
-	)
-
-	r := ctx.HTTPRequest()
-	if err := parameterValidator(r, form); err != nil {
-		return nil, InvalidParamsError(err.Error())
-	}
-
-	client := getClient(r)
-	logger := getLogger(r)
-
-	table, form.Column, err = checkAccess(form.Name, form.Column, client)
-	if err != nil {
-		return nil, DefaultError(err.Error())
-	}
-
-	if form.Where != nil {
-		switch v := form.Where.(type) {
-		case string:
-			if len(v) == 0 {
-				where = `true`
-			} else {
-				return nil, DefaultError("Where has wrong format")
-			}
-		case map[string]any:
-			where, err = qb.GetWhere(types.LoadMap(v))
-			if err != nil {
-				return nil, DefaultError(err.Error())
-			}
-		case *types.Map:
-			where, err = qb.GetWhere(v)
-			if err != nil {
-				return nil, DefaultError(err.Error())
-			}
-		default:
-			return nil, DefaultError("Where has wrong format")
-		}
-	}
-
-	count, err := sqldb.NewDbTransaction(nil).GetSumColumnCount(table, form.Column, where)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
-			Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
-		return nil, DefaultError(err.Error())
-	}
-
-	result := new(sumResult)
-	if count > 0 {
-		sum, err := sqldb.NewDbTransaction(nil).GetSumColumn(table, form.Column, where)
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
-				Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
-			return nil, DefaultError(fmt.Sprintf("Table %s has not been found", table))
-		}
-		result.Sum = sum
-	}
-	return result, nil
-
 }
 
 type blockMetricByNode struct {

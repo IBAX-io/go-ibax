@@ -124,7 +124,7 @@ type (
 		JsonRPC      struct {
 			Enabled bool
 			HostPort
-			Methods string
+			Namespace string
 		}
 		DB              DBConfig
 		Redis           RedisConfig

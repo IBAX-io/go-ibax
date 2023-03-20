@@ -37,7 +37,6 @@ var (
 	gAuth             string
 	gAddress          string
 	gPrivate, gPublic string
-	gMobile           bool
 )
 
 // PrivateToPublicHex returns the hex public key for the specified hex private key.
@@ -137,9 +136,6 @@ func keyLogin(state int64) (err error) {
 	}
 	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)},
 		`ecosystem`: {converter.Int64ToStr(state)}, "role_id": {"0"}}
-	if gMobile {
-		form[`mobile`] = []string{`true`}
-	}
 	var logret loginResult
 	err = sendPost(`login`, &form, &logret)
 	if err != nil {
@@ -191,9 +187,6 @@ func keyLoginToken(state int64) (err error) {
 	}
 	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)},
 		`ecosystem`: {converter.Int64ToStr(state)}, "role_id": {"0"}, "expire": {"5"}}
-	if gMobile {
-		form[`mobile`] = []string{`true`}
-	}
 	var logret loginResult
 	err = sendPost(`login`, &form, &logret)
 	if err != nil {
@@ -243,9 +236,6 @@ func keyLoginex(state int64, m ...string) (err error) {
 	}
 	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)},
 		`ecosystem`: {converter.Int64ToStr(state)}, "role_id": {"0"}}
-	if gMobile {
-		form[`mobile`] = []string{`true`}
-	}
 	var logret loginResult
 	err = sendPost(`login`, &form, &logret)
 	if err != nil {

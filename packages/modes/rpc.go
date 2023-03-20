@@ -64,7 +64,7 @@ func newServerApi(r *rpcServer) *serverApi {
 	return &serverApi{r}
 }
 
-func (s *serverApi) StartJsonRpc(ctx jsonrpc.RequestContext, host *string, port *int, methods *string) (bool, *jsonrpc.Error) {
+func (s *serverApi) StartJsonRpc(ctx jsonrpc.RequestContext, host *string, port *int, namespace *string) (bool, *jsonrpc.Error) {
 	if host == nil {
 		h := conf.Config.JsonRPC.Host
 		host = &h
@@ -74,8 +74,8 @@ func (s *serverApi) StartJsonRpc(ctx jsonrpc.RequestContext, host *string, port 
 		port = &p
 	}
 
-	if methods != nil {
-		conf.Config.JsonRPC.Methods = *methods
+	if namespace != nil {
+		conf.Config.JsonRPC.Namespace = *namespace
 	}
 
 	addr := fmt.Sprintf("%s:%d", *host, *port)
@@ -222,7 +222,7 @@ func startRPC(addr string, m jsonrpc.Mode) error {
 func (r *rpcServer) start(addr string) error {
 	r.lo.Lock()
 	defer r.lo.Unlock()
-	err := r.enableRpc(conf.Config.JsonRPC.Methods)
+	err := r.enableRpc(conf.Config.JsonRPC.Namespace)
 	if err != nil {
 		return err
 	}

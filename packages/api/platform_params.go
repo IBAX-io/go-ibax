@@ -23,7 +23,7 @@ func getPlatformParamsHandler(w http.ResponseWriter, r *http.Request) {
 
 	logger := getLogger(r)
 
-	list, err := sqldb.GetAllPlatformParameters(nil)
+	list, err := sqldb.GetAllPlatformParameters(nil, nil, nil, nil)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all platform parameters")
 	}

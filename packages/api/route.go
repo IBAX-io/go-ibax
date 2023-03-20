@@ -111,7 +111,7 @@ func (m Mode) SetBlockchainRoutes(r Router) {
 func SetOtherCommonRoutes(api *mux.Router, m Mode) {
 	api.HandleFunc("/member/{ecosystem}/{account}", getMemberHandler).Methods("GET")
 	api.HandleFunc("/listWhere/{name}", authRequire(getListWhereHandler)).Methods("POST")
-	api.HandleFunc("/nodelistWhere/{name}", authRequire(getnodeListWhereHandler)).Methods("POST")
+	api.HandleFunc("/nodelistWhere/{name}", authRequire(getListWhereHandler)).Methods("POST")
 	api.HandleFunc("/sumWhere/{name}", authRequire(getsumWhereHandler)).Methods("POST")
 	api.HandleFunc("/metrics/blockper/{node}/{mode}", blocksCountByNodeHandler).Methods("GET")
 }

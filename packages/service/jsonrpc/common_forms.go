@@ -45,7 +45,7 @@ func (f *paginatorForm) Validate(r *http.Request) error {
 
 type paramsForm struct {
 	nopeValidator
-	Names string `schema:"names"`
+	Names []string `schema:"names"`
 }
 
 type nopeValidator struct{}
@@ -54,15 +54,10 @@ func (np nopeValidator) Validate(r *http.Request) error {
 	return nil
 }
 
-func (f *paramsForm) AcceptNames() map[string]bool {
-	names := make(map[string]bool)
-	for _, item := range strings.Split(f.Names, ",") {
-		if len(item) == 0 {
-			continue
-		}
-		names[item] = true
+func (f *paramsForm) AcceptNames(names string) {
+	if names != "" {
+		f.Names = strings.Split(names, ",")
 	}
-	return names
 }
 
 type ecosystemForm struct {
