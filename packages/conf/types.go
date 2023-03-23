@@ -122,8 +122,9 @@ type (
 		TCPServer    HostPort
 		HTTP         HostPort
 		JsonRPC      struct {
-			Enabled bool
-			HostPort
+			Enabled   bool
+			Host      string
+			Port      int
 			Namespace string
 		}
 		DB              DBConfig
