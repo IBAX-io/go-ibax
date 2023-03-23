@@ -382,8 +382,10 @@ func ContractConditions(sc *SmartContract, names ...any) (bool, error) {
 	for _, iname := range names {
 		name := iname.(string)
 		if len(name) > 0 {
+			contractName := script.StateName(uint32(sc.TxSmart.EcosystemID), name)
 			getContract := VMGetContract(sc.VM, name, uint32(sc.TxSmart.EcosystemID))
 			if getContract == nil {
+				contractName = script.StateName(0, name)
 				getContract = VMGetContract(sc.VM, name, 0)
 				if getContract == nil {
 					return false, logErrorfShort(eUnknownContract, name, consts.NotFound)
@@ -401,7 +403,8 @@ func ContractConditions(sc *SmartContract, names ...any) (bool, error) {
 			if err := sc.AppendStack(name); err != nil {
 				return false, err
 			}
-			_, err := script.VMRun(sc.VM, block, []any{}, vars, sc.Hash)
+			methods := []string{`conditions`}
+			err := script.RunContractByName(sc.VM, contractName, methods, vars, sc.Hash)
 			if err != nil {
 				return false, err
 			}

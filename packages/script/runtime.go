@@ -102,7 +102,7 @@ type RunTime struct {
 	vars      []any
 	extend    map[string]any
 	vm        *VM
-	cost      int64
+	cost      int64 //cost remaining
 	err       error
 	unwrap    bool
 	timeLimit bool
@@ -277,28 +277,21 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		stack.PopStack(finfo.Name)
 	}
 
-	for i, iret := range result {
+	for i, ret := range result {
 		// first return value of every extend function that makes queries to DB is cost
-		if i == 0 && rt.vm.FuncCallsDB != nil {
-			if _, ok := rt.vm.FuncCallsDB[finfo.Name]; ok {
-				cost := iret.Int()
-				if cost > rt.cost {
-					rt.cost = 0
-					rt.vm.logger.Error("paid CPU resource is over")
-					return fmt.Errorf("paid CPU resource is over")
-				}
-
-				rt.cost -= cost
-				continue
+		if _, ok := rt.vm.FuncCallsDB[finfo.Name]; ok && i == 0 {
+			if err = rt.SubCost(ret.Int()); err != nil {
+				return
 			}
+			continue
 		}
 		if finfo.Results[i].String() == `error` {
-			if iret.Interface() != nil {
+			if ret.Interface() != nil {
 				rt.errInfo = ErrInfo{Name: finfo.Name}
-				return iret.Interface().(error)
+				return ret.Interface().(error)
 			}
 		} else {
-			rt.push(iret.Interface())
+			rt.push(ret.Interface())
 		}
 	}
 	return
@@ -481,6 +474,16 @@ func (rt *RunTime) SetCost(cost int64) {
 	rt.cost = cost
 }
 
+func (rt *RunTime) SubCost(cost int64) error {
+	if cost > 0 {
+		rt.cost -= cost
+	}
+	if rt.cost < 0 {
+		return fmt.Errorf("runtime cost limit overflow")
+	}
+	return nil
+}
+
 // Cost return the remain cost of the execution.
 func (rt *RunTime) Cost() int64 {
 	return rt.cost
@@ -636,7 +639,9 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	start := rt.len()
 	varoff := len(rt.vars)
 	for vkey, vpar := range block.Vars {
-		rt.cost--
+		if err = rt.SubCost(1); err != nil {
+			break
+		}
 		var value any
 		if block.Type == ObjectType_Func && vkey < len(block.GetFuncInfo().Params) {
 			value = rt.stack[start-len(block.GetFuncInfo().Params)+vkey]
@@ -649,6 +654,9 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 			}
 		}
 		rt.addVar(value)
+	}
+	if err != nil {
+		return
 	}
 	if namemap != nil {
 		for key, item := range namemap {
@@ -674,8 +682,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	labels := make([]int, 0)
 main:
 	for ci := 0; ci < len(block.Code); ci++ {
-		rt.cost--
-		if rt.cost <= 0 {
+		if err = rt.SubCost(1); err != nil {
 			break
 		}
 		if rt.timeLimit {
@@ -811,21 +818,18 @@ main:
 			rt.resetByIdx(mapoff + 1)
 			continue
 		case cmdCallVariadic, cmdCall:
+			var cost = int64(CostCall)
 			if cmd.Value.(*ObjInfo).Type == ObjectType_ExtFunc {
 				finfo := cmd.Value.(*ObjInfo).GetExtFuncInfo()
 				if rt.vm.ExtCost != nil {
-					cost := rt.vm.ExtCost(finfo.Name)
-					if cost > rt.cost {
-						rt.cost = 0
-						break main
-					} else if cost == -1 {
-						rt.cost -= CostCall
-					} else {
-						rt.cost -= cost
+					cost = rt.vm.ExtCost(finfo.Name)
+					if cost == -1 {
+						cost = CostCall
 					}
 				}
-			} else {
-				rt.cost -= CostCall
+			}
+			if err = rt.SubCost(cost); err != nil {
+				break
 			}
 			err = rt.callFunc(cmd.Cmd, cmd.Value.(*ObjInfo))
 		case cmdVar:
@@ -843,8 +847,10 @@ main:
 				break main
 			}
 		case cmdExtend, cmdCallExtend:
+			if err = rt.SubCost(CostExtend); err != nil {
+				break
+			}
 			if val, ok := rt.extend[cmd.Value.(string)]; ok {
-				rt.cost -= CostExtend
 				if cmd.Cmd == cmdCallExtend {
 					err = rt.extendFunc(cmd.Value.(string))
 					if err != nil {
@@ -866,7 +872,6 @@ main:
 		case cmdIndex:
 			rv := reflect.ValueOf(rt.stack[size-2])
 			itype := reflect.TypeOf(rt.stack[size-2]).String()
-
 			switch {
 			case itype == `*types.Map`:
 				if reflect.TypeOf(rt.getStack(size-1)).String() != `string` {
@@ -1335,7 +1340,6 @@ main:
 			err = fmt.Errorf(`unknown command %d`, cmd.Cmd)
 		}
 		if err != nil {
-			rt.err = err
 			break
 		}
 		if status == statusReturn || status == statusContinue || status == statusBreak {
@@ -1345,6 +1349,9 @@ main:
 			rt.stack[size-2] = bin
 			rt.resetByIdx(size - 1)
 		}
+	}
+	if err != nil {
+		return
 	}
 	last := rt.popBlock()
 	if status == statusReturn {
@@ -1378,10 +1385,6 @@ main:
 	}
 
 	rt.resetByIdx(start)
-	if rt.cost <= 0 {
-		rt.vm.logger.WithFields(log.Fields{"type": consts.VMError}).Warn("runtime cost limit overflow")
-		err = fmt.Errorf(`runtime cost limit overflow`)
-	}
 	return
 }
 
