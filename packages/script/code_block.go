@@ -67,10 +67,9 @@ func (m *CodeBlock) GetContractInfo() *ContractInfo {
 
 // ByteCode stores a command and an additional parameter.
 type ByteCode struct {
-	Cmd    uint16
-	Line   uint16
-	Lexeme Lexeme
-	Value  any
+	Cmd   uint16
+	Line  uint16
+	Value any
 }
 
 // CodeBlocks is a slice of blocks
@@ -252,14 +251,14 @@ func (block *CodeBlock) getObjByName(name string) (ret *ObjInfo) {
 	return
 }
 
-func (block *CodeBlock) parentContractCost() int64 {
+func (cb *CodeBlock) contractBaseCost() int64 {
 	var cost int64
-	parent := block.Parent.GetContractInfo()
-	if parent != nil {
-		cost += int64(len(block.Parent.Objects) * CostCall)
-		cost += int64(len(parent.Settings) * CostCall)
-		if parent.Tx != nil {
-			cost += int64(len(*parent.Tx) * CostExtend)
+	c := cb.GetContractInfo()
+	if c != nil {
+		cost += int64(len(cb.Objects) * CostCall)
+		cost += int64(len(c.Settings) * CostCall)
+		if c.Tx != nil {
+			cost += int64(len(*c.Tx) * CostExtend)
 		}
 	}
 	return cost

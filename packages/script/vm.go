@@ -114,6 +114,65 @@ func getContractList(src string) (list []string) {
 	return
 }
 
+func VMGetContractByID(vm *VM, id int32) *ContractInfo {
+	var tableID int64
+	if id > consts.ShiftContractID {
+		tableID = int64(id - consts.ShiftContractID)
+		id = int32(tableID + vm.ShiftContract)
+	}
+	idcont := id
+	if len(vm.Children) <= int(idcont) {
+		return nil
+	}
+	if vm.Children[idcont] == nil || vm.Children[idcont].Type != ObjectType_Contract {
+		return nil
+	}
+	if tableID > 0 && vm.Children[idcont].GetContractInfo().Owner.TableID != tableID {
+		return nil
+	}
+	return vm.Children[idcont].GetContractInfo()
+}
+
+func RunContractById(vm *VM, id int32, methods []string, extend map[string]any, txHash []byte) error {
+	info := VMGetContractByID(vm, id)
+	if info == nil {
+		return fmt.Errorf(`unknown contract id '%d'`, id)
+	}
+	return RunContractByName(vm, info.Name, methods, extend, txHash)
+}
+
+func RunContractByName(vm *VM, name string, methods []string, extend map[string]any, txHash []byte) error {
+	obj, ok := vm.Objects[name]
+	if !ok {
+		return fmt.Errorf(`unknown object '%s'`, name)
+	}
+
+	if obj.Type != ObjectType_Contract {
+		return fmt.Errorf(eUnknownContract, name)
+	}
+	contract := obj.GetCodeBlock()
+	extend[Extend_txcost] = extend[Extend_txcost].(int64) - CostContract - contract.contractBaseCost()
+	if extend[Extend_txcost].(int64) < 0 {
+		return fmt.Errorf("runtime cost limit overflow")
+	}
+	var err error
+	for i := 0; i < len(methods); i++ {
+		method := methods[i]
+		obj, ok := contract.Objects[method]
+		if !ok {
+			continue
+		}
+		if obj.Type == ObjectType_Func {
+			fn := obj.GetCodeBlock()
+			_, err = VMRun(vm, fn, nil, extend, txHash)
+			if err != nil {
+				break
+			}
+		}
+	}
+	return err
+}
+
 // VMRun executes CodeBlock in vm
 func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any, hash []byte) (ret []any, err error) {
 	if block == nil {
@@ -126,9 +185,6 @@ func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any, hash [
 		cost = syspar.GetMaxCost()
 	}
 	rt := NewRunTime(vm, cost)
-	if block.isParentContract() {
-		rt.cost -= block.parentContractCost()
-	}
 	ret, err = rt.Run(block, params, extend)
 	extend[Extend_txcost] = rt.Cost()
 	if err != nil {

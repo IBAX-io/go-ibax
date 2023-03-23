@@ -648,8 +648,8 @@ func GetPriceExec(s string) (price int64, ok bool) {
 	return
 }
 
-func GetPriceCreateExec(s string) (price int64, ok bool) {
-	if ok = HasSys(PriceCreateExec + s); !ok {
+func GetPriceCreateExec(s string) (price int64) {
+	if ok := HasSys(PriceCreateExec + s); !ok {
 		return
 	}
 	price = SysInt64(PriceCreateExec + s)
