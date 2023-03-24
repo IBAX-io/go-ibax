@@ -9,10 +9,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/service/jsonrpc"
 	log "github.com/sirupsen/logrus"
 	"net"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -242,7 +244,31 @@ func (r *rpcServer) start(addr string) error {
 		IdleTimeout:       120 * time.Second,
 	}
 	r.server = server
-	go server.Serve(listener)
+	if conf.Config.TLSConf.Enabled {
+		if len(conf.Config.TLSConf.TLSCert) == 0 || len(conf.Config.TLSConf.TLSKey) == 0 {
+			log.Fatal("[JSON-RPC] -tls-cert/TLSCert and -tls-key/TLSKey must be specified with -tls/TLS")
+		}
+		if _, err := os.Stat(conf.Config.TLSConf.TLSCert); os.IsNotExist(err) {
+			log.WithError(err).Fatalf(`[JSON-RPC] Filepath -tls-cert/TLSCert = %s is invalid`, conf.Config.TLSConf.TLSCert)
+		}
+		if _, err := os.Stat(conf.Config.TLSConf.TLSKey); os.IsNotExist(err) {
+			log.WithError(err).Fatalf(`[JSON-RPC] Filepath -tls-key/TLSKey = %s is invalid`, conf.Config.TLSConf.TLSKey)
+		}
+		go func() {
+			err := server.ListenAndServeTLS(conf.Config.TLSConf.TLSCert, conf.Config.TLSConf.TLSKey)
+			if err != nil {
+				log.WithFields(log.Fields{"host": addr, "error": err, "type": consts.NetworkError}).Fatal("[JSON-RPC] Listening TLS server")
+			}
+		}()
+		log.WithFields(log.Fields{"host": addr}).Info("[JSON-RPC] listening with TLS at")
+		return nil
+	}
+	go func() {
+		err := server.Serve(listener)
+		if err != nil {
+			log.WithFields(log.Fields{"host": addr, "error": err, "type": consts.NetworkError}).Fatal("[JSON-RPC] Listening server")
+		}
+	}()
 	return nil
 }
 
