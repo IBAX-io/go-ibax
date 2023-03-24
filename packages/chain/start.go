@@ -9,6 +9,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/service/jsonrpc"
 	"math/rand"
 	"net/http"
 	"os"
@@ -33,6 +35,12 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	jwtSecret := []byte(crypto.RandSeq(15))
+	jsonrpc.InitJwtSecret(jwtSecret)
+	api.InitJwtSecret(jwtSecret)
+}
 
 // Start starts the main code of the program
 func Start() {

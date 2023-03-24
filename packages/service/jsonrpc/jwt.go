@@ -7,7 +7,6 @@ package jsonrpc
 import (
 	"errors"
 	"fmt"
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/golang-jwt/jwt/v4"
@@ -15,11 +14,10 @@ import (
 )
 
 var (
-	jwtSecret       = []byte(crypto.RandSeq(15))
+	jwtSecret       []byte
 	jwtPrefix       = "Bearer "
 	jwtExpire       = 28800 // By default, seconds
 	jwtrefeshExpire = 600   // By default, seconds
-	//jwtrefeshExpire = 10   // By default, seconds  test
 
 	errJWTAuthValue      = errors.New("wrong authorization value")
 	errEcosystemNotFound = errors.New("ecosystem not found")
@@ -83,4 +81,11 @@ func getClientFromToken(token *jwt.Token, ecosysNameService types.EcosystemGette
 
 	client.EcosystemName = name
 	return client, nil
+}
+
+func InitJwtSecret(secret []byte) {
+	if secret == nil {
+		panic("[JSON-RPC] jwt secret invalid")
+	}
+	jwtSecret = secret
 }
