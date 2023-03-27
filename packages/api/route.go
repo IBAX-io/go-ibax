@@ -8,9 +8,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/service/node"
-
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -38,9 +35,6 @@ func (r Router) NewVersion(preffix string) *mux.Router {
 
 // Route sets routing pathes
 func (m Mode) SetCommonRoutes(r Router) {
-	r.main.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		jsonResponse(writer, consts.Version()+" "+node.NodePauseType().String())
-	}).Methods("get")
 	api := r.NewVersion("/api/v2")
 
 	api.Use(nodeStateMiddleware, tokenMiddleware, m.clientMiddleware)

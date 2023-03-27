@@ -123,8 +123,6 @@ type (
 		HTTP         HostPort
 		JsonRPC      struct {
 			Enabled   bool
-			Host      string
-			Port      int
 			Namespace string
 		}
 		DB              DBConfig

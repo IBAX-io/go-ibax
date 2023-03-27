@@ -126,7 +126,6 @@ func Start() {
 	daemons.WaitForSignals()
 
 	initRoutes(conf.Config.HTTP.Str())
-	initJsonRPC()
 
 	select {}
 }
@@ -194,6 +193,9 @@ func initRoutes(listenHost string) {
 	handler := modes.RegisterRoutes()
 	handler = api.WithCors(handler)
 	handler = httpserver.NewMaxBodyReader(handler, conf.Config.LocalConf.HTTPServerMaxBodySize)
+	if conf.Config.JsonRPC.Enabled {
+		handler = modes.RegisterJsonRPCRoutes(handler)
+	}
 
 	if conf.Config.TLSConf.Enabled {
 		if len(conf.Config.TLSConf.TLSCert) == 0 || len(conf.Config.TLSConf.TLSKey) == 0 {
@@ -227,9 +229,4 @@ func initRoutes(listenHost string) {
 	}
 
 	httpListener(listenHost, handler)
-}
-
-func initJsonRPC() {
-	host := fmt.Sprintf("%s:%d", conf.Config.JsonRPC.Host, conf.Config.JsonRPC.Port)
-	modes.RegisterJsonRPC(host)
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/language"
 	"github.com/IBAX-io/go-ibax/packages/publisher"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
@@ -803,7 +804,7 @@ func (c *commonApi) GetTableCount(ctx RequestContext, auth Auth, offset, limit *
 }
 
 func (c *commonApi) GetVersion() string {
-	return consts.Version()
+	return consts.Version() + " " + node.NodePauseType().String()
 }
 
 func replaceHttpSchemeToWs(centrifugoURL string) string {
