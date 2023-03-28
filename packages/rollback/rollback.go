@@ -69,6 +69,8 @@ func ToBlockID(blockID int64, dbTx *sqldb.DbTransaction, logger *log.Entry) erro
 		NodePosition:   converter.Int64ToStr(header.NodePosition),
 		CurrentVersion: strconv.Itoa(int(header.Version)),
 		RollbacksHash:  block.RollbacksHash,
+		ConsensusMode:  block.ConsensusMode,
+		CandidateNodes: block.CandidateNodes,
 	}
 
 	err = ib.Update(dbTx)
