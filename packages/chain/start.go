@@ -191,11 +191,11 @@ func initLogs() error {
 
 func initRoutes(listenHost string) {
 	handler := modes.RegisterRoutes()
-	handler = api.WithCors(handler)
 	handler = httpserver.NewMaxBodyReader(handler, conf.Config.LocalConf.HTTPServerMaxBodySize)
 	if conf.Config.JsonRPC.Enabled {
 		handler = modes.RegisterJsonRPCRoutes(handler)
 	}
+	handler = api.WithCors(handler)
 
 	if conf.Config.TLSConf.Enabled {
 		if len(conf.Config.TLSConf.TLSCert) == 0 || len(conf.Config.TLSConf.TLSKey) == 0 {

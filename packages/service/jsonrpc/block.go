@@ -833,15 +833,12 @@ func (b *blockChainApi) EcosystemInfo(ctx RequestContext, ecosystemId int64) (*E
 	return info, nil
 }
 
-func (b *blockChainApi) SystemParams(ctx RequestContext, auth Auth, ecosystemId *int64, names *string, offset, limit *int) (*ParamsResult, *Error) {
+func (b *blockChainApi) SystemParams(ctx RequestContext, auth Auth, names *string, offset, limit *int) (*ParamsResult, *Error) {
 	r := ctx.HTTPRequest()
 	form := &AppParamsForm{
 		ecosystemForm: ecosystemForm{
 			Validator: auth.EcosystemGetter,
 		},
-	}
-	if ecosystemId != nil {
-		form.EcosystemID = *ecosystemId
 	}
 	if names != nil {
 		form.AcceptNames(*names)

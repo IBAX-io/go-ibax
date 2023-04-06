@@ -54,8 +54,7 @@ func NewMiddlewares(srv http.Handler, m Mode) http.Handler {
 	handler = nodeStateMiddleware(handler)
 	//handler = statsdMiddleware(handler)
 	handler = recoverMiddleware(handler)
-	handler = loggerMiddleware(handler)
-	return limiterMiddleware(handler)
+	return loggerMiddleware(handler)
 }
 
 type gzipResponseWriter struct {
