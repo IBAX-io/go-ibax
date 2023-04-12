@@ -31,7 +31,7 @@ const (
 	RequestSyncMatchineState
 
 	// BlocksPerRequest contains count of blocks per request
-	BlocksPerRequest int = 100
+	BlocksPerRequest int = 10
 )
 
 var ErrNotAccepted = errors.New("Not accepted")
