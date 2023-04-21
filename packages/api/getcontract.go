@@ -6,6 +6,7 @@
 package api
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -23,14 +24,17 @@ type contractField struct {
 }
 
 type getContractResult struct {
-	ID       uint32          `json:"id"`
-	StateID  uint32          `json:"state"`
-	TableID  string          `json:"tableid"`
-	WalletID string          `json:"walletid"`
-	TokenID  string          `json:"tokenid"`
-	Address  string          `json:"address"`
-	Fields   []contractField `json:"fields"`
-	Name     string          `json:"name"`
+	ID         uint32          `json:"id"`
+	StateID    uint32          `json:"state"`
+	TableID    string          `json:"tableid"`
+	WalletID   string          `json:"walletid"`
+	TokenID    string          `json:"tokenid"`
+	Address    string          `json:"address"`
+	Fields     []contractField `json:"fields"`
+	Name       string          `json:"name"`
+	AppId      uint32          `json:"app_id"`
+	Ecosystem  uint32          `json:"ecosystem"`
+	Conditions string          `json:"conditions"`
 }
 
 func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
@@ -46,15 +50,30 @@ func getContractInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	var result getContractResult
 	info := getContractInfo(contract)
+	con := &sqldb.Contract{}
+	exits, err := con.Get(info.Owner.TableID)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "contract_id": info.Owner.TableID}).Error("get contract")
+		errorResponse(w, errQuery)
+		return
+	}
+	if !exits {
+		logger.WithFields(log.Fields{"type": consts.ContractError, "contract id": info.Owner.TableID}).Debug("get contract")
+		errorResponse(w, errContract.Errorf(params["name"]))
+		return
+	}
 	fields := make([]contractField, 0)
 	result = getContractResult{
-		ID:       uint32(info.Owner.TableID + consts.ShiftContractID),
-		TableID:  converter.Int64ToStr(info.Owner.TableID),
-		Name:     info.Name,
-		StateID:  info.Owner.StateID,
-		WalletID: converter.Int64ToStr(info.Owner.WalletID),
-		TokenID:  converter.Int64ToStr(info.Owner.TokenID),
-		Address:  converter.AddressToString(info.Owner.WalletID),
+		ID:         uint32(info.Owner.TableID + consts.ShiftContractID),
+		TableID:    converter.Int64ToStr(info.Owner.TableID),
+		Name:       info.Name,
+		StateID:    info.Owner.StateID,
+		WalletID:   converter.Int64ToStr(info.Owner.WalletID),
+		TokenID:    converter.Int64ToStr(info.Owner.TokenID),
+		Address:    converter.AddressToString(info.Owner.WalletID),
+		Ecosystem:  uint32(con.EcosystemID),
+		AppId:      uint32(con.AppID),
+		Conditions: con.Conditions,
 	}
 
 	if info.Tx != nil {

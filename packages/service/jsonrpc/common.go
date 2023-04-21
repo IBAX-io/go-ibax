@@ -49,14 +49,17 @@ type contractField struct {
 }
 
 type GetContractResult struct {
-	ID       uint32          `json:"id"`
-	StateID  uint32          `json:"state"`
-	TableID  string          `json:"tableid"`
-	WalletID string          `json:"walletid"`
-	TokenID  string          `json:"tokenid"`
-	Address  string          `json:"address"`
-	Fields   []contractField `json:"fields"`
-	Name     string          `json:"name"`
+	ID         uint32          `json:"id"`
+	StateID    uint32          `json:"state"`
+	TableID    string          `json:"tableid"`
+	WalletID   string          `json:"walletid"`
+	TokenID    string          `json:"tokenid"`
+	Address    string          `json:"address"`
+	Fields     []contractField `json:"fields"`
+	Name       string          `json:"name"`
+	AppId      uint32          `json:"app_id"`
+	Ecosystem  uint32          `json:"ecosystem"`
+	Conditions string          `json:"conditions"`
 }
 
 func getContract(r *http.Request, name string) *smart.Contract {
@@ -88,15 +91,28 @@ func (c *commonApi) GetContractInfo(ctx RequestContext, auth Auth, contractName 
 
 	var result GetContractResult
 	info := getContractInfo(contract)
+	con := &sqldb.Contract{}
+	exits, err := con.Get(info.Owner.TableID)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "contract_id": info.Owner.TableID}).Error("get contract")
+		return nil, DefaultError(fmt.Sprintf("get contract %d failed:%s", info.Owner.TableID, err.Error()))
+	}
+	if !exits {
+		logger.WithFields(log.Fields{"type": consts.ContractError, "contract id": info.Owner.TableID}).Debug("get contract")
+		return nil, DefaultError(fmt.Sprintf("There is not %d contract", info.Owner.TableID))
+	}
 	fields := make([]contractField, 0)
 	result = GetContractResult{
-		ID:       uint32(info.Owner.TableID + consts.ShiftContractID),
-		TableID:  converter.Int64ToStr(info.Owner.TableID),
-		Name:     info.Name,
-		StateID:  info.Owner.StateID,
-		WalletID: converter.Int64ToStr(info.Owner.WalletID),
-		TokenID:  converter.Int64ToStr(info.Owner.TokenID),
-		Address:  converter.AddressToString(info.Owner.WalletID),
+		ID:         uint32(info.Owner.TableID + consts.ShiftContractID),
+		TableID:    converter.Int64ToStr(info.Owner.TableID),
+		Name:       info.Name,
+		StateID:    info.Owner.StateID,
+		WalletID:   converter.Int64ToStr(info.Owner.WalletID),
+		TokenID:    converter.Int64ToStr(info.Owner.TokenID),
+		Address:    converter.AddressToString(info.Owner.WalletID),
+		Ecosystem:  uint32(con.EcosystemID),
+		AppId:      uint32(con.AppID),
+		Conditions: con.Conditions,
 	}
 
 	if info.Tx != nil {
@@ -360,7 +376,16 @@ func (c *commonApi) GetList(ctx RequestContext, auth Auth, form *ListWhereForm) 
 	}
 
 	if form.Where != nil {
-		switch v := form.Where.(type) {
+		var inWhere any
+		switch form.Where.(type) {
+		case string:
+			inWhere, _, err = template.ParseObject([]rune(form.Where.(string)))
+			if err != nil {
+				return nil, DefaultError("where parse object failed")
+			}
+		}
+
+		switch v := inWhere.(type) {
 		case string:
 			if len(v) == 0 {
 				where = `true`
