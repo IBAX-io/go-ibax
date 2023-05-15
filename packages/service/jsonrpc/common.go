@@ -379,9 +379,13 @@ func (c *commonApi) GetList(ctx RequestContext, auth Auth, form *ListWhereForm) 
 		var inWhere any
 		switch form.Where.(type) {
 		case string:
-			inWhere, _, err = template.ParseObject([]rune(form.Where.(string)))
-			if err != nil {
-				return nil, DefaultError("where parse object failed")
+			if len(form.Where.(string)) > 0 {
+				inWhere, _, err = template.ParseObject([]rune(form.Where.(string)))
+				if err != nil {
+					return nil, DefaultError("where parse object failed")
+				}
+			} else {
+				inWhere = ""
 			}
 		}
 

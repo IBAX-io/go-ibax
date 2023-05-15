@@ -13,18 +13,20 @@ import (
 )
 
 var (
-	errorType   = reflect.TypeOf((*Error)(nil)).Elem()
-	contextType = reflect.TypeOf((*RequestContext)(nil)).Elem()
-	authType    = reflect.TypeOf((*Auth)(nil)).Elem()
+	errorType     = reflect.TypeOf((*Error)(nil)).Elem()
+	contextType   = reflect.TypeOf((*RequestContext)(nil)).Elem()
+	authType      = reflect.TypeOf((*Auth)(nil)).Elem()
+	notSingleType = reflect.TypeOf((*NotSingle)(nil)).Elem()
 )
 
 type callback struct {
-	fn       reflect.Value  // the function
-	recv     reflect.Value  // receiver object of function
-	argTypes []reflect.Type // params types
-	hasCtx   bool           // method's first argument is a RequestContext (not included in argTypes)
-	errIndex int            // err return index, of 0 when method cannot return error
-	hasAuth  bool           // has auth
+	fn        reflect.Value  // the function
+	recv      reflect.Value  // receiver object of function
+	argTypes  []reflect.Type // params types
+	hasCtx    bool           // method's first argument is a RequestContext (not included in argTypes)
+	errIndex  int            // err return index, of 0 when method cannot return error
+	hasAuth   bool           // has auth
+	notSingle bool
 }
 
 func (c *callback) getArgsTypes() {
@@ -42,6 +44,10 @@ func (c *callback) getArgsTypes() {
 		c.hasAuth = true
 		firstArg++
 	}
+	if fntype.NumIn() > firstArg && fntype.In(firstArg) == notSingleType {
+		c.notSingle = true
+		firstArg++
+	}
 	// Add all remaining parameters.
 	c.argTypes = make([]reflect.Type, fntype.NumIn()-firstArg)
 	for i := firstArg; i < fntype.NumIn(); i++ {
@@ -51,7 +57,7 @@ func (c *callback) getArgsTypes() {
 
 func (c *callback) call(ctx RequestContext, m Mode, args []reflect.Value) (result any, errRes *Error) {
 	// Create the argument slice.
-	values := make([]reflect.Value, 0, 3+len(args))
+	values := make([]reflect.Value, 0, 4+len(args))
 	if c.recv.IsValid() {
 		values = append(values, c.recv)
 	}
@@ -61,6 +67,9 @@ func (c *callback) call(ctx RequestContext, m Mode, args []reflect.Value) (resul
 	if c.hasAuth {
 		auth := Auth{m}
 		values = append(values, reflect.ValueOf(auth))
+	}
+	if c.notSingle {
+		values = append(values, reflect.ValueOf(NotSingle{}))
 	}
 	values = append(values, args...)
 
@@ -86,6 +95,9 @@ func (c *callback) call(ctx RequestContext, m Mode, args []reflect.Value) (resul
 		err := results[c.errIndex].Interface().(*Error)
 		return reflect.Value{}, err
 	}
+	if results[0].IsNil() {
+		return nil, nil
+	}
 	return results[0].Interface(), nil
 }
 
@@ -110,7 +122,7 @@ func suitableCallbacks(receiver reflect.Value) map[string]*callback {
 
 func newCallback(receiver, fn reflect.Value) *callback {
 	ftype := fn.Type()
-	c := &callback{fn: fn, recv: receiver, errIndex: 0}
+	c := &callback{fn: fn, recv: receiver, errIndex: -1}
 	// Determine parameter types. They must all be exported or builtin types.
 	c.getArgsTypes()
 

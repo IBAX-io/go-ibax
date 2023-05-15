@@ -10,6 +10,7 @@ type IbaxApi struct {
 	common  *commonApi
 	tx      *transactionApi
 	account *accountsApi
+	data    *dataApi
 }
 
 func (p *IbaxApi) GetApis() []any {
@@ -32,6 +33,9 @@ func (p *IbaxApi) GetApis() []any {
 	if p.account != nil {
 		apis = append(apis, p.account)
 	}
+	if p.data != nil {
+		apis = append(apis, p.data)
+	}
 	return apis
 }
 
@@ -42,5 +46,6 @@ func NewIbaxApi(m Mode) *IbaxApi {
 		common:  NewCommonApi(m),
 		tx:      NewTransactionApi(),
 		account: NewAccountsApi(m),
+		data:    NewDataApi(),
 	}
 }

@@ -471,8 +471,31 @@ func (dbTx *DbTransaction) HasTableOrView(names string) bool {
 }
 
 // GetColumnByID returns the value of the column from the table by id
-func GetColumnByID(table, column, id string) (result string, err error) {
-	err = GetDB(nil).Table(table).Select(column).Where(`id=?`, id).Row().Scan(&result)
+func GetColumnByID(table, column string, id int64) (result string, err error) {
+	dbTr := new(DbTransaction)
+	columnList, err := dbTr.GetAllColumnTypes(table)
+	if err != nil {
+		return "", err
+	}
+	var exist bool
+	for _, list := range columnList {
+		for k, v := range list {
+			if k == "column_name" {
+				if v == column {
+					exist = true
+					break
+				}
+			}
+		}
+		if exist {
+			break
+		}
+	}
+	if !exist {
+		return "", errors.New("column invalid")
+	}
+
+	err = GetDB(nil).Table(table).Select(column).Where("id=?", id).Row().Scan(&result)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column by id")
 	}

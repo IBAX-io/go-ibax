@@ -77,7 +77,16 @@ func (s *serviceRegistry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.ctx, s.cancel = context.WithCancel(ctx)
 	defer s.close(io.EOF)
 
-	result, e := s.run(RequestContext{ctx}, batch, reqs)
+	if batch {
+		if len(reqs) == 0 {
+			WriteResponse(w, nil, nil, InvalidInput("empty batch request"))
+			return
+		}
+		s.runBatch(RequestContext{ctx}, reqs)
+		return
+	}
+
+	result, e := s.run(RequestContext{ctx}, false, reqs)
 	WriteResponse(w, reqs[0], result, e)
 }
 
@@ -101,13 +110,6 @@ func (r *serviceRegistry) findCallback(method string) *callback {
 }
 
 func (s *serviceRegistry) run(ctx RequestContext, isBatch bool, reqs []*Request) (any, *Error) {
-	if isBatch {
-		if len(reqs) == 0 {
-			return nil, InvalidInput("empty batch request")
-		}
-		s.runBatch(ctx, reqs)
-		return nil, nil
-	}
 	req := reqs[0]
 	cb := s.findCallback(req.Method)
 	if cb == nil {
@@ -118,6 +120,9 @@ func (s *serviceRegistry) run(ctx RequestContext, isBatch bool, reqs []*Request)
 		if err := authRequire(r); err != nil {
 			return nil, err
 		}
+	}
+	if cb.notSingle && isBatch {
+		return nil, InvalidInput("not support batch")
 	}
 	args, err := req.Params.UnmarshalValue(cb.argTypes)
 	if err != nil {
@@ -156,7 +161,7 @@ func (s *serviceRegistry) runBatch(reqCtx RequestContext, reqs []*Request) {
 				break
 			}
 			req := []*Request{msg}
-			resp, err := s.run(reqCtx, false, req)
+			resp, err := s.run(reqCtx, true, req)
 			callBuffer.pushResponse(&resp, err, msg)
 		}
 		if timer != nil {
