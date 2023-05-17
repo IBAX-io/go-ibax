@@ -212,3 +212,8 @@ func MerkleTreeRoot(dataArray [][]byte) []byte {
 	ret := result[int32(len(result)-1)]
 	return ret[0]
 }
+
+type BlockCandidateNode struct {
+	ID         int64
+	ReplyCount int64
+}
