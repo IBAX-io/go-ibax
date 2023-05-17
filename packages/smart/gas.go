@@ -14,7 +14,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
-	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/gogo/protobuf/sortkeys"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -154,9 +153,6 @@ func (pay *PaymentInfo) GetPayMoney() decimal.Decimal {
 	var money decimal.Decimal
 	for i := 0; i < len(pay.FuelCategories); i++ {
 		f := pay.FuelCategories[i]
-		if pay.Penalty && f.FuelType == FuelType_element_fee {
-			continue
-		}
 		money = money.Add(f.Fees())
 	}
 	return money
@@ -194,9 +190,6 @@ func (pay *PaymentInfo) DetailCombustion() any {
 	var money decimal.Decimal
 	for i := 0; i < len(pay.FuelCategories); i++ {
 		f := pay.FuelCategories[i]
-		if pay.Penalty && f.FuelType == FuelType_element_fee {
-			continue
-		}
 		s := f.Fees().Mul(decimal.NewFromInt(c.Percent)).Div(decimal.New(100, 0)).Floor()
 		detail.Set(f.FuelType.String(), s)
 		money = money.Add(f.Fees())
@@ -288,12 +281,12 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	for i := 0; i < len(sc.multiPays); i++ {
 		pay := sc.multiPays[i]
 		pay.Penalty = sc.Penalty
-		pay.SetDecimalByType(FuelType_vmCost_fee, sc.TxUsedCost.Mul(pay.FuelRate))
+		pay.SetDecimalByType(FuelType_vmCost_fee, sc.TxUsedCost.Mul(pay.FuelRate).Mul(decimal.New(1, int32(pay.Ecosystem.Digits-sc.multiPays[0].Ecosystem.Digits))))
 		money := pay.GetPayMoney()
 		wltAmount := pay.PayWallet.CapableAmount()
 		if wltAmount.Cmp(money) < 0 {
 			if !errNeedPay {
-				return errTaxes
+				return fmt.Errorf("%s not enough fee for taxes in ecosystem %d", pay.PayWallet.AccountID, pay.TokenEco)
 			}
 			money = wltAmount
 		}
@@ -366,7 +359,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 				`id`:        pay.FromID,
 				`ecosystem`: pay.TokenEco,
 			})); err != nil {
-			return errTaxes
+			return err
 		}
 		if _, _, err := sc.updateWhere(
 			[]string{"+amount"}, []any{sum}, "1_keys",
@@ -484,7 +477,6 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 	var (
 		err         error
 		storageFee  decimal.Decimal
-		elementFee  decimal.Decimal
 		expediteFee decimal.Decimal
 		pays        []*PaymentInfo
 		feeMode     *sqldb.FeeModeInfo
@@ -518,9 +510,6 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 	}
 
 	if curPay.TaxesID, err = sc.taxesWallet(curPay.TokenEco); err != nil {
-		return nil, err
-	}
-	if elementFee, err = elementFeeBy(sc.TxContract.Name, int32(curPay.Ecosystem.Digits)); err != nil {
 		return nil, err
 	}
 
@@ -593,8 +582,6 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 				categoryFee = decimal.NewFromInt(0)
 			case FuelType_storage_fee.String():
 				categoryFee = storageFee
-			case FuelType_element_fee.String():
-				categoryFee = elementFee
 			case FuelType_expedite_fee.String():
 				categoryFee = expediteFee
 			default:
@@ -628,7 +615,6 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 	curPay.PushFuelCategories(
 		NewFuelCategory(FuelType_vmCost_fee, decimal.NewFromInt(0), GasPayAbleType_Unable, 100),
 		NewFuelCategory(FuelType_storage_fee, storageFee, GasPayAbleType_Unable, 100),
-		NewFuelCategory(FuelType_element_fee, elementFee, GasPayAbleType_Unable, 100),
 		NewFuelCategory(FuelType_expedite_fee, expediteFee, GasPayAbleType_Unable, 100),
 	)
 	pays = append(pays, curPay)
@@ -792,28 +778,6 @@ func (sc *SmartContract) taxesWallet(eco int64) (taxesID int64, err error) {
 		err = fmt.Errorf("get eco[%d] taxes wallet err", eco)
 	}
 	return
-}
-
-func elementFeeBy(contractName string, digits int32) (decimal.Decimal, error) {
-	var (
-		elementFee decimal.Decimal
-		err        error
-		zero       = decimal.Zero
-	)
-	if priceName, ok := syspar.GetPriceCreateExec(utils.ToSnakeCase(contractName)); ok {
-		newElementPrices := decimal.NewFromInt(priceName).
-			Mul(decimal.New(1, digits))
-		if newElementPrices.GreaterThan(decimal.New(MaxPrice, 0)) {
-			err = errMaxPrice
-			return zero, err
-		}
-		if newElementPrices.LessThan(zero) {
-			err = errNegPrice
-			return zero, err
-		}
-		elementFee = newElementPrices
-	}
-	return elementFee, err
 }
 
 func storageFeeBy(txSize int64, digits int32) decimal.Decimal {

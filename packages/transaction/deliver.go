@@ -30,8 +30,7 @@ type InToCxt struct {
 	TxCheckLimits  *Limits
 	OutputsMap     map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	PrevSysPar     map[string]string
-	ComPercents    map[int64]int64
-	EcoDigits      map[int64]int32
+	EcoParams      []sqldb.EcoParam
 }
 
 type OutCtx struct {

@@ -35,6 +35,12 @@ type FeeModeFlag struct {
 	ConversionRate string `json:"conversion_rate"`
 }
 
+type EcoParam struct {
+	Id      int64
+	Percent int64
+	Digits  int
+}
+
 func (f FeeModeFlag) FlagToInt() int64 {
 	ret, _ := strconv.ParseInt(f.Flag, 10, 64)
 	return ret
@@ -84,58 +90,25 @@ func GetAllSystemStatesIDs() ([]int64, []string, error) {
 	return ids, names, nil
 }
 
-// GetCombustionPercents is ecosystem combustion percent
-func GetCombustionPercents(db *DbTransaction, ids []int64) (map[int64]int64, error) {
+// GetEcoParam is ecosystem combustion percent, digits
+func GetEcoParam(db *DbTransaction, ids []int64) ([]EcoParam, error) {
 	query :=
 		`
-			SELECT eco.id,(eco.fee_mode_info::json#>>'{combustion,percent}')::int as percent  
+			SELECT eco.id,(eco.fee_mode_info::json#>>'{combustion,percent}')::int as percent ,eco.digits
 			FROM "1_parameters" as par
 			LEFT JOIN "1_ecosystems" as eco ON par.ecosystem = eco.id 
 			WHERE par.name = 'utxo_fee' and par.value = '1' and par.ecosystem IN ?
 		`
 
-	type Combustion1 struct {
-		Id      int64
-		Percent int64
-	}
-
-	var ret []Combustion1
+	var ret []EcoParam
 	if len(ids) > 0 {
 		err := GetDB(db).Raw(query, ids).Scan(&ret).Error
 		if err != nil {
 			return nil, err
 		}
 	}
-	var result = make(map[int64]int64)
-	for _, combustion := range ret {
-		result[combustion.Id] = combustion.Percent
-	}
-	return result, nil
-}
 
-// GetEcoDigits is ecosystem digits
-func GetEcoDigits(db *DbTransaction, ids []int64) (map[int64]int32, error) {
-	query :=
-		`
-			SELECT eco.id,eco.digits FROM "1_ecosystems" AS eco WHERE eco.id IN ?
-		`
-	type EcoDigits struct {
-		Id     int64
-		Digits int32
-	}
-
-	var ret []EcoDigits
-	if len(ids) > 0 {
-		err := GetDB(db).Raw(query, ids).Scan(&ret).Error
-		if err != nil {
-			return nil, err
-		}
-	}
-	var result = make(map[int64]int32)
-	for _, ecoDigits := range ret {
-		result[ecoDigits.Id] = ecoDigits.Digits
-	}
-	return result, nil
+	return ret, nil
 }
 
 // Get is fill receiver from db

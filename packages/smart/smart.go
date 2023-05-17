@@ -90,8 +90,7 @@ type SmartContract struct {
 	TxInputsMap     map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	TxOutputsMap    map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	PrevSysPar      map[string]string
-	ComPercents     map[int64]int64
-	EcoDigits       map[int64]int32
+	EcoParams       []sqldb.EcoParam
 }
 
 // AppendStack adds an element to the stack of contract call or removes the top element when name is empty
@@ -593,36 +592,12 @@ func (sc *SmartContract) CallContract(point string) (string, error) {
 	ctrctExtend[script.Extend_this_contract] = nameContract
 
 	methods := []string{`conditions`, `action`}
-	var (
-		estimate decimal.Decimal
-		cfuncs   []*script.CodeBlock
-	)
-	for i := 0; i < len(methods); i++ {
-		cfunc := sc.TxContract.GetFunc(methods[i])
-		if cfunc == nil {
-			continue
-		}
-		if needPayment {
-			for _, pay := range sc.multiPays {
-				wltAmount, _ := decimal.NewFromString(pay.PayWallet.Amount)
-				estimateCost := converter.StrToInt64(converter.IntToStr(len(cfunc.Vars) + len(cfunc.Code)))
-				estimate = estimate.Add(decimal.New(estimateCost*2, 0).Mul(pay.FuelRate))
-				if wltAmount.Cmp(estimate) < 0 {
-					return ``, fmt.Errorf(eEcoCurrentBalance, pay.PayWallet.AccountID, pay.TokenEco)
-				}
-			}
-		}
-		cfuncs = append(cfuncs, cfunc)
+	err = script.RunContractById(sc.VM, int32(sc.TxSmart.ID), methods, sc.TxContract.Extend, sc.Hash)
+	if ctrctExtend[script.Extend_txcost].(int64) < 0 {
+		sc.TxFuel = before
+	} else {
+		sc.TxFuel = before - ctrctExtend[script.Extend_txcost].(int64)
 	}
-	ctrctExtend[script.Extend_txcost] = ctrctExtend[script.Extend_txcost].(int64) - script.CostContract
-
-	for i := 0; i < len(cfuncs); i++ {
-		sc.TxContract.Called = 1 << i
-		if _, err = script.VMRun(sc.VM, cfuncs[i], nil, sc.TxContract.Extend, sc.Hash); err != nil {
-			break
-		}
-	}
-	sc.TxFuel = before - ctrctExtend[script.Extend_txcost].(int64)
 	sc.TxUsedCost = decimal.New(sc.TxFuel, 0)
 
 	if err == nil {

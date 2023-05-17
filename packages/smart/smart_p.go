@@ -848,10 +848,24 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	outputsMap := sc.OutputsMap
 	txInputsMap := sc.TxInputsMap
 	txOutputsMap := sc.TxOutputsMap
-	comPercents := sc.ComPercents
-	ecoDigits := sc.EcoDigits
+	ecoParams := sc.EcoParams
+
+	var comPercents = make(map[int64]int64)
+	for _, eco := range ecoParams {
+		comPercents[eco.Id] = eco.Percent
+	}
+	var ecoDigits = make(map[int64]int)
+	for _, eco := range ecoParams {
+		ecoDigits[eco.Id] = eco.Digits
+	}
+
 	//txHash := sc.Hash
 	ecosystem := sc.TxSmart.EcosystemID
+
+	ecoDigits1 := consts.MoneyDigits
+
+	ecoDigits2 := ecoDigits[ecosystem]
+
 	blockId := sc.BlockHeader.BlockId
 	//dbTx := sc.DbTransaction
 	keyUTXO := sqldb.KeyUTXO{Ecosystem: ecosystem, KeyId: fromID}
@@ -861,11 +875,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 		return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
 	}
 
-	digits, ok1 := ecoDigits[ecosystem]
-	if !ok1 {
-		return false, errors.New("ecosystem not found")
-	}
-	if expediteFee, err = expediteFeeBy(sc.TxSmart.Expedite, digits); err != nil {
+	if expediteFee, err = expediteFeeBy(sc.TxSmart.Expedite, consts.MoneyDigits); err != nil {
 		return false, err
 	}
 	totalAmount := decimal.Zero
@@ -960,7 +970,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 					return false, err
 				}
 				//	ecosystem fuelRate /10 *( bit + len(input))
-				money2 = fuelRate2.Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs)))))
+				money2 = fuelRate2.Mul(decimal.New(1, int32(ecoDigits2-ecoDigits1))).Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs)))))
 
 				if money2.GreaterThan(totalAmount) {
 					money2 = totalAmount
