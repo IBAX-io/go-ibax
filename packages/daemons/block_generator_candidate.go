@@ -88,7 +88,16 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		st = time.Now()
 	}
 
-	candidateNodesByte, _ := json.Marshal(candidateNodes)
+	nodes := make([]types.BlockCandidateNode, len(candidateNodes))
+	for i, candidateNode := range candidateNodes {
+		bcn := types.BlockCandidateNode{
+			ID:         candidateNode.ID,
+			ReplyCount: candidateNode.ReplyCount,
+		}
+		nodes[i] = bcn
+	}
+	candidateNodesByte, _ := json.Marshal(nodes)
+
 	header := &types.BlockHeader{
 		BlockId:        prevBlock.BlockID + 1,
 		Timestamp:      st.Unix(),
