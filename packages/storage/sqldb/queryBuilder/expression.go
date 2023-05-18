@@ -8,7 +8,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
-func GetOrder(tblname string, inOrder any) (string, error) {
+func GetOrder(tblname string, inOrder any, withDefault bool) (string, error) {
 	var (
 		orders           []string
 		defaultSortOrder = map[string]string{
@@ -35,13 +35,14 @@ func GetOrder(tblname string, inOrder any) (string, error) {
 			orders = append(orders, `"id" asc`)
 		}
 	}
-
-	if v, ok := defaultSortOrder[tblname[2:]]; ok {
-		for _, item := range strings.Split(v, `,`) {
-			cols.Set(item, false)
+	if withDefault {
+		if v, ok := defaultSortOrder[tblname[2:]]; ok {
+			for _, item := range strings.Split(v, `,`) {
+				cols.Set(item, false)
+			}
+		} else {
+			cols.Set(`id`, false)
 		}
-	} else {
-		cols.Set(`id`, false)
 	}
 	switch v := inOrder.(type) {
 	case string:

@@ -939,10 +939,6 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 		return 0, nil, err
 	}
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
-	order, err = qb.GetOrder(tblname, inOrder)
-	if err != nil {
-		return 0, nil, err
-	}
 	where, err := qb.GetWhere(inWhere)
 	if err != nil {
 		return 0, nil, err
@@ -966,11 +962,27 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 	}
 	q := sqldb.GetDB(sc.DbTransaction).Table(tblname).Select(PrepareColumns(columns)).Where(where)
 
+	//group + order => false
+	//group + no order => true
+	//no group + order => true
+	//no group + no order => true
+	order, err = qb.GetOrder(tblname, inOrder, true)
+	if err != nil {
+		return 0, nil, err
+	}
+
 	if len(group) != 0 {
 		q = q.Group(group)
-	} else {
-		q = q.Order(order)
+		if inOrder != nil {
+			order, err = qb.GetOrder(tblname, inOrder, false)
+			if err != nil {
+				return 0, nil, err
+			}
+		}
 	}
+
+	q = q.Order(order)
+
 	if query != "" {
 		q = q.Select(query)
 	}

@@ -19,7 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr, rollDataHashStr string) error {
+func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr, rollDataHashStr string) {
 	rollbackTx := &types.RollbackTx{
 		BlockId:   sc.BlockHeader.BlockId,
 		TxHash:    sc.Hash,
@@ -29,18 +29,16 @@ func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr, rollDataHas
 		DataHash:  crypto.Hash([]byte(rollDataHashStr)),
 	}
 	sc.RollBackTx = append(sc.RollBackTx, rollbackTx)
-	return nil
 }
 
 func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	table string, inWhere *types.Map, generalRollback bool, exists bool) (int64, string, error) {
 
 	var (
-		cost            int64
-		rollbackInfoStr string
-		logData         map[string]string
+		cost    int64
+		logData map[string]string
+		rows    *sqldb.OneRow
 	)
-
 	logger := sc.GetLogger()
 	if generalRollback && sc.BlockHeader == nil {
 		logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("Block is undefined")
@@ -72,8 +70,8 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table, "query": selectQuery, "fields": fields, "values": ivalues, "where": inWhere}).Error("getting query total cost")
 			return 0, "", err
 		}
-
-		logData, err = sc.DbTransaction.GetOneRowTransaction(selectQuery).String()
+		rows = sc.DbTransaction.GetOneRowTransaction(selectQuery)
+		logData, err = rows.String()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": selectQuery}).Error("getting one row transaction")
 			return 0, "", err
@@ -92,13 +90,6 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	var rollDataHashStr string
 
 	if !sqlBuilder.Where.IsEmpty() && len(logData) > 0 {
-		var err error
-		rollbackInfoStr, err = sqlBuilder.GenerateRollBackInfoString(logData)
-		if err != nil {
-			logger.WithError(err).Error("on generate rollback info string for update")
-			return 0, "", err
-		}
-
 		updateExpr, err := sqlBuilder.GetSQLUpdateExpr(logData)
 		if err != nil {
 			logger.WithError(err).Error("on getting update expression for update")
@@ -125,14 +116,36 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Error("getting update query")
 			return 0, "", err
 		}
-		sqlBuilder.SetTableID(logData[`id`])
-	} else {
 
-		insertQuery, err := sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
-		if err != nil {
-			logger.WithError(err).Error("on build insert query")
-			return 0, "", err
+		for i := 0; i < len(rows.List) && generalRollback; i++ {
+			rollData := rows.List[i]
+			rollbackInfoStr, err := sqlBuilder.GenerateRollBackInfoString(rollData)
+			if err != nil {
+				logger.WithError(err).Error("on generate rollback info string for update")
+				return 0, "", err
+			}
+			addRollback(sc, sqlBuilder.Table, rollData["id"], rollbackInfoStr, rollDataHashStr)
 		}
+
+		var ids []string
+		for _, result := range rows.List {
+			if len(result["id"]) > 0 {
+				ids = append(ids, result["id"])
+			}
+		}
+		if len(ids) == 1 {
+			sqlBuilder.SetTableID(ids[0])
+		} else {
+			sqlBuilder.SetTableID(strings.Join(ids, ","))
+		}
+		return cost, sqlBuilder.TableID(), nil
+	}
+
+	insertQuery, err := sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
+	if err != nil {
+		logger.WithError(err).Error("on build insert query")
+		return 0, "", err
+	}
 
 		insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery)
 		if err != nil {
@@ -140,28 +153,23 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			return 0, "", err
 		}
 		rollDataHashStr = insertQuery
-		cost += insertCost
-		err = sc.DbTransaction.ExecSql(insertQuery)
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
-			return 0, "", err
-		}
+	cost += insertCost
+	err = sc.DbTransaction.ExecSql(insertQuery)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
+		return 0, "", err
 	}
 
 	if generalRollback {
 		var tid string
 		tid = sqlBuilder.TableID()
-		if len(rollbackInfoStr) <= 0 {
-			idNames := strings.SplitN(sqlBuilder.Table, `_`, 2)
-			if len(idNames) == 2 {
-				if sqlBuilder.KeyTableChkr.IsKeyTable(idNames[1]) {
-					tid = sqlBuilder.TableID() + "," + sqlBuilder.GetEcosystem()
-				}
+		idNames := strings.SplitN(sqlBuilder.Table, `_`, 2)
+		if len(idNames) == 2 {
+			if sqlBuilder.KeyTableChkr.IsKeyTable(idNames[1]) {
+				tid = sqlBuilder.TableID() + "," + sqlBuilder.GetEcosystem()
 			}
 		}
-		if err := addRollback(sc, sqlBuilder.Table, tid, rollbackInfoStr, rollDataHashStr); err != nil {
-			return 0, sqlBuilder.TableID(), err
-		}
+		addRollback(sc, sqlBuilder.Table, tid, "", rollDataHashStr)
 	}
 	return cost, sqlBuilder.TableID(), nil
 }

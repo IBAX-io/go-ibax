@@ -676,7 +676,7 @@ func dbfindTag(par parFunc) string {
 			inColumns = order
 		}
 	}
-	order, err = qb.GetOrder(tblname, inColumns)
+	order, err = qb.GetOrder(tblname, inColumns, true)
 	if err != nil {
 		return err.Error()
 	}

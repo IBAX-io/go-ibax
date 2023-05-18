@@ -75,6 +75,7 @@ func (r *SingleResult) Bytes() ([]byte, error) {
 // OneRow is storing one row result
 type OneRow struct {
 	result map[string]string
+	List   []map[string]string
 	err    error
 }
 
@@ -155,14 +156,14 @@ func (dbTx *DbTransaction) GetAllTransaction(query string, countRows int, args .
 // GetOneRowTransaction returns one row from transactions
 func (dbTx *DbTransaction) GetOneRowTransaction(query string, args ...any) *OneRow {
 	result := make(map[string]string)
-	all, err := dbTx.GetAllTransaction(query, 1, args...)
+	all, err := dbTx.GetAllTransaction(query, -1, args...)
 	if err != nil {
-		return &OneRow{result, fmt.Errorf("%s in query %s %s", err, query, args)}
+		return &OneRow{result: result, err: fmt.Errorf("%s in query %s %s", err, query, args)}
 	}
 	if len(all) == 0 {
-		return &OneRow{result, nil}
+		return &OneRow{result: result, err: nil}
 	}
-	return &OneRow{all[0], nil}
+	return &OneRow{result: all[0], List: all, err: nil}
 }
 
 // GetOneRow returns one row
