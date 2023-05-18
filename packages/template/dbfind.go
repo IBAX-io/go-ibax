@@ -84,6 +84,8 @@ func ParseObject(in []rune) (any, int, error) {
 	} else if in[0] == '{' {
 		ret = types.NewMap()
 		mapMode = true
+	} else {
+		return nil, 0, errWhere
 	}
 	addEmptyKey := func() {
 		if mapMode {

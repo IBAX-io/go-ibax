@@ -51,6 +51,7 @@ type blockInfoResult struct {
 	Tx            int32  `json:"tx_count"`
 	RollbacksHash []byte `json:"rollbacks_hash"`
 	NodePosition  int64  `json:"node_position"`
+	ConsensusMode int32  `json:"consensus_mode"`
 }
 
 func getBlockInfoHandler(w http.ResponseWriter, r *http.Request) {
@@ -79,6 +80,7 @@ func getBlockInfoHandler(w http.ResponseWriter, r *http.Request) {
 		Tx:            block.Tx,
 		RollbacksHash: block.RollbacksHash,
 		NodePosition:  block.NodePosition,
+		ConsensusMode: block.ConsensusMode,
 	})
 }
 

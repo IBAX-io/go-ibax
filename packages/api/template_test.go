@@ -46,8 +46,7 @@ func TestAPI(t *testing.T) {
 	name := randName(`page`)
 	value := `Div(,#ecosystem_id#)
 	Div(,#key_id#)
-	Div(,#role_id#)
-	Div(,#isMobile#)`
+	Div(,#role_id#)`
 	form := url.Values{"Name": {name}, "Value": {value}, "ApplicationId": {`1`},
 		"Menu": {`default_menu`}, "Conditions": {`ContractConditions("MainCondition")`}}
 	assert.NoError(t, postTx(`NewPage`, &form))
@@ -135,8 +134,6 @@ var forTest = tplList{
 	{`SetVar(where).(lim,3)DBFind(contracts, src).Columns(id).Order([{id:1}, {name:-1}]).Limit(#lim#).Custom(a){SetVar(where, #where# #id#)}
 	Div(){Table(src, "=x")}Div(){Table(src)}Div(){#where#}`,
 		`[{"tag":"dbfind","attr":{"columns":["id","a"],"data":[["1","null"],["2","null"],["3","null"]],"limit":"3","name":"contracts","order":"[{id:1}, {name:-1}]","source":"src","types":["text","tags"]}},{"tag":"div","children":[{"tag":"table","attr":{"columns":[{"Name":"x","Title":""}],"source":"src"}}]},{"tag":"div","children":[{"tag":"table","attr":{"source":"src"}}]},{"tag":"div","children":[{"tag":"text","text":" 1 2 3"}]}]`},
-	{`If(#isMobile#){Span(Mobile)}.Else{Span(Desktop)}`,
-		`[{"tag":"span","children":[{"tag":"text","text":"Desktop"}]}]`},
 	{`SetVar(off, 10)DBFind(contracts, src_contracts).Columns("id").Order(id).Limit(2).Offset(#off#).Custom(){}`,
 		`[{"tag":"dbfind","attr":{"columns":["id"],"data":[["11"],["12"]],"limit":"2","name":"contracts","offset":"10","order":"id","source":"src_contracts","types":["text"]}}]`},
 	{`DBFind(contracts, src_pos).Columns(id).Where({id:[{$gte:1}, {$lte:3}]}).Order(id)
@@ -215,24 +212,6 @@ func TestMoney(t *testing.T) {
 	}
 	if RawToString(ret.Tree) != `[{"tag":"text","text":"invalid money value"}]` {
 		t.Errorf(`wrong value %s`, RawToString(ret.Tree))
-	}
-}
-
-func TestMobile(t *testing.T) {
-	var ret contentResult
-	gMobile = true
-	if err := keyLogin(1); err != nil {
-		t.Error(err)
-		return
-	}
-	err := sendPost(`content`, &url.Values{`template`: {`If(#isMobile#){Span(Mobile)}.Else{Span(Desktop)}`}}, &ret)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if RawToString(ret.Tree) != `[{"tag":"span","children":[{"tag":"text","text":"Mobile"}]}]` {
-		t.Error(fmt.Errorf(`wrong mobile tree %s`, RawToString(ret.Tree)))
-		return
 	}
 }
 

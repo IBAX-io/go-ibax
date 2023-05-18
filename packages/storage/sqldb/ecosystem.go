@@ -76,7 +76,7 @@ func GetAllSystemStatesIDs() ([]int64, []string, error) {
 	}
 
 	ecosystems := new([]Ecosystem)
-	if err := DBConn.Order("id asc").Find(&ecosystems).Error; err != nil {
+	if err := DBConn.Select("id,name").Order("id asc").Find(&ecosystems).Error; err != nil {
 		return nil, nil, err
 	}
 
@@ -88,6 +88,18 @@ func GetAllSystemStatesIDs() ([]int64, []string, error) {
 	}
 
 	return ids, names, nil
+}
+
+func GetAllSystemCount() (int64, error) {
+	if !NewDbTransaction(DBConn).IsTable(ecosysTable) {
+		return 0, nil
+	}
+
+	var total int64
+	if err := DBConn.Model(Ecosystem{}).Count(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
 }
 
 // GetEcoParam is ecosystem combustion percent, digits

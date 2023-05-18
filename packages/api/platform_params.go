@@ -6,6 +6,7 @@
 package api
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/converter"
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -22,7 +23,7 @@ func getPlatformParamsHandler(w http.ResponseWriter, r *http.Request) {
 
 	logger := getLogger(r)
 
-	list, err := sqldb.GetAllPlatformParameters(nil)
+	list, err := sqldb.GetAllPlatformParameters(nil, nil, nil, nil)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all platform parameters")
 	}
@@ -37,6 +38,7 @@ func getPlatformParamsHandler(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		result.List = append(result.List, paramResult{
+			ID:         converter.Int64ToStr(item.ID),
 			Name:       item.Name,
 			Value:      item.Value,
 			Conditions: item.Conditions,

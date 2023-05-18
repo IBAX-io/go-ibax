@@ -25,6 +25,11 @@ func (c *Contract) TableName() string {
 	return `1_contracts`
 }
 
+// Get is retrieving id contracts from database
+func (c *Contract) Get(Id int64) (bool, error) {
+	return isFound(DBConn.Where("id = ?", Id).First(c))
+}
+
 // GetList is retrieving records from database
 func (c *Contract) GetList(offset, limit int) ([]Contract, error) {
 	result := new([]Contract)

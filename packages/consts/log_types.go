@@ -66,4 +66,5 @@ const (
 	BadTxError               = "BadTxError"
 	TimeCalcError            = "BlockTimeCounterError"
 	RegisterError            = "RegisterError"
+	JsonRpcError             = "JsonRpcError"
 )

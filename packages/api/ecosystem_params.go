@@ -7,6 +7,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/gorilla/mux"
@@ -43,7 +44,8 @@ func (m Mode) getEcosystemParamsHandler(w http.ResponseWriter, r *http.Request) 
 
 	sp := &sqldb.StateParameter{}
 	sp.SetTablePrefix(form.EcosystemPrefix)
-	list, err := sp.GetAllStateParameters()
+	names := strings.Split(form.Names, ",")
+	list, err := sp.GetAllStateParameters(nil, nil, names)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all state parameters")
 	}
@@ -52,11 +54,7 @@ func (m Mode) getEcosystemParamsHandler(w http.ResponseWriter, r *http.Request) 
 		List: make([]paramResult, 0),
 	}
 
-	acceptNames := form.AcceptNames()
 	for _, item := range list {
-		if len(acceptNames) > 0 && !acceptNames[item.Name] {
-			continue
-		}
 		result.List = append(result.List, paramResult{
 			ID:         converter.Int64ToStr(item.ID),
 			Name:       item.Name,

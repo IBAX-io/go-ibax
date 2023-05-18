@@ -8,9 +8,6 @@ package api
 import (
 	"net/http"
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/service/node"
-
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
@@ -38,9 +35,6 @@ func (r Router) NewVersion(preffix string) *mux.Router {
 
 // Route sets routing pathes
 func (m Mode) SetCommonRoutes(r Router) {
-	r.main.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
-		jsonResponse(writer, consts.Version()+" "+node.NodePauseType().String())
-	}).Methods("get")
 	api := r.NewVersion("/api/v2")
 
 	api.Use(nodeStateMiddleware, tokenMiddleware, m.clientMiddleware)
@@ -80,7 +74,7 @@ func (m Mode) SetCommonRoutes(r Router) {
 	api.HandleFunc("/txstatus", authRequire(getTxStatusHandler)).Methods("POST")
 	api.HandleFunc("/metrics/blocks", blocksCountHandler).Methods("GET")
 	api.HandleFunc("/metrics/transactions", txCountHandler).Methods("GET")
-	api.HandleFunc("/metrics/ecosystems", m.ecosysCountHandler).Methods("GET")
+	api.HandleFunc("/metrics/ecosystems", ecosysCountHandler).Methods("GET")
 	api.HandleFunc("/metrics/keys", keysCountHandler).Methods("GET")
 	api.HandleFunc("/metrics/mem", memStatHandler).Methods("GET")
 	api.HandleFunc("/metrics/ban", banStatHandler).Methods("GET")
@@ -111,9 +105,9 @@ func (m Mode) SetBlockchainRoutes(r Router) {
 func SetOtherCommonRoutes(api *mux.Router, m Mode) {
 	api.HandleFunc("/member/{ecosystem}/{account}", getMemberHandler).Methods("GET")
 	api.HandleFunc("/listWhere/{name}", authRequire(getListWhereHandler)).Methods("POST")
-	api.HandleFunc("/nodelistWhere/{name}", authRequire(getnodeListWhereHandler)).Methods("POST")
+	api.HandleFunc("/nodelistWhere/{name}", authRequire(getListWhereHandler)).Methods("POST")
 	api.HandleFunc("/sumWhere/{name}", authRequire(getsumWhereHandler)).Methods("POST")
-	api.HandleFunc("/metrics/blockper/{node}", blocksCountByNodeHandler).Methods("GET")
+	api.HandleFunc("/metrics/blockper/{node}/{mode}", blocksCountByNodeHandler).Methods("GET")
 }
 
 func setOtherBlockChainRoutes(api *mux.Router, m Mode) {

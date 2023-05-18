@@ -49,9 +49,21 @@ func (sp *PlatformParameter) GetValueParameterByName(name, value string) (*strin
 }
 
 // GetAllPlatformParameters returns all platform parameters
-func GetAllPlatformParameters(dbTx *DbTransaction) ([]PlatformParameter, error) {
+func GetAllPlatformParameters(dbTx *DbTransaction, offset, limit *int, names []string) ([]PlatformParameter, error) {
 	parameters := new([]PlatformParameter)
-	if err := GetDB(dbTx).Find(&parameters).Error; err != nil {
+	q := GetDB(dbTx)
+	if len(names) > 0 {
+		//if any select names,then all return
+		q = q.Where("name IN ?", names)
+	} else {
+		if offset != nil {
+			q = q.Offset(*offset)
+		}
+		if limit != nil {
+			q = q.Limit(*limit)
+		}
+	}
+	if err := q.Find(&parameters).Error; err != nil {
 		return nil, err
 	}
 	return *parameters, nil

@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
@@ -19,7 +18,7 @@ import (
 )
 
 var (
-	jwtSecret       = []byte(crypto.RandSeq(15))
+	jwtSecret       []byte
 	jwtPrefix       = "Bearer "
 	jwtExpire       = 28800 // By default, seconds
 	jwtrefeshExpire = 600   // By default, seconds
@@ -36,7 +35,6 @@ type JWTClaims struct {
 	KeyID       string `json:"key_id,omitempty"`
 	AccountID   string `json:"account_id,omitempty"`
 	RoleID      string `json:"role_id,omitempty"`
-	IsMobile    bool   `json:"is_mobile,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -77,7 +75,6 @@ func getClientFromToken(token *jwt.Token, ecosysNameService types.EcosystemGette
 		EcosystemID: converter.StrToInt64(claims.EcosystemID),
 		KeyID:       converter.StrToInt64(claims.KeyID),
 		AccountID:   claims.AccountID,
-		IsMobile:    claims.IsMobile,
 		RoleID:      converter.StrToInt64(claims.RoleID),
 	}
 
@@ -112,4 +109,11 @@ func getAuthStatus(w http.ResponseWriter, r *http.Request) {
 
 	result.IsActive = true
 	result.ExpiresAt = claims.ExpiresAt.Unix()
+}
+
+func InitJwtSecret(secret []byte) {
+	if secret == nil {
+		panic("jwt secret invalid")
+	}
+	jwtSecret = secret
 }

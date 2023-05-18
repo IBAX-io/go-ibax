@@ -67,7 +67,6 @@ func initVars(r *http.Request) *map[string]string {
 		vars["ecosystem_id"] = converter.Int64ToStr(client.EcosystemID)
 		vars["key_id"] = converter.Int64ToStr(client.KeyID)
 		vars["account_id"] = client.AccountID
-		vars["isMobile"] = isMobileValue(client.IsMobile)
 		vars["role_id"] = converter.Int64ToStr(client.RoleID)
 		vars["ecosystem_name"] = client.EcosystemName
 	} else {
@@ -85,9 +84,6 @@ func initVars(r *http.Request) *map[string]string {
 		} else {
 			vars["role_id"] = "0"
 		}
-		if len(vars["isMobile"]) == 0 {
-			vars["isMobile"] = "0"
-		}
 		if len(vars["ecosystem_id"]) != 0 {
 			ecosystems := sqldb.Ecosystem{}
 			if found, _ := ecosystems.Get(nil, converter.StrToInt64(vars["ecosystem_id"])); found {
@@ -100,13 +96,6 @@ func initVars(r *http.Request) *map[string]string {
 	}
 
 	return &vars
-}
-
-func isMobileValue(v bool) string {
-	if v {
-		return "1"
-	}
-	return "0"
 }
 
 func parseEcosystem(in string) (string, string) {

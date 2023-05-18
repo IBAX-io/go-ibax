@@ -42,12 +42,12 @@ func (rt *RollbackTx) GetBlockRollbackTransactions(dbTx *DbTransaction, blockID 
 
 // GetRollbackTxsByTableIDAndTableName returns records of rollback by table name and id
 func (rt *RollbackTx) GetRollbackTxsByTableIDAndTableName(tableID, tableName string, limit int) (*[]RollbackTx, error) {
-	rollbackTx := new([]RollbackTx)
+	var rollbackTx []RollbackTx
 	if err := DBConn.Where("table_id = ? AND table_name = ?", tableID, tableName).
-		Order("id desc").Limit(limit).Find(rollbackTx).Error; err != nil {
+		Order("id desc").Limit(limit).Find(&rollbackTx).Error; err != nil {
 		return nil, err
 	}
-	return rollbackTx, nil
+	return &rollbackTx, nil
 }
 
 // DeleteByHash is deleting rollbackTx by hash

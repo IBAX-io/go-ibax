@@ -8,6 +8,7 @@ require (
 	github.com/cactus/go-statsd-client/v5 v5.0.0
 	github.com/centrifugal/gocent v2.2.0+incompatible
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1
+	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/gobuffalo/fizz v1.14.0
 	github.com/gogo/protobuf v1.3.2
@@ -83,6 +84,7 @@ require (
 	github.com/ochinchina/supervisord/logger v0.0.0-20211206031846-72fec8953af3 // indirect
 	github.com/ochinchina/supervisord/signals v0.0.0-20211206031846-72fec8953af3 // indirect
 	github.com/ochinchina/supervisord/util v0.0.0-20211206031846-72fec8953af3 // indirect
+	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -105,6 +107,7 @@ require (
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
 	golang.org/x/sys v0.0.0-20221006211917-84dc82d7e875 // indirect
 	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect

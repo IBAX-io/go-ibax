@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -45,7 +46,12 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 
 	table, column := params["table"], params["column"]
 
-	data, err := sqldb.GetColumnByID(table, column, params["id"])
+	id, err := strconv.ParseInt(params["id"], 10, 64)
+	if err != nil {
+		errorResponse(w, errParamNotFound.Errorf("id"))
+		return
+	}
+	data, err := sqldb.GetColumnByID(table, column, id)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("selecting data from table")
 		errorResponse(w, errNotFound)

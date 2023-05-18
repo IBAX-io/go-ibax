@@ -9,6 +9,8 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/service/jsonrpc"
 	"math/rand"
 	"net/http"
 	"os"
@@ -33,6 +35,12 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
 )
+
+func init() {
+	jwtSecret := []byte(crypto.RandSeq(15))
+	jsonrpc.InitJwtSecret(jwtSecret)
+	api.InitJwtSecret(jwtSecret)
+}
 
 // Start starts the main code of the program
 func Start() {
@@ -183,8 +191,11 @@ func initLogs() error {
 
 func initRoutes(listenHost string) {
 	handler := modes.RegisterRoutes()
-	handler = api.WithCors(handler)
 	handler = httpserver.NewMaxBodyReader(handler, conf.Config.LocalConf.HTTPServerMaxBodySize)
+	if conf.Config.JsonRPC.Enabled {
+		handler = modes.RegisterJsonRPCRoutes(handler)
+	}
+	handler = api.WithCors(handler)
 
 	if conf.Config.TLSConf.Enabled {
 		if len(conf.Config.TLSConf.TLSCert) == 0 || len(conf.Config.TLSConf.TLSKey) == 0 {

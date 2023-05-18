@@ -39,7 +39,6 @@ type Client struct {
 	EcosystemID   int64
 	EcosystemName string
 	RoleID        int64
-	IsMobile      bool
 }
 
 func (c *Client) Prefix() string {

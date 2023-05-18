@@ -151,99 +151,6 @@ func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
 		errorResponse(w, err)
 		return
 	}
-	q := sqldb.GetTableQuery(params["name"], client.EcosystemID)
-
-	if len(form.Columns) > 0 {
-		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
-	}
-
-	if len(form.InWhere) > 0 {
-		inWhere, _, err := template.ParseObject([]rune(form.InWhere))
-		switch v := inWhere.(type) {
-		case string:
-			if len(v) == 0 {
-				where = `true`
-			} else {
-				errorResponse(w, errors.New(`Where has wrong format`))
-				return
-			}
-		case map[string]any:
-			where, err = qb.GetWhere(types.LoadMap(v))
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		case *types.Map:
-			where, err = qb.GetWhere(v)
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		default:
-			errorResponse(w, errors.New(`Where has wrong format`))
-			return
-		}
-		q = q.Where(where)
-	}
-
-	result := new(listResult)
-	err = q.Count(&result.Count).Error
-
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
-		errorResponse(w, errTableNotFound.Errorf(table))
-		return
-	}
-
-	if len(form.Order) > 0 {
-		rows, err := q.Order(form.Order).Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			errorResponse(w, err)
-			return
-		}
-		result.List, err = sqldb.GetResult(rows)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-	} else {
-		rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			errorResponse(w, err)
-			return
-		}
-		result.List, err = sqldb.GetResult(rows)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-	}
-
-	jsonResponse(w, result)
-}
-
-func getnodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
-	form := &listWhereForm{}
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
-		return
-	}
-
-	params := mux.Vars(r)
-	client := getClient(r)
-	logger := getLogger(r)
-
-	var (
-		err          error
-		table, where string
-	)
-	table, form.Columns, err = checkAccess(params["name"], form.Columns, client)
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
 	//q := sqldb.GetTableQuery(params["name"], client.EcosystemID)
 	q := sqldb.GetTableListQuery(params["name"], client.EcosystemID)
 	if len(form.Columns) > 0 {
@@ -283,7 +190,8 @@ func getnodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 	err = q.Count(&result.Count).Error
 
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
+			Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
 		errorResponse(w, errTableNotFound.Errorf(table))
 		return
 	}
@@ -295,7 +203,7 @@ func getnodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, err)
 			return
 		}
-		result.List, err = sqldb.GetNodeResult(rows)
+		result.List, err = sqldb.GetResult(rows)
 		if err != nil {
 			errorResponse(w, err)
 			return
@@ -307,7 +215,7 @@ func getnodeListWhereHandler(w http.ResponseWriter, r *http.Request) {
 			errorResponse(w, err)
 			return
 		}
-		result.List, err = sqldb.GetNodeResult(rows)
+		result.List, err = sqldb.GetResult(rows)
 		if err != nil {
 			errorResponse(w, err)
 			return
@@ -384,7 +292,8 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 	if count > 0 {
 		sum, err := sqldb.NewDbTransaction(nil).GetSumColumn(table, form.Column, where)
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
+				Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
 			errorResponse(w, errTableNotFound.Errorf(table))
 			return
 		}

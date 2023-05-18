@@ -49,7 +49,7 @@ func (m Mode) getAppParamsHandler(w http.ResponseWriter, r *http.Request) {
 	ap := &sqldb.AppParam{}
 	ap.SetTablePrefix(form.EcosystemPrefix)
 
-	list, err := ap.GetAllAppParameters(converter.StrToInt64(params["appID"]))
+	list, err := ap.GetAllAppParameters(converter.StrToInt64(params["appID"]), nil, nil, nil)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting all app parameters")
 	}
