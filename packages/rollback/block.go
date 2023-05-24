@@ -74,6 +74,8 @@ func RollbackBlock(data []byte) error {
 		KeyID:          b.KeyID,
 		Time:           b.Time,
 		CurrentVersion: strconv.Itoa(int(bl.Header.Version)),
+		ConsensusMode:  b.ConsensusMode,
+		CandidateNodes: b.CandidateNodes,
 	}
 	err = ib.Update(dbTx)
 	if err != nil {
