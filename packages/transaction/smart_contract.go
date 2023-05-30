@@ -151,7 +151,7 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 }
 
 func (s *SmartTransactionParser) TxRollback() error {
-	return nil
+	return syspar.SysUpdate(s.DbTransaction)
 }
 
 func (s *SmartTransactionParser) Marshal() ([]byte, error) {
