@@ -7,6 +7,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -26,7 +27,12 @@ type rowForm struct {
 
 func (f *rowForm) Validate(r *http.Request) error {
 	if len(f.Columns) > 0 {
-		f.Columns = converter.EscapeName(f.Columns)
+		columns := strings.Split(f.Columns, ",")
+		list := make([]string, len(columns))
+		for k, column := range columns {
+			list[k] = converter.Sanitize(column, `->`)
+		}
+		f.Columns = strings.Join(list, ",")
 	}
 	return nil
 }

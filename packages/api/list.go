@@ -7,7 +7,6 @@ package api
 
 import (
 	"errors"
-
 	"github.com/IBAX-io/go-ibax/packages/script"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -60,7 +59,7 @@ func (f *listForm) Validate(r *http.Request) error {
 
 func (f *SumWhereForm) Validate(r *http.Request) error {
 	if len(f.Column) > 0 {
-		f.Column = converter.EscapeName(f.Column)
+		f.Column = converter.Sanitize(f.Column, ``)
 	}
 	return nil
 }
