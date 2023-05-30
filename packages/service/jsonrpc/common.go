@@ -326,7 +326,12 @@ type rowForm struct {
 
 func (f *rowForm) Validate(r *http.Request) error {
 	if len(f.Columns) > 0 {
-		f.Columns = converter.EscapeName(f.Columns)
+		columns := strings.Split(f.Columns, ",")
+		list := make([]string, len(columns))
+		for k, column := range columns {
+			list[k] = converter.Sanitize(column, `->`)
+		}
+		f.Columns = strings.Join(list, ",")
 	}
 	return nil
 }
@@ -372,7 +377,7 @@ func (c *commonApi) GetList(ctx RequestContext, auth Auth, form *ListWhereForm) 
 	q = sqldb.GetTableListQuery(form.Name, client.EcosystemID)
 
 	if len(form.Columns) > 0 {
-		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
+		q = q.Select("id," + form.Columns)
 	}
 
 	if form.Where != nil {
