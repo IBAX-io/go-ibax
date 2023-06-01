@@ -31,6 +31,15 @@ func Address(pubKey []byte) int64 {
 	return buildChecksumConvert(crc)
 }
 
+// AddressSeed gets int64 address from the seed.
+// format: `IBAX Address By Seed:` + seed
+func AddressSeed(seed string) int64 {
+	h := Hash([]byte("IBAX Address By Seed:" + seed))
+	h512 := sha512.Sum512(h[:])
+	crc := CalcChecksum(h512[:])
+	return buildChecksumConvert(crc)
+}
+
 func buildChecksumConvert(crc uint64) int64 {
 	num := strconv.FormatUint(crc, 10)
 	val := RepeatPrefixed(num)

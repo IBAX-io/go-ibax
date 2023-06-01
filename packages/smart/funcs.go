@@ -21,6 +21,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/base58"
+
 	"golang.org/x/crypto/sha3"
 
 	"github.com/IBAX-io/go-ibax/packages/clbmanager"
@@ -217,6 +219,7 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"Replace":                      Replace,
 		"Size":                         Size,
 		"PubToID":                      PubToID,
+		"SeedToID":                     crypto.AddressSeed,
 		"HexToBytes":                   HexToBytes,
 		"LangRes":                      LangRes,
 		"HasPrefix":                    strings.HasPrefix,
@@ -247,6 +250,7 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"SortedKeys":                   SortedKeys,
 		"Append":                       Append,
 		"EthereumAddress":              EthereumAddress,
+		"TronAddress":                  TronAddress,
 		"GetLogTxCount":                GetLogTxCount,
 		"GetHistory":                   GetHistory,
 		"GetHistoryRow":                GetHistoryRow,
@@ -2029,6 +2033,13 @@ func EthereumAddress(pub []byte) string {
 	keccak256 := &hashalgo.Keccak256{}
 	copy(addr[:], keccak256.GetHash(pub[:])[12:])
 	return addr.Hex()
+}
+
+func TronAddress(pub []byte) (string, error) {
+	keccak256 := &hashalgo.Keccak256{}
+	hash := keccak256.GetHash(pub[:])
+	hex20 := "41" + hex.EncodeToString(hash[len(hash)-20:])
+	return base58.FromHexAddress(hex20)
 }
 
 func GetLogTxCount(sc *SmartContract, ecosystemID int64) (int64, error) {
