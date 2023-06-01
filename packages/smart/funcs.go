@@ -21,6 +21,8 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/base58"
+
 	"golang.org/x/crypto/sha3"
 
 	"github.com/IBAX-io/go-ibax/packages/clbmanager"
@@ -2037,7 +2039,7 @@ func TronAddress(pub []byte) (string, error) {
 	keccak256 := &hashalgo.Keccak256{}
 	hash := keccak256.GetHash(pub[:])
 	hex20 := "41" + hex.EncodeToString(hash[len(hash)-20:])
-	return crypto.FromHexAddress(hex20)
+	return base58.FromHexAddress(hex20)
 }
 
 func GetLogTxCount(sc *SmartContract, ecosystemID int64) (int64, error) {

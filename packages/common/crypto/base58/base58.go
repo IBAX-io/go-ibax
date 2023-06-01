@@ -1,4 +1,4 @@
-package crypto
+package base58
 
 import (
 	"bytes"
