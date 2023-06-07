@@ -14,6 +14,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/statsd"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -76,7 +77,9 @@ func nodeStateMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		case node.PauseTypeUpdatingBlockchain:
-			reason = errUpdating
+			var s sqldb.BlockChain
+			s.GetMaxBlock()
+			reason = errUpdating.Errorf(s.ID)
 			break
 		case node.PauseTypeStopingNetwork:
 			reason = errStopping

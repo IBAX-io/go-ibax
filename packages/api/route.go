@@ -35,8 +35,9 @@ func (r Router) NewVersion(preffix string) *mux.Router {
 
 // Route sets routing pathes
 func (m Mode) SetCommonRoutes(r Router) {
-	api := r.NewVersion("/api/v2")
+	NoneMiddlewareRoutes(r.NewVersion("/api/v2"), m)
 
+	api := r.NewVersion("/api/v2")
 	api.Use(nodeStateMiddleware, tokenMiddleware, m.clientMiddleware)
 
 	SetOtherCommonRoutes(api, m)
@@ -59,7 +60,6 @@ func (m Mode) SetCommonRoutes(r Router) {
 	api.HandleFunc("/interface/snippet/{name}", authRequire(getSnippetRowHandler)).Methods("GET")
 	api.HandleFunc("/table/{name}", authRequire(getTableHandler)).Methods("GET")
 	api.HandleFunc("/tables", authRequire(getTablesHandler)).Methods("GET")
-	api.HandleFunc("/version", getVersionHandler).Methods("GET")
 	api.HandleFunc("/config/{option}", getConfigOptionHandler).Methods("GET")
 
 	api.HandleFunc("/page/validators_count/{name}", getPageValidatorsCountHandler).Methods("GET")
@@ -100,6 +100,10 @@ func (m Mode) SetBlockchainRoutes(r Router) {
 	api.HandleFunc("/systemparams", authRequire(getPlatformParamsHandler)).Methods("GET")
 	api.HandleFunc("/ecosystemparam/{name}", authRequire(m.getEcosystemParamHandler)).Methods("GET")
 	api.HandleFunc("/ecosystemname", getEcosystemNameHandler).Methods("GET")
+}
+
+func NoneMiddlewareRoutes(api *mux.Router, m Mode) {
+	api.HandleFunc("/version", getVersionHandler).Methods("GET")
 }
 
 func SetOtherCommonRoutes(api *mux.Router, m Mode) {
