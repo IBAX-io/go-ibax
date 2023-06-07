@@ -47,7 +47,7 @@ var (
 	errCLB               = errType{"E_CLB", "Virtual Dedicated Ecosystem %d doesn't exist", defaultStatus}
 	errCLBCreated        = errType{"E_CLBCREATED", "Virtual Dedicated Ecosystem is already created", http.StatusBadRequest}
 	errRequestNotFound   = errType{"E_REQUESTNOTFOUND", "Request %s doesn't exist", defaultStatus}
-	errUpdating          = errType{"E_UPDATING", "Node is updating blockchain", http.StatusServiceUnavailable}
+	errUpdating          = errType{"E_UPDATING", "Node is updating blockchain, block height %d", http.StatusServiceUnavailable}
 	errStopping          = errType{"E_STOPPING", "Network is stopping", http.StatusServiceUnavailable}
 	errNotImplemented    = errType{"E_NOTIMPLEMENTED", "Not implemented", http.StatusNotImplemented}
 	errParamMoneyDigit   = errType{"E_PARAMMONEYDIGIT", "The number of decimal places cannot be exceeded ( %s )", http.StatusBadRequest}
