@@ -27,7 +27,6 @@ func rollbackUpdatedRow(tx map[string]string, where string, dbTx *sqldb.DbTransa
 	}
 	addSQLUpdate := ""
 	for k, v := range rollbackInfo {
-		k = `"` + strings.Trim(k, `"`) + `"`
 		if v == "NULL" {
 			addSQLUpdate += k + `=NULL,`
 		} else if syspar.IsByteColumn(tx["table_name"], k) && len(v) != 0 {
