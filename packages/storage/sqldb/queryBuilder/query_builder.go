@@ -319,11 +319,7 @@ func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (
 		if k == `id` || (b.isKeyTable && !eco) {
 			continue
 		}
-		if syspar.IsByteColumn(b.Table, k) && v != "" {
-			rollbackInfo[k] = string(converter.BinToHex([]byte(v)))
-		} else {
-			rollbackInfo[k] = v
-		}
+		rollbackInfo[k] = v
 	}
 
 	jsonRollbackInfo, err := json.Marshal(rollbackInfo)
