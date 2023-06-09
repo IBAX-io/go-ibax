@@ -37,7 +37,7 @@ func rollbackUpdatedRow(tx map[string]string, where string, dbTx *sqldb.DbTransa
 	}
 	addSQLUpdate = addSQLUpdate[0 : len(addSQLUpdate)-1]
 	if err := dbTx.Update(tx["table_name"], addSQLUpdate, where); err != nil {
-		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err, "rollback_id": tx["id"], "block_id": tx["block_id"], "update": addSQLUpdate, "where": where}).Error("updating table for rollback ")
+		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err, "rollback_id": tx["id"], "block_id": tx["block_id"], "where": where}).Error("updating table for rollback ")
 		return err
 	}
 	return nil
