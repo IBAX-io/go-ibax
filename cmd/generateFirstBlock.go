@@ -48,16 +48,15 @@ func init() {
 func genesisBlock() ([]byte, error) {
 	now := time.Now().Unix()
 	header := &types.BlockHeader{
-		BlockId:        1,
-		Timestamp:      now,
-		EcosystemId:    0,
-		KeyId:          conf.Config.KeyID,
-		NetworkId:      conf.Config.LocalConf.NetworkID,
-		NodePosition:   0,
-		Version:        consts.BlockVersion,
-		RollbacksHash:  crypto.Hash([]byte(`0`)),
-		ConsensusMode:  consts.HonorNodeMode,
-		CandidateNodes: []byte(`0`),
+		BlockId:       1,
+		Timestamp:     now,
+		EcosystemId:   0,
+		KeyId:         conf.Config.KeyID,
+		NetworkId:     conf.Config.LocalConf.NetworkID,
+		NodePosition:  0,
+		Version:       consts.BlockVersion,
+		RollbacksHash: crypto.Hash([]byte(`0`)),
+		ConsensusMode: consts.HonorNodeMode,
 	}
 	decodeKeyFile := func(kName string) []byte {
 		filepath := filepath.Join(conf.Config.DirPathConf.KeysDir, kName)
