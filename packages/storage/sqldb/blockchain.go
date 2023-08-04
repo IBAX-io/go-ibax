@@ -21,7 +21,7 @@ type BlockChain struct {
 	Time           int64  `gorm:"not null"`
 	Tx             int32  `gorm:"not null"`
 	ConsensusMode  int32  `gorm:"not null"`
-	CandidateNodes []byte `gorm:"not null"`
+	CandidateNodes []byte `gorm:"not null;default:null"`
 }
 
 // TableName returns name of table
