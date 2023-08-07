@@ -80,5 +80,5 @@ func (ts *TransactionStatus) SetError(dbTx *DbTransaction, errorText string, tra
 
 // UpdatePenalty is updating penalty
 func (ts *TransactionStatus) UpdatePenalty(dbTx *DbTransaction, transactionHash []byte) error {
-	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ? AND penalty = 0", transactionHash).Update("penalty", pbgo.TxInvokeStatusCode_PENALTY).Error
+	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ? AND penalty = 0", transactionHash).Update("penalty", int64(pbgo.TxInvokeStatusCode_PENALTY)).Error
 }
