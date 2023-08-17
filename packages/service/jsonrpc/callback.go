@@ -95,9 +95,14 @@ func (c *callback) call(ctx RequestContext, m Mode, args []reflect.Value) (resul
 		err := results[c.errIndex].Interface().(*Error)
 		return reflect.Value{}, err
 	}
-	if results[0].IsNil() {
-		return nil, nil
+	k := results[0].Kind()
+	switch k {
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
+		if results[0].IsNil() {
+			return nil, nil
+		}
 	}
+
 	return results[0].Interface(), nil
 }
 
