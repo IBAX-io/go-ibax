@@ -223,6 +223,7 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"HexToBytes":                   HexToBytes,
 		"LangRes":                      LangRes,
 		"HasPrefix":                    strings.HasPrefix,
+		"HasSlice":                     HasSlice,
 		"ValidateCondition":            ValidateCondition,
 		"TrimSpace":                    strings.TrimSpace,
 		"ToLower":                      strings.ToLower,
