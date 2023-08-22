@@ -664,6 +664,19 @@ func Append(slice []any, val any) []any {
 	return append(slice, val)
 }
 
+func HasSlice(element any, slice any) bool {
+	s := reflect.ValueOf(slice)
+	if s.Kind() != reflect.Slice {
+		return false
+	}
+	for i := 0; i < s.Len(); i++ {
+		if reflect.DeepEqual(element, s.Index(i).Interface()) {
+			return true
+		}
+	}
+	return false
+}
+
 // RegexpMatch validates regexp
 func RegexpMatch(str, reg string) bool {
 	if strings.Contains(reg, `\u`) || strings.Contains(reg, `\U`) {
