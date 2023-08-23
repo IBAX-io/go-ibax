@@ -35,13 +35,14 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
         '{
             "name": "ContractAccess(\"@1EditEcosystemName\")",
             "info": "ContractAccess(\"@1EcManageInfo\")",
+            "digits": "ContractAccess(\"@1NewToken\")",
             "fee_mode_info": "ContractAccess(\"@1EcoFeeModeManage\")",
             "is_valued": "ContractAccess(\"@1VotingVesAccept\")",
             "emission_amount": "ContractAccess(\"@1NewToken\",\"@1TeBurn\",\"@1TeEmission\")",
             "token_symbol": "ContractAccess(\"@1NewToken\")",
             "token_name": "ContractAccess(\"@1NewToken\")",
-            "type_emission": "ContractAccess(\"@1TeChange\")",
-            "type_withdraw": "ContractAccess(\"@1TeChange\")",
+            "type_emission": "ContractAccess(\"@1TeChange\",\"@1NewToken\")",
+            "type_withdraw": "ContractAccess(\"@1TeChange\",\"@1NewToken\")",
             "control_mode": "ContractAccess(\"@1EditControlMode\")"
         }',
         'ContractConditions("@1MainCondition")'
