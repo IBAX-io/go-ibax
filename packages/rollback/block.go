@@ -7,7 +7,9 @@ package rollback
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -89,6 +91,7 @@ func RollbackBlock(data []byte) error {
 func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 	// rollback transactions in reverse order
 	logger := block.GetLogger()
+	var transferSelfHashes = make([]string, 0)
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
 		t := block.Transactions[i]
 		t.DbTransaction = dbTx
@@ -123,6 +126,12 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 			if err = rollbackTransaction(t.Hash(), t.DbTransaction, logger); err != nil {
 				return err
 			}
+			transferSelf := t.Inner.(*transaction.SmartTransactionParser).TxSmart.TransferSelf
+			if transferSelf != nil {
+				if strings.EqualFold("UTXO", transferSelf.Source) && strings.EqualFold("Account", transferSelf.Target) {
+					transferSelfHashes = append(transferSelfHashes, fmt.Sprintf("%x", t.Hash()))
+				}
+			}
 		}
 		err = t.Inner.TxRollback()
 		if err != nil {
@@ -130,7 +139,7 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 		}
 	}
 
-	err := sqldb.RollbackOutputs(block.Header.BlockId, dbTx, logger)
+	err := sqldb.RollbackOutputs(block.Header.BlockId, dbTx, transferSelfHashes, logger)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating outputs by block id")
 		return err
