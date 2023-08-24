@@ -8,7 +8,6 @@ package sqldb
 import (
 	"errors"
 	"fmt"
-
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -90,11 +89,18 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	return result, nil
 }
 
-func RollbackOutputs(blockID int64, db *DbTransaction, logger *log.Entry) error {
+func RollbackOutputs(blockID int64, db *DbTransaction, transferSelfHashes []string, logger *log.Entry) error {
 	err := GetDB(db).Exec(`UPDATE spent_info SET  input_tx_hash= null , input_index=0 WHERE input_tx_hash  in ( SELECT output_tx_hash FROM "spent_info"  WHERE block_id = ? )`, blockID).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Errorf("updating input_tx_hash rollback outputs by blockID : %d", blockID)
 		return err
+	}
+	if len(transferSelfHashes) > 0 {
+		err = GetDB(db).Exec(`UPDATE spent_info SET  input_tx_hash= null , input_index=0 WHERE encode(input_tx_hash,'hex') in ?`, transferSelfHashes).Error
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Errorf("updating input_tx_hash of transfer self for rollback outputs by blockID : %d", blockID)
+			return err
+		}
 	}
 
 	err = GetDB(db).Exec(`DELETE FROM spent_info WHERE block_id = ? `, blockID).Error
