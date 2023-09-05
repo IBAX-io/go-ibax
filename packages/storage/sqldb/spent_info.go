@@ -8,6 +8,7 @@ package sqldb
 import (
 	"errors"
 	"fmt"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -130,4 +131,18 @@ func (si *SpentInfo) GetBalance(db *DbTransaction, keyId, ecosystem int64) (deci
 	}
 
 	return amount, err
+}
+
+// GetTopAmounts returns top amount of UTXO by ecosystem , limit and offset
+func GetTopAmounts(db *DbTransaction, ecosystem int64, limit int64, offset int64) ([]map[string]string, error) {
+	query :=
+		` SELECT SUM( output_value ) AS output_value,output_key_id FROM spent_info 
+			WHERE input_tx_hash IS NULL AND ecosystem = ? 
+			GROUP BY output_key_id 
+			ORDER BY output_value DESC LIMIT ? OFFSET ? `
+	rows, err := GetDB(db).Raw(query, ecosystem, limit, offset).Rows()
+	if err != nil {
+		return nil, err
+	}
+	return getResult(rows, -1)
 }

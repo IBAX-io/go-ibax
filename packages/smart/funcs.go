@@ -252,6 +252,7 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"Append":                       Append,
 		"EthereumAddress":              EthereumAddress,
 		"TronAddress":                  TronAddress,
+		"TopAmountsUTXO":               TopAmountsUTXO,
 		"GetLogTxCount":                GetLogTxCount,
 		"GetHistory":                   GetHistory,
 		"GetHistoryRow":                GetHistoryRow,
@@ -2045,6 +2046,10 @@ func TronAddress(pub []byte) (string, error) {
 
 func GetLogTxCount(sc *SmartContract, ecosystemID int64) (int64, error) {
 	return sqldb.GetLogTxCount(sc.DbTransaction, ecosystemID)
+}
+
+func TopAmountsUTXO(sc *SmartContract, ecosystem int64, limit int64, ofset int64) ([]map[string]string, error) {
+	return sqldb.GetTopAmounts(sc.DbTransaction, ecosystem, limit, ofset)
 }
 
 func GetHistory(sc *SmartContract, tableName string, id int64) ([]any, error) {
