@@ -162,6 +162,9 @@ func (txSmart *SmartTransaction) Validate() error {
 		return nil
 	}
 	if txSmart.UTXO != nil {
+		if converter.IDToAddress(txSmart.UTXO.ToID) == `invalid` {
+			return errors.New("error UTXO ToID must be a valid address")
+		}
 		if ok, _ := regexp.MatchString("^\\d+$", txSmart.UTXO.Value); !ok {
 			return errors.New("error UTXO Value must be a positive integer")
 		}
