@@ -8,8 +8,10 @@ package sqldb
 import (
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -134,15 +136,47 @@ func (si *SpentInfo) GetBalance(db *DbTransaction, keyId, ecosystem int64) (deci
 }
 
 // GetTopAmounts returns top amount of UTXO by ecosystem , limit and offset
-func GetTopAmounts(db *DbTransaction, ecosystem int64, limit int64, offset int64) ([]map[string]string, error) {
+func GetTopAmounts(db *DbTransaction, ecosystem int64, limit int64, offset int64) ([]any, error) {
 	query :=
-		` SELECT SUM( output_value ) AS output_value,output_key_id FROM spent_info 
-			WHERE input_tx_hash IS NULL AND ecosystem = ? 
-			GROUP BY output_key_id 
-			ORDER BY output_value DESC LIMIT ? OFFSET ? `
-	rows, err := GetDB(db).Raw(query, ecosystem, limit, offset).Rows()
+		`SELECT SUM( amount )as amount, id FROM (
+SELECT  output_value  AS amount,output_key_id AS id FROM spent_info LEFT JOIN "1_keys" ON spent_info.ecosystem = "1_keys".ecosystem 
+      AND "1_keys".id=spent_info.output_key_id
+      WHERE input_tx_hash IS NULL AND "spent_info".ecosystem = ?  
+      AND ("1_keys".blocked = 0 OR "1_keys".blocked IS NULL) AND ("1_keys".deleted = 0 OR "1_keys".deleted IS NULL)
+UNION 
+SELECT amount,id FROM "1_keys" WHERE  ecosystem = ? AND blocked = 0 AND deleted = 0 AND amount > 0
+) tmp GROUP BY id ORDER BY amount desc LIMIT ? OFFSET ?`
+	rows, err := GetDB(db).Raw(query, ecosystem, ecosystem, limit, offset).Rows()
 	if err != nil {
 		return nil, err
 	}
-	return getResult(rows, -1)
+
+	defer rows.Close()
+	cols, err := rows.Columns()
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", err, "getting rows columns")
+	}
+	values := make([][]byte, len(cols))
+	scanArgs := make([]any, len(values))
+	for i := range values {
+		scanArgs[i] = &values[i]
+	}
+
+	result := make([]any, 0)
+	for rows.Next() {
+		err = rows.Scan(scanArgs...)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", err, "scanning next row")
+		}
+		row := types.NewMap()
+		for i, col := range values {
+			var value string
+			if col != nil {
+				value = string(col)
+			}
+			row.Set(cols[i], value)
+		}
+		result = append(result, reflect.ValueOf(row).Interface())
+	}
+	return result, nil
 }
