@@ -135,17 +135,41 @@ func (si *SpentInfo) GetBalance(db *DbTransaction, keyId, ecosystem int64) (deci
 	return amount, err
 }
 
-// GetTopAmounts returns top amount of UTXO by ecosystem , limit and offset
-func GetTopAmounts(db *DbTransaction, ecosystem int64, limit int64, offset int64) ([]any, error) {
-	query :=
-		`SELECT SUM( amount )as amount, id FROM (
-SELECT  output_value  AS amount,output_key_id AS id FROM spent_info LEFT JOIN "1_keys" ON spent_info.ecosystem = "1_keys".ecosystem 
-      AND  id = spent_info.output_key_id
-      WHERE input_tx_hash IS NULL AND "spent_info".ecosystem = ? AND blocked = 0 AND deleted = 0 AND length(pub)>0
-UNION 
-SELECT amount,id FROM "1_keys" WHERE ecosystem = ? AND blocked = 0 AND deleted = 0 AND amount > 0 AND length(pub)>0
-) tmp GROUP BY id ORDER BY amount desc LIMIT ? OFFSET ?`
-	rows, err := GetDB(db).Raw(query, ecosystem, ecosystem, limit, offset).Rows()
+// GetTopAmounts returns top amounts by ecosystem, rank and dense
+func GetTopAmounts(db *DbTransaction, ecosystem int64, rank int64, dense bool) ([]any, error) {
+	query := `
+SELECT * FROM 
+    (SELECT sum ( amount ) AS amount,
+     id,
+     CASE 
+    	WHEN ? THEN dense_rank() OVER (ORDER BY sum ( amount )  DESC)
+    	ELSE rank() OVER (ORDER BY sum ( amount )  DESC)
+  	END AS rank
+    FROM 
+        (SELECT output_value AS amount,
+     output_key_id AS id
+        FROM spent_info
+        LEFT JOIN "1_keys"
+          ON spent_info.ecosystem = "1_keys".ecosystem
+            AND id = spent_info.output_key_id
+        WHERE input_tx_hash is null
+            AND "spent_info".ecosystem = ?
+            AND blocked = 0
+            AND deleted = 0
+            AND length ( pub ) > 0
+UNION
+SELECT amount, id  FROM "1_keys"
+        WHERE ecosystem = ?
+            AND blocked = 0
+            AND deleted = 0
+            AND amount > 0
+            AND length ( pub ) > 0 ) tmp
+        GROUP BY  id
+        ORDER BY  rank ASC ) r
+    WHERE rank <= ?
+ORDER BY  rank, id;
+`
+	rows, err := GetDB(db).Raw(query, dense, ecosystem, ecosystem, rank).Rows()
 	if err != nil {
 		return nil, err
 	}
