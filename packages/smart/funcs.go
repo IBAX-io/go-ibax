@@ -2048,8 +2048,8 @@ func GetLogTxCount(sc *SmartContract, ecosystemID int64) (int64, error) {
 	return sqldb.GetLogTxCount(sc.DbTransaction, ecosystemID)
 }
 
-func TopAmounts(sc *SmartContract, ecosystem int64, limit int64, offset int64) ([]any, error) {
-	return sqldb.GetTopAmounts(sc.DbTransaction, ecosystem, limit, offset)
+func TopAmounts(sc *SmartContract, ecosystem int64, rank int64, dense bool) ([]any, error) {
+	return sqldb.GetTopAmounts(sc.DbTransaction, ecosystem, rank, dense)
 }
 
 func GetHistory(sc *SmartContract, tableName string, id int64) ([]any, error) {
