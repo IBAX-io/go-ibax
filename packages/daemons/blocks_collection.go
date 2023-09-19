@@ -168,6 +168,11 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 					// d.logger.WithFields(log.Fields{"error": err, "type": consts.BlockError}).Error("playing raw block")
 					return err
 				}
+				if candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes)); err == nil && len(candidateNodes) > 0 {
+					syspar.SetRunModel(consts.CandidateNodeMode)
+				} else {
+					syspar.SetRunModel(consts.HonorNodeMode)
+				}
 				count++
 			}
 
@@ -202,13 +207,6 @@ func banNodePause(host string, blockID, blockTime int64, err error) {
 
 // GetHostWithMaxID returns host with maxBlockID
 func getHostWithMaxID(ctx context.Context, logger *log.Entry) (host string, maxBlockID int64, err error) {
-	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
-	if err == nil && len(candidateNodes) > 0 {
-		syspar.SetRunModel(consts.CandidateNodeMode)
-	} else {
-		syspar.SetRunModel(consts.HonorNodeMode)
-	}
-
 	selectMode := SelectModel{}
 	hosts, err := selectMode.GetHostWithMaxID()
 
