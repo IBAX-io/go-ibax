@@ -88,24 +88,16 @@ func (r *rpcServer) getApis(namespace string) []any {
 	switch namespace {
 	case jsonrpc.GetNamespace(jsonrpc.NamespaceAdmin):
 		adminApi := newAdminApi(r)
-		for _, v := range adminApi.GetApis() {
-			apis = append(apis, v)
-		}
+		apis = append(apis, adminApi.GetApis()...)
 	case jsonrpc.GetNamespace(jsonrpc.NamespaceIBAX):
 		ibaxApi := jsonrpc.NewIbaxApi(r.mode)
-		for _, v := range ibaxApi.GetApis() {
-			apis = append(apis, v)
-		}
+		apis = append(apis, ibaxApi.GetApis()...)
 	case jsonrpc.GetNamespace(jsonrpc.NamespaceNet):
 		netApi := jsonrpc.NewNetApi()
-		for _, v := range netApi.GetApis() {
-			apis = append(apis, v)
-		}
+		apis = append(apis, netApi.GetApis()...)
 	case jsonrpc.GetNamespace(jsonrpc.NamespaceDebug):
 		debugApi := jsonrpc.NewDebugApi()
-		for _, v := range debugApi.GetApis() {
-			apis = append(apis, v)
-		}
+		apis = append(apis, debugApi.GetApis()...)
 	}
 	return apis
 }
@@ -119,12 +111,10 @@ func (r *rpcServer) enableRpc(namespaces string) error {
 	for _, m := range strings.Split(namespaces, ",") {
 		name := strings.TrimSpace(m)
 		funcs := r.getApis(name)
-		if funcs != nil {
-			for _, f := range funcs {
-				err := srv.RegisterName(name, f)
-				if err != nil {
-					return err
-				}
+		for _, f := range funcs {
+			err := srv.RegisterName(name, f)
+			if err != nil {
+				return err
 			}
 		}
 	}
