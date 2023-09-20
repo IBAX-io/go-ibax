@@ -2221,9 +2221,6 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 		return err
 	}
 
-	if err = sc.DbTransaction.DropTable(tblname); err != nil {
-		return
-	}
 	if !sc.CLB {
 		var (
 			out []byte
@@ -2247,9 +2244,11 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating sys table col type")
 			return err
 		}
-		return SysRollback(sc, SysRollData{Type: "DeleteTable", TableName: tblname, Data: string(out)})
+		if err = SysRollback(sc, SysRollData{Type: "DeleteTable", TableName: tblname, Data: string(out)}); err != nil {
+			return err
+		}
 	}
-	return
+	return sc.DbTransaction.DropTable(tblname)
 }
 
 func FormatMoney(sc *SmartContract, exp string, digit int64) (string, error) {
