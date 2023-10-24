@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -158,7 +157,7 @@ func keyLoginToken(state int64) (err error) {
 
 	str, _ := os.Getwd()
 	fmt.Println("dir " + str)
-	key, err = ioutil.ReadFile(`key`)
+	key, err = os.ReadFile(`key`)
 	if err != nil {
 		return
 	}
@@ -207,7 +206,7 @@ func keyLoginex(state int64, m ...string) (err error) {
 		key, sign []byte
 	)
 
-	key, err = ioutil.ReadFile(`key` + m[0])
+	key, err = os.ReadFile(`key` + m[0])
 	if err != nil {
 		return
 	}
