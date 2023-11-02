@@ -713,7 +713,7 @@ main:
 		case lexIdent:
 			noMap = true
 			objInfo, tobj := vm.findObj(lexeme.Value.(string), block)
-			if objInfo == nil && (!vm.Extern || i > *ind || i >= len(*lexemes)-2 || (*lexemes)[i+1].Type != isLPar) {
+			if objInfo == nil && (!vm.Extern || i >= len(*lexemes)-2 || (*lexemes)[i+1].Type != isLPar) {
 				logger.WithFields(log.Fields{"lex_value": lexeme.Value, "type": consts.ParseError}).Error("unknown identifier")
 				return fmt.Errorf(eUnknownIdent, lexeme.Value)
 			}
