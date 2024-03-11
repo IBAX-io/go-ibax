@@ -22,7 +22,7 @@ import (
 type transactionApi struct {
 }
 
-func NewTransactionApi() *transactionApi {
+func newTransactionApi() *transactionApi {
 	return &transactionApi{}
 }
 

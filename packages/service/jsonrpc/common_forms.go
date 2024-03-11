@@ -76,7 +76,7 @@ func (f *ecosystemForm) Validate(r *http.Request) error {
 
 	ecosysID, err := f.Validator.ValidateId(f.EcosystemID, client.EcosystemID, logger)
 	if err != nil {
-		if err == errors.New("Ecosystem not found") {
+		if err.Error() == "Ecosystem not found" {
 			err = fmt.Errorf("ecosystem %d doesn't exist", f.EcosystemID)
 		}
 		return err

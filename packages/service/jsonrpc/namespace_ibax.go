@@ -41,11 +41,11 @@ func (p *IbaxApi) GetApis() []any {
 
 func NewIbaxApi(m Mode) *IbaxApi {
 	return &IbaxApi{
-		auth:    NewAuthApi(m),
-		bk:      NewBlockChainApi(),
-		common:  NewCommonApi(m),
-		tx:      NewTransactionApi(),
-		account: NewAccountsApi(m),
-		data:    NewDataApi(),
+		auth:    newAuthApi(m),
+		bk:      newBlockChainApi(),
+		common:  newCommonApi(m),
+		tx:      newTransactionApi(),
+		account: newAccountsApi(m),
+		data:    newDataApi(),
 	}
 }
