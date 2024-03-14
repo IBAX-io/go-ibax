@@ -36,7 +36,7 @@ type commonApi struct {
 	mode Mode
 }
 
-func NewCommonApi(m Mode) *commonApi {
+func newCommonApi(m Mode) *commonApi {
 	return &commonApi{
 		mode: m,
 	}
@@ -194,6 +194,7 @@ type notifyInfo struct {
 
 type KeyInfoResult struct {
 	Account    string              `json:"account"`
+	KeyId      string              `json:"key_id"`
 	Ecosystems []*keyEcosystemInfo `json:"ecosystems"`
 }
 
@@ -300,6 +301,7 @@ func (c *commonApi) GetKeyInfo(ctx RequestContext, accountAddress string) (*KeyI
 
 	return &KeyInfoResult{
 		Account:    account,
+		KeyId:      strconv.FormatInt(keyID, 10),
 		Ecosystems: keysList,
 	}, nil
 }
@@ -366,10 +368,14 @@ func (c *commonApi) GetList(ctx RequestContext, auth Auth, form *ListWhereForm) 
 	logger := getLogger(r)
 
 	var (
-		err          error
-		table, where string
+		err                 error
+		table, where, order string
 	)
 	table, form.Columns, err = checkAccess(form.Name, form.Columns, client)
+	if err != nil {
+		return nil, DefaultError(err.Error())
+	}
+	order, err = qb.GetOrder(table, form.Order, true)
 	if err != nil {
 		return nil, DefaultError(err.Error())
 	}
@@ -426,8 +432,8 @@ func (c *commonApi) GetList(ctx RequestContext, auth Auth, form *ListWhereForm) 
 		return nil, DefaultError(fmt.Sprintf("Table %s has not been found", table))
 	}
 
-	if len(form.Order) > 0 {
-		rows, err := q.Order(form.Order).Offset(form.Offset).Limit(form.Limit).Rows()
+	if len(order) > 0 {
+		rows, err := q.Order(order).Offset(form.Offset).Limit(form.Limit).Rows()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
 			return nil, DefaultError(err.Error())

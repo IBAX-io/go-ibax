@@ -52,7 +52,7 @@ type authApi struct {
 	mode Mode
 }
 
-func NewAuthApi(mode Mode) *authApi {
+func newAuthApi(mode Mode) *authApi {
 	a := &authApi{
 		mode: mode,
 	}

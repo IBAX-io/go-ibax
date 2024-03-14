@@ -19,7 +19,7 @@ type NotSingle struct {
 type dataApi struct {
 }
 
-func NewDataApi() *dataApi {
+func newDataApi() *dataApi {
 	return &dataApi{}
 }
 
