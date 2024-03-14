@@ -158,6 +158,10 @@ func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(form.InWhere) > 0 {
 		inWhere, _, err := template.ParseObject([]rune(form.InWhere))
+		if err != nil {
+			errorResponse(w, err)
+			return
+		}
 		switch v := inWhere.(type) {
 		case string:
 			if len(v) == 0 {
@@ -253,6 +257,10 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(form.Where) > 0 {
 		inWhere, _, err := template.ParseObject([]rune(form.Where))
+		if err != nil {
+			errorResponse(w, err)
+			return
+		}
 		switch v := inWhere.(type) {
 		case string:
 			if len(v) == 0 {
