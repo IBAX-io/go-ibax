@@ -19,7 +19,9 @@ var (
 )
 
 func PrepareWhere(where string) string {
-	whereSlice := regexp.MustCompile(`->([\w\d_]+)`).FindAllStringSubmatchIndex(where, -1)
+	whereStr := where
+	where = strings.Replace(where, "->", ";", -1)
+	whereSlice := regexp.MustCompile(`;([\w\-]+)`).FindAllStringSubmatchIndex(where, -1)
 	startWhere := 0
 	out := ``
 	for i := 0; i < len(whereSlice); i++ {
@@ -48,7 +50,7 @@ func PrepareWhere(where string) string {
 	if len(out) > 0 {
 		return out + where[startWhere:]
 	}
-	return where
+	return whereStr
 }
 
 func GetWhere(inWhere *types.Map) (string, error) {

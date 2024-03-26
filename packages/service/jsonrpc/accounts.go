@@ -19,7 +19,7 @@ type accountsApi struct {
 	Mode
 }
 
-func NewAccountsApi(m Mode) *accountsApi {
+func newAccountsApi(m Mode) *accountsApi {
 	return &accountsApi{m}
 }
 

@@ -20,6 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"strings"
@@ -28,7 +29,7 @@ import (
 type blockChainApi struct {
 }
 
-func NewBlockChainApi() *blockChainApi {
+func newBlockChainApi() *blockChainApi {
 	return &blockChainApi{}
 }
 
@@ -924,8 +925,8 @@ func (b *blockChainApi) GetMember(ctx RequestContext, account string, ecosystemI
 
 type ListWhereForm struct {
 	ListForm
-	Order string `json:"order"`
-	Where any    `json:"where"`
+	Order any `json:"order"`
+	Where any `json:"where"`
 }
 
 func (f *ListWhereForm) Validate(r *http.Request) error {
@@ -969,4 +970,71 @@ func (b *blockChainApi) GetBlocksCountByNode(ctx RequestContext, nodePosition in
 
 	return &bm, nil
 
+}
+
+type openSystemInfo struct {
+	Ecosystem int64          `json:"ecosystem"`
+	Info      *EcosystemInfo `json:"info,omitempty"`
+}
+
+type openSystemList struct {
+	Count int64            `json:"count"`
+	List  []openSystemInfo `json:"list"`
+}
+
+// GetOpenEcosystem
+// verbosity Type: numeric, optional, default=1
+// 1 for a ecosystem id list, and 2 for json object with ecosystem info
+func (b *blockChainApi) GetOpenEcosystem(ctx RequestContext, verbosity, offset, limit *int) (*openSystemList, *Error) {
+	r := ctx.HTTPRequest()
+	logger := getLogger(r)
+	form := &paginatorForm{}
+	if offset != nil {
+		form.Offset = *offset
+	}
+	if limit != nil {
+		form.Limit = *limit
+	}
+	if err := parameterValidator(r, form); err != nil {
+		return nil, InvalidParamsError(err.Error())
+	}
+
+	var bosity = 1
+	if verbosity != nil {
+		bosity = *verbosity
+		if bosity != 1 && bosity != 2 {
+			return nil, DefaultError("Not Supported verbosity")
+		}
+	}
+	var (
+		idList   []int64
+		spfm     sqldb.StateParameter
+		info     openSystemList
+		sqlQuery *gorm.DB
+	)
+	sqlQuery = sqldb.GetDB(nil).Table(spfm.TableName()).Where("name = 'free_membership' AND value = '1'").
+		Select("ecosystem")
+	err := sqlQuery.Count(&info.Count).Error
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get open ecosystem count")
+		return nil, DefaultError(err.Error())
+	}
+	err = sqlQuery.Offset(form.Offset).Limit(form.Limit).Order("ecosystem asc").Find(&idList).Error
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("get open ecosystem")
+		return nil, DefaultError(err.Error())
+	}
+	info.List = make([]openSystemInfo, len(idList))
+	for i, ecosystem := range idList {
+		if bosity == 2 {
+			var er *Error
+			info.List[i].Info, er = b.EcosystemInfo(ctx, ecosystem)
+			if er != nil {
+				return nil, er
+			}
+		}
+		info.List[i].Ecosystem = ecosystem
+	}
+
+	return &info, nil
 }

@@ -6,7 +6,9 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/IBAX-io/go-ibax/packages/script"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -142,14 +144,28 @@ func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	var (
-		err          error
-		table, where string
+		err                 error
+		table, where, order string
 	)
 	table, form.Columns, err = checkAccess(params["name"], form.Columns, client)
 	if err != nil {
 		errorResponse(w, err)
 		return
 	}
+	if form.Order != "" {
+		var orderParam any
+		err = json.Unmarshal([]byte(form.Order), &orderParam)
+		if err != nil {
+			errorResponse(w, fmt.Errorf("order unamrshal:%v", err))
+			return
+		}
+		order, err = qb.GetOrder(table, orderParam, true)
+		if err != nil {
+			errorResponse(w, err)
+			return
+		}
+	}
+
 	//q := sqldb.GetTableQuery(params["name"], client.EcosystemID)
 	q := sqldb.GetTableListQuery(params["name"], client.EcosystemID)
 	if len(form.Columns) > 0 {
@@ -158,6 +174,10 @@ func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(form.InWhere) > 0 {
 		inWhere, _, err := template.ParseObject([]rune(form.InWhere))
+		if err != nil {
+			errorResponse(w, err)
+			return
+		}
 		switch v := inWhere.(type) {
 		case string:
 			if len(v) == 0 {
@@ -195,8 +215,8 @@ func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(form.Order) > 0 {
-		rows, err := q.Order(form.Order).Offset(form.Offset).Limit(form.Limit).Rows()
+	if len(order) > 0 {
+		rows, err := q.Order(order).Offset(form.Offset).Limit(form.Limit).Rows()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
 			errorResponse(w, err)
@@ -253,6 +273,10 @@ func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
 
 	if len(form.Where) > 0 {
 		inWhere, _, err := template.ParseObject([]rune(form.Where))
+		if err != nil {
+			errorResponse(w, err)
+			return
+		}
 		switch v := inWhere.(type) {
 		case string:
 			if len(v) == 0 {
