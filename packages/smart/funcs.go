@@ -287,6 +287,12 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"MathMod":                      MathMod,
 		"MathModDecimal":               MathModDecimal,
 		"CreateView":                   CreateView,
+		"SqrtDecimal":                  SqrtDecimal,
+		"Div":                          Div,
+		"GreaterThan":                  GreaterThan,
+		"GreaterThanOrEqual":           GreaterThanOrEqual,
+		"LessThan":                     LessThan,
+		"LessThanOrEqual":              LessThanOrEqual,
 	}
 	switch vt {
 	case script.VMType_CLB:

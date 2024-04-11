@@ -5,6 +5,7 @@
 package smart
 
 import (
+	"github.com/shopspring/decimal"
 	"math"
 	"strconv"
 )
@@ -107,4 +108,58 @@ func Sqrt(x any) (float64, error) {
 		return fx, nil
 	}
 	return 0, errFloatResult
+}
+
+func SqrtDecimal(str string) decimal.Decimal {
+	y, _ := decimal.NewFromString(str)
+
+	var z decimal.Decimal
+	var three = decimal.NewFromInt(3)
+	var two = decimal.NewFromInt(2)
+	var one = decimal.NewFromInt(1)
+	if y.GreaterThan(three) {
+		z = y
+		x := y.Div(two).Add(one)
+		for x.LessThan(z) {
+			z = x
+			x = (y.Div(x).Add(x)).Div(two)
+		}
+	} else if !y.IsZero() {
+		z = one
+	}
+	return z
+}
+
+func Div(str1 string, str2 string) string {
+	x, _ := decimal.NewFromString(str1)
+	y, _ := decimal.NewFromString(str2)
+	return x.Div(y).String()
+}
+
+func GreaterThan(str1 string, str2 string) bool {
+	x, _ := decimal.NewFromString(str1)
+	y, _ := decimal.NewFromString(str2)
+
+	return x.GreaterThan(y)
+}
+
+func GreaterThanOrEqual(str1 string, str2 string) bool {
+	x, _ := decimal.NewFromString(str1)
+	y, _ := decimal.NewFromString(str2)
+
+	return x.GreaterThanOrEqual(y)
+}
+
+func LessThan(str1 string, str2 string) bool {
+	x, _ := decimal.NewFromString(str1)
+	y, _ := decimal.NewFromString(str2)
+
+	return x.LessThan(y)
+}
+
+func LessThanOrEqual(str1 string, str2 string) bool {
+	x, _ := decimal.NewFromString(str1)
+	y, _ := decimal.NewFromString(str2)
+
+	return x.LessThanOrEqual(y)
 }
