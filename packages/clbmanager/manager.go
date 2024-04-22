@@ -393,10 +393,10 @@ func checkCLBName(name string) error {
 
 	for i, c := range name {
 		if unicode.IsDigit(c) && i == 0 {
-			return fmt.Errorf("the name cannot begin with a number")
+			return errors.New("the name cannot begin with a number")
 		}
 		if !unicode.IsDigit(c) && !unicode.Is(unicode.Latin, c) {
-			return fmt.Errorf("Incorrect symbol")
+			return errors.New("Incorrect symbol")
 		}
 	}
 
