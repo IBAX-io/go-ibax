@@ -248,7 +248,7 @@ func GetHonorNodeType() bool {
 	return false
 }
 
-// GetNodePositionByKeyID is returning node position by key id
+// GetNodePositionByPublicKey is returning node position by key id
 func GetNodePositionByPublicKey(publicKey []byte) (int64, error) {
 	mutex.RLock()
 	defer mutex.RUnlock()
@@ -523,7 +523,7 @@ func GetLocalNodeBanTime() time.Duration {
 	return time.Millisecond * time.Duration(converter.StrToInt64(SysString(LocalNodeBanTime)))
 }
 
-// GetRemoteHosts returns array of hostnames excluding myself
+// GetDefaultRemoteHosts returns array of hostnames excluding myself
 func GetDefaultRemoteHosts() []string {
 	ret := make([]string, 0)
 
