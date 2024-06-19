@@ -41,6 +41,7 @@ type BalanceResult struct {
 	Total       string `json:"total"`
 	Utxo        string `json:"utxo"`
 	TokenSymbol string `json:"token_symbol"`
+	TokenName   string `json:"token_name"`
 }
 
 type AccountOrKeyId struct {
@@ -140,5 +141,6 @@ func (b *accountsApi) GetBalance(ctx RequestContext, info *AccountOrKeyId, ecosy
 		Total:       total.String(),
 		Utxo:        utxoAmount.String(),
 		TokenSymbol: eco.TokenSymbol,
+		TokenName:   eco.TokenName,
 	}, nil
 }

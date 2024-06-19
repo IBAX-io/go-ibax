@@ -22,6 +22,7 @@ type balanceResult struct {
 	Total       string `json:"total"`
 	Utxo        string `json:"utxo"`
 	TokenSymbol string `json:"token_symbol"`
+	TokenName   string `json:"token_name"`
 }
 
 func (m Mode) getBalanceHandler(w http.ResponseWriter, r *http.Request) {
@@ -76,5 +77,6 @@ func (m Mode) getBalanceHandler(w http.ResponseWriter, r *http.Request) {
 		Total:       total.String(),
 		Utxo:        utxoAmount.String(),
 		TokenSymbol: eco.TokenSymbol,
+		TokenName:   eco.TokenName,
 	})
 }
