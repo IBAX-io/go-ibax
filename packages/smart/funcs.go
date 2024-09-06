@@ -21,12 +21,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/IBAX-io/go-ibax/packages/common/crypto/base58"
-
-	"golang.org/x/crypto/sha3"
-
 	"github.com/IBAX-io/go-ibax/packages/clbmanager"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto/base58"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/hashalgo"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -38,10 +35,15 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/types"
-
+	"github.com/btcsuite/btcd/btcec/v2"
+	"github.com/btcsuite/btcd/btcec/v2/schnorr"
+	"github.com/btcsuite/btcd/btcutil"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/txscript"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -251,6 +253,11 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"SortedKeys":                   SortedKeys,
 		"Append":                       Append,
 		"EthereumAddress":              EthereumAddress,
+		"BitcoinLegacyAddress":         BitcoinLegacyAddress, // 1 address public key uncompressed
+		"BitcoinBip32Address":          BitcoinBip32Address,  // 1 address public key compressed
+		"BitcoinBip49Address":          BitcoinBip49Address,  // 3 address public key compressed,path: m/49'/0'/0'/0/0
+		"BitcoinBip84Address":          BitcoinBip84Address,  // bc1q address public key compressed,path: m/84'/0'/0'/0/0
+		"BitcoinBip86Address":          BitcoinBip86Address,  // bc1p address public key compressed,path: m/86'/0'/0'/0/0
 		"TronAddress":                  TronAddress,
 		"TopAmounts":                   TopAmounts,
 		"GetLogTxCount":                GetLogTxCount,
@@ -2035,6 +2042,128 @@ func (a Address) hex() []byte {
 	hex.Encode(buf[2:], a[:])
 	return buf[:]
 }
+
+// BitcoinLegacyAddress public key uncompressed, p2pkh address 1...
+func BitcoinLegacyAddress(pubKeyBytes []byte) (string, error) {
+	// if the public key is 64 bytes, add 0x04 prefix
+	if len(pubKeyBytes) == 64 {
+		pubKeyBytes = append([]byte{0x04}, pubKeyBytes...)
+	}
+	pubKey, err := btcec.ParsePubKey(pubKeyBytes)
+	if err != nil {
+		return "", err
+	}
+	serializedPubKey := pubKey.SerializeUncompressed()
+	addressPubKey, err := btcutil.NewAddressPubKey(serializedPubKey, &chaincfg.MainNetParams)
+	if err != nil {
+		return "", err
+	}
+	address := addressPubKey.EncodeAddress()
+	return address, nil
+}
+
+// BitcoinBip32Address bip32 path: m/32/0/{index} compressed, p2pkh address 1...
+func BitcoinBip32Address(pubKeyBytes []byte) (string, error) {
+	// if the public key is 64 bytes, add 0x04 prefix
+	if len(pubKeyBytes) == 64 {
+		pubKeyBytes = append([]byte{0x04}, pubKeyBytes...)
+	}
+	pubKey, err := btcec.ParsePubKey(pubKeyBytes)
+	if err != nil {
+		return "", err
+	}
+	serializedPubKey := pubKey.SerializeCompressed()
+	addressPubKey, err := btcutil.NewAddressPubKey(serializedPubKey, &chaincfg.MainNetParams)
+	if err != nil {
+		return "", err
+	}
+	address := addressPubKey.EncodeAddress()
+	return address, nil
+}
+
+// BitcoinBip49Address bip49 path: m/49'/0'/0'/0/{index}, segwit address p2sh 3...
+func BitcoinBip49Address(pubKeyBytes []byte) (string, error) {
+	// if the public key is 64 bytes, add 0x04 prefix
+	if len(pubKeyBytes) == 64 {
+		pubKeyBytes = append([]byte{0x04}, pubKeyBytes...)
+	}
+	pubKey, err := btcec.ParsePubKey(pubKeyBytes)
+	if err != nil {
+		return "", err
+	}
+	serializedPubKey := pubKey.SerializeCompressed()
+	pkHash := btcutil.Hash160(serializedPubKey)
+	witnessProg, err := btcutil.NewAddressWitnessPubKeyHash(pkHash, &chaincfg.MainNetParams)
+	if err != nil {
+		return "", err
+	}
+	script, err := txscript.PayToAddrScript(witnessProg)
+	if err != nil {
+		return "", err
+	}
+	addressScriptHash, err := btcutil.NewAddressScriptHash(script, &chaincfg.MainNetParams)
+	if err != nil {
+		return "", err
+	}
+	address := addressScriptHash.EncodeAddress()
+	return address, nil
+}
+
+// BitcoinBip84Address bip84 path: m/84'/0'/0'/0/{index}, segwit address p2wpkh bc1q...
+func BitcoinBip84Address(pubKeyBytes []byte) (string, error) {
+	// if the public key is 64 bytes, add 0x04 prefix
+	if len(pubKeyBytes) == 64 {
+		pubKeyBytes = append([]byte{0x04}, pubKeyBytes...)
+	}
+	pubKey, err := btcec.ParsePubKey(pubKeyBytes)
+	if err != nil {
+		return "", err
+	}
+	serializedPubKey := pubKey.SerializeCompressed()
+	witnessProg := btcutil.Hash160(serializedPubKey)
+	addressWitnessPubKeyHash, err := btcutil.NewAddressWitnessPubKeyHash(witnessProg, &chaincfg.MainNetParams)
+	if err != nil {
+		return "", err
+	}
+	address := addressWitnessPubKeyHash.EncodeAddress()
+	return address, nil
+}
+
+// BitcoinBip86Address bip86 path: m/86'/0'/0'/0/{index},taproot address bc1p...
+func BitcoinBip86Address(pubKeyBytes []byte) (string, error) {
+	// if the public key is 64 bytes, add 0x04 prefix
+	if len(pubKeyBytes) == 64 {
+		pubKeyBytes = append([]byte{0x04}, pubKeyBytes...)
+	}
+	pubKey, err := btcec.ParsePubKey(pubKeyBytes)
+	if err != nil {
+		return "", err
+	}
+	tapKey := txscript.ComputeTaprootKeyNoScript(pubKey)
+	tweakedPubKeyHash := schnorr.SerializePubKey(tapKey)
+	address, err := btcutil.NewAddressTaproot(tweakedPubKeyHash, &chaincfg.MainNetParams)
+	if err != nil {
+		return "", err
+	}
+	taprootAddress := address.EncodeAddress()
+	return taprootAddress, nil
+}
+
+// EthereumAddress bip44 path: m/44'/60'/0'/0/{index}
+//func EthereumAddress(pubKeyBytes []byte) (string, error) {
+//	// if the public key is 64 bytes, add 0x04 prefix
+//	if len(pubKeyBytes) == 64 {
+//		pubKeyBytes = append([]byte{0x04}, pubKeyBytes...)
+//	}
+//	pubKey, err := btcec.ParsePubKey(pubKeyBytes)
+//	if err != nil {
+//		return "", err
+//	}
+//	pubKeyBytes2 := pubKey.SerializeUncompressed()[1:] // Strip off the 0x04 prefix
+//	address := eth_crypto.Keccak256(pubKeyBytes2)[12:] // Keccak-256 and take last 20 bytes
+//	ethAddress := "0x" + fmt.Sprintf("%x", address)
+//	return ethAddress, nil
+//}
 
 func EthereumAddress(pub []byte) string {
 	var addr Address
