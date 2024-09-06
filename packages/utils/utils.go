@@ -26,7 +26,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/theckman/go-flock"
 )
@@ -302,10 +301,6 @@ func ShuffleSlice(slice []string) {
 		j := rand.Intn(i + 1)
 		slice[i], slice[j] = slice[j], slice[i]
 	}
-}
-
-func UUID() string {
-	return uuid.Must(uuid.NewV4(), nil).String()
 }
 
 // MakeDirectory makes directory if is not exists
