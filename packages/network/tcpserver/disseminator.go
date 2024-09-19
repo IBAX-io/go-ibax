@@ -141,7 +141,7 @@ func processBlock(buf *bytes.Buffer, honorNodeID int64) error {
 
 	// get block hash
 	blockHash := buf.Next(consts.HashSize)
-	log.Debug("blockHash %x", blockHash)
+	log.Debugf("blockHash %x", blockHash)
 
 	qb := &sqldb.QueueBlock{}
 	found, err = qb.GetQueueBlockByHash(blockHash)
