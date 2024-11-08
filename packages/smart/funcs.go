@@ -2043,6 +2043,14 @@ func (a Address) hex() []byte {
 	return buf[:]
 }
 
+func getBtcNetParams() *chaincfg.Params {
+	netParams := &chaincfg.MainNetParams
+	if syspar.IsTestMode() {
+		netParams = &chaincfg.TestNet3Params
+	}
+	return netParams
+}
+
 // BitcoinLegacyAddress public key uncompressed, p2pkh address 1...
 func BitcoinLegacyAddress(pubKeyBytes []byte) (string, error) {
 	// if the public key is 64 bytes, add 0x04 prefix
@@ -2054,7 +2062,7 @@ func BitcoinLegacyAddress(pubKeyBytes []byte) (string, error) {
 		return "", err
 	}
 	serializedPubKey := pubKey.SerializeUncompressed()
-	addressPubKey, err := btcutil.NewAddressPubKey(serializedPubKey, &chaincfg.MainNetParams)
+	addressPubKey, err := btcutil.NewAddressPubKey(serializedPubKey, getBtcNetParams())
 	if err != nil {
 		return "", err
 	}
@@ -2073,7 +2081,7 @@ func BitcoinBip32Address(pubKeyBytes []byte) (string, error) {
 		return "", err
 	}
 	serializedPubKey := pubKey.SerializeCompressed()
-	addressPubKey, err := btcutil.NewAddressPubKey(serializedPubKey, &chaincfg.MainNetParams)
+	addressPubKey, err := btcutil.NewAddressPubKey(serializedPubKey, getBtcNetParams())
 	if err != nil {
 		return "", err
 	}
@@ -2093,7 +2101,7 @@ func BitcoinBip49Address(pubKeyBytes []byte) (string, error) {
 	}
 	serializedPubKey := pubKey.SerializeCompressed()
 	pkHash := btcutil.Hash160(serializedPubKey)
-	witnessProg, err := btcutil.NewAddressWitnessPubKeyHash(pkHash, &chaincfg.MainNetParams)
+	witnessProg, err := btcutil.NewAddressWitnessPubKeyHash(pkHash, getBtcNetParams())
 	if err != nil {
 		return "", err
 	}
@@ -2101,7 +2109,7 @@ func BitcoinBip49Address(pubKeyBytes []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	addressScriptHash, err := btcutil.NewAddressScriptHash(script, &chaincfg.MainNetParams)
+	addressScriptHash, err := btcutil.NewAddressScriptHash(script, getBtcNetParams())
 	if err != nil {
 		return "", err
 	}
@@ -2121,7 +2129,7 @@ func BitcoinBip84Address(pubKeyBytes []byte) (string, error) {
 	}
 	serializedPubKey := pubKey.SerializeCompressed()
 	witnessProg := btcutil.Hash160(serializedPubKey)
-	addressWitnessPubKeyHash, err := btcutil.NewAddressWitnessPubKeyHash(witnessProg, &chaincfg.MainNetParams)
+	addressWitnessPubKeyHash, err := btcutil.NewAddressWitnessPubKeyHash(witnessProg, getBtcNetParams())
 	if err != nil {
 		return "", err
 	}
@@ -2141,7 +2149,7 @@ func BitcoinBip86Address(pubKeyBytes []byte) (string, error) {
 	}
 	tapKey := txscript.ComputeTaprootKeyNoScript(pubKey)
 	tweakedPubKeyHash := schnorr.SerializePubKey(tapKey)
-	address, err := btcutil.NewAddressTaproot(tweakedPubKeyHash, &chaincfg.MainNetParams)
+	address, err := btcutil.NewAddressTaproot(tweakedPubKeyHash, getBtcNetParams())
 	if err != nil {
 		return "", err
 	}
