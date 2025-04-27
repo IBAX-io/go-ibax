@@ -268,6 +268,7 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"BlockTime":                    BlockTime,
 		"IsObject":                     IsObject,
 		"DateTime":                     DateTime,
+		"AddDate":                      AddDate,
 		"UnixDateTime":                 UnixDateTime,
 		"DateTimeLocation":             DateTimeLocation,
 		"UnixDateTimeLocation":         UnixDateTimeLocation,
