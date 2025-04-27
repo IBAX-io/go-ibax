@@ -43,6 +43,9 @@ func DateTimeLocation(unix int64, locationName string) (string, error) {
 
 	return time.Unix(unix, 0).In(loc).Format(dateTimeFormat), nil
 }
+func AddDate(unix, years, months, days int64) int64 {
+	return time.Unix(unix, 0).AddDate(int(years), int(months), int(days)).Unix()
+}
 
 func UnixDateTime(value string) int64 {
 	t, err := time.Parse(dateTimeFormat, value)
