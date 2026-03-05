@@ -52,7 +52,7 @@ func GetHTTPTextAnswer(url string) (string, error) {
 		log.WithFields(log.Fields{"error": err, "type": consts.IOError}).Error("cannot read response body")
 		return "", err
 	}
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNotFound {
 		err = fmt.Errorf(`404`)
 	}
 	return string(htmlData), err
