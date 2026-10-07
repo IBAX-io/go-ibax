@@ -20,7 +20,7 @@ func RegisterRoutes() http.Handler {
 	}
 
 	r := api.NewRouter(m)
-	if !conf.Config.IsSupportingCLB() {
+	if !conf.Config.IsSupportingChildChain() {
 		m.SetBlockchainRoutes(r)
 	}
 
@@ -28,7 +28,7 @@ func RegisterRoutes() http.Handler {
 		m.SetSubNodeRoutes(r)
 	}
 
-	if conf.Config.IsSupportingCLB() {
+	if conf.Config.IsSupportingChildChain() {
 	}
 
 	return r.GetAPI()

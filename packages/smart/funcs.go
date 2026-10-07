@@ -21,7 +21,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/IBAX-io/go-ibax/packages/clbmanager"
+	"github.com/IBAX-io/go-ibax/packages/chainmanager"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/base58"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/hashalgo"
@@ -53,7 +53,7 @@ const (
 )
 
 var (
-	ErrNotImplementedOnCLB = errors.New("Contract not implemented on CLB")
+	ErrNotImplementedOnChildChain = errors.New("Contract not implemented on child chain")
 )
 
 var BOM = []byte{0xEF, 0xBB, 0xBF}
@@ -493,7 +493,7 @@ func UpdateContract(sc *SmartContract, id int64, value, conditions string, recip
 	}
 
 	if len(pars) > 0 {
-		if !sc.CLB {
+		if !sc.ChildChain {
 			if err := SysRollback(sc, SysRollData{Type: "EditContract", ID: id}); err != nil {
 				return err
 			}
@@ -541,7 +541,7 @@ func CreateContract(sc *SmartContract, name, value, conditions string, tokenEcos
 	if err = FlushContract(sc, root, id); err != nil {
 		return 0, err
 	}
-	if !sc.CLB {
+	if !sc.ChildChain {
 		err = SysRollback(sc, SysRollData{Type: "NewContract", Data: value})
 		if err != nil {
 			return 0, err
@@ -638,7 +638,7 @@ func CreateView(sc *SmartContract, vname, columns, where string, applicationID i
 	if err != nil {
 		return logErrorDB(err, "insert table info")
 	}
-	if !sc.CLB {
+	if !sc.ChildChain {
 		if err = syspar.SysTableColType(sc.DbTransaction); err != nil {
 			return logErrorDB(err, "updating sys table col type")
 		}
@@ -859,7 +859,7 @@ func CreateTable(sc *SmartContract, name, columns, permissions string, applicati
 	if err != nil {
 		return logErrorDB(err, "insert table info")
 	}
-	if !sc.CLB {
+	if !sc.ChildChain {
 		if err = syspar.SysTableColType(sc.DbTransaction); err != nil {
 			return logErrorDB(err, "updating sys table col type")
 		}
@@ -1519,7 +1519,7 @@ func CreateColumn(sc *SmartContract, tableName, name, colType, permissions strin
 	if err != nil {
 		return err
 	}
-	if !sc.CLB {
+	if !sc.ChildChain {
 		if err := syspar.SysTableColType(sc.DbTransaction); err != nil {
 			return err
 		}
@@ -1707,8 +1707,8 @@ func UpdateCron(sc *SmartContract, id int64) error {
 }
 
 func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
-	if conf.Config.IsSupportingCLB() {
-		return ErrNotImplementedOnCLB
+	if conf.Config.IsSupportingChildChain() {
+		return ErrNotImplementedOnChildChain
 	}
 
 	now := time.Unix(timestamp, 0)
@@ -1884,29 +1884,29 @@ func BytesToString(src []byte) string {
 	return string(src)
 }
 
-// CreateCLB allow create new CLB throught clbmanager
+// CreateCLB creates a new child chain via chainmanager (Needle API name kept for compatibility)
 func CreateCLB(sc *SmartContract, name, dbUser, dbPassword string, port int64) error {
-	return clbmanager.Manager.CreateCLB(name, dbUser, dbPassword, int(port))
+	return chainmanager.Manager.CreateChildChain(name, dbUser, dbPassword, int(port))
 }
 
 // DeleteCLB delete clb
 func DeleteCLB(sc *SmartContract, name string) error {
-	return clbmanager.Manager.DeleteCLB(name)
+	return chainmanager.Manager.DeleteChildChain(name)
 }
 
 // StartCLB run CLB process
 func StartCLB(sc *SmartContract, name string) error {
-	return clbmanager.Manager.StartCLB(name)
+	return chainmanager.Manager.StartChildChain(name)
 }
 
 // StopCLBProcess stops CLB process
 func StopCLBProcess(sc *SmartContract, name string) error {
-	return clbmanager.Manager.StopCLB(name)
+	return chainmanager.Manager.StopChildChain(name)
 }
 
 // GetCLBList returns list CLB process with statuses
 func GetCLBList(sc *SmartContract) map[string]string {
-	list, _ := clbmanager.Manager.ListProcessWithPorts()
+	list, _ := chainmanager.Manager.ListProcessWithPorts()
 	return list
 }
 
@@ -2310,7 +2310,7 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 	if err != nil {
 		return err
 	}
-	if !sc.CLB {
+	if !sc.ChildChain {
 		if err = syspar.SysTableColType(sc.DbTransaction); err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating sys table col type")
 			return err
@@ -2365,7 +2365,7 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 		return err
 	}
 
-	if !sc.CLB {
+	if !sc.ChildChain {
 		var (
 			out []byte
 		)

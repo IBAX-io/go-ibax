@@ -3,7 +3,7 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package clb
+package childchain
 
 import (
 	"github.com/IBAX-io/go-ibax/packages/consts"

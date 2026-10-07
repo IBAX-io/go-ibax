@@ -67,7 +67,7 @@ type loginResult struct {
 	NotifyKey   string        `json:"notify_key,omitempty"`
 	IsNode      bool          `json:"isnode"`
 	IsOwner     bool          `json:"isowner"`
-	IsCLB       bool          `json:"clb"`
+	IsChildChain bool          `json:"clb"` // JSON tag kept for API compatibility
 	Timestamp   string        `json:"timestamp,omitempty"`
 	Roles       []rolesResult `json:"roles,omitempty"`
 }
@@ -194,7 +194,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if !conf.Config.IsSupportingCLB() {
+			if !conf.Config.IsSupportingChildChain() {
 				gt := 3 * syspar.GetMaxBlockGenerationTime()
 				l := &sqldb.LogTransaction{}
 				for i := 0; i < 2; i++ {
@@ -285,7 +285,7 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		KeyID:       converter.Int64ToStr(wallet),
 		IsOwner:     founder == wallet,
 		IsNode:      conf.Config.KeyID == wallet,
-		IsCLB:       conf.Config.IsSupportingCLB(),
+		IsChildChain:       conf.Config.IsSupportingChildChain(),
 	}
 
 	claims := JWTClaims{
@@ -381,7 +381,7 @@ func checkRoleFromParam(role, ecosystemID int64, account string) (int64, error) 
 }
 
 func allowCreateUser(c *Client) bool {
-	if conf.Config.IsSupportingCLB() {
+	if conf.Config.IsSupportingChildChain() {
 		return true
 	}
 

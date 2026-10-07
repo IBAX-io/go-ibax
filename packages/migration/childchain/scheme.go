@@ -3,14 +3,14 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package clb
+package childchain
 
 import (
 	"strings"
 )
 
 // GetCLBScript returns script to create ecosystem
-func GetCLBScript() string {
+func GetChildChainScript() string {
 	scripts := []string{
 		schemaCLB,
 		snippetsDataSQL,

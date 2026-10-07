@@ -715,11 +715,11 @@ func parseArg(arg string, workspace *Workspace) (val string) {
 // Template2JSON converts templates to JSON data
 func Template2JSON(input string, timeout *bool, vars *map[string]string) []byte {
 	root := node{}
-	isclb := (*vars)[`clb`] == `true` || (*vars)[`clb`] == `1`
+	isChildChain := (*vars)[`clb`] == `true` || (*vars)[`clb`] == `1` // template var "clb" kept for compatibility
 	keyID := converter.StrToInt64((*vars)["key_id"])
 	accountID := (*vars)["account_id"]
 	sc := smart.SmartContract{
-		CLB: isclb,
+		ChildChain: isChildChain,
 		VM:  script.GetVM(),
 		TxSmart: &types.SmartTransaction{
 			Header: &types.Header{

@@ -52,7 +52,7 @@ var (
 
 // SmartContract is storing smart contract data
 type SmartContract struct {
-	CLB             bool
+	ChildChain      bool
 	Rollback        bool
 	FullAccess      bool
 	SysUpdate       bool
@@ -136,10 +136,10 @@ func InitVM() {
 }
 
 func defineVMType() script.VMType {
-	if conf.Config.IsCLB() {
+	if conf.Config.IsChildChain() {
 		return script.VMType_CLB
 	}
-	if conf.Config.IsCLBMaster() {
+	if conf.Config.IsChainHost() {
 		return script.VMType_CLBMaster
 	}
 	return script.VMType_Smart
@@ -151,7 +151,7 @@ func (sc *SmartContract) GetLogger() *log.Entry {
 	if sc.TxContract != nil {
 		name = sc.TxContract.Name
 	}
-	return log.WithFields(log.Fields{"tx": fmt.Sprintf("%x", sc.Hash), "clb": sc.CLB, "name": name, "tx_eco": sc.TxSmart.EcosystemID})
+	return log.WithFields(log.Fields{"tx": fmt.Sprintf("%x", sc.Hash), "clb": sc.ChildChain, "name": name, "tx_eco": sc.TxSmart.EcosystemID})
 }
 
 func GetAllContracts() (string, error) {

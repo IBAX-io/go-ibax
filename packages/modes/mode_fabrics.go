@@ -8,7 +8,7 @@ import (
 	"context"
 
 	"github.com/IBAX-io/go-ibax/packages/block"
-	"github.com/IBAX-io/go-ibax/packages/clbmanager"
+	"github.com/IBAX-io/go-ibax/packages/chainmanager"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/daemons"
@@ -22,9 +22,9 @@ import (
 )
 
 func GetDaemonLoader() types.DaemonFactory {
-	if conf.Config.IsSupportingCLB() {
-		return CLBDaemonFactory{
-			logger: log.WithFields(log.Fields{"loader": "clb_daemon_loader"}),
+	if conf.Config.IsSupportingChildChain() {
+		return ChainHostDaemonFactory{
+			logger: log.WithFields(log.Fields{"loader": "chainhost_daemon_loader"}),
 		}
 	}
 
@@ -166,13 +166,13 @@ func (SNDaemonFactory) GetDaemonsList() []string {
 	}
 }
 
-// CLBDaemonFactory allows load clb daemons
-type CLBDaemonFactory struct {
+// ChainHostDaemonFactory allows load clb daemons
+type ChainHostDaemonFactory struct {
 	logger *log.Entry
 }
 
-// Load loads clb daemons
-func (l CLBDaemonFactory) Load(ctx context.Context) error {
+// Load loads daemons
+func (l ChainHostDaemonFactory) Load(ctx context.Context) error {
 	if err := syspar.SysUpdate(nil); err != nil {
 		l.logger.Errorf("can't read platform parameters: %s", utils.ErrInfo(err))
 		return err
@@ -196,11 +196,11 @@ func (l CLBDaemonFactory) Load(ctx context.Context) error {
 		log.Errorf("can't start tcp servers, stop")
 		return err
 	}
-	clbmanager.InitCLBManager()
+	chainmanager.InitChainManager()
 	return nil
 }
 
-func (CLBDaemonFactory) GetDaemonsList() []string {
+func (ChainHostDaemonFactory) GetDaemonsList() []string {
 	return []string{
 		"Scheduler",
 	}

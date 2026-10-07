@@ -101,7 +101,7 @@ func InitDB(cfg conf.DBConfig) error {
 		return err
 	}
 
-	if err := ExecCLBSchema(consts.DefaultCLB, conf.Config.KeyID); err != nil {
+	if err := ExecChildChainSchema(consts.DefaultCLB, conf.Config.KeyID); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB schema")
 		return err
 	}

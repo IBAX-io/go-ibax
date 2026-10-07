@@ -51,7 +51,7 @@ func (s *SmartTransactionParser) Init(t *InToCxt) error {
 	s.DbTransaction = t.DbTransaction
 	s.TxSize = int64(len(s.Payload))
 	s.VM = script.GetVM()
-	s.CLB = false
+	s.ChildChain = false
 	s.Rollback = true
 	s.SysUpdate = false
 	s.OutputsMap = t.OutputsMap
