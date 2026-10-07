@@ -68,3 +68,22 @@ $    go-ibax start
 
 
 
+
+## Run Modes
+
+`RunNodeMode` in the config selects how the node operates:
+
+| Mode | Value | Description |
+|------|-------|-------------|
+| Node | `NONE` | Regular blockchain node (default) |
+| ChainHost | `ChainHost` | Manages isolated child-chain instances (BaaS-style) |
+| ChildChain | `ChildChain` | Runs as an isolated child chain |
+| SubNode | `SubNode` | Ecosystem-level node syncing only its own ecosystem's data |
+
+> **Naming note (2026-10):** `ChainHost`/`ChildChain` were renamed from
+> `CLBMaster`/`CLB`. The old names collided with **CLB (Cross Ledger Base)**,
+> the cross-ledger communication protocol implemented by the separate
+> `go-ibax-clb` repository (whitepaper §6.2.3). The run modes only provision
+> isolated chain instances and implement no cross-ledger function.
+> Old config values are not accepted; update `RunNodeMode` accordingly.
+> (Pre-mainnet: no migration needed for deployed networks.)
