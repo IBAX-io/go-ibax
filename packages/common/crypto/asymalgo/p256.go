@@ -27,9 +27,16 @@ func (e *P256) Sign(privateKey, hash []byte) ([]byte, error) {
 	if len(hash) == 0 {
 		return nil, ErrSigningEmpty
 	}
+	curve := elliptic.P256()
+	d, err := privateScalar(privateKey, curve.Params().N)
+	if err != nil {
+		return nil, err
+	}
 	priv := new(ecdsa.PrivateKey)
-	priv.PublicKey.Curve = elliptic.P256()
-	priv.D = new(big.Int).SetBytes(privateKey)
+	priv.PublicKey.Curve = curve
+	priv.D = d
+	// Since Go 1.20 ecdsa.Sign needs the public key of a NIST curve key; without it Sign panics
+	priv.PublicKey.X, priv.PublicKey.Y = curve.ScalarBaseMult(d.Bytes())
 	r, s, err := ecdsa.Sign(crand.Reader, priv, hash)
 	if err != nil {
 		return nil, err

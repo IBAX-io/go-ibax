@@ -1,0 +1,33 @@
+name: crypto
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'packages/common/crypto/**'
+      - 'packages/converter/**'
+      - 'packages/transaction/**'
+      - 'packages/types/**'
+      - 'packages/smart/**'
+      - 'tools/cryptovectors/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/crypto.yml'
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        # the minimum go.mod allows, and the current release
+        go: ['1.20', 'stable']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Sign and verify under every suite
+        run: go test -count=1 ./packages/common/crypto/...
+      - name: Golden vectors match what the node computes
+        run: go test -count=1 ./tools/cryptovectors/...
