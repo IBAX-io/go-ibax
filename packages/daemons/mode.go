@@ -1,9 +1,9 @@
 package daemons
 
 import (
-	"encoding/hex"
 	"errors"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
@@ -70,8 +70,8 @@ func (s SelectModel) GetWorkMode() Model {
 }
 
 func GetCandidateNodePositionByPublicKey() (int64, error) {
-	NodePublicKey := hex.EncodeToString(syspar.GetNodePubKey())
-	if len(NodePublicKey) < 1 {
+	NodePublicKey := crypto.PubToHex(syspar.GetNodePubKey())
+	if len(syspar.GetNodePubKey()) < 1 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
 		return 0, errors.New(`node public key is empty`)
 	}
@@ -85,8 +85,8 @@ func GetCandidateNodePositionByPublicKey() (int64, error) {
 	return candidateNode.ID, nil
 }
 func GetCandidateNodes() (sqldb.CandidateNodes, error) {
-	nodePublicKey := hex.EncodeToString(syspar.GetNodePubKey())
-	if len(nodePublicKey) < 1 {
+	nodePublicKey := crypto.PubToHex(syspar.GetNodePubKey())
+	if len(syspar.GetNodePubKey()) < 1 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
 		return nil, errors.New(`node public key is empty`)
 	}
@@ -97,7 +97,7 @@ func GetCandidateNodes() (sqldb.CandidateNodes, error) {
 	}
 	ret := make(sqldb.CandidateNodes, 0)
 	for _, node := range candidateNodes {
-		if "04"+nodePublicKey != node.NodePubKey {
+		if nodePublicKey != node.NodePubKey {
 			ret = append(ret, node)
 		}
 	}

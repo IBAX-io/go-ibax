@@ -159,8 +159,7 @@ func GetThisNodePosition(candidateNodes sqldb.CandidateNodes, prevBlock *sqldb.I
 	}
 
 	if len(candidateNodes) == 2 {
-		_, NodePublicKey := utils.GetNodeKeys()
-		NodePublicKey = "04" + NodePublicKey
+		NodePublicKey := crypto.PubToHex(syspar.GetNodePubKey())
 
 		compare := func(c []sqldb.CandidateNode) (sqldb.CandidateNode, bool) {
 			var (
@@ -243,12 +242,11 @@ func GetThisNodePosition(candidateNodes sqldb.CandidateNodes, prevBlock *sqldb.I
 					break
 				}
 			}
-			_, NodePublicKey := utils.GetNodeKeys()
-			if len(NodePublicKey) < 1 {
+			if len(syspar.GetNodePubKey()) < 1 {
 				log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
 				return candidateNode, false
 			}
-			NodePublicKey = "04" + NodePublicKey
+			NodePublicKey := crypto.PubToHex(syspar.GetNodePubKey())
 			if isHonorNode {
 				if NodePublicKey == candidateNodes[maxIndex].NodePubKey {
 					return candidateNodes[maxIndex], true
