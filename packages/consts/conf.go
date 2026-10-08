@@ -38,4 +38,7 @@ const (
 
 	// KeyIDFilename generated KeyID
 	KeyIDFilename = "KeyID"
+
+	// JWTSecretFilename name of the file with the secret the node signs API tokens with
+	JWTSecretFilename = "JWTSecret"
 )
