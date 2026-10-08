@@ -10,9 +10,9 @@
 //	go run ./tools/cryptovectors gen   [-dir tools/cryptovectors/testdata]
 //	go run ./tools/cryptovectors check [-dir tools/cryptovectors/testdata]
 //
-// gen rewrites the node-side fields; check recomputes them and fails on any difference. ECDSA and
-// SM2 signatures are randomized, so node signatures are verified instead of compared: gen keeps a
-// stored signature while it still verifies.
+// gen rewrites the node-side fields; check recomputes them and fails on any difference. ECDSA,
+// SM2 and ML-DSA signatures are randomized, so node signatures are verified instead of compared:
+// gen keeps a stored signature while it still verifies.
 package main
 
 import (

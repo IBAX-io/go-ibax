@@ -41,6 +41,8 @@ func TestTamperedVectorsFail(t *testing.T) {
 		{"key id", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 5, "keyID", "1") }},
 		{"P256 key id", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 13, "keyID", "-1") }},
 		{"SM2 public key", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 30, "publicKey", "04"+repeat("cd", 64)) }},
+		{"ML-DSA-65 public key", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 37, "publicKey", repeat("ab", 1952)) }},
+		{"ML-DSA-65 client signature", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 40, "clientSignature", repeat("22", 3309)) }},
 		{"node signature", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 1, "goSignature", repeat("11", 64)) }},
 		{"client signature", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 2, "clientSignature", repeat("22", 64)) }},
 		{"address id", "go-ibax-addresses.json", func(d map[string]any) { setAt(d, "cases", 0, "id", "597920150864192935") }},
