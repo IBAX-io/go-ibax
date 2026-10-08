@@ -107,6 +107,7 @@ PrivateKey
 NodePublicKey
 PublicKey
 KeyID
+JWTSecret
 chain.pid
 config.toml
 

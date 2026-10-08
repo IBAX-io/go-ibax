@@ -5,21 +5,24 @@
 package crypto
 
 import (
-	crand "crypto/rand"
-	"math/big"
+	"strings"
+	"testing"
 )
 
-// RandSeq returns a random string of n letters and digits from crypto/rand
-func RandSeq(n int) string {
+func TestRandSeq(t *testing.T) {
 	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	max := big.NewInt(int64(len(letters)))
-	b := make([]byte, n)
-	for i := range b {
-		k, err := crand.Int(crand.Reader, max)
-		if err != nil {
-			panic(err)
+	seen := map[string]bool{}
+	for i := 0; i < 100; i++ {
+		s := RandSeq(16)
+		if len(s) != 16 || strings.Trim(s, letters) != "" {
+			t.Fatalf("RandSeq(16) = %q", s)
 		}
-		b[i] = letters[k.Int64()]
+		if seen[s] {
+			t.Fatalf("RandSeq repeated %q", s)
+		}
+		seen[s] = true
 	}
-	return string(b)
+	if s := RandSeq(0); s != "" {
+		t.Fatalf("RandSeq(0) = %q", s)
+	}
 }

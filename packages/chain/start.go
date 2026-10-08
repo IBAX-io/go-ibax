@@ -9,7 +9,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/service/jsonrpc"
 	"math/rand"
 	"net/http"
@@ -35,12 +34,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
 )
-
-func init() {
-	jwtSecret := []byte(crypto.RandSeq(15))
-	jsonrpc.InitJwtSecret(jwtSecret)
-	api.InitJwtSecret(jwtSecret)
-}
 
 // Start starts the main code of the program
 func Start() {
@@ -77,6 +70,15 @@ func Start() {
 		log.Errorf("logs init failed: %v\n", utils.ErrInfo(err))
 		exitErr(1)
 	}
+
+	jwtSecretPath := filepath.Join(conf.Config.DirPathConf.KeysDir, consts.JWTSecretFilename)
+	jwtSecret, err := loadJWTSecret(jwtSecretPath)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "path": jwtSecretPath}).Error("can't load JWT secret")
+		exitErr(1)
+	}
+	api.InitJwtSecret(jwtSecret)
+	jsonrpc.InitJwtSecret(jwtSecret)
 
 	if conf.Config.FuncBench {
 		log.Warning("Warning! Access checking is disabled in some built-in functions")
