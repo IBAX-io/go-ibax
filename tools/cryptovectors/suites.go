@@ -6,6 +6,7 @@
 package main
 
 import (
+	"crypto/mldsa"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -15,7 +16,9 @@ import (
 
 const suitesSource = "go-ibax packages/common/crypto via tools/cryptovectors: PrivateToPublic, Address and Sign " +
 	"(goSignature, over message) for every cryptoer and hasher go-ibax implements; clientSignature is the client's " +
-	"transaction signature over payload, checked like utils.CheckSign: Verify(publicKey, DoubleHash(payload)). Test keys only."
+	"transaction signature over payload, checked like utils.CheckSign: Verify(publicKey, DoubleHash(payload)); " +
+	"contextFreeSignature (ML-DSA only) is a valid FIPS 204 signature of Hash(message) under the empty context, " +
+	"which the node and the client must refuse. Test keys only."
 
 type suitesFile struct {
 	Source  string        `json:"source"`
@@ -33,6 +36,9 @@ type suiteVector struct {
 	PublicKey   string  `json:"publicKey"`
 	KeyID       string  `json:"keyID"`
 	GoSignature *string `json:"goSignature"`
+	// ML-DSA only: the same key and digest signed under the empty context instead of the chain's
+	// context string; a valid FIPS 204 signature that both sides must refuse
+	ContextFreeSignature string `json:"contextFreeSignature,omitempty"`
 	// client side, written by the client; the node must accept it
 	ClientSignature string `json:"clientSignature,omitempty"`
 }
@@ -82,6 +88,15 @@ func updateSuites(raw []byte) (any, []string, error) {
 			v.GoSignature = &s
 		}
 
+		if params, ok := mldsaParameters[v.Cryptoer]; ok {
+			if v.ContextFreeSignature, err = contextFreeSignature(params(), priv, []byte(v.Message), v.ContextFreeSignature); err != nil {
+				return nil, nil, fmt.Errorf("%s: %w", label, err)
+			}
+			if verifies(pub, []byte(v.Message), v.ContextFreeSignature) {
+				problems = append(problems, fmt.Sprintf("%s: node accepts a signature made under the empty context", label))
+			}
+		}
+
 		if v.ClientSignature != "" {
 			payload, err := hex.DecodeString(v.Payload)
 			if err != nil {
@@ -102,4 +117,27 @@ func verifies(pub, data []byte, signatureHex string) bool {
 	}
 	ok, err := crypto.Verify(pub, data, sig)
 	return ok && err == nil
+}
+
+// mldsaParameters are the FIPS 204 parameter sets of the ML-DSA cryptoers
+var mldsaParameters = map[string]func() mldsa.Parameters{
+	"MLDSA65": mldsa.MLDSA65,
+}
+
+// contextFreeSignature returns stored while it is still a valid empty-context signature of
+// Hash(message), and a fresh one otherwise.
+func contextFreeSignature(params mldsa.Parameters, seed, message []byte, stored string) (string, error) {
+	sk, err := mldsa.NewPrivateKey(params, seed)
+	if err != nil {
+		return "", err
+	}
+	digest := crypto.Hash(message)
+	if sig, err := hex.DecodeString(stored); err == nil && stored != "" && mldsa.Verify(sk.PublicKey(), digest, sig, nil) == nil {
+		return stored, nil
+	}
+	sig, err := sk.Sign(nil, digest, nil)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(sig), nil
 }
