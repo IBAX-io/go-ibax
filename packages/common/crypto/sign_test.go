@@ -3,6 +3,7 @@ package crypto
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"testing"
 )
@@ -50,6 +51,24 @@ func TestSignVerifyEverySuite(t *testing.T) {
 					}
 				}
 			})
+		}
+	}
+}
+
+// A key that is not a curve scalar (unloaded, zero, or >= n) must be refused, not signed with
+func TestSignRefusesInvalidPrivateKey(t *testing.T) {
+	digest := NewHashAlgo(HashAlgo_SHA256).GetHash([]byte("block"))
+	order := map[AsymAlgo]string{
+		AsymAlgo_ECC_P256:      "ffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551",
+		AsymAlgo_ECC_Secp256k1: "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+		AsymAlgo_SM2:           "fffffffeffffffffffffffffffffffff7203df6b21c6052b53bbf40939d54123",
+	}
+	for _, a := range signAlgos {
+		n, _ := hex.DecodeString(order[a])
+		for name, key := range map[string][]byte{"nil": nil, "zero": make([]byte, 32), "order": n} {
+			if sig, err := NewAsymAlgo(a).Sign(key, digest); err == nil {
+				t.Errorf("%s: signed with a %s private key: %x", a, name, sig)
+			}
 		}
 	}
 }

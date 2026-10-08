@@ -13,6 +13,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -46,6 +47,10 @@ func init() {
 }
 
 func genesisBlock() ([]byte, error) {
+	// The genesis block is signed with the node key like every block (block.MarshallBlock)
+	if err := syspar.ReadNodeKeys(); err != nil {
+		log.WithError(err).Fatal("reading node keys")
+	}
 	now := time.Now().Unix()
 	header := &types.BlockHeader{
 		BlockId:       1,
