@@ -1,6 +1,6 @@
 module github.com/IBAX-io/go-ibax
 
-go 1.26.0
+go 1.27.0
 
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
@@ -10,7 +10,6 @@ require (
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/cactus/go-statsd-client/v5 v5.1.0
 	github.com/centrifugal/gocent v2.2.0+incompatible
-	github.com/cloudflare/circl v1.6.5
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-redis/redis v6.15.9+incompatible

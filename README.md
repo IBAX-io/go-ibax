@@ -12,7 +12,7 @@ smart contract, database table and interface.
 
 #### Install Go
 
-The build process for go-ibax requires Go 1.17 or higher. If you don't have it: [Download Go 1.17+](https://go.dev).
+The build process for go-ibax requires Go 1.27 or higher. If you don't have it: [Download Go 1.27+](https://go.dev).
 
 You'll need to add Go's bin directories to your `$PATH` environment variable e.g., by adding these lines to
 your `/etc/profile` (for a system-wide installation) or `$HOME/.profile`:
