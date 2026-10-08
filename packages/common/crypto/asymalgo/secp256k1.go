@@ -32,6 +32,7 @@ func (s *Secp256k1) Sign(privateKey, hash []byte) ([]byte, error) {
 	priv := new(ecdsa.PrivateKey)
 	priv.PublicKey.Curve = pubkeyCurve
 	priv.D = bi
+	priv.PublicKey.X, priv.PublicKey.Y = pubkeyCurve.ScalarBaseMult(privateKey)
 	r, s_, err := ecdsa.Sign(crand.Reader, priv, hash)
 	if err != nil {
 		return nil, err
