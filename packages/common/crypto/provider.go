@@ -8,6 +8,8 @@ type AsymProvider interface {
 	PrivateToPublic(key []byte) ([]byte, error)
 	// PublicKeySize is the length of a public key as PrivateToPublic returns it
 	PublicKeySize() int
+	// SignatureSize is the maximum length of a signature as Sign returns it
+	SignatureSize() int
 }
 
 type HashProvider interface {
@@ -17,4 +19,6 @@ type HashProvider interface {
 	GetHash(msg []byte) []byte
 	// DoubleHash returns double hash of passed bytes
 	DoubleHash(msg []byte) []byte
+	// Size is the length of a hash in bytes
+	Size() int
 }

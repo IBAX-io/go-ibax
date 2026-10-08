@@ -8,6 +8,8 @@ import (
 
 type Sha3256 struct{}
 
+func (s *Sha3256) Size() int { return 32 }
+
 func (s *Sha3256) GetHMAC(secret string, message string) ([]byte, error) {
 	mac := hmac.New(sha3.New256, []byte(secret))
 	mac.Write([]byte(message))

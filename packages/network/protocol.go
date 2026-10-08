@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -142,11 +143,11 @@ func (req *ConfirmRequest) Write(w io.Writer) error {
 // ConfirmResponse contains response data
 type ConfirmResponse struct {
 	// ConfType uint8
-	Hash []byte `size:"32"`
+	Hash []byte // crypto.HashSize() bytes
 }
 
 func (resp *ConfirmResponse) Read(r io.Reader) error {
-	h, err := readSliceWithSize(r, consts.HashSize)
+	h, err := readSliceWithSize(r, crypto.HashSize())
 	if err == io.EOF {
 	} else if err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on reading ConfirmResponse reverse order")
@@ -157,7 +158,7 @@ func (resp *ConfirmResponse) Read(r io.Reader) error {
 }
 
 func (resp *ConfirmResponse) Write(w io.Writer) error {
-	if err := writeSliceWithSize(w, resp.Hash, consts.HashSize); err != nil {
+	if err := writeSliceWithSize(w, resp.Hash, int32(crypto.HashSize())); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on sending ConfiremResponse hash")
 		return err
 	}

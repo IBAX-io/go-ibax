@@ -8,6 +8,8 @@ import (
 
 type SM3 struct{}
 
+func (s *SM3) Size() int { return 32 }
+
 func (s *SM3) GetHMAC(secret string, message string) ([]byte, error) {
 	mac := hmac.New(sm3.New, []byte(secret))
 	mac.Write([]byte(message))

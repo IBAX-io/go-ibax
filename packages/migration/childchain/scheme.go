@@ -259,7 +259,7 @@ var schemaCLB = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
 			"app_id" bigint NOT NULL DEFAULT '1',
 			"name" varchar(255) NOT NULL DEFAULT '',
 			"data" bytea NOT NULL DEFAULT '',
-			"hash" varchar(32) NOT NULL DEFAULT '',
+			"hash" varchar(128) NOT NULL DEFAULT '',
 			"mime_type" varchar(255) NOT NULL DEFAULT '',
 			"ecosystem" bigint NOT NULL DEFAULT '1',
 			"account" char(24) NOT NULL

@@ -29,6 +29,8 @@ func NewAsymAlgo(a AsymAlgo) AsymProvider {
 		return &asymalgo.SM2{}
 	case AsymAlgo_MLDSA65:
 		return &asymalgo.MLDSA65{}
+	case AsymAlgo_MLDSA87:
+		return &asymalgo.MLDSA87{}
 	}
 	panic(fmt.Errorf("curve algo [%v] is not supported yet", a))
 }
@@ -56,6 +58,10 @@ func NewHashAlgo(a HashAlgo) HashProvider {
 		return &hashalgo.Keccak256{}
 	case HashAlgo_SHA3_256:
 		return &hashalgo.Sha3256{}
+	case HashAlgo_SHA384:
+		return &hashalgo.SHA384{}
+	case HashAlgo_SHA512:
+		return &hashalgo.SHA512{}
 	}
 	panic(fmt.Errorf("hash algo [%v] is not supported yet", a))
 }
@@ -100,6 +106,11 @@ func PublicKeySize() int {
 	return GetAsymProvider().PublicKeySize()
 }
 
+// SignatureSize is the maximum length of the network's signatures
+func SignatureSize() int {
+	return GetAsymProvider().SignatureSize()
+}
+
 // PrivateToPublic returns the public key for the specified private key.
 func PrivateToPublic(key []byte) ([]byte, error) {
 	return GetAsymProvider().PrivateToPublic(key)
@@ -123,6 +134,11 @@ func Hash(msg []byte) []byte {
 
 func DoubleHash(msg []byte) []byte {
 	return GetHashProvider().DoubleHash(msg)
+}
+
+// HashSize is the length in bytes of the network's hashes: block, transaction and data hashes
+func HashSize() int {
+	return GetHashProvider().Size()
 }
 
 func HashHex(input []byte) string {
