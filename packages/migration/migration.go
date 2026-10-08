@@ -123,7 +123,7 @@ func InitMigrate(db database) error {
 	if conf.Config.IsSubNode() {
 		//mig = append(mig, migrationsSub)
 	}
-	if conf.Config.IsSupportingCLB() {
+	if conf.Config.IsSupportingChildChain() {
 		//mig = append(mig, migrationsCLB)
 	}
 	return runMigrations(db, mig)

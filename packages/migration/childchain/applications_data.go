@@ -3,8 +3,8 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package clb
+package childchain
 
-var snippetsDataSQL = `INSERT INTO "1_snippets" (id, name, value, conditions, app_id, ecosystem) VALUES
-		(next_id('1_snippets'), 'pager_header', '', 'ContractConditions("@1DeveloperCondition")', '1', '1');
+var applicationsDataSQL = `
+INSERT INTO "1_applications" (id, name, conditions, ecosystem) VALUES (next_id('1_applications'), 'System', 'ContractConditions("MainCondition")', '1');
 `

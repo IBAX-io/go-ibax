@@ -340,7 +340,7 @@ func (f *rowForm) Validate(r *http.Request) error {
 
 func checkAccess(tableName, columns string, client *UserClient) (table string, cols string, err error) {
 	sc := smart.SmartContract{
-		CLB: conf.Config.IsSupportingCLB(),
+		ChildChain: conf.Config.IsSupportingChildChain(),
 		VM:  script.GetVM(),
 		TxSmart: &types.SmartTransaction{
 			Header: &types.Header{

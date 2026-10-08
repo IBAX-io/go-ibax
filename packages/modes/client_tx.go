@@ -60,7 +60,7 @@ func (p ClbTxPreprocessor) ProcessClientTranstaction(txData []byte, key int64, l
 		return "", err
 	}
 
-	res, _, err := tx.CallCLBContract()
+	res, _, err := tx.CallChildChainContract()
 	if err != nil {
 		le.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("on execution contract")
 		return "", err

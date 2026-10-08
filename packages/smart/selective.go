@@ -101,7 +101,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			logger.WithError(err).Error("on getting where expression for update")
 			return 0, "", err
 		}
-		if !sc.CLB {
+		if !sc.ChildChain {
 			updateQuery := `UPDATE "` + sqlBuilder.Table + `" SET ` + updateExpr + " " + whereExpr
 			updateCost, err := queryCoster.QueryCost(sc.DbTransaction, updateQuery)
 			if err != nil {
@@ -176,12 +176,12 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 
 func (sc *SmartContract) insert(fields []string, ivalues []any,
 	table string) (int64, string, error) {
-	return sc.selectiveLoggingAndUpd(fields, ivalues, table, nil, !sc.CLB && sc.Rollback, false)
+	return sc.selectiveLoggingAndUpd(fields, ivalues, table, nil, !sc.ChildChain && sc.Rollback, false)
 }
 
 func (sc *SmartContract) updateWhere(fields []string, values []any,
 	table string, where *types.Map) (int64, string, error) {
-	return sc.selectiveLoggingAndUpd(fields, values, table, where, !sc.CLB && sc.Rollback, true)
+	return sc.selectiveLoggingAndUpd(fields, values, table, where, !sc.ChildChain && sc.Rollback, true)
 }
 
 func (sc *SmartContract) update(fields []string, values []any,

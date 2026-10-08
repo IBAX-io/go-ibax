@@ -61,7 +61,7 @@ const (
 	SchedulerError           = "SchedulerError"
 	SyncProcess              = "SyncProcess"
 	WrongModeError           = "WrongModeError"
-	CLBManagerError          = "CLBManagerError"
+	ChainManagerError          = "CLBManagerError"
 	TCPClientError           = "TCPClientError"
 	BadTxError               = "BadTxError"
 	TimeCalcError            = "BlockTimeCounterError"

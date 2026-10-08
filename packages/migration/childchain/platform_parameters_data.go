@@ -3,7 +3,7 @@
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-package clb
+package childchain
 
 var platformParametersDataSQL = `
 INSERT INTO "1_platform_parameters" ("id","name", "value", "conditions") VALUES 

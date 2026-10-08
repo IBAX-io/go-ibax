@@ -25,7 +25,7 @@ func BlockTime(sc *SmartContract) string {
 	if sc.BlockHeader != nil {
 		blockTime = sc.BlockHeader.Timestamp
 	}
-	if sc.CLB {
+	if sc.ChildChain {
 		blockTime = time.Now().Unix()
 	}
 	return Date(dateTimeFormat, blockTime)

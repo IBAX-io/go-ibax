@@ -2,7 +2,7 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package clbmanager
+package chainmanager
 
 import (
 	"errors"
@@ -34,23 +34,23 @@ const (
 	dropDBRoleTemplate = `DROP ROLE IF EXISTS %s`
 	commandTemplate    = `%s start --config=%s`
 
-	alreadyExistsErrorTemplate = `clb '%s' already exists`
+	alreadyExistsErrorTemplate = `child chain '%s' already exists`
 )
 
 var (
 	errWrongMode        = errors.New("node must be running as CLBMaster")
-	errIncorrectCLBName = errors.New("the name cannot begit with a number and must contain alphabetical symbols and numbers")
+	errIncorrectCLBName = errors.New("the name cannot begin with a number and must contain alphabetical symbols and numbers")
 )
 
-// CLBManager struct
-type CLBManager struct {
+// ChainManager struct
+type ChainManager struct {
 	processes        *process.Manager
 	execPath         string
 	childConfigsPath string
 }
 
 var (
-	Manager *CLBManager
+	Manager *ChainManager
 )
 
 func prepareWorkDir() (string, error) {
@@ -66,10 +66,10 @@ func prepareWorkDir() (string, error) {
 	return childConfigsPath, nil
 }
 
-// CreateCLB creates one instance of CLB
-func (mgr *CLBManager) CreateCLB(name, dbUser, dbPassword string, port int) error {
-	if err := checkCLBName(name); err != nil {
-		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Error("on check CLB name")
+// CreateChildChain creates one instance of CLB
+func (mgr *ChainManager) CreateChildChain(name, dbUser, dbPassword string, port int) error {
+	if err := checkChildChainName(name); err != nil {
+		log.WithFields(log.Fields{"type": consts.ChainManagerError, "error": err}).Error("on check child chain name")
 		return errIncorrectCLBName
 	}
 
@@ -86,7 +86,7 @@ func (mgr *CLBManager) CreateCLB(name, dbUser, dbPassword string, port int) erro
 		}
 	}()
 
-	config := ChildCLBConfig{
+	config := ChildChainConfig{
 		Executable:     mgr.execPath,
 		Name:           name,
 		Directory:      path.Join(mgr.childConfigsPath, name),
@@ -99,12 +99,12 @@ func (mgr *CLBManager) CreateCLB(name, dbUser, dbPassword string, port int) erro
 	}
 
 	if mgr.processes == nil {
-		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("creating new CLB")
+		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("creating new child chain")
 		return errWrongMode
 	}
 
-	if err = mgr.createCLBDB(name, dbUser, dbPassword); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on creating CLB DB")
+	if err = mgr.createChildChainDB(name, dbUser, dbPassword); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("on creating child chain DB")
 		return fmt.Errorf(alreadyExistsErrorTemplate, name)
 	}
 
@@ -115,17 +115,17 @@ func (mgr *CLBManager) CreateCLB(name, dbUser, dbPassword string, port int) erro
 	dirPath := path.Join(mgr.childConfigsPath, name)
 	if directoryExists(dirPath) {
 		err = fmt.Errorf(alreadyExistsErrorTemplate, name)
-		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err, "dirPath": dirPath}).Error("on check directory")
+		log.WithFields(log.Fields{"type": consts.ChainManagerError, "error": err, "dirPath": dirPath}).Error("on check directory")
 		return err
 	}
 
-	if err = mgr.initCLBDir(name); err != nil {
-		log.WithFields(log.Fields{"type": consts.IOError, "DirName": name, "error": err}).Error("on init CLB dir")
+	if err = mgr.initChildChainDir(name); err != nil {
+		log.WithFields(log.Fields{"type": consts.IOError, "DirName": name, "error": err}).Error("on init child chain dir")
 		return err
 	}
 
 	cancelChain = append(cancelChain, func() {
-		dropCLBDir(mgr.childConfigsPath, name)
+		dropChildChainDir(mgr.childConfigsPath, name)
 	})
 
 	cmd := config.configCommand()
@@ -158,7 +158,7 @@ func (mgr *CLBManager) CreateCLB(name, dbUser, dbPassword string, port int) erro
 }
 
 // ListProcess returns list of process names with state of process
-func (mgr *CLBManager) ListProcess() (map[string]string, error) {
+func (mgr *ChainManager) ListProcess() (map[string]string, error) {
 	if mgr.processes == nil {
 		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("get CLB list")
 		return nil, errWrongMode
@@ -173,7 +173,7 @@ func (mgr *CLBManager) ListProcess() (map[string]string, error) {
 	return list, nil
 }
 
-func (mgr *CLBManager) ListProcessWithPorts() (map[string]string, error) {
+func (mgr *ChainManager) ListProcessWithPorts() (map[string]string, error) {
 	list, err := mgr.ListProcess()
 	if err != nil {
 		return list, err
@@ -183,7 +183,7 @@ func (mgr *CLBManager) ListProcessWithPorts() (map[string]string, error) {
 		path := path.Join(mgr.childConfigsPath, name, consts.DefaultConfigFile)
 		c := &conf.GlobalConfig{}
 		if err := conf.LoadConfigToVar(path, c); err != nil {
-			log.WithFields(log.Fields{"type": "dbError", "error": err, "path": path}).Warn("on loading child CLB config")
+			log.WithFields(log.Fields{"type": "dbError", "error": err, "path": path}).Warn("on loading child chain config")
 			continue
 		}
 
@@ -193,22 +193,22 @@ func (mgr *CLBManager) ListProcessWithPorts() (map[string]string, error) {
 	return list, err
 }
 
-// DeleteCLB stop CLB process and remove CLB folder
-func (mgr *CLBManager) DeleteCLB(name string) error {
+// DeleteChildChain stop CLB process and remove CLB folder
+func (mgr *ChainManager) DeleteChildChain(name string) error {
 
 	if mgr.processes == nil {
-		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("deleting CLB")
+		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("deleting child chain")
 		return errWrongMode
 	}
 
-	mgr.StopCLB(name)
+	mgr.StopChildChain(name)
 	mgr.processes.Remove(name)
 	clbDir := path.Join(mgr.childConfigsPath, name)
 	clbConfigPath := filepath.Join(clbDir, consts.DefaultConfigFile)
 	clbConfig, err := conf.GetConfigFromPath(clbConfigPath)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Errorf("Getting config from path %s", clbConfigPath)
-		return fmt.Errorf(`CLB '%s' is not exists`, name)
+		return fmt.Errorf(`child chain '%s' does not exist`, name)
 	}
 
 	time.Sleep(1 * time.Second)
@@ -219,18 +219,18 @@ func (mgr *CLBManager) DeleteCLB(name string) error {
 	return os.RemoveAll(clbDir)
 }
 
-// StartCLB find process and then start him
-func (mgr *CLBManager) StartCLB(name string) error {
+// StartChildChain find process and then start him
+func (mgr *ChainManager) StartChildChain(name string) error {
 
 	if mgr.processes == nil {
-		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("starting CLB")
+		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("starting child chain")
 		return errWrongMode
 	}
 
 	proc := mgr.processes.Find(name)
 	if proc == nil {
-		err := fmt.Errorf(`CLB '%s' is not exists`, name)
-		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Error("on find CLB process")
+		err := fmt.Errorf(`child chain '%s' does not exist`, name)
+		log.WithFields(log.Fields{"type": consts.ChainManagerError, "error": err}).Error("on find child chain process")
 		return err
 	}
 
@@ -243,13 +243,13 @@ func (mgr *CLBManager) StartCLB(name string) error {
 		return nil
 	}
 
-	err := fmt.Errorf("CLB '%s' is %s", name, state)
-	log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Error("on starting CLB")
+	err := fmt.Errorf("child chain '%s' is %s", name, state)
+	log.WithFields(log.Fields{"type": consts.ChainManagerError, "error": err}).Error("on starting child chain")
 	return err
 }
 
-// StopCLB find process with definded name and then stop him
-func (mgr *CLBManager) StopCLB(name string) error {
+// StopChildChain find process with definded name and then stop him
+func (mgr *ChainManager) StopChildChain(name string) error {
 
 	if mgr.processes == nil {
 		log.WithFields(log.Fields{"type": consts.WrongModeError, "error": errWrongMode}).Error("on stopping CLB process")
@@ -258,8 +258,8 @@ func (mgr *CLBManager) StopCLB(name string) error {
 
 	proc := mgr.processes.Find(name)
 	if proc == nil {
-		err := fmt.Errorf(`CLB '%s' is not exists`, name)
-		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Error("on find CLB process")
+		err := fmt.Errorf(`child chain '%s' does not exist`, name)
+		log.WithFields(log.Fields{"type": consts.ChainManagerError, "error": err}).Error("on find child chain process")
 		return err
 	}
 
@@ -271,12 +271,12 @@ func (mgr *CLBManager) StopCLB(name string) error {
 		return nil
 	}
 
-	err := fmt.Errorf("CLB '%s' is %s", name, state)
-	log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Error("on stoping CLB")
+	err := fmt.Errorf("child chain '%s' is %s", name, state)
+	log.WithFields(log.Fields{"type": consts.ChainManagerError, "error": err}).Error("on stoping CLB")
 	return err
 }
 
-func (mgr *CLBManager) createCLBDB(clbName, login, pass string) error {
+func (mgr *ChainManager) createChildChainDB(clbName, login, pass string) error {
 
 	if err := sqldb.DBConn.Exec(fmt.Sprintf(createRoleTemplate, login, pass)).Error; err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating CLB DB User")
@@ -296,7 +296,7 @@ func (mgr *CLBManager) createCLBDB(clbName, login, pass string) error {
 	return nil
 }
 
-func (mgr *CLBManager) initCLBDir(clbName string) error {
+func (mgr *ChainManager) initChildChainDir(clbName string) error {
 
 	clbDirName := path.Join(mgr.childConfigsPath, clbName)
 	if _, err := os.Stat(clbDirName); os.IsNotExist(err) {
@@ -309,22 +309,22 @@ func (mgr *CLBManager) initCLBDir(clbName string) error {
 	return nil
 }
 
-func InitCLBManager() {
+func InitChainManager() {
 	if !conf.Config.IsCLBMaster() {
 		return
 	}
 
 	execPath, err := os.Executable()
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Fatal("on determine executable path")
+		log.WithFields(log.Fields{"type": consts.ChainManagerError, "error": err}).Fatal("on determine executable path")
 	}
 
 	childConfigsPath, err := prepareWorkDir()
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.CLBManagerError, "error": err}).Fatal("on prepare child configs folder")
+		log.WithFields(log.Fields{"type": consts.ChainManagerError, "error": err}).Fatal("on prepare child configs folder")
 	}
 
-	Manager = &CLBManager{
+	Manager = &ChainManager{
 		processes:        process.NewManager(),
 		execPath:         execPath,
 		childConfigsPath: childConfigsPath,
@@ -367,7 +367,7 @@ func dropDb(name, role string) error {
 	return nil
 }
 
-func dropCLBDir(configsPath, clbName string) error {
+func dropChildChainDir(configsPath, clbName string) error {
 	path := path.Join(configsPath, clbName)
 	if directoryExists(path) {
 		os.RemoveAll(path)
@@ -387,7 +387,7 @@ func directoryExists(path string) bool {
 	return true
 }
 
-func checkCLBName(name string) error {
+func checkChildChainName(name string) error {
 
 	name = strings.ToLower(name)
 
@@ -403,7 +403,7 @@ func checkCLBName(name string) error {
 	return nil
 }
 
-func (mgr *CLBManager) configByName(name string) (*conf.GlobalConfig, error) {
+func (mgr *ChainManager) configByName(name string) (*conf.GlobalConfig, error) {
 	path := path.Join(mgr.childConfigsPath)
 	c := &conf.GlobalConfig{}
 	err := conf.LoadConfigToVar(path, c)

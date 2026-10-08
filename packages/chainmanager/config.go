@@ -2,7 +2,7 @@
  *  Copyright (c) IBAX. All rights reserved.
  *  See LICENSE in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-package clbmanager
+package chainmanager
 
 import (
 	"fmt"
@@ -16,8 +16,8 @@ const (
 	startCommand   = "start"
 )
 
-// ChildCLBConfig struct to manage child entry
-type ChildCLBConfig struct {
+// ChildChainConfig struct to manage child entry
+type ChildChainConfig struct {
 	Executable     string
 	Name           string
 	Directory      string
@@ -29,7 +29,7 @@ type ChildCLBConfig struct {
 	HTTPPort       int
 }
 
-func (c ChildCLBConfig) configCommand() *exec.Cmd {
+func (c ChildChainConfig) configCommand() *exec.Cmd {
 
 	args := []string{
 		"config",
@@ -48,23 +48,23 @@ func (c ChildCLBConfig) configCommand() *exec.Cmd {
 	return exec.Command(c.Executable, args...)
 }
 
-func (c ChildCLBConfig) initDBCommand() *exec.Cmd {
+func (c ChildChainConfig) initDBCommand() *exec.Cmd {
 	return c.getCommand(inidDBCommand)
 }
 
-func (c ChildCLBConfig) generateKeysCommand() *exec.Cmd {
+func (c ChildChainConfig) generateKeysCommand() *exec.Cmd {
 	return c.getCommand(genKeysCommand)
 }
 
-func (c ChildCLBConfig) startCommand() *exec.Cmd {
+func (c ChildChainConfig) startCommand() *exec.Cmd {
 	return c.getCommand(startCommand)
 }
 
-func (c ChildCLBConfig) configPath() string {
+func (c ChildChainConfig) configPath() string {
 	return filepath.Join(c.Directory, c.ConfigFileName)
 }
 
-func (c ChildCLBConfig) getCommand(commandName string) *exec.Cmd {
+func (c ChildChainConfig) getCommand(commandName string) *exec.Cmd {
 	args := []string{
 		commandName,
 		fmt.Sprintf("--config=%s", c.configPath()),

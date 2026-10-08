@@ -406,7 +406,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 }
 
 func (sc *SmartContract) needPayment() bool {
-	return sc.TxSmart.EcosystemID > 0 && !sc.CLB && !syspar.IsPrivateBlockchain() && sc.payFreeContract()
+	return sc.TxSmart.EcosystemID > 0 && !sc.ChildChain && !syspar.IsPrivateBlockchain() && sc.payFreeContract()
 }
 
 func (sc *SmartContract) hasExistKeyID(eco, id int64) error {

@@ -426,7 +426,7 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 	if err := LoadContract(sc.DbTransaction, id); err != nil {
 		return 0, err
 	}
-	if !sc.CLB {
+	if !sc.ChildChain {
 		if err := SysRollback(sc, SysRollData{Type: "NewEcosystem", ID: id}); err != nil {
 			return 0, err
 		}
@@ -594,7 +594,7 @@ func CheckSignature(sc *SmartContract, i map[string]any, name string) error {
 // DBSelectMetrics returns list of metrics by name and time interval
 func DBSelectMetrics(sc *SmartContract, metric, timeInterval, aggregateFunc string) ([]any, error) {
 	if conf.Config.IsSupportingCLB() {
-		return nil, ErrNotImplementedOnCLB
+		return nil, ErrNotImplementedOnChildChain
 	}
 
 	timeBlock := time.Unix(sc.Timestamp, 0).Format(`2006-01-02 15:04:05`)

@@ -65,7 +65,7 @@ func (t *Transaction) Check(checkTime int64) error {
 //	var err error
 //	t.TxSize = int64(len(t.Raw.payload))
 //	t.VM = smart.GetVM()
-//	t.CLB = false
+//	t.ChildChain = false
 //	t.Rollback = true
 //	t.SysUpdate = false
 //	t.RollBackTx = make([]*sqldb.RollbackTx, 0)
@@ -96,11 +96,11 @@ func (t *Transaction) Check(checkTime int64) error {
 //	return err
 //}
 /*
-func (t *Transaction) CallCLBContract() (resultContract string, flushRollback []smart.FlushInfo, err error) {
+func (t *Transaction) CallChildChainContract() (resultContract string, flushRollback []smart.FlushInfo, err error) {
 
 	t.TxSize = int64(len(t.Inner.TxPayload()))
 	t.VM = smart.GetVM()
-	t.CLB = true
+	t.ChildChain = true
 	t.Rollback = false
 	t.SysUpdate = false
 
