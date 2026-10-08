@@ -78,3 +78,7 @@ func (s *Secp256k1) PrivateToPublic(key []byte) ([]byte, error) {
 	priv := secp.PrivKeyFromBytes(key)
 	return priv.PubKey().SerializeUncompressed()[1:], nil
 }
+
+func (e *Secp256k1) PublicKeySize() int {
+	return consts.PubkeySizeLength
+}

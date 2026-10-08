@@ -81,3 +81,7 @@ func (e *P256) PrivateToPublic(key []byte) ([]byte, error) {
 	priv.PublicKey.X, priv.PublicKey.Y = pubkeyCurve.ScalarBaseMult(key)
 	return append(FillLeft(priv.PublicKey.X.Bytes()), FillLeft(priv.PublicKey.Y.Bytes())...), nil
 }
+
+func (e *P256) PublicKeySize() int {
+	return consts.PubkeySizeLength
+}

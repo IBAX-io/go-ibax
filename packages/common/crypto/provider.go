@@ -6,6 +6,8 @@ type AsymProvider interface {
 	// Verify checks if forSign has been signed with corresponding to public the private key
 	Verify(public, hash, sign []byte) (bool, error)
 	PrivateToPublic(key []byte) ([]byte, error)
+	// PublicKeySize is the length of a public key as PrivateToPublic returns it
+	PublicKeySize() int
 }
 
 type HashProvider interface {
