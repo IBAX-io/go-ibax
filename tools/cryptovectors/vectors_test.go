@@ -6,11 +6,14 @@
 package main
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,6 +46,10 @@ func TestTamperedVectorsFail(t *testing.T) {
 		{"SM2 public key", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 30, "publicKey", "04"+repeat("cd", 64)) }},
 		{"ML-DSA-65 public key", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 37, "publicKey", repeat("ab", 1952)) }},
 		{"ML-DSA-65 client signature", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 40, "clientSignature", repeat("22", 3309)) }},
+		{"ML-DSA-65 context-free signature", "go-ibax-vectors.json", func(d map[string]any) {
+			v := d["vectors"].([]any)[36].(map[string]any)
+			v["contextFreeSignature"] = v["goSignature"]
+		}},
 		{"node signature", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 1, "goSignature", repeat("11", 64)) }},
 		{"client signature", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 2, "clientSignature", repeat("22", 64)) }},
 		{"address id", "go-ibax-addresses.json", func(d map[string]any) { setAt(d, "cases", 0, "id", "597920150864192935") }},
@@ -98,6 +105,53 @@ func TestTamperedVectorsFail(t *testing.T) {
 				t.Fatal("check passed a tampered vector")
 			}
 		})
+	}
+}
+
+// Every cryptoer signs hedged: the same key and message give a new signature each time, and each
+// one verifies
+func TestNodeSignaturesAreHedged(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("testdata", "go-ibax-vectors.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var f suitesFile
+	if err := decode(raw, &f); err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for _, v := range f.Vectors {
+		if seen[v.Cryptoer] {
+			continue
+		}
+		seen[v.Cryptoer] = true
+		if err := useSuite(v.Cryptoer, v.Hasher); err != nil {
+			t.Fatal(err)
+		}
+		priv, _ := hex.DecodeString(v.PrivateKey)
+		pub, err := crypto.PrivateToPublic(priv)
+		if err != nil {
+			t.Fatal(err)
+		}
+		first, err := crypto.Sign(priv, []byte(v.Message))
+		if err != nil {
+			t.Fatal(err)
+		}
+		second, err := crypto.Sign(priv, []byte(v.Message))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if bytes.Equal(first, second) {
+			t.Errorf("%s: two signatures of one message are identical", v.Cryptoer)
+		}
+		for _, sig := range [][]byte{first, second} {
+			if !verifies(pub, []byte(v.Message), hex.EncodeToString(sig)) {
+				t.Errorf("%s: a hedged signature does not verify", v.Cryptoer)
+			}
+		}
+	}
+	if len(seen) != len(crypto.AsymAlgo_value)-1 {
+		t.Errorf("checked %d cryptoers, go-ibax names %d", len(seen), len(crypto.AsymAlgo_value))
 	}
 }
 

@@ -4,7 +4,7 @@ Golden vectors for the cryptography and transaction decoding shared by the clien
 
 | File | Inputs (written by) | Fields computed by the node |
 |---|---|---|
-| `go-ibax-vectors.json` | cryptoer, hasher, privateKey, message, payload (this repository); clientSignature (client) | publicKey, keyID, goSignature; clientSignature must pass the node's verification |
+| `go-ibax-vectors.json` | cryptoer, hasher, privateKey, message, payload (this repository); clientSignature (client) | publicKey, keyID, goSignature; ML-DSA only: contextFreeSignature, signed under the empty context, which the node and the client must refuse; clientSignature must pass the node's verification |
 | `go-ibax-addresses.json` | input (this repository) | id, address |
 | `go-ibax-transfers.json` | transaction parameters and data (client) | node: result of decoding, Validate and CheckSign |
 | `go-ibax-contract-params.json` | declared types and data (client) | header, node: FillTxData result per parameter |
@@ -28,4 +28,4 @@ go run ./tools/cryptovectors gen && go test ./tools/cryptovectors/... && git com
 GO_IBAX_DIR=/path/to/go-ibax npm run vectors:sync && npm test
 ```
 
-Coverage (checked by the tests on both sides): all 16 suites (4 cryptoers × 4 hashers) have a transaction the node accepts in transfers; all 48 signature vectors carry a clientSignature that the node verifies.
+Coverage (checked by the tests on both sides): all 16 suites (4 cryptoers × 4 hashers) have a transaction the node accepts in transfers; all 48 signature vectors carry a clientSignature that the node verifies; all 12 ML-DSA-65 vectors carry a contextFreeSignature that the node refuses. The rules these vectors pin down are in [docs/specs/pqc-signature.md](../../docs/specs/pqc-signature.md).
