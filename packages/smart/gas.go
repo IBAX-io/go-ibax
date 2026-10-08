@@ -207,13 +207,13 @@ func (pay *PaymentInfo) DetailCombustion() any {
 func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	eco := f.TokenEco
 	if err := sc.hasExistKeyID(eco, f.FromID); err != nil {
-		return errors.Wrapf(err, fmt.Sprintf("From ID %d does not exist", f.ToID))
+		return errors.Wrapf(err, "from ID %d does not exist", f.FromID)
 	}
 	if err := sc.hasExistKeyID(eco, f.ToID); err != nil {
-		return errors.Wrapf(err, fmt.Sprintf("to ID %d does not exist", f.ToID))
+		return errors.Wrapf(err, "to ID %d does not exist", f.ToID)
 	}
 	if err := sc.hasExistKeyID(eco, f.TaxesID); err != nil {
-		return errors.Wrapf(err, fmt.Sprintf("taxes ID %d does not exist", f.TaxesID))
+		return errors.Wrapf(err, "taxes ID %d does not exist", f.TaxesID)
 	}
 	if found, err := f.PayWallet.SetTablePrefix(eco).Get(sc.DbTransaction, f.FromID); err != nil || !found {
 		if err != nil {

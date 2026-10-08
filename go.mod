@@ -1,6 +1,6 @@
 module github.com/IBAX-io/go-ibax
 
-go 1.20
+go 1.25.0
 
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
