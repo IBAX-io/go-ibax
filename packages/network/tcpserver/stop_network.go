@@ -32,7 +32,7 @@ func StopNetwork(req *network.StopNetworkRequest, w net.Conn) error {
 		return err
 	}
 
-	res := &network.StopNetworkResponse{hash}
+	res := &network.StopNetworkResponse{Hash: hash}
 	if err = res.Write(w); err != nil {
 		log.WithFields(log.Fields{"error": err, "type": consts.NetworkError}).Error("sending response")
 		return err

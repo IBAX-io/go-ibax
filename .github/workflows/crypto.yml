@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         # the minimum go.mod allows, and the current release
-        go: ['1.25', 'stable']
+        go: ['1.26', 'stable']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
