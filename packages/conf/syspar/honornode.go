@@ -20,8 +20,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const publicKeyLength = 64
-
 var (
 	errHonorNodeInvalidValues       = errors.New("invalid values of the honor_nodes parameter")
 	errHonorNodeDuplicatePublicKey  = errors.New("duplicate publicKey values of the honor_nodes parameter")
@@ -107,8 +105,7 @@ func validateURL(rawurl string) error {
 
 // Validate checks values
 func (fn *HonorNode) Validate() error {
-	if len(fn.PublicKey) !=
-		publicKeyLength || len(fn.TCPAddress) == 0 {
+	if len(fn.PublicKey) != crypto.PublicKeySize() || len(fn.TCPAddress) == 0 {
 		return errHonorNodeInvalidValues
 	}
 

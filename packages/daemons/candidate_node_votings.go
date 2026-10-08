@@ -14,7 +14,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -91,8 +90,7 @@ func CandidateNodeVoting(ctx context.Context, d *daemon) error {
 	if len(candidateNodes) == 0 {
 		return nil
 	}
-	_, NodePublicKey := utils.GetNodeKeys()
-	NodePublicKey = "04" + NodePublicKey
+	NodePublicKey := crypto.PubToHex(syspar.GetNodePubKey())
 	var (
 		isHonorNode       bool
 		currentTcpAddress string

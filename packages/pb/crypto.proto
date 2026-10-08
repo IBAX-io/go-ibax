@@ -10,6 +10,7 @@ enum AsymAlgo{
   ECC_Secp256k1 = 1;
   SM2 = 2;
   ECC_P512 = 3;
+  MLDSA65 = 4;
 }
 
 // SymAlgo is symmetric algorithms

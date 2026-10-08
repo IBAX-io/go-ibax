@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	signAlgos = []AsymAlgo{AsymAlgo_ECC_P256, AsymAlgo_ECC_Secp256k1, AsymAlgo_SM2}
-	hashAlgos = []HashAlgo{HashAlgo_SHA256, HashAlgo_KECCAK256, HashAlgo_SHA3_256, HashAlgo_SM3}
+	curveAlgos = []AsymAlgo{AsymAlgo_ECC_P256, AsymAlgo_ECC_Secp256k1, AsymAlgo_SM2}
+	signAlgos  = []AsymAlgo{AsymAlgo_ECC_P256, AsymAlgo_ECC_Secp256k1, AsymAlgo_SM2, AsymAlgo_MLDSA65}
+	hashAlgos  = []HashAlgo{HashAlgo_SHA256, HashAlgo_KECCAK256, HashAlgo_SHA3_256, HashAlgo_SM3}
 )
 
 const signRounds = 1000
@@ -36,6 +37,9 @@ func TestSignVerifyEverySuite(t *testing.T) {
 					}
 					if !bytes.Equal(derived, pub) {
 						t.Fatalf("PrivateToPublic %x != generated %x", derived, pub)
+					}
+					if len(pub) != asym.PublicKeySize() {
+						t.Fatalf("public key is %d bytes, PublicKeySize %d", len(pub), asym.PublicKeySize())
 					}
 					if _, err := rand.Read(msg); err != nil {
 						t.Fatal(err)
@@ -63,7 +67,7 @@ func TestSignRefusesInvalidPrivateKey(t *testing.T) {
 		AsymAlgo_ECC_Secp256k1: "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
 		AsymAlgo_SM2:           "fffffffeffffffffffffffffffffffff7203df6b21c6052b53bbf40939d54123",
 	}
-	for _, a := range signAlgos {
+	for _, a := range curveAlgos {
 		n, _ := hex.DecodeString(order[a])
 		for name, key := range map[string][]byte{"nil": nil, "zero": make([]byte, 32), "order": n} {
 			if sig, err := NewAsymAlgo(a).Sign(key, digest); err == nil {

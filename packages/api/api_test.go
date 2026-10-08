@@ -280,7 +280,7 @@ func waitTx(hash string) (blockid int64, penalty int64, err error) {
 				err = errors.New(string(errtext))
 				return
 			} else {
-				err = fmt.Errorf(ret.Result)
+				err = errors.New(ret.Result)
 				return
 			}
 		}

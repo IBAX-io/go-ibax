@@ -1,6 +1,6 @@
 module github.com/IBAX-io/go-ibax
 
-go 1.20
+go 1.25.0
 
 require (
 	github.com/360EntSecGroup-Skylar/excelize v1.4.1
@@ -10,6 +10,7 @@ require (
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/cactus/go-statsd-client/v5 v5.1.0
 	github.com/centrifugal/gocent v2.2.0+incompatible
+	github.com/cloudflare/circl v1.6.5
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -33,7 +34,7 @@ require (
 	github.com/theckman/go-flock v0.8.1
 	github.com/tjfoc/gmsm v1.4.1
 	github.com/vmihailenco/msgpack/v5 v5.3.5
-	golang.org/x/crypto v0.23.0
+	golang.org/x/crypto v0.54.0
 	gorm.io/driver/postgres v1.5.2
 	gorm.io/gorm v1.25.2
 )
@@ -101,10 +102,9 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
-	golang.org/x/net v0.24.0 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

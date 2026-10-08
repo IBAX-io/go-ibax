@@ -27,6 +27,8 @@ func NewAsymAlgo(a AsymAlgo) AsymProvider {
 		return &asymalgo.Secp256k1{}
 	case AsymAlgo_SM2:
 		return &asymalgo.SM2{}
+	case AsymAlgo_MLDSA65:
+		return &asymalgo.MLDSA65{}
 	}
 	panic(fmt.Errorf("curve algo [%v] is not supported yet", a))
 }
@@ -91,6 +93,11 @@ func Sign(privateKey, data []byte) ([]byte, error) {
 
 func Verify(public, data, signature []byte) (bool, error) {
 	return GetAsymProvider().Verify(public, Hash(data), signature)
+}
+
+// PublicKeySize is the length of the network's public keys (without the 04 prefix of the curves)
+func PublicKeySize() int {
+	return GetAsymProvider().PublicKeySize()
 }
 
 // PrivateToPublic returns the public key for the specified private key.
