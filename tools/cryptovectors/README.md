@@ -17,4 +17,15 @@ go test ./tools/cryptovectors/...    # what CI runs: check, plus tampered vector
 
 ECDSA and SM2 signatures are randomized: a `goSignature` is kept as long as it still verifies and is not compared byte for byte.
 
-When the client changes the transaction encoding or adds cases, regenerate data / clientSignature in the client repository, write them here, then run `gen`; the client repository then syncs the four files back.
+When the client changes the transaction encoding, signing or the cases, run one round in this order (the client's case list and its rules for changing data are in Weaver `src/app/test/cryptovectors.ts`):
+
+```sh
+# 1. Weaver: write the client fields (data, hash, clientSignature, parameter types/data) into this directory
+GO_IBAX_DIR=/path/to/go-ibax npm run vectors:client
+# 2. go-ibax: fill in the node fields and commit
+go run ./tools/cryptovectors gen && go test ./tools/cryptovectors/... && git commit
+# 3. Weaver: sync the four files back and record the go-ibax commit (src/app/lib/crypto/fixtures/go-ibax-commit.txt)
+GO_IBAX_DIR=/path/to/go-ibax npm run vectors:sync && npm test
+```
+
+Coverage (checked by the tests on both sides): all 12 suites (3 cryptoers × 4 hashers) have a transaction the node accepts in transfers; all 36 signature vectors carry a clientSignature that the node verifies.

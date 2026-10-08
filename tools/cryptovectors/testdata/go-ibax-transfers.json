@@ -682,6 +682,176 @@
       }
     },
     {
+      "cryptoer": "ECC_Secp256k1",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1500000000000",
+        "comment": ""
+      },
+      "hash": "84a70dfc26d839042f7d8621f3d83c617844354479072b823d866287d1dc872b",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf65afabafe3b61eb9a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c441042b49fef0125be27d32d5e91470e25414e446d51e5fbdf7f5f4a995f446b1c2c4c6b60561be4b681f3147009ffac05a30e92f74f1ab345d121ea86899ffa6e24fa45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565ad31353030303030303030303030a7436f6d6d656e74a0a44c616e67a2656e40873139b933190e2e5d905cdb1ca58f8d6101e01d10eb6b5214dd1d67ff9ef3c6536c6f11e3be3ef9fdb205b066945256b022a2ae88ff08998c94a34feb67f4ea",
+      "node": {
+        "type": 5,
+        "hash": "84a70dfc26d839042f7d8621f3d83c617844354479072b823d866287d1dc872b",
+        "keyID": "7327263890683076281",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "597920150864192934",
+          "value": "1500000000000",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "cryptoer": "ECC_Secp256k1",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "-2568234799998900389",
+        "value": "1",
+        "comment": "Invoice #42 — ünïcode"
+      },
+      "hash": "e420513c679993080def328db20549e4bdb20393ebb8dc125f08eab887049bb4",
+      "data": "8081ed83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf65afabafe3b61eb9a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c441042b49fef0125be27d32d5e91470e25414e446d51e5fbdf7f5f4a995f446b1c2c4c6b60561be4b681f3147009ffac05a30e92f74f1ab345d121ea86899ffa6e24fa45554584f83a4546f4944d3dc5bcc0e7644e75ba556616c7565a131a7436f6d6d656e74b9496e766f6963652023343220e2809420c3bc6ec3af636f6465a44c616e67a2656e403a56e4838411b56f42ee892ca23d19dd65c792028c1bbc965b1bab19e9f252424a5991896c6586deeeba83c75149a0cf3e101c8eed0e1d65728df76c5ece5708",
+      "node": {
+        "type": 5,
+        "hash": "e420513c679993080def328db20549e4bdb20393ebb8dc125f08eab887049bb4",
+        "keyID": "7327263890683076281",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "-2568234799998900389",
+          "value": "1",
+          "comment": "Invoice #42 — ünïcode"
+        }
+      }
+    },
+    {
+      "cryptoer": "ECC_Secp256k1",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "250000000000",
+        "direction": "toUTXO"
+      },
+      "hash": "8d4ccd779545eda5e1908993103b48ddb443106a68dcb2095ffb699a418c8226",
+      "data": "8081eb83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf65afabafe3b61eb9a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c441042b49fef0125be27d32d5e91470e25414e446d51e5fbdf7f5f4a995f446b1c2c4c6b60561be4b681f3147009ffac05a30e92f74f1ab345d121ea86899ffa6e24fac5472616e7366657253656c6683a556616c7565ac323530303030303030303030a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e403258d7d585597e348248cde84f3df2953974f587179d2db3b18c295cc76702214478a93fe0dc94d97eae8f69f236bb83a496ea4873a60f437e6a3208ff688c90",
+      "node": {
+        "type": 6,
+        "hash": "8d4ccd779545eda5e1908993103b48ddb443106a68dcb2095ffb699a418c8226",
+        "keyID": "7327263890683076281",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "250000000000",
+          "source": "Account",
+          "target": "UTXO"
+        }
+      }
+    },
+    {
+      "cryptoer": "ECC_Secp256k1",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "99999999999999999999",
+        "direction": "toAccount"
+      },
+      "hash": "03ad11bf40b84b4a096f193e64538768554c90dc7f9409ffa46af9562ac9b608",
+      "data": "8081f383a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf65afabafe3b61eb9a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c441042b49fef0125be27d32d5e91470e25414e446d51e5fbdf7f5f4a995f446b1c2c4c6b60561be4b681f3147009ffac05a30e92f74f1ab345d121ea86899ffa6e24fac5472616e7366657253656c6683a556616c7565b43939393939393939393939393939393939393939a6536f75726365a45554584fa6546172676574a74163636f756e74a44c616e67a2656e40ac6063c5c56a5c5fa39bc1d96a538021bd8ef2e071104eb49ea13ef9a1054cbe4bcf3c3f8916662b4e97e771d13ba1ebf6f955cf9921f83834057fa56011fe36",
+      "node": {
+        "type": 6,
+        "hash": "03ad11bf40b84b4a096f193e64538768554c90dc7f9409ffa46af9562ac9b608",
+        "keyID": "7327263890683076281",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "99999999999999999999",
+          "source": "UTXO",
+          "target": "Account"
+        }
+      }
+    },
+    {
+      "cryptoer": "ECC_Secp256k1",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192935",
+        "value": "1",
+        "comment": ""
+      },
+      "hash": "9175e25228f26b8738e08aace4eec16776c1c9d5211a0ab7e179992c6d25d339",
+      "data": "8081d483a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf65afabafe3b61eb9a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c441042b49fef0125be27d32d5e91470e25414e446d51e5fbdf7f5f4a995f446b1c2c4c6b60561be4b681f3147009ffac05a30e92f74f1ab345d121ea86899ffa6e24fa45554584f83a4546f4944cf084c3d35944ee5a7a556616c7565a131a7436f6d6d656e74a0a44c616e67a2656e403557c36c62fcf634e4ba3a0d4b7b96746bae6185331958489967d7488bb8b8933c22511971b325b09cce9d496b602b8d177925452b51c15b507443e7f10bce95",
+      "node": {
+        "error": "error UTXO ToID must be a valid address"
+      }
+    },
+    {
+      "cryptoer": "ECC_Secp256k1",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1.5",
+        "comment": ""
+      },
+      "hash": "d89190f2547824366f9ab32862c797a4e8acef6f052728760cdc92226dc497e7",
+      "data": "8081d683a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf65afabafe3b61eb9a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c441042b49fef0125be27d32d5e91470e25414e446d51e5fbdf7f5f4a995f446b1c2c4c6b60561be4b681f3147009ffac05a30e92f74f1ab345d121ea86899ffa6e24fa45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565a3312e35a7436f6d6d656e74a0a44c616e67a2656e409818354a8331c1a02382a10f046ea1bc0b3fcf63e19ef9a9b8d3d8b60dfb8aca32428af795e90f58149ef56c62aa54957c891749bb2f24fe8e0c5cb3e33a9a44",
+      "node": {
+        "error": "error UTXO Value must be a positive integer"
+      }
+    },
+    {
+      "cryptoer": "ECC_Secp256k1",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "0",
+        "direction": "toUTXO"
+      },
+      "hash": "9aacd8cbff4787206299f232d0c265aeac4dee1a6e6e6e3debb892e54221ba7d",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf65afabafe3b61eb9a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c441042b49fef0125be27d32d5e91470e25414e446d51e5fbdf7f5f4a995f446b1c2c4c6b60561be4b681f3147009ffac05a30e92f74f1ab345d121ea86899ffa6e24fac5472616e7366657253656c6683a556616c7565a130a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e408d00eeaa28bb015f5aff6b4b4213252e4207ccbe4f1203e79d2869c6e62060fe52720491cc18131fa5f0041808fda15409f56eec94c14bfac7580ad9a6d822bc",
+      "node": {
+        "error": "error TransferSelf Value must be greater than zero"
+      }
+    },
+    {
       "cryptoer": "ECC_P256",
       "hasher": "SHA256",
       "networkID": 5,
@@ -1192,6 +1362,856 @@
       }
     },
     {
+      "cryptoer": "ECC_P256",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1500000000000",
+        "comment": ""
+      },
+      "hash": "940783c669990818b72df9bd70f094f0dc93aedc6b2bbcf3fb3797f3d6283d62",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf121252075ee1d16ea94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104489347a1205c818d9a02f285faaedd0122a56138e3d985f5e1b4f6a9470f90f692a00a3453771dd7feea388ceb7aefeaf183e299c70ad1aecb7f870bfada3b86a45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565ad31353030303030303030303030a7436f6d6d656e74a0a44c616e67a2656e4066d875098ff73c10abe2420ef927e0fb0127db1a9bce1fef2f1533758c761f8760b286a07945d5eef3bc768f0cce06ce7e9157f054c43adac039722f226dcdfb",
+      "node": {
+        "type": 5,
+        "hash": "940783c669990818b72df9bd70f094f0dc93aedc6b2bbcf3fb3797f3d6283d62",
+        "keyID": "1302193433873600878",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "597920150864192934",
+          "value": "1500000000000",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "cryptoer": "ECC_P256",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "-2568234799998900389",
+        "value": "1",
+        "comment": "Invoice #42 — ünïcode"
+      },
+      "hash": "ac46e03ba325265229b08b84aa0a7012fafc4cce77a7cc3f69381e511fa219ef",
+      "data": "8081ed83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf121252075ee1d16ea94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104489347a1205c818d9a02f285faaedd0122a56138e3d985f5e1b4f6a9470f90f692a00a3453771dd7feea388ceb7aefeaf183e299c70ad1aecb7f870bfada3b86a45554584f83a4546f4944d3dc5bcc0e7644e75ba556616c7565a131a7436f6d6d656e74b9496e766f6963652023343220e2809420c3bc6ec3af636f6465a44c616e67a2656e40f05efb366767d8ce0e2ade8b86925392fe6f5257511643529b438874f823ab29655fd7984acd6f801564a8100706cb3e5dc98101c670e3c50b1d815d1b271c7f",
+      "node": {
+        "type": 5,
+        "hash": "ac46e03ba325265229b08b84aa0a7012fafc4cce77a7cc3f69381e511fa219ef",
+        "keyID": "1302193433873600878",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "-2568234799998900389",
+          "value": "1",
+          "comment": "Invoice #42 — ünïcode"
+        }
+      }
+    },
+    {
+      "cryptoer": "ECC_P256",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "250000000000",
+        "direction": "toUTXO"
+      },
+      "hash": "d7be368b419534581c691c994885e314f6af6457e94a4e51da5c3bccc0721730",
+      "data": "8081eb83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf121252075ee1d16ea94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104489347a1205c818d9a02f285faaedd0122a56138e3d985f5e1b4f6a9470f90f692a00a3453771dd7feea388ceb7aefeaf183e299c70ad1aecb7f870bfada3b86ac5472616e7366657253656c6683a556616c7565ac323530303030303030303030a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e40603bc29b09e92b3a35a282b4d4981983b7f57fb393917d04b7d23d024a1ac506295bcc65b49e740a895454872ef23b87c01d7f128216ed3b47affe1ca6c7b482",
+      "node": {
+        "type": 6,
+        "hash": "d7be368b419534581c691c994885e314f6af6457e94a4e51da5c3bccc0721730",
+        "keyID": "1302193433873600878",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "250000000000",
+          "source": "Account",
+          "target": "UTXO"
+        }
+      }
+    },
+    {
+      "cryptoer": "ECC_P256",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "99999999999999999999",
+        "direction": "toAccount"
+      },
+      "hash": "44c9cb507ad67d919879d07b8daaeb9b71c55ea51910ac75a88e3a752b75cd8c",
+      "data": "8081f383a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf121252075ee1d16ea94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104489347a1205c818d9a02f285faaedd0122a56138e3d985f5e1b4f6a9470f90f692a00a3453771dd7feea388ceb7aefeaf183e299c70ad1aecb7f870bfada3b86ac5472616e7366657253656c6683a556616c7565b43939393939393939393939393939393939393939a6536f75726365a45554584fa6546172676574a74163636f756e74a44c616e67a2656e409214ac3df649c4aacf8b5895c229f839024ba9b914e86f4b4bd1b72a427babeb3b7b88e99baa9d40d0764da34114e3a070342cd0480486398590269b70ba8834",
+      "node": {
+        "type": 6,
+        "hash": "44c9cb507ad67d919879d07b8daaeb9b71c55ea51910ac75a88e3a752b75cd8c",
+        "keyID": "1302193433873600878",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "99999999999999999999",
+          "source": "UTXO",
+          "target": "Account"
+        }
+      }
+    },
+    {
+      "cryptoer": "ECC_P256",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192935",
+        "value": "1",
+        "comment": ""
+      },
+      "hash": "39db1fdd6de0a16224d9a083b5f20a4fa7611f70feba818aa567d24042eeeccb",
+      "data": "8081d483a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf121252075ee1d16ea94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104489347a1205c818d9a02f285faaedd0122a56138e3d985f5e1b4f6a9470f90f692a00a3453771dd7feea388ceb7aefeaf183e299c70ad1aecb7f870bfada3b86a45554584f83a4546f4944cf084c3d35944ee5a7a556616c7565a131a7436f6d6d656e74a0a44c616e67a2656e4075f90b7c8ab203f3df8ee942db0e0021d8fe2bc7814ae05a4c5569902889503f5f5ab25eb0b378484e0d55f4e53ec683fe2c08c9d5b9dd54a5dae092ce4fa8eb",
+      "node": {
+        "error": "error UTXO ToID must be a valid address"
+      }
+    },
+    {
+      "cryptoer": "ECC_P256",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1.5",
+        "comment": ""
+      },
+      "hash": "240db5b62b2e93d1d839e8835de8e5bab9b6396045572ac4e22f7d3860c55ae7",
+      "data": "8081d683a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf121252075ee1d16ea94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104489347a1205c818d9a02f285faaedd0122a56138e3d985f5e1b4f6a9470f90f692a00a3453771dd7feea388ceb7aefeaf183e299c70ad1aecb7f870bfada3b86a45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565a3312e35a7436f6d6d656e74a0a44c616e67a2656e409317b10a16cc1ae818ec0995b523202ffa2645c7916f90aa85a93c6729453f2406ed139d3b118a6bee5cc2cf2231e2dd3c0a05be5e8e2dc5934cb8d2a89f5c90",
+      "node": {
+        "error": "error UTXO Value must be a positive integer"
+      }
+    },
+    {
+      "cryptoer": "ECC_P256",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "0",
+        "direction": "toUTXO"
+      },
+      "hash": "a66bfcf7cbafa1c71f9a0cbe955aa70c03c7f162e20149cd99c08d7e3aba30dc",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf121252075ee1d16ea94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104489347a1205c818d9a02f285faaedd0122a56138e3d985f5e1b4f6a9470f90f692a00a3453771dd7feea388ceb7aefeaf183e299c70ad1aecb7f870bfada3b86ac5472616e7366657253656c6683a556616c7565a130a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e400a376184d72dcf3351e50ba4cbbb8b02bbc34c8285eb3d077972fa9e347249f76232320e531d273f122b47535891abc809682d60460729bf05eba1512f014228",
+      "node": {
+        "error": "error TransferSelf Value must be greater than zero"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1500000000000",
+        "comment": ""
+      },
+      "hash": "97036d1ed50d4c556fc965f8067ebd287339db3b239ec21912b30d81e0e505f3",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf36db5f475ba0f7aaa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565ad31353030303030303030303030a7436f6d6d656e74a0a44c616e67a2656e483046022100d0215b7d939b91735e3aa613270e71dad1662c649acea66519acceafb2ba0c45022100f7ac580d804abc2119c94c9c85137888632e204c4d1e3fa6c7b59ee9100a8470",
+      "node": {
+        "type": 5,
+        "hash": "97036d1ed50d4c556fc965f8067ebd287339db3b239ec21912b30d81e0e505f3",
+        "keyID": "3952857858032334762",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "597920150864192934",
+          "value": "1500000000000",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "-2568234799998900389",
+        "value": "1",
+        "comment": "Invoice #42 — ünïcode"
+      },
+      "hash": "4aab4ca71fa80b4a268024dae0b966d590bd2e9c3e05ebc9656bfe1fb9ae2573",
+      "data": "8081ed83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf36db5f475ba0f7aaa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944d3dc5bcc0e7644e75ba556616c7565a131a7436f6d6d656e74b9496e766f6963652023343220e2809420c3bc6ec3af636f6465a44c616e67a2656e4730450220226ae61ffaa418d1bd9f333cea48edc0eced2174d23f249e93768c97d9b85039022100c23d8f7fcf7d01ebd404aa095acbff73542035653fc6e9d597ac0812a7cc35a7",
+      "node": {
+        "type": 5,
+        "hash": "4aab4ca71fa80b4a268024dae0b966d590bd2e9c3e05ebc9656bfe1fb9ae2573",
+        "keyID": "3952857858032334762",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "-2568234799998900389",
+          "value": "1",
+          "comment": "Invoice #42 — ünïcode"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "250000000000",
+        "direction": "toUTXO"
+      },
+      "hash": "b13813ec4cdb0b06c81bd06b16d400cc858c2352fc7fc9169bc8836a8ac2fb60",
+      "data": "8081eb83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf36db5f475ba0f7aaa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565ac323530303030303030303030a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e473045022100ee8809488ede4c657a6ace323d17cabdbe33bbedb0ca8db8c72b7357ff5e556502202f4f4d1983f28934db0a4b2ba8b9f0bec9ca6f92f25d419a2328845d8a118eea",
+      "node": {
+        "type": 6,
+        "hash": "b13813ec4cdb0b06c81bd06b16d400cc858c2352fc7fc9169bc8836a8ac2fb60",
+        "keyID": "3952857858032334762",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "250000000000",
+          "source": "Account",
+          "target": "UTXO"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "99999999999999999999",
+        "direction": "toAccount"
+      },
+      "hash": "d4f8728382292d5f03270fcd3455f115ba51769954441467e7eb503403056e14",
+      "data": "8081f383a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf36db5f475ba0f7aaa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565b43939393939393939393939393939393939393939a6536f75726365a45554584fa6546172676574a74163636f756e74a44c616e67a2656e473045022044c815e2a59e7b26fc12e304fbe34aebf7c918264bcd261cec69da140cfd5ce9022100b897601e80770ebe2bf6faad6013d7fc3ec83fa327145048747226e5bf80bff0",
+      "node": {
+        "type": 6,
+        "hash": "d4f8728382292d5f03270fcd3455f115ba51769954441467e7eb503403056e14",
+        "keyID": "3952857858032334762",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "99999999999999999999",
+          "source": "UTXO",
+          "target": "Account"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192935",
+        "value": "1",
+        "comment": ""
+      },
+      "hash": "c27fdc2ceb4dee8b6215f5fff3261201ec695c8f8654c35c68a55285d4bcf68b",
+      "data": "8081d483a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf36db5f475ba0f7aaa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a7a556616c7565a131a7436f6d6d656e74a0a44c616e67a2656e463044022021c2cc5eba0e40fb16093d51e1b4139d0af5962bdf3048a40f53b69101e4ca62022042843928948f9be0d83602ee8f0e1df01373f04ade8f8c02ff43a88e74ec8c9c",
+      "node": {
+        "error": "error UTXO ToID must be a valid address"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1.5",
+        "comment": ""
+      },
+      "hash": "19425edc89b98998a981a411323f5d4ed400c5eba7ed5f94791ec8c0dac73623",
+      "data": "8081d683a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf36db5f475ba0f7aaa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565a3312e35a7436f6d6d656e74a0a44c616e67a2656e4730450220534a35b0f14b4b6661b32ba9b47f2898e4131d3cd0d2c9b0c555ed80b88a9e7c022100f7de6cb212da664d75d83dbe38cc82ef7c10aa4a52daf90732104ec4994ba641",
+      "node": {
+        "error": "error UTXO Value must be a positive integer"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "0",
+        "direction": "toUTXO"
+      },
+      "hash": "6068ff7851a337c76847856b93def5bea9cfd5406ef3a54191ba513ed84eb65f",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf36db5f475ba0f7aaa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565a130a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e4730450220162ad91d622e46477d4fe9b181fa3787a004f3008a6474550589f96b81bfd111022100f72a127f52f65a4f708f6a5193b60f8f4335b43a70e103e3ddac14068ea6b0f3",
+      "node": {
+        "error": "error TransferSelf Value must be greater than zero"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "KECCAK256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1500000000000",
+        "comment": ""
+      },
+      "hash": "723970de95c5de2501d81e421d801efa16b8955496ec0e86794f08f229096844",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3d432624fef9fad4da94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565ad31353030303030303030303030a7436f6d6d656e74a0a44c616e67a2656e473045022100f58c9a427bfd078ed559dda1e3788b43852e0f2c791d9b00a7940b0ad846fda002201101af8fc120e24b4a908abb325e825d0a5ca7033ebeb8e92627474d396c2e37",
+      "node": {
+        "type": 5,
+        "hash": "723970de95c5de2501d81e421d801efa16b8955496ec0e86794f08f229096844",
+        "keyID": "-3156352293371138739",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "597920150864192934",
+          "value": "1500000000000",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "KECCAK256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "-2568234799998900389",
+        "value": "1",
+        "comment": "Invoice #42 — ünïcode"
+      },
+      "hash": "c0945fc68d9e5052376377846e33d89101144bf470721250a905f5d9e18dee33",
+      "data": "8081ed83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3d432624fef9fad4da94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944d3dc5bcc0e7644e75ba556616c7565a131a7436f6d6d656e74b9496e766f6963652023343220e2809420c3bc6ec3af636f6465a44c616e67a2656e483046022100eae6e4f0b9cf24dcce5d3600c81e649eaecf6f5dba879b62a664afbee2ed98c1022100ea0737f0b554d266a3477b3a949995a1095f7ac19cbaeae791972ea0e0d0a416",
+      "node": {
+        "type": 5,
+        "hash": "c0945fc68d9e5052376377846e33d89101144bf470721250a905f5d9e18dee33",
+        "keyID": "-3156352293371138739",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "-2568234799998900389",
+          "value": "1",
+          "comment": "Invoice #42 — ünïcode"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "KECCAK256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "250000000000",
+        "direction": "toUTXO"
+      },
+      "hash": "34f9f12b5ad57c983802bd85b13e198fe513e9a5b6972a207c68d3136dfcc15c",
+      "data": "8081eb83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3d432624fef9fad4da94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565ac323530303030303030303030a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e4830460221008218f6850c52ef525cc72523a92002a5781634dc204a5f323dcfd66ffa47f3bc022100fa2812d9dd19a37e9f14778731c67baaa21af94d3b2d412e36bd488f296f350e",
+      "node": {
+        "type": 6,
+        "hash": "34f9f12b5ad57c983802bd85b13e198fe513e9a5b6972a207c68d3136dfcc15c",
+        "keyID": "-3156352293371138739",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "250000000000",
+          "source": "Account",
+          "target": "UTXO"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "KECCAK256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "99999999999999999999",
+        "direction": "toAccount"
+      },
+      "hash": "29f228619ab5ef28a507d7e6ab609dbb37746cc9a8b1a2049f73c627068baf23",
+      "data": "8081f383a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3d432624fef9fad4da94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565b43939393939393939393939393939393939393939a6536f75726365a45554584fa6546172676574a74163636f756e74a44c616e67a2656e473045022100c1c65c40c89b487c23214c09f14ae2fc2b79664719f9e9dcfb4b9e1156c1242202207cd409bac9ba2a54abee69effd1f8e7ebab9079165c4e69065b531d64484959f",
+      "node": {
+        "type": 6,
+        "hash": "29f228619ab5ef28a507d7e6ab609dbb37746cc9a8b1a2049f73c627068baf23",
+        "keyID": "-3156352293371138739",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "99999999999999999999",
+          "source": "UTXO",
+          "target": "Account"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "KECCAK256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192935",
+        "value": "1",
+        "comment": ""
+      },
+      "hash": "611bed300932c5cdaff558ba7ca2f08c4463d3d5c08913e59d73629404086cda",
+      "data": "8081d483a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3d432624fef9fad4da94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a7a556616c7565a131a7436f6d6d656e74a0a44c616e67a2656e48304602210097dfc1e84ba7c5c0cdbebc8ff1de2c419c6f403ada6b888a3ba314b261dfc012022100ff1b5a781d05c708a3cae8bd84ebd76326bb1db5efbef4ff7087b582f30ca7fc",
+      "node": {
+        "error": "error UTXO ToID must be a valid address"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "KECCAK256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1.5",
+        "comment": ""
+      },
+      "hash": "5e44e501d73a26165a8edc52e5504912f3bd04ef80bf21f3dfb9a3aa589ce11f",
+      "data": "8081d683a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3d432624fef9fad4da94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565a3312e35a7436f6d6d656e74a0a44c616e67a2656e473045022100e64349c067c070f22696a9756316e65a05abf5ea450e0ecb43d35907e4b3f8540220177209b07b20af54893da49a7f289789400e3d6c347a6ef03ce2ea0f2b9b00a8",
+      "node": {
+        "error": "error UTXO Value must be a positive integer"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "KECCAK256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "0",
+        "direction": "toUTXO"
+      },
+      "hash": "645258d2cfb1765df7c63a6ccd309ccccfb196fc2019112d9288a2ac8430b750",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3d432624fef9fad4da94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565a130a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e46304402201e82364cdb0868d9f3b8d9d4831f49e00126131841ad389aa2e980289ce3fb87022055024ee36b0a5b06df23426469b3177ecf64c5015d06a7d8f334f6eb59291a3b",
+      "node": {
+        "error": "error TransferSelf Value must be greater than zero"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA3_256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1500000000000",
+        "comment": ""
+      },
+      "hash": "800adcbc27e55a3dc6b9e71772ea48180830d84f70645f44d8eb3d81ac7c6939",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf2fef80f211786675a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565ad31353030303030303030303030a7436f6d6d656e74a0a44c616e67a2656e47304502207ad28e1079877faebba84e29d2e895552b3e2523bfdef70cb7f3cafbc0f7cb4b0221008aa2a5ef40cf94bf6177aee66f50d14392bf4151b47502ba784cb2c303426fcf",
+      "node": {
+        "type": 5,
+        "hash": "800adcbc27e55a3dc6b9e71772ea48180830d84f70645f44d8eb3d81ac7c6939",
+        "keyID": "3454121216380003957",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "597920150864192934",
+          "value": "1500000000000",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA3_256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "-2568234799998900389",
+        "value": "1",
+        "comment": "Invoice #42 — ünïcode"
+      },
+      "hash": "dac6dca94f36baff92d4605cd8ec73106f34390f711e4e0fb4d64cac09197b48",
+      "data": "8081ed83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf2fef80f211786675a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944d3dc5bcc0e7644e75ba556616c7565a131a7436f6d6d656e74b9496e766f6963652023343220e2809420c3bc6ec3af636f6465a44c616e67a2656e483046022100ee681589d4f01a16cb5be43bcabd9c9778be43a1a59fc025516a0539df618c8f022100db74c0b5080c30721eb2c50d5666683e15497b627b7a0ed0a64389ae9ed56397",
+      "node": {
+        "type": 5,
+        "hash": "dac6dca94f36baff92d4605cd8ec73106f34390f711e4e0fb4d64cac09197b48",
+        "keyID": "3454121216380003957",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "-2568234799998900389",
+          "value": "1",
+          "comment": "Invoice #42 — ünïcode"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA3_256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "250000000000",
+        "direction": "toUTXO"
+      },
+      "hash": "52cc860439a505ad45e27ae60f02dec410fed60b400661acc5ef56478b8ade7b",
+      "data": "8081eb83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf2fef80f211786675a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565ac323530303030303030303030a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e4830460221009c37a2fb261408af6f046a8b7d56623d15af11b69272f675f3574d667dff5cd4022100e2a63713b5e6aa7cae86683027041cd541e698fdc16e6df43ae296b09c3c3fad",
+      "node": {
+        "type": 6,
+        "hash": "52cc860439a505ad45e27ae60f02dec410fed60b400661acc5ef56478b8ade7b",
+        "keyID": "3454121216380003957",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "250000000000",
+          "source": "Account",
+          "target": "UTXO"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA3_256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "99999999999999999999",
+        "direction": "toAccount"
+      },
+      "hash": "058fc5b94c03482e046c900812dda2be986131b7ee84a5d6aa7146e3d5c07c00",
+      "data": "8081f383a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf2fef80f211786675a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565b43939393939393939393939393939393939393939a6536f75726365a45554584fa6546172676574a74163636f756e74a44c616e67a2656e4830460221009bad5c1e5b86b78d84207891f4cb7fd0bec2ccb14d4c8bf8e97acccdd8304399022100a3d53f962d33635428d644c885fcce31cfbb3b4a0458c0514a23ecd338a24335",
+      "node": {
+        "type": 6,
+        "hash": "058fc5b94c03482e046c900812dda2be986131b7ee84a5d6aa7146e3d5c07c00",
+        "keyID": "3454121216380003957",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "99999999999999999999",
+          "source": "UTXO",
+          "target": "Account"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA3_256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192935",
+        "value": "1",
+        "comment": ""
+      },
+      "hash": "8724aa39e6485661d1ff9d33c916e0aa0b2598dcf92c6ca42f11b40384437c36",
+      "data": "8081d483a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf2fef80f211786675a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a7a556616c7565a131a7436f6d6d656e74a0a44c616e67a2656e483046022100cadf03744340d1f67bea72532993c059d13c8ce70dff152148ce57504a9fc76e022100aa406663c823fc5c3830f6b7eb1e0143c7d16b58f9f9478e7172d5f4589dc418",
+      "node": {
+        "error": "error UTXO ToID must be a valid address"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA3_256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1.5",
+        "comment": ""
+      },
+      "hash": "89f82af7ff615ddc467b85c6c95787c7ebf8a2ea48a0b5dd03d3afb0a3813645",
+      "data": "8081d683a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf2fef80f211786675a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565a3312e35a7436f6d6d656e74a0a44c616e67a2656e473045022100cc14814170fbab1aba9b56ef6dde1b8df24e39f69c9243c2bd37f21335ff340c02202657cce97772c9e45445c246559e697f25c061c0dbaecb55c28e5220c7c43f10",
+      "node": {
+        "error": "error UTXO Value must be a positive integer"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SHA3_256",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "0",
+        "direction": "toUTXO"
+      },
+      "hash": "ecf4a520383b11b5a911b73ac2b0033e82a61597dcebe9e4104df0cd7d08b362",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf2fef80f211786675a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565a130a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e47304502210080deb80b2a58c225cb608029d0f5cfca4446f74398be6fd2e5683f5b6578187002203fe5746f106358a499838185e83ff6ef91c01a0b5b5bd49d37a08d70d946bead",
+      "node": {
+        "error": "error TransferSelf Value must be greater than zero"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1500000000000",
+        "comment": ""
+      },
+      "hash": "2bd79fa48f5d94931bd20a0bbcf5fb0007ac2f6951f7656594325ac043043e43",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3a5d946ec7495176fa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565ad31353030303030303030303030a7436f6d6d656e74a0a44c616e67a2656e473045022044a75c4eb8db0a6f890b3036175aa9120097756c5fe5622fccb4a76e27bb3268022100f00594904393f186fe60c51ab3ef0f0a199a6dcf630cd70bdf5ae32fd13f6cd0",
+      "node": {
+        "type": 5,
+        "hash": "2bd79fa48f5d94931bd20a0bbcf5fb0007ac2f6951f7656594325ac043043e43",
+        "keyID": "-6496083006123075729",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "597920150864192934",
+          "value": "1500000000000",
+          "comment": ""
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "-2568234799998900389",
+        "value": "1",
+        "comment": "Invoice #42 — ünïcode"
+      },
+      "hash": "c164025fba89deef33dee7b92f8f1ebc965058801216b57d682f59985d84defe",
+      "data": "8081ed83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3a5d946ec7495176fa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944d3dc5bcc0e7644e75ba556616c7565a131a7436f6d6d656e74b9496e766f6963652023343220e2809420c3bc6ec3af636f6465a44c616e67a2656e473045022100aad431f94549f37f5f0b3bdb113c491122780b8d49a3e1e535f95d88c0fb512c02203300feffdb764c441d2e0df5752c2499b5228e3f3773db1f13edc9505bab0944",
+      "node": {
+        "type": 5,
+        "hash": "c164025fba89deef33dee7b92f8f1ebc965058801216b57d682f59985d84defe",
+        "keyID": "-6496083006123075729",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "utxo": {
+          "toID": "-2568234799998900389",
+          "value": "1",
+          "comment": "Invoice #42 — ünïcode"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "250000000000",
+        "direction": "toUTXO"
+      },
+      "hash": "70c4859635b6945e3f64b37b7c00c1204c31a1dbcc31066b32186b7b1ea7f66b",
+      "data": "8081eb83a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3a5d946ec7495176fa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565ac323530303030303030303030a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e483046022100b249ffe4556ca369b1114a95ee6d68e0312e97b29b473a763afb3272d325f7c302210089c37332c92419ffac4ffd73e05dbc21e3345fe7aad9e0e8ee73883611073a50",
+      "node": {
+        "type": 6,
+        "hash": "70c4859635b6945e3f64b37b7c00c1204c31a1dbcc31066b32186b7b1ea7f66b",
+        "keyID": "-6496083006123075729",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "250000000000",
+          "source": "Account",
+          "target": "UTXO"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "99999999999999999999",
+        "direction": "toAccount"
+      },
+      "hash": "48ea1aec36f93ab6a2605582a97b17812285e86f1122b9fab0400588869780cc",
+      "data": "8081f383a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3a5d946ec7495176fa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565b43939393939393939393939393939393939393939a6536f75726365a45554584fa6546172676574a74163636f756e74a44c616e67a2656e46304402206379c353faf6e1dda1629b1cedf00555e4a50da1be4922772d94f4988ee9a5b002205ba0e4d5c972a26d6046c5c5f127d71cfe24310973c7348c4e3666c37ea97267",
+      "node": {
+        "type": 6,
+        "hash": "48ea1aec36f93ab6a2605582a97b17812285e86f1122b9fab0400588869780cc",
+        "keyID": "-6496083006123075729",
+        "keyMatchesPublicKey": true,
+        "ecosystemID": "1",
+        "networkID": "5",
+        "transferSelf": {
+          "value": "99999999999999999999",
+          "source": "UTXO",
+          "target": "Account"
+        }
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192935",
+        "value": "1",
+        "comment": ""
+      },
+      "hash": "314256959ea442a1fbd1fea9ffb02cb1847dd245a41a79b922ad69e235547e5c",
+      "data": "8081d483a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3a5d946ec7495176fa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a7a556616c7565a131a7436f6d6d656e74a0a44c616e67a2656e483046022100df0adc9eee4e1d3596b4b5348fb50b2640b65562cca5054264f3f8c2dfcac8f4022100e270d422b9e8a868ff175d0c6efecac7e391a7cadaf0b9e6f725d28235833c5e",
+      "node": {
+        "error": "error UTXO ToID must be a valid address"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "utxo",
+        "toID": "597920150864192934",
+        "value": "1.5",
+        "comment": ""
+      },
+      "hash": "57f5d4811f689927b8d312bb40ef081ddb498e1a072c2d54a52a2aa0a23e5a81",
+      "data": "8081d683a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3a5d946ec7495176fa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9a45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565a3312e35a7436f6d6d656e74a0a44c616e67a2656e483046022100dd1aaa8e877576f108285fd5690e6f538e8366248c13c41db4e988736b4559cb022100d1ca11535d1755b13000455b74f4c9e14bcd328eedf2a8c90b5029289b162665",
+      "node": {
+        "error": "error UTXO Value must be a positive integer"
+      }
+    },
+    {
+      "cryptoer": "SM2",
+      "hasher": "SM3",
+      "networkID": 5,
+      "ecosystemID": 1,
+      "time": 1760000000,
+      "privateKey": "e5a87a96a445cb55a214edaad3661018061ef2936e63a0a93bdb76eb28251c1f",
+      "payload": {
+        "type": "transferSelf",
+        "value": "0",
+        "direction": "toUTXO"
+      },
+      "hash": "cc8387cf9c819413206fa770c575d62f4dee6e1f49ee7aabb9f5df80a66fdd1a",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944d3a5d946ec7495176fa94e6574776f726b4944cf0000000000000005a95075626c69634b6579c44104b6780b2049377fb84f64e158c5dd74945d52b219e11dc91b72fdcf5c764a2d5a56650d26d0444925213a397120def26c8738040128758a85f3c44f70f4bfa6b9ac5472616e7366657253656c6683a556616c7565a130a6536f75726365a74163636f756e74a6546172676574a45554584fa44c616e67a2656e46304402202b2ae5033f1df4d034bfb925dc1929faee47834c29bbbd3a698612d560d31e070220297270b348762f816ab6c6aeaa0f8350f13f50b3f352e9500d271107a684c8fb",
+      "node": {
+        "error": "error TransferSelf Value must be greater than zero"
+      }
+    },
+    {
       "cryptoer": "ECC_Secp256k1",
       "hasher": "SHA256",
       "networkID": 5,
@@ -1226,7 +2246,7 @@
         "comment": ""
       },
       "hash": "13bd27a6912a66756567a02eb9e705039051592e355d29a1afda78130741d8a2",
-      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf084c3d35944ee5a6a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c441042b49fef0125be27d32d5e91470e25414e446d51e5fbdf7f5f4a995f446b1c2c4c6b60561be4b681f3147009ffac05a30e92f74f1ab345d121ea86899ffa6e24fa45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565ad31353030303030303030303031a7436f6d6d656e74a0a44c616e67a2656e406b9d62582396e30f037132a7dd51d5a7567e522b992390734fa7b8b0b623369507b17b2b00f3432950b011f8cb5281cd3f61968e6e3503c84935ed01c4737ce0",
+      "data": "8081e083a648656164657286a24944cf0000000000000000a454696d65cf0000000068e77800ab45636f73797374656d4944cf0000000000000001a54b65794944cf084c3d35944ee5a6a94e6574776f726b4944cf0000000000000005a95075626c69634b6579c441042b49fef0125be27d32d5e91470e25414e446d51e5fbdf7f5f4a995f446b1c2c4c6b60561be4b681f3147009ffac05a30e92f74f1ab345d121ea86899ffa6e24fa45554584f83a4546f4944cf084c3d35944ee5a6a556616c7565ad31353030303030303030303030a7436f6d6d656e74a0a44c616e67a2656f406b9d62582396e30f037132a7dd51d5a7567e522b992390734fa7b8b0b623369507b17b2b00f3432950b011f8cb5281cd3f61968e6e3503c84935ed01c4737ce0",
       "node": {
         "error": "Incorrect sign"
       }
