@@ -5,17 +5,21 @@
 package crypto
 
 import (
-	"math/rand"
-	"time"
+	crand "crypto/rand"
+	"math/big"
 )
 
-// RandSeq is returning random string
+// RandSeq returns a random string of n letters and digits from crypto/rand
 func RandSeq(n int) string {
-	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-	rand.Seed(time.Now().UnixNano())
-	b := make([]rune, n)
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	max := big.NewInt(int64(len(letters)))
+	b := make([]byte, n)
 	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
+		k, err := crand.Int(crand.Reader, max)
+		if err != nil {
+			panic(err)
+		}
+		b[i] = letters[k.Int64()]
 	}
 	return string(b)
 }
