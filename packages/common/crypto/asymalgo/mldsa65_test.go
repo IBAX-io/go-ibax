@@ -2,12 +2,11 @@ package asymalgo
 
 import (
 	"bytes"
+	"crypto/mldsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"testing"
-
-	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
 )
 
 func testSeed() []byte {
@@ -63,7 +62,8 @@ func TestMLDSA65SignIsHedged(t *testing.T) {
 func TestMLDSA65RefusesInvalidPrivateKey(t *testing.T) {
 	m := &MLDSA65{}
 	hash := sha256.Sum256([]byte("block"))
-	expanded := make([]byte, mldsa65.PrivateKeySize)
+	// An ML-DSA-65 private key in the FIPS 204 expanded encoding
+	expanded := make([]byte, 4032)
 	for name, key := range map[string][]byte{"nil": nil, "short": make([]byte, 31), "long": make([]byte, 33), "expanded": expanded} {
 		if sig, err := m.Sign(key, hash[:]); !errors.Is(err, ErrInvalidPrivateKey) {
 			t.Errorf("%s: Sign returned %x, %v", name, sig, err)
@@ -93,11 +93,12 @@ func TestMLDSA65VerifyRejects(t *testing.T) {
 	tampered := append([]byte{}, sig...)
 	tampered[100] ^= 1
 	// The same key and hash signed without the IBAX context
-	var seed [MLDSA65SeedSize]byte
-	copy(seed[:], priv)
-	_, sk := mldsa65.NewKeyFromSeed(&seed)
-	noContext := make([]byte, MLDSA65SignatureSize)
-	if err := mldsa65.SignTo(sk, hash[:], nil, true, noContext); err != nil {
+	sk, err := mldsa.NewPrivateKey(mldsa.MLDSA65(), priv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	noContext, err := sk.Sign(nil, hash[:], nil)
+	if err != nil {
 		t.Fatal(err)
 	}
 
