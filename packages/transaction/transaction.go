@@ -35,7 +35,18 @@ type TransactionCaller interface {
 	txTime() int64
 	txKeyID() int64
 	txExpedite() decimal.Decimal
+	// txSize is the length of the transaction as a block stores it (Transaction.FullData).
+	// Size limits and size-based fees count it.
+	txSize() int64
+	setTxSize(int64)
 }
+
+// storedSize keeps the length of a transaction as a block stores it. Parsers embed it; its field
+// is unexported, so it is not part of their msgpack encoding.
+type storedSize struct{ size int64 }
+
+func (s *storedSize) txSize() int64        { return s.size }
+func (s *storedSize) setTxSize(size int64) { s.size = size }
 
 func (t *Transaction) Type() byte                { return t.Inner.txType() }
 func (t *Transaction) Hash() []byte              { return t.Inner.txHash() }

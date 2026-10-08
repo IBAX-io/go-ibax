@@ -105,6 +105,10 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		if err = b.repeatMarshallBlock(); err != nil {
 			return err
 		}
+		// blockSize counted every transaction in, so this only fails if that count is wrong
+		if int64(len(b.BinData)) > syspar.GetMaxBlockSize() {
+			return types.ErrMaxBlockSize(syspar.GetMaxBlockSize(), len(b.BinData))
+		}
 	}
 	blockchain := &sqldb.BlockChain{
 		ID:             blockID,

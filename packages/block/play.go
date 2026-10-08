@@ -143,6 +143,9 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	b.EcoParams = ecoParams
 	// UTXO multiple ecosystem fuelRate
 	b.PrevSysPar = syspar.GetSysParCache()
+	if b.GenBlock {
+		b.size = newBlockSize(syspar.GetMaxBlockSize(), b.Header, b.PrevHeader)
+	}
 	var wg sync.WaitGroup
 
 	// StopNetworkTxType
@@ -287,15 +290,6 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 			return err
 		}
 
-		if t.SysUpdate {
-			b.SysUpdate = true
-			t.SysUpdate = false
-		}
-
-		if t.Notifications.Size() > 0 {
-			b.Notifications = append(b.Notifications, t.Notifications)
-		}
-
 		var (
 			after    = &types.AfterTx{}
 			eco      = int64(1)
@@ -321,6 +315,29 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 			InvokeStatus: code,
 		}
 		after.UpdTxStatus = t.TxResult
+
+		// A transaction that would make the block longer than max_block_size waits for the next
+		// block; one that does not fit even into an empty block never will.
+		if b.GenBlock && !b.size.add(t.FullData, after, t.RollBackTx) {
+			if errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash()))); errRoll != nil {
+				return errRoll
+			}
+			if len(*processedTx) == 0 {
+				txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: "transaction is larger than an empty block", keyID: t.KeyID()}
+				continue
+			}
+			break
+		}
+
+		if t.SysUpdate {
+			b.SysUpdate = true
+			t.SysUpdate = false
+		}
+
+		if t.Notifications.Size() > 0 {
+			b.Notifications = append(b.Notifications, t.Notifications)
+		}
+
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
 		//afters.TxBinLogSql = append(afters.TxBinLogSql, t.DbTransaction.BinLogSql...)

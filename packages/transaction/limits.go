@@ -68,7 +68,7 @@ func NewLimits(b LimitMode) (limits *Limits) {
 	limits.Mode = b
 
 	allLimiters := []limiterModes{
-		{limiter: &txMaxSize{}, modes: letPreprocess | letParsing},
+		{limiter: &txMaxSize{}, modes: letPreprocess | letGenBlock | letParsing},
 		{limiter: &txUserLimit{}, modes: letPreprocess | letParsing},
 		{limiter: &txMaxLimit{}, modes: letPreprocess | letParsing},
 		{limiter: &txUserEcosysLimit{}, modes: letPreprocess | letParsing},
@@ -216,29 +216,19 @@ func (bl *txUserEcosysLimit) check(t TransactionCaller, mode LimitMode) error {
 	return nil
 }
 
-// Checking the max tx & block size
+// Checking the max tx size. The block size is checked on the encoded block: the node generating
+// it counts it as its transactions run (block.blockSize), and its peers check the bytes they get.
 type txMaxSize struct {
-	Size       int64 // the current size of the block
-	LimitBlock int64 // max size of the block
-	LimitTx    int64 // max size of tx
+	LimitTx int64 // max size of tx
 }
 
 func (bl *txMaxSize) init() {
-	bl.LimitBlock = syspar.GetMaxBlockSize()
 	bl.LimitTx = syspar.GetMaxTxSize()
 }
 
 func (bl *txMaxSize) check(t TransactionCaller, mode LimitMode) error {
-	size := int64(len(append([]byte{t.txType()}, t.txPayload()...)))
-	if size > bl.LimitTx {
+	if t.txSize() > bl.LimitTx {
 		return limitError(`txMaxSize`, `Max size of tx`)
-	}
-	bl.Size += size
-	if bl.Size > bl.LimitBlock {
-		if mode == letPreprocess {
-			return errors.WithMessage(ErrLimitStop, "txMaxSize")
-		}
-		return limitError(`txMaxSize`, `Max size of the block`)
 	}
 	return nil
 }

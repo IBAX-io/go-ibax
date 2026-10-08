@@ -31,6 +31,7 @@ type Block struct {
 	ClassifyTxsMap    map[int][]*transaction.Transaction
 	PrevSysPar        map[string]string
 	EcoParams         []sqldb.EcoParam // combustion percent,digits for each ecosystem
+	size              *blockSize       // the encoded length of the block being generated
 }
 
 // GetLogger is returns logger

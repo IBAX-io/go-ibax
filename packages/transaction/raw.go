@@ -84,6 +84,7 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer, fill bool) error {
 	default:
 		return fmt.Errorf("unsupported tx type %d", txT)
 	}
+	inner.setTxSize(int64(len(rtx.FullData)))
 	rtx.Inner = inner
 	if cache, ok := txCache.Get(fmt.Sprintf("%x", rtx.Hash())); ok {
 		rtx = cache

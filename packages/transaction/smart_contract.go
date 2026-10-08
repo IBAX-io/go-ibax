@@ -27,6 +27,7 @@ import (
 
 type SmartTransactionParser struct {
 	*smart.SmartContract
+	storedSize
 }
 
 func (s *SmartTransactionParser) txType() byte      { return s.TxSmart.TxType() }
@@ -49,7 +50,7 @@ func (s *SmartTransactionParser) Init(t *InToCxt) error {
 	s.PreBlockHeader = t.PreBlockHeader
 	s.Notifications = t.Notifications
 	s.DbTransaction = t.DbTransaction
-	s.TxSize = int64(len(s.Payload))
+	s.TxSize = s.txSize()
 	s.VM = script.GetVM()
 	s.ChildChain = false
 	s.Rollback = true
