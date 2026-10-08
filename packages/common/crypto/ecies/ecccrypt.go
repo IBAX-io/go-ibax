@@ -96,6 +96,7 @@ func GetPrivateKeys(privateKey []byte) (ret *ecdsa.PrivateKey, err error) {
 	priv := new(ecdsa.PrivateKey)
 	priv.PublicKey.Curve = pubkeyCurve
 	priv.D = bi
+	priv.PublicKey.X, priv.PublicKey.Y = pubkeyCurve.ScalarBaseMult(privateKey)
 	return priv, nil
 }
 
