@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/network"
 
@@ -121,7 +122,7 @@ func SendFullBlockToAll(ctx context.Context, hosts []string, block *sqldb.InfoBl
 				return
 			}
 
-			if len(response) == 0 || len(response) < consts.HashSize {
+			if len(response) == 0 || len(response) < crypto.HashSize() {
 				return
 			}
 
@@ -229,9 +230,10 @@ func resieveRequiredTransactions(con net.Conn) (response []byte, err error) {
 }
 
 func parseTxHashesFromResponse(resp []byte) (hashes [][]byte) {
-	hashes = make([][]byte, 0, len(resp)/consts.HashSize)
-	for len(resp) >= consts.HashSize {
-		hashes = append(hashes, converter.BytesShift(&resp, consts.HashSize))
+	size := int64(crypto.HashSize())
+	hashes = make([][]byte, 0, int64(len(resp))/size)
+	for int64(len(resp)) >= size {
+		hashes = append(hashes, converter.BytesShift(&resp, size))
 	}
 
 	return

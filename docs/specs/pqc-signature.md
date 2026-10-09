@@ -7,7 +7,7 @@ This document fixes how go-ibax chains use ML-DSA (FIPS 204). Every rule is pinn
 
 ## Notation
 
-- `Hash` is the chain's hasher (`--hasher`): SHA256, KECCAK256, SHA3_256, SM3, and SHA384, SHA512 once they exist. `DoubleHash(x) = Hash(Hash(x))`.
+- `Hash` is the chain's hasher (`--hasher`): SHA256, KECCAK256, SHA3_256, SM3 (32-byte digests), SHA384 (48) or SHA512 (64). `DoubleHash(x) = Hash(Hash(x))`. Nothing assumes a 32-byte digest: hash lengths on the wire and in the database follow `crypto.HashSize()`.
 - `Sign(key, data)` and `Verify(pub, data, sig)` are `packages/common/crypto.Sign` and `Verify`. Both apply `Hash` once to `data` before handing it to the signature algorithm.
 - "The vectors" are the files in `tools/cryptovectors/testdata`; Weaver syncs them into `src/app/lib/crypto/fixtures`.
 
@@ -18,16 +18,17 @@ This document fixes how go-ibax chains use ML-DSA (FIPS 204). Every rule is pinn
 | Private key (seed ξ) | 32 | 32 |
 | Public key | 1,952 | 2,592 |
 | Signature | 3,309 | 4,627 |
-| Transfer transaction, measured (payload / signature section / total) | 2,112–2,131 / 3,312 / 5,428–5,447 | about 2,750 / 4,630 / 7,400 |
-| ECDSA transfer, for comparison | 224–243 / 65 / 292–311 | |
+| Transfer transaction from the client (payload / signature section / total) | 2,112–2,131 / 3,312 / 5,428–5,447 | 2,752–2,771 / 4,630 / 7,386–7,405 |
+| The same transaction as a block stores it (rule 9) | 8,081–8,143 | 10,679–10,741 |
+| ECDSA transfer, for comparison | 224–243 / 65 / 292–311; stored 1,056–1,118 | |
 
-The ML-DSA-65 and ECDSA rows come from `go-ibax-transfers.json`. The ML-DSA-87 row is derived from them (public key and signature swapped in); T9 replaces it with measured values.
+Measured on the transfers in `go-ibax-transfers.json`. Stored lengths grow with the hasher's digest: SHA384 adds 16 bytes and SHA512 32 bytes to those of a 32-byte hasher.
 
 ## Rules
 
 ### 1. Algorithms and levels
 
-`MLDSA65` (`AsymAlgo = 4`) and `MLDSA87` (`AsymAlgo = 5`, added with T9). A chain picks one with `--cryptoer`. National security systems use `MLDSA87` with `SHA384` or `SHA512` (CNSA 2.0); other federal chains may use either level.
+`MLDSA65` (`AsymAlgo = 4`) and `MLDSA87` (`AsymAlgo = 5`). A chain picks one with `--cryptoer`, and any hasher with `--hasher`. National security systems use `MLDSA87` with `SHA384` or `SHA512` (CNSA 2.0); other federal chains may use either level.
 
 Rationale: FIPS 204 approves both; CNSA 2.0 allows only ML-DSA-87.
 
@@ -78,7 +79,7 @@ Pinned by: `keyID` in `go-ibax-vectors.json`; `go-ibax-addresses.json`.
 
 Rationale: a wallet keeps one secret across all algorithms. FIPS 140-3 requires signing inside a validated module, which also rules out deriving the key in software.
 
-Pinned by: `publicKey` in `go-ibax-vectors.json` for three seeds, including the all-zero seed; the public-key fingerprint test in `asymalgo/mldsa65_test.go`.
+Pinned by: `publicKey` in `go-ibax-vectors.json` for three seeds, including the all-zero seed; the public-key fingerprint tests in `asymalgo/mldsa_test.go` (both levels, cross-checked with `@noble/post-quantum`).
 
 ### 7. Transaction format
 
@@ -86,11 +87,13 @@ The transaction format is unchanged and has no version bump. The public key trav
 
 Rationale: the length prefix already supports any size. A version bump would split clients with no change in meaning.
 
-Pinned by: the ML-DSA-65 transfers in `go-ibax-transfers.json` (3,309-byte signature); the ML-DSA-87 transfers added with T9 (4,627 bytes).
+Pinned by: the ML-DSA transfers in `go-ibax-transfers.json` (3,309- and 4,627-byte signatures).
 
 ### 8. Storage
 
-Public keys are stored as they are, at full length. Every column holding a public key is `bytea`, or `text` for hex, without a length limit. `1_keys.pub` already is. `1_candidate_node_requests.node_pub_key` is created outside this repository; T9 checks its definition and widens it if needed.
+Public keys are stored as they are, at full length. `1_keys.pub` is `bytea` without a length limit. `node_pub_key` of the candidate node tables is created by a contract (`NewTable`); the narrowest text column a contract can declare is `varchar(102400)`, and an ML-DSA-87 key in hex is 5,184 characters.
+
+Hash columns hold the longest digest: `1_binaries.hash` and the child chain's `hash` are `varchar(128)`, a 64-byte SHA512 digest in hex.
 
 Rationale: a truncated or rejected public key makes an account or node unusable on an ML-DSA chain.
 
@@ -98,23 +101,24 @@ Pinned by: the Weaver chain e2e (`suites.chain`): on every ML-DSA suite a new ac
 
 ### 9. Size limits and fees
 
-The transaction size limit, the block size accounting and the storage fee all count the full serialized transaction: type byte, payload and signature section.
+A transaction's size is the length of the bytes a block stores for it (`Transaction.FullData`): the type byte and the msgpack encoding of the parsed transaction, which holds the payload, the signature section and the fields the node fills in. The node converts a client transaction (type `0x80`) to this form when it receives it. `max_tx_size` and the storage fee (`storageFeeBy`: `price_tx_size × size / 2^20` tokens) count this length, wherever a transaction is checked: on receipt, while generating a block and while checking one.
 
-Today go-ibax counts only the payload (`txMaxSize.check` in `transaction/limits.go`, and `TxSize = len(Payload)` for `storageFeeBy` in `smart/gas.go`). The signature section is not counted, while a receiving node checks the full block bytes against `max_block_size` (`block/db.go`). The gap is 65 bytes per ECDSA transaction and 3,312 (ML-DSA-65) or 4,630 (ML-DSA-87) bytes per ML-DSA transaction. A producer can therefore build a block that its own accounting accepts and its peers refuse. Fixing this changes fees on every chain, so all nodes upgrade together; it is implemented with T9.
+`max_block_size` bounds the encoded block: the bytes a peer receives and checks in `ProcessBlockByBinData`. Besides the transactions, compressed with zlib, a block holds the header with the producer's signature, the previous header, the Merkle root, and `after_txs`: a log entry and a status per transaction, and the rollback rows of what each one changed. The node generating a block counts the exact contribution of every transaction as it runs it (`block.blockSize`): the compressed transaction, its `after_txs` entries and its rollback rows. The fields only known once every transaction ran (signature, block hash, rollbacks hash, Merkle root) are counted at their maximum length for the chain's cryptoer and hasher. A transaction that would take the block over the limit is rolled back and left for the next block; one that does not fit into an empty block is marked bad. The node checks the length of the encoded block once more before it stores and publishes it. A block it publishes is therefore never longer than the limit its peers apply.
 
 With the defaults (`max_tx_size` 32 MiB, `max_block_size` 64 MiB, `max_tx_block` 5,000, `price_tx_size` 15), no parameter has to change:
 
-| | ECDSA | ML-DSA-65 | ML-DSA-87 |
+| Transfer, 32-byte hasher | ECDSA | ML-DSA-65 | ML-DSA-87 |
 |---|---|---|---|
-| Transfer, full bytes | 292 | 5,428 | about 7,400 |
-| Storage fee per transfer (`15 × bytes / 2^20` tokens) | 0.0042 | 0.0776 | about 0.106 |
-| 5,000 transfers per block | 1.5 MB | 27 MB | 37 MB, under 64 MiB |
+| Stored (size limit and fee) | 1,056–1,086 | 8,081–8,111 | 10,679–10,709 |
+| Compressed in the block | about 740 | about 6,050 | about 8,030 |
+| Storage fee, tokens | 0.015 | 0.116 | 0.153 |
+| 5,000 transfers per block, with their `after_txs` entries | about 4.5 MB | about 31 MB | about 41 MB, under 64 MiB |
 
 Signature verification is not charged as fuel for any algorithm. ML-DSA verification costs about as much CPU time as ECDSA verification, so it needs no charge either.
 
-Rationale: an ML-DSA signature is 61% of the transaction. Limits and fees that skip it neither bound the block nor price the storage.
+Rationale: the stored transaction is what a block holds and the database keeps, 3.6 times the client's bytes for ECDSA and about 1.5 times for ML-DSA. Counting only the payload missed the signature (about 60% of an ML-DSA transaction) and the node's fields, and a sum of transaction sizes cannot bound a block that also holds compressed data, logs and rollback rows. Only a count of the encoded block keeps a node from publishing a block its peers refuse.
 
-Pinned by: the sizes in `go-ibax-transfers.json`; T9 adds a test that a block filled to the limit is accepted by its peers.
+Pinned by: `TestTxSizeIsStoredLength` (`packages/transaction`: the size of every transfer in the vectors is its stored length, is not part of the encoding, and `max_tx_size` applies to it); `TestBlockSizeCountsEncodedBlock`, `TestBlockSizeFillsToLimit` and `TestBlockSizeRefusesOversizedTransaction` (`packages/block`: on six suites, the count never falls short of the encoded block; a block filled to the limit passes the peers' check, and the transaction one byte over is not added).
 
 ### 10. Implementations
 

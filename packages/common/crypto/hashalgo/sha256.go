@@ -7,6 +7,8 @@ import (
 
 type SHA256 struct{}
 
+func (s *SHA256) Size() int { return sha256.Size }
+
 func (s *SHA256) GetHMAC(secret string, message string) ([]byte, error) {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(message))

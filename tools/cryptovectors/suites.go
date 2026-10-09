@@ -122,6 +122,7 @@ func verifies(pub, data []byte, signatureHex string) bool {
 // mldsaParameters are the FIPS 204 parameter sets of the ML-DSA cryptoers
 var mldsaParameters = map[string]func() mldsa.Parameters{
 	"MLDSA65": mldsa.MLDSA65,
+	"MLDSA87": mldsa.MLDSA87,
 }
 
 // contextFreeSignature returns stored while it is still a valid empty-context signature of

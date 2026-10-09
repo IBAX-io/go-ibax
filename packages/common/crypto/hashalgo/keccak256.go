@@ -7,6 +7,8 @@ import (
 
 type Keccak256 struct{}
 
+func (k *Keccak256) Size() int { return 32 }
+
 func (k *Keccak256) GetHMAC(secret string, message string) ([]byte, error) {
 	mac := hmac.New(sha3.NewLegacyKeccak256, []byte(secret))
 	mac.Write([]byte(message))

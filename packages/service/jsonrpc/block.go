@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/common"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -530,7 +531,7 @@ func (bh *BlockIdOrHash) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	if len(input) == 64 {
+	if len(input) == 2*crypto.HashSize() {
 		bh.Hash = input
 		return nil
 	} else {

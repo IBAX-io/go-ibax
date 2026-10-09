@@ -82,3 +82,8 @@ func (s *Secp256k1) PrivateToPublic(key []byte) ([]byte, error) {
 func (e *Secp256k1) PublicKeySize() int {
 	return consts.PubkeySizeLength
 }
+
+// SignatureSize is r || s, each left-padded to 32 bytes
+func (e *Secp256k1) SignatureSize() int {
+	return 64
+}

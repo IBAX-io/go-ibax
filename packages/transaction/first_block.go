@@ -33,6 +33,7 @@ const (
 
 // FirstBlockParser is parser wrapper
 type FirstBlockParser struct {
+	storedSize
 	Logger        *log.Entry
 	DbTransaction *sqldb.DbTransaction
 	Data          *types.FirstBlock

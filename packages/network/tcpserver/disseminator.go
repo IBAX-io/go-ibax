@@ -11,6 +11,7 @@ import (
 
 	"gorm.io/gorm/clause"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/network"
@@ -67,7 +68,7 @@ func Disseminator(rw io.ReadWriter) error {
 		banned := n != nil && node.GetNodesBanService().IsBanned(*n)
 		if banned {
 			buf.Next(3)
-			buf.Next(consts.HashSize)
+			buf.Next(crypto.HashSize())
 		} else {
 			err := processBlock(buf, honorNodeID)
 			if err != nil {
@@ -140,7 +141,7 @@ func processBlock(buf *bytes.Buffer, honorNodeID int64) error {
 	log.WithFields(log.Fields{"new_block_id": newBlockID}).Debug("Generated new block id")
 
 	// get block hash
-	blockHash := buf.Next(consts.HashSize)
+	blockHash := buf.Next(crypto.HashSize())
 	log.Debugf("blockHash %x", blockHash)
 
 	qb := &sqldb.QueueBlock{}
@@ -211,15 +212,16 @@ func getUnknownTransactions(buf *bytes.Buffer) ([]byte, error) {
 }
 
 func readHashes(buf *bytes.Buffer) ([][]byte, error) {
-	if buf.Len()%consts.HashSize != 0 {
-		log.WithFields(log.Fields{"hashes_slice_size": buf.Len(), "tx_size": consts.HashSize, "type": consts.ProtocolError}).Error("incorrect hashes length")
+	size := crypto.HashSize()
+	if buf.Len()%size != 0 {
+		log.WithFields(log.Fields{"hashes_slice_size": buf.Len(), "tx_size": size, "type": consts.ProtocolError}).Error("incorrect hashes length")
 		return nil, errors.New("wrong transactions hashes size")
 	}
 
-	hashes := make([][]byte, 0, buf.Len()/consts.HashSize)
+	hashes := make([][]byte, 0, buf.Len()/size)
 
 	for buf.Len() > 0 {
-		hashes = append(hashes, buf.Next(consts.HashSize))
+		hashes = append(hashes, buf.Next(size))
 	}
 
 	return hashes, nil

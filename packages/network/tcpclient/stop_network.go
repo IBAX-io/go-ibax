@@ -5,7 +5,7 @@
 package tcpclient
 
 import (
-	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/network"
 )
 
@@ -33,7 +33,7 @@ func SendStopNetwork(addr string, req *network.StopNetworkRequest) error {
 		return err
 	}
 
-	if len(res.Hash) != consts.HashSize {
+	if len(res.Hash) != crypto.HashSize() {
 		return network.ErrNotAccepted
 	}
 

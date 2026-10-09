@@ -254,7 +254,7 @@ var sqlFirstEcosystemCommon = `
 		t.Column("app_id", "bigint", {"default": "1"})
 		t.Column("name", "string", {"default": "", "size": 255})
 		t.Column("data", "bytea", {"default": ""})
-		t.Column("hash", "string", {"default": "", "size": 64})
+		t.Column("hash", "string", {"default": "", "size": 128})
 		t.Column("mime_type", "string", {"default": "", "size": 255})
 		t.Column("ecosystem", "bigint", {"default": "1"})
 		t.Column("account", "char(24)", {})

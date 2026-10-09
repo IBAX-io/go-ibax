@@ -62,9 +62,6 @@ const PrivkeyLength = 32
 // BlockSize is size of block
 const BlockSize = 16
 
-// HashSize is size of hash
-const HashSize = 32
-
 const AvailableBCGap = 4
 
 const DefaultNodesConnectDelay = 6

@@ -29,6 +29,7 @@ var (
 )
 
 type StopNetworkParser struct {
+	storedSize
 	Logger    *log.Entry
 	Data      *types.StopNetwork
 	Cert      *x509.Cert

@@ -5,6 +5,7 @@
 package tcpserver
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -19,8 +20,7 @@ func Confirmation(r *network.ConfirmRequest) (*network.ConfirmResponse, error) {
 	block := &sqldb.BlockChain{}
 	found, err := block.Get(int64(r.BlockID))
 	if err != nil || !found {
-		hash := [32]byte{}
-		resp.Hash = hash[:]
+		resp.Hash = make([]byte, crypto.HashSize())
 	} else {
 		resp.Hash = block.Hash // can we send binary data ?
 	}

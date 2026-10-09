@@ -10,8 +10,8 @@ import (
 
 var (
 	curveAlgos = []AsymAlgo{AsymAlgo_ECC_P256, AsymAlgo_ECC_Secp256k1, AsymAlgo_SM2}
-	signAlgos  = []AsymAlgo{AsymAlgo_ECC_P256, AsymAlgo_ECC_Secp256k1, AsymAlgo_SM2, AsymAlgo_MLDSA65}
-	hashAlgos  = []HashAlgo{HashAlgo_SHA256, HashAlgo_KECCAK256, HashAlgo_SHA3_256, HashAlgo_SM3}
+	signAlgos  = []AsymAlgo{AsymAlgo_ECC_P256, AsymAlgo_ECC_Secp256k1, AsymAlgo_SM2, AsymAlgo_MLDSA65, AsymAlgo_MLDSA87}
+	hashAlgos  = []HashAlgo{HashAlgo_SHA256, HashAlgo_KECCAK256, HashAlgo_SHA3_256, HashAlgo_SM3, HashAlgo_SHA384, HashAlgo_SHA512}
 )
 
 const signRounds = 1000
@@ -45,7 +45,13 @@ func TestSignVerifyEverySuite(t *testing.T) {
 						t.Fatal(err)
 					}
 					digest := hasher.GetHash(msg)
+					if len(digest) != hasher.Size() {
+						t.Fatalf("hash is %d bytes, Size %d", len(digest), hasher.Size())
+					}
 					sig := signNoPanic(t, asym, priv, digest)
+					if len(sig) > asym.SignatureSize() {
+						t.Fatalf("signature is %d bytes, SignatureSize %d", len(sig), asym.SignatureSize())
+					}
 					if ok, err := asym.Verify(pub, digest, sig); !ok || err != nil {
 						t.Fatalf("verify own signature: %v", err)
 					}

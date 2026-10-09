@@ -72,3 +72,8 @@ func (s *SM2) PrivateToPublic(key []byte) ([]byte, error) {
 func (e *SM2) PublicKeySize() int {
 	return consts.PubkeySizeLength
 }
+
+// SignatureSize is the longest ASN.1 DER signature: a sequence of two 33-byte integers
+func (e *SM2) SignatureSize() int {
+	return 72
+}
