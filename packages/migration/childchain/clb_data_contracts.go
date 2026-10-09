@@ -518,6 +518,7 @@ VALUES
         UpdatePerm string
         NewColumnPerm string
         ReadPerm string "optional"
+        RowsPerm string "optional"
     }
 
     conditions {
@@ -537,6 +538,9 @@ VALUES
         permissions["new_column"] = $NewColumnPerm
         if $ReadPerm {
             permissions["read"] = $ReadPerm
+        }
+        if $RowsPerm {
+            permissions["rows"] = $RowsPerm
         }
         $Permissions = permissions
         TableConditions($Name, "", JSONEncode($Permissions))
@@ -617,20 +621,6 @@ VALUES
                         if item["conditions"] == "false" {
                             // ignore updating impossible
                             contractName = ""
-                        }
-                    } elif type == "menu" {
-                        var menu menuItem string
-                        menu = Replace(item["value"], " ", "")
-                        menu = Replace(menu, "\n", "")
-                        menu = Replace(menu, "\r", "")
-                        menuItem = Replace(cdata["Value"], " ", "")
-                        menuItem = Replace(menuItem, "\n", "")
-                        menuItem = Replace(menuItem, "\r", "")
-                        if Contains(menu, menuItem) {
-                            // ignore repeated
-                            contractName = ""
-                        } else {
-                            cdata["Value"] = item["value"] + "\n" + cdata["Value"]
                         }
                     }
                 } else {
@@ -1227,6 +1217,129 @@ VALUES
             warning "NodeOwnerCondition: Sorry, you do not have access to this action."
         }
 	}
+}
+', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
+	(next_id('1_contracts'), 'NotificationsClose', 'contract NotificationsClose {
+    data {
+        NotificationId int
+    }
+
+    conditions {
+        var row map
+        row = DBFind("@1notifications").Columns("notification->type,recipient->account,recipient->role_id,processing_info->account,closed").Where({"id": $NotificationId, "ecosystem": $ecosystem_id}).Row()
+        if !row {
+            warning Sprintf("Notification %d does not exist", $NotificationId)
+        }
+        if Int(row["closed"]) != 0 {
+            warning "The notification is closed"
+        }
+        $kind = Int(row["notification.type"])
+        if $kind == 1 {
+            if row["recipient.account"] != $account_id {
+                warning "Only its recipient closes the notification"
+            }
+        } else {
+            if row["processing_info.account"] != $account_id {
+                warning "Only the member who took it up closes the notification"
+            }
+            $role = Int(row["recipient.role_id"])
+        }
+    }
+
+    action {
+        DBUpdate("@1notifications", $NotificationId, {"closed": 1, "date_closed": $block_time})
+        if $kind == 1 {
+            UpdateNotifications($ecosystem_id, $account_id)
+        } else {
+            UpdateRolesNotifications($ecosystem_id, $role)
+        }
+    }
+}
+', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
+	(next_id('1_contracts'), 'NotificationsProcess', 'contract NotificationsProcess {
+    data {
+        NotificationId int
+    }
+
+    conditions {
+        var row map
+        row = DBFind("@1notifications").Columns("notification->type,recipient->role_id,date_start_processing,closed").Where({"id": $NotificationId, "ecosystem": $ecosystem_id}).Row()
+        if !row {
+            warning Sprintf("Notification %d does not exist", $NotificationId)
+        }
+        if Int(row["notification.type"]) != 2 {
+            warning "Only a notification to a role is taken up"
+        }
+        if Int(row["closed"]) != 0 {
+            warning "The notification is closed"
+        }
+        if Int(row["date_start_processing"]) != 0 {
+            warning "The notification is taken up"
+        }
+        $role = Int(row["recipient.role_id"])
+        $roleId = Str($role)
+        $member = {"role->id": $roleId, "member->account": $account_id, "ecosystem": $ecosystem_id, "deleted": 0}
+        if !DBFind("@1roles_participants").Columns("id").Where($member).Row() {
+            warning "Only a member of the role takes it up"
+        }
+    }
+
+    action {
+        DBUpdate("@1notifications", $NotificationId, {"date_start_processing": $block_time, "processing_info": {"account": $account_id}})
+        UpdateRolesNotifications($ecosystem_id, $role)
+    }
+}
+', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
+	(next_id('1_contracts'), 'NotificationsSend', 'contract NotificationsSend {
+    data {
+        Account string "optional"
+        RoleId int "optional"
+        Header string
+        Body string "optional"
+        PageName string "optional"
+        PageParams string "optional"
+    }
+
+    conditions {
+        if ($Account == "" && $RoleId == 0) || ($Account != "" && $RoleId != 0) {
+            warning "A notification is sent to one account or to one role"
+        }
+        if $Account != "" {
+            if !DBFind("@1keys").Columns("id").Where({"account": $Account, "ecosystem": $ecosystem_id}).Row() {
+                warning Sprintf("Account %s is not a member of the ecosystem", $Account)
+            }
+            $recipient = {"account": $Account}
+            $kind = 1
+        } else {
+            if !DBFind("@1roles").Columns("id").Where({"id": $RoleId, "ecosystem": $ecosystem_id, "deleted": 0}).Row() {
+                warning Sprintf("Role %d does not exist", $RoleId)
+            }
+            $recipient = {"role_id": $RoleId}
+            $kind = 2
+        }
+        if Size($Header) == 0 || Size($Header) > 255 {
+            warning "The header is 1 to 255 characters"
+        }
+        if Size($Body) > 4096 {
+            warning "The body is at most 4096 characters"
+        }
+        if Size($PageName) > 255 {
+            warning "The page name is at most 255 characters"
+        }
+        $params = JSONDecode("{}")
+        if $PageParams != "" {
+            $params = JSONDecode($PageParams)
+        }
+    }
+
+    action {
+        DBInsert("@1notifications", {"recipient": $recipient, "sender": {"account": $account_id}, "notification": {"type": $kind, "header": $Header, "body": $Body}, "page_name": $PageName, "page_params": $params, "date_created": $block_time, "ecosystem": $ecosystem_id})
+        if $kind == 1 {
+            UpdateNotifications($ecosystem_id, $Account)
+        } else {
+            UpdateRolesNotifications($ecosystem_id, $RoleId)
+        }
+    }
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
 	(next_id('1_contracts'), 'RemoveCLB', 'contract RemoveCLB {
