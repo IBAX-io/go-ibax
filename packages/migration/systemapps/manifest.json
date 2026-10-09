@@ -1,0 +1,62 @@
+{
+  "application": "System",
+  "pages": [
+    {
+      "name": "default_page",
+      "menu": "default_menu",
+      "conditions": "ContractConditions(\"@1DeveloperCondition\")"
+    },
+    {
+      "name": "developer_index",
+      "menu": "developer_menu",
+      "conditions": "ContractConditions(\"@1DeveloperCondition\")"
+    },
+    {
+      "name": "import_app",
+      "menu": "developer_menu",
+      "conditions": "ContractConditions(\"@1DeveloperCondition\")"
+    },
+    {
+      "name": "import_upload",
+      "menu": "developer_menu",
+      "conditions": "ContractConditions(\"@1DeveloperCondition\")"
+    },
+    {
+      "name": "notifications",
+      "menu": "default_menu",
+      "conditions": "ContractConditions(\"@1DeveloperCondition\")"
+    }
+  ],
+  "blocks": [
+    {
+      "name": "pager_header",
+      "conditions": "ContractConditions(\"@1DeveloperCondition\")"
+    },
+    {
+      "name": "welcome",
+      "conditions": "ContractConditions(\"@1DeveloperCondition\")"
+    }
+  ],
+  "menus": [
+    {
+      "name": "default_menu",
+      "title": "default",
+      "conditions": "ContractAccess(\"@1EditMenu\")"
+    },
+    {
+      "name": "developer_menu",
+      "title": "developer",
+      "conditions": "ContractAccess(\"@1EditMenu\")"
+    }
+  ],
+  "parameters": [
+    {
+      "name": "default_ecosystem_menu",
+      "kind": "menu"
+    },
+    {
+      "name": "default_ecosystem_page",
+      "kind": "page"
+    }
+  ]
+}

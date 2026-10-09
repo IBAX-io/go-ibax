@@ -1,0 +1,91 @@
+@wtl 1
+<Page title={t('system_notifications')}>
+  <Include
+    name="pager_header"
+    props={{ title: t('system_notifications'), description: t('system_notifications_description') }}
+  />
+  <Query
+    id="personal"
+    table="notifications"
+    columns={['id', 'sender->account', 'notification->header', 'notification->body', 'page_name', 'page_params', 'date_created']}
+    where={{ closed: 0, 'recipient->account': $account }}
+    order={{ id: 'desc' }}
+  />
+  <Query
+    id="toRole"
+    table="notifications"
+    columns={['id', 'sender->account', 'notification->header', 'notification->body', 'page_name', 'page_params', 'date_created', 'date_start_processing', 'processing_info->account']}
+    where={{ closed: 0, 'recipient->role_id': $role.id }}
+    order={{ id: 'desc' }}
+  />
+  <Tabs>
+    <Tab title={t('system_notifications_personal')}>
+      <List items={personal.rows} as="note" empty={t('system_notifications_none')}>
+        <Card title={note['notification.header']}>
+          <Text>
+            {note['notification.body']}
+          </Text>
+          <Text tone="neutral" size="sm">
+            {t('system_notification_from', { account: note['sender.account'], date: format(note.date_created, 'datetime') })}
+          </Text>
+          <Stack direction="row" gap="sm">
+            <If test={!isEmpty(note.page_name)}>
+              <Button action={navigate(note.page_name, note.page_params)} icon="external-link">
+                {t('system_notification_open')}
+              </Button>
+            </If>
+            <Button
+              action={contract('@1NotificationsClose', { NotificationId: note.id })}
+              onSuccess={refresh(personal)}
+              icon="check"
+            >
+              {t('system_notification_close')}
+            </Button>
+          </Stack>
+        </Card>
+      </List>
+    </Tab>
+    <Tab title={t('system_notifications_role')}>
+      <List items={toRole.rows} as="note" empty={t('system_notifications_none')}>
+        <Card title={note['notification.header']}>
+          <Text>
+            {note['notification.body']}
+          </Text>
+          <Text tone="neutral" size="sm">
+            {t('system_notification_from', { account: note['sender.account'], date: format(note.date_created, 'datetime') })}
+          </Text>
+          <Stack direction="row" gap="sm">
+            <If test={!isEmpty(note.page_name)}>
+              <Button action={navigate(note.page_name, note.page_params)} icon="external-link">
+                {t('system_notification_open')}
+              </Button>
+            </If>
+            <If test={note.date_start_processing == 0}>
+              <Button
+                action={contract('@1NotificationsProcess', { NotificationId: note.id })}
+                onSuccess={refresh(toRole)}
+                icon="handshake"
+              >
+                {t('system_notification_process')}
+              </Button>
+            </If>
+            <ElseIf test={note['processing_info.account'] == $account}>
+              <Button
+                action={contract('@1NotificationsClose', { NotificationId: note.id })}
+                onSuccess={refresh(toRole)}
+                icon="check"
+              >
+                {t('system_notification_close')}
+              </Button>
+            </ElseIf>
+            <Else>
+              <Badge tone="info">
+                {t('system_notification_taken', { account: note['processing_info.account'] })}
+              </Badge>
+            </Else>
+          </Stack>
+        </Card>
+      </List>
+    </Tab>
+  </Tabs>
+</Page>

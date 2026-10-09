@@ -1,0 +1,5 @@
+@wtl 1
+<Menu>
+  <MenuItem title={t('system_home')} icon="house" page="default_page" />
+  <MenuItem title={t('system_notifications')} icon="bell" page="notifications" />
+</Menu>

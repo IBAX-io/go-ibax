@@ -44,6 +44,7 @@ func ExecSchemaEcosystem(db *DbTransaction, data migration.SqlData) error {
 		}
 		if err := db.ExecSql(q); err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing first ecosystem schema")
+			return err
 		}
 	}
 	// Every ecosystem declares the shared tables it keeps rows in, as the first one does: without them the

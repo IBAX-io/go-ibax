@@ -1,0 +1,4 @@
+@wtl 1
+<Page title={t('system_home')}>
+  <Include name="welcome" />
+</Page>

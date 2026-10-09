@@ -1,0 +1,192 @@
+{
+  "system_applications": {
+    "en": "Applications",
+    "zh": "应用",
+    "tr": "Uygulamalar"
+  },
+  "system_applications_none": {
+    "en": "No applications yet",
+    "zh": "暂无应用",
+    "tr": "Henüz uygulama yok"
+  },
+  "system_blocks": {
+    "en": "Blocks",
+    "zh": "区块",
+    "tr": "Bloklar"
+  },
+  "system_contracts": {
+    "en": "Contracts",
+    "zh": "合约",
+    "tr": "Sözleşmeler"
+  },
+  "system_developer": {
+    "en": "Developer",
+    "zh": "开发者",
+    "tr": "Geliştirici"
+  },
+  "system_developer_description": {
+    "en": "Applications of this ecosystem",
+    "zh": "本生态的应用",
+    "tr": "Bu ekosistemin uygulamaları"
+  },
+  "system_home": {
+    "en": "Home",
+    "zh": "首页",
+    "tr": "Ana sayfa"
+  },
+  "system_id": {
+    "en": "ID",
+    "zh": "ID",
+    "tr": "Kimlik"
+  },
+  "system_import": {
+    "en": "Import",
+    "zh": "导入",
+    "tr": "İçe aktar"
+  },
+  "system_import_app_description": {
+    "en": "Review the uploaded package, then import it",
+    "zh": "检查已上传的导出包，然后导入",
+    "tr": "Yüklenen paketi inceleyin, ardından içe aktarın"
+  },
+  "system_import_count": {
+    "en": "Count",
+    "zh": "数量",
+    "tr": "Sayı"
+  },
+  "system_import_description": {
+    "en": "Choose an exported application package",
+    "zh": "选择一个应用导出包",
+    "tr": "Dışa aktarılmış bir uygulama paketi seçin"
+  },
+  "system_import_element": {
+    "en": "Element",
+    "zh": "元素",
+    "tr": "Öğe"
+  },
+  "system_import_file": {
+    "en": "Package file",
+    "zh": "导出包文件",
+    "tr": "Paket dosyası"
+  },
+  "system_import_names": {
+    "en": "Names",
+    "zh": "名称",
+    "tr": "Adlar"
+  },
+  "system_import_none": {
+    "en": "Nothing selected",
+    "zh": "未选择",
+    "tr": "Seçilmedi"
+  },
+  "system_import_nothing": {
+    "en": "No package is uploaded. Upload one first.",
+    "zh": "尚未上传导出包，请先上传。",
+    "tr": "Yüklenmiş paket yok. Önce bir paket yükleyin."
+  },
+  "system_import_run": {
+    "en": "Import",
+    "zh": "导入",
+    "tr": "İçe aktar"
+  },
+  "system_import_upload": {
+    "en": "Upload",
+    "zh": "上传",
+    "tr": "Yükle"
+  },
+  "system_languages": {
+    "en": "Language resources",
+    "zh": "语言资源",
+    "tr": "Dil kaynakları"
+  },
+  "system_loading": {
+    "en": "Loading…",
+    "zh": "加载中…",
+    "tr": "Yükleniyor…"
+  },
+  "system_menus": {
+    "en": "Menus",
+    "zh": "菜单",
+    "tr": "Menüler"
+  },
+  "system_name": {
+    "en": "Name",
+    "zh": "名称",
+    "tr": "Ad"
+  },
+  "system_notification_close": {
+    "en": "Close",
+    "zh": "关闭",
+    "tr": "Kapat"
+  },
+  "system_notification_from": {
+    "en": "From {account}, {date}",
+    "zh": "来自 {account}，{date}",
+    "tr": "{account} tarafından, {date}"
+  },
+  "system_notification_open": {
+    "en": "Open",
+    "zh": "打开",
+    "tr": "Aç"
+  },
+  "system_notification_process": {
+    "en": "Take up",
+    "zh": "接手处理",
+    "tr": "Üstlen"
+  },
+  "system_notification_taken": {
+    "en": "Taken up by {account}",
+    "zh": "{account} 已接手",
+    "tr": "{account} tarafından üstlenildi"
+  },
+  "system_notifications": {
+    "en": "Notifications",
+    "zh": "通知",
+    "tr": "Bildirimler"
+  },
+  "system_notifications_description": {
+    "en": "Notifications to you and to your role",
+    "zh": "发给你和你的角色的通知",
+    "tr": "Size ve rolünüze gönderilen bildirimler"
+  },
+  "system_notifications_none": {
+    "en": "No open notifications",
+    "zh": "没有未关闭的通知",
+    "tr": "Açık bildirim yok"
+  },
+  "system_notifications_personal": {
+    "en": "To you",
+    "zh": "发给你",
+    "tr": "Size"
+  },
+  "system_notifications_role": {
+    "en": "To your role",
+    "zh": "发给你的角色",
+    "tr": "Rolünüze"
+  },
+  "system_pages": {
+    "en": "Pages",
+    "zh": "页面",
+    "tr": "Sayfalar"
+  },
+  "system_parameters": {
+    "en": "Parameters",
+    "zh": "参数",
+    "tr": "Parametreler"
+  },
+  "system_tables": {
+    "en": "Tables",
+    "zh": "数据表",
+    "tr": "Tablolar"
+  },
+  "system_welcome_body": {
+    "en": "This ecosystem is ready. Build applications in the developer section, or import one from a package.",
+    "zh": "生态已就绪。可以在开发者分区构建应用，或从导出包导入应用。",
+    "tr": "Bu ekosistem hazır. Geliştirici bölümünde uygulama oluşturun veya bir paketten içe aktarın."
+  },
+  "system_welcome_title": {
+    "en": "Welcome to IBAX",
+    "zh": "欢迎使用 IBAX",
+    "tr": "IBAX'e hoş geldiniz"
+  }
+}

@@ -1,0 +1,15 @@
+@wtl 1
+<Block>
+  <Prop name="title" type="string" required />
+  <Prop name="description" type="string?" />
+  <Stack gap="xs">
+    <Heading level={1}>
+      {$props.title}
+    </Heading>
+    <If test={$props.description != null}>
+      <Text tone="neutral">
+        {$props.description}
+      </Text>
+    </If>
+  </Stack>
+</Block>
