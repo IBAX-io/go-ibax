@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/dataquery"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	"github.com/gorilla/mux"
@@ -27,9 +28,18 @@ func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 	client := getClient(r)
 
-	table := client.Prefix() + "_" + params["name"]
+	ecosystem, err := queryEcosystem(r)
+	if err != nil {
+		dataErrorResponse(w, err)
+		return
+	}
+	t, err := dataquery.Open(dataReader(client), params["name"], ecosystem)
+	if err != nil {
+		dataErrorResponse(w, err)
+		return
+	}
 	rollbackTx := &sqldb.RollbackTx{}
-	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(params["id"], table, rollbackHistoryLimit)
+	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(params["id"], t.Physical(), rollbackHistoryLimit)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("rollback history")
 		errorResponse(w, err)
@@ -45,6 +55,12 @@ func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 			logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollbackTx.Data from JSON")
 			errorResponse(w, err)
 			return
+		}
+		// A past value is read as the column it was a value of is
+		for name := range rollback {
+			if !t.Readable(name) {
+				delete(rollback, name)
+			}
 		}
 		rollbackList = append(rollbackList, rollback)
 	}
