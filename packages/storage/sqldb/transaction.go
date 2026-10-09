@@ -82,6 +82,18 @@ func GetTransactionsCount(hash []byte) (int64, error) {
 	return rowsCount, nil
 }
 
+// IsTransactionKnown reports whether a transaction with this hash is queued or already in a block
+func IsTransactionKnown(hash []byte) (bool, error) {
+	queued, err := GetTransactionsCount(hash)
+	if err != nil {
+		return false, err
+	}
+	if queued > 0 {
+		return true, nil
+	}
+	return (&LogTransaction{}).GetByHash(nil, hash)
+}
+
 // DeleteTransactionByHash deleting transaction by hash
 func DeleteTransactionByHash(dbTx *DbTransaction, hash []byte) error {
 	return GetDB(dbTx).Where("hash = ?", hash).Delete(&Transaction{}).Error

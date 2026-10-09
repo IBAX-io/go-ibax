@@ -280,8 +280,12 @@ func (a authApi) Login(ctx RequestContext, form *loginForm) (*LoginResult, *Erro
 				return nil, DefaultError(err.Error())
 			}
 
+			// Logins of the same new key within one second make the very same transaction: the
+			// first queues it, the others wait for it to be in a block like the first
 			if err := a.mode.ContractRunner.RunContract(txData, stp.Hash, sc.KeyID, stp.Timestamp, logger); err != nil {
-				return nil, DefaultError(err.Error())
+				if known, _ := sqldb.IsTransactionKnown(stp.Hash); !known {
+					return nil, DefaultError(err.Error())
+				}
 			}
 
 			if !conf.Config.IsSupportingChildChain() {

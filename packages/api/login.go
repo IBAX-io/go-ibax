@@ -189,9 +189,13 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			// Logins of the same new key within one second make the very same transaction: the
+			// first queues it, the others wait for it to be in a block like the first
 			if err := m.ContractRunner.RunContract(txData, stp.Hash, sc.KeyID, stp.Timestamp, logger); err != nil {
-				errorResponse(w, err)
-				return
+				if known, _ := sqldb.IsTransactionKnown(stp.Hash); !known {
+					errorResponse(w, err)
+					return
+				}
 			}
 
 			if !conf.Config.IsSupportingChildChain() {
