@@ -1,0 +1,35 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NotificationsProcess {
+    data {
+        NotificationId int
+    }
+
+    conditions {
+        var row map
+        row = DBFind("@1notifications").Columns("notification->type,recipient->role_id,date_start_processing,closed").Where({"id": $NotificationId, "ecosystem": $ecosystem_id}).Row()
+        if !row {
+            warning Sprintf("Notification %d does not exist", $NotificationId)
+        }
+        if Int(row["notification.type"]) != 2 {
+            warning "Only a notification to a role is taken up"
+        }
+        if Int(row["closed"]) != 0 {
+            warning "The notification is closed"
+        }
+        if Int(row["date_start_processing"]) != 0 {
+            warning "The notification is taken up"
+        }
+        $role = Int(row["recipient.role_id"])
+        $roleId = Str($role)
+        $member = {"role->id": $roleId, "member->account": $account_id, "ecosystem": $ecosystem_id, "deleted": 0}
+        if !DBFind("@1roles_participants").Columns("id").Where($member).Row() {
+            warning "Only a member of the role takes it up"
+        }
+    }
+
+    action {
+        DBUpdate("@1notifications", $NotificationId, {"date_start_processing": $block_time, "processing_info": {"account": $account_id}})
+        UpdateRolesNotifications($ecosystem_id, $role)
+    }
+}

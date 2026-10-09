@@ -198,18 +198,18 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
         '{
             "read": "true",
             "rows": "{\"$or\": [{\"recipient->account\": \"$account\"}, {\"recipient->role_id\": {\"$in\": \"$roles\"}}, {\"sender->account\": \"$account\"}]}",
-            "insert": "ContractAccess(\"@1NotificationsSend\", \"@1CheckNodesBan\", \"@1NotificationsBroadcast\")",
-            "update": "ContractAccess(\"@1NotificationsSend\", \"@1NotificationsClose\", \"@1NotificationsProcess\", \"@1NotificationsUpdateParams\")",
+            "insert": "ContractAccess(\"@1NotificationsSend\")",
+            "update": "ContractAccess(\"@1NotificationsClose\", \"@1NotificationsProcess\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
             "date_closed": "ContractAccess(\"@1NotificationsClose\")",
             "sender": "false",
-            "processing_info": "ContractAccess(\"@1NotificationsClose\",\"@1NotificationsProcess\")",
-            "date_start_processing": "ContractAccess(\"@1NotificationsClose\",\"@1NotificationsProcess\")",
+            "processing_info": "ContractAccess(\"@1NotificationsProcess\")",
+            "date_start_processing": "ContractAccess(\"@1NotificationsProcess\")",
             "notification": "false",
             "page_name": "false",
-            "page_params": "ContractAccess(\"@1NotificationsUpdateParams\")",
+            "page_params": "false",
             "closed": "ContractAccess(\"@1NotificationsClose\")",
             "date_created": "false",
             "recipient": "false",

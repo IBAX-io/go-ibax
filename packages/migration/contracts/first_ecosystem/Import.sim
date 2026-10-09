@@ -60,20 +60,6 @@ contract Import {
                             // ignore updating impossible
                             contractName = ""
                         }
-                    } elif type == "menu" {
-                        var menu menuItem string
-                        menu = Replace(item["value"], " ", "")
-                        menu = Replace(menu, "\n", "")
-                        menu = Replace(menu, "\r", "")
-                        menuItem = Replace(cdata["Value"], " ", "")
-                        menuItem = Replace(menuItem, "\n", "")
-                        menuItem = Replace(menuItem, "\r", "")
-                        if Contains(menu, menuItem) {
-                            // ignore repeated
-                            contractName = ""
-                        } else {
-                            cdata["Value"] = item["value"] + "\n" + cdata["Value"]
-                        }
                     }
                 } else {
                     contractName = creators[type]
