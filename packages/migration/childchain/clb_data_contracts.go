@@ -182,6 +182,20 @@ VALUES
     }
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
+	(next_id('1_contracts'), 'DAODecisionCondition', '// This contract is used to set the rights of an ecosystem in the "DAO" control mode (control_mode 2):
+// only the contracts that an accepted voting runs have them.
+// @1VotingDecisionCheck marks the voting as being executed before it runs the contract of the voting''s
+// subject with the subject''s parameters, and sets the voting''s decision after the voting''s contracts,
+// in the same transaction. So a marked voting exists only while the contracts of its decision run.
+
+contract DAODecisionCondition {
+    conditions {
+        if !DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "flags->decision": "2"}).One("id") {
+            warning Sprintf(LangRes("@1x_not_access_action"), "DAODecisionCondition")
+        }
+    }
+}
+', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
 	(next_id('1_contracts'), 'EditAppParam', 'contract EditAppParam {
     data {
         Id int

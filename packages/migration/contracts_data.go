@@ -20,6 +20,7 @@ contract DeveloperCondition {
     conditions {
         chooseControl()
         if $control["control_mode"] == 2{
+            @1DAODecisionCondition()
             return
         }
         // check for Founder
@@ -50,6 +51,7 @@ contract DeveloperCondition {
 	conditions {
 	    chooseControl()
         if $control["control_mode"] == 2{
+            @1DAODecisionCondition()
             return
         }
 		if EcosysParam("founder_account")!=$key_id

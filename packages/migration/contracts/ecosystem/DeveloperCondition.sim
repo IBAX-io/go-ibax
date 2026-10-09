@@ -15,6 +15,7 @@ contract DeveloperCondition {
     conditions {
         chooseControl()
         if $control["control_mode"] == 2{
+            @1DAODecisionCondition()
             return
         }
         // check for Founder
