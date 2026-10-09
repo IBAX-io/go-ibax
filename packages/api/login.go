@@ -38,6 +38,9 @@ type loginForm struct {
 	KeyID       string         `schema:"key_id"`
 	Signature   hexValue       `schema:"signature"`
 	RoleID      int64          `schema:"role_id"`
+	// Signs in as the guest account (consts.GuestKey); the other fields but ecosystem and expire
+	// are ignored
+	Guest bool `schema:"guest"`
 }
 
 type publicKeyValue struct {
@@ -59,16 +62,16 @@ func (f *loginForm) Validate(r *http.Request) error {
 }
 
 type loginResult struct {
-	Token       string        `json:"token,omitempty"`
-	EcosystemID string        `json:"ecosystem_id,omitempty"`
-	KeyID       string        `json:"key_id,omitempty"`
-	Account     string        `json:"account,omitempty"`
-	NotifyKey   string        `json:"notify_key,omitempty"`
-	IsNode      bool          `json:"isnode"`
-	IsOwner     bool          `json:"isowner"`
+	Token        string        `json:"token,omitempty"`
+	EcosystemID  string        `json:"ecosystem_id,omitempty"`
+	KeyID        string        `json:"key_id,omitempty"`
+	Account      string        `json:"account,omitempty"`
+	NotifyKey    string        `json:"notify_key,omitempty"`
+	IsNode       bool          `json:"isnode"`
+	IsOwner      bool          `json:"isowner"`
 	IsChildChain bool          `json:"clb"` // JSON tag kept for API compatibility
-	Timestamp   string        `json:"timestamp,omitempty"`
-	Roles       []rolesResult `json:"roles,omitempty"`
+	Timestamp    string        `json:"timestamp,omitempty"`
+	Roles        []rolesResult `json:"roles,omitempty"`
 }
 
 type rolesResult struct {
@@ -106,7 +109,9 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		client.EcosystemID = 1
 	}
 
-	if len(form.KeyID) > 0 {
+	if form.Guest {
+		wallet = converter.StrToInt64(consts.GuestKey)
+	} else if len(form.KeyID) > 0 {
 		wallet = converter.StringToAddress(form.KeyID)
 	} else if len(form.PublicKey.Bytes()) > 0 {
 		wallet = crypto.Address(form.PublicKey.Bytes())
@@ -121,142 +126,153 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	spfm.SetTablePrefix(converter.Int64ToStr(client.EcosystemID))
-	if ok, err := spfm.Get(nil, "free_membership"); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting free_membership parameter")
-		errorResponse(w, err)
-		return
-	} else if ok {
-		fm = converter.StrToInt64(spfm.Value)
-	}
-	publicKey = account.PublicKey
-	isExistPub = len(publicKey) == 0
-
-	isCan := func(a, e bool) bool {
-		return !a || (a && e)
-	}
-	if isCan(isAccount, isExistPub) {
-		if !(fm == 1 || client.EcosystemID == 1) {
-			errorResponse(w, errEcoNotOpen.Errorf(client.EcosystemID))
-			return
-		}
-	}
-
-	if isAccount && !isExistPub {
-		if account.Deleted == 1 {
-			errorResponse(w, errDeletedKey)
-			return
-		}
-	} else {
-		if !allowCreateUser(client) {
+	// The guest key is public: a signature made with it proves nothing, so none is asked for (a
+	// client that may not sign in software, on a FIPS 140-3 network, signs in as a guest too). The
+	// session reads like any other; every transaction still carries its own signature.
+	if form.Guest {
+		if !isAccount || account.Deleted == 1 {
 			errorResponse(w, errKeyNotFound)
 			return
 		}
-		if isCan(isAccount, isExistPub) {
+		form.RoleID = 0
+	} else {
+		spfm.SetTablePrefix(converter.Int64ToStr(client.EcosystemID))
+		if ok, err := spfm.Get(nil, "free_membership"); err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting free_membership parameter")
+			errorResponse(w, err)
+			return
+		} else if ok {
+			fm = converter.StrToInt64(spfm.Value)
+		}
+		publicKey = account.PublicKey
+		isExistPub = len(publicKey) == 0
 
-			publicKey = form.PublicKey.Bytes()
-			if len(publicKey) == 0 {
+		isCan := func(a, e bool) bool {
+			return !a || (a && e)
+		}
+		if isCan(isAccount, isExistPub) {
+			if !(fm == 1 || client.EcosystemID == 1) {
+				errorResponse(w, errEcoNotOpen.Errorf(client.EcosystemID))
+				return
+			}
+		}
+
+		if isAccount && !isExistPub {
+			if account.Deleted == 1 {
+				errorResponse(w, errDeletedKey)
+				return
+			}
+		} else {
+			if !allowCreateUser(client) {
+				errorResponse(w, errKeyNotFound)
+				return
+			}
+			if isCan(isAccount, isExistPub) {
+
+				publicKey = form.PublicKey.Bytes()
+				if len(publicKey) == 0 {
+					logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty")
+					errorResponse(w, errEmptyPublic)
+					return
+				}
+
+				nodePrivateKey := syspar.GetNodePrivKey()
+
+				contract := smart.GetContract("NewUser", 1)
+				sc := types.SmartTransaction{
+					Header: &types.Header{
+						ID:          int(contract.Info().ID),
+						EcosystemID: 1,
+						Time:        time.Now().Unix(),
+						KeyID:       conf.Config.KeyID,
+						NetworkID:   conf.Config.LocalConf.NetworkID,
+					},
+					Params: map[string]any{
+						"NewPubkey": hex.EncodeToString(publicKey),
+						"Ecosystem": client.EcosystemID,
+					},
+				}
+
+				stp := &transaction.SmartTransactionParser{
+					SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
+				}
+				txData, err := stp.BinMarshalWithPrivate(&sc, nodePrivateKey, true)
+				if err != nil {
+					log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("Building transaction")
+					errorResponse(w, err)
+					return
+				}
+
+				// Logins of the same new key within one second make the very same transaction: the
+				// first queues it, the others wait like the first
+				if err := m.ContractRunner.RunContract(txData, stp.Hash, sc.KeyID, stp.Timestamp, logger); err != nil {
+					if known, _ := sqldb.IsTransactionKnown(stp.Hash); !known {
+						errorResponse(w, err)
+						return
+					}
+				}
+
+				if !conf.Config.IsSupportingChildChain() {
+					timeout := time.Duration(2*3*syspar.GetMaxBlockGenerationTime()) * time.Millisecond
+					switch err := transaction.AwaitNewUser(account, wallet, stp.Hash, timeout); err {
+					case nil:
+					case transaction.ErrNewUserPending:
+						errorResponse(w, errNewUser)
+						return
+					default:
+						errorResponse(w, err)
+						return
+					}
+				}
+
+			} else {
+				logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty, and state is not default")
+				errorResponse(w, errStateLogin.Errorf(wallet, client.EcosystemID))
+				return
+			}
+		}
+
+		if len(publicKey) == 0 {
+			if client.EcosystemID > 1 {
+				logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty, and state is not default")
+				errorResponse(w, errStateLogin.Errorf(wallet, client.EcosystemID))
+				return
+			}
+
+			if len(form.PublicKey.Bytes()) == 0 {
 				logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty")
 				errorResponse(w, errEmptyPublic)
 				return
 			}
+		}
 
-			nodePrivateKey := syspar.GetNodePrivKey()
-
-			contract := smart.GetContract("NewUser", 1)
-			sc := types.SmartTransaction{
-				Header: &types.Header{
-					ID:          int(contract.Info().ID),
-					EcosystemID: 1,
-					Time:        time.Now().Unix(),
-					KeyID:       conf.Config.KeyID,
-					NetworkID:   conf.Config.LocalConf.NetworkID,
-				},
-				Params: map[string]any{
-					"NewPubkey": hex.EncodeToString(publicKey),
-					"Ecosystem": client.EcosystemID,
-				},
-			}
-
-			stp := &transaction.SmartTransactionParser{
-				SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
-			}
-			txData, err := stp.BinMarshalWithPrivate(&sc, nodePrivateKey, true)
+		if form.RoleID != 0 && client.RoleID == 0 {
+			checkedRole, err := checkRoleFromParam(form.RoleID, client.EcosystemID, account.AccountID)
 			if err != nil {
-				log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("Building transaction")
 				errorResponse(w, err)
 				return
 			}
 
-			// Logins of the same new key within one second make the very same transaction: the
-			// first queues it, the others wait like the first
-			if err := m.ContractRunner.RunContract(txData, stp.Hash, sc.KeyID, stp.Timestamp, logger); err != nil {
-				if known, _ := sqldb.IsTransactionKnown(stp.Hash); !known {
-					errorResponse(w, err)
-					return
-				}
+			if checkedRole != form.RoleID {
+				errorResponse(w, errCheckRole)
+				return
 			}
 
-			if !conf.Config.IsSupportingChildChain() {
-				timeout := time.Duration(2*3*syspar.GetMaxBlockGenerationTime()) * time.Millisecond
-				switch err := transaction.AwaitNewUser(account, wallet, stp.Hash, timeout); err {
-				case nil:
-				case transaction.ErrNewUserPending:
-					errorResponse(w, errNewUser)
-					return
-				default:
-					errorResponse(w, err)
-					return
-				}
-			}
-
-		} else {
-			logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty, and state is not default")
-			errorResponse(w, errStateLogin.Errorf(wallet, client.EcosystemID))
-			return
-		}
-	}
-
-	if len(publicKey) == 0 {
-		if client.EcosystemID > 1 {
-			logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty, and state is not default")
-			errorResponse(w, errStateLogin.Errorf(wallet, client.EcosystemID))
-			return
+			client.RoleID = checkedRole
 		}
 
-		if len(form.PublicKey.Bytes()) == 0 {
-			logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty")
-			errorResponse(w, errEmptyPublic)
-			return
-		}
-	}
-
-	if form.RoleID != 0 && client.RoleID == 0 {
-		checkedRole, err := checkRoleFromParam(form.RoleID, client.EcosystemID, account.AccountID)
+		verify, err := crypto.Verify(publicKey, []byte(nonceSalt()+uid), form.Signature.Bytes())
 		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.CryptoError, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Info("checking signature")
 			errorResponse(w, err)
 			return
 		}
 
-		if checkedRole != form.RoleID {
-			errorResponse(w, errCheckRole)
+		if !verify {
+			logger.WithFields(log.Fields{"type": consts.InvalidObject, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Error("incorrect signature")
+			errorResponse(w, errSignature)
 			return
 		}
-
-		client.RoleID = checkedRole
-	}
-
-	verify, err := crypto.Verify(publicKey, []byte(nonceSalt()+uid), form.Signature.Bytes())
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.CryptoError, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Info("checking signature")
-		errorResponse(w, err)
-		return
-	}
-
-	if !verify {
-		logger.WithFields(log.Fields{"type": consts.InvalidObject, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Error("incorrect signature")
-		errorResponse(w, errSignature)
-		return
 	}
 
 	spfounder.SetTablePrefix(converter.Int64ToStr(client.EcosystemID))
@@ -269,12 +285,12 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := &loginResult{
-		Account:     account.AccountID,
-		EcosystemID: converter.Int64ToStr(client.EcosystemID),
-		KeyID:       converter.Int64ToStr(wallet),
-		IsOwner:     founder == wallet,
-		IsNode:      conf.Config.KeyID == wallet,
-		IsChildChain:       conf.Config.IsSupportingChildChain(),
+		Account:      account.AccountID,
+		EcosystemID:  converter.Int64ToStr(client.EcosystemID),
+		KeyID:        converter.Int64ToStr(wallet),
+		IsOwner:      founder == wallet,
+		IsNode:       conf.Config.KeyID == wallet,
+		IsChildChain: conf.Config.IsSupportingChildChain(),
 	}
 
 	claims := JWTClaims{

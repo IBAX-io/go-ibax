@@ -1,6 +1,6 @@
 # FIPS 140-3 mode
 
-Applies to: go-ibax (node). Weaver needs no mode of its own: it signs and hashes with whatever suite the node reports.
+Applies to: go-ibax (node), and the clients that sign for a FIPS chain (see "Clients").
 
 A node runs in FIPS 140-3 mode when every cryptographic service it relies on comes from a validated module, used only in approved ways. go-ibax gets this from the Go Cryptographic Module (Go 1.24 and later): the node is built against a frozen version of the module and started with FIPS mode on.
 
@@ -53,6 +53,12 @@ A mismatch stops the node with "the genesis block does not match the configured 
 - `SHA3_256` comes from `crypto/sha3` (inside the module) instead of `golang.org/x/crypto/sha3`.
 - Links to binaries and to long text or blob values (`/data/...`) carry the network hash or SHA-256; MD5 is no longer used, in the node or in the SQL it runs.
 - The HTTPS API follows SP 800-52 Rev. 2: TLS 1.3, or TLS 1.2 with ECDHE and AES-GCM only. In FIPS mode Go further restricts both to approved groups and signature schemes.
+
+## Clients
+
+FIPS mode covers what the node does. Transactions and logins are signed by the client, and a FIPS chain needs those signatures from a validated module too: the node cannot tell, so the client decides by the `fips` flag of `getuid`. Weaver signs only with a key in a PKCS#11 module (an HSM or a token) on a network that reports `fips: true`; that is the desktop app, and the web app only reads there.
+
+Signing in as the guest takes no signature: `POST /api/v2/login` with `guest=true` (JSON-RPC `login` with `"guest": true`) opens a session of the guest account (`consts.GuestKey`) in the ecosystem asked for, and ignores `pubkey`, `key_id`, `signature` and `role_id`. The guest key is public, so a signature with it proved nothing. Clients use it to read a network without signing in software; every node accepts it, in every mode.
 
 ## Outside the boundary
 
