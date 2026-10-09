@@ -1,9 +1,6 @@
 @wtl 1
 <Page title={t('system_import')}>
-  <Include
-    name="pager_header"
-    props={{ title: t('system_import'), description: t('system_import_description') }}
-  />
+  <Include name="pager_header" props={{ description: t('system_import_description') }} />
   <Form id="upload">
     <Input name="file" type="file" label={t('system_import_file')} required />
     <Button

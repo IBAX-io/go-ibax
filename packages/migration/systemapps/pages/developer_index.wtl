@@ -1,9 +1,6 @@
 @wtl 1
 <Page title={t('system_developer')}>
-  <Include
-    name="pager_header"
-    props={{ title: t('system_developer'), description: t('system_developer_description') }}
-  />
+  <Include name="pager_header" props={{ description: t('system_developer_description') }} />
   <Query
     id="apps"
     table="applications"
