@@ -88,6 +88,7 @@ type GetUIDResult struct {
 	NetworkID   string `json:"network_id,omitempty"`
 	Cryptoer    string `json:"cryptoer"`
 	Hasher      string `json:"hasher"`
+	Fips        bool   `json:"fips"` // the node runs in FIPS 140-3 mode
 }
 
 func (a *authApi) GetUid(ctx RequestContext) (*GetUIDResult, *Error) {
@@ -98,6 +99,7 @@ func (a *authApi) GetUid(ctx RequestContext) (*GetUIDResult, *Error) {
 	r := ctx.HTTPRequest()
 	token := getToken(r)
 	result.Cryptoer, result.Hasher = conf.Config.CryptoSettings.Cryptoer, conf.Config.CryptoSettings.Hasher
+	result.Fips = crypto.FIPSMode()
 	if token != nil {
 		if claims, ok := token.Claims.(*JWTClaims); ok && len(claims.KeyID) > 0 {
 			result.EcosystemID = claims.EcosystemID
@@ -278,31 +280,18 @@ func (a authApi) Login(ctx RequestContext, form *loginForm) (*LoginResult, *Erro
 				return nil, DefaultError(err.Error())
 			}
 
+			// Logins of the same new key within one second make the very same transaction: the
+			// first queues it, the others wait like the first
 			if err := a.mode.ContractRunner.RunContract(txData, stp.Hash, sc.KeyID, stp.Timestamp, logger); err != nil {
-				return nil, DefaultError(err.Error())
+				if known, _ := sqldb.IsTransactionKnown(stp.Hash); !known {
+					return nil, DefaultError(err.Error())
+				}
 			}
 
 			if !conf.Config.IsSupportingChildChain() {
-				gt := 3 * syspar.GetMaxBlockGenerationTime()
-				l := &sqldb.LogTransaction{}
-				for i := 0; i < 2; i++ {
-					found, err := l.GetByHash(nil, stp.Hash)
-					if err != nil {
-						return nil, DefaultError(err.Error())
-					}
-					if found {
-						if l.Status != 0 {
-							return nil, DefaultError("encountered some problems when login account")
-						} else {
-							_, _ = account.Get(nil, wallet)
-							break
-						}
-					}
-					time.Sleep(time.Duration(gt) * time.Millisecond)
-				}
-
-				if l.Block == 0 {
-					return nil, DefaultError("The block packing in progress, please wait")
+				timeout := time.Duration(2*3*syspar.GetMaxBlockGenerationTime()) * time.Millisecond
+				if err := transaction.AwaitNewUser(account, wallet, stp.Hash, timeout); err != nil {
+					return nil, DefaultError(err.Error())
 				}
 			}
 

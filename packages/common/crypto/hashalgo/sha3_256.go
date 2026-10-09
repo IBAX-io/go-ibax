@@ -2,8 +2,8 @@ package hashalgo
 
 import (
 	"crypto/hmac"
-
-	"golang.org/x/crypto/sha3"
+	"crypto/sha3"
+	"hash"
 )
 
 type Sha3256 struct{}
@@ -11,7 +11,7 @@ type Sha3256 struct{}
 func (s *Sha3256) Size() int { return 32 }
 
 func (s *Sha3256) GetHMAC(secret string, message string) ([]byte, error) {
-	mac := hmac.New(sha3.New256, []byte(secret))
+	mac := hmac.New(func() hash.Hash { return sha3.New256() }, []byte(secret))
 	mac.Write([]byte(message))
 	return mac.Sum(nil), nil
 }

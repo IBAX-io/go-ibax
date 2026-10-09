@@ -25,14 +25,16 @@ const (
 	errComma = `unexpected comma`
 )
 
+// Links to blob and long text values carry the SHA-256 of the value, computed by the database
+// (crypto.MatchesDataHash checks it when the value is fetched)
 func dbfindExpressionBlob(column string) string {
-	return fmt.Sprintf(`md5(%s) "%[1]s"`, column)
+	return fmt.Sprintf(`encode(sha256(%s), 'hex') "%[1]s"`, column)
 }
 
 func dbfindExpressionLongText(column string) string {
 	return fmt.Sprintf(`json_build_array(
 		substr(%s, 1, %d),
-		CASE WHEN length(%[1]s)>%[2]d THEN md5(%[1]s) END) "%[1]s"`, column, substringLength)
+		CASE WHEN length(%[1]s)>%[2]d THEN encode(sha256(convert_to(%[1]s, 'UTF8')), 'hex') END) "%[1]s"`, column, substringLength)
 }
 
 type valueLink struct {

@@ -1,9 +1,11 @@
 package crypto
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"log"
+	"strings"
 	"testing"
 )
 
@@ -52,4 +54,28 @@ func TestGetCryptoer(t *testing.T) {
 		log.Fatal(err)
 	}
 
+}
+
+func TestMatchesDataHash(t *testing.T) {
+	defer func() { asymAlgo, hashAlgo = AsymAlgo_ECC_P256, HashAlgo_SHA256 }()
+	data := []byte("binary data")
+	sum := sha256.Sum256(data)
+	for _, hasher := range []string{"SHA256", "SHA3_256", "SHA512"} {
+		hashAlgo = HashAlgo(HashAlgo_value[hasher])
+		for _, c := range []struct {
+			name, hash string
+			ok         bool
+		}{
+			{"network hash", hex.EncodeToString(Hash(data)), true},
+			{"network hash, upper case", strings.ToUpper(hex.EncodeToString(Hash(data))), true},
+			{"SHA-256 of a dbfind link", hex.EncodeToString(sum[:]), true},
+			{"MD5", "9f0d3e8f5c1b4a7e2d6c8b0a1e3f5d7c", false},
+			{"other data", hex.EncodeToString(Hash([]byte("other"))), false},
+			{"not hex", "zz", false},
+		} {
+			if got := MatchesDataHash(data, c.hash); got != c.ok {
+				t.Errorf("%s, %s: %v", hasher, c.name, got)
+			}
+		}
+	}
 }

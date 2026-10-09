@@ -7,7 +7,6 @@ package chain
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"github.com/IBAX-io/go-ibax/packages/service/jsonrpc"
 	"math/rand"
@@ -20,6 +19,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/chain/daemonsctl"
 	"github.com/IBAX-io/go-ibax/packages/chain/system"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	logtools "github.com/IBAX-io/go-ibax/packages/common/log"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -84,6 +84,11 @@ func Start() {
 		log.Warning("Warning! Access checking is disabled in some built-in functions")
 	}
 
+	// Centrifugo tokens are HMAC-SHA256 signed with the secret
+	if err := crypto.CheckHMACKey(len(conf.Config.Centrifugo.Secret)); err != nil {
+		log.WithFields(log.Fields{"type": consts.ConfigError, "error": err}).Error("Centrifugo secret (--centSecret)")
+		exitErr(1)
+	}
 	publisher.InitCentrifugo(conf.Config.Centrifugo)
 	initStatsd()
 
@@ -118,11 +123,11 @@ func Start() {
 		utils.ReturnCh = make(chan string)
 
 		// The installation process is already finished (where user has specified DB and where wallet has been restarted)
-		err = daemonsctl.RunAllDaemons(ctx)
-		log.Info("Daemons started")
-		if err != nil {
+		if err = daemonsctl.RunAllDaemons(ctx); err != nil {
+			log.WithError(err).Error("starting daemons")
 			exitErr(1)
 		}
+		log.Info("Daemons started")
 	}
 
 	daemons.WaitForSignals()
@@ -211,13 +216,9 @@ func initRoutes(listenHost string) {
 		}
 		go func() {
 			s := &http.Server{
-				Addr:    listenHost,
-				Handler: handler,
-				TLSConfig: &tls.Config{
-					MinVersion:             tls.VersionTLS12,
-					SessionTicketsDisabled: true,
-					//ClientAuth:   tls.RequireAndVerifyClientCert,
-				},
+				Addr:      listenHost,
+				Handler:   handler,
+				TLSConfig: serverTLSConfig(),
 			}
 			err := s.ListenAndServeTLS(conf.Config.TLSConf.TLSCert, conf.Config.TLSConf.TLSKey)
 

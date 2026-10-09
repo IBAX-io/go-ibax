@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - 'packages/common/crypto/**'
+      - 'packages/block/**'
+      - 'packages/chain/**'
       - 'packages/converter/**'
       - 'packages/transaction/**'
       - 'packages/types/**'
@@ -31,3 +33,24 @@ jobs:
         run: go test -count=1 ./packages/common/crypto/...
       - name: Golden vectors match what the node computes
         run: go test -count=1 ./tools/cryptovectors/...
+
+  # FIPS 140-3 mode: built against a frozen Go Cryptographic Module, run with fips140=only so that
+  # any non-approved primitive fails. v1.0.0 is the certified module (no ML-DSA); v1.26.0 adds ML-DSA.
+  fips:
+    strategy:
+      matrix:
+        module: ['v1.0.0-c2097c7c', 'v1.26.0']
+    runs-on: ubuntu-latest
+    env:
+      GOFIPS140: ${{ matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+      - name: Build the node against the module
+        run: go build ./...
+      - name: Approved suites run, others are refused, genesis and TLS checks hold
+        env:
+          GODEBUG: fips140=only
+        run: go test -count=1 -run 'FIPS|Algos|Genesis|TLS' -v ./packages/common/crypto/ ./packages/block/ ./packages/chain/

@@ -34,9 +34,19 @@ func InitialLoad(logger *log.Entry) error {
 		if err := sqldb.UpdateSchema(); err != nil {
 			return err
 		}
+		return nil
 	}
 
-	return nil
+	// The chain was loaded on an earlier start: the node's suite must still be the chain's
+	genesis := &sqldb.BlockChain{}
+	found, err := genesis.Get(1)
+	if err != nil {
+		return errors.Wrap(err, "reading the genesis block")
+	}
+	if !found {
+		return errors.New("reading the genesis block: not found")
+	}
+	return block.CheckGenesis(genesis.Data)
 }
 
 // init first block from file or from embedded value
@@ -61,6 +71,9 @@ func loadFirstBlock(logger *log.Entry) error {
 		for rawBlock := range rawBlocksChan {
 			newBlock = rawBlock
 		}
+	}
+	if err = block.CheckGenesis(newBlock); err != nil {
+		return err
 	}
 	if err = block.InsertBlockWOForksNew(newBlock, nil, false, true); err != nil {
 		logger.WithFields(log.Fields{"type": consts.ParserError, "error": err}).Error("inserting new block")

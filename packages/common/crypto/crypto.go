@@ -5,6 +5,8 @@
 package crypto
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 
@@ -40,8 +42,10 @@ func InitAsymAlgo(s string) {
 	if !ok {
 		log.Fatal(fmt.Errorf("curve algo [%v] is not supported yet, Run 'go-ibax config --help' for details", s))
 	}
+	if err := CheckAsymAlgo(AsymAlgo(v)); err != nil {
+		log.Fatal(err)
+	}
 	asymAlgo = AsymAlgo(v)
-	return
 }
 
 func GetAsymProvider() AsymProvider {
@@ -71,8 +75,10 @@ func InitHashAlgo(s string) {
 	if !ok {
 		log.Fatal(fmt.Errorf("hash algo [%v] is not supported yet, Run 'go-ibax config --help' for details", s))
 	}
+	if err := CheckHashAlgo(HashAlgo(v)); err != nil {
+		log.Fatal(err)
+	}
 	hashAlgo = HashAlgo(v)
-	return
 }
 
 func GetHashProvider() HashProvider {
@@ -125,6 +131,9 @@ func SignString(privateKeyHex, data string) ([]byte, error) {
 }
 
 func GetHMAC(secret string, message string) ([]byte, error) {
+	if err := CheckHMACKey(len(secret)); err != nil {
+		return nil, err
+	}
 	return GetHashProvider().GetHMAC(secret, message)
 }
 
@@ -143,4 +152,20 @@ func HashSize() int {
 
 func HashHex(input []byte) string {
 	return hex.EncodeToString(Hash(input))
+}
+
+// MatchesDataHash reports whether hexHash, taken from a /data link, is the hash of data. Binaries
+// are linked by the network hash (the Hash contract function); dbfind links blob and long text
+// values by their SHA-256, which the database computes.
+func MatchesDataHash(data []byte, hexHash string) bool {
+	want, err := hex.DecodeString(hexHash)
+	if err != nil {
+		return false
+	}
+	if len(want) == sha256.Size {
+		if sum := sha256.Sum256(data); subtle.ConstantTimeCompare(sum[:], want) == 1 {
+			return true
+		}
+	}
+	return len(want) == HashSize() && subtle.ConstantTimeCompare(Hash(data), want) == 1
 }
