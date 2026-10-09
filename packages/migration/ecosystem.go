@@ -184,8 +184,8 @@ func GetFirstEcosystemScript(data SqlData) (ret string, err error) {
 	return
 }
 
-// GetFirstTableScript returns script to update _tables for first ecosystem
-func GetFirstTableScript(data SqlData) (string, error) {
+// GetTableScript returns the script declaring, in 1_tables, the shared tables of an ecosystem
+func GetTableScript(data SqlData) (string, error) {
 	return sqlTemplate([]string{
 		tablesDataSQL,
 	}, data)
