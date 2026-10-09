@@ -42,6 +42,26 @@ func TestCheckAlgosByModeAndModule(t *testing.T) {
 	}
 }
 
+// HMAC keys (contract HMac, the Centrifugo secret) need 112 bits in FIPS mode only
+func TestCheckHMACKeyAlgos(t *testing.T) {
+	for _, c := range []struct {
+		size int
+		fips bool
+		ok   bool
+	}{
+		{fipsMinHMACKeySize, true, true},
+		{fipsMinHMACKeySize - 1, true, false},
+		{len("127.0.0.1"), true, false},
+		{0, true, false},
+		{len("127.0.0.1"), false, true},
+		{0, false, true},
+	} {
+		if err := checkHMACKey(c.size, c.fips); (err == nil) != c.ok {
+			t.Errorf("size %d fips=%v: %v", c.size, c.fips, err)
+		}
+	}
+}
+
 const initAlgoEnv = "IBAX_TEST_INIT_ALGO"
 
 // A node in FIPS mode refuses to start with an algorithm that is not approved, and says why

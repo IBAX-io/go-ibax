@@ -49,7 +49,7 @@ A mismatch stops the node with "the genesis block does not match the configured 
 
 ## What else FIPS mode changes
 
-- HMAC (the `HMac` contract function) refuses keys shorter than 112 bits (14 bytes), as SP 800-131A requires. Outside FIPS mode any key length works.
+- HMAC keys shorter than 112 bits (14 bytes) are refused, as SP 800-131A requires: the `HMac` contract function returns an error, and the node exits at startup when the Centrifugo secret (`--centSecret`, which signs Centrifugo tokens with HMAC-SHA256) is shorter; the default `127.0.0.1` is. Outside FIPS mode any key length works.
 - `SHA3_256` comes from `crypto/sha3` (inside the module) instead of `golang.org/x/crypto/sha3`.
 - Links to binaries and to long text or blob values (`/data/...`) carry the network hash or SHA-256; MD5 is no longer used, in the node or in the SQL it runs.
 - The HTTPS API follows SP 800-52 Rev. 2: TLS 1.3, or TLS 1.2 with ECDHE and AES-GCM only. In FIPS mode Go further restricts both to approved groups and signature schemes.
@@ -63,7 +63,7 @@ Code that does not use the module for a security function, and is not affected b
 
 ## Pinned by
 
-- `packages/common/crypto/fips_test.go`: which algorithms each mode and module accepts; a node in FIPS mode exits on every other one; every approved suite signs, verifies, hashes and MACs under `fips140=only`.
+- `packages/common/crypto/fips_test.go`: which algorithms and HMAC key lengths each mode and module accepts; a node in FIPS mode exits on every other one; every approved suite signs, verifies, hashes and MACs under `fips140=only`.
 - `packages/block/genesis_test.go`: a genesis made under one suite is refused under every other one.
 - `packages/chain/tls_test.go`: which TLS versions and suites the API accepts.
 - `.github/workflows/crypto.yml`, job `fips`: the tests above built against both modules and run with `GODEBUG=fips140=only`.

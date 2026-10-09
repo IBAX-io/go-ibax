@@ -130,12 +130,9 @@ func SignString(privateKeyHex, data string) ([]byte, error) {
 	return Sign(privateKey, []byte(data))
 }
 
-// fipsMinHMACKeySize is the shortest HMAC key FIPS 140-3 approves: 112 bits (SP 800-131A)
-const fipsMinHMACKeySize = 112 / 8
-
 func GetHMAC(secret string, message string) ([]byte, error) {
-	if FIPSMode() && len(secret) < fipsMinHMACKeySize {
-		return nil, fmt.Errorf("HMAC key of %d bytes is not approved in FIPS 140-3 mode: at least %d bytes are required", len(secret), fipsMinHMACKeySize)
+	if err := CheckHMACKey(len(secret)); err != nil {
+		return nil, err
 	}
 	return GetHashProvider().GetHMAC(secret, message)
 }
