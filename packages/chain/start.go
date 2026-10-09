@@ -8,7 +8,7 @@ package chain
 import (
 	"context"
 	"fmt"
-	"github.com/IBAX-io/go-ibax/packages/service/jsonrpc"
+	"github.com/IBAX-io/go-ibax/packages/login"
 	"math/rand"
 	"net/http"
 	"os"
@@ -77,8 +77,7 @@ func Start() {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err, "path": jwtSecretPath}).Error("can't load JWT secret")
 		exitErr(1)
 	}
-	api.InitJwtSecret(jwtSecret)
-	jsonrpc.InitJwtSecret(jwtSecret)
+	login.InitSecret(jwtSecret)
 
 	if conf.Config.FuncBench {
 		log.Warning("Warning! Access checking is disabled in some built-in functions")

@@ -41,7 +41,7 @@ var (
 		},
 		{
 			Source:    []string{"./contracts/common", "./contracts/first_ecosystem", "./contracts/clb"},
-			Dest:      "./clb/clb_data_contracts.go",
+			Dest:      "./childchain/clb_data_contracts.go",
 			Variable:  "contractsDataSQL",
 			Ecosystem: "%[1]d",
 		},

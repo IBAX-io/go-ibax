@@ -45,7 +45,6 @@ const (
 var (
 	builtinContract = map[string]bool{
 		CallDelayedContract: true,
-		NewUserContract:     true,
 		NewBadBlockContract: true,
 	}
 )
@@ -510,9 +509,6 @@ func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 			isNode = crypto.Address(syspar.GetNodePubKey()) == signedBy
 		}
 
-		if sc.TxContract.Name == NewUserContract && !isNode {
-			return signedBy, nil
-		}
 		if !isNode {
 			return 0, errDelayedContract
 		}
@@ -634,11 +630,18 @@ func (sc *SmartContract) checkTxSign() error {
 	}
 
 	if !isFound {
-		err = fmt.Errorf(eEcoKeyNotFound, converter.AddressToString(signedBy), sc.TxSmart.EcosystemID)
-		sc.GetLogger().WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("looking for keyid")
-		return err
+		// A key the ecosystem does not know signs only its own registration: @1NewUser, with the
+		// public key in the header (GetSignedBy has checked that it is the signer's)
+		if sc.TxContract.Name != NewUserContract || sc.TxSmart.SignedBy != 0 || len(public) == 0 {
+			err = fmt.Errorf(eEcoKeyNotFound, converter.AddressToString(signedBy), sc.TxSmart.EcosystemID)
+			sc.GetLogger().WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("looking for keyid")
+			return err
+		}
+		// $key_id and $account_id are the signer's, as for any other transaction
+		sc.Key.ID = signedBy
+		sc.Key.AccountID = converter.AddressToString(signedBy)
 	}
-	if sc.Key.Disable() {
+	if isFound && sc.Key.Disable() {
 		err = fmt.Errorf(eEcoKeyDisable, converter.AddressToString(signedBy), sc.TxSmart.EcosystemID)
 		sc.GetLogger().WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("disable keyid")
 		return err
@@ -650,7 +653,7 @@ func (sc *SmartContract) checkTxSign() error {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.EmptyObject}).Error("empty public key")
 		return errEmptyPublicKey
 	}
-	sc.PublicKeys = append(sc.PublicKeys, public)
+	sc.PublicKeys = append(sc.PublicKeys, crypto.CutPub(public))
 
 	var CheckSignResult bool
 

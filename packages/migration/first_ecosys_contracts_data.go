@@ -1033,6 +1033,10 @@ VALUES
         if Size($NewPubkey) == 0 {
             warning "You did not enter the public key"
         }
+        // A key registers itself: the transaction is signed with NewPubkey
+        if $newId != $key_id {
+            warning "NewUser must be signed with the key it registers"
+        }
         $pub = HexToPub($NewPubkey)
         $account = IdToAddress($newId)
 
