@@ -7,45 +7,59 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/dataquery"
 
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 )
 
-type componentModel interface {
-	SetTablePrefix(prefix string)
-	Get(name string) (bool, error)
+type interfaceListResult struct {
+	List []map[string]any `json:"list"`
 }
 
-func getPageRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &sqldb.Page{})
-}
-
-func getMenuRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &sqldb.Menu{})
-}
-
-func getSnippetRowHandler(w http.ResponseWriter, r *http.Request) {
-	getInterfaceRow(w, r, &sqldb.Snippet{})
-}
-
-func getInterfaceRow(w http.ResponseWriter, r *http.Request, c componentModel) {
+// GET interface/{kind}/{name}: a page, menu or snippet as stored, and the hash of its source. Its
+// ETag is the hash: a reader that holds the source asks with If-None-Match, and is answered 304
+// while it is current.
+func getInterfaceHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	logger := getLogger(r)
-	client := getClient(r)
-
-	c.SetTablePrefix(client.Prefix())
-	if ok, err := c.Get(params["name"]); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting one row")
-		errorResponse(w, errQuery)
-		return
-	} else if !ok {
-		errorResponse(w, errNotFound)
+	ecosystem, err := queryEcosystem(r)
+	if err != nil {
+		dataErrorResponse(w, err)
 		return
 	}
+	element, err := dataquery.Element(dataReader(getClient(r)), params["kind"], params["name"], ecosystem)
+	if err != nil {
+		dataErrorResponse(w, err)
+		return
+	}
+	etag := `"` + element["hash"].(string) + `"`
+	w.Header().Set("ETag", etag)
+	for _, held := range strings.Split(r.Header.Get("If-None-Match"), ",") {
+		if strings.TrimSpace(held) == etag {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+	}
+	jsonResponse(w, element)
+}
 
-	jsonResponse(w, c)
+// GET interface/{kind}?names=a,b: the elements of the names, at most 100; those that do not exist
+// are left out
+func getInterfacesHandler(w http.ResponseWriter, r *http.Request) {
+	ecosystem, err := queryEcosystem(r)
+	if err != nil {
+		dataErrorResponse(w, err)
+		return
+	}
+	var names []string
+	if text := r.URL.Query().Get("names"); text != "" {
+		names = strings.Split(text, ",")
+	}
+	list, err := dataquery.Elements(dataReader(getClient(r)), mux.Vars(r)["kind"], names, ecosystem)
+	if err != nil {
+		dataErrorResponse(w, err)
+		return
+	}
+	jsonResponse(w, &interfaceListResult{List: list})
 }

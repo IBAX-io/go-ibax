@@ -489,57 +489,40 @@ func (c *commonApi) GetRow(ctx RequestContext, auth Auth, name string, value jso
 	return result, nil
 }
 
-type PartModel interface {
-	SetTablePrefix(prefix string)
-	Get(name string) (bool, error)
+type InterfaceListResult struct {
+	List []map[string]any `json:"list"`
 }
 
-func getPageRowMux(ctx RequestContext, name string) (PartModel, *Error) {
-	return getInterfaceRow(ctx, name, &sqldb.Page{})
-}
-
-func getMenuRowMux(ctx RequestContext, name string) (PartModel, *Error) {
-	return getInterfaceRow(ctx, name, &sqldb.Menu{})
-}
-
-func getSnippetRowMux(ctx RequestContext, name string) (PartModel, *Error) {
-	return getInterfaceRow(ctx, name, &sqldb.Snippet{})
-}
-
-func getInterfaceRow(ctx RequestContext, name string, c PartModel) (PartModel, *Error) {
-	r := ctx.HTTPRequest()
-	logger := getLogger(r)
-	client := getClient(r)
-
-	c.SetTablePrefix(client.Prefix())
-	if ok, err := c.Get(name); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting one row")
-		return nil, DefaultError("DB query is wrong")
-	} else if !ok {
-		return nil, NotFoundError()
-	}
-	return c, nil
-}
-
-func (c *commonApi) GetPageRow(ctx RequestContext, auth Auth, name string) (PartModel, *Error) {
-	if name == "" {
+// GetInterface reads a page, menu or snippet as stored, with the hash of its source
+func (c *commonApi) GetInterface(ctx RequestContext, auth Auth, kind, name string, ecosystem *int64) (map[string]any, *Error) {
+	if name == "" || !dataquery.IsInterfaceKind(kind) {
 		return nil, InvalidParamsError(paramsEmpty)
 	}
-	return getPageRowMux(ctx, name)
+	var eco int64
+	if ecosystem != nil {
+		eco = *ecosystem
+	}
+	element, err := dataquery.Element(dataReader(getClient(ctx.HTTPRequest())), kind, name, eco)
+	if err != nil {
+		return nil, dataError(err)
+	}
+	return element, nil
 }
 
-func (c *commonApi) GetMenuRow(ctx RequestContext, auth Auth, name string) (PartModel, *Error) {
-	if name == "" {
+// GetInterfaces reads the elements of the names, at most 100; those that do not exist are left out
+func (c *commonApi) GetInterfaces(ctx RequestContext, auth Auth, kind string, names []string, ecosystem *int64) (*InterfaceListResult, *Error) {
+	if !dataquery.IsInterfaceKind(kind) {
 		return nil, InvalidParamsError(paramsEmpty)
 	}
-	return getMenuRowMux(ctx, name)
-}
-
-func (c *commonApi) GetSnippetRow(ctx RequestContext, auth Auth, name string) (PartModel, *Error) {
-	if name == "" {
-		return nil, InvalidParamsError(paramsEmpty)
+	var eco int64
+	if ecosystem != nil {
+		eco = *ecosystem
 	}
-	return getSnippetRowMux(ctx, name)
+	list, err := dataquery.Elements(dataReader(getClient(ctx.HTTPRequest())), kind, names, eco)
+	if err != nil {
+		return nil, dataError(err)
+	}
+	return &InterfaceListResult{List: list}, nil
 }
 
 type TableResult struct {

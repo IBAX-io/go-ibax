@@ -76,7 +76,32 @@ A page looks like this:
 Each row holds exactly the columns announced in `columns`. `count` is the number of rows the
 filter matches.
 
-## Where
+## Interface sources
+
+Pages, menus and snippets are read as stored, under the read conditions of the `pages`, `menu` and
+`snippets` tables.
+
+| REST                                   | JSON-RPC                                 |
+| -------------------------------------- | ---------------------------------------- |
+| `GET interface/{kind}/{name}`          | `getInterface(kind, name, ecosystem)`    |
+| `GET interface/{kind}?names=a,b`       | `getInterfaces(kind, names, ecosystem)`  |
+
+- `kind` is `page`, `menu` or `snippet`.
+- A name may carry its ecosystem: `@2main`.
+- The batch read takes 1 to 100 names. It returns `{"list": [...]}` and leaves out the names that
+  do not exist.
+
+An element has the following fields:
+
+- every kind: `ecosystem`, `id`, `name`, `value`, `conditions` and `hash`. `hash` is the hex
+  SHA-256 of `value`.
+- pages: also `app_id`, `menu`, `validate_count` and `validate_mode`.
+- menus: also `title`.
+- snippets: also `app_id`.
+
+A single read answers with `ETag: "<hash>"`. A request with `If-None-Match: "<hash>"` is answered
+`304 Not Modified` while the source is unchanged.
+
 
 | Form                                        | Meaning                                             |
 | ------------------------------------------- | --------------------------------------------------- |
