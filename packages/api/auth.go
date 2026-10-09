@@ -7,41 +7,25 @@ package api
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/login"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
 	"github.com/golang-jwt/jwt/v4"
 )
 
 var (
-	jwtSecret       []byte
-	jwtPrefix       = "Bearer "
-	jwtExpire       = 28800 // By default, seconds
-	jwtrefeshExpire = 600   // By default, seconds
-	//jwtrefeshExpire = 10   // By default, seconds  test
+	jwtPrefix = "Bearer "
 
 	errJWTAuthValue      = errors.New("wrong authorization value")
 	errEcosystemNotFound = errors.New("ecosystem not found")
 )
 
 // JWTClaims is storing jwt claims
-type JWTClaims struct {
-	UID         string `json:"uid,omitempty"`
-	EcosystemID string `json:"ecosystem_id,omitempty"`
-	KeyID       string `json:"key_id,omitempty"`
-	AccountID   string `json:"account_id,omitempty"`
-	RoleID      string `json:"role_id,omitempty"`
-	jwt.RegisteredClaims
-}
-
-func generateJWTToken(claims JWTClaims) (string, error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
-}
+type JWTClaims = login.Claims
 
 func parseJWTToken(header string) (*jwt.Token, error) {
 	if len(header) == 0 {
@@ -54,12 +38,7 @@ func parseJWTToken(header string) (*jwt.Token, error) {
 		return nil, errJWTAuthValue
 	}
 
-	return jwt.ParseWithClaims(header, &JWTClaims{}, func(token *jwt.Token) (any, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(jwtSecret), nil
-	})
+	return login.Parse(header)
 }
 
 func getClientFromToken(token *jwt.Token, ecosysNameService types.EcosystemGetter) (*Client, error) {
@@ -109,11 +88,4 @@ func getAuthStatus(w http.ResponseWriter, r *http.Request) {
 
 	result.IsActive = true
 	result.ExpiresAt = claims.ExpiresAt.Unix()
-}
-
-func InitJwtSecret(secret []byte) {
-	if secret == nil {
-		panic("jwt secret invalid")
-	}
-	jwtSecret = secret
 }

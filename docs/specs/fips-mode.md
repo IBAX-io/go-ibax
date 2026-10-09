@@ -58,7 +58,7 @@ A mismatch stops the node with "the genesis block does not match the configured 
 
 FIPS mode covers what the node does. Transactions and logins are signed by the client, and a FIPS chain needs those signatures from a validated module too: the node cannot tell, so the client decides by the `fips` flag of `getuid`. Weaver signs only with a key in a PKCS#11 module (an HSM or a token) on a network that reports `fips: true`; that is the desktop app, and the web app only reads there.
 
-Signing in as the guest takes no signature: `POST /api/v2/login` with `guest=true` (JSON-RPC `login` with `"guest": true`) opens a session of the guest account (`consts.GuestKey`) in the ecosystem asked for, and ignores `pubkey`, `key_id`, `signature` and `role_id`. The guest key is public, so a signature with it proved nothing. Clients use it to read a network without signing in software; every node accepts it, in every mode.
+Signing in as the guest takes no signature (`guest=true`, see [Login](../api/login.md#guest)). Clients use it to read a FIPS network without signing in software; every node accepts it, in every mode.
 
 ## Outside the boundary
 

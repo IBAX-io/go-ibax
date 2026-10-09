@@ -6,67 +6,37 @@
 package api
 
 import (
-	"math/rand"
 	"net/http"
-	"time"
 
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-
-	"github.com/golang-jwt/jwt/v4"
-	log "github.com/sirupsen/logrus"
+	"github.com/IBAX-io/go-ibax/packages/login"
 )
 
-const jwtUIDExpire = time.Second * 5
-
-type getUIDResult struct {
-	UID         string `json:"uid,omitempty"`
-	Token       string `json:"token,omitempty"`
-	Expire      string `json:"expire,omitempty"`
-	EcosystemID string `json:"ecosystem_id,omitempty"`
-	KeyID       string `json:"key_id,omitempty"`
-	Address     string `json:"address,omitempty"`
-	NetworkID   string `json:"network_id,omitempty"`
-	Cryptoer    string `json:"cryptoer"`
-	Hasher      string `json:"hasher"`
-	Fips        bool   `json:"fips"` // the node runs in FIPS 140-3 mode
-}
+type getUIDResult = login.UIDResult
 
 func getUIDHandler(w http.ResponseWriter, r *http.Request) {
-	result := new(getUIDResult)
-	result.NetworkID = converter.Int64ToStr(conf.Config.LocalConf.NetworkID)
-	token := getToken(r)
-	result.Cryptoer, result.Hasher = conf.Config.CryptoSettings.Cryptoer, conf.Config.CryptoSettings.Hasher
-	result.Fips = crypto.FIPSMode()
-	if token != nil {
-		if claims, ok := token.Claims.(*JWTClaims); ok && len(claims.KeyID) > 0 {
-			result.EcosystemID = claims.EcosystemID
-			result.Expire = claims.ExpiresAt.Sub(time.Now()).String()
-			result.KeyID = claims.KeyID
-			result.Address = converter.AddressToString(converter.StrToInt64(claims.KeyID))
-			jsonResponse(w, result)
-			return
-		}
-	}
-
-	result.UID = converter.Int64ToStr(rand.New(rand.NewSource(time.Now().Unix())).Int63())
-	claims := JWTClaims{
-		UID:         result.UID,
-		EcosystemID: "1",
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: &jwt.NumericDate{Time: time.Now().Add(jwtUIDExpire)},
-		},
-	}
-
-	var err error
-	if result.Token, err = generateJWTToken(claims); err != nil {
-		logger := getLogger(r)
-		logger.WithFields(log.Fields{"type": consts.JWTError, "error": err}).Error("generating jwt token")
-		errorResponse(w, err)
+	result, err := login.UID(tokenClaims(r))
+	if err != nil {
+		loginErrorResponse(w, err)
 		return
 	}
-
 	jsonResponse(w, result)
+}
+
+// tokenClaims are the claims of the valid token the request carries, nil without one
+func tokenClaims(r *http.Request) *JWTClaims {
+	if token := getToken(r); token != nil {
+		if claims, ok := token.Claims.(*JWTClaims); ok {
+			return claims
+		}
+	}
+	return nil
+}
+
+// loginErrorResponse answers a refused login with its code, any other error as the API does
+func loginErrorResponse(w http.ResponseWriter, err error) {
+	if refusal, ok := err.(*login.Error); ok {
+		errorResponse(w, errType{Err: refusal.Code, Message: refusal.Msg, Status: refusal.Status})
+		return
+	}
+	errorResponse(w, err)
 }

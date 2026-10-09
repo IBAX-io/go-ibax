@@ -22,7 +22,7 @@ func TestEscape(t *testing.T) {
 	}{
 		{`'test'`, `''test''`},
 		{"`test`", "` + \"`\" + `test` + \"`\" + `"},
-		{`100%`, `100%%`},
+		{`100%`, `100%`},
 	}
 
 	for _, v := range cases {
@@ -30,14 +30,14 @@ func TestEscape(t *testing.T) {
 	}
 }
 
-func tempContract(appID int, conditions, value string) (string, error) {
+func tempContract(appID, conditions, value string) (string, error) {
 	file, err := os.CreateTemp("", "contract")
 	if err != nil {
 		return "", err
 	}
 	defer file.Close()
 
-	file.Write([]byte(fmt.Sprintf(`// +prop AppID = %d
+	file.Write([]byte(fmt.Sprintf(`// +prop AppID = '%s'
 // +prop Conditions = '%s'
 %s`, appID, conditions, value)))
 
@@ -47,7 +47,7 @@ func tempContract(appID int, conditions, value string) (string, error) {
 func TestLoadSource(t *testing.T) {
 	value := "contract Test {}"
 
-	path, err := tempContract(5, "true", value)
+	path, err := tempContract("5", "true", value)
 	assert.NoError(t, err)
 
 	source, err := loadSource(path)
@@ -57,6 +57,6 @@ func TestLoadSource(t *testing.T) {
 		Name:       filepath.Base(path),
 		Source:     template.HTML(value + "\n"),
 		Conditions: template.HTML("true"),
-		AppID:      5,
+		AppID:      "5",
 	}, source)
 }
