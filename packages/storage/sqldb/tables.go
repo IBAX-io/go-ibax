@@ -187,10 +187,3 @@ func GetTableQuery(table string, ecosystemID int64) *gorm.DB {
 	return GetDB(nil).Table(converter.ParseTable(table, ecosystemID))
 }
 
-func GetTableListQuery(table string, ecosystemID int64) *gorm.DB {
-	if converter.FirstEcosystemTables[table] {
-		return DBConn.Table("1_" + table)
-	}
-
-	return GetDB(nil).Table(converter.ParseTable(table, ecosystemID))
-}
