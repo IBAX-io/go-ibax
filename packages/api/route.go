@@ -91,6 +91,7 @@ func (m Mode) SetBlockchainRoutes(r Router) {
 	api.HandleFunc("/appcontent/{appID}", authRequire(m.getAppContentHandler)).Methods("GET")
 	api.HandleFunc("/history/{name}/{id}", authRequire(getHistoryHandler)).Methods("GET")
 	api.HandleFunc("/balance/{wallet}", m.getBalanceHandler).Methods("GET")
+	api.HandleFunc("/utxo/{wallet}", m.getUTXOMovementsHandler).Methods("GET")
 	api.HandleFunc("/block/{id}", getBlockInfoHandler).Methods("GET")
 	api.HandleFunc("/maxblockid", getMaxBlockHandler).Methods("GET")
 	api.HandleFunc("/blocks", getBlocksTxInfoHandler).Methods("GET")
