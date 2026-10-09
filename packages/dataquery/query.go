@@ -128,6 +128,10 @@ func (t *Table) Query(q Query) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	visible, err := t.visible(s)
+	if err != nil {
+		return nil, err
+	}
 	where, err := s.where(q.Where, 0)
 	if err != nil {
 		return nil, err
@@ -136,7 +140,7 @@ func (t *Table) Query(q Query) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	filter := ` FROM ` + t.from() + ` WHERE ` + t.scope() + ` AND ` + where
+	filter := ` FROM ` + t.from() + ` WHERE ` + visible + ` AND ` + where
 
 	result := &Result{Columns: names(refs, q.Columns)}
 	rows, err := query(`SELECT count(*)`+filter, s.args...)
@@ -176,6 +180,10 @@ func (t *Table) Row(column, value string, columns []string) (*RowResult, error) 
 	if err != nil {
 		return nil, err
 	}
+	visible, err := t.visible(s)
+	if err != nil {
+		return nil, err
+	}
 	key, err := s.resolve(column)
 	if err != nil {
 		return nil, err
@@ -192,7 +200,7 @@ func (t *Table) Row(column, value string, columns []string) (*RowResult, error) 
 		selects[i] = r.selectSQL()
 	}
 	result := &RowResult{Columns: names(refs, columns)}
-	list, err := t.read(`SELECT `+strings.Join(selects, ", ")+` FROM `+t.from()+` WHERE `+t.scope()+
+	list, err := t.read(`SELECT `+strings.Join(selects, ", ")+` FROM `+t.from()+` WHERE `+visible+
 		` AND `+cond+` LIMIT 1`, s.args, result.Columns)
 	if err != nil {
 		return nil, err
@@ -214,11 +222,15 @@ func (t *Table) Sum(column string, where Where) (string, error) {
 	if len(r.path) > 0 || (r.t != TypeNumber && r.t != TypeMoney && r.t != TypeDouble) {
 		return "", ErrColumn(column)
 	}
+	visible, err := t.visible(s)
+	if err != nil {
+		return "", err
+	}
 	filter, err := s.where(where, 0)
 	if err != nil {
 		return "", err
 	}
-	rows, err := query(`SELECT CAST(COALESCE(sum(`+r.sql()+`), 0) AS text) FROM `+t.from()+` WHERE `+t.scope()+
+	rows, err := query(`SELECT CAST(COALESCE(sum(`+r.sql()+`), 0) AS text) FROM `+t.from()+` WHERE `+visible+
 		` AND `+filter, s.args...)
 	if err != nil {
 		return "", queryFailed(err, t.physical)

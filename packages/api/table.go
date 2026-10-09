@@ -21,6 +21,7 @@ type tableResult struct {
 	Update     string             `json:"update"`
 	Read       string             `json:"read"`
 	Filter     string             `json:"filter"`
+	Rows       string             `json:"rows"`
 	Conditions string             `json:"conditions"`
 	AppID      string             `json:"app_id"`
 	Columns    []dataquery.Column `json:"columns"`
@@ -47,6 +48,7 @@ func getTableHandler(w http.ResponseWriter, r *http.Request) {
 		Update:     perm.Update,
 		Read:       perm.Read,
 		Filter:     perm.Filter,
+		Rows:       perm.Rows,
 		Conditions: t.Record.Conditions,
 		AppID:      converter.Int64ToStr(t.Record.AppID),
 		Columns:    t.Columns(),

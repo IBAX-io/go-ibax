@@ -57,6 +57,8 @@ type Table struct {
 	ordered []string
 	reads   map[string]string
 	checked map[string]error
+	// The row scope, its reader's values bound; nil when the table has none
+	rows Where
 }
 
 var prefixedName = regexp.MustCompile(`^@([1-9][0-9]*)([a-z_][a-z0-9_]*)$`)
@@ -69,6 +71,9 @@ func Open(reader Reader, name string, ecosystem int64) (*Table, error) {
 	}
 	if cond := t.Record.Permissions.Read; cond != "" && !t.holds(cond) {
 		return nil, ErrAccessDenied(t.Name)
+	}
+	if err := t.readRowScope(); err != nil {
+		return nil, err
 	}
 	return t, nil
 }

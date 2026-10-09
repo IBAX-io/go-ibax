@@ -38,6 +38,11 @@ func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		dataErrorResponse(w, err)
 		return
 	}
+	// The past values of a row the reader sees now
+	if err := t.Sees(params["id"]); err != nil {
+		dataErrorResponse(w, err)
+		return
+	}
 	rollbackTx := &sqldb.RollbackTx{}
 	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(params["id"], t.Physical(), rollbackHistoryLimit)
 	if err != nil {

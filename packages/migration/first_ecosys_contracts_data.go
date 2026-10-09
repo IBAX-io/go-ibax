@@ -492,6 +492,7 @@ VALUES
         UpdatePerm string
         NewColumnPerm string
         ReadPerm string "optional"
+        RowsPerm string "optional"
     }
 
     conditions {
@@ -511,6 +512,9 @@ VALUES
         permissions["new_column"] = $NewColumnPerm
         if $ReadPerm {
             permissions["read"] = $ReadPerm
+        }
+        if $RowsPerm {
+            permissions["rows"] = $RowsPerm
         }
         $Permissions = permissions
         TableConditions($Name, "", JSONEncode($Permissions))
