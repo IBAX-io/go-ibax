@@ -442,30 +442,6 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 	return nil
 }
 
-func (sc *SmartContract) CheckAccess(tableName, columns string, ecosystem int64) (table string, perm map[string]string,
-	cols string, err error) {
-	var collist []string
-
-	table = converter.ParseTable(tableName, ecosystem)
-	collist, err = qb.GetColumns(columns)
-	if err != nil {
-		return
-	}
-	if !syspar.IsPrivateBlockchain() {
-		cols = PrepareColumns(collist)
-		return
-	}
-	perm, err = sc.AccessTablePerm(table, `read`)
-	if err != nil {
-		return
-	}
-	if err = sc.AccessColumns(table, &collist, false); err != nil {
-		return
-	}
-	cols = PrepareColumns(collist)
-	return
-}
-
 // AccessRights checks the access right by executing the condition value
 func (sc *SmartContract) AccessRights(condition string, iscondition bool) error {
 	sp := &sqldb.StateParameter{}

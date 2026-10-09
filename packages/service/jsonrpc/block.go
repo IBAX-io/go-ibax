@@ -16,6 +16,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/dataquery"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -924,17 +925,10 @@ func (b *blockChainApi) GetMember(ctx RequestContext, account string, ecosystemI
 	return info, nil
 }
 
+// ListWhereForm is a query of the rows of the table named
 type ListWhereForm struct {
-	ListForm
-	Order any `json:"order"`
-	Where any `json:"where"`
-}
-
-func (f *ListWhereForm) Validate(r *http.Request) error {
-	if f == nil || f.Name == "" {
-		return errors.New(paramsEmpty)
-	}
-	return f.ListForm.Validate(r)
+	Name string `json:"name"`
+	dataquery.Query
 }
 
 type blockMetricByNode struct {

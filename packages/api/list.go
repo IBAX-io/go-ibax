@@ -8,23 +8,14 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/IBAX-io/go-ibax/packages/script"
-
-	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
-	"github.com/IBAX-io/go-ibax/packages/template"
-	"github.com/IBAX-io/go-ibax/packages/types"
-
-	//"io/ioutil"
+	"io"
 	"net/http"
+	"strconv"
+	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/dataquery"
 
 	"github.com/gorilla/mux"
-	log "github.com/sirupsen/logrus"
 )
 
 type listResult struct {
@@ -36,291 +27,146 @@ type sumResult struct {
 	Sum string `json:"sum"`
 }
 
-type listForm struct {
-	paginatorForm
-	rowForm
+// The most a data request body holds
+const maxQueryBody = 1 << 20
+
+func dataReader(client *Client) dataquery.Reader {
+	return dataquery.Reader{KeyID: client.KeyID, AccountID: client.AccountID, Ecosystem: client.EcosystemID}
 }
 
-type listWhereForm struct {
-	listForm
-	Order   string `schema:"order"`
-	InWhere string `schema:"where"`
-}
-
-type SumWhereForm struct {
-	Column string `schema:"column"`
-	Where  string `schema:"where"`
-}
-
-func (f *listForm) Validate(r *http.Request) error {
-	if err := f.paginatorForm.Validate(r); err != nil {
-		return err
+func dataErrorResponse(w http.ResponseWriter, err error) {
+	var refusal *dataquery.Error
+	if errors.As(err, &refusal) {
+		errorResponse(w, errType{Err: refusal.Code, Message: refusal.Msg, Status: refusal.Status})
+		return
 	}
-	return f.rowForm.Validate(r)
+	errorResponse(w, err)
 }
 
-func (f *SumWhereForm) Validate(r *http.Request) error {
-	if len(f.Column) > 0 {
-		f.Column = converter.Sanitize(f.Column, ``)
+// readBody reads a JSON request body into v: no other fields than v has, nothing after it
+func readBody(r *http.Request, v any) error {
+	if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/json") {
+		return dataquery.ErrWhere("the body must be application/json")
+	}
+	data, err := io.ReadAll(io.LimitReader(r.Body, maxQueryBody+1))
+	if err != nil || len(data) > maxQueryBody {
+		return dataquery.ErrWhere("the body is too large")
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(data)))
+	decoder.UseNumber()
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(v); err != nil || decoder.More() {
+		return dataquery.ErrWhere("the body is not a query")
 	}
 	return nil
 }
 
-func checkAccess(tableName, columns string, client *Client) (table string, cols string, err error) {
-	sc := smart.SmartContract{
-		ChildChain: conf.Config.IsSupportingChildChain(),
-		VM:  script.GetVM(),
-		TxSmart: &types.SmartTransaction{
-			Header: &types.Header{
-				EcosystemID: client.EcosystemID,
-				KeyID:       client.KeyID,
-				NetworkID:   conf.Config.LocalConf.NetworkID,
-			},
-		},
+// queryEcosystem reads the ecosystem a GET names, 0 when none
+func queryEcosystem(r *http.Request) (int64, error) {
+	text := r.URL.Query().Get("ecosystem")
+	if text == "" {
+		return 0, nil
 	}
-	table, _, cols, err = sc.CheckAccess(tableName, columns, client.EcosystemID)
-	return
+	ecosystem, err := strconv.ParseInt(text, 10, 64)
+	if err != nil || ecosystem <= 0 {
+		return 0, dataquery.ErrWhere("ecosystem " + text)
+	}
+	return ecosystem, nil
 }
 
+// queryColumns reads the columns a GET names, comma separated
+func queryColumns(r *http.Request) []string {
+	text := r.URL.Query().Get("columns")
+	if text == "" {
+		return nil
+	}
+	return strings.Split(text, ",")
+}
+
+func runQuery(w http.ResponseWriter, r *http.Request, q dataquery.Query) {
+	t, err := dataquery.Open(dataReader(getClient(r)), mux.Vars(r)["name"], q.Ecosystem)
+	if err != nil {
+		dataErrorResponse(w, err)
+		return
+	}
+	result, err := t.Query(q)
+	if err != nil {
+		dataErrorResponse(w, err)
+		return
+	}
+	jsonResponse(w, result)
+}
+
+// GET list/{name}: a query in the URL, its where and order as JSON
 func getListHandler(w http.ResponseWriter, r *http.Request) {
-	form := &listForm{}
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
+	values := r.URL.Query()
+	q := dataquery.Query{Columns: queryColumns(r)}
+	var err error
+	if q.Ecosystem, err = queryEcosystem(r); err != nil {
+		dataErrorResponse(w, err)
 		return
 	}
-
-	params := mux.Vars(r)
-	client := getClient(r)
-	logger := getLogger(r)
-
-	var (
-		err   error
-		table string
-	)
-	table, form.Columns, err = checkAccess(params["name"], form.Columns, client)
-	if err != nil {
-		errorResponse(w, err)
-		return
+	if text := values.Get("where"); text != "" {
+		if err := dataquery.DecodeJSON([]byte(text), &q.Where); err != nil {
+			dataErrorResponse(w, err)
+			return
+		}
 	}
-	q := sqldb.GetTableQuery(params["name"], client.EcosystemID)
-
-	if len(form.Columns) > 0 {
-		q = q.Select("id," + form.Columns)
+	if text := values.Get("order"); text != "" {
+		if err := dataquery.DecodeJSON([]byte(text), &q.Order); err != nil {
+			dataErrorResponse(w, err)
+			return
+		}
 	}
-
-	result := new(listResult)
-	err = q.Count(&result.Count).Error
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting table records count")
-		errorResponse(w, errTableNotFound.Errorf(table))
-		return
+	for name, target := range map[string]*int{"limit": nil, "offset": &q.Offset} {
+		text := values.Get(name)
+		if text == "" {
+			continue
+		}
+		n, err := strconv.Atoi(text)
+		if err != nil {
+			dataErrorResponse(w, dataquery.ErrLimit(name+" "+text))
+			return
+		}
+		if target == nil {
+			q.Limit = &n
+		} else {
+			*target = n
+		}
 	}
-
-	rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-		errorResponse(w, err)
-		return
-	}
-
-	result.List, err = sqldb.GetResult(rows)
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-
-	jsonResponse(w, result)
+	runQuery(w, r, q)
 }
 
+// POST listWhere/{name}: a query as a JSON body
 func getListWhereHandler(w http.ResponseWriter, r *http.Request) {
-	form := &listWhereForm{}
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
+	var q dataquery.Query
+	if err := readBody(r, &q); err != nil {
+		dataErrorResponse(w, err)
 		return
 	}
-
-	params := mux.Vars(r)
-	client := getClient(r)
-	logger := getLogger(r)
-
-	var (
-		err                 error
-		table, where, order string
-	)
-	table, form.Columns, err = checkAccess(params["name"], form.Columns, client)
-	if err != nil {
-		errorResponse(w, err)
-		return
-	}
-	if form.Order != "" {
-		var orderParam any
-		err = json.Unmarshal([]byte(form.Order), &orderParam)
-		if err != nil {
-			errorResponse(w, fmt.Errorf("order unamrshal:%v", err))
-			return
-		}
-		order, err = qb.GetOrder(table, orderParam, true)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-	}
-
-	//q := sqldb.GetTableQuery(params["name"], client.EcosystemID)
-	q := sqldb.GetTableListQuery(params["name"], client.EcosystemID)
-	if len(form.Columns) > 0 {
-		q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
-	}
-
-	if len(form.InWhere) > 0 {
-		inWhere, _, err := template.ParseObject([]rune(form.InWhere))
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-		switch v := inWhere.(type) {
-		case string:
-			if len(v) == 0 {
-				where = `true`
-			} else {
-				errorResponse(w, errors.New(`Where has wrong format`))
-				return
-			}
-		case map[string]any:
-			where, err = qb.GetWhere(types.LoadMap(v))
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		case *types.Map:
-			where, err = qb.GetWhere(v)
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		default:
-			errorResponse(w, errors.New(`Where has wrong format`))
-			return
-		}
-		q = q.Where(where)
-	}
-
-	result := new(listResult)
-	err = q.Count(&result.Count).Error
-
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
-			Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
-		errorResponse(w, errTableNotFound.Errorf(table))
-		return
-	}
-
-	if len(order) > 0 {
-		rows, err := q.Order(order).Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			errorResponse(w, err)
-			return
-		}
-		result.List, err = sqldb.GetResult(rows)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-	} else {
-		rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			errorResponse(w, err)
-			return
-		}
-		result.List, err = sqldb.GetResult(rows)
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-	}
-
-	jsonResponse(w, result)
+	runQuery(w, r, q)
 }
 
+// POST sumWhere/{name}: {ecosystem, column, where} → the sum of the column over the rows matched
 func getsumWhereHandler(w http.ResponseWriter, r *http.Request) {
-	var (
-		err          error
-		table, where string
-	)
-	form := &SumWhereForm{}
-
-	if err := parseForm(r, form); err != nil {
-		errorResponse(w, err, http.StatusBadRequest)
+	var form struct {
+		Ecosystem int64           `json:"ecosystem"`
+		Column    string          `json:"column"`
+		Where     dataquery.Where `json:"where"`
+	}
+	if err := readBody(r, &form); err != nil {
+		dataErrorResponse(w, err)
 		return
 	}
-
-	params := mux.Vars(r)
-	client := getClient(r)
-	logger := getLogger(r)
-
-	table, form.Column, err = checkAccess(params["name"], form.Column, client)
+	t, err := dataquery.Open(dataReader(getClient(r)), mux.Vars(r)["name"], form.Ecosystem)
 	if err != nil {
-		errorResponse(w, err)
+		dataErrorResponse(w, err)
 		return
 	}
-	//q := sqldb.GetTableQuery(params["name"], client.EcosystemID)
-	//
-	//if len(form.Columns) > 0 {
-	//	q = q.Select("id," + smart.PrepareColumns([]string{form.Columns}))
-	//}
-
-	if len(form.Where) > 0 {
-		inWhere, _, err := template.ParseObject([]rune(form.Where))
-		if err != nil {
-			errorResponse(w, err)
-			return
-		}
-		switch v := inWhere.(type) {
-		case string:
-			if len(v) == 0 {
-				where = `true`
-			} else {
-				errorResponse(w, errors.New(`Where has wrong format`))
-				return
-			}
-		case map[string]any:
-			where, err = qb.GetWhere(types.LoadMap(v))
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		case *types.Map:
-			where, err = qb.GetWhere(v)
-			if err != nil {
-				errorResponse(w, err)
-				return
-			}
-		default:
-			errorResponse(w, errors.New(`Where has wrong format`))
-			return
-		}
-		//q = q.Where(where)
-	}
-
-	count, err := sqldb.NewDbTransaction(nil).GetSumColumnCount(table, form.Column, where)
+	sum, err := t.Sum(form.Column, form.Where)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
-		errorResponse(w, err)
+		dataErrorResponse(w, err)
 		return
 	}
-
-	result := new(sumResult)
-	if count > 0 {
-		sum, err := sqldb.NewDbTransaction(nil).GetSumColumn(table, form.Column, where)
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
-				Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Column}), where)
-			errorResponse(w, errTableNotFound.Errorf(table))
-			return
-		}
-		result.Sum = sum
-	}
-	jsonResponse(w, result)
+	jsonResponse(w, &sumResult{Sum: sum})
 }

@@ -14,17 +14,15 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/dataquery"
 	"github.com/IBAX-io/go-ibax/packages/language"
 	"github.com/IBAX-io/go-ibax/packages/publisher"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-	qb "github.com/IBAX-io/go-ibax/packages/storage/sqldb/queryBuilder"
 	"github.com/IBAX-io/go-ibax/packages/template"
-	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
 	"strings"
@@ -306,154 +304,41 @@ func (c *commonApi) GetKeyInfo(ctx RequestContext, accountAddress string) (*KeyI
 	}, nil
 }
 
-type ListForm struct {
-	Name string `json:"name"` //table name
-	paginatorForm
-	rowForm
+func dataReader(client *UserClient) dataquery.Reader {
+	return dataquery.Reader{KeyID: client.KeyID, AccountID: client.AccountID, Ecosystem: client.EcosystemID}
 }
 
-func (f *ListForm) Validate(r *http.Request) error {
-	if f == nil || f.Name == "" {
-		return errors.New(paramsEmpty)
+// dataError is a refused or failed data read as a JSON-RPC error, its data the code of the refusal
+func dataError(err error) *Error {
+	var refusal *dataquery.Error
+	if !errors.As(err, &refusal) {
+		return DefaultError(err.Error())
 	}
-	if err := f.paginatorForm.Validate(r); err != nil {
-		return err
+	data := map[string]any{"error": refusal.Code}
+	switch refusal.Status {
+	case http.StatusForbidden:
+		return NewError(ErrCodeUnauthorized, refusal.Msg, data)
+	case http.StatusNotFound:
+		return NewError(ErrCodeNotFound, refusal.Msg, data)
+	case http.StatusInternalServerError:
+		return InternalError(refusal.Msg, data)
 	}
-	return f.rowForm.Validate(r)
+	return InvalidParamsError(refusal.Msg, data)
 }
 
-type rowForm struct {
-	Columns string `json:"columns"`
-}
-
-func (f *rowForm) Validate(r *http.Request) error {
-	if len(f.Columns) > 0 {
-		columns := strings.Split(f.Columns, ",")
-		list := make([]string, len(columns))
-		for k, column := range columns {
-			list[k] = converter.Sanitize(column, `->`)
-		}
-		f.Columns = strings.Join(list, ",")
-	}
-	return nil
-}
-
-func checkAccess(tableName, columns string, client *UserClient) (table string, cols string, err error) {
-	sc := smart.SmartContract{
-		ChildChain: conf.Config.IsSupportingChildChain(),
-		VM:  script.GetVM(),
-		TxSmart: &types.SmartTransaction{
-			Header: &types.Header{
-				EcosystemID: client.EcosystemID,
-				KeyID:       client.KeyID,
-				NetworkID:   conf.Config.LocalConf.NetworkID,
-			},
-		},
-	}
-	table, _, cols, err = sc.CheckAccess(tableName, columns, client.EcosystemID)
-	return
-}
-
-func (c *commonApi) GetList(ctx RequestContext, auth Auth, form *ListWhereForm) (*ListResult, *Error) {
-	r := ctx.HTTPRequest()
-	if form == nil {
+// GetList reads the rows of a table a query matches (docs/api/data-query.md)
+func (c *commonApi) GetList(ctx RequestContext, auth Auth, form *ListWhereForm) (*dataquery.Result, *Error) {
+	if form == nil || form.Name == "" {
 		return nil, InvalidParamsError(paramsEmpty)
 	}
-
-	if err := parameterValidator(r, form); err != nil {
-		return nil, InvalidParamsError(err.Error())
-	}
-
-	client := getClient(r)
-	logger := getLogger(r)
-
-	var (
-		err                 error
-		table, where, order string
-	)
-	table, form.Columns, err = checkAccess(form.Name, form.Columns, client)
+	t, err := dataquery.Open(dataReader(getClient(ctx.HTTPRequest())), form.Name, form.Ecosystem)
 	if err != nil {
-		return nil, DefaultError(err.Error())
+		return nil, dataError(err)
 	}
-	order, err = qb.GetOrder(table, form.Order, true)
+	result, err := t.Query(form.Query)
 	if err != nil {
-		return nil, DefaultError(err.Error())
+		return nil, dataError(err)
 	}
-	var q *gorm.DB
-	q = sqldb.GetTableListQuery(form.Name, client.EcosystemID)
-
-	if len(form.Columns) > 0 {
-		q = q.Select("id," + form.Columns)
-	}
-
-	if form.Where != nil {
-		var inWhere any
-		switch form.Where.(type) {
-		case string:
-			if len(form.Where.(string)) > 0 {
-				inWhere, _, err = template.ParseObject([]rune(form.Where.(string)))
-				if err != nil {
-					return nil, DefaultError("where parse object failed")
-				}
-			} else {
-				inWhere = ""
-			}
-		}
-
-		switch v := inWhere.(type) {
-		case string:
-			if len(v) == 0 {
-				where = `true`
-			} else {
-				return nil, DefaultError("Where has wrong format")
-			}
-		case map[string]any:
-			where, err = qb.GetWhere(types.LoadMap(v))
-			if err != nil {
-				return nil, DefaultError(err.Error())
-			}
-		case *types.Map:
-			where, err = qb.GetWhere(v)
-			if err != nil {
-				return nil, DefaultError(err.Error())
-			}
-		default:
-			return nil, DefaultError("Where has wrong format")
-		}
-		q = q.Where(where)
-	}
-
-	result := new(ListResult)
-	err = q.Count(&result.Count).Error
-
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).
-			Errorf("selecting rows from table %s select %s where %s", table, smart.PrepareColumns([]string{form.Columns}), where)
-		return nil, DefaultError(fmt.Sprintf("Table %s has not been found", table))
-	}
-
-	if len(order) > 0 {
-		rows, err := q.Order(order).Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			return nil, DefaultError(err.Error())
-		}
-		result.List, err = sqldb.GetResult(rows)
-		if err != nil {
-			return nil, DefaultError(err.Error())
-		}
-	} else {
-		rows, err := q.Order("id ASC").Offset(form.Offset).Limit(form.Limit).Rows()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-			return nil, DefaultError(err.Error())
-		}
-		result.List, err = sqldb.GetResult(rows)
-		if err != nil {
-			return nil, DefaultError(err.Error())
-		}
-	}
-
 	return result, nil
 }
 
@@ -522,7 +407,11 @@ func (c *commonApi) GetSections(ctx RequestContext, auth Auth, params *SectionsF
 	logger := getLogger(r)
 
 	table := "1_sections"
-	q := sqldb.GetDB(nil).Table(table).Where("ecosystem = ? AND status > 0", client.EcosystemID).Order("id ASC")
+	// The sections of no role are everyone's, the others are their roles' only
+	q := sqldb.GetDB(nil).Table(table).
+		Where("ecosystem = ? AND status > 0", client.EcosystemID).
+		Where("(roles_access IS NULL OR roles_access = '[]'::jsonb OR roles_access @> ?::jsonb)", fmt.Sprintf("[%d]", client.RoleID)).
+		Order("id ASC")
 
 	result := new(ListResult)
 	err := q.Count(&result.Count).Error
@@ -544,23 +433,6 @@ func (c *commonApi) GetSections(ctx RequestContext, auth Auth, params *SectionsF
 
 	var sections []map[string]string
 	for _, item := range result.List {
-		var roles []int64
-		if err := json.Unmarshal([]byte(item["roles_access"]), &roles); err != nil {
-			return nil, DefaultError(err.Error())
-		}
-		if len(roles) > 0 {
-			var added bool
-			for _, v := range roles {
-				if v == client.RoleID {
-					added = true
-					break
-				}
-			}
-			if !added {
-				continue
-			}
-		}
-
 		if item["status"] == consts.StatusMainPage {
 			roles := &sqldb.Role{}
 			roles.SetTablePrefix(1)
@@ -582,73 +454,39 @@ func (c *commonApi) GetSections(ctx RequestContext, auth Auth, params *SectionsF
 	return result, nil
 }
 
-type RowResult struct {
-	Value map[string]string `json:"value"`
-}
-
-// GetRow
-// whereColumn: find whereColumn = id or Find id
-// columns: select colunms
-// example: "params":["@1history",6660819716178795186,"sender_id","created_at,ecosystem"]
-func (c *commonApi) GetRow(ctx RequestContext, auth Auth, tableName string, id int64, columns *string, whereColumn *string) (*RowResult, *Error) {
-	r := ctx.HTTPRequest()
-	form := &rowForm{}
-	if columns != nil {
-		form.Columns = *columns
-		if err := parameterValidator(r, form); err != nil {
-			return nil, InvalidParamsError(err.Error())
-		}
+// GetRow reads the row whose id, or whose column, holds a value: a number or a string
+// example: "params":["@1history",6660819716178795186,["created_at","ecosystem"],"sender_id"]
+func (c *commonApi) GetRow(ctx RequestContext, auth Auth, name string, value json.RawMessage, columns *[]string, column *string, ecosystem *int64) (*dataquery.RowResult, *Error) {
+	if name == "" || len(value) == 0 {
+		return nil, InvalidParamsError(paramsEmpty)
 	}
-	idStr := strconv.FormatInt(id, 10)
-	if tableName == "" || idStr == "" {
-		return nil, InvalidParamsError("tableName or id invalid")
+	var text string
+	if json.Unmarshal(value, &text) != nil {
+		text = string(value)
 	}
-
-	client := getClient(r)
-	logger := getLogger(r)
-
-	q := sqldb.GetDB(nil).Limit(1)
-
 	var (
-		err   error
-		table string
+		where    string
+		selected []string
+		eco      int64
 	)
-	table, form.Columns, err = checkAccess(tableName, form.Columns, client)
+	if column != nil {
+		where = *column
+	}
+	if columns != nil {
+		selected = *columns
+	}
+	if ecosystem != nil {
+		eco = *ecosystem
+	}
+	t, err := dataquery.Open(dataReader(getClient(ctx.HTTPRequest())), name, eco)
 	if err != nil {
-		return nil, DefaultError(err.Error())
+		return nil, dataError(err)
 	}
-	col := `id`
-	if whereColumn != nil && len(*whereColumn) > 0 {
-		col = converter.Sanitize(*whereColumn, `-`)
-	}
-	if converter.FirstEcosystemTables[tableName] {
-		q = q.Table(table).Where(col+" = ? and ecosystem = ?", idStr, client.EcosystemID)
-	} else {
-		q = q.Table(table).Where(col+" = ?", idStr)
-	}
-
-	if len(form.Columns) > 0 {
-		q = q.Select(form.Columns)
-	}
-
-	rows, err := q.Rows()
+	result, err := t.Row(where, text, selected)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("Getting rows from table")
-		return nil, DefaultError("DB query is wrong")
+		return nil, dataError(err)
 	}
-
-	result, err := sqldb.GetResult(rows)
-	if err != nil {
-		return nil, DefaultError(err.Error())
-	}
-
-	if len(result) == 0 {
-		return nil, NotFoundError()
-	}
-
-	return &RowResult{
-		Value: result[0],
-	}, nil
+	return result, nil
 }
 
 type PartModel interface {
@@ -704,76 +542,42 @@ func (c *commonApi) GetSnippetRow(ctx RequestContext, auth Auth, name string) (P
 	return getSnippetRowMux(ctx, name)
 }
 
-type columnInfo struct {
-	Name string `json:"name"`
-	Type string `json:"type"`
-	Perm string `json:"perm"`
-}
-
 type TableResult struct {
-	Name       string       `json:"name"`
-	Insert     string       `json:"insert"`
-	NewColumn  string       `json:"new_column"`
-	Update     string       `json:"update"`
-	Read       string       `json:"read,omitempty"`
-	Filter     string       `json:"filter,omitempty"`
-	Conditions string       `json:"conditions"`
-	AppID      string       `json:"app_id"`
-	Columns    []columnInfo `json:"columns"`
+	Name       string             `json:"name"`
+	Insert     string             `json:"insert"`
+	NewColumn  string             `json:"new_column"`
+	Update     string             `json:"update"`
+	Read       string             `json:"read"`
+	Filter     string             `json:"filter"`
+	Conditions string             `json:"conditions"`
+	AppID      string             `json:"app_id"`
+	Columns    []dataquery.Column `json:"columns"`
 }
 
-func (c *commonApi) GetTable(ctx RequestContext, auth Auth, name string) (*TableResult, *Error) {
+// GetTable is a table's permissions and its columns with their types: a definition is public
+func (c *commonApi) GetTable(ctx RequestContext, auth Auth, name string, ecosystem *int64) (*TableResult, *Error) {
 	if name == "" {
 		return nil, InvalidParamsError(paramsEmpty)
 	}
-	r := ctx.HTTPRequest()
-	logger := getLogger(r)
-	client := getClient(r)
-	prefix := client.Prefix()
-
-	table := &sqldb.Table{}
-	table.SetTablePrefix(prefix)
-
-	_, err := table.Get(nil, strings.ToLower(name))
+	var eco int64
+	if ecosystem != nil {
+		eco = *ecosystem
+	}
+	t, err := dataquery.Describe(dataReader(getClient(ctx.HTTPRequest())), name, eco)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting table")
-		return nil, DefaultError(err.Error())
+		return nil, dataError(err)
 	}
-
-	if len(table.Name) == 0 {
-		return nil, DefaultError(fmt.Sprintf("Table %s has not been found", name))
-	}
-
-	var columnsMap map[string]string
-	err = json.Unmarshal([]byte(table.Columns), &columnsMap)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("Unmarshalling table columns to json")
-		return nil, DefaultError(err.Error())
-	}
-
-	columns := make([]columnInfo, 0)
-	for key, value := range columnsMap {
-		colType, err := sqldb.NewDbTransaction(nil).GetColumnType(prefix+`_`+name, key)
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting column type from db")
-			return nil, DefaultError(err.Error())
-		}
-		columns = append(columns, columnInfo{
-			Name: key,
-			Perm: value,
-			Type: colType,
-		})
-	}
+	perm := t.Record.Permissions
 	return &TableResult{
-		Name:       table.Name,
-		Insert:     table.Permissions.Insert,
-		NewColumn:  table.Permissions.NewColumn,
-		Update:     table.Permissions.Update,
-		Read:       table.Permissions.Read,
-		Filter:     table.Permissions.Filter,
-		Conditions: table.Conditions,
-		AppID:      converter.Int64ToStr(table.AppID),
-		Columns:    columns,
+		Name:       t.Name,
+		Insert:     perm.Insert,
+		NewColumn:  perm.NewColumn,
+		Update:     perm.Update,
+		Read:       perm.Read,
+		Filter:     perm.Filter,
+		Conditions: t.Record.Conditions,
+		AppID:      converter.Int64ToStr(t.Record.AppID),
+		Columns:    t.Columns(),
 	}, nil
 }
 

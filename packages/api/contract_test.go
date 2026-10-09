@@ -849,10 +849,10 @@ func TestEditContracts(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	code := row.Value[`value`]
+	code := row.Value[`value`].(string)
 	off := strings.IndexByte(code, '-')
 	newCode := code[:off+1] + time.Now().Format(`2006.01.02`) + code[off+11:]
-	form := url.Values{`Id`: {sid}, `Value`: {newCode}, `Conditions`: {row.Value[`conditions`]}, `WalletId`: {"01231234123412341230"}}
+	form := url.Values{`Id`: {sid}, `Value`: {newCode}, `Conditions`: {row.Value[`conditions`].(string)}, `WalletId`: {"01231234123412341230"}}
 	if err := postTx(`EditContract`, &form); err != nil {
 		t.Error(err)
 		return
@@ -1112,8 +1112,8 @@ func TestEditContracts_ChangeWallet(t *testing.T) {
 		return
 	}
 
-	code = row.Value[`value`]
-	form = url.Values{`Id`: {sid}, `Value`: {code}, `Conditions`: {row.Value[`conditions`]}, `WalletId`: {"1248-5499-7861-4204-5166"}}
+	code = row.Value[`value`].(string)
+	form = url.Values{`Id`: {sid}, `Value`: {code}, `Conditions`: {row.Value[`conditions`].(string)}, `WalletId`: {"1248-5499-7861-4204-5166"}}
 	err = postTx(`EditContract`, &form)
 	if err == nil {
 		t.Error("Expected `Contract activated` error")

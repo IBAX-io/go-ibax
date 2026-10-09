@@ -6,7 +6,7 @@
 package api
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -47,7 +47,11 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
 	table := "1_sections"
-	q := sqldb.GetDB(nil).Table(table).Where("ecosystem = ? AND status > 0", client.EcosystemID).Order("id ASC")
+	// The sections of no role are everyone's, the others are their roles' only
+	q := sqldb.GetDB(nil).Table(table).
+		Where("ecosystem = ? AND status > 0", client.EcosystemID).
+		Where("(roles_access IS NULL OR roles_access = '[]'::jsonb OR roles_access @> ?::jsonb)", fmt.Sprintf("[%d]", client.RoleID)).
+		Order("id ASC")
 
 	result := new(listResult)
 	err := q.Count(&result.Count).Error
@@ -72,24 +76,6 @@ func getSectionsHandler(w http.ResponseWriter, r *http.Request) {
 
 	var sections []map[string]string
 	for _, item := range result.List {
-		var roles []int64
-		if err := json.Unmarshal([]byte(item["roles_access"]), &roles); err != nil {
-			errorResponse(w, err)
-			return
-		}
-		if len(roles) > 0 {
-			var added bool
-			for _, v := range roles {
-				if v == client.RoleID {
-					added = true
-					break
-				}
-			}
-			if !added {
-				continue
-			}
-		}
-
 		if item["status"] == consts.StatusMainPage {
 			roles := &sqldb.Role{}
 			roles.SetTablePrefix(1)
