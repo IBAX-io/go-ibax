@@ -1,0 +1,5 @@
+@wtl 1
+<Menu>
+  <MenuItem title={t('system_developer')} icon="code" page="developer_index" />
+  <MenuItem title={t('system_import')} icon="upload" page="import_upload" />
+</Menu>

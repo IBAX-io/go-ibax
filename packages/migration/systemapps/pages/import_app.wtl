@@ -1,0 +1,56 @@
+@wtl 1
+<Page title={t('system_import')}>
+  <Include
+    name="pager_header"
+    props={{ title: t('system_import'), description: t('system_import_app_description') }}
+  />
+  <Query
+    id="info"
+    table="buffer_data"
+    columns={['value']}
+    where={{ key: 'import_info', account: $account }}
+    row
+  />
+  <Query
+    id="staged"
+    table="buffer_data"
+    columns={['value->data']}
+    where={{ key: 'import', account: $account }}
+    row
+  />
+  <If test={info.status != 'ready'}>
+    <Text tone="neutral">
+      {t('system_loading')}
+    </Text>
+  </If>
+  <ElseIf test={info.row == null || isEmpty(info.row.value)}>
+    <Alert tone="info">
+      {t('system_import_nothing')}
+    </Alert>
+    <Link page="import_upload">
+      {t('system_import_upload')}
+    </Link>
+  </ElseIf>
+  <Else>
+    <Card title={info.row.value.app_name}>
+      <Table
+        source={[{ kind: t('system_pages'), count: info.row.value.pages_count, names: info.row.value.pages }, { kind: t('system_blocks'), count: info.row.value.blocks_count, names: info.row.value.snippets }, { kind: t('system_menus'), count: info.row.value.menu_count, names: info.row.value.menu }, { kind: t('system_parameters'), count: info.row.value.parameters_count, names: info.row.value.parameters }, { kind: t('system_languages'), count: info.row.value.languages_count, names: info.row.value.languages }, { kind: t('system_contracts'), count: info.row.value.contracts_count, names: info.row.value.contracts }, { kind: t('system_tables'), count: info.row.value.tables_count, names: info.row.value.tables }]}
+        as="element"
+      >
+        <Column field="kind" label={t('system_import_element')} />
+        <Column field="count" label={t('system_import_count')} format="number" />
+        <Column field="names" label={t('system_import_names')}>
+          {isEmpty(element.names) ? t('system_import_none') : element.names}
+        </Column>
+      </Table>
+    </Card>
+    <Button
+      action={contract('@1Import', staged.row?.['value.data'])}
+      onSuccess={navigate('developer_index')}
+      tone="primary"
+      icon="download"
+    >
+      {t('system_import_run')}
+    </Button>
+  </Else>
+</Page>

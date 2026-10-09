@@ -72,7 +72,6 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	logger := f.Logger
 	data := f.Data
 	dbTx := in.DbTransaction
-	id := int64(0)
 	keyID := crypto.Address(data.PublicKey)
 	nodeKeyID := crypto.Address(data.NodePublicKey)
 	err = sqldb.ExecSchemaEcosystem(dbTx, migration.SqlData{
@@ -130,27 +129,6 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		return err
 	}
 
-	id, err = dbTx.GetNextID("1_pages")
-	if err != nil {
-		return err
-	}
-	err = sqldb.GetDB(dbTx).Exec(`insert into "1_pages" (id,name,menu,value,conditions) values(?, 'default_page',
-		  'default_menu', ?, 'ContractConditions("@1DeveloperCondition")')`,
-		id, syspar.SysString(`default_ecosystem_page`)).Error
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting default page")
-		return err
-	}
-	id, err = dbTx.GetNextID("1_menu")
-	if err != nil {
-		return err
-	}
-	err = sqldb.GetDB(dbTx).Exec(`insert into "1_menu" (id,name,value,title,conditions) values(?, 'default_menu', ?, ?, 'ContractAccess("@1EditMenu")')`,
-		id, syspar.SysString(`default_ecosystem_menu`), `default`).Error
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting default menu")
-		return err
-	}
 	err = smart.LoadContract(dbTx, 1)
 	if err != nil {
 		return err

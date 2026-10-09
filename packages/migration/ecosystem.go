@@ -12,6 +12,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/IBAX-io/go-ibax/packages/migration/systemapps"
 	"github.com/gobuffalo/fizz"
 	"github.com/gobuffalo/fizz/translators"
 )
@@ -149,8 +150,6 @@ func sqlTemplate(input []string, data any) (ret string, err error) {
 func GetEcosystemScript(data SqlData) (string, error) {
 	return sqlTemplate([]string{
 		contractsDataSQL,
-		menuDataSQL,
-		pagesDataSQL,
 		parametersDataSQL,
 		membersDataSQL,
 		sectionsDataSQL,
@@ -171,13 +170,26 @@ func GetFirstEcosystemScript(data SqlData) (ret string, err error) {
 		firstDelayedContractsDataSQL,
 		firstEcosystemDataSQL,
 	}, data)
+	if err != nil {
+		return
+	}
 	ret += out
 
+	// The system apps of ecosystem 1 and the default page and menu of a new ecosystem: WTL, from
+	// their one source
+	apps, err := systemapps.Load()
+	if err != nil {
+		return
+	}
+	records, err := apps.FirstEcosystemSQL()
+	if err != nil {
+		return
+	}
 	scripts := []string{
 		firstEcosystemContractsSQL,
-		firstEcosystemPagesDataSQL,
-		firstEcosystemBlocksDataSQL,
+		records,
 		platformParametersDataSQL,
+		apps.PlatformParametersSQL(),
 		firstTablesDataSQL,
 	}
 	ret += strings.Join(scripts, "\r\n")

@@ -1,0 +1,4 @@
+@wtl 1
+<Page>
+  <Include name="@1welcome" ecosystem={1} />
+</Page>

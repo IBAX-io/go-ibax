@@ -1,0 +1,19 @@
+@wtl 1
+<Block>
+  <Card title={t('system_welcome_title')}>
+    <Text>
+      {t('system_welcome_body')}
+    </Text>
+    <Stack direction="row" gap="md">
+      <Link page="@1developer_index">
+        {t('system_developer')}
+      </Link>
+      <Link page="@1import_upload">
+        {t('system_import')}
+      </Link>
+      <Link page="@1notifications">
+        {t('system_notifications')}
+      </Link>
+    </Stack>
+  </Card>
+</Block>

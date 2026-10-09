@@ -1,0 +1,23 @@
+@wtl 1
+<Page title={t('system_developer')}>
+  <Include
+    name="pager_header"
+    props={{ title: t('system_developer'), description: t('system_developer_description') }}
+  />
+  <Query
+    id="apps"
+    table="applications"
+    columns={['id', 'name']}
+    where={{ deleted: 0 }}
+    order={{ id: 'asc' }}
+  />
+  <Card title={t('system_applications')}>
+    <Table source={apps.rows} paginate empty={t('system_applications_none')}>
+      <Column field="id" label={t('system_id')} format="number" />
+      <Column field="name" label={t('system_name')} />
+    </Table>
+  </Card>
+  <Link page="import_upload">
+    {t('system_import')}
+  </Link>
+</Page>
