@@ -55,9 +55,8 @@ func (m Mode) SetCommonRoutes(r Router) {
 	api.HandleFunc("/sections", authRequire(getSectionsHandler)).Methods("GET")
 	api.HandleFunc("/row/{name}/{id}", authRequire(getRowHandler)).Methods("GET")
 	api.HandleFunc("/row/{name}/{column}/{id}", authRequire(getRowHandler)).Methods("GET")
-	api.HandleFunc("/interface/page/{name}", authRequire(getPageRowHandler)).Methods("GET")
-	api.HandleFunc("/interface/menu/{name}", authRequire(getMenuRowHandler)).Methods("GET")
-	api.HandleFunc("/interface/snippet/{name}", authRequire(getSnippetRowHandler)).Methods("GET")
+	api.HandleFunc("/interface/{kind:page|menu|snippet}/{name}", authRequire(getInterfaceHandler)).Methods("GET")
+	api.HandleFunc("/interface/{kind:page|menu|snippet}", authRequire(getInterfacesHandler)).Methods("GET")
 	api.HandleFunc("/table/{name}", authRequire(getTableHandler)).Methods("GET")
 	api.HandleFunc("/tables", authRequire(getTablesHandler)).Methods("GET")
 	api.HandleFunc("/config/{option}", getConfigOptionHandler).Methods("GET")
@@ -137,7 +136,8 @@ func WithCors(h http.Handler) http.Handler {
 	return handlers.CORS(
 		handlers.AllowedOrigins([]string{"*"}),
 		handlers.AllowedMethods([]string{"GET", "HEAD", "POST"}),
-		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "X-Requested-With"}),
+		handlers.AllowedHeaders([]string{"Authorization", "Content-Type", "X-Requested-With", "If-None-Match"}),
+		handlers.ExposedHeaders([]string{"ETag"}),
 		handlers.MaxAge(corsMaxAge),
 	)(h)
 }
