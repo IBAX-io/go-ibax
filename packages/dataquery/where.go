@@ -74,6 +74,17 @@ func (r ref) selectSQL() string {
 	return `CAST(jsonb_extract_path("` + r.column + `", '` + strings.Join(r.path, `', '`) + `') AS text)`
 }
 
+// selectList is the select list of a result, its columns read in the order given. Each is named by
+// its position, a name no column can have: unnamed, a column read as text would be named as the
+// column, and an ORDER BY of that name would sort the text (id 9 before id 10)
+func selectList(refs []ref) string {
+	selects := make([]string, len(refs))
+	for i, r := range refs {
+		selects[i] = r.selectSQL() + ` AS "#` + strconv.Itoa(i) + `"`
+	}
+	return strings.Join(selects, ", ")
+}
+
 // resultType is the type of the column or path in a result: a path reads JSON
 func (r ref) resultType() Type {
 	if len(r.path) > 0 {

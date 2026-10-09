@@ -143,6 +143,15 @@ func TestOrderNamesReadableColumnsAndEndsWithID(t *testing.T) {
 	}
 }
 
+func TestSelectListNamesColumnsAsNoColumnIsNamed(t *testing.T) {
+	refs := []ref{{column: "id", t: TypeNumber}, {column: "data", path: []string{"k"}, t: TypeJSON}}
+	assert.Equal(t,
+		`CAST("id" AS text) AS "#0", CAST(jsonb_extract_path("data", 'k') AS text) AS "#1"`, selectList(refs))
+	for _, name := range []string{"#0", "#1"} {
+		assert.False(t, identifier.MatchString(name), name)
+	}
+}
+
 // Injection payloads end up as bound values, or are refused as names: never in the SQL text
 var payloads = []string{
 	`'`, `''`, `' OR '1'='1`, `'; DROP TABLE "1_keys"; --`, `" OR "1"="1`, `\'`, `$1`, `$$`, `$tag$x$tag$`,

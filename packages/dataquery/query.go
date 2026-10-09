@@ -7,7 +7,6 @@ package dataquery
 
 import (
 	"strconv"
-	"strings"
 )
 
 const (
@@ -155,11 +154,7 @@ func (t *Table) Query(q Query) (*Result, error) {
 	}
 	rows.Close()
 
-	selects := make([]string, len(refs))
-	for i, r := range refs {
-		selects[i] = r.selectSQL()
-	}
-	text := `SELECT ` + strings.Join(selects, ", ") + filter
+	text := `SELECT ` + selectList(refs) + filter
 	if order != "" {
 		text += ` ORDER BY ` + order
 	}
@@ -195,12 +190,8 @@ func (t *Table) Row(column, value string, columns []string) (*RowResult, error) 
 	if err != nil {
 		return nil, err
 	}
-	selects := make([]string, len(refs))
-	for i, r := range refs {
-		selects[i] = r.selectSQL()
-	}
 	result := &RowResult{Columns: names(refs, columns)}
-	list, err := t.read(`SELECT `+strings.Join(selects, ", ")+` FROM `+t.from()+` WHERE `+visible+
+	list, err := t.read(`SELECT `+selectList(refs)+` FROM `+t.from()+` WHERE `+visible+
 		` AND `+cond+` LIMIT 1`, s.args, result.Columns)
 	if err != nil {
 		return nil, err
