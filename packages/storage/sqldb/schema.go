@@ -45,13 +45,16 @@ func ExecSchemaEcosystem(db *DbTransaction, data migration.SqlData) error {
 		if err := db.ExecSql(q); err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing first ecosystem schema")
 		}
-		q, err = migration.GetFirstTableScript(data)
-		if err != nil {
-			return err
-		}
-		if err := db.ExecSql(q); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing first tables schema")
-		}
+	}
+	// Every ecosystem declares the shared tables it keeps rows in, as the first one does: without them the
+	// node would take its pages, menus and other rows for tables of its own and refuse to read them
+	q, err = migration.GetTableScript(data)
+	if err != nil {
+		return err
+	}
+	if err := db.ExecSql(q); err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing tables schema")
+		return err
 	}
 	return nil
 }
