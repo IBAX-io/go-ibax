@@ -9,6 +9,7 @@ var firstTablesDataSQL = `
 INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VALUES
     (next_id('1_tables'), 'delayed_contracts',
         '{
+            "read": "true",
             "insert": "ContractAccess(\"@1NewDelayedContract\")",
             "update": "ContractAccess(\"@1CallDelayedContract\",\"@1EditDelayedContract\",\"@1CheckNodesBan\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
@@ -28,6 +29,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     ),
     (next_id('1_tables'), 'ecosystems',
         '{
+            "read": "true",
             "insert": "ContractAccess(\"@1NewEcosystem\")",
             "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1EcoFeeModeManage\",\"@1EditControlMode\",\"@1NewToken\",\"@1TeChange\",\"@1TeEmission\",\"@1TeBurn\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
@@ -49,6 +51,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     ),
     (next_id('1_tables'), 'platform_parameters',
         '{
+            "read": "true",
             "insert": "false",
             "update": "ContractAccess(\"@1UpdatePlatformParam\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
@@ -62,6 +65,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     ),
     (next_id('1_tables'), 'bad_blocks',
         '{
+            "read": "true",
             "insert": "ContractAccess(\"@1NewBadBlock\")",
             "update": "ContractAccess(\"@1NewBadBlock\", \"@1CheckNodesBan\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
@@ -78,6 +82,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     ),
     (next_id('1_tables'), 'node_ban_logs',
         '{
+            "read": "true",
             "insert": "ContractAccess(\"@1CheckNodesBan\")",
             "update": "ContractAccess(\"@1CheckNodesBan\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
@@ -92,6 +97,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     ),
     (next_id('1_tables'), 'time_zones',
         '{
+            "read": "true",
             "insert": "false",
             "update": "false",
             "new_column": "false"
