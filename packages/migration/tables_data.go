@@ -197,6 +197,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     (next_id('1_tables'), 'notifications',
         '{
             "read": "true",
+            "rows": "{\"$or\": [{\"recipient->account\": \"$account\"}, {\"recipient->role_id\": {\"$in\": \"$roles\"}}, {\"sender->account\": \"$account\"}]}",
             "insert": "ContractAccess(\"@1NotificationsSend\", \"@1CheckNodesBan\", \"@1NotificationsBroadcast\")",
             "update": "ContractAccess(\"@1NotificationsSend\", \"@1NotificationsClose\", \"@1NotificationsProcess\", \"@1NotificationsUpdateParams\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
@@ -303,6 +304,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     (next_id('1_tables'), 'buffer_data',
         '{
             "read": "true",
+            "rows": "{\"account\": \"$account\"}",
             "insert": "true",
             "update": "true",
             "new_column": "ContractConditions(\"@1MainCondition\")"

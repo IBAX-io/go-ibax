@@ -24,6 +24,25 @@ The reader is the key of the session. Read conditions come from the table's row 
 A condition is evaluated in the table's ecosystem, with the reader's key. If it fails to evaluate,
 it counts as not holding.
 
+`permissions.rows` is the table's row scope: a filter of the query language below, as JSON text.
+Every read of the table (list, row, sum, history) sees only the rows it matches, whoever reads. In
+place of a whole value it may name the reader's:
+
+| Name            | Value                                                        |
+| --------------- | ------------------------------------------------------------ |
+| `$account`      | the reader's account                                         |
+| `$key_id`       | the reader's key id                                          |
+| `$ecosystem_id` | the ecosystem of the session                                 |
+| `$roles`        | the ids of the roles the reader holds in the table's ecosystem, a list for `$in` and `$nin` |
+
+The scope may name any column of the table, readable by the reader or not. A scope that is not a
+filter of the table, or names another `$` value, refuses the table (`E_ACCESS_DENIED`).
+`NewTable` and `EditTable` refuse a scope that is not a JSON object. The row scope binds the data
+API only: contracts read tables as before.
+
+In the genesis data, `buffer_data` is scoped to the reader's account, and `notifications` to those
+the reader sent, those sent to the reader's account, and those sent to a role the reader holds.
+
 A table that exists in the database but has no row in `1_tables` belongs to the node itself. It is
 never read through this API (`E_ACCESS_DENIED`).
 
@@ -39,7 +58,7 @@ Every table in the genesis data of a new chain declares `permissions.read`.
 | `GET row/{table}/{column}/{value}`    |                                | the row whose column holds the value              |
 | `POST sumWhere/{table}` (JSON body)   |                                | `{"sum": "<decimal>"}` of a numeric column        |
 | `GET table/{table}`                   | `getTable(name, ecosystem)`    | the table's permissions and columns (public)      |
-| `GET history/{table}/{id}`            |                                | past values of a row, readable columns only       |
+| `GET history/{table}/{id}`            |                                | past values of a row the reader sees, readable columns only |
 
 REST GETs take `ecosystem` and `columns` (comma separated) as URL parameters.
 
@@ -150,5 +169,5 @@ whose `data.error` is the code.
 | `E_WHERE`         | 400    | a filter, order or body outside this language             |
 | `E_LIMIT`         | 400    | a limit or offset out of range                            |
 | `E_TABLENOTFOUND` | 404    | no such table                                             |
-| `E_NOTFOUND`      | 404    | no such row                                               |
+| `E_NOTFOUND`      | 404    | no such row, or none the reader sees                      |
 | `E_QUERY`         | 500    | a database failure, logged by the node                    |

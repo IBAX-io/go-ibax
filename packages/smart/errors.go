@@ -25,6 +25,7 @@ const (
 	eNotCondition          = `There is not %s in parameters`
 	eParamNotFound         = `Parameter %s has not been found`
 	eRecordNotFound        = `Record %s has not been found`
+	eRowScope              = `%s is not a filter object`
 	eTableExists           = `table %s exists`
 	eTableNotFound         = `table %s has not been found`
 	eTypeJSON              = `Type %T doesn't support json marshalling`

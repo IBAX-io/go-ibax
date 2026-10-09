@@ -36,6 +36,8 @@ type Permissions struct {
 	Update    string `json:"update"`
 	Read      string `json:"read"`
 	Filter    string `json:"filter"`
+	// Rows is the row scope of the data API: a filter of its query language, as JSON text
+	Rows string `json:"rows,omitempty"`
 }
 
 func (p Permissions) Value() (driver.Value, error) {
@@ -186,4 +188,3 @@ func GetTableQuery(table string, ecosystemID int64) *gorm.DB {
 
 	return GetDB(nil).Table(converter.ParseTable(table, ecosystemID))
 }
-

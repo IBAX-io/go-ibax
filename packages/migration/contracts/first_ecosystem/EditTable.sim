@@ -7,6 +7,7 @@ contract EditTable {
         UpdatePerm string
         NewColumnPerm string
         ReadPerm string "optional"
+        RowsPerm string "optional"
     }
 
     conditions {
@@ -26,6 +27,9 @@ contract EditTable {
         permissions["new_column"] = $NewColumnPerm
         if $ReadPerm {
             permissions["read"] = $ReadPerm
+        }
+        if $RowsPerm {
+            permissions["rows"] = $RowsPerm
         }
         $Permissions = permissions
         TableConditions($Name, "", JSONEncode($Permissions))

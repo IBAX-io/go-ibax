@@ -7,6 +7,7 @@ package api
 
 import (
 	stdErrors "errors"
+	"strings"
 	"testing"
 )
 
@@ -26,12 +27,9 @@ func TestHistory(t *testing.T) {
 		t.Error(stdErrors.New("History should not be empty"))
 	}
 
+	// No history of a row the reader does not see
 	err = sendGet("history/pages/1000", nil, &ret)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if len(ret.List) != 0 {
-		t.Error(stdErrors.New("History should be empty"))
+	if err == nil || !strings.Contains(err.Error(), "E_NOTFOUND") {
+		t.Error(stdErrors.New("History of a missing row should not be found"), err)
 	}
 }

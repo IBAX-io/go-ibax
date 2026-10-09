@@ -64,6 +64,8 @@ type permTable struct {
 	NewColumn string `json:"new_column"`
 	Read      string `json:"read,omitempty"`
 	Filter    string `json:"filter,omitempty"`
+	// Rows is the row scope of the data API: a filter of its query language, as JSON text
+	Rows string `json:"rows,omitempty"`
 }
 
 type permColumn struct {
@@ -1311,6 +1313,13 @@ func TableConditions(sc *SmartContract, name, columns, permissions string) (err 
 	for i := 0; i < v.NumField(); i++ {
 		cond := v.Field(i).Interface().(string)
 		name := v.Type().Field(i).Name
+		if name == `Rows` {
+			var rows map[string]any
+			if len(cond) > 0 && json.Unmarshal([]byte(cond), &rows) != nil {
+				return logErrorfShort(eRowScope, name, consts.InvalidObject)
+			}
+			continue
+		}
 		if len(cond) == 0 && name != `Read` && name != `Filter` {
 			return logErrorfShort(eEmptyCond, name, consts.EmptyObject)
 		}
