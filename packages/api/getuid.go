@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -30,6 +31,7 @@ type getUIDResult struct {
 	NetworkID   string `json:"network_id,omitempty"`
 	Cryptoer    string `json:"cryptoer"`
 	Hasher      string `json:"hasher"`
+	Fips        bool   `json:"fips"` // the node runs in FIPS 140-3 mode
 }
 
 func getUIDHandler(w http.ResponseWriter, r *http.Request) {
@@ -37,6 +39,7 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 	result.NetworkID = converter.Int64ToStr(conf.Config.LocalConf.NetworkID)
 	token := getToken(r)
 	result.Cryptoer, result.Hasher = conf.Config.CryptoSettings.Cryptoer, conf.Config.CryptoSettings.Hasher
+	result.Fips = crypto.FIPSMode()
 	if token != nil {
 		if claims, ok := token.Claims.(*JWTClaims); ok && len(claims.KeyID) > 0 {
 			result.EcosystemID = claims.EcosystemID

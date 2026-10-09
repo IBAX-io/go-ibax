@@ -1,8 +1,6 @@
 package jsonrpc
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -10,7 +8,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	log "github.com/sirupsen/logrus"
 	"strconv"
-	"strings"
 )
 
 type NotSingle struct {
@@ -21,21 +18,6 @@ type dataApi struct {
 
 func newDataApi() *dataApi {
 	return &dataApi{}
-}
-
-func compareHash(data []byte, urlHash string) bool {
-	urlHash = strings.ToLower(urlHash)
-
-	var hash []byte
-	switch len(urlHash) {
-	case 32:
-		h := md5.Sum(data)
-		hash = h[:]
-	case 64:
-		hash = crypto.Hash(data)
-	}
-
-	return hex.EncodeToString(hash) == urlHash
 }
 
 func (d *dataApi) BinaryVerify(ctx RequestContext, notSingle NotSingle, binaryId int64, hash string) *Error {
@@ -61,7 +43,7 @@ func (d *dataApi) BinaryVerify(ctx RequestContext, notSingle NotSingle, binaryId
 		return NotFoundError()
 	}
 
-	if !compareHash(bin.Data, hash) {
+	if !crypto.MatchesDataHash(bin.Data, hash) {
 		return DefaultError("Hash is incorrect")
 	}
 
@@ -86,7 +68,7 @@ func (d *dataApi) DataVerify(ctx RequestContext, notSingle NotSingle, table, col
 		return NotFoundError()
 	}
 
-	if !compareHash([]byte(data), hash) {
+	if !crypto.MatchesDataHash([]byte(data), hash) {
 		return DefaultError("Hash is incorrect")
 	}
 

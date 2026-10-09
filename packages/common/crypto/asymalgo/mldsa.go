@@ -79,3 +79,10 @@ func (l *mldsaLevel) key(seed []byte) (*mldsa.PrivateKey, error) {
 	}
 	return mldsa.NewPrivateKey(l.params(), seed)
 }
+
+// MLDSAAvailable reports whether the Go Cryptographic Module the node is built with implements
+// ML-DSA. Module v1.0.0 (GOFIPS140=v1.0.0) does not: crypto/mldsa then fails on every key.
+func MLDSAAvailable() bool {
+	_, err := mldsa.NewPrivateKey(mldsa.MLDSA65(), make([]byte, MLDSASeedSize))
+	return err == nil
+}

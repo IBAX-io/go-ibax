@@ -116,7 +116,9 @@ type SNDaemonFactory struct {
 
 // Load loads subnode daemons
 func (l SNDaemonFactory) Load(ctx context.Context) error {
-	daemons.InitialLoad(l.logger)
+	if err := daemons.InitialLoad(l.logger); err != nil {
+		return err
+	}
 
 	if err := syspar.SysUpdate(nil); err != nil {
 		log.Errorf("can't read platform parameters: %s", utils.ErrInfo(err))

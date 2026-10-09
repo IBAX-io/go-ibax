@@ -6,12 +6,9 @@
 package api
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -24,21 +21,6 @@ import (
 )
 
 const binaryColumn = "data"
-
-func compareHash(data []byte, urlHash string) bool {
-	urlHash = strings.ToLower(urlHash)
-
-	var hash []byte
-	switch len(urlHash) {
-	case 32:
-		h := md5.Sum(data)
-		hash = h[:]
-	case 64:
-		hash = crypto.Hash(data)
-	}
-
-	return hex.EncodeToString(hash) == urlHash
-}
 
 func getDataHandler(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
@@ -58,7 +40,7 @@ func getDataHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !compareHash([]byte(data), params["hash"]) {
+	if !crypto.MatchesDataHash([]byte(data), params["hash"]) {
 		errorResponse(w, errHashWrong)
 		return
 	}
@@ -87,7 +69,7 @@ func getBinaryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !compareHash(bin.Data, params["hash"]) {
+	if !crypto.MatchesDataHash(bin.Data, params["hash"]) {
 		errorResponse(w, errHashWrong)
 		return
 	}

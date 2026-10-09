@@ -88,6 +88,7 @@ type GetUIDResult struct {
 	NetworkID   string `json:"network_id,omitempty"`
 	Cryptoer    string `json:"cryptoer"`
 	Hasher      string `json:"hasher"`
+	Fips        bool   `json:"fips"` // the node runs in FIPS 140-3 mode
 }
 
 func (a *authApi) GetUid(ctx RequestContext) (*GetUIDResult, *Error) {
@@ -98,6 +99,7 @@ func (a *authApi) GetUid(ctx RequestContext) (*GetUIDResult, *Error) {
 	r := ctx.HTTPRequest()
 	token := getToken(r)
 	result.Cryptoer, result.Hasher = conf.Config.CryptoSettings.Cryptoer, conf.Config.CryptoSettings.Hasher
+	result.Fips = crypto.FIPSMode()
 	if token != nil {
 		if claims, ok := token.Claims.(*JWTClaims); ok && len(claims.KeyID) > 0 {
 			result.EcosystemID = claims.EcosystemID

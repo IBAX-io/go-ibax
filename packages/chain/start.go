@@ -7,7 +7,6 @@ package chain
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"github.com/IBAX-io/go-ibax/packages/service/jsonrpc"
 	"math/rand"
@@ -118,11 +117,11 @@ func Start() {
 		utils.ReturnCh = make(chan string)
 
 		// The installation process is already finished (where user has specified DB and where wallet has been restarted)
-		err = daemonsctl.RunAllDaemons(ctx)
-		log.Info("Daemons started")
-		if err != nil {
+		if err = daemonsctl.RunAllDaemons(ctx); err != nil {
+			log.WithError(err).Error("starting daemons")
 			exitErr(1)
 		}
+		log.Info("Daemons started")
 	}
 
 	daemons.WaitForSignals()
@@ -213,11 +212,7 @@ func initRoutes(listenHost string) {
 			s := &http.Server{
 				Addr:    listenHost,
 				Handler: handler,
-				TLSConfig: &tls.Config{
-					MinVersion:             tls.VersionTLS12,
-					SessionTicketsDisabled: true,
-					//ClientAuth:   tls.RequireAndVerifyClientCert,
-				},
+				TLSConfig: serverTLSConfig(),
 			}
 			err := s.ListenAndServeTLS(conf.Config.TLSConf.TLSCert, conf.Config.TLSConf.TLSKey)
 
