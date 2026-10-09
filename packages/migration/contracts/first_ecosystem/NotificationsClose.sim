@@ -1,0 +1,38 @@
+// +prop AppID = '1'
+// +prop Conditions = 'ContractConditions("MainCondition")'
+contract NotificationsClose {
+    data {
+        NotificationId int
+    }
+
+    conditions {
+        var row map
+        row = DBFind("@1notifications").Columns("notification->type,recipient->account,recipient->role_id,processing_info->account,closed").Where({"id": $NotificationId, "ecosystem": $ecosystem_id}).Row()
+        if !row {
+            warning Sprintf("Notification %d does not exist", $NotificationId)
+        }
+        if Int(row["closed"]) != 0 {
+            warning "The notification is closed"
+        }
+        $kind = Int(row["notification.type"])
+        if $kind == 1 {
+            if row["recipient.account"] != $account_id {
+                warning "Only its recipient closes the notification"
+            }
+        } else {
+            if row["processing_info.account"] != $account_id {
+                warning "Only the member who took it up closes the notification"
+            }
+            $role = Int(row["recipient.role_id"])
+        }
+    }
+
+    action {
+        DBUpdate("@1notifications", $NotificationId, {"closed": 1, "date_closed": $block_time})
+        if $kind == 1 {
+            UpdateNotifications($ecosystem_id, $account_id)
+        } else {
+            UpdateRolesNotifications($ecosystem_id, $role)
+        }
+    }
+}
