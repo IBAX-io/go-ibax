@@ -140,6 +140,9 @@ type loginForm struct {
 	KeyID       string         `json:"key_id"`
 	Signature   hexValue       `json:"signature"`
 	RoleID      int64          `json:"role_id"`
+	// Signs in as the guest account (consts.GuestKey); the other fields but ecosystem and expire
+	// are ignored
+	Guest bool `json:"guest"`
 }
 
 type publicKeyValue struct {
@@ -164,16 +167,16 @@ func (f *loginForm) Validate(r *http.Request) error {
 }
 
 type LoginResult struct {
-	Token       string        `json:"token,omitempty"`
-	EcosystemID string        `json:"ecosystem_id,omitempty"`
-	KeyID       string        `json:"key_id,omitempty"`
-	Account     string        `json:"account,omitempty"`
-	NotifyKey   string        `json:"notify_key,omitempty"`
-	IsNode      bool          `json:"isnode"`
-	IsOwner     bool          `json:"isowner"`
+	Token        string        `json:"token,omitempty"`
+	EcosystemID  string        `json:"ecosystem_id,omitempty"`
+	KeyID        string        `json:"key_id,omitempty"`
+	Account      string        `json:"account,omitempty"`
+	NotifyKey    string        `json:"notify_key,omitempty"`
+	IsNode       bool          `json:"isnode"`
+	IsOwner      bool          `json:"isowner"`
 	IsChildChain bool          `json:"clb"` // JSON tag kept for API compatibility
-	Timestamp   string        `json:"timestamp,omitempty"`
-	Roles       []rolesResult `json:"roles,omitempty"`
+	Timestamp    string        `json:"timestamp,omitempty"`
+	Roles        []rolesResult `json:"roles,omitempty"`
 }
 
 type rolesResult struct {
@@ -207,7 +210,9 @@ func (a authApi) Login(ctx RequestContext, form *loginForm) (*LoginResult, *Erro
 		client.EcosystemID = 1
 	}
 
-	if len(form.KeyID) > 0 {
+	if form.Guest {
+		wallet = converter.StrToInt64(consts.GuestKey)
+	} else if len(form.KeyID) > 0 {
 		wallet = converter.StringToAddress(form.KeyID)
 	} else if len(form.PublicKey.Bytes()) > 0 {
 		wallet = crypto.Address(form.PublicKey.Bytes())
@@ -220,121 +225,131 @@ func (a authApi) Login(ctx RequestContext, form *loginForm) (*LoginResult, *Erro
 		return nil, DefaultError(err.Error())
 	}
 
-	spfm.SetTablePrefix(converter.Int64ToStr(client.EcosystemID))
-	if ok, err := spfm.Get(nil, "free_membership"); err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting free_membership parameter")
-		return nil, DefaultError(err.Error())
-	} else if ok {
-		fm = converter.StrToInt64(spfm.Value)
-	}
-	publicKey = account.PublicKey
-	isExistPub = len(publicKey) == 0
-
-	isCan := func(a, e bool) bool {
-		return !a || (a && e)
-	}
-	if isCan(isAccount, isExistPub) {
-		if !(fm == 1 || client.EcosystemID == 1) {
-			return nil, DefaultError(fmt.Sprintf("The ecosystem (%d) is not open and cannot be registered address", client.EcosystemID))
-		}
-	}
-
-	if isAccount && !isExistPub {
-		if account.Deleted == 1 {
-			return nil, DefaultError("The key is deleted")
-		}
-	} else {
-		if !allowCreateUser(client) {
+	// The guest key is public: a signature made with it proves nothing, so none is asked for (a
+	// client that may not sign in software, on a FIPS 140-3 network, signs in as a guest too). The
+	// session reads like any other; every transaction still carries its own signature.
+	if form.Guest {
+		if !isAccount || account.Deleted == 1 {
 			return nil, DefaultError("Key has not been found")
 		}
+		form.RoleID = 0
+	} else {
+		spfm.SetTablePrefix(converter.Int64ToStr(client.EcosystemID))
+		if ok, err := spfm.Get(nil, "free_membership"); err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting free_membership parameter")
+			return nil, DefaultError(err.Error())
+		} else if ok {
+			fm = converter.StrToInt64(spfm.Value)
+		}
+		publicKey = account.PublicKey
+		isExistPub = len(publicKey) == 0
+
+		isCan := func(a, e bool) bool {
+			return !a || (a && e)
+		}
 		if isCan(isAccount, isExistPub) {
-			publicKey = form.PublicKey.Bytes()
-			if len(publicKey) == 0 {
+			if !(fm == 1 || client.EcosystemID == 1) {
+				return nil, DefaultError(fmt.Sprintf("The ecosystem (%d) is not open and cannot be registered address", client.EcosystemID))
+			}
+		}
+
+		if isAccount && !isExistPub {
+			if account.Deleted == 1 {
+				return nil, DefaultError("The key is deleted")
+			}
+		} else {
+			if !allowCreateUser(client) {
+				return nil, DefaultError("Key has not been found")
+			}
+			if isCan(isAccount, isExistPub) {
+				publicKey = form.PublicKey.Bytes()
+				if len(publicKey) == 0 {
+					logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty")
+					return nil, DefaultError("Public key is undefined")
+				}
+
+				nodePrivateKey := syspar.GetNodePrivKey()
+
+				contract := smart.GetContract("NewUser", 1)
+				sc := types.SmartTransaction{
+					Header: &types.Header{
+						ID:          int(contract.Info().ID),
+						EcosystemID: 1,
+						Time:        time.Now().Unix(),
+						KeyID:       conf.Config.KeyID,
+						NetworkID:   conf.Config.LocalConf.NetworkID,
+					},
+					Params: map[string]any{
+						"NewPubkey": hex.EncodeToString(publicKey),
+						"Ecosystem": client.EcosystemID,
+					},
+				}
+
+				stp := &transaction.SmartTransactionParser{
+					SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
+				}
+				txData, err := stp.BinMarshalWithPrivate(&sc, nodePrivateKey, true)
+				if err != nil {
+					log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("Building transaction")
+					return nil, DefaultError(err.Error())
+				}
+
+				// Logins of the same new key within one second make the very same transaction: the
+				// first queues it, the others wait like the first
+				if err := a.mode.ContractRunner.RunContract(txData, stp.Hash, sc.KeyID, stp.Timestamp, logger); err != nil {
+					if known, _ := sqldb.IsTransactionKnown(stp.Hash); !known {
+						return nil, DefaultError(err.Error())
+					}
+				}
+
+				if !conf.Config.IsSupportingChildChain() {
+					timeout := time.Duration(2*3*syspar.GetMaxBlockGenerationTime()) * time.Millisecond
+					if err := transaction.AwaitNewUser(account, wallet, stp.Hash, timeout); err != nil {
+						return nil, DefaultError(err.Error())
+					}
+				}
+
+			} else {
+				logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty, and state is not default")
+				return nil, DefaultError(fmt.Sprintf("%d is not a membership of ecosystem %d", wallet, client.EcosystemID))
+			}
+		}
+
+		if len(publicKey) == 0 {
+			if client.EcosystemID > 1 {
+				logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty, and state is not default")
+				return nil, DefaultError(fmt.Sprintf("%d is not a membership of ecosystem %d", wallet, client.EcosystemID))
+			}
+
+			if len(form.PublicKey.Bytes()) == 0 {
 				logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty")
 				return nil, DefaultError("Public key is undefined")
 			}
+		}
 
-			nodePrivateKey := syspar.GetNodePrivKey()
-
-			contract := smart.GetContract("NewUser", 1)
-			sc := types.SmartTransaction{
-				Header: &types.Header{
-					ID:          int(contract.Info().ID),
-					EcosystemID: 1,
-					Time:        time.Now().Unix(),
-					KeyID:       conf.Config.KeyID,
-					NetworkID:   conf.Config.LocalConf.NetworkID,
-				},
-				Params: map[string]any{
-					"NewPubkey": hex.EncodeToString(publicKey),
-					"Ecosystem": client.EcosystemID,
-				},
-			}
-
-			stp := &transaction.SmartTransactionParser{
-				SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
-			}
-			txData, err := stp.BinMarshalWithPrivate(&sc, nodePrivateKey, true)
+		if form.RoleID != 0 && client.RoleID == 0 {
+			checkedRole, err := checkRoleFromParam(form.RoleID, client.EcosystemID, account.AccountID)
 			if err != nil {
-				log.WithFields(log.Fields{"type": consts.ContractError, "err": err}).Error("Building transaction")
 				return nil, DefaultError(err.Error())
 			}
 
-			// Logins of the same new key within one second make the very same transaction: the
-			// first queues it, the others wait like the first
-			if err := a.mode.ContractRunner.RunContract(txData, stp.Hash, sc.KeyID, stp.Timestamp, logger); err != nil {
-				if known, _ := sqldb.IsTransactionKnown(stp.Hash); !known {
-					return nil, DefaultError(err.Error())
-				}
+			if checkedRole != form.RoleID {
+				return nil, DefaultError("Access denied")
 			}
 
-			if !conf.Config.IsSupportingChildChain() {
-				timeout := time.Duration(2*3*syspar.GetMaxBlockGenerationTime()) * time.Millisecond
-				if err := transaction.AwaitNewUser(account, wallet, stp.Hash, timeout); err != nil {
-					return nil, DefaultError(err.Error())
-				}
-			}
-
-		} else {
-			logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty, and state is not default")
-			return nil, DefaultError(fmt.Sprintf("%d is not a membership of ecosystem %d", wallet, client.EcosystemID))
-		}
-	}
-
-	if len(publicKey) == 0 {
-		if client.EcosystemID > 1 {
-			logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty, and state is not default")
-			return nil, DefaultError(fmt.Sprintf("%d is not a membership of ecosystem %d", wallet, client.EcosystemID))
+			client.RoleID = checkedRole
 		}
 
-		if len(form.PublicKey.Bytes()) == 0 {
-			logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty")
-			return nil, DefaultError("Public key is undefined")
-		}
-	}
-
-	if form.RoleID != 0 && client.RoleID == 0 {
-		checkedRole, err := checkRoleFromParam(form.RoleID, client.EcosystemID, account.AccountID)
+		verify, err := crypto.Verify(publicKey, []byte(nonceSalt()+uid), form.Signature.Bytes())
 		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.CryptoError, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Info("checking signature")
 			return nil, DefaultError(err.Error())
 		}
 
-		if checkedRole != form.RoleID {
-			return nil, DefaultError("Access denied")
+		if !verify {
+			logger.WithFields(log.Fields{"type": consts.InvalidObject, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Error("incorrect signature")
+			return nil, DefaultError("Signature is incorrect")
 		}
-
-		client.RoleID = checkedRole
-	}
-
-	verify, err := crypto.Verify(publicKey, []byte(nonceSalt()+uid), form.Signature.Bytes())
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.CryptoError, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Info("checking signature")
-		return nil, DefaultError(err.Error())
-	}
-
-	if !verify {
-		logger.WithFields(log.Fields{"type": consts.InvalidObject, "pubkey": publicKey, "uid": uid, "signature": form.Signature.Bytes()}).Error("incorrect signature")
-		return nil, DefaultError("Signature is incorrect")
 	}
 
 	spfounder.SetTablePrefix(converter.Int64ToStr(client.EcosystemID))
@@ -346,12 +361,12 @@ func (a authApi) Login(ctx RequestContext, form *loginForm) (*LoginResult, *Erro
 	}
 
 	result := &LoginResult{
-		Account:     account.AccountID,
-		EcosystemID: converter.Int64ToStr(client.EcosystemID),
-		KeyID:       converter.Int64ToStr(wallet),
-		IsOwner:     founder == wallet,
-		IsNode:      conf.Config.KeyID == wallet,
-		IsChildChain:       conf.Config.IsSupportingChildChain(),
+		Account:      account.AccountID,
+		EcosystemID:  converter.Int64ToStr(client.EcosystemID),
+		KeyID:        converter.Int64ToStr(wallet),
+		IsOwner:      founder == wallet,
+		IsNode:       conf.Config.KeyID == wallet,
+		IsChildChain: conf.Config.IsSupportingChildChain(),
 	}
 
 	claims := JWTClaims{
