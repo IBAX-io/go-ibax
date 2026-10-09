@@ -32,6 +32,7 @@ var updateMigrations = []*migration{
 	{"0.0.3", updates.MigrationUpdatePriceExec, false},
 	{"0.0.4", updates.MigrationUpdateAccessExec, false},
 	{"0.0.5", updates.MigrationUpdatePriceCreateExec, false},
+	{"0.0.6", updates.MigrationUTXOMovementsIndex, false},
 }
 
 type migration struct {

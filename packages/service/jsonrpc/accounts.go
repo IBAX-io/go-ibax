@@ -7,9 +7,11 @@ package jsonrpc
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/utxo"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"net/http"
@@ -143,4 +145,38 @@ func (b *accountsApi) GetBalance(ctx RequestContext, info *AccountOrKeyId, ecosy
 		TokenSymbol: eco.TokenSymbol,
 		TokenName:   eco.TokenName,
 	}, nil
+}
+
+// UtxoMovements is the UTXO movements of an account, as public as its balance
+func (b *accountsApi) UtxoMovements(ctx RequestContext, info *AccountOrKeyId, ecosystemId *int64, before *int64, limit *int64) (*utxo.Page, *Error) {
+	r := ctx.HTTPRequest()
+	logger := getLogger(r)
+	form := &ecosystemForm{
+		Validator: b.EcosystemGetter,
+	}
+	if ecosystemId != nil {
+		form.EcosystemID = *ecosystemId
+	}
+	if err := parameterValidator(r, form); err != nil {
+		return nil, InvalidParamsError(err.Error())
+	}
+	if err := parameterValidator(r, info); err != nil {
+		return nil, InvalidParamsError(err.Error())
+	}
+	from, size := int64(0), utxo.DefaultLimit
+	if before != nil {
+		from = *before
+	}
+	if limit != nil {
+		size = int(*limit)
+	}
+	if from < 0 || size < 1 || size > utxo.MaxLimit {
+		return nil, InvalidParamsError(fmt.Sprintf("paging is wrong: before %d, limit %d", from, size))
+	}
+	page, err := utxo.Movements(info.KeyId, form.EcosystemID, from, size)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("listing UTXO movements")
+		return nil, DefaultError(err.Error())
+	}
+	return page, nil
 }

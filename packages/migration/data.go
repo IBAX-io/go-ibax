@@ -102,7 +102,7 @@ var (
 		t.Column("ecosystem", "bigint", {"default": "1"})
 		t.Column("block_id", "bigint")
 		t.Column("type", "bigint")
-	{{footer "primary(output_tx_hash,output_key_id,output_index)" "index(block_id)" "index(input_tx_hash)" "index(output_key_id)" "index(output_tx_hash)"}}
+	{{footer "primary(output_tx_hash,output_key_id,output_index)" "index(block_id)" "index(input_tx_hash)" "index(output_key_id)" "index(output_tx_hash)" "index(ecosystem, output_key_id, block_id)"}}
 
 	{{head "transactions"}}
 		t.Column("hash", "bytea", {"default": ""})

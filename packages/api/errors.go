@@ -55,6 +55,7 @@ var (
 	errBanned            = errType{"E_BANNED", "The key %d is banned till %s", http.StatusForbidden}
 	errCheckRole         = errType{"E_CHECKROLE", "Access denied", http.StatusForbidden}
 	errNewUser           = errType{"E_NEWUSER", "The block packing in progress, please wait", http.StatusUnauthorized}
+	errUTXOPaging        = errType{"E_UTXOPAGING", "Paging is wrong: before %d, limit %d", http.StatusBadRequest}
 	errEcoNotOpen        = errType{"E_ECONOTOPEN", "The ecosystem (%d) is not open and cannot be registered address", http.StatusUnauthorized}
 )
 
