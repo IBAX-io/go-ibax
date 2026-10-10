@@ -223,3 +223,11 @@ func GetAccountAlgorithms() AccountAlgorithmSet {
 	defer mutex.RUnlock()
 	return accountAlgos
 }
+
+// SetAccountAlgorithms sets the value of account_algorithms where there is no database to read it
+// from (tests, tools)
+func SetAccountAlgorithms(set AccountAlgorithmSet) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	accountAlgos = set
+}

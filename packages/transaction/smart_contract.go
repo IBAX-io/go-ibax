@@ -73,9 +73,14 @@ func (s *SmartTransactionParser) Validate() error {
 		return err
 	}
 	// The header carries the key that signs; whether the account may sign with it is checked
-	// when the transaction runs
+	// when the transaction runs. Validate runs only when a transaction enters the queue, so a key
+	// of an algorithm the network takes no longer is refused here with the clock: the block time
+	// decides once it runs.
 	key, err := crypto.ParseAccountKey(s.TxSmart.PublicKey)
 	if err != nil {
+		return err
+	}
+	if err := syspar.GetAccountAlgorithms().CheckSign(key.Algo, time.Now().Unix()); err != nil {
 		return err
 	}
 	signature, err := utils.TxSignature(s.TxSignature)

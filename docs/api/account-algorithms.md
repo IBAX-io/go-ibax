@@ -38,6 +38,8 @@ The platform parameter lists the algorithms account keys may have:
 - A key registers (a new key signing `@1NewUser`, the contract function `HexToPub`, a login with a
   key not registered) on or before `register_until` as well.
 - Days are whole UTC days. A missing day is no limit.
+- A node refuses a transaction it is sent (`sendTx`) whose header key may not sign by its clock;
+  once in a block, the block time decides.
 - A new value may move a day earlier or add one, never later or away; an algorithm is removed
   only when no key, not deleted, has it.
 
