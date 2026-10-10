@@ -48,7 +48,7 @@ func UpdateMachineStatus(localAddress, tcpAddress string, logger *log.Entry) ([]
 	}
 
 	signStr := voteMsg.VoteForSign()
-	signed, err := crypto.SignString(NodePrivateKey, signStr)
+	signed, err := crypto.NodeSignString(NodePrivateKey, signStr)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing voteMsg")
 		return nil, err

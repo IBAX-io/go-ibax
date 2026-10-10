@@ -118,7 +118,7 @@ func checkClientVote(r *network.CandidateNodeVotingRequest, voteMsgParam *networ
 	}
 	pk, err := hex.DecodeString(candidateNodeSql.NodePubKey)
 	pk = crypto.CutPub(pk)
-	_, err = crypto.Verify(pk, []byte(voteMsgParam.VoteForSign()), voteMsgParam.Sign)
+	_, err = crypto.NodeVerify(pk, []byte(voteMsgParam.VoteForSign()), voteMsgParam.Sign)
 	if err != nil {
 		voteMsg.Msg = "Signature verification failed"
 		voteMsg.Agree = false
@@ -142,7 +142,7 @@ func sign(voteMsg *network.VoteMsg) ([]byte, error) {
 		return nil, errors.New(`node private key is empty`)
 	}
 	signStr := voteMsg.VerifyVoteForSign()
-	signed, err := crypto.SignString(NodePrivateKey, signStr)
+	signed, err := crypto.NodeSignString(NodePrivateKey, signStr)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("verify voting signature")
 		return nil, err

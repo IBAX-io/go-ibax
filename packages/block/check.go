@@ -108,7 +108,7 @@ func (b *Block) CheckSign() error {
 	if len(nodePub) == 0 {
 		return fmt.Errorf("empty nodePublicKey")
 	}
-	_, err = utils.CheckSign([][]byte{nodePub}, []byte(b.ForSign()), b.Header.Sign, true)
+	err = utils.CheckNodeSign(nodePub, []byte(b.ForSign()), b.Header.Sign)
 	if err != nil {
 		return errors.Wrap(err, "checking block header sign")
 	}

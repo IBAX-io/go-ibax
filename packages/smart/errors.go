@@ -60,7 +60,6 @@ var (
 	errEmpty             = errors.New(`empty value and condition`)
 	errEmptyCond         = errors.New(`the condition is empty`)
 	errEmptyContract     = errors.New(`empty contract name in ContractConditions`)
-	errEmptyPublicKey    = errors.New(`empty public key`)
 	errFounderAccount    = errors.New(`unknown founder account`)
 	errKeyIDAccount      = errors.New(`unknown address account`)
 	errFuelRate          = errors.New(`fuel rate must be greater than 0`)

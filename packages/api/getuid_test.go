@@ -26,17 +26,17 @@ func TestGetUID(t *testing.T) {
 		return
 	}
 	gAuth = ret.Token
-	priv, pub, err := crypto.GenHexKeys()
+	priv, key, err := crypto.GenAccountKey(crypto.AsymAlgo_ECC_P256)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	sign, err := crypto.SignString(priv, `LOGIN`+ret.NetworkID+ret.UID)
+	sign, err := crypto.AccountSign(key.Algo, priv, []byte(`LOGIN`+ret.NetworkID+ret.UID))
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)}}
+	form := url.Values{"pubkey": {key.Hex()}, "signature": {hex.EncodeToString(sign)}}
 	var lret loginResult
 	err = sendPost(`login`, &form, &lret)
 	if err != nil {

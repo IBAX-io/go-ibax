@@ -75,7 +75,7 @@ func testHeaders(r *mrand.Rand) (*types.BlockHeader, *types.BlockHeader) {
 		BlockId:       41,
 		Timestamp:     r.Int64(),
 		KeyId:         r.Int64(),
-		Sign:          make([]byte, crypto.SignatureSize()),
+		Sign:          make([]byte, crypto.NodeSignatureSize()),
 		BlockHash:     crypto.Hash([]byte("prev")),
 		RollbacksHash: crypto.Hash([]byte("prev rollbacks")),
 		Version:       4,
@@ -124,7 +124,7 @@ func TestBlockSizeCountsEncodedBlock(t *testing.T) {
 		t.Run(s.cryptoer+"/"+s.hasher, func(t *testing.T) {
 			crypto.InitAsymAlgo(s.cryptoer)
 			crypto.InitHashAlgo(s.hasher)
-			key, _, err := crypto.GenKeyPair()
+			key, _, err := crypto.GenNodeKeyPair()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -143,7 +143,7 @@ func TestBlockSizeCountsEncodedBlock(t *testing.T) {
 						continue
 					}
 					bin := marshalTestBlock(t, key, cur, prev, txs, sysUpdate)
-					slack := int64(crypto.SignatureSize()) + 2
+					slack := int64(crypto.NodeSignatureSize()) + 2
 					if got := int64(len(bin)); got > size.size() || size.size()-got > slack {
 						t.Fatalf("%d transactions: block is %d bytes, counted %d", len(txs), got, size.size())
 					}
@@ -160,7 +160,7 @@ func TestBlockSizeFillsToLimit(t *testing.T) {
 		t.Run(s.cryptoer+"/"+s.hasher, func(t *testing.T) {
 			crypto.InitAsymAlgo(s.cryptoer)
 			crypto.InitHashAlgo(s.hasher)
-			key, _, err := crypto.GenKeyPair()
+			key, _, err := crypto.GenNodeKeyPair()
 			if err != nil {
 				t.Fatal(err)
 			}

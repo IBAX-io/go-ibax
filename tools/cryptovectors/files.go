@@ -21,20 +21,25 @@ type vectorFile struct {
 	update func(raw []byte) (any, []string, error)
 }
 
-var vectorFiles = []vectorFile{
-	{"go-ibax-vectors.json", updateSuites},
-	{"go-ibax-addresses.json", updateAddresses},
-	{"go-ibax-transfers.json", updateTransfers},
-	{"go-ibax-contract-params.json", updateContractParams},
+// vectorFiles are the vector files of dir; go-ibax-account-keys.json comes from the suite vectors,
+// so it follows them
+func vectorFiles(dir string) []vectorFile {
+	return []vectorFile{
+		{"go-ibax-vectors.json", updateSuites},
+		{"go-ibax-addresses.json", updateAddresses},
+		{"go-ibax-transfers.json", updateTransfers},
+		{"go-ibax-contract-params.json", updateContractParams},
+		{"go-ibax-account-keys.json", updateAccountKeys(dir)},
+	}
 }
 
 // run regenerates (write) or checks every vector file in dir and returns what differs.
 func run(dir string, write bool) ([]string, error) {
 	var diffs []string
-	for _, f := range vectorFiles {
+	for _, f := range vectorFiles(dir) {
 		path := filepath.Join(dir, f.name)
 		raw, err := os.ReadFile(path)
-		if err != nil {
+		if err != nil && !(write && os.IsNotExist(err)) {
 			return nil, err
 		}
 		updated, problems, err := f.update(raw)

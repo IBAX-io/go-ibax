@@ -72,9 +72,23 @@ func (s *SmartTransactionParser) Validate() error {
 	if err := s.TxSmart.Validate(); err != nil {
 		return err
 	}
-	_, err := utils.CheckSign([][]byte{crypto.CutPub(s.TxSmart.PublicKey)}, s.Hash, s.TxSignature, false)
+	// The header carries the key that signs; whether the account may sign with it is checked
+	// when the transaction runs. Validate runs only when a transaction enters the queue, so a key
+	// of an algorithm the network takes no longer is refused here with the clock: the block time
+	// decides once it runs.
+	key, err := crypto.ParseAccountKey(s.TxSmart.PublicKey)
 	if err != nil {
 		return err
+	}
+	if err := syspar.GetAccountAlgorithms().CheckSign(key.Algo, time.Now().Unix()); err != nil {
+		return err
+	}
+	signature, err := utils.TxSignature(s.TxSignature)
+	if err != nil {
+		return err
+	}
+	if ok, err := key.Verify(s.Hash, signature); err != nil || !ok {
+		return fmt.Errorf("transaction signature does not verify with the key in the header: %v", err)
 	}
 	return nil
 }
@@ -169,7 +183,7 @@ func (s *SmartTransactionParser) Marshal() ([]byte, error) {
 }
 
 func (s *SmartTransactionParser) setSig(privateKey []byte) error {
-	signature, err := crypto.Sign(privateKey, s.Hash)
+	signature, err := crypto.NodeSign(privateKey, s.Hash)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by node private key")
 		return err

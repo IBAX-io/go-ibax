@@ -129,16 +129,16 @@ func TestFIPSSuites(t *testing.T) {
 		for _, hasher := range fipsHashers {
 			InitAsymAlgo(cryptoer)
 			InitHashAlgo(hasher)
-			priv, pub, err := GenKeyPair()
+			priv, pub, err := GenNodeKeyPair()
 			if err != nil {
 				t.Fatalf("%s/%s: %v", cryptoer, hasher, err)
 			}
 			msg := []byte("fips " + cryptoer + " " + hasher)
-			sig, err := Sign(priv, msg)
+			sig, err := NodeSign(priv, msg)
 			if err != nil {
 				t.Fatalf("%s/%s: %v", cryptoer, hasher, err)
 			}
-			if ok, err := Verify(pub, msg, sig); err != nil || !ok {
+			if ok, err := NodeVerify(pub, msg, sig); err != nil || !ok {
 				t.Errorf("%s/%s: verify %v %v", cryptoer, hasher, ok, err)
 			}
 			if len(Hash(msg)) != HashSize() || len(DoubleHash(msg)) != HashSize() {

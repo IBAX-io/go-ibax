@@ -1,6 +1,7 @@
 package asymalgo
 
 import (
+	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	crand "crypto/rand"
@@ -80,6 +81,17 @@ func (e *P256) PrivateToPublic(key []byte) ([]byte, error) {
 	priv.D = new(big.Int).SetBytes(key)
 	priv.PublicKey.X, priv.PublicKey.Y = pubkeyCurve.ScalarBaseMult(key)
 	return append(FillLeft(priv.PublicKey.X.Bytes()), FillLeft(priv.PublicKey.Y.Bytes())...), nil
+}
+
+func (e *P256) CheckPublicKey(public []byte) error {
+	if len(public) != consts.PubkeySizeLength {
+		return ErrInvalidPublicKey
+	}
+	// ecdh refuses a point off the curve, the point at infinity and coordinates not below p
+	if _, err := ecdh.P256().NewPublicKey(append([]byte{4}, public...)); err != nil {
+		return ErrInvalidPublicKey
+	}
+	return nil
 }
 
 func (e *P256) PublicKeySize() int {

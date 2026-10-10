@@ -27,7 +27,7 @@ type blockSize struct {
 
 func newBlockSize(limit int64, header, prev *types.BlockHeader) *blockSize {
 	h := *header
-	h.Sign = make([]byte, crypto.SignatureSize())
+	h.Sign = make([]byte, crypto.NodeSignatureSize())
 	h.BlockHash = make([]byte, crypto.HashSize())
 	h.RollbacksHash = make([]byte, crypto.HashSize())
 	fixed := &types.BlockData{

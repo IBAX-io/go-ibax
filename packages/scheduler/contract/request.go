@@ -16,8 +16,10 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/login"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -46,9 +48,9 @@ type contractResult struct {
 // The transaction is signed with a node key.
 func NodeContract(Name string) (result contractResult, err error) {
 	var (
-		sign                          []byte
-		ret                           authResult
-		NodePrivateKey, NodePublicKey string
+		sign           []byte
+		ret            authResult
+		NodePrivateKey string
 	)
 	err = sendAPIRequest(`GET`, `getuid`, nil, &ret, ``)
 	if err != nil {
@@ -59,18 +61,18 @@ func NodeContract(Name string) (result contractResult, err error) {
 		err = fmt.Errorf(`getuid has returned empty uid`)
 		return
 	}
-	NodePrivateKey, NodePublicKey = utils.GetNodeKeys()
+	NodePrivateKey, _ = utils.GetNodeKeys()
 	if len(NodePrivateKey) == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node private key is empty")
 		err = errors.New(`empty node private key`)
 		return
 	}
-	sign, err = crypto.SignString(NodePrivateKey, ret.UID)
+	sign, err = crypto.NodeSignString(NodePrivateKey, login.Salt()+ret.UID)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing node uid")
 		return
 	}
-	form := url.Values{"pubkey": {NodePublicKey}, "signature": {hex.EncodeToString(sign)},
+	form := url.Values{"pubkey": {crypto.NodeAccountKey(syspar.GetNodePubKey()).Hex()}, "signature": {hex.EncodeToString(sign)},
 		`ecosystem`: {converter.Int64ToStr(1)}}
 	var logret authResult
 	err = sendAPIRequest(`POST`, `login`, &form, &logret, auth)

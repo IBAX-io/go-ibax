@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 
@@ -85,36 +86,45 @@ func ExecChildChainSchema(id int, wallet int64) error {
 			return err
 		}
 
-		pubfunc := func(privateKeyFilename string) ([]byte, error) {
-			var (
-				privkey, privKey, pubKey []byte
-				err                      error
-			)
-			privkey, err = os.ReadFile(filepath.Join(conf.Config.DirPathConf.KeysDir, privateKeyFilename))
+		keyFile := func(name string) ([]byte, error) {
+			data, err := os.ReadFile(filepath.Join(conf.Config.DirPathConf.KeysDir, name))
 			if err != nil {
-				log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading private key from file")
+				log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("reading key from file")
 				return nil, err
 			}
-			privKey, err = hex.DecodeString(string(privkey))
-			if err != nil {
-				log.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("decoding private key from hex")
-				return nil, err
-			}
-			pubKey, err = crypto.PrivateToPublic(privKey)
-			if err != nil {
-				log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting private key to public")
-				return nil, err
-			}
-			return pubKey, nil
+			return hex.DecodeString(strings.TrimSpace(string(data)))
 		}
-
-		nodePubKey, err := pubfunc(consts.NodePrivateKeyFilename)
-		PubKey, err := pubfunc(consts.PrivateKeyFilename)
-		nodeKeyID := crypto.Address(nodePubKey)
-		keyID := crypto.Address(PubKey)
+		nodePriv, err := keyFile(consts.NodePrivateKeyFilename)
+		if err != nil {
+			return err
+		}
+		nodePub, err := crypto.NodePrivateToPublic(nodePriv)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
+			return err
+		}
+		nodeKey := crypto.NodeAccountKey(nodePub)
+		pub, err := keyFile(consts.PublicKeyFilename)
+		if err != nil {
+			return err
+		}
+		accountKey, err := crypto.ParseAccountKey(pub)
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("reading the account key")
+			return err
+		}
+		// The child chain accepts the algorithms of its two keys
+		algos := fmt.Sprintf(`[{"algo":%q}]`, nodeKey.Algo)
+		if accountKey.Algo != nodeKey.Algo {
+			algos = fmt.Sprintf(`[{"algo":%q},{"algo":%q}]`, nodeKey.Algo, accountKey.Algo)
+		}
+		if err = GetDB(nil).Exec(`update "1_platform_parameters" set value = ? where name = 'account_algorithms'`, algos).Error; err != nil {
+			return err
+		}
+		nodeKeyID, keyID := nodeKey.Address(), accountKey.Address()
 		amount := decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()
-		if err = GetDB(nil).Exec(`insert into "1_keys" (account,pub,amount) values (?,?,?,?),(?,?,?,?)`,
-			keyID, converter.AddressToString(keyID), PubKey, amount, nodeKeyID, converter.AddressToString(nodeKeyID), nodePubKey, 0).Error; err != nil {
+		if err = GetDB(nil).Exec(`insert into "1_keys" (id,account,pub,amount) values (?,?,?,?),(?,?,?,?)`,
+			keyID, converter.AddressToString(keyID), accountKey.Bytes(), amount, nodeKeyID, converter.AddressToString(nodeKeyID), nodeKey.Bytes(), 0).Error; err != nil {
 			return err
 		}
 	}

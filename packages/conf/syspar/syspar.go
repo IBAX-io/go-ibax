@@ -104,6 +104,7 @@ var (
 	nodePrivKey         []byte
 	cacheTableColType   = make([]map[string]string, 0)
 	runModel            uint8
+	accountAlgos        AccountAlgorithmSet
 )
 
 func ReadNodeKeys() (err error) {
@@ -120,7 +121,7 @@ func ReadNodeKeys() (err error) {
 		log.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("decoding node private key from hex")
 		return
 	}
-	nodePubKey, err = crypto.PrivateToPublic(nodePrivKey)
+	nodePubKey, err = crypto.NodePrivateToPublic(nodePrivKey)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
 		return
@@ -182,8 +183,29 @@ func SysUpdate(dbTx *sqldb.DbTransaction) error {
 	}
 	fuels, err = getParams(FuelRate)
 	wallets, err = getParams(TaxesWallet)
+	if err != nil {
+		return err
+	}
+	return updateAccountAlgorithms()
+}
 
-	return err
+// updateAccountAlgorithms reads account_algorithms. A node that cannot verify every algorithm of
+// the set stops: it would refuse the transactions of the accounts the other nodes accept.
+func updateAccountAlgorithms() error {
+	if len(cache[AccountAlgorithms]) == 0 {
+		accountAlgos = nil
+		return nil
+	}
+	set, err := ParseAccountAlgorithms(cache[AccountAlgorithms])
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("reading account algorithms")
+		return err
+	}
+	if err := set.CheckNode(); err != nil {
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Fatal("this node cannot verify the account algorithms of the network")
+	}
+	accountAlgos = set
+	return nil
 }
 
 func updateNodes() (err error) {

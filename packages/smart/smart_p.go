@@ -143,6 +143,11 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 				}
 			}
 			checked = true
+		case syspar.AccountAlgorithms:
+			if err := checkAccountAlgorithms(sc.DbTransaction, value); err != nil {
+				return 0, logErrorValue(err, consts.InvalidObject, err.Error(), value)
+			}
+			checked = true
 		case syspar.HonorNodes:
 			var fnodes []*syspar.HonorNode
 			if err := json.Unmarshal([]byte(value), &fnodes); err != nil {
@@ -188,6 +193,29 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 	}
 	sc.SysUpdate = true
 	return 0, nil
+}
+
+// checkAccountAlgorithms refuses a new value of account_algorithms that is malformed, moves a
+// day later, or removes an algorithm some keys still have
+func checkAccountAlgorithms(dbTx *sqldb.DbTransaction, value string) error {
+	next, err := syspar.ParseAccountAlgorithms(value)
+	if err != nil {
+		return err
+	}
+	removed, err := syspar.GetAccountAlgorithms().CheckChange(next)
+	if err != nil {
+		return err
+	}
+	for _, algo := range removed {
+		n, err := sqldb.CountKeysOfAlgo(dbTx, algo)
+		if err != nil {
+			return err
+		}
+		if n > 0 {
+			return fmt.Errorf("%s: %d keys still have %s; rebind them before removing it", syspar.AccountAlgorithms, n, algo)
+		}
+	}
+	return nil
 }
 
 // SysParamString returns the value of the system parameter
@@ -250,27 +278,65 @@ func Split(input, sep string) []any {
 	return result
 }
 
-// PubToID returns a numeric identifier for the public key specified in the hexadecimal form.
+// PubToID is the account of an account public key in hex, 0 when it is not one
 func PubToID(hexkey string) int64 {
-	pubkey, err := crypto.HexToPub(hexkey)
+	key, err := crypto.ParseAccountKeyHex(hexkey)
 	if err != nil {
-		logErrorValue(err, consts.CryptoError, "decoding hexkey to string", hexkey)
+		logErrorValue(err, consts.CryptoError, "decoding account public key", hexkey)
 		return 0
 	}
-	return crypto.Address(pubkey)
+	return key.Address()
 }
 
-func CheckSign(pub, data, sign string) (bool, error) {
-	pk, err := hex.DecodeString(pub)
+// NodePubToID is the account of a node public key in hex, as honor_nodes holds it, or 0 for what
+// is no node key of the network
+func NodePubToID(hexkey string) int64 {
+	key, err := crypto.ParseNodeKeyHex(hexkey)
 	if err != nil {
+		logErrorValue(err, consts.CryptoError, "decoding node public key", hexkey)
+		return 0
+	}
+	return key.Address()
+}
+
+// NodePubKey is the node public key in hex, as honor_nodes holds it, of an account public key from
+// 1_keys.pub: the account of a node signs with the node key
+func NodePubKey(pub []byte) (string, error) {
+	key, err := crypto.ParseAccountKey(pub)
+	if err != nil {
+		return "", err
+	}
+	return key.NodeKeyHex()
+}
+
+// HexToPub reads an account public key in hex for 1_keys.pub: a valid key of an algorithm that
+// may still be registered at the block time
+func HexToPub(sc *SmartContract, hexkey string) ([]byte, error) {
+	key, err := crypto.ParseAccountKeyHex(hexkey)
+	if err != nil {
+		return nil, err
+	}
+	if err = syspar.GetAccountAlgorithms().CheckRegister(key.Algo, sc.blockTime()); err != nil {
+		return nil, err
+	}
+	return key.Bytes(), nil
+}
+
+// CheckSign checks a signature, in hex, of data made with an account public key, in hex, of an
+// algorithm that may still sign at the block time
+func CheckSign(sc *SmartContract, pub, data, sign string) (bool, error) {
+	key, err := crypto.ParseAccountKeyHex(pub)
+	if err != nil {
+		return false, err
+	}
+	if err = syspar.GetAccountAlgorithms().CheckSign(key.Algo, sc.blockTime()); err != nil {
 		return false, err
 	}
 	s, err := hex.DecodeString(sign)
 	if err != nil {
 		return false, err
 	}
-	pk = crypto.CutPub(pk)
-	return crypto.Verify(pk, []byte(data), s)
+	return key.Verify([]byte(data), s)
 }
 
 func CheckNumberChars(data string) bool {
@@ -581,11 +647,8 @@ func CheckSignature(sc *SmartContract, i map[string]any, name string) error {
 		forsign += fmt.Sprintf(`,%v`, val)
 	}
 
-	CheckSignResult, err := utils.CheckSign(sc.PublicKeys, []byte(forsign), hexsign, true)
-	if err != nil {
-		return err
-	}
-	if !CheckSignResult {
+	ok, err := sc.SignerKey.Verify([]byte(forsign), hexsign)
+	if err != nil || !ok {
 		return logErrorfShort(eIncorrectSignature, forsign, consts.InvalidObject)
 	}
 	return nil

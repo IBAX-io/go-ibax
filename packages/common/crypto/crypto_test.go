@@ -17,7 +17,7 @@ func TestGetCryptoer(t *testing.T) {
 	encodedStr := hex.EncodeToString(src)
 	fmt.Println("Message in []byte: ", src)
 	fmt.Printf("%s\n", encodedStr)
-	prv, pub, err := GenKeyPair()
+	prv, pub, err := GenNodeKeyPair()
 	if err != nil {
 		return
 	}
@@ -28,7 +28,7 @@ func TestGetCryptoer(t *testing.T) {
 	addr := Address(pub)
 
 	fmt.Println("Address is:", addr)
-	signedDataByte, err := Sign(prv, src)
+	signedDataByte, err := NodeSign(prv, src)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,7 +49,7 @@ func TestGetCryptoer(t *testing.T) {
 	// }
 	fmt.Println("signedDataByPriv is:", signedDataByte)
 	//signature=3045022046468a5a6c62adff1d7c6a864dae3878a34f9d07be66b71f8ba34fc5a80d0e45022100caba64be8cf53709975a6a209c5c2197b01054f9b22edf25e99dfb8ea50a0633
-	_, err = Verify(pub, src, signedDataByte)
+	_, err = NodeVerify(pub, src, signedDataByte)
 	if err != nil {
 		log.Fatal(err)
 	}

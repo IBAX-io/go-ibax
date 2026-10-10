@@ -48,6 +48,7 @@ func InitAsymAlgo(s string) {
 	asymAlgo = AsymAlgo(v)
 }
 
+// GetAsymProvider is the provider of the node algorithm
 func GetAsymProvider() AsymProvider {
 	return NewAsymAlgo(asymAlgo)
 }
@@ -85,49 +86,74 @@ func GetHashProvider() HashProvider {
 	return NewHashAlgo(hashAlgo)
 }
 
-// GenKeyPair generates a random pair of private and public binary keys.
-func GenKeyPair() ([]byte, []byte, error) {
+// The node algorithm signs blocks, candidate votes and the requests between nodes, with the keys
+// of honor_nodes and the node key files. Accounts sign with the algorithm of their own key
+// (AccountKey).
+
+// NodeAlgo is the signature algorithm of the network's node keys
+func NodeAlgo() AsymAlgo {
+	return asymAlgo
+}
+
+// NodeAccountKey is the account public key of a node public key: the node account signs its
+// transactions and logins with the node key
+func NodeAccountKey(nodePublicKey []byte) AccountKey {
+	return AccountKey{Algo: NodeAlgo(), Raw: CutPub(nodePublicKey)}
+}
+
+// ParseNodeKeyHex reads a node public key in hex, as honor_nodes and the candidate nodes hold it,
+// as the account key of the node
+func ParseNodeKeyHex(s string) (AccountKey, error) {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return AccountKey{}, fmt.Errorf("%w: %v", ErrAccountKeyFormat, err)
+	}
+	return NewAccountKey(NodeAlgo(), CutPub(b))
+}
+
+// NodeKeyHex is the node public key in hex, as honor_nodes holds it, of a node account key: a key
+// of the network's node algorithm
+func (k AccountKey) NodeKeyHex() (string, error) {
+	if k.Algo != NodeAlgo() {
+		return "", fmt.Errorf("%w: a %s key is no node key of the network (%s)", ErrAccountKeyFormat, k.Algo, NodeAlgo())
+	}
+	return PubToHex(k.Raw), nil
+}
+
+// GenNodeKeyPair generates a random pair of private and public node keys
+func GenNodeKeyPair() ([]byte, []byte, error) {
 	return GetAsymProvider().GenKeyPair()
 }
 
-// GenHexKeys generates a random pair of private and public hex keys.
-func GenHexKeys() (string, string, error) {
-	priv, pub, err := GenKeyPair()
-	if err != nil {
-		return ``, ``, err
-	}
-	return hex.EncodeToString(priv), PubToHex(pub), nil
-}
-
-func Sign(privateKey, data []byte) ([]byte, error) {
+func NodeSign(privateKey, data []byte) ([]byte, error) {
 	return GetAsymProvider().Sign(privateKey, Hash(data))
 }
 
-func Verify(public, data, signature []byte) (bool, error) {
+func NodeVerify(public, data, signature []byte) (bool, error) {
 	return GetAsymProvider().Verify(public, Hash(data), signature)
 }
 
-// PublicKeySize is the length of the network's public keys (without the 04 prefix of the curves)
-func PublicKeySize() int {
+// NodePublicKeySize is the length of the node public keys (without the 04 prefix of the curves)
+func NodePublicKeySize() int {
 	return GetAsymProvider().PublicKeySize()
 }
 
-// SignatureSize is the maximum length of the network's signatures
-func SignatureSize() int {
+// NodeSignatureSize is the maximum length of the node signatures
+func NodeSignatureSize() int {
 	return GetAsymProvider().SignatureSize()
 }
 
-// PrivateToPublic returns the public key for the specified private key.
-func PrivateToPublic(key []byte) ([]byte, error) {
+// NodePrivateToPublic returns the node public key of a node private key
+func NodePrivateToPublic(key []byte) ([]byte, error) {
 	return GetAsymProvider().PrivateToPublic(key)
 }
 
-func SignString(privateKeyHex, data string) ([]byte, error) {
+func NodeSignString(privateKeyHex, data string) ([]byte, error) {
 	privateKey, err := hex.DecodeString(privateKeyHex)
 	if err != nil {
 		return nil, fmt.Errorf("decoding private key from hex: %w", err)
 	}
-	return Sign(privateKey, []byte(data))
+	return NodeSign(privateKey, []byte(data))
 }
 
 func GetHMAC(secret string, message string) ([]byte, error) {

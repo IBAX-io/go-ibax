@@ -14,6 +14,8 @@ var (
 	ErrIncorrectSign = errors.New("Incorrect sign")
 	// ErrInvalidPrivateKey is a private key outside [1, n-1] of the curve
 	ErrInvalidPrivateKey = errors.New("Invalid private key")
+	// ErrInvalidPublicKey is a public key of the wrong length, or not a key of the algorithm
+	ErrInvalidPublicKey = errors.New("Invalid public key")
 )
 
 // privateScalar reads a private key as the curve scalar it must be: 1 <= d < n. A zero key signs

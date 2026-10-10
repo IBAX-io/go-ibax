@@ -69,6 +69,20 @@ func (s *SM2) PrivateToPublic(key []byte) ([]byte, error) {
 	return append(FillLeft(priv.PublicKey.X.Bytes()), FillLeft(priv.PublicKey.Y.Bytes())...), nil
 }
 
+func (s *SM2) CheckPublicKey(public []byte) error {
+	if len(public) != consts.PubkeySizeLength {
+		return ErrInvalidPublicKey
+	}
+	curve := sm2.P256Sm2()
+	x := new(big.Int).SetBytes(public[:consts.PrivkeyLength])
+	y := new(big.Int).SetBytes(public[consts.PrivkeyLength:])
+	p := curve.Params().P
+	if x.Cmp(p) >= 0 || y.Cmp(p) >= 0 || !curve.IsOnCurve(x, y) {
+		return ErrInvalidPublicKey
+	}
+	return nil
+}
+
 func (e *SM2) PublicKeySize() int {
 	return consts.PubkeySizeLength
 }

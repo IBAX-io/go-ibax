@@ -30,5 +30,6 @@ func (m *MLDSA87) Verify(public, hash, signature []byte) (bool, error) {
 	return mldsa87.verify(public, hash, signature)
 }
 func (m *MLDSA87) PrivateToPublic(key []byte) ([]byte, error) { return mldsa87.privateToPublic(key) }
+func (m *MLDSA87) CheckPublicKey(public []byte) error         { return mldsa87.checkPublicKey(public) }
 func (m *MLDSA87) PublicKeySize() int                         { return MLDSA87PublicKeySize }
 func (m *MLDSA87) SignatureSize() int                         { return MLDSA87SignatureSize }

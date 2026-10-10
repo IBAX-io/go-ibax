@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -35,6 +36,44 @@ func (c *accountsApi) GetKeysCount(ctx RequestContext) (*int64, *Error) {
 	}
 
 	return &cnt, nil
+}
+
+// AccountAlgorithms is account_algorithms with the number of keys of each algorithm
+func (c *accountsApi) AccountAlgorithms(ctx RequestContext) ([]syspar.AccountAlgorithmKeys, *Error) {
+	list, err := syspar.AccountAlgorithmsWithKeys()
+	if err != nil {
+		getLogger(ctx.HTTPRequest()).WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("counting the keys of account algorithms")
+		return nil, InternalError(err.Error())
+	}
+	return list, nil
+}
+
+// AccountAlgorithmKeys is a page of the accounts whose keys have an algorithm
+func (c *accountsApi) AccountAlgorithmKeys(ctx RequestContext, algo string, limit, offset *int) (*syspar.AccountAlgoKeys, *Error) {
+	r := ctx.HTTPRequest()
+	form := &paginatorForm{}
+	if limit != nil {
+		form.Limit = *limit
+	}
+	if offset != nil {
+		form.Offset = *offset
+	}
+	if err := form.Validate(r); err != nil {
+		return nil, InvalidParamsError(err.Error())
+	}
+	if form.Offset < 0 {
+		return nil, InvalidParamsError(fmt.Sprintf("offset %d is negative", form.Offset))
+	}
+	a, err := syspar.ParseAccountAlgo(algo)
+	if err != nil {
+		return nil, InvalidParamsError(err.Error())
+	}
+	page, err := syspar.KeysOfAccountAlgo(a, form.Offset, form.Limit)
+	if err != nil {
+		getLogger(r).WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("listing the keys of an account algorithm")
+		return nil, InternalError(err.Error())
+	}
+	return page, nil
 }
 
 type BalanceResult struct {

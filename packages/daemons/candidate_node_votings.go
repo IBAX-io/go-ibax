@@ -175,7 +175,7 @@ func checkServerSign(serverVoteMsg network.VoteMsg) error {
 		return err
 	}
 	pk = crypto.CutPub(pk)
-	_, err = crypto.Verify(pk, []byte(serverVoteMsg.VerifyVoteForSign()), serverVoteMsg.Sign)
+	_, err = crypto.NodeVerify(pk, []byte(serverVoteMsg.VerifyVoteForSign()), serverVoteMsg.Sign)
 	if err != nil {
 		return err
 	}

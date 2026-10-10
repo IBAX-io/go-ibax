@@ -48,11 +48,11 @@ func loginNetwork(urlPath string) (connect *api.Connect, err error) {
 	if len(nodePrivateKey) == 0 {
 		var pubKey []byte
 		nodePrivateKey = syspar.GetNodePrivKey()
-		if pubKey, err = crypto.PrivateToPublic(nodePrivateKey); err != nil {
+		if pubKey, err = crypto.NodePrivateToPublic(nodePrivateKey); err != nil {
 			return
 		}
 		nodeKeyID = crypto.Address(pubKey)
-		nodePublicKey = crypto.PubToHex(pubKey)
+		nodePublicKey = crypto.NodeAccountKey(pubKey).Hex()
 	}
 	connect = &api.Connect{
 		Auth:       authNet[urlPath],

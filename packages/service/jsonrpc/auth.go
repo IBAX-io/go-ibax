@@ -5,11 +5,9 @@
 package jsonrpc
 
 import (
-	"encoding/hex"
 	"errors"
 	"net/http"
 
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/login"
 	log "github.com/sirupsen/logrus"
@@ -106,23 +104,13 @@ func (a *authApi) GetUid(ctx RequestContext) (*GetUIDResult, *Error) {
 }
 
 type loginForm struct {
-	EcosystemID int64          `json:"ecosystem_id"`
-	Expire      int64          `json:"expire"`
-	PublicKey   publicKeyValue `json:"public_key"`
-	KeyID       string         `json:"key_id"`
-	Signature   hexValue       `json:"signature"`
-	RoleID      int64          `json:"role_id"`
-	Guest       bool           `json:"guest"`
-}
-
-type publicKeyValue struct {
-	hexValue
-}
-
-func (pk *publicKeyValue) UnmarshalText(v []byte) (err error) {
-	pk.value, err = hex.DecodeString(string(v))
-	pk.value = crypto.CutPub(pk.value)
-	return
+	EcosystemID int64    `json:"ecosystem_id"`
+	Expire      int64    `json:"expire"`
+	PublicKey   hexValue `json:"public_key"`
+	KeyID       string   `json:"key_id"`
+	Signature   hexValue `json:"signature"`
+	RoleID      int64    `json:"role_id"`
+	Guest       bool     `json:"guest"`
 }
 
 func (f *loginForm) Validate(r *http.Request) error {

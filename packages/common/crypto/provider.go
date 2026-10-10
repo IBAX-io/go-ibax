@@ -6,6 +6,9 @@ type AsymProvider interface {
 	// Verify checks if forSign has been signed with corresponding to public the private key
 	Verify(public, hash, sign []byte) (bool, error)
 	PrivateToPublic(key []byte) ([]byte, error)
+	// CheckPublicKey refuses a public key of the wrong length or one that is not a key of the
+	// algorithm, such as a point off the curve
+	CheckPublicKey(public []byte) error
 	// PublicKeySize is the length of a public key as PrivateToPublic returns it
 	PublicKeySize() int
 	// SignatureSize is the maximum length of a signature as Sign returns it

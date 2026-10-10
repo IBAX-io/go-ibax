@@ -7,6 +7,7 @@ Golden vectors for the cryptography and transaction decoding shared by the clien
 | `go-ibax-vectors.json` | cryptoer, hasher, privateKey, message, payload (this repository); clientSignature (client) | publicKey, keyID, goSignature; ML-DSA only: contextFreeSignature, signed under the empty context, which the node and the client must refuse; clientSignature must pass the node's verification |
 | `go-ibax-addresses.json` | input (this repository) | id, address |
 | `go-ibax-transfers.json` | transaction parameters and data (client) | node: result of decoding, Validate and CheckSign |
+| `go-ibax-account-keys.json` | derived from the SHA256 vectors of `go-ibax-vectors.json` (this tool) | node: accepted, or the error: each key, the key relabelled as every other account algorithm, and malformed encodings (bare, SEC1, unknown or unimplemented algorithm, a byte short or more); a client must refuse what the node refuses |
 | `go-ibax-contract-params.json` | declared types and data (client) | header, node: FillTxData result per parameter |
 
 ```sh
@@ -24,7 +25,7 @@ When the client changes the transaction encoding, signing or the cases, run one 
 GO_IBAX_DIR=/path/to/go-ibax npm run vectors:client
 # 2. go-ibax: fill in the node fields and commit
 go run ./tools/cryptovectors gen && go test ./tools/cryptovectors/... && git commit
-# 3. Weaver: sync the four files back and record the go-ibax commit (src/app/lib/crypto/fixtures/go-ibax-commit.txt)
+# 3. Weaver: sync the five files back and record the go-ibax commit (src/app/lib/crypto/fixtures/go-ibax-commit.txt)
 GO_IBAX_DIR=/path/to/go-ibax npm run vectors:sync && npm test
 ```
 

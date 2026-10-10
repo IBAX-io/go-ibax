@@ -12,6 +12,7 @@ import (
 	"math/rand"
 	"sort"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/IBAX-io/go-ibax/packages/common"
@@ -72,7 +73,7 @@ type SmartContract struct {
 	TxSignature     []byte
 	TxSize          int64
 	Size            common.StorageSize
-	PublicKeys      [][]byte
+	SignerKey       crypto.AccountKey // the key that signed the transaction
 	DbTransaction   *sqldb.DbTransaction
 	Rand            *rand.Rand
 	FlushRollback   []*FlushInfo
@@ -518,8 +519,14 @@ func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 		if !isNode {
 			return 0, errDelayedContract
 		}
-	} else if len(public) > 0 && sc.TxSmart.KeyID != crypto.Address(public) {
-		return 0, errDiffKeys
+	} else if len(public) > 0 {
+		key, err := crypto.ParseAccountKey(public)
+		if err != nil {
+			return 0, err
+		}
+		if key.Address() != sc.TxSmart.KeyID {
+			return 0, errDiffKeys
+		}
 	}
 	return signedBy, nil
 }
@@ -652,25 +659,35 @@ func (sc *SmartContract) checkTxSign() error {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("disable keyid")
 		return err
 	}
-	if len(sc.Key.PublicKey) > 0 {
-		public = sc.Key.PublicKey
+	var registered []byte
+	if isFound {
+		registered = sc.Key.PublicKey
 	}
-	if len(public) == 0 {
-		sc.GetLogger().WithFields(log.Fields{"type": consts.EmptyObject}).Error("empty public key")
-		return errEmptyPublicKey
-	}
-	sc.PublicKeys = append(sc.PublicKeys, crypto.CutPub(public))
-
-	var CheckSignResult bool
-
-	CheckSignResult, err = utils.CheckSign(sc.PublicKeys, sc.Hash, sc.TxSignature, false)
+	key, err := syspar.GetAccountAlgorithms().Signer(registered, public, signedBy, sc.blockTime())
 	if err != nil {
-		sc.GetLogger().WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("checking tx data sign")
+		sc.GetLogger().WithFields(log.Fields{"type": consts.CryptoError, "error": err, "key_id": signedBy}).Error("account key of the signer")
 		return err
 	}
-	if !CheckSignResult {
-		sc.GetLogger().WithFields(log.Fields{"type": consts.InvalidObject}).Error("incorrect sign")
+	signature, err := utils.TxSignature(sc.TxSignature)
+	if err != nil {
+		sc.GetLogger().WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("reading tx signature")
+		return err
+	}
+	ok, err := key.Verify(sc.Hash, signature)
+	if err != nil || !ok {
+		sc.GetLogger().WithFields(log.Fields{"type": consts.InvalidObject, "error": err}).Error("incorrect sign")
 		return errIncorrectSign
 	}
+	sc.SignerKey = key
 	return nil
+}
+
+// blockTime is the time of the block the transaction is in, in Unix seconds: what the days of
+// account_algorithms are compared with. Off the chain (child chains, checks before a block) it is
+// the clock.
+func (sc *SmartContract) blockTime() int64 {
+	if sc.BlockHeader == nil || sc.ChildChain {
+		return time.Now().Unix()
+	}
+	return sc.BlockHeader.Timestamp
 }

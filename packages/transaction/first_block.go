@@ -6,6 +6,7 @@ package transaction
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -72,8 +73,14 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	logger := f.Logger
 	data := f.Data
 	dbTx := in.DbTransaction
-	keyID := crypto.Address(data.PublicKey)
-	nodeKeyID := crypto.Address(data.NodePublicKey)
+	algos, founder, err := CheckFirstBlockAccounts(data)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("checking the account keys of the first block")
+		return err
+	}
+	nodeKey := crypto.NodeAccountKey(data.NodePublicKey)
+	keyID := founder.Address()
+	nodeKeyID := nodeKey.Address()
 	err = sqldb.ExecSchemaEcosystem(dbTx, migration.SqlData{
 		Ecosystem:   firstEcosystemID,
 		Wallet:      keyID,
@@ -110,13 +117,19 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		return err
 	}
 
+	err = sqldb.GetDB(dbTx).Exec(`update "1_platform_parameters" SET value = ? where name = ?`, algos.String(), syspar.AccountAlgorithms).Error
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating account_algorithms")
+		return err
+	}
+
 	if err = syspar.SysUpdate(dbTx); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
 		return err
 	}
 
 	err = sqldb.GetDB(dbTx).Exec(`insert into "1_keys" (id,account,pub,amount) values(?,?,?,?),(?,?,?,?)`,
-		keyID, converter.AddressToString(keyID), data.PublicKey, 0, nodeKeyID, converter.AddressToString(nodeKeyID), data.NodePublicKey, 0).Error
+		keyID, converter.AddressToString(keyID), founder.Bytes(), 0, nodeKeyID, converter.AddressToString(nodeKeyID), nodeKey.Bytes(), 0).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting key")
 		return err
@@ -139,6 +152,36 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	syspar.SetFirstBlockData(data)
 	syspar.SetFirstBlockTimestamp(time.UnixMilli(f.Timestamp).Unix())
 	return nil
+}
+
+// CheckFirstBlockAccounts checks the accounts of the first block: account_algorithms is a valid
+// set the node can verify; the node algorithm is in it, since the node account signs with the
+// node key; and the founder key is an account key that may be registered at genesis.
+func CheckFirstBlockAccounts(data *types.FirstBlock) (syspar.AccountAlgorithmSet, crypto.AccountKey, error) {
+	algos, err := syspar.ParseAccountAlgorithms(data.AccountAlgorithms)
+	if err != nil {
+		return nil, crypto.AccountKey{}, err
+	}
+	if err := algos.CheckNode(); err != nil {
+		return nil, crypto.AccountKey{}, err
+	}
+	if err := algos.CheckRegister(crypto.NodeAlgo(), data.Time); err != nil {
+		return nil, crypto.AccountKey{}, fmt.Errorf("the node account: %w", err)
+	}
+	if _, err := crypto.NewAccountKey(crypto.NodeAlgo(), data.NodePublicKey); err != nil {
+		return nil, crypto.AccountKey{}, fmt.Errorf("the node key: %w", err)
+	}
+	founder, err := crypto.ParseAccountKey(data.PublicKey)
+	if err != nil {
+		return nil, crypto.AccountKey{}, fmt.Errorf("the founder key: %w", err)
+	}
+	if err := algos.CheckRegister(founder.Algo, data.Time); err != nil {
+		return nil, crypto.AccountKey{}, fmt.Errorf("the founder key: %w", err)
+	}
+	if founder.Address() != data.KeyID {
+		return nil, crypto.AccountKey{}, fmt.Errorf("the founder key is not that of key %d", data.KeyID)
+	}
+	return algos, founder, nil
 }
 
 func (s *FirstBlockParser) BinMarshal(data *types.FirstBlock) ([]byte, error) {

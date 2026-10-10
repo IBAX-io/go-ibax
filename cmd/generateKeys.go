@@ -21,13 +21,23 @@ import (
 
 const fileMode = 0600
 
+var accountAlgo string
+
 // generateKeysCmd represents the generateKeys command
 var generateKeysCmd = &cobra.Command{
 	Use:    "generateKeys",
 	Short:  "Keys generation",
 	PreRun: loadConfig,
 	Run: func(cmd *cobra.Command, args []string) {
-		_, publicKey, err := createKeyPair(
+		algo := crypto.NodeAlgo()
+		if accountAlgo != "" {
+			v, ok := crypto.AsymAlgo_value[accountAlgo]
+			if !ok || !crypto.AccountAlgoImplemented(crypto.AsymAlgo(v)) {
+				log.WithFields(log.Fields{"algo": accountAlgo}).Fatal("the account algorithm is not implemented")
+			}
+			algo = crypto.AsymAlgo(v)
+		}
+		accountKey, err := createAccountKey(algo,
 			filepath.Join(conf.Config.DirPathConf.KeysDir, consts.PrivateKeyFilename),
 			filepath.Join(conf.Config.DirPathConf.KeysDir, consts.PublicKeyFilename),
 		)
@@ -43,7 +53,7 @@ var generateKeysCmd = &cobra.Command{
 			log.WithError(err).Fatal("generating node keys")
 			return
 		}
-		address := crypto.Address(publicKey)
+		address := accountKey.Address()
 		keyIDPath := filepath.Join(conf.Config.DirPathConf.KeysDir, consts.KeyIDFilename)
 		err = createFile(keyIDPath, []byte(strconv.FormatInt(address, 10)))
 		if err != nil {
@@ -52,6 +62,23 @@ var generateKeysCmd = &cobra.Command{
 		}
 		log.Info("keys generated")
 	},
+}
+
+func init() {
+	generateKeysCmd.Flags().StringVar(&accountAlgo, "accountAlgo", "", "algorithm of the account key, e.g. MLDSA65 (default: the node algorithm)")
+}
+
+// createAccountKey writes an account private key and its account public key, which carries its
+// algorithm (crypto.AccountKey)
+func createAccountKey(algo crypto.AsymAlgo, privFilename, pubFilename string) (crypto.AccountKey, error) {
+	priv, key, err := crypto.GenAccountKey(algo)
+	if err != nil {
+		return key, err
+	}
+	if err = createFile(privFilename, []byte(hex.EncodeToString(priv))); err != nil {
+		return key, err
+	}
+	return key, createFile(pubFilename, []byte(key.Hex()))
 }
 
 func createFile(filename string, data []byte) error {
@@ -67,7 +94,7 @@ func createFile(filename string, data []byte) error {
 }
 
 func createKeyPair(privFilename, pubFilename string) (priv, pub []byte, err error) {
-	priv, pub, err = crypto.GenKeyPair()
+	priv, pub, err = crypto.GenNodeKeyPair()
 	if err != nil {
 		log.WithError(err).Error("generate keys")
 		return

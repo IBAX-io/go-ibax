@@ -6,31 +6,19 @@
 package api
 
 import (
-	"encoding/hex"
 	"net/http"
 
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/login"
 )
 
 type loginForm struct {
-	EcosystemID int64          `schema:"ecosystem"`
-	Expire      int64          `schema:"expire"`
-	PublicKey   publicKeyValue `schema:"pubkey"`
-	KeyID       string         `schema:"key_id"`
-	Signature   hexValue       `schema:"signature"`
-	RoleID      int64          `schema:"role_id"`
-	Guest       bool           `schema:"guest"`
-}
-
-type publicKeyValue struct {
-	hexValue
-}
-
-func (pk *publicKeyValue) UnmarshalText(v []byte) (err error) {
-	pk.value, err = hex.DecodeString(string(v))
-	pk.value = crypto.CutPub(pk.value)
-	return
+	EcosystemID int64    `schema:"ecosystem"`
+	Expire      int64    `schema:"expire"`
+	PublicKey   hexValue `schema:"pubkey"`
+	KeyID       string   `schema:"key_id"`
+	Signature   hexValue `schema:"signature"`
+	RoleID      int64    `schema:"role_id"`
+	Guest       bool     `schema:"guest"`
 }
 
 func (f *loginForm) Validate(r *http.Request) error {

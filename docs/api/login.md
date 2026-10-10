@@ -25,13 +25,22 @@ Without a session token, `getuid` answers:
   "network_id": "1",
   "cryptoer": "ECC_P256",
   "hasher": "SHA256",
-  "fips": false
+  "fips": false,
+  "account_algorithms": [
+    { "algo": "ECC_P256", "register_until": "2030-12-31", "sign_until": "2031-12-31" },
+    { "algo": "MLDSA65" }
+  ]
 }
 ```
 
 - `uid` is 128 bits from `crypto/rand`, written as 39 decimal digits with leading zeros. The client
   signs only `"LOGIN" + network_id + uid`, and checks that `uid` is digits only, so a node cannot
   make it sign anything else.
+- `cryptoer` is the algorithm of the node keys. An account signs with the algorithm of its own key,
+  one of `account_algorithms` (the platform parameter): a key of an algorithm registers until
+  `register_until` and signs until `sign_until`, both whole UTC days compared with the block time
+  (with the clock of the node at login), no limit when missing. See
+  [account algorithms](account-algorithms.md).
 - `token` carries the `uid` and a random `jti`. It expires with the challenge.
 - A challenge lives 30 seconds (`login.ChallengeLifetime`) in the memory of the node that issued
   it. It is used on that node only.
@@ -47,7 +56,7 @@ With a session token, `getuid` answers its `ecosystem_id`, `key_id`, `address` a
 | ----------- | --------------- | -------------------------------------------------------------- |
 | `ecosystem` | `ecosystem_id`  | the ecosystem of the session; 1 when missing                    |
 | `expire`    | `expire`        | session lifetime in seconds, 0 to 28800; 0 or missing means 28800 |
-| `pubkey`    | `public_key`    | the public key, hex                                            |
+| `pubkey`    | `public_key`    | the account key, hex: `ac`, the algorithm, the public key       |
 | `key_id`    | `key_id`        | the key's address, when `pubkey` is missing                    |
 | `signature` | `signature`     | signature of `"LOGIN" + network_id + uid`, hex                  |
 | `role_id`   | `role_id`       | a role of the account to act in; 0 for none                     |
@@ -61,7 +70,8 @@ The node checks, in this order:
 3. The key: from `pubkey`, or from the chain's keys table by `key_id`. A `key_id` that is not the
    address of `pubkey` is refused.
 4. The signature, with the chain's public key of the account when it has one, otherwise with
-   `pubkey`. The session is of the key that verified the signature.
+   `pubkey`. The algorithm comes from that key: a registered key must still sign, `pubkey` must
+   still register. The session is of the key that verified the signature.
 5. The account: a deleted key is refused; a key the ecosystem does not know gets `E_NEWUSER`, or
    `E_ECONOTOPEN` when the ecosystem takes no new members (`free_membership`).
 6. `role_id`, when given: the account must be a member of the role.
@@ -98,7 +108,7 @@ accepts it, in every mode.
 The node does not register keys. A key the ecosystem does not know registers itself:
 
 1. Login answers `E_NEWUSER`.
-2. The client sends `@1NewUser` signed with that key: header ecosystem 1, the public key in the
+2. The client sends `@1NewUser` signed with that key: header ecosystem 1, the account key in the
    header, `NewPubkey` = the same key in hex, and `Ecosystem` = the ecosystem to join.
 3. Once the transaction is in a block, the client asks for a new challenge and logs in again.
 
@@ -119,6 +129,7 @@ an error with the JSON-RPC code below and the same code in `data.error`.
 | `E_EXPIRE`       | 400  | -32010   | `expire` out of range                                   |
 | `E_EMPTYPUBLIC`  | 400  | -32010   | neither `pubkey` nor a registered `key_id`              |
 | `E_DIFKEY`       | 400  | -32010   | `key_id` is not the address of the public key           |
+| `E_KEYALGO`      | 400  | -32010   | no account key, or its algorithm no longer signs or registers; the message names the algorithm and the day |
 | `E_SIGNATURE`    | 400  | -32010   | the signature does not verify                            |
 | `E_NEWUSER`      | 401  | -32014   | the key is not registered in the ecosystem               |
 | `E_ECONOTOPEN`   | 401  | -32014   | the ecosystem takes no new members                       |

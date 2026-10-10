@@ -116,8 +116,7 @@ const (
 	// ContractList is the number of contracts per page on loading
 	ContractList = 200
 
-	// Guest key
-	GuestPublic  = "ef0ab117793962b7b3ee8d2ae94b58bbd7db1aa856a7dc623fdb28ad530090b0bcf5cb81b4d6912a249f1ab30921f414ad88383208cd8ba26ae2a9c3eb543772"
+	// Guest key: the account of guest logins, blocked and without a public key
 	GuestKey     = "-110277540701013350"
 	GuestAddress = "1833-6466-5330-0853-8266"
 
