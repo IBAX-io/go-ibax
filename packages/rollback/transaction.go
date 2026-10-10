@@ -88,6 +88,8 @@ func rollbackTransaction(txHash []byte, dbTx *sqldb.DbTransaction, logger *log.E
 				err = smart.SysRollbackDeleteColumn(dbTx, sysData)
 			case "DeleteTable":
 				err = smart.SysRollbackDeleteTable(dbTx, sysData)
+			case "DeleteRow":
+				err = smart.SysRollbackDeleteRow(dbTx, sysData)
 			}
 			if err != nil {
 				return err

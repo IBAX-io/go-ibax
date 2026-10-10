@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IBAX-io/go-ibax/packages/wtl"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -51,6 +52,34 @@ func TestFirstEcosystemSQLInsertsEachRecordOnce(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, sql, "'system_home', "+quote(string(res)))
 	assert.NotContains(t, sql, "parameters/")
+}
+
+// The refs the genesis data writes name only the records of the system apps, so none of them is
+// deleted while another refers to it
+func TestEveryRefOfTheSystemAppsIsARecord(t *testing.T) {
+	apps, err := Load()
+	require.NoError(t, err)
+	records := map[string]map[string]bool{"blocks": {}, "pages": {}}
+	for _, page := range apps.manifest.Pages {
+		records["pages"][page.Name] = true
+	}
+	for _, block := range apps.manifest.Blocks {
+		records["blocks"][block.Name] = true
+	}
+	var refs int
+	for file, source := range apps.sources {
+		read := wtl.Read(source, 1)
+		for kind, names := range map[string][]string{"blocks": read.Blocks, "pages": read.Pages} {
+			for _, name := range names {
+				assert.True(t, records[kind][name], "%s refers to the %s %s", file, kind, name)
+				refs++
+			}
+		}
+	}
+	assert.NotZero(t, refs)
+	sql, err := apps.FirstEcosystemSQL()
+	require.NoError(t, err)
+	assert.Contains(t, sql, "'{\"blocks\":[")
 }
 
 func TestPlatformParametersSQLGivesANewEcosystemItsDocuments(t *testing.T) {

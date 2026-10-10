@@ -89,6 +89,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "read": "true",
             "insert": "ContractConditions(\"DeveloperCondition\")",
             "update": "ContractConditions(\"DeveloperCondition\")",
+            "delete": "ContractAccess(\"@1DeleteMenu\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
@@ -97,6 +98,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "title": "ContractAccess(\"@1EditMenu\")",
             "conditions": "ContractAccess(\"@1EditMenu\")",
             "permissions": "ContractConditions(\"@1MainCondition\")",
+            "refs": "false",
             "ecosystem": "false"
         }',
         'ContractConditions("@1MainCondition")', '{{.Ecosystem}}'
@@ -106,6 +108,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "read": "true",
             "insert": "ContractConditions(\"DeveloperCondition\")",
             "update": "ContractConditions(\"DeveloperCondition\")",
+            "delete": "ContractAccess(\"@1DeletePage\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
@@ -117,6 +120,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "app_id": "ContractAccess(\"@1ItemChangeAppId\")",
             "conditions": "ContractAccess(\"@1EditPage\")",
             "permissions": "ContractConditions(\"@1MainCondition\")",
+            "refs": "false",
             "ecosystem": "false"
         }',
         'ContractConditions("@1MainCondition")', '{{.Ecosystem}}'
@@ -126,6 +130,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "read": "true",
             "insert": "ContractConditions(\"DeveloperCondition\")",
             "update": "ContractConditions(\"DeveloperCondition\")",
+            "delete": "ContractAccess(\"@1DeleteSnippet\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
@@ -134,6 +139,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "conditions": "ContractAccess(\"@1EditSnippet\")",
             "permissions": "ContractConditions(\"@1MainCondition\")",
             "app_id": "ContractAccess(\"@1ItemChangeAppId\")",
+            "refs": "false",
             "ecosystem": "false"
         }',
         'ContractConditions("@1MainCondition")', '{{.Ecosystem}}'

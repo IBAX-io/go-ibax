@@ -49,7 +49,8 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
 	  "new_column": "ContractConditions(\"MainCondition\")"}',
 	'{"name": "ContractConditions(\"MainCondition\")",
 "value": "ContractConditions(\"MainCondition\")",
-"conditions": "ContractConditions(\"MainCondition\")"
+"conditions": "ContractConditions(\"MainCondition\")",
+"refs": "false"
 	}', 'ContractAccess("@1EditTable")'),
 	(next_id('1_tables'), 'pages', 
 		'{"read": "true", "insert": "ContractConditions(\"MainCondition\")", "update": "ContractConditions(\"MainCondition\")", 
@@ -60,7 +61,8 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
 "validate_count": "ContractConditions(\"MainCondition\")",
 "validate_mode": "ContractConditions(\"MainCondition\")",
 "app_id": "ContractConditions(\"MainCondition\")",
-"conditions": "ContractConditions(\"MainCondition\")"
+"conditions": "ContractConditions(\"MainCondition\")",
+"refs": "false"
 	}', 'ContractAccess("@1EditTable")'),
 	(next_id('1_tables'), 'blocks', 
 	'{"read": "true", "insert": "ContractConditions(\"MainCondition\")", "update": "ContractConditions(\"MainCondition\")", 

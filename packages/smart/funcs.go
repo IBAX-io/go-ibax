@@ -62,8 +62,10 @@ type permTable struct {
 	Insert    string `json:"insert"`
 	Update    string `json:"update"`
 	NewColumn string `json:"new_column"`
-	Read      string `json:"read,omitempty"`
-	Filter    string `json:"filter,omitempty"`
+	// Delete is who may delete the rows of the table: a table without it refuses deleting
+	Delete string `json:"delete,omitempty"`
+	Read   string `json:"read,omitempty"`
+	Filter string `json:"filter,omitempty"`
 	// Rows is the row scope of the data API: a filter of its query language, as JSON text
 	Rows string `json:"rows,omitempty"`
 }
@@ -126,6 +128,7 @@ var (
 		"DBUpdate":              {},
 		"DBUpdatePlatformParam": {},
 		"DBUpdateExt":           {},
+		"DBDelete":              {},
 		"DBSelect":              {},
 	}
 	writeFuncs = map[string]struct{}{
@@ -135,6 +138,7 @@ var (
 		"DBUpdate":              {},
 		"DBUpdatePlatformParam": {},
 		"DBUpdateExt":           {},
+		"DBDelete":              {},
 		"CreateEcosystem":       {},
 		"CreateContract":        {},
 		"UpdateContract":        {},
@@ -192,6 +196,8 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"DBUpdate":                     DBUpdate,
 		"DBUpdatePlatformParam":        UpdatePlatformParam,
 		"DBUpdateExt":                  DBUpdateExt,
+		"DBDelete":                     DBDelete,
+		"InterfaceReferrers":           InterfaceReferrers,
 		"EcosysParam":                  EcosysParam,
 		"AppParam":                     AppParam,
 		"SysParamString":               SysParamString,
@@ -1319,7 +1325,7 @@ func TableConditions(sc *SmartContract, name, columns, permissions string) (err 
 			}
 			continue
 		}
-		if len(cond) == 0 && name != `Read` && name != `Filter` {
+		if len(cond) == 0 && name != `Read` && name != `Filter` && name != `Delete` {
 			return logErrorfShort(eEmptyCond, name, consts.EmptyObject)
 		}
 		if err = script.VMCompileEval(sc.VM, cond, uint32(sc.TxSmart.EcosystemID)); err != nil {

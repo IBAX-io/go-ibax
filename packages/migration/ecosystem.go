@@ -38,6 +38,8 @@ const (
 	sqlUnique  = "unique"
 	sqlIndex   = "index"
 	sqlSeq     = "seq"
+	// gin(column) indexes the containment of a jsonb column (@>)
+	sqlGin = "gin"
 )
 
 func sqlHeadSequence(name string) string {
@@ -78,6 +80,12 @@ func sqlEnd(options ...string) (ret string) {
 				pars[i] = strings.TrimSpace(val)
 			}
 			cname = strings.Join(pars, `_`)
+		}
+		if strings.HasPrefix(opt, sqlGin) {
+			column := strings.TrimSpace(strings.Trim(opt[len(sqlGin):], `() `))
+			ret += fmt.Sprintf(`
+	sql("CREATE INDEX \"%[1]s_%[2]s_gin\" ON \"%[1]s\" USING gin (%[2]s jsonb_path_ops);")`, tblName, column)
+			continue
 		}
 		if strings.HasPrefix(opt, sqlIndex) {
 			pars := strings.Split(strings.Trim(opt[len(sqlIndex):], `() `), `,`)

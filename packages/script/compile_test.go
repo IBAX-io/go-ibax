@@ -802,3 +802,18 @@ func TestVM_CompileBlock(t *testing.T) {
 		})
 	}
 }
+
+func TestAssignMustHaveValue(t *testing.T) {
+	for src, valid := range map[string]bool{
+		"contract a {\n action {\n $result = 1\n }\n}":       true,
+		"contract a {\n action {\n var x int\n x = 1\n }\n}": true,
+		"contract a {\n action {\n $result =\n }\n}":         false,
+		"contract a {\n action {\n $result = }\n}":           false,
+		"contract a {\n action {\n var x int\n x =\n }\n}":   false,
+	} {
+		_, err := NewVM().CompileBlock([]rune(src), &OwnerInfo{StateID: 1})
+		if (err == nil) != valid {
+			t.Errorf("%q: error %v", src, err)
+		}
+	}
+}

@@ -1,14 +1,16 @@
 // +prop AppID = '1'
 // +prop Conditions = 'ContractConditions("MainCondition")'
 // This contract is used to set the rights of an ecosystem in the "DAO" control mode (control_mode 2):
-// only the contracts that an accepted voting runs have them.
-// @1VotingDecisionCheck marks the voting as being executed before it runs the contract of the voting's
-// subject with the subject's parameters, and sets the voting's decision after the voting's contracts,
-// in the same transaction. So a marked voting exists only while the contracts of its decision run.
+// only the contracts that an accepted system voting (type 2) runs have them.
+// @1VotingDecisionCheck marks a system voting as being executed before it runs the contract of the
+// voting's subject with the subject's parameters, and sets the voting's decision after the voting's
+// contracts, in the same transaction. So a marked voting exists only while the contracts of its
+// decision run. Only a template creates a system voting, and its subject is fixed when it is created;
+// a voting that a member creates directly runs its contracts with the rights of the transaction's signer.
 
 contract DAODecisionCondition {
     conditions {
-        if !DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "flags->decision": "2"}).One("id") {
+        if !DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "voting->type": "2", "flags->decision": "2"}).One("id") {
             warning Sprintf(LangRes("@1x_not_access_action"), "DAODecisionCondition")
         }
     }

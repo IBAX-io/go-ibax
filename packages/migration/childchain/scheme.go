@@ -87,6 +87,7 @@ var schemaCLB = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
 			"title" character varying(255) NOT NULL DEFAULT '',
 			"value" text NOT NULL DEFAULT '',
 			"conditions" text NOT NULL DEFAULT '',
+			"refs" jsonb NOT NULL DEFAULT '{}',
 			"ecosystem" bigint NOT NULL DEFAULT '1'
 		);
 		ALTER TABLE ONLY "%[1]d_menu" ADD CONSTRAINT "%[1]d_menu_pkey" PRIMARY KEY (id);
@@ -102,6 +103,7 @@ var schemaCLB = `DROP TABLE IF EXISTS "1_keys"; CREATE TABLE "1_keys" (
 			"conditions" text NOT NULL DEFAULT '',
 			"app_id" bigint NOT NULL DEFAULT '1',
 			"validate_mode" character(1) NOT NULL DEFAULT '0',
+			"refs" jsonb NOT NULL DEFAULT '{}',
 			"ecosystem" bigint NOT NULL DEFAULT '1'
 		);
 		ALTER TABLE ONLY "%[1]d_pages" ADD CONSTRAINT "%[1]d_pages_pkey" PRIMARY KEY (id);

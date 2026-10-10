@@ -17,6 +17,8 @@ import (
 	"path"
 	"slices"
 	"strings"
+
+	"github.com/IBAX-io/go-ibax/packages/wtl"
 )
 
 //go:embed manifest.json languages.json pages blocks menus parameters
@@ -115,6 +117,11 @@ func quote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
 }
 
+// The refs of a source of ecosystem 1, as the node writes them with the value (package wtl)
+func refs(source string) string {
+	return quote(wtl.Read(source, 1).JSON())
+}
+
 func insert(table string, columns string, rows []string) string {
 	if len(rows) == 0 {
 		return ""
@@ -126,16 +133,19 @@ func insert(table string, columns string, rows []string) string {
 func (apps *Apps) FirstEcosystemSQL() (string, error) {
 	var pages, blocks, menus, languages []string
 	for _, page := range apps.manifest.Pages {
-		pages = append(pages, fmt.Sprintf("(next_id('1_pages'), %s, %s, %s, %s, '%d', '1')", quote(page.Name),
-			quote(apps.sources[path.Join("pages", page.Name+".wtl")]), quote(page.Menu), quote(page.Conditions), applicationID))
+		source := apps.sources[path.Join("pages", page.Name+".wtl")]
+		pages = append(pages, fmt.Sprintf("(next_id('1_pages'), %s, %s, %s, %s, '%d', %s, '1')", quote(page.Name),
+			quote(source), quote(page.Menu), quote(page.Conditions), applicationID, refs(source)))
 	}
 	for _, block := range apps.manifest.Blocks {
-		blocks = append(blocks, fmt.Sprintf("(next_id('1_snippets'), %s, %s, %s, '%d', '1')", quote(block.Name),
-			quote(apps.sources[path.Join("blocks", block.Name+".wtl")]), quote(block.Conditions), applicationID))
+		source := apps.sources[path.Join("blocks", block.Name+".wtl")]
+		blocks = append(blocks, fmt.Sprintf("(next_id('1_snippets'), %s, %s, %s, '%d', %s, '1')", quote(block.Name),
+			quote(source), quote(block.Conditions), applicationID, refs(source)))
 	}
 	for _, menu := range apps.manifest.Menus {
-		menus = append(menus, fmt.Sprintf("(next_id('1_menu'), %s, %s, %s, %s, '1')", quote(menu.Name),
-			quote(apps.sources[path.Join("menus", menu.Name+".wtl")]), quote(menu.Title), quote(menu.Conditions)))
+		source := apps.sources[path.Join("menus", menu.Name+".wtl")]
+		menus = append(menus, fmt.Sprintf("(next_id('1_menu'), %s, %s, %s, %s, %s, '1')", quote(menu.Name),
+			quote(source), quote(menu.Title), quote(menu.Conditions), refs(source)))
 	}
 	names := make([]string, 0, len(apps.languages))
 	for name := range apps.languages {
@@ -150,9 +160,9 @@ func (apps *Apps) FirstEcosystemSQL() (string, error) {
 		}
 		languages = append(languages, fmt.Sprintf("(next_id('1_languages'), %s, %s, '1')", quote(name), quote(string(res))))
 	}
-	return insert("1_pages", "id, name, value, menu, conditions, app_id, ecosystem", pages) +
-		insert("1_snippets", "id, name, value, conditions, app_id, ecosystem", blocks) +
-		insert("1_menu", "id, name, value, title, conditions, ecosystem", menus) +
+	return insert("1_pages", "id, name, value, menu, conditions, app_id, refs, ecosystem", pages) +
+		insert("1_snippets", "id, name, value, conditions, app_id, refs, ecosystem", blocks) +
+		insert("1_menu", "id, name, value, title, conditions, refs, ecosystem", menus) +
 		insert("1_languages", "id, name, res, ecosystem", languages), nil
 }
 
