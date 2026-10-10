@@ -20,7 +20,7 @@ import (
 // usable reports whether this node can run the suite: in FIPS mode only approved suites, and
 // ML-DSA only with a module that implements it
 func usable(cryptoer, hasher string) bool {
-	return crypto.CheckAsymAlgo(crypto.AsymAlgo(crypto.AsymAlgo_value[cryptoer])) == nil &&
+	return crypto.CheckNodeAlgo(crypto.AsymAlgo(crypto.AsymAlgo_value[cryptoer])) == nil &&
 		crypto.CheckHashAlgo(crypto.HashAlgo(crypto.HashAlgo_value[hasher])) == nil
 }
 
@@ -145,7 +145,7 @@ func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
 	useSuite("ECC_P256", "SHA256")
 	// Any ML-DSA-65 key: under a module without ML-DSA, the bytes stand for one and are refused
 	mldsa := crypto.AccountKey{Algo: crypto.AsymAlgo_MLDSA65, Raw: make([]byte, 1952)}
-	withMLDSA := crypto.CheckAsymAlgo(crypto.AsymAlgo_MLDSA65) == nil
+	withMLDSA := crypto.CheckAccountAlgo(crypto.AsymAlgo_MLDSA65) == nil
 	if withMLDSA {
 		var err error
 		if _, mldsa, err = crypto.GenAccountKey(crypto.AsymAlgo_MLDSA65); err != nil {

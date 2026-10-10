@@ -16,7 +16,10 @@ import (
 // Cryptographic Module implements as approved services. ECC_Secp256k1, SM2, SM3 and KECCAK256 are
 // not FIPS algorithms; Keccak-256 is not FIPS 202 SHA3-256.
 var (
-	fipsAsymAlgos = map[AsymAlgo]bool{AsymAlgo_ECC_P256: true, AsymAlgo_MLDSA65: true, AsymAlgo_MLDSA87: true}
+	fipsAsymAlgos = map[AsymAlgo]bool{
+		AsymAlgo_ECC_P256: true, AsymAlgo_ECC_P384: true, AsymAlgo_RSA2048: true, AsymAlgo_RSA3072: true,
+		AsymAlgo_MLDSA65: true, AsymAlgo_MLDSA87: true,
+	}
 	fipsHashAlgos = map[HashAlgo]bool{HashAlgo_SHA256: true, HashAlgo_SHA384: true, HashAlgo_SHA512: true, HashAlgo_SHA3_256: true}
 )
 
@@ -35,14 +38,27 @@ func isMLDSA(a AsymAlgo) bool {
 	return a == AsymAlgo_MLDSA65 || a == AsymAlgo_MLDSA87
 }
 
-// CheckAsymAlgo refuses a signature algorithm this node cannot run (InitAsymAlgo stops the node on it)
-func CheckAsymAlgo(a AsymAlgo) error {
+// CheckNodeAlgo refuses a node algorithm this node cannot sign with (InitAsymAlgo stops the node on it)
+func CheckNodeAlgo(a AsymAlgo) error {
+	return checkNodeAlgo(a, FIPSMode(), asymalgo.MLDSAAvailable(), FIPSModule())
+}
+
+// CheckAccountAlgo refuses an algorithm of account keys this node cannot verify
+func CheckAccountAlgo(a AsymAlgo) error {
 	return checkAsymAlgo(a, FIPSMode(), asymalgo.MLDSAAvailable(), FIPSModule())
 }
 
 // CheckHashAlgo refuses a hash algorithm this node cannot run (InitHashAlgo stops the node on it)
 func CheckHashAlgo(a HashAlgo) error {
 	return checkHashAlgo(a, FIPSMode())
+}
+
+// checkNodeAlgo refuses a node algorithm: one of account keys only, or one the node cannot run
+func checkNodeAlgo(a AsymAlgo, fips, mldsa bool, module string) error {
+	if IsAccountOnlyAlgo(a) {
+		return fmt.Errorf("curve algo [%v] is an algorithm of account keys only, never of node keys, Run 'go-ibax config --help' for details", a)
+	}
+	return checkAsymAlgo(a, fips, mldsa, module)
 }
 
 // checkAsymAlgo refuses a signature algorithm the node cannot run: one it does not implement, one
@@ -52,7 +68,7 @@ func checkAsymAlgo(a AsymAlgo, fips, mldsa bool, module string) error {
 		return fmt.Errorf("curve algo [%v] is not supported yet, Run 'go-ibax config --help' for details", a)
 	}
 	if fips && !fipsAsymAlgos[a] {
-		return fmt.Errorf("curve algo [%v] is not approved in FIPS 140-3 mode; a FIPS node signs with ECC_P256, MLDSA65 or MLDSA87", a)
+		return fmt.Errorf("curve algo [%v] is not approved in FIPS 140-3 mode; a FIPS node signs with ECC_P256, MLDSA65 or MLDSA87, and accounts with these, ECC_P384, RSA2048 or RSA3072", a)
 	}
 	if isMLDSA(a) && !mldsa {
 		return fmt.Errorf("curve algo [%v] is not implemented by the Go Cryptographic Module %s this node is built with; build it with a module that has ML-DSA (GOFIPS140=v1.26.0 or later)", a, module)

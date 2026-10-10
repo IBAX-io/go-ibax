@@ -50,7 +50,8 @@ type accountAlgorithmJSON struct {
 }
 
 // ParseAccountAlgorithms reads and checks a value of account_algorithms: at least one algorithm,
-// each implemented and listed once, with valid days and registration ending no later than signing
+// each implemented, usable with the network hash and listed once, with valid days and
+// registration ending no later than signing
 func ParseAccountAlgorithms(value string) (AccountAlgorithmSet, error) {
 	var items []accountAlgorithmJSON
 	if err := json.Unmarshal([]byte(value), &items); err != nil {
@@ -66,6 +67,9 @@ func ParseAccountAlgorithms(value string) (AccountAlgorithmSet, error) {
 			return nil, fmt.Errorf("%s: algorithm %q is not implemented", AccountAlgorithms, item.Algo)
 		}
 		algo := crypto.AsymAlgo(v)
+		if err := crypto.CheckAccountAlgoNetwork(algo); err != nil {
+			return nil, fmt.Errorf("%s: %w", AccountAlgorithms, err)
+		}
 		if _, dup := set.find(algo); dup {
 			return nil, fmt.Errorf("%s: algorithm %s is listed twice", AccountAlgorithms, algo)
 		}
@@ -210,7 +214,7 @@ func (s AccountAlgorithmSet) CheckChange(next AccountAlgorithmSet) ([]crypto.Asy
 // the cryptographic module of the node lacks. A node that cannot verify every account would fork.
 func (s AccountAlgorithmSet) CheckNode() error {
 	for _, a := range s {
-		if err := crypto.CheckAsymAlgo(a.Algo); err != nil {
+		if err := crypto.CheckAccountAlgo(a.Algo); err != nil {
 			return fmt.Errorf("%s: %w", AccountAlgorithms, err)
 		}
 	}

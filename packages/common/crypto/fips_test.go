@@ -119,7 +119,7 @@ func TestFIPSSuites(t *testing.T) {
 	defer func() { asymAlgo, hashAlgo = AsymAlgo_ECC_P256, HashAlgo_SHA256 }()
 	for _, cryptoer := range fipsCryptoers {
 		a := AsymAlgo(AsymAlgo_value[cryptoer])
-		if err := CheckAsymAlgo(a); err != nil {
+		if err := CheckNodeAlgo(a); err != nil {
 			if isMLDSA(a) {
 				t.Logf("%s: %v", cryptoer, err)
 				continue

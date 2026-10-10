@@ -38,7 +38,7 @@ func TestParseAccountAlgorithms(t *testing.T) {
 	}
 	for _, bad := range []string{
 		``, `{}`, `[]`, `null`,
-		`[{"algo":"RSA2048"}]`,
+		`[{"algo":"RSA4096"}]`,
 		`[{"algo":"ECC_P512"}]`,
 		`[{"algo":"ecc_p256"}]`,
 		`[{"algo":"MLDSA65"},{"algo":"MLDSA65"}]`,
@@ -48,6 +48,27 @@ func TestParseAccountAlgorithms(t *testing.T) {
 	} {
 		if set, err := ParseAccountAlgorithms(bad); err == nil {
 			t.Errorf("%s parsed as %v", bad, set)
+		}
+	}
+}
+
+// The PIV algorithms are account algorithms; RSA only where the network hash has RSASSA-PSS
+func TestParseAccountAlgorithmsPIV(t *testing.T) {
+	piv := `[{"algo":"ECC_P384","sign_until":"2031-12-31"},{"algo":"RSA2048","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"RSA3072","sign_until":"2031-12-31"}]`
+	if set := mustParse(t, piv); set.String() != piv {
+		t.Fatalf("written %s", set)
+	}
+	if crypto.FIPSMode() {
+		return
+	}
+	crypto.InitHashAlgo("KECCAK256")
+	defer crypto.InitHashAlgo("SHA256")
+	if _, err := ParseAccountAlgorithms(`[{"algo":"ECC_P384"}]`); err != nil {
+		t.Errorf("P-384 refused on KECCAK256: %v", err)
+	}
+	for _, rsa := range []string{`[{"algo":"RSA2048"}]`, `[{"algo":"ECC_P384"},{"algo":"RSA3072"}]`} {
+		if set, err := ParseAccountAlgorithms(rsa); err == nil {
+			t.Errorf("%s parsed on KECCAK256 as %v", rsa, set)
 		}
 	}
 }
@@ -118,7 +139,7 @@ func TestAccountAlgorithmChange(t *testing.T) {
 // A FIPS node cannot verify every algorithm: it refuses a set with one it may not use
 func TestAccountAlgorithmsFIPS(t *testing.T) {
 	approved := mustParse(t, `[{"algo":"ECC_P256"},{"algo":"MLDSA65"},{"algo":"MLDSA87"}]`)
-	if crypto.CheckAsymAlgo(crypto.AsymAlgo_MLDSA65) == nil {
+	if crypto.CheckAccountAlgo(crypto.AsymAlgo_MLDSA65) == nil {
 		if err := approved.CheckNode(); err != nil {
 			t.Errorf("approved set refused: %v", err)
 		}
@@ -183,7 +204,7 @@ func TestParseAccountAlgo(t *testing.T) {
 	if a, err := ParseAccountAlgo("MLDSA87"); err != nil || a != crypto.AsymAlgo_MLDSA87 {
 		t.Errorf("MLDSA87: %v %v", a, err)
 	}
-	for _, bad := range []string{"", "mldsa87", "ECC_P512", "RSA2048", "4"} {
+	for _, bad := range []string{"", "mldsa87", "ECC_P512", "RSA4096", "4"} {
 		if _, err := ParseAccountAlgo(bad); !errors.Is(err, ErrAccountAlgorithm) {
 			t.Errorf("%q: %v", bad, err)
 		}

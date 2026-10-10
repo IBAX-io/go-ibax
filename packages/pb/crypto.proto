@@ -12,6 +12,10 @@ enum AsymAlgo{
   ECC_P512 = 3;
   MLDSA65 = 4;
   MLDSA87 = 5;
+  // Account keys only (PIV): never a node algorithm
+  ECC_P384 = 6;
+  RSA2048 = 7;
+  RSA3072 = 8;
 }
 
 // SymAlgo is symmetric algorithms

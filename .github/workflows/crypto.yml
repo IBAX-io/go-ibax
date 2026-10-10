@@ -53,4 +53,4 @@ jobs:
       - name: Approved suites run, others are refused, genesis and TLS checks hold
         env:
           GODEBUG: fips140=only
-        run: go test -count=1 -run 'FIPS|Algos|Genesis|TLS' -v ./packages/common/crypto/ ./packages/block/ ./packages/chain/ ./packages/conf/syspar/
+        run: go test -count=1 -run 'FIPS|Algos|Genesis|TLS|PIV|RSA' -v ./packages/common/crypto/ ./packages/block/ ./packages/chain/ ./packages/conf/syspar/

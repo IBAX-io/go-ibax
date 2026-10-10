@@ -7,6 +7,7 @@ package crypto
 
 import (
 	"bytes"
+	stdcrypto "crypto"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -38,6 +39,40 @@ type AccountKey struct {
 func AccountAlgoImplemented(a AsymAlgo) bool {
 	_, known := AsymAlgo_name[int32(a)]
 	return known && a != AsymAlgo_ECC_P512
+}
+
+// IsAccountOnlyAlgo reports whether the algorithm is one of account keys only: the PIV keys
+// ECC_P384, RSA2048 and RSA3072 sign accounts and logins, never blocks
+func IsAccountOnlyAlgo(a AsymAlgo) bool {
+	return a == AsymAlgo_ECC_P384 || IsRSAAlgo(a)
+}
+
+// IsRSAAlgo reports whether the algorithm is RSASSA-PSS
+func IsRSAAlgo(a AsymAlgo) bool {
+	return a == AsymAlgo_RSA2048 || a == AsymAlgo_RSA3072
+}
+
+// pssHashes are the network hashes RSASSA-PSS is defined with
+var pssHashes = map[HashAlgo]stdcrypto.Hash{
+	HashAlgo_SHA256:   stdcrypto.SHA256,
+	HashAlgo_SHA384:   stdcrypto.SHA384,
+	HashAlgo_SHA512:   stdcrypto.SHA512,
+	HashAlgo_SHA3_256: stdcrypto.SHA3_256,
+}
+
+// PSSHash is the PSS and MGF1 hash of RSA account keys on a network of hash h: zero for KECCAK256
+// and SM3, with which RSA keys neither sign nor verify
+func PSSHash(h HashAlgo) stdcrypto.Hash {
+	return pssHashes[h]
+}
+
+// CheckAccountAlgoNetwork refuses an algorithm accounts cannot have on this network whatever the
+// node: RSA without a PSS hash (KECCAK256 and SM3 networks). All nodes of a network share its hash.
+func CheckAccountAlgoNetwork(a AsymAlgo) error {
+	if IsRSAAlgo(a) && PSSHash(hashAlgo) == 0 {
+		return fmt.Errorf("%s keys sign with RSASSA-PSS, which is not defined with the network hash %s; RSA needs SHA256, SHA384, SHA512 or SHA3_256", a, hashAlgo)
+	}
+	return nil
 }
 
 // NewAccountKey checks that raw is a public key of algo

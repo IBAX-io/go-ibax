@@ -8,7 +8,7 @@ import (
 )
 
 func TestAccountKeyRoundTrip(t *testing.T) {
-	for _, a := range signAlgos {
+	for _, a := range accountAlgos {
 		t.Run(a.String(), func(t *testing.T) {
 			priv, key, err := GenAccountKey(a)
 			if err != nil {
@@ -112,7 +112,7 @@ func TestAccountKeyRefusesMalformed(t *testing.T) {
 // The control verifies the same signature with the original key.
 func TestAccountKeyRelabelledDoesNotVerify(t *testing.T) {
 	msg := []byte("transfer")
-	for _, a := range signAlgos {
+	for _, a := range accountAlgos {
 		priv, key, err := GenAccountKey(a)
 		if err != nil {
 			t.Fatal(err)
@@ -124,7 +124,7 @@ func TestAccountKeyRelabelledDoesNotVerify(t *testing.T) {
 		if ok, err := key.Verify(msg, sig); !ok || err != nil {
 			t.Fatalf("%s: control: %v", a, err)
 		}
-		for _, b := range signAlgos {
+		for _, b := range accountAlgos {
 			if b == a {
 				continue
 			}

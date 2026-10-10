@@ -33,6 +33,12 @@ func NewAsymAlgo(a AsymAlgo) AsymProvider {
 		return &asymalgo.MLDSA65{}
 	case AsymAlgo_MLDSA87:
 		return &asymalgo.MLDSA87{}
+	case AsymAlgo_ECC_P384:
+		return &asymalgo.P384{}
+	case AsymAlgo_RSA2048:
+		return &asymalgo.RSA{Bits: 2048, Hash: PSSHash(hashAlgo)}
+	case AsymAlgo_RSA3072:
+		return &asymalgo.RSA{Bits: 3072, Hash: PSSHash(hashAlgo)}
 	}
 	panic(fmt.Errorf("curve algo [%v] is not supported yet", a))
 }
@@ -42,7 +48,7 @@ func InitAsymAlgo(s string) {
 	if !ok {
 		log.Fatal(fmt.Errorf("curve algo [%v] is not supported yet, Run 'go-ibax config --help' for details", s))
 	}
-	if err := CheckAsymAlgo(AsymAlgo(v)); err != nil {
+	if err := CheckNodeAlgo(AsymAlgo(v)); err != nil {
 		log.Fatal(err)
 	}
 	asymAlgo = AsymAlgo(v)
