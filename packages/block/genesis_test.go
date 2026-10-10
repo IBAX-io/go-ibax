@@ -6,6 +6,7 @@
 package block
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -29,16 +30,30 @@ func useSuite(cryptoer, hasher string) {
 	crypto.InitHashAlgo(hasher)
 }
 
-// testGenesis makes a genesis block as generateFirstBlock does, under the current suite
-func testGenesis(t *testing.T) []byte {
+// testGenesis makes a genesis block as generateFirstBlock does, under the current suite: the
+// founder has an account key of the node algorithm, the only account algorithm. edit, if any,
+// changes the first block before it is signed.
+// genesisTime is 2030-06-15 12:00 UTC
+const genesisTime = 1907755200
+
+func testGenesis(t *testing.T, edit ...func(*types.FirstBlock)) []byte {
 	t.Helper()
 	priv, pub, err := crypto.GenNodeKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}
-	tx, err := new(transaction.FirstBlockParser).BinMarshal(&types.FirstBlock{
-		KeyID: 1, Time: 1, PublicKey: pub, NodePublicKey: pub,
-	})
+	_, founder, err := crypto.GenAccountKey(crypto.NodeAlgo())
+	if err != nil {
+		t.Fatal(err)
+	}
+	first := &types.FirstBlock{
+		KeyID: founder.Address(), Time: genesisTime, PublicKey: founder.Bytes(), NodePublicKey: pub,
+		AccountAlgorithms: fmt.Sprintf(`[{"algo":%q}]`, crypto.NodeAlgo()),
+	}
+	for _, e := range edit {
+		e(first)
+	}
+	tx, err := new(transaction.FirstBlockParser).BinMarshal(first)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,5 +135,77 @@ func TestCheckGenesisRefusesAlteredBlock(t *testing.T) {
 	}
 	if err := CheckGenesis(data); err == nil || !strings.Contains(err.Error(), "signature does not verify") {
 		t.Errorf("altered genesis: %v", err)
+	}
+}
+
+// The genesis block must hold a valid account_algorithms the node algorithm is in, and a founder
+// account key that may be registered at the genesis time
+func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
+	defer useSuite("ECC_P256", "SHA256")
+	useSuite("ECC_P256", "SHA256")
+	// Any ML-DSA-65 key: under a module without ML-DSA, the bytes stand for one and are refused
+	mldsa := crypto.AccountKey{Algo: crypto.AsymAlgo_MLDSA65, Raw: make([]byte, 1952)}
+	withMLDSA := crypto.CheckAsymAlgo(crypto.AsymAlgo_MLDSA65) == nil
+	if withMLDSA {
+		var err error
+		if _, mldsa, err = crypto.GenAccountKey(crypto.AsymAlgo_MLDSA65); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cases := map[string]func(*types.FirstBlock){
+		"no account algorithms": func(f *types.FirstBlock) { f.AccountAlgorithms = "" },
+		"empty set":             func(f *types.FirstBlock) { f.AccountAlgorithms = "[]" },
+		"node algorithm missing": func(f *types.FirstBlock) {
+			f.AccountAlgorithms = `[{"algo":"MLDSA65"}]`
+		},
+		"node algorithm past its signing day": func(f *types.FirstBlock) {
+			f.AccountAlgorithms = `[{"algo":"ECC_P256","sign_until":"2030-06-14"}]`
+		},
+		"founder algorithm missing": func(f *types.FirstBlock) {
+			f.PublicKey, f.KeyID = mldsa.Bytes(), mldsa.Address()
+		},
+		"founder past its registration day": func(f *types.FirstBlock) {
+			f.AccountAlgorithms = `[{"algo":"ECC_P256","register_until":"2030-06-14"}]`
+		},
+		"bare founder key":               func(f *types.FirstBlock) { f.PublicKey = f.PublicKey[2:] },
+		"founder key of another account": func(f *types.FirstBlock) { f.KeyID++ },
+	}
+	for name, edit := range cases {
+		if err := CheckGenesis(testGenesis(t, edit)); err == nil || !strings.Contains(err.Error(), "the accounts of the genesis block") {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	// The registration and signing days include the genesis day; a founder of another algorithm
+	// in the set is accepted
+	accepted := map[string]func(*types.FirstBlock){
+		"days on the genesis day": func(f *types.FirstBlock) {
+			f.AccountAlgorithms = `[{"algo":"ECC_P256","register_until":"2030-06-15","sign_until":"2030-06-15"}]`
+		},
+	}
+	if withMLDSA {
+		accepted["ML-DSA founder"] = func(f *types.FirstBlock) {
+			f.AccountAlgorithms = `[{"algo":"ECC_P256"},{"algo":"MLDSA65"}]`
+			f.PublicKey, f.KeyID = mldsa.Bytes(), mldsa.Address()
+		}
+	}
+	for name, edit := range accepted {
+		if err := CheckGenesis(testGenesis(t, edit)); err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+}
+
+// A FIPS node refuses a genesis block whose accounts may have keys it cannot verify in FIPS mode
+func TestCheckGenesisFIPSRefusesAccountAlgorithms(t *testing.T) {
+	if !crypto.FIPSMode() {
+		t.Skip("runs in FIPS mode (GODEBUG=fips140=on)")
+	}
+	defer useSuite("ECC_P256", "SHA256")
+	useSuite("ECC_P256", "SHA256")
+	err := CheckGenesis(testGenesis(t, func(f *types.FirstBlock) {
+		f.AccountAlgorithms = `[{"algo":"ECC_P256"},{"algo":"ECC_Secp256k1"}]`
+	}))
+	if err == nil || !strings.Contains(err.Error(), "FIPS") {
+		t.Errorf("secp256k1 accounts accepted in FIPS mode: %v", err)
 	}
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/shopspring/decimal"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
@@ -81,4 +82,14 @@ func GetKeysCount() (int64, error) {
 	row := DBConn.Raw(`SELECT count(*) key_count FROM "1_keys" WHERE ecosystem = 1`).Select("key_count").Row()
 	err := row.Scan(&cnt)
 	return cnt, err
+}
+
+// CountKeysOfAlgo returns the number of keys, not deleted, of an account algorithm in every
+// ecosystem: their public key opens with the marker and the algorithm
+func CountKeysOfAlgo(db *DbTransaction, algo crypto.AsymAlgo) (int64, error) {
+	var n int64
+	err := GetDB(db).Table("1_keys").
+		Where("deleted = 0 AND substring(pub from 1 for 2) = ?", []byte{crypto.AccountKeyMarker, byte(algo)}).
+		Count(&n).Error
+	return n, err
 }

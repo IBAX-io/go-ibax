@@ -19,7 +19,7 @@ import (
 // configured with: its prev hashes, merkle root and block hash are recomputed with the configured
 // hasher, and its signature is verified with the configured cryptoer and the genesis node key.
 // A node whose suite differs from its chain's would fork from the first block it makes, so it
-// must not start.
+// must not start. Its account algorithms must all be ones the node can verify.
 func CheckGenesis(data []byte) (err error) {
 	// The block may come from a peer: a malformed one must not crash the node
 	defer func() {
@@ -61,6 +61,9 @@ func CheckGenesis(data []byte) (err error) {
 	}
 	if ok, err := crypto.NodeVerify(first.Data.NodePublicKey, []byte(b.ForSign()), b.Header.Sign); err != nil || !ok {
 		return mismatch("its signature does not verify")
+	}
+	if _, _, err := transaction.CheckFirstBlockAccounts(first.Data); err != nil {
+		return fmt.Errorf("the accounts of the genesis block: %w", err)
 	}
 	return nil
 }

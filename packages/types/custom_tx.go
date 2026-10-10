@@ -39,6 +39,8 @@ type FirstBlock struct {
 	StopNetworkCertBundle []byte
 	Test                  int64
 	PrivateBlockchain     uint64
+	// AccountAlgorithms is the initial value of the platform parameter account_algorithms
+	AccountAlgorithms string
 }
 
 func (t *FirstBlock) TxType() byte { return FirstBlockTxType }

@@ -8,6 +8,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/block"
@@ -24,6 +25,7 @@ import (
 var stopNetworkBundleFilepath string
 var testBlockchain bool
 var privateBlockchain bool
+var accountAlgorithms string
 
 // generateFirstBlockCmd represents the generateFirstBlock command
 var generateFirstBlockCmd = &cobra.Command{
@@ -44,6 +46,7 @@ func init() {
 	generateFirstBlockCmd.Flags().StringVar(&stopNetworkBundleFilepath, "stopNetworkCert", "", "Filepath to the fullchain of certificates for network stopping")
 	generateFirstBlockCmd.Flags().BoolVar(&testBlockchain, "test", false, "if true - test blockchain")
 	generateFirstBlockCmd.Flags().BoolVar(&privateBlockchain, "private", false, "if true - all transactions will be free")
+	generateFirstBlockCmd.Flags().StringVar(&accountAlgorithms, "accountAlgorithms", "", `algorithms account keys may have, as the platform parameter account_algorithms, e.g. [{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"}] (default: the node algorithm, without days)`)
 }
 
 func genesisBlock() ([]byte, error) {
@@ -63,19 +66,25 @@ func genesisBlock() ([]byte, error) {
 		RollbacksHash: crypto.Hash([]byte(`0`)),
 		ConsensusMode: consts.HonorNodeMode,
 	}
-	decodeKeyFile := func(kName string) []byte {
+	readKeyFile := func(kName string) string {
 		filepath := filepath.Join(conf.Config.DirPathConf.KeysDir, kName)
 		data, err := os.ReadFile(filepath)
 		if err != nil {
 			log.WithError(err).WithFields(log.Fields{"key": kName, "filepath": filepath}).Fatal("Reading key data")
 		}
-
-		decodedKey, err := crypto.HexToPub(string(data))
-		if err != nil {
-			log.WithError(err).Fatalf("converting %s from hex", kName)
-		}
-
-		return decodedKey
+		return strings.TrimSpace(string(data))
+	}
+	nodeKey, err := crypto.HexToPub(readKeyFile(consts.NodePublicKeyFilename))
+	if err != nil {
+		log.WithError(err).Fatalf("converting %s from hex", consts.NodePublicKeyFilename)
+	}
+	founderKey, err := crypto.ParseAccountKeyHex(readKeyFile(consts.PublicKeyFilename))
+	if err != nil {
+		log.WithError(err).Fatalf("reading the account key %s", consts.PublicKeyFilename)
+	}
+	algos := accountAlgorithms
+	if algos == "" {
+		algos = syspar.AccountAlgorithmSet{{Algo: crypto.NodeAlgo()}}.String()
 	}
 
 	var stopNetworkCert []byte
@@ -101,15 +110,20 @@ func genesisBlock() ([]byte, error) {
 	}
 
 	fbp := new(transaction.FirstBlockParser)
-	tx, err := fbp.BinMarshal(&types.FirstBlock{
+	first := &types.FirstBlock{
 		KeyID:                 conf.Config.KeyID,
 		Time:                  now,
-		PublicKey:             decodeKeyFile(consts.PublicKeyFilename),
-		NodePublicKey:         decodeKeyFile(consts.NodePublicKeyFilename),
+		PublicKey:             founderKey.Bytes(),
+		NodePublicKey:         nodeKey,
 		StopNetworkCertBundle: stopNetworkCert,
 		Test:                  test,
 		PrivateBlockchain:     pb,
-	})
+		AccountAlgorithms:     algos,
+	}
+	if _, _, err := transaction.CheckFirstBlockAccounts(first); err != nil {
+		log.WithError(err).Fatal("checking the accounts of the first block")
+	}
+	tx, err := fbp.BinMarshal(first)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Fatal("first block body bin marshalling")
 	}

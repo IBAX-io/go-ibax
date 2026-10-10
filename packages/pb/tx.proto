@@ -27,6 +27,7 @@ message FirstBlock {
   bytes stop_network_cert_bundle = 5;
   int64 test = 6;
   uint64 private_blockchain = 7;
+  string account_algorithms = 8;
 }
 
 message StopNetwork {

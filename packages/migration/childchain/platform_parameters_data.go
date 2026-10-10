@@ -13,6 +13,7 @@ INSERT INTO "1_platform_parameters" ("id","name", "value", "conditions") VALUES
 	(next_id('1_platform_parameters'),'gap_between_blocks', '2', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'rollback_blocks', '60', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'honor_nodes', '', 'ContractAccess("@1UpdatePlatformParam","@1NodeRemoveByKey")'),
+	(next_id('1_platform_parameters'),'account_algorithms', '', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'number_of_nodes', '101', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'price_create_ecosystem', '2000', 'ContractAccess("@1UpdatePlatformParam")'),
 	(next_id('1_platform_parameters'),'price_create_table', '25', 'ContractAccess("@1UpdatePlatformParam")'),

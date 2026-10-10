@@ -143,6 +143,11 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 				}
 			}
 			checked = true
+		case syspar.AccountAlgorithms:
+			if err := checkAccountAlgorithms(sc.DbTransaction, value); err != nil {
+				return 0, logErrorValue(err, consts.InvalidObject, err.Error(), value)
+			}
+			checked = true
 		case syspar.HonorNodes:
 			var fnodes []*syspar.HonorNode
 			if err := json.Unmarshal([]byte(value), &fnodes); err != nil {
@@ -188,6 +193,29 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 	}
 	sc.SysUpdate = true
 	return 0, nil
+}
+
+// checkAccountAlgorithms refuses a new value of account_algorithms that is malformed, moves a
+// day later, or removes an algorithm some keys still have
+func checkAccountAlgorithms(dbTx *sqldb.DbTransaction, value string) error {
+	next, err := syspar.ParseAccountAlgorithms(value)
+	if err != nil {
+		return err
+	}
+	removed, err := syspar.GetAccountAlgorithms().CheckChange(next)
+	if err != nil {
+		return err
+	}
+	for _, algo := range removed {
+		n, err := sqldb.CountKeysOfAlgo(dbTx, algo)
+		if err != nil {
+			return err
+		}
+		if n > 0 {
+			return fmt.Errorf("%s: %d keys still have %s; rebind them before removing it", syspar.AccountAlgorithms, n, algo)
+		}
+	}
+	return nil
 }
 
 // SysParamString returns the value of the system parameter
