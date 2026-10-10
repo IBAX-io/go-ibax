@@ -201,7 +201,7 @@ func CheckSign(publicKeys [][]byte, forSign []byte, signs []byte, nodeKeyOrLogin
 		}
 	}
 
-	return crypto.Verify(publicKeys[0], forSign, signsSlice[0])
+	return crypto.NodeVerify(publicKeys[0], forSign, signsSlice[0])
 }
 
 // GetCurrentDir returns the current directory

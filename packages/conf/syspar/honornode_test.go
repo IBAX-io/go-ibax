@@ -65,7 +65,7 @@ func TestHonorNodeKeyOfNetworkCryptoer(t *testing.T) {
 	keys := map[string]string{}
 	for _, cryptoer := range []string{"ECC_P256", "MLDSA65"} {
 		crypto.InitAsymAlgo(cryptoer)
-		_, pub, err := crypto.GenKeyPair()
+		_, pub, err := crypto.GenNodeKeyPair()
 		require.NoError(t, err)
 		keys[cryptoer] = crypto.PubToHex(pub)
 	}
@@ -80,7 +80,7 @@ func TestHonorNodeKeyOfNetworkCryptoer(t *testing.T) {
 			if keyType == cryptoer {
 				require.NoError(t, err, "%s key on a %s network", keyType, cryptoer)
 				pub, _ := hex.DecodeString(key)
-				assert.Equal(t, crypto.PublicKeySize(), len(crypto.CutPub(pub)))
+				assert.Equal(t, crypto.NodePublicKeySize(), len(crypto.CutPub(pub)))
 			} else {
 				assert.EqualError(t, err, errHonorNodeInvalidValues.Error(), "%s key on a %s network", keyType, cryptoer)
 			}

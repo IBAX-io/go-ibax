@@ -67,7 +67,7 @@ func createFile(filename string, data []byte) error {
 }
 
 func createKeyPair(privFilename, pubFilename string) (priv, pub []byte, err error) {
-	priv, pub, err = crypto.GenKeyPair()
+	priv, pub, err = crypto.GenNodeKeyPair()
 	if err != nil {
 		log.WithError(err).Error("generate keys")
 		return

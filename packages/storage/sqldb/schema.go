@@ -100,7 +100,7 @@ func ExecChildChainSchema(id int, wallet int64) error {
 				log.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("decoding private key from hex")
 				return nil, err
 			}
-			pubKey, err = crypto.PrivateToPublic(privKey)
+			pubKey, err = crypto.NodePrivateToPublic(privKey)
 			if err != nil {
 				log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting private key to public")
 				return nil, err

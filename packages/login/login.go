@@ -171,7 +171,7 @@ func signIn(req Request, logger *log.Entry) (int64, *sqldb.Key, error) {
 		return 0, nil, ErrEmptyPublic
 	}
 
-	ok, err := crypto.Verify(publicKey, []byte(Salt()+req.Token.UID), req.Signature)
+	ok, err := crypto.NodeVerify(publicKey, []byte(Salt()+req.Token.UID), req.Signature)
 	if err != nil || !ok {
 		logger.WithFields(log.Fields{"type": consts.InvalidObject, "key_id": wallet, "error": err}).Info("incorrect login signature")
 		if err != nil {

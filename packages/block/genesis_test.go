@@ -32,7 +32,7 @@ func useSuite(cryptoer, hasher string) {
 // testGenesis makes a genesis block as generateFirstBlock does, under the current suite
 func testGenesis(t *testing.T) []byte {
 	t.Helper()
-	priv, pub, err := crypto.GenKeyPair()
+	priv, pub, err := crypto.GenNodeKeyPair()
 	if err != nil {
 		t.Fatal(err)
 	}

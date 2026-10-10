@@ -63,6 +63,16 @@ func (l *mldsaLevel) verify(public, hash, signature []byte) (bool, error) {
 	return true, nil
 }
 
+func (l *mldsaLevel) checkPublicKey(public []byte) error {
+	if len(public) != l.publicKeySize {
+		return ErrInvalidPublicKey
+	}
+	if _, err := mldsa.NewPublicKey(l.params(), public); err != nil {
+		return ErrInvalidPublicKey
+	}
+	return nil
+}
+
 func (l *mldsaLevel) privateToPublic(key []byte) ([]byte, error) {
 	sk, err := l.key(key)
 	if err != nil {

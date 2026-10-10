@@ -102,7 +102,7 @@ func (s *SmartTransaction) WithPrivate(privateKey []byte, internal bool) error {
 		publicKey []byte
 		err       error
 	)
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
 		return err
 	}

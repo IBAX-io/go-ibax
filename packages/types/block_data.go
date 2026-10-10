@@ -129,7 +129,7 @@ func (b *BlockData) GenMerkleRoot() []byte {
 
 func (b *BlockData) GetSign(key []byte) ([]byte, error) {
 	forSign := b.ForSign()
-	signed, err := crypto.Sign(key, []byte(forSign))
+	signed, err := crypto.NodeSign(key, []byte(forSign))
 	if err != nil {
 		return nil, errors.Wrap(err, "signing block")
 	}

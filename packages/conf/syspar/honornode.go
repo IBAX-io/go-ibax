@@ -105,7 +105,7 @@ func validateURL(rawurl string) error {
 
 // Validate checks values
 func (fn *HonorNode) Validate() error {
-	if len(fn.PublicKey) != crypto.PublicKeySize() || len(fn.TCPAddress) == 0 {
+	if len(fn.PublicKey) != crypto.NodePublicKeySize() || len(fn.TCPAddress) == 0 {
 		return errHonorNodeInvalidValues
 	}
 

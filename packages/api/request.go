@@ -249,7 +249,7 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 	}
 
 	var publicKey []byte
-	if publicKey, err = crypto.PrivateToPublic(connect.PrivateKey); err != nil {
+	if publicKey, err = crypto.NodePrivateToPublic(connect.PrivateKey); err != nil {
 		return
 	}
 	txTime := time.Now().Unix()
@@ -305,7 +305,7 @@ func (connect *Connect) Login() error {
 		return nil
 	}
 	connect.Auth = ret.Token
-	sign, err = crypto.SignString(hex.EncodeToString(connect.PrivateKey), `LOGIN`+ret.NetworkID+ret.UID)
+	sign, err = crypto.NodeSignString(hex.EncodeToString(connect.PrivateKey), `LOGIN`+ret.NetworkID+ret.UID)
 	if err != nil {
 		return err
 	}

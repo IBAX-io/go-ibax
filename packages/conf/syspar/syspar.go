@@ -120,7 +120,7 @@ func ReadNodeKeys() (err error) {
 		log.WithFields(log.Fields{"type": consts.ConversionError, "error": err}).Error("decoding node private key from hex")
 		return
 	}
-	nodePubKey, err = crypto.PrivateToPublic(nodePrivKey)
+	nodePubKey, err = crypto.NodePrivateToPublic(nodePrivKey)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
 		return

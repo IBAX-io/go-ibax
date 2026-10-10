@@ -72,7 +72,7 @@ func updateSuites(raw []byte) (any, []string, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s: private key: %w", label, err)
 		}
-		pub, err := crypto.PrivateToPublic(priv)
+		pub, err := crypto.NodePrivateToPublic(priv)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", label, err)
 		}
@@ -80,7 +80,7 @@ func updateSuites(raw []byte) (any, []string, error) {
 		v.KeyID = strconv.FormatInt(crypto.Address(pub), 10)
 
 		if v.GoSignature == nil || !verifies(pub, []byte(v.Message), *v.GoSignature) {
-			sig, err := crypto.Sign(priv, []byte(v.Message))
+			sig, err := crypto.NodeSign(priv, []byte(v.Message))
 			if err != nil {
 				return nil, nil, fmt.Errorf("%s: sign: %w", label, err)
 			}
@@ -115,7 +115,7 @@ func verifies(pub, data []byte, signatureHex string) bool {
 	if err != nil {
 		return false
 	}
-	ok, err := crypto.Verify(pub, data, sig)
+	ok, err := crypto.NodeVerify(pub, data, sig)
 	return ok && err == nil
 }
 

@@ -169,7 +169,7 @@ func (s *SmartTransactionParser) Marshal() ([]byte, error) {
 }
 
 func (s *SmartTransactionParser) setSig(privateKey []byte) error {
-	signature, err := crypto.Sign(privateKey, s.Hash)
+	signature, err := crypto.NodeSign(privateKey, s.Hash)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by node private key")
 		return err

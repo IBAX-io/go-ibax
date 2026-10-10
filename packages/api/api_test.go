@@ -60,7 +60,7 @@ func PrivateToPublicHex(hexkey string) (string, error) {
 	if err != nil {
 		return ``, fmt.Errorf("Decode hex error")
 	}
-	pubKey, err := crypto.PrivateToPublic(key)
+	pubKey, err := crypto.NodePrivateToPublic(key)
 	if err != nil {
 		return ``, err
 	}
@@ -141,7 +141,7 @@ func keyLogin(state int64) (err error) {
 
 	var pub string
 
-	sign, err = crypto.SignString(string(key), `LOGIN`+ret.NetworkID+ret.UID)
+	sign, err = crypto.NodeSignString(string(key), `LOGIN`+ret.NetworkID+ret.UID)
 	if err != nil {
 		return
 	}
@@ -192,7 +192,7 @@ func keyLoginToken(state int64) (err error) {
 
 	var pub string
 
-	sign, err = crypto.SignString(string(key), `LOGIN`+ret.NetworkID+ret.UID)
+	sign, err = crypto.NodeSignString(string(key), `LOGIN`+ret.NetworkID+ret.UID)
 	if err != nil {
 		return
 	}
@@ -241,7 +241,7 @@ func keyLoginex(state int64, m ...string) (err error) {
 
 	var pub string
 
-	sign, err = crypto.SignString(string(key), `LOGIN`+ret.NetworkID+ret.UID)
+	sign, err = crypto.NodeSignString(string(key), `LOGIN`+ret.NetworkID+ret.UID)
 	if err != nil {
 		return
 	}
@@ -385,7 +385,7 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
 		return
 	}
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
 		return
 	}
 
@@ -477,7 +477,7 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
 		return
 	}
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
 		return
 	}
 	arrData := make(map[string][]byte)
@@ -585,7 +585,7 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
 		return
 	}
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
 		return
 	}
 
@@ -675,7 +675,7 @@ func postTxResult2(name string, form getter) (id int64, msg string, err error) {
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
 		return
 	}
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
 		return
 	}
 
@@ -746,7 +746,7 @@ func postTransferSelfTxResult(form getter) (id int64, msg string, err error) {
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
 		return
 	}
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
 		return
 	}
 
@@ -797,7 +797,7 @@ func postUTXOTxResult(form getter) (id int64, msg string, err error) {
 	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
 		return
 	}
-	if publicKey, err = crypto.PrivateToPublic(privateKey); err != nil {
+	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
 		return
 	}
 

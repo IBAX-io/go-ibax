@@ -59,7 +59,7 @@ func CheckGenesis(data []byte) (err error) {
 	if err := first.Unmarshal(tx); err != nil || first.Data == nil {
 		return fmt.Errorf("reading the genesis block: %v", err)
 	}
-	if ok, err := crypto.Verify(first.Data.NodePublicKey, []byte(b.ForSign()), b.Header.Sign); err != nil || !ok {
+	if ok, err := crypto.NodeVerify(first.Data.NodePublicKey, []byte(b.ForSign()), b.Header.Sign); err != nil || !ok {
 		return mismatch("its signature does not verify")
 	}
 	return nil

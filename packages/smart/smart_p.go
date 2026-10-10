@@ -270,7 +270,7 @@ func CheckSign(pub, data, sign string) (bool, error) {
 		return false, err
 	}
 	pk = crypto.CutPub(pk)
-	return crypto.Verify(pk, []byte(data), s)
+	return crypto.NodeVerify(pk, []byte(data), s)
 }
 
 func CheckNumberChars(data string) bool {
