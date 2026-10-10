@@ -65,7 +65,7 @@ var generateKeysCmd = &cobra.Command{
 }
 
 func init() {
-	generateKeysCmd.Flags().StringVar(&accountAlgo, "accountAlgo", "", "algorithm of the account key, e.g. MLDSA65 (default: the node algorithm)")
+	generateKeysCmd.Flags().StringVar(&accountAlgo, "accountAlgo", "", "algorithm of the account key, e.g. MLDSA65, ECC_P384 or RSA3072 (default: the node algorithm); an RSA private key is PKCS #1 DER")
 }
 
 // createAccountKey writes an account private key and its account public key, which carries its

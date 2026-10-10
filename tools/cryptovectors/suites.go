@@ -12,11 +12,14 @@ import (
 	"strconv"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 )
 
 const suitesSource = "go-ibax packages/common/crypto via tools/cryptovectors: AccountKeyOf (publicKey: 0xAC, the " +
 	"cryptoer's AsymAlgo byte, the bare public key), AccountKey.Address and AccountSign (goSignature, over message) " +
-	"for every cryptoer and hasher go-ibax implements; clientSignature is the client's transaction signature over " +
+	"for every account algorithm (cryptoer) and hasher go-ibax implements: the PIV algorithms ECC_P384, RSA2048 and " +
+	"RSA3072 are account keys only, and RSA (RSASSA-PSS, the hasher as PSS and MGF1 hash, salt as long as the hash) " +
+	"has no vectors under KECCAK256 and SM3, with which it neither signs nor verifies; clientSignature is the client's transaction signature over " +
 	"payload, checked like a transaction: AccountKey.Verify(DoubleHash(payload)); " +
 	"contextFreeSignature (ML-DSA only) is a valid FIPS 204 signature of Hash(message) under the empty context, " +
 	"which the node and the client must refuse. Test keys only."
@@ -51,8 +54,21 @@ func useSuite(cryptoer, hasher string) error {
 	if _, ok := crypto.HashAlgo_value[hasher]; !ok {
 		return fmt.Errorf("unknown hasher %q", hasher)
 	}
+	// No node key is of an account-only algorithm: the node algorithm stays P-256 for those
+	if crypto.IsAccountOnlyAlgo(crypto.AsymAlgo(crypto.AsymAlgo_value[cryptoer])) {
+		cryptoer = crypto.AsymAlgo_ECC_P256.String()
+	}
 	crypto.InitAsymAlgo(cryptoer)
 	crypto.InitHashAlgo(hasher)
+	// The vectors pin decoding and signatures, not what a network accepts: every account algorithm
+	// the hasher allows may sign and register
+	var set syspar.AccountAlgorithmSet
+	for v := range crypto.AsymAlgo_name {
+		if a := crypto.AsymAlgo(v); crypto.AccountAlgoImplemented(a) && crypto.CheckAccountAlgoNetwork(a) == nil {
+			set = append(set, syspar.AccountAlgorithm{Algo: a})
+		}
+	}
+	syspar.SetAccountAlgorithms(set)
 	return nil
 }
 
