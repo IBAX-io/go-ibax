@@ -108,7 +108,7 @@ func (s *SmartTransaction) WithPrivate(privateKey []byte, internal bool) error {
 		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
 		return err
 	}
-	s.PublicKey = publicKey
+	s.PublicKey = crypto.NodeAccountKey(publicKey).Bytes()
 	if internal {
 		s.SignedBy = crypto.Address(publicKey)
 	}

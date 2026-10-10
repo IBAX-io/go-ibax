@@ -72,9 +72,18 @@ func (s *SmartTransactionParser) Validate() error {
 	if err := s.TxSmart.Validate(); err != nil {
 		return err
 	}
-	_, err := utils.CheckSign([][]byte{crypto.CutPub(s.TxSmart.PublicKey)}, s.Hash, s.TxSignature, false)
+	// The header carries the key that signs; whether the account may sign with it is checked
+	// when the transaction runs
+	key, err := crypto.ParseAccountKey(s.TxSmart.PublicKey)
 	if err != nil {
 		return err
+	}
+	signature, err := utils.TxSignature(s.TxSignature)
+	if err != nil {
+		return err
+	}
+	if ok, err := key.Verify(s.Hash, signature); err != nil || !ok {
+		return fmt.Errorf("transaction signature does not verify with the key in the header: %v", err)
 	}
 	return nil
 }

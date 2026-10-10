@@ -103,7 +103,7 @@ func ExecChildChainSchema(id int, wallet int64) error {
 			log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
 			return err
 		}
-		nodeKey := crypto.AccountKey{Algo: crypto.NodeAlgo(), Raw: nodePub}
+		nodeKey := crypto.NodeAccountKey(nodePub)
 		pub, err := keyFile(consts.PublicKeyFilename)
 		if err != nil {
 			return err

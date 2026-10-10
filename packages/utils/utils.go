@@ -160,48 +160,32 @@ func CopyFileContents(src, dst string) error {
 	return ErrInfo(err)
 }
 
-// CheckSign checks the signature
-func CheckSign(publicKeys [][]byte, forSign []byte, signs []byte, nodeKeyOrLogin bool) (bool, error) {
-	defer func() {
-		if r := recover(); r != nil {
-			log.WithFields(log.Fields{"type": consts.PanicRecoveredError, "error": r}).Error("recovered panic in check sign")
-		}
-	}()
-
-	var signsSlice [][]byte
-	if len(forSign) == 0 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("for sign is empty")
-		return false, ErrInfoFmt("len(forSign) == 0")
+// CheckNodeSign refuses a signature of forSign not made with the node key: blocks and node votes
+func CheckNodeSign(nodePublicKey, forSign, sign []byte) error {
+	if len(forSign) == 0 || len(nodePublicKey) == 0 || len(sign) == 0 {
+		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node signature, its data or key is empty")
+		return ErrInfoFmt("empty node signature, data or key")
 	}
-	if len(publicKeys) == 0 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public keys is empty")
-		return false, ErrInfoFmt("len(publicKeys) == 0")
+	ok, err := crypto.NodeVerify(nodePublicKey, forSign, sign)
+	if err != nil {
+		return err
 	}
-	if len(signs) == 0 {
-		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("signs is empty")
-		return false, ErrInfoFmt("len(signs) == 0")
+	if !ok {
+		return ErrInfoFmt("incorrect node signature")
 	}
+	return nil
+}
 
-	// node always has only one signature
-	if nodeKeyOrLogin {
-		signsSlice = append(signsSlice, signs)
-	} else {
-		length, err := converter.DecodeLength(&signs)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("decoding signs length")
-			return false, err
-		}
-		if length > 0 {
-			signsSlice = append(signsSlice, converter.BytesShift(&signs, length))
-		}
-
-		if len(publicKeys) != len(signsSlice) {
-			log.WithFields(log.Fields{"public_keys_length": len(publicKeys), "signs_length": len(signsSlice), "type": consts.SizeDoesNotMatch}).Error("public keys and signs slices lengths does not match")
-			return false, fmt.Errorf("sign error publicKeys length %d != signsSlice length %d", len(publicKeys), len(signsSlice))
-		}
+// TxSignature reads the signature of a transaction: one length-prefixed signature, nothing after it
+func TxSignature(data []byte) ([]byte, error) {
+	length, err := converter.DecodeLength(&data)
+	if err != nil {
+		return nil, err
 	}
-
-	return crypto.NodeVerify(publicKeys[0], forSign, signsSlice[0])
+	if length <= 0 || int(length) != len(data) {
+		return nil, fmt.Errorf("transaction signature: %d bytes announced, %d sent", length, len(data))
+	}
+	return data, nil
 }
 
 // GetCurrentDir returns the current directory

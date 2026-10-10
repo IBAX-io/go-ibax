@@ -317,9 +317,7 @@ func getBlocks(ctx context.Context, host string, blockID, minCount int64) ([]*bl
 		blocks = append(blocks, bl)
 
 		// check the signature
-		_, okSignErr := utils.CheckSign([][]byte{nodePublicKey},
-			[]byte(bl.ForSign()),
-			bl.Header.Sign, true)
+		okSignErr := utils.CheckNodeSign(nodePublicKey, []byte(bl.ForSign()), bl.Header.Sign)
 		if okSignErr == nil && len(blocks) >= int(minCount) {
 			break
 		}

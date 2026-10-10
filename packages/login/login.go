@@ -10,11 +10,13 @@ package login
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/publisher"
@@ -143,12 +145,18 @@ func Login(req Request, logger *log.Entry) (*Result, error) {
 	return session(req, wallet, account)
 }
 
-// signIn checks the signature of a login, and finds the account it signs in to
+// signIn checks the signature of a login, and finds the account it signs in to. The key that
+// signs is the registered one; a key the ecosystem does not know signs with the key it sends,
+// which must be of an algorithm still registered: it is told to register with @1NewUser.
 func signIn(req Request, logger *log.Entry) (int64, *sqldb.Key, error) {
 	var wallet int64
 	switch {
 	case len(req.PublicKey) > 0:
-		wallet = crypto.Address(req.PublicKey)
+		key, err := crypto.ParseAccountKey(req.PublicKey)
+		if err != nil {
+			return 0, nil, ErrKeyAlgorithm(err.Error())
+		}
+		wallet = key.Address()
 		if len(req.KeyID) > 0 && converter.StringToAddress(req.KeyID) != wallet {
 			return 0, nil, ErrDiffKey
 		}
@@ -163,15 +171,22 @@ func signIn(req Request, logger *log.Entry) (int64, *sqldb.Key, error) {
 	if err != nil {
 		return 0, nil, err
 	}
-	registered := found && len(account.PublicKey) > 0
-	publicKey := req.PublicKey
-	if registered {
-		publicKey = account.PublicKey
-	} else if len(publicKey) == 0 {
+	var registered []byte
+	if found {
+		registered = account.PublicKey
+	}
+	// A login is not in a block: the days of account_algorithms are compared with the clock
+	key, err := syspar.GetAccountAlgorithms().Signer(registered, req.PublicKey, wallet, time.Now().Unix())
+	switch {
+	case errors.Is(err, syspar.ErrNoAccountKey):
 		return 0, nil, ErrEmptyPublic
+	case errors.Is(err, syspar.ErrAccountKeyID):
+		return 0, nil, ErrDiffKey
+	case err != nil:
+		return 0, nil, ErrKeyAlgorithm(err.Error())
 	}
 
-	ok, err := crypto.NodeVerify(publicKey, []byte(Salt()+req.Token.UID), req.Signature)
+	ok, err := key.Verify([]byte(Salt()+req.Token.UID), req.Signature)
 	if err != nil || !ok {
 		logger.WithFields(log.Fields{"type": consts.InvalidObject, "key_id": wallet, "error": err}).Info("incorrect login signature")
 		if err != nil {
@@ -180,11 +195,11 @@ func signIn(req Request, logger *log.Entry) (int64, *sqldb.Key, error) {
 		return 0, nil, ErrSignature("Signature is incorrect")
 	}
 	// The session is of the key that signed, whatever was asked for
-	if crypto.Address(publicKey) != wallet {
+	if key.Address() != wallet {
 		return 0, nil, ErrDiffKey
 	}
 
-	if registered {
+	if len(registered) > 0 {
 		if account.Deleted == 1 {
 			return 0, nil, ErrDeletedKey
 		}

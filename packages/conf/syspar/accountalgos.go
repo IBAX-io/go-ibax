@@ -20,8 +20,14 @@ const AccountAlgorithms = `account_algorithms`
 // accountAlgoDate is the layout of the dates of account_algorithms: a UTC calendar day
 const accountAlgoDate = time.DateOnly
 
-// ErrAccountAlgorithm is a key whose algorithm the network does not accept for what it is used for
-var ErrAccountAlgorithm = errors.New("account key algorithm not accepted")
+var (
+	// ErrAccountAlgorithm is a key whose algorithm the network does not accept for what it is used for
+	ErrAccountAlgorithm = errors.New("account key algorithm not accepted")
+	// ErrAccountKeyID is a public key whose address is not the account it is sent for
+	ErrAccountKeyID = errors.New("key_id is not the address of the public key")
+	// ErrNoAccountKey is an account with no registered public key, sent without one
+	ErrNoAccountKey = errors.New("public key is undefined")
+)
 
 // AccountAlgorithm is an algorithm account keys may have, with the last day keys of it may be
 // registered and the last day they may sign. A zero day is no limit. The days are UTC and
@@ -151,6 +157,32 @@ func (s AccountAlgorithmSet) CheckRegister(algo crypto.AsymAlgo, blockTime int64
 		return fmt.Errorf("%w: %s keys are registered until %s", ErrAccountAlgorithm, algo, a.RegisterUntil.Format(accountAlgoDate))
 	}
 	return nil
+}
+
+// Signer is the key an account signs with at the block time. The key registered in 1_keys, when
+// there is one, is the only key the account signs with, and its algorithm must still sign. An
+// account without a registered key signs with the key it sends (in the transaction header, at
+// login), which registers it: it must be a key of keyID, of an algorithm that is still registered.
+// The algorithm always comes from the key itself, never from what the sender claims.
+func (s AccountAlgorithmSet) Signer(registered, sent []byte, keyID, blockTime int64) (crypto.AccountKey, error) {
+	if len(registered) > 0 {
+		key, err := crypto.ParseAccountKey(registered)
+		if err != nil {
+			return crypto.AccountKey{}, err
+		}
+		return key, s.CheckSign(key.Algo, blockTime)
+	}
+	if len(sent) == 0 {
+		return crypto.AccountKey{}, ErrNoAccountKey
+	}
+	key, err := crypto.ParseAccountKey(sent)
+	if err != nil {
+		return crypto.AccountKey{}, err
+	}
+	if key.Address() != keyID {
+		return crypto.AccountKey{}, ErrAccountKeyID
+	}
+	return key, s.CheckRegister(key.Algo, blockTime)
 }
 
 // CheckChange refuses a new value that moves a day of an algorithm kept in the set later or

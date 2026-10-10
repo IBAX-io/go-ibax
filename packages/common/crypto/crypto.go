@@ -95,6 +95,12 @@ func NodeAlgo() AsymAlgo {
 	return asymAlgo
 }
 
+// NodeAccountKey is the account public key of a node public key: the node account signs its
+// transactions and logins with the node key
+func NodeAccountKey(nodePublicKey []byte) AccountKey {
+	return AccountKey{Algo: NodeAlgo(), Raw: CutPub(nodePublicKey)}
+}
+
 // GenNodeKeyPair generates a random pair of private and public node keys
 func GenNodeKeyPair() ([]byte, []byte, error) {
 	return GetAsymProvider().GenKeyPair()

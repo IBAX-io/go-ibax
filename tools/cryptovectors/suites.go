@@ -14,9 +14,10 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 )
 
-const suitesSource = "go-ibax packages/common/crypto via tools/cryptovectors: PrivateToPublic, Address and Sign " +
-	"(goSignature, over message) for every cryptoer and hasher go-ibax implements; clientSignature is the client's " +
-	"transaction signature over payload, checked like utils.CheckSign: Verify(publicKey, DoubleHash(payload)); " +
+const suitesSource = "go-ibax packages/common/crypto via tools/cryptovectors: AccountKeyOf (publicKey: 0xAC, the " +
+	"cryptoer's AsymAlgo byte, the bare public key), AccountKey.Address and AccountSign (goSignature, over message) " +
+	"for every cryptoer and hasher go-ibax implements; clientSignature is the client's transaction signature over " +
+	"payload, checked like a transaction: AccountKey.Verify(DoubleHash(payload)); " +
 	"contextFreeSignature (ML-DSA only) is a valid FIPS 204 signature of Hash(message) under the empty context, " +
 	"which the node and the client must refuse. Test keys only."
 
@@ -72,15 +73,16 @@ func updateSuites(raw []byte) (any, []string, error) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s: private key: %w", label, err)
 		}
-		pub, err := crypto.NodePrivateToPublic(priv)
+		algo := crypto.AsymAlgo(crypto.AsymAlgo_value[v.Cryptoer])
+		pub, err := crypto.AccountKeyOf(algo, priv)
 		if err != nil {
 			return nil, nil, fmt.Errorf("%s: %w", label, err)
 		}
-		v.PublicKey = crypto.PubToHex(pub)
-		v.KeyID = strconv.FormatInt(crypto.Address(pub), 10)
+		v.PublicKey = pub.Hex()
+		v.KeyID = strconv.FormatInt(pub.Address(), 10)
 
 		if v.GoSignature == nil || !verifies(pub, []byte(v.Message), *v.GoSignature) {
-			sig, err := crypto.NodeSign(priv, []byte(v.Message))
+			sig, err := crypto.AccountSign(algo, priv, []byte(v.Message))
 			if err != nil {
 				return nil, nil, fmt.Errorf("%s: sign: %w", label, err)
 			}
@@ -110,12 +112,12 @@ func updateSuites(raw []byte) (any, []string, error) {
 	return f, problems, nil
 }
 
-func verifies(pub, data []byte, signatureHex string) bool {
+func verifies(pub crypto.AccountKey, data []byte, signatureHex string) bool {
 	sig, err := hex.DecodeString(signatureHex)
 	if err != nil {
 		return false
 	}
-	ok, err := crypto.NodeVerify(pub, data, sig)
+	ok, err := pub.Verify(data, sig)
 	return ok && err == nil
 }
 

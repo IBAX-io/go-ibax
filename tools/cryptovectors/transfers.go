@@ -18,7 +18,8 @@ import (
 )
 
 const transfersSource = "go-ibax transaction.(*Transaction).Unmarshall (client tx type 0x80) then " +
-	"SmartTransactionParser.Validate (SmartTransaction.Validate, utils.CheckSign) via tools/cryptovectors; " +
+	"SmartTransactionParser.Validate (SmartTransaction.Validate, the account key in the header verifies the " +
+	"signature) via tools/cryptovectors; " +
 	"data is written by the client. Test keys only."
 
 type transfersFile struct {
@@ -114,7 +115,7 @@ func nodeAcceptsTransfer(networkID int64, data []byte) (verdict transferVerdict)
 		Type:                int(tx.Type()),
 		Hash:                hex.EncodeToString(tx.Hash()),
 		KeyID:               strconv.FormatInt(smartTx.KeyID, 10),
-		KeyMatchesPublicKey: crypto.Address(smartTx.PublicKey) == smartTx.KeyID,
+		KeyMatchesPublicKey: keyMatches(smartTx.PublicKey, smartTx.KeyID),
 		EcosystemID:         strconv.FormatInt(smartTx.EcosystemID, 10),
 		NetworkID:           strconv.FormatInt(smartTx.NetworkID, 10),
 	}
@@ -133,4 +134,10 @@ func nodeAcceptsTransfer(networkID int64, data []byte) (verdict transferVerdict)
 		}
 	}
 	return verdict
+}
+
+// keyMatches reports whether keyID is the account of the account public key
+func keyMatches(public []byte, keyID int64) bool {
+	key, err := crypto.ParseAccountKey(public)
+	return err == nil && key.Address() == keyID
 }

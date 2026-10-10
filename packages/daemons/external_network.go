@@ -52,7 +52,7 @@ func loginNetwork(urlPath string) (connect *api.Connect, err error) {
 			return
 		}
 		nodeKeyID = crypto.Address(pubKey)
-		nodePublicKey = crypto.PubToHex(pubKey)
+		nodePublicKey = crypto.NodeAccountKey(pubKey).Hex()
 	}
 	connect = &api.Connect{
 		Auth:       authNet[urlPath],

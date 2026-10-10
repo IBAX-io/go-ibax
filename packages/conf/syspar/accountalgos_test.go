@@ -129,3 +129,52 @@ func TestAccountAlgorithmsFIPS(t *testing.T) {
 		t.Errorf("FIPS mode %v, secp256k1 set: %v", crypto.FIPSMode(), err)
 	}
 }
+
+// The registered key is the only key an account signs with; a key sent registers only its own
+// account, with an algorithm still registered
+func TestAccountSigner(t *testing.T) {
+	set := mustParse(t, `[{"algo":"ECC_P256","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"ECC_Secp256k1"}]`)
+	_, p256, err := crypto.GenAccountKey(crypto.AsymAlgo_ECC_P256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, k1, err := crypto.GenAccountKey(crypto.AsymAlgo_ECC_Secp256k1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, sm2, err := crypto.GenAccountKey(crypto.AsymAlgo_SM2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before, between, after := unix("2030-12-31", 0), unix("2031-06-01", 0), unix("2032-01-01", 0)
+	for _, c := range []struct {
+		name       string
+		registered []byte
+		sent       []byte
+		keyID      int64
+		time       int64
+		signer     crypto.AccountKey
+		err        error
+	}{
+		{"registered key signs", p256.Bytes(), nil, p256.Address(), between, p256, nil},
+		{"registered key wins over the key sent", p256.Bytes(), k1.Bytes(), p256.Address(), between, p256, nil},
+		{"registered key after its last signing day", p256.Bytes(), nil, p256.Address(), after, crypto.AccountKey{}, ErrAccountAlgorithm},
+		{"registered key of an algorithm not in the set", sm2.Bytes(), nil, sm2.Address(), before, crypto.AccountKey{}, ErrAccountAlgorithm},
+		{"registered bare key", p256.Raw, nil, p256.Address(), before, crypto.AccountKey{}, crypto.ErrAccountKeyFormat},
+		{"key sent registers", nil, p256.Bytes(), p256.Address(), before, p256, nil},
+		{"key sent after the last registration day", nil, p256.Bytes(), p256.Address(), between, crypto.AccountKey{}, ErrAccountAlgorithm},
+		{"key sent without days", nil, k1.Bytes(), k1.Address(), after, k1, nil},
+		{"key sent of an algorithm not in the set", nil, sm2.Bytes(), sm2.Address(), before, crypto.AccountKey{}, ErrAccountAlgorithm},
+		{"key sent of another account", nil, k1.Bytes(), p256.Address(), before, crypto.AccountKey{}, ErrAccountKeyID},
+		{"bare key sent", nil, p256.Raw, p256.Address(), before, crypto.AccountKey{}, crypto.ErrAccountKeyFormat},
+		{"no key", nil, nil, p256.Address(), before, crypto.AccountKey{}, ErrNoAccountKey},
+	} {
+		signer, err := set.Signer(c.registered, c.sent, c.keyID, c.time)
+		if c.err == nil && (err != nil || signer.Hex() != c.signer.Hex()) {
+			t.Errorf("%s: %v %v", c.name, signer, err)
+		}
+		if c.err != nil && !errors.Is(err, c.err) {
+			t.Errorf("%s: %v", c.name, err)
+		}
+	}
+}

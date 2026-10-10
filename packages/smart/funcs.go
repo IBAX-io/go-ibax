@@ -278,7 +278,7 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"UpdateRolesNotifications":     UpdateRolesNotifications,
 		"DelTable":                     DelTable,
 		"DelColumn":                    DelColumn,
-		"HexToPub":                     crypto.HexToPub,
+		"HexToPub":                     HexToPub,
 		"PubToHex":                     PubToHex,
 		"UpdateNodesBan":               UpdateNodesBan,
 		"Log":                          Log,
@@ -2422,9 +2422,9 @@ func FormatMoney(sc *SmartContract, exp string, digit int64) (string, error) {
 func PubToHex(in any) (ret string) {
 	switch v := in.(type) {
 	case string:
-		ret = crypto.PubToHex([]byte(v))
+		ret = hex.EncodeToString([]byte(v))
 	case []byte:
-		ret = crypto.PubToHex(v)
+		ret = hex.EncodeToString(v)
 	}
 	return
 }

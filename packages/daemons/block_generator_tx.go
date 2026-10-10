@@ -55,6 +55,11 @@ func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*sqldb.Transaction, e
 }
 
 func (dtx *DelayedTx) createDelayTxByItem(name string, keyID, highRate int64) (*sqldb.Transaction, error) {
+	privateKey, err := hex.DecodeString(dtx.privateKey)
+	if err != nil {
+		return nil, err
+	}
+
 	vm := script.GetVM()
 	contract := smart.VMGetContract(vm, name, uint32(firstEcosystemID))
 	smartTx := types.SmartTransaction{
@@ -65,13 +70,8 @@ func (dtx *DelayedTx) createDelayTxByItem(name string, keyID, highRate int64) (*
 			Time:        dtx.time,
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
-		SignedBy: smart.PubToID(dtx.publicKey),
-		Params:   map[string]any{},
-	}
-
-	privateKey, err := hex.DecodeString(dtx.privateKey)
-	if err != nil {
-		return nil, err
+		// NewInternalTransaction signs it by the node
+		Params: map[string]any{},
 	}
 
 	txData, txHash, err := transaction.NewInternalTransaction(smartTx, privateKey)

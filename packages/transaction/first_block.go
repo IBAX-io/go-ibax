@@ -78,7 +78,7 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		logger.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("checking the account keys of the first block")
 		return err
 	}
-	nodeKey := crypto.AccountKey{Algo: crypto.NodeAlgo(), Raw: data.NodePublicKey}
+	nodeKey := crypto.NodeAccountKey(data.NodePublicKey)
 	keyID := founder.Address()
 	nodeKeyID := nodeKey.Address()
 	err = sqldb.ExecSchemaEcosystem(dbTx, migration.SqlData{

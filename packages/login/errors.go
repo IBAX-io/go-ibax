@@ -48,6 +48,12 @@ func ErrSignature(msg string) *Error {
 	return &Error{Code: "E_SIGNATURE", Msg: msg, Status: http.StatusBadRequest}
 }
 
+// ErrKeyAlgorithm refuses a public key that is not an account key, or whose algorithm the network
+// does not accept for the login now (account_algorithms); msg says why
+func ErrKeyAlgorithm(msg string) *Error {
+	return &Error{Code: "E_KEYALGO", Msg: msg, Status: http.StatusBadRequest}
+}
+
 // ErrEcoNotOpen refuses a new key in an ecosystem that does not take new members
 func ErrEcoNotOpen(ecosystem int64) *Error {
 	return &Error{Code: "E_ECONOTOPEN", Msg: fmt.Sprintf("The ecosystem (%d) is not open and cannot be registered address", ecosystem), Status: http.StatusUnauthorized}

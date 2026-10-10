@@ -129,15 +129,16 @@ func TestNodeSignaturesAreHedged(t *testing.T) {
 			t.Fatal(err)
 		}
 		priv, _ := hex.DecodeString(v.PrivateKey)
-		pub, err := crypto.NodePrivateToPublic(priv)
+		algo := crypto.AsymAlgo(crypto.AsymAlgo_value[v.Cryptoer])
+		pub, err := crypto.AccountKeyOf(algo, priv)
 		if err != nil {
 			t.Fatal(err)
 		}
-		first, err := crypto.NodeSign(priv, []byte(v.Message))
+		first, err := crypto.AccountSign(algo, priv, []byte(v.Message))
 		if err != nil {
 			t.Fatal(err)
 		}
-		second, err := crypto.NodeSign(priv, []byte(v.Message))
+		second, err := crypto.AccountSign(algo, priv, []byte(v.Message))
 		if err != nil {
 			t.Fatal(err)
 		}

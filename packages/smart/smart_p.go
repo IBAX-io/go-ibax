@@ -278,27 +278,44 @@ func Split(input, sep string) []any {
 	return result
 }
 
-// PubToID returns a numeric identifier for the public key specified in the hexadecimal form.
+// PubToID is the account of an account public key in hex, 0 when it is not one
 func PubToID(hexkey string) int64 {
-	pubkey, err := crypto.HexToPub(hexkey)
+	key, err := crypto.ParseAccountKeyHex(hexkey)
 	if err != nil {
-		logErrorValue(err, consts.CryptoError, "decoding hexkey to string", hexkey)
+		logErrorValue(err, consts.CryptoError, "decoding account public key", hexkey)
 		return 0
 	}
-	return crypto.Address(pubkey)
+	return key.Address()
 }
 
-func CheckSign(pub, data, sign string) (bool, error) {
-	pk, err := hex.DecodeString(pub)
+// HexToPub reads an account public key in hex for 1_keys.pub: a valid key of an algorithm that
+// may still be registered at the block time
+func HexToPub(sc *SmartContract, hexkey string) ([]byte, error) {
+	key, err := crypto.ParseAccountKeyHex(hexkey)
 	if err != nil {
+		return nil, err
+	}
+	if err = syspar.GetAccountAlgorithms().CheckRegister(key.Algo, sc.blockTime()); err != nil {
+		return nil, err
+	}
+	return key.Bytes(), nil
+}
+
+// CheckSign checks a signature, in hex, of data made with an account public key, in hex, of an
+// algorithm that may still sign at the block time
+func CheckSign(sc *SmartContract, pub, data, sign string) (bool, error) {
+	key, err := crypto.ParseAccountKeyHex(pub)
+	if err != nil {
+		return false, err
+	}
+	if err = syspar.GetAccountAlgorithms().CheckSign(key.Algo, sc.blockTime()); err != nil {
 		return false, err
 	}
 	s, err := hex.DecodeString(sign)
 	if err != nil {
 		return false, err
 	}
-	pk = crypto.CutPub(pk)
-	return crypto.NodeVerify(pk, []byte(data), s)
+	return key.Verify([]byte(data), s)
 }
 
 func CheckNumberChars(data string) bool {
@@ -609,11 +626,8 @@ func CheckSignature(sc *SmartContract, i map[string]any, name string) error {
 		forsign += fmt.Sprintf(`,%v`, val)
 	}
 
-	CheckSignResult, err := utils.CheckSign(sc.PublicKeys, []byte(forsign), hexsign, true)
-	if err != nil {
-		return err
-	}
-	if !CheckSignResult {
+	ok, err := sc.SignerKey.Verify([]byte(forsign), hexsign)
+	if err != nil || !ok {
 		return logErrorfShort(eIncorrectSignature, forsign, consts.InvalidObject)
 	}
 	return nil

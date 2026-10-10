@@ -306,11 +306,11 @@ func pubToIdTag(par parFunc) string {
 		return `0`
 	}
 	idval := processToText(par, macro(hexkey, par.Workspace.Vars))
-	pubkey, err := crypto.HexToPub(idval)
+	key, err := crypto.ParseAccountKeyHex(idval)
 	if err != nil {
 		return `0`
 	}
-	return converter.Int64ToStr(crypto.Address(pubkey))
+	return converter.Int64ToStr(key.Address())
 }
 
 func addressIDTag(par parFunc) string {
