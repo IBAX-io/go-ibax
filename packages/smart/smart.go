@@ -234,6 +234,12 @@ func (sc *SmartContract) getExtend() map[string]any {
 		script.Extend_gen_block:           sc.GenBlock,
 		script.Extend_time_limit:          sc.TimeLimit,
 	}
+	// The contracts called so far, so that code run apart from the transaction's contract
+	// (ContractConditions, the conditions of rows and tables) sees the same $stack. A copy: the
+	// stack grows and shrinks in place
+	if sc.TxContract != nil && len(sc.TxContract.StackCont) > 0 {
+		extend[script.Extend_stack] = append([]any(nil), sc.TxContract.StackCont...)
+	}
 	for key, val := range sc.TxData {
 		extend[key] = val
 	}
