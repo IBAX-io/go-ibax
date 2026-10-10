@@ -46,7 +46,7 @@ func init() {
 	generateFirstBlockCmd.Flags().StringVar(&stopNetworkBundleFilepath, "stopNetworkCert", "", "Filepath to the fullchain of certificates for network stopping")
 	generateFirstBlockCmd.Flags().BoolVar(&testBlockchain, "test", false, "if true - test blockchain")
 	generateFirstBlockCmd.Flags().BoolVar(&privateBlockchain, "private", false, "if true - all transactions will be free")
-	generateFirstBlockCmd.Flags().StringVar(&accountAlgorithms, "accountAlgorithms", "", `algorithms account keys may have, as the platform parameter account_algorithms, e.g. [{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"}] (default: the node algorithm, without days)`)
+	generateFirstBlockCmd.Flags().StringVar(&accountAlgorithms, "accountAlgorithms", "", `algorithms account keys may have, as the platform parameter account_algorithms, e.g. [{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"}] (default: the node algorithm, with the latest days FIPS allows on a FIPS node and no days otherwise)`)
 }
 
 func genesisBlock() ([]byte, error) {
@@ -84,7 +84,7 @@ func genesisBlock() ([]byte, error) {
 	}
 	algos := accountAlgorithms
 	if algos == "" {
-		algos = syspar.AccountAlgorithmSet{{Algo: crypto.NodeAlgo()}}.String()
+		algos = syspar.DefaultAccountAlgorithms(crypto.NodeAlgo(), crypto.FIPSMode()).String()
 	}
 
 	var stopNetworkCert []byte

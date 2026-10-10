@@ -138,7 +138,7 @@ func TestAccountAlgorithmChange(t *testing.T) {
 
 // A FIPS node cannot verify every algorithm: it refuses a set with one it may not use
 func TestAccountAlgorithmsFIPS(t *testing.T) {
-	approved := mustParse(t, `[{"algo":"ECC_P256"},{"algo":"MLDSA65"},{"algo":"MLDSA87"}]`)
+	approved := mustParse(t, `[{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"},{"algo":"MLDSA87"}]`)
 	if crypto.CheckAccountAlgo(crypto.AsymAlgo_MLDSA65) == nil {
 		if err := approved.CheckNode(); err != nil {
 			t.Errorf("approved set refused: %v", err)
@@ -148,6 +148,44 @@ func TestAccountAlgorithmsFIPS(t *testing.T) {
 	err := other.CheckNode()
 	if crypto.FIPSMode() == (err == nil) {
 		t.Errorf("FIPS mode %v, secp256k1 set: %v", crypto.FIPSMode(), err)
+	}
+}
+
+// A FIPS node refuses classical algorithms without days or with days later than the regulations
+func TestAccountAlgorithmsFIPSDays(t *testing.T) {
+	for _, c := range []struct {
+		value string
+		ok    bool
+	}{
+		{`[{"algo":"ECC_P256","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"ECC_P384","sign_until":"2031-12-31"},{"algo":"RSA2048","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"RSA3072","sign_until":"2031-12-31"},{"algo":"MLDSA65"},{"algo":"MLDSA87"}]`, true},
+		{`[{"algo":"RSA2048","register_until":"2027-01-01","sign_until":"2028-06-30"}]`, true},
+		{`[{"algo":"ECC_P256","sign_until":"2031-12-31"}]`, true},
+		{`[{"algo":"MLDSA65"}]`, true},
+		{`[{"algo":"ECC_P256"}]`, false},
+		{`[{"algo":"ECC_P384","sign_until":"2032-01-01"}]`, false},
+		{`[{"algo":"RSA3072","register_until":"2030-12-31"}]`, false},
+		{`[{"algo":"RSA2048","sign_until":"2031-12-31"}]`, false},
+		{`[{"algo":"RSA2048","register_until":"2031-01-01","sign_until":"2031-12-31"}]`, false},
+		{`[{"algo":"RSA2048","register_until":"2030-12-31"}]`, false},
+		{`[{"algo":"MLDSA65"},{"algo":"ECC_P256","sign_until":"2035-12-31"}]`, false},
+	} {
+		if err := mustParse(t, c.value).checkFIPSDays(); (err == nil) != c.ok {
+			t.Errorf("%s: %v", c.value, err)
+		}
+	}
+	if s := DefaultAccountAlgorithms(crypto.AsymAlgo_ECC_P256, true).String(); s != `[{"algo":"ECC_P256","sign_until":"2031-12-31"}]` {
+		t.Errorf("FIPS default %s", s)
+	}
+	if s := DefaultAccountAlgorithms(crypto.AsymAlgo_MLDSA65, true).String(); s != `[{"algo":"MLDSA65"}]` {
+		t.Errorf("FIPS ML-DSA default %s", s)
+	}
+	if s := DefaultAccountAlgorithms(crypto.AsymAlgo_ECC_P256, false).String(); s != `[{"algo":"ECC_P256"}]` {
+		t.Errorf("default %s", s)
+	}
+	for _, set := range []string{`[{"algo":"ECC_P256"}]`, `[{"algo":"ECC_P256","sign_until":"2031-12-31"}]`} {
+		if err := mustParse(t, set).CheckNode(); (err == nil) == (crypto.FIPSMode() && set == `[{"algo":"ECC_P256"}]`) {
+			t.Errorf("FIPS mode %v, %s: %v", crypto.FIPSMode(), set, err)
+		}
 	}
 }
 

@@ -212,13 +212,69 @@ func (s AccountAlgorithmSet) CheckChange(next AccountAlgorithmSet) ([]crypto.Asy
 
 // CheckNode refuses a set the node cannot verify: an algorithm not approved in FIPS mode, or one
 // the cryptographic module of the node lacks. A node that cannot verify every account would fork.
+// In FIPS mode it also refuses days later than the regulations allow (FIPSLastDays).
 func (s AccountAlgorithmSet) CheckNode() error {
 	for _, a := range s {
 		if err := crypto.CheckAccountAlgo(a.Algo); err != nil {
 			return fmt.Errorf("%s: %w", AccountAlgorithms, err)
 		}
 	}
+	if crypto.FIPSMode() {
+		return s.checkFIPSDays()
+	}
 	return nil
+}
+
+// fipsLastDays are the latest days of the classical algorithms a FIPS node accepts: PIV signature
+// keys are RSA 3072 or longer from 2031 on (SP 800-78-5, table 1), and high-impact systems sign
+// with post-quantum keys by the end of 2031 (Executive Order 14412, section 4(b)). ML-DSA has no
+// last day. A zero day is none.
+var fipsLastDays = map[crypto.AsymAlgo]struct{ register, sign string }{
+	crypto.AsymAlgo_ECC_P256: {sign: "2031-12-31"},
+	crypto.AsymAlgo_ECC_P384: {sign: "2031-12-31"},
+	crypto.AsymAlgo_RSA2048:  {register: "2030-12-31", sign: "2031-12-31"},
+	crypto.AsymAlgo_RSA3072:  {sign: "2031-12-31"},
+}
+
+// FIPSLastDays is the algorithm with the latest days a FIPS node accepts for it
+func FIPSLastDays(algo crypto.AsymAlgo) AccountAlgorithm {
+	days := fipsLastDays[algo]
+	register, _ := parseAccountAlgoDate(days.register)
+	sign, _ := parseAccountAlgoDate(days.sign)
+	return AccountAlgorithm{Algo: algo, RegisterUntil: register, SignUntil: sign}
+}
+
+// checkFIPSDays refuses a day missing or later than FIPSLastDays. The days are node-local like the
+// FIPS approval of the algorithms: a federal network runs FIPS nodes only, and its genesis sets
+// days no later than these.
+func (s AccountAlgorithmSet) checkFIPSDays() error {
+	beyond := func(day, last time.Time) bool {
+		return !last.IsZero() && (day.IsZero() || day.After(last))
+	}
+	for _, a := range s {
+		last := FIPSLastDays(a.Algo)
+		// Without a registration day, registration ends with signing
+		register := a.RegisterUntil
+		if register.IsZero() {
+			register = a.SignUntil
+		}
+		if beyond(a.SignUntil, last.SignUntil) {
+			return fmt.Errorf("%s: in FIPS 140-3 mode %s keys sign until %s at the latest", AccountAlgorithms, a.Algo, last.SignUntil.Format(accountAlgoDate))
+		}
+		if beyond(register, last.RegisterUntil) {
+			return fmt.Errorf("%s: in FIPS 140-3 mode %s keys are registered until %s at the latest", AccountAlgorithms, a.Algo, last.RegisterUntil.Format(accountAlgoDate))
+		}
+	}
+	return nil
+}
+
+// DefaultAccountAlgorithms is the set of a new network without an account_algorithms of its own:
+// the node algorithm, with the latest days FIPS allows on a FIPS node and no days otherwise
+func DefaultAccountAlgorithms(nodeAlgo crypto.AsymAlgo, fips bool) AccountAlgorithmSet {
+	if fips {
+		return AccountAlgorithmSet{FIPSLastDays(nodeAlgo)}
+	}
+	return AccountAlgorithmSet{{Algo: nodeAlgo}}
 }
 
 // GetAccountAlgorithms is the current value of account_algorithms
