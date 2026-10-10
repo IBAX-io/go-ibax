@@ -74,7 +74,7 @@ The answer:
   "ecosystem_id": "1",
   "key_id": "-6097185355090423139",
   "account": "1234-5678-9012-3456-7890",
-  "notify_key": "<centrifugo token>",
+  "notify_key": "<centrifugo connection token>",
   "isnode": false,
   "isowner": false,
   "clb": false,
@@ -82,6 +82,9 @@ The answer:
   "roles": [{ "role_id": 3, "role_name": "Developer" }]
 }
 ```
+
+`notify_key` connects the session to Centrifugo for the account's notifications until the session
+expires; see [notifications](notifications.md).
 
 ### Guest
 

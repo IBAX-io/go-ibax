@@ -9,7 +9,6 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/cactus/go-statsd-client/v5 v5.1.0
-	github.com/centrifugal/gocent v2.2.0+incompatible
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -19,6 +18,7 @@ require (
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/schema v1.2.0
+	github.com/jackc/pgx/v5 v5.4.2
 	github.com/ochinchina/go-ini v1.0.1
 	github.com/ochinchina/supervisord/config v0.0.0-20230719054037-813956ff6a67
 	github.com/ochinchina/supervisord/process v0.0.0-20230719054037-813956ff6a67
@@ -67,7 +67,6 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
-	github.com/jackc/pgx/v5 v5.4.2 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect

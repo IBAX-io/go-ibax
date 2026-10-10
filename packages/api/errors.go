@@ -49,6 +49,7 @@ var (
 	errRequestNotFound   = errType{"E_REQUESTNOTFOUND", "Request %s doesn't exist", defaultStatus}
 	errUpdating          = errType{"E_UPDATING", "Node is updating blockchain, block height %d", http.StatusServiceUnavailable}
 	errStopping          = errType{"E_STOPPING", "Network is stopping", http.StatusServiceUnavailable}
+	errCentrifugo        = errType{"E_CENTRIFUGO", "Notifications are unavailable: %s", http.StatusServiceUnavailable}
 	errNotImplemented    = errType{"E_NOTIMPLEMENTED", "Not implemented", http.StatusNotImplemented}
 	errParamMoneyDigit   = errType{"E_PARAMMONEYDIGIT", "The number of decimal places cannot be exceeded ( %s )", http.StatusBadRequest}
 	errDiffKey           = errType{"E_DIFKEY", "Sender's key is different from tx key", defaultStatus}

@@ -7,9 +7,7 @@ package api
 
 import (
 	"net/http"
-	"strings"
 
-	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/publisher"
 
@@ -38,23 +36,17 @@ func getConfigOptionHandler(w http.ResponseWriter, r *http.Request) {
 	errorResponse(w, errNotFound)
 }
 
-func replaceHttpSchemeToWs(centrifugoURL string) string {
-	if strings.HasPrefix(centrifugoURL, "http:") {
-		return strings.Replace(centrifugoURL, "http:", "ws:", -1)
-	} else if strings.HasPrefix(centrifugoURL, "https:") {
-		return strings.Replace(centrifugoURL, "https:", "wss:", -1)
-	}
-	return centrifugoURL
-}
-
+// centrifugoAddressHandler answers where and how clients connect to Centrifugo, or 503 when it
+// does not answer
 func centrifugoAddressHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
 
-	if _, err := publisher.GetStats(); err != nil {
-		logger.WithFields(log.Fields{"type": consts.CentrifugoError, "error": err}).Warn("on getting centrifugo stats")
-		errorResponse(w, err)
+	endpoint, err := publisher.GetEndpoint()
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.CentrifugoError, "error": err}).Warn("on getting centrifugo info")
+		errorResponse(w, errCentrifugo.Errorf(err))
 		return
 	}
 
-	jsonResponse(w, replaceHttpSchemeToWs(conf.Config.Centrifugo.URL))
+	jsonResponse(w, endpoint)
 }

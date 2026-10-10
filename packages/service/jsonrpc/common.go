@@ -636,26 +636,6 @@ func (c *commonApi) GetVersion() string {
 	return consts.Version() + " " + node.NodePauseType().String()
 }
 
-func replaceHttpSchemeToWs(centrifugoURL string) string {
-	if strings.HasPrefix(centrifugoURL, "http:") {
-		return strings.Replace(centrifugoURL, "http:", "ws:", -1)
-	} else if strings.HasPrefix(centrifugoURL, "https:") {
-		return strings.Replace(centrifugoURL, "https:", "wss:", -1)
-	}
-	return centrifugoURL
-}
-
-func centrifugoAddressHandler(r *http.Request) (string, error) {
-	logger := getLogger(r)
-
-	if _, err := publisher.GetStats(); err != nil {
-		logger.WithFields(log.Fields{"type": consts.CentrifugoError, "error": err}).Warn("on getting centrifugo stats")
-		return "", err
-	}
-
-	return replaceHttpSchemeToWs(conf.Config.Centrifugo.URL), nil
-}
-
 func (c *commonApi) GetConfig(ctx RequestContext, option string) (map[string]any, *Error) {
 	r := ctx.HTTPRequest()
 	logger := getLogger(r)
@@ -668,9 +648,10 @@ func (c *commonApi) GetConfig(ctx RequestContext, option string) (map[string]any
 	var err error
 	switch option {
 	case "centrifugo":
-		rets[option], err = centrifugoAddressHandler(r)
+		rets[option], err = publisher.GetEndpoint()
 		if err != nil {
-			return nil, DefaultError(err.Error())
+			logger.WithFields(log.Fields{"type": consts.CentrifugoError, "error": err}).Warn("on getting centrifugo info")
+			return nil, ResourceUnavailable("Notifications are unavailable: " + err.Error())
 		}
 		return rets, nil
 	}
