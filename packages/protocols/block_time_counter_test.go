@@ -36,7 +36,8 @@ func TestBlockTimeCounter(t *testing.T) {
 
 	start, end, err := btc.RangeByTime(at)
 	assert.NoError(t, err)
-	assert.Equal(t, time.Unix(10, 0).Add(1*time.Millisecond), start)
+	// Block times are in seconds: the interval (10, 15] starts at its first second
+	assert.Equal(t, time.Unix(11, 0), start)
 	assert.Equal(t, time.Unix(15, 0), end)
 	fmt.Println("ranges:", start.Unix(), end.Unix())
 }
