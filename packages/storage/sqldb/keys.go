@@ -93,3 +93,19 @@ func CountKeysOfAlgo(db *DbTransaction, algo crypto.AsymAlgo) (int64, error) {
 		Count(&n).Error
 	return n, err
 }
+
+// AlgoKey is the account, in an ecosystem, of a key of an account algorithm
+type AlgoKey struct {
+	Account   string `json:"account"`
+	Ecosystem int64  `json:"ecosystem"`
+}
+
+// KeysOfAlgo returns a page of the keys, not deleted, of an account algorithm in every ecosystem,
+// by ecosystem and account
+func KeysOfAlgo(db *DbTransaction, algo crypto.AsymAlgo, offset, limit int) ([]AlgoKey, error) {
+	keys := []AlgoKey{}
+	err := GetDB(db).Table("1_keys").Select("account, ecosystem").
+		Where("deleted = 0 AND substring(pub from 1 for 2) = ?", []byte{crypto.AccountKeyMarker, byte(algo)}).
+		Order("ecosystem, id").Offset(offset).Limit(limit).Scan(&keys).Error
+	return keys, err
+}

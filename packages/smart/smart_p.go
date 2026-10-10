@@ -288,6 +288,27 @@ func PubToID(hexkey string) int64 {
 	return key.Address()
 }
 
+// NodePubToID is the account of a node public key in hex, as honor_nodes holds it, or 0 for what
+// is no node key of the network
+func NodePubToID(hexkey string) int64 {
+	key, err := crypto.ParseNodeKeyHex(hexkey)
+	if err != nil {
+		logErrorValue(err, consts.CryptoError, "decoding node public key", hexkey)
+		return 0
+	}
+	return key.Address()
+}
+
+// NodePubKey is the node public key in hex, as honor_nodes holds it, of an account public key from
+// 1_keys.pub: the account of a node signs with the node key
+func NodePubKey(pub []byte) (string, error) {
+	key, err := crypto.ParseAccountKey(pub)
+	if err != nil {
+		return "", err
+	}
+	return key.NodeKeyHex()
+}
+
 // HexToPub reads an account public key in hex for 1_keys.pub: a valid key of an algorithm that
 // may still be registered at the block time
 func HexToPub(sc *SmartContract, hexkey string) ([]byte, error) {

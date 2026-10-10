@@ -178,3 +178,14 @@ func TestAccountSigner(t *testing.T) {
 		}
 	}
 }
+
+func TestParseAccountAlgo(t *testing.T) {
+	if a, err := ParseAccountAlgo("MLDSA87"); err != nil || a != crypto.AsymAlgo_MLDSA87 {
+		t.Errorf("MLDSA87: %v %v", a, err)
+	}
+	for _, bad := range []string{"", "mldsa87", "ECC_P512", "RSA2048", "4"} {
+		if _, err := ParseAccountAlgo(bad); !errors.Is(err, ErrAccountAlgorithm) {
+			t.Errorf("%q: %v", bad, err)
+		}
+	}
+}

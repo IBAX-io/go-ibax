@@ -49,6 +49,8 @@ func (m Mode) SetCommonRoutes(r Router) {
 	api.HandleFunc("/contract/{name}", authRequire(getContractInfoHandler)).Methods("GET")
 	api.HandleFunc("/contracts", authRequire(getContractsHandler)).Methods("GET")
 	api.HandleFunc("/getuid", getUIDHandler).Methods("GET")
+	api.HandleFunc("/accountalgorithms", getAccountAlgorithmsHandler).Methods("GET")
+	api.HandleFunc("/accountalgorithms/{algo}/keys", getAccountAlgoKeysHandler).Methods("GET")
 	api.HandleFunc("/keyinfo/{wallet}", m.getKeyInfoHandler).Methods("GET")
 	api.HandleFunc("/list/{name}", authRequire(getListHandler)).Methods("GET")
 	api.HandleFunc("/network", getNetworkHandler).Methods("GET")

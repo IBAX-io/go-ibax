@@ -223,6 +223,8 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"Replace":                      Replace,
 		"Size":                         Size,
 		"PubToID":                      PubToID,
+		"NodePubToID":                  NodePubToID,
+		"NodePubKey":                   NodePubKey,
 		"SeedToID":                     crypto.AddressSeed,
 		"HexToBytes":                   HexToBytes,
 		"LangRes":                      LangRes,

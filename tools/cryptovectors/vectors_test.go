@@ -52,6 +52,14 @@ func TestTamperedVectorsFail(t *testing.T) {
 		}},
 		{"node signature", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 1, "goSignature", repeat("11", 64)) }},
 		{"client signature", "go-ibax-vectors.json", func(d map[string]any) { setAt(d, "vectors", 2, "clientSignature", repeat("22", 64)) }},
+		{"relabelled account key accepted", "go-ibax-account-keys.json", func(d map[string]any) {
+			v := d["vectors"].([]any)[1].(map[string]any)
+			v["node"] = map[string]any{"accepted": true}
+		}},
+		{"account key error", "go-ibax-account-keys.json", func(d map[string]any) {
+			v := d["vectors"].([]any)[5].(map[string]any)
+			v["node"].(map[string]any)["error"] = "refused"
+		}},
 		{"address id", "go-ibax-addresses.json", func(d map[string]any) { setAt(d, "cases", 0, "id", "597920150864192935") }},
 		{"address text", "go-ibax-addresses.json", func(d map[string]any) { setAt(d, "cases", 1, "address", "0059-7920-1508-6419-2935") }},
 		{"transfer hash", "go-ibax-transfers.json", func(d map[string]any) { nodeOf(d, 0)["hash"] = repeat("00", 32) }},
@@ -78,7 +86,7 @@ func TestTamperedVectorsFail(t *testing.T) {
 		m := m
 		t.Run(m.name, func(t *testing.T) {
 			dir := t.TempDir()
-			for _, f := range vectorFiles {
+			for _, f := range vectorFiles("testdata") {
 				raw, err := os.ReadFile(filepath.Join("testdata", f.name))
 				if err != nil {
 					t.Fatal(err)

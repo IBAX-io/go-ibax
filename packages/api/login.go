@@ -12,13 +12,13 @@ import (
 )
 
 type loginForm struct {
-	EcosystemID int64          `schema:"ecosystem"`
-	Expire      int64          `schema:"expire"`
+	EcosystemID int64    `schema:"ecosystem"`
+	Expire      int64    `schema:"expire"`
 	PublicKey   hexValue `schema:"pubkey"`
-	KeyID       string         `schema:"key_id"`
-	Signature   hexValue       `schema:"signature"`
-	RoleID      int64          `schema:"role_id"`
-	Guest       bool           `schema:"guest"`
+	KeyID       string   `schema:"key_id"`
+	Signature   hexValue `schema:"signature"`
+	RoleID      int64    `schema:"role_id"`
+	Guest       bool     `schema:"guest"`
 }
 
 func (f *loginForm) Validate(r *http.Request) error {

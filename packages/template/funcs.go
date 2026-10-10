@@ -57,6 +57,7 @@ func init() {
 	funcs[`AddToolButton`] = tplFunc{defaultTailTag, defaultTailTag, `addtoolbutton`, `Title,Icon,Page,PageParams`}
 	funcs[`Address`] = tplFunc{addressTag, defaultTag, `address`, `Wallet`}
 	funcs[`PubToID`] = tplFunc{pubToIdTag, defaultTag, `pubtoid`, `Pub`}
+	funcs[`NodePubToID`] = tplFunc{nodePubToIdTag, defaultTag, `nodepubtoid`, `Pub`}
 	funcs[`AddressToId`] = tplFunc{addressIDTag, defaultTag, `addresstoid`, `Wallet`}
 	funcs[`AppParam`] = tplFunc{appparTag, defaultTag, `apppar`, `Name,App,Index,Source,Ecosystem`}
 	funcs[`Calculate`] = tplFunc{calculateTag, defaultTag, `calculate`, `Exp,Type,Prec`}
@@ -298,6 +299,19 @@ func addressTag(par parFunc) string {
 		return `unknown address`
 	}
 	return converter.AddressToString(id)
+}
+
+// nodePubToIdTag is the account of a node public key in hex, as honor_nodes holds it
+func nodePubToIdTag(par parFunc) string {
+	hexkey := (*par.Pars)[`Pub`]
+	if len(hexkey) == 0 {
+		return `0`
+	}
+	key, err := crypto.ParseNodeKeyHex(processToText(par, macro(hexkey, par.Workspace.Vars)))
+	if err != nil {
+		return `0`
+	}
+	return converter.Int64ToStr(key.Address())
 }
 
 func pubToIdTag(par parFunc) string {

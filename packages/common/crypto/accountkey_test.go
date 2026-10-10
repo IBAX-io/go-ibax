@@ -156,3 +156,35 @@ func TestAccountKeyRelabelledDoesNotVerify(t *testing.T) {
 		t.Fatal("a P-256 signature verified as secp256k1")
 	}
 }
+
+// A node key, as honor_nodes holds it, is the account key of the node; only a key of the node
+// algorithm is a node key
+func TestNodeKeyHex(t *testing.T) {
+	_, pub, err := GenNodeKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	key, err := ParseNodeKeyHex(PubToHex(pub))
+	if err != nil || key.Hex() != NodeAccountKey(pub).Hex() {
+		t.Fatalf("node key: %v %v", key, err)
+	}
+	if again, err := key.NodeKeyHex(); err != nil || again != PubToHex(pub) {
+		t.Fatalf("node key of the account key: %s %v", again, err)
+	}
+	other := AsymAlgo_MLDSA65
+	if NodeAlgo() == other {
+		other = AsymAlgo_ECC_P256
+	}
+	_, account, err := GenAccountKey(other)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s, err := account.NodeKeyHex(); !errors.Is(err, ErrAccountKeyFormat) {
+		t.Errorf("a %s key is a node key: %s", other, s)
+	}
+	for _, s := range []string{"", "zz", key.Hex(), account.Hex()} {
+		if _, err := ParseNodeKeyHex(s); !errors.Is(err, ErrAccountKeyFormat) {
+			t.Errorf("%q parsed as a node key", s)
+		}
+	}
+}

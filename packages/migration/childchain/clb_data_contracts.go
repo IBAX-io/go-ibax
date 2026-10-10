@@ -1144,18 +1144,19 @@ contract DAODecisionCondition {
     }
     conditions {
         getEcosystem()
-        $newId = PubToID($NewPubkey)
-
-        if $newId == 0 {
-            warning LangRes("@1wrong_pub")
-        }
         if Size($NewPubkey) == 0 {
             warning "You did not enter the public key"
+        }
+        // NewPubkey is an account key in hex: 0xAC, its algorithm and the public key
+        $newId = PubToID($NewPubkey)
+        if $newId == 0 {
+            warning LangRes("@1wrong_pub")
         }
         // A key registers itself: the transaction is signed with NewPubkey
         if $newId != $key_id {
             warning "NewUser must be signed with the key it registers"
         }
+        // Refuses a key of an algorithm account_algorithms no longer registers
         $pub = HexToPub($NewPubkey)
         $account = IdToAddress($newId)
 
@@ -1174,6 +1175,10 @@ contract DAODecisionCondition {
             var kid int kpub string
             kid = Int($k["id"])
             kpub = $k["pub"]
+            // A blocked account, like the guest account, never gets a key
+            if Int($k["blocked"]) == 1 {
+                warning Sprintf("Account %s is blocked", $account)
+            }
             if Size(kpub) != 0 {
                 warning Sprintf(LangRes("@1template_user_exists"), IdToAddress($newId))
             }

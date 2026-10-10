@@ -104,13 +104,13 @@ func (a *authApi) GetUid(ctx RequestContext) (*GetUIDResult, *Error) {
 }
 
 type loginForm struct {
-	EcosystemID int64          `json:"ecosystem_id"`
-	Expire      int64          `json:"expire"`
+	EcosystemID int64    `json:"ecosystem_id"`
+	Expire      int64    `json:"expire"`
 	PublicKey   hexValue `json:"public_key"`
-	KeyID       string         `json:"key_id"`
-	Signature   hexValue       `json:"signature"`
-	RoleID      int64          `json:"role_id"`
-	Guest       bool           `json:"guest"`
+	KeyID       string   `json:"key_id"`
+	Signature   hexValue `json:"signature"`
+	RoleID      int64    `json:"role_id"`
+	Guest       bool     `json:"guest"`
 }
 
 func (f *loginForm) Validate(r *http.Request) error {

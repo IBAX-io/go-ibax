@@ -101,6 +101,25 @@ func NodeAccountKey(nodePublicKey []byte) AccountKey {
 	return AccountKey{Algo: NodeAlgo(), Raw: CutPub(nodePublicKey)}
 }
 
+// ParseNodeKeyHex reads a node public key in hex, as honor_nodes and the candidate nodes hold it,
+// as the account key of the node
+func ParseNodeKeyHex(s string) (AccountKey, error) {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return AccountKey{}, fmt.Errorf("%w: %v", ErrAccountKeyFormat, err)
+	}
+	return NewAccountKey(NodeAlgo(), CutPub(b))
+}
+
+// NodeKeyHex is the node public key in hex, as honor_nodes holds it, of a node account key: a key
+// of the network's node algorithm
+func (k AccountKey) NodeKeyHex() (string, error) {
+	if k.Algo != NodeAlgo() {
+		return "", fmt.Errorf("%w: a %s key is no node key of the network (%s)", ErrAccountKeyFormat, k.Algo, NodeAlgo())
+	}
+	return PubToHex(k.Raw), nil
+}
+
 // GenNodeKeyPair generates a random pair of private and public node keys
 func GenNodeKeyPair() ([]byte, []byte, error) {
 	return GetAsymProvider().GenKeyPair()

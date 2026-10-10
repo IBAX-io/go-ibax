@@ -37,6 +37,9 @@ type UIDResult struct {
 	Cryptoer    string `json:"cryptoer"`
 	Hasher      string `json:"hasher"`
 	Fips        bool   `json:"fips"` // the node runs in FIPS 140-3 mode
+	// AccountAlgorithms are the algorithms account keys may have and their days; Cryptoer is the
+	// algorithm of the node keys, an account signs with the algorithm of its own key
+	AccountAlgorithms syspar.AccountAlgorithmSet `json:"account_algorithms"`
 }
 
 // Request is a login: the claims of the token sent with it (nil without one) and its form
@@ -85,6 +88,8 @@ func UID(token *Claims) (*UIDResult, error) {
 		Cryptoer:  conf.Config.CryptoSettings.Cryptoer,
 		Hasher:    conf.Config.CryptoSettings.Hasher,
 		Fips:      crypto.FIPSMode(),
+
+		AccountAlgorithms: syspar.GetAccountAlgorithms(),
 	}
 	if token != nil && len(token.KeyID) > 0 {
 		result.EcosystemID = token.EcosystemID
