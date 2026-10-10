@@ -6,12 +6,12 @@
 package block
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -20,7 +20,7 @@ import (
 // usable reports whether this node can run the suite: in FIPS mode only approved suites, and
 // ML-DSA only with a module that implements it
 func usable(cryptoer, hasher string) bool {
-	return crypto.CheckAsymAlgo(crypto.AsymAlgo(crypto.AsymAlgo_value[cryptoer])) == nil &&
+	return crypto.CheckNodeAlgo(crypto.AsymAlgo(crypto.AsymAlgo_value[cryptoer])) == nil &&
 		crypto.CheckHashAlgo(crypto.HashAlgo(crypto.HashAlgo_value[hasher])) == nil
 }
 
@@ -48,7 +48,7 @@ func testGenesis(t *testing.T, edit ...func(*types.FirstBlock)) []byte {
 	}
 	first := &types.FirstBlock{
 		KeyID: founder.Address(), Time: genesisTime, PublicKey: founder.Bytes(), NodePublicKey: pub,
-		AccountAlgorithms: fmt.Sprintf(`[{"algo":%q}]`, crypto.NodeAlgo()),
+		AccountAlgorithms: syspar.DefaultAccountAlgorithms(crypto.NodeAlgo(), crypto.FIPSMode()).String(),
 	}
 	for _, e := range edit {
 		e(first)
@@ -145,7 +145,7 @@ func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
 	useSuite("ECC_P256", "SHA256")
 	// Any ML-DSA-65 key: under a module without ML-DSA, the bytes stand for one and are refused
 	mldsa := crypto.AccountKey{Algo: crypto.AsymAlgo_MLDSA65, Raw: make([]byte, 1952)}
-	withMLDSA := crypto.CheckAsymAlgo(crypto.AsymAlgo_MLDSA65) == nil
+	withMLDSA := crypto.CheckAccountAlgo(crypto.AsymAlgo_MLDSA65) == nil
 	if withMLDSA {
 		var err error
 		if _, mldsa, err = crypto.GenAccountKey(crypto.AsymAlgo_MLDSA65); err != nil {
@@ -184,7 +184,7 @@ func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
 	}
 	if withMLDSA {
 		accepted["ML-DSA founder"] = func(f *types.FirstBlock) {
-			f.AccountAlgorithms = `[{"algo":"ECC_P256"},{"algo":"MLDSA65"}]`
+			f.AccountAlgorithms = `[{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"}]`
 			f.PublicKey, f.KeyID = mldsa.Bytes(), mldsa.Address()
 		}
 	}
@@ -207,5 +207,20 @@ func TestCheckGenesisFIPSRefusesAccountAlgorithms(t *testing.T) {
 	}))
 	if err == nil || !strings.Contains(err.Error(), "FIPS") {
 		t.Errorf("secp256k1 accounts accepted in FIPS mode: %v", err)
+	}
+	// Classical algorithms carry days no later than the regulations allow
+	for _, set := range []string{
+		`[{"algo":"ECC_P256"}]`,
+		`[{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"RSA2048","sign_until":"2031-12-31"}]`,
+		`[{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"ECC_P384","sign_until":"2032-01-01"}]`,
+	} {
+		err := CheckGenesis(testGenesis(t, func(f *types.FirstBlock) { f.AccountAlgorithms = set }))
+		if err == nil || !strings.Contains(err.Error(), "FIPS") {
+			t.Errorf("%s accepted in FIPS mode: %v", set, err)
+		}
+	}
+	piv := `[{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"ECC_P384","sign_until":"2031-12-31"},{"algo":"RSA2048","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"RSA3072","sign_until":"2031-12-31"}]`
+	if err := CheckGenesis(testGenesis(t, func(f *types.FirstBlock) { f.AccountAlgorithms = piv })); err != nil {
+		t.Errorf("PIV accounts refused in FIPS mode: %v", err)
 	}
 }

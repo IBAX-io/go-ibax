@@ -11,7 +11,10 @@ import (
 var (
 	curveAlgos = []AsymAlgo{AsymAlgo_ECC_P256, AsymAlgo_ECC_Secp256k1, AsymAlgo_SM2}
 	signAlgos  = []AsymAlgo{AsymAlgo_ECC_P256, AsymAlgo_ECC_Secp256k1, AsymAlgo_SM2, AsymAlgo_MLDSA65, AsymAlgo_MLDSA87}
-	hashAlgos  = []HashAlgo{HashAlgo_SHA256, HashAlgo_KECCAK256, HashAlgo_SHA3_256, HashAlgo_SM3, HashAlgo_SHA384, HashAlgo_SHA512}
+	// pivAlgos are the algorithms of account keys only
+	pivAlgos     = []AsymAlgo{AsymAlgo_ECC_P384, AsymAlgo_RSA2048, AsymAlgo_RSA3072}
+	accountAlgos = append(append([]AsymAlgo{}, signAlgos...), pivAlgos...)
+	hashAlgos    = []HashAlgo{HashAlgo_SHA256, HashAlgo_KECCAK256, HashAlgo_SHA3_256, HashAlgo_SM3, HashAlgo_SHA384, HashAlgo_SHA512}
 )
 
 const signRounds = 1000

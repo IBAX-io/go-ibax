@@ -118,7 +118,12 @@ func accountKeyCases(key crypto.AccountKey) []accountKeyCase {
 		accountKeyCase{key.Algo.String() + " key short of a byte", key.Bytes()[:len(key.Bytes())-1], false},
 		accountKeyCase{key.Algo.String() + " key with a byte more", append(key.Bytes(), 0), false},
 	)
-	if len(key.Raw) == 64 {
+	if key.Algo == crypto.AsymAlgo_RSA2048 || key.Algo == crypto.AsymAlgo_RSA3072 {
+		even := key.Bytes()
+		even[len(even)-1] &^= 1
+		cases = append(cases, accountKeyCase{key.Algo.String() + " key with an even modulus", even, false})
+	}
+	if len(key.Raw) == 64 || key.Algo == crypto.AsymAlgo_ECC_P384 {
 		cases = append(cases, accountKeyCase{key.Algo.String() + " SEC1 key (04, X, Y)", append([]byte{4}, key.Raw...), false})
 	}
 	return cases

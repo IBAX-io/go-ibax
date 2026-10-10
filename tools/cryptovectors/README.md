@@ -7,7 +7,7 @@ Golden vectors for the cryptography and transaction decoding shared by the clien
 | `go-ibax-vectors.json` | cryptoer, hasher, privateKey, message, payload (this repository); clientSignature (client) | publicKey, keyID, goSignature; ML-DSA only: contextFreeSignature, signed under the empty context, which the node and the client must refuse; clientSignature must pass the node's verification |
 | `go-ibax-addresses.json` | input (this repository) | id, address |
 | `go-ibax-transfers.json` | transaction parameters and data (client) | node: result of decoding, Validate and CheckSign |
-| `go-ibax-account-keys.json` | derived from the SHA256 vectors of `go-ibax-vectors.json` (this tool) | node: accepted, or the error: each key, the key relabelled as every other account algorithm, and malformed encodings (bare, SEC1, unknown or unimplemented algorithm, a byte short or more); a client must refuse what the node refuses |
+| `go-ibax-account-keys.json` | derived from the SHA256 vectors of `go-ibax-vectors.json` (this tool) | node: accepted, or the error: each key, the key relabelled as every other account algorithm, and malformed encodings (bare, SEC1, unknown or unimplemented algorithm, a byte short or more, an even RSA modulus); a client must refuse what the node refuses |
 | `go-ibax-contract-params.json` | declared types and data (client) | header, node: FillTxData result per parameter |
 
 ```sh
@@ -29,4 +29,4 @@ go run ./tools/cryptovectors gen && go test ./tools/cryptovectors/... && git com
 GO_IBAX_DIR=/path/to/go-ibax npm run vectors:sync && npm test
 ```
 
-Coverage (checked by the tests on both sides): all 30 suites (5 cryptoers × 6 hashers) have a transaction the node accepts in transfers; all 90 signature vectors carry a clientSignature that the node verifies; all 36 ML-DSA vectors (ML-DSA-65 and ML-DSA-87) carry a contextFreeSignature that the node refuses. The rules these vectors pin down are in [docs/specs/pqc-signature.md](../../docs/specs/pqc-signature.md).
+Coverage (checked by the tests on both sides): all 30 suites (5 cryptoers × 6 hashers) have a transaction the node accepts in transfers; all 90 signature vectors of the node cryptoers carry a clientSignature that the node verifies; the 14 vectors of the PIV account algorithms (ECC_P384 under every hasher, RSA2048 and RSA3072 under SHA256, SHA384, SHA512 and SHA3_256, never KECCAK256 or SM3) carry one once the client signs with them; all 36 ML-DSA vectors (ML-DSA-65 and ML-DSA-87) carry a contextFreeSignature that the node refuses. The rules these vectors pin down are in [docs/specs/pqc-signature.md](../../docs/specs/pqc-signature.md).

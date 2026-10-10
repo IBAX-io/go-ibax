@@ -38,7 +38,7 @@ func TestParseAccountAlgorithms(t *testing.T) {
 	}
 	for _, bad := range []string{
 		``, `{}`, `[]`, `null`,
-		`[{"algo":"RSA2048"}]`,
+		`[{"algo":"RSA4096"}]`,
 		`[{"algo":"ECC_P512"}]`,
 		`[{"algo":"ecc_p256"}]`,
 		`[{"algo":"MLDSA65"},{"algo":"MLDSA65"}]`,
@@ -48,6 +48,27 @@ func TestParseAccountAlgorithms(t *testing.T) {
 	} {
 		if set, err := ParseAccountAlgorithms(bad); err == nil {
 			t.Errorf("%s parsed as %v", bad, set)
+		}
+	}
+}
+
+// The PIV algorithms are account algorithms; RSA only where the network hash has RSASSA-PSS
+func TestParseAccountAlgorithmsPIV(t *testing.T) {
+	piv := `[{"algo":"ECC_P384","sign_until":"2031-12-31"},{"algo":"RSA2048","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"RSA3072","sign_until":"2031-12-31"}]`
+	if set := mustParse(t, piv); set.String() != piv {
+		t.Fatalf("written %s", set)
+	}
+	if crypto.FIPSMode() {
+		return
+	}
+	crypto.InitHashAlgo("KECCAK256")
+	defer crypto.InitHashAlgo("SHA256")
+	if _, err := ParseAccountAlgorithms(`[{"algo":"ECC_P384"}]`); err != nil {
+		t.Errorf("P-384 refused on KECCAK256: %v", err)
+	}
+	for _, rsa := range []string{`[{"algo":"RSA2048"}]`, `[{"algo":"ECC_P384"},{"algo":"RSA3072"}]`} {
+		if set, err := ParseAccountAlgorithms(rsa); err == nil {
+			t.Errorf("%s parsed on KECCAK256 as %v", rsa, set)
 		}
 	}
 }
@@ -117,8 +138,8 @@ func TestAccountAlgorithmChange(t *testing.T) {
 
 // A FIPS node cannot verify every algorithm: it refuses a set with one it may not use
 func TestAccountAlgorithmsFIPS(t *testing.T) {
-	approved := mustParse(t, `[{"algo":"ECC_P256"},{"algo":"MLDSA65"},{"algo":"MLDSA87"}]`)
-	if crypto.CheckAsymAlgo(crypto.AsymAlgo_MLDSA65) == nil {
+	approved := mustParse(t, `[{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"},{"algo":"MLDSA87"}]`)
+	if crypto.CheckAccountAlgo(crypto.AsymAlgo_MLDSA65) == nil {
 		if err := approved.CheckNode(); err != nil {
 			t.Errorf("approved set refused: %v", err)
 		}
@@ -127,6 +148,44 @@ func TestAccountAlgorithmsFIPS(t *testing.T) {
 	err := other.CheckNode()
 	if crypto.FIPSMode() == (err == nil) {
 		t.Errorf("FIPS mode %v, secp256k1 set: %v", crypto.FIPSMode(), err)
+	}
+}
+
+// A FIPS node refuses classical algorithms without days or with days later than the regulations
+func TestAccountAlgorithmsFIPSDays(t *testing.T) {
+	for _, c := range []struct {
+		value string
+		ok    bool
+	}{
+		{`[{"algo":"ECC_P256","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"ECC_P384","sign_until":"2031-12-31"},{"algo":"RSA2048","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"RSA3072","sign_until":"2031-12-31"},{"algo":"MLDSA65"},{"algo":"MLDSA87"}]`, true},
+		{`[{"algo":"RSA2048","register_until":"2027-01-01","sign_until":"2028-06-30"}]`, true},
+		{`[{"algo":"ECC_P256","sign_until":"2031-12-31"}]`, true},
+		{`[{"algo":"MLDSA65"}]`, true},
+		{`[{"algo":"ECC_P256"}]`, false},
+		{`[{"algo":"ECC_P384","sign_until":"2032-01-01"}]`, false},
+		{`[{"algo":"RSA3072","register_until":"2030-12-31"}]`, false},
+		{`[{"algo":"RSA2048","sign_until":"2031-12-31"}]`, false},
+		{`[{"algo":"RSA2048","register_until":"2031-01-01","sign_until":"2031-12-31"}]`, false},
+		{`[{"algo":"RSA2048","register_until":"2030-12-31"}]`, false},
+		{`[{"algo":"MLDSA65"},{"algo":"ECC_P256","sign_until":"2035-12-31"}]`, false},
+	} {
+		if err := mustParse(t, c.value).checkFIPSDays(); (err == nil) != c.ok {
+			t.Errorf("%s: %v", c.value, err)
+		}
+	}
+	if s := DefaultAccountAlgorithms(crypto.AsymAlgo_ECC_P256, true).String(); s != `[{"algo":"ECC_P256","sign_until":"2031-12-31"}]` {
+		t.Errorf("FIPS default %s", s)
+	}
+	if s := DefaultAccountAlgorithms(crypto.AsymAlgo_MLDSA65, true).String(); s != `[{"algo":"MLDSA65"}]` {
+		t.Errorf("FIPS ML-DSA default %s", s)
+	}
+	if s := DefaultAccountAlgorithms(crypto.AsymAlgo_ECC_P256, false).String(); s != `[{"algo":"ECC_P256"}]` {
+		t.Errorf("default %s", s)
+	}
+	for _, set := range []string{`[{"algo":"ECC_P256"}]`, `[{"algo":"ECC_P256","sign_until":"2031-12-31"}]`} {
+		if err := mustParse(t, set).CheckNode(); (err == nil) == (crypto.FIPSMode() && set == `[{"algo":"ECC_P256"}]`) {
+			t.Errorf("FIPS mode %v, %s: %v", crypto.FIPSMode(), set, err)
+		}
 	}
 }
 
@@ -183,7 +242,7 @@ func TestParseAccountAlgo(t *testing.T) {
 	if a, err := ParseAccountAlgo("MLDSA87"); err != nil || a != crypto.AsymAlgo_MLDSA87 {
 		t.Errorf("MLDSA87: %v %v", a, err)
 	}
-	for _, bad := range []string{"", "mldsa87", "ECC_P512", "RSA2048", "4"} {
+	for _, bad := range []string{"", "mldsa87", "ECC_P512", "RSA4096", "4"} {
 		if _, err := ParseAccountAlgo(bad); !errors.Is(err, ErrAccountAlgorithm) {
 			t.Errorf("%q: %v", bad, err)
 		}
