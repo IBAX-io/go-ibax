@@ -57,6 +57,10 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		KeyTableChkr: sqldb.KeyTableChecker{},
 	}
 
+	if err := setInterfaceRefs(sqlBuilder); err != nil {
+		return 0, "", err
+	}
+
 	queryCoster := querycost.GetQueryCoster(querycost.FormulaQueryCosterType)
 	if exists {
 		selectQuery, err := sqlBuilder.GetSelectExpr()
@@ -147,12 +151,12 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		return 0, "", err
 	}
 
-		insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery)
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
-			return 0, "", err
-		}
-		rollDataHashStr = insertQuery
+	insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
+		return 0, "", err
+	}
+	rollDataHashStr = insertQuery
 	cost += insertCost
 	err = sc.DbTransaction.ExecSql(insertQuery)
 	if err != nil {
@@ -172,6 +176,54 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		addRollback(sc, sqlBuilder.Table, tid, "", rollDataHashStr)
 	}
 	return cost, sqlBuilder.TableID(), nil
+}
+
+// deleteRow deletes the row with the id from the table. The row, all its columns, is kept in a
+// rollback of the system, which inserts it again.
+func (sc *SmartContract) deleteRow(table string, id int64, generalRollback bool) (int64, error) {
+	logger := sc.GetLogger()
+	if generalRollback && sc.BlockHeader == nil {
+		logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("Block is undefined")
+		return 0, fmt.Errorf(`it is impossible to write to DB when Block is undefined`)
+	}
+	sqlBuilder := &qb.SQLQueryBuilder{
+		Entry:        logger,
+		Table:        table,
+		Where:        types.LoadMap(map[string]any{"id": id}),
+		TxEcoID:      sc.TxSmart.EcosystemID,
+		KeyTableChkr: sqldb.KeyTableChecker{},
+	}
+	whereExpr, err := sqlBuilder.GetSQLWhereExpr()
+	if err != nil {
+		return 0, err
+	}
+	queryCoster := querycost.GetQueryCoster(querycost.FormulaQueryCosterType)
+	selectQuery := `SELECT to_jsonb(t)::text FROM "` + sqlBuilder.Table + `" t ` + whereExpr
+	selectCost, err := queryCoster.QueryCost(sc.DbTransaction, selectQuery)
+	if err != nil {
+		return 0, logErrorDB(err, "getting query total cost")
+	}
+	row, err := sc.DbTransaction.Single(selectQuery).String()
+	if err != nil {
+		return 0, logErrorDB(err, "selecting the row to delete")
+	}
+	if len(row) == 0 {
+		return 0, errDelNotExistRecord
+	}
+	deleteQuery := `DELETE FROM "` + sqlBuilder.Table + `" ` + whereExpr
+	deleteCost, err := queryCoster.QueryCost(sc.DbTransaction, deleteQuery)
+	if err != nil {
+		return 0, logErrorDB(err, "getting query total cost for delete query")
+	}
+	if err = sc.DbTransaction.Delete(sqlBuilder.Table, whereExpr); err != nil {
+		return 0, logErrorDB(err, "deleting the row")
+	}
+	if generalRollback {
+		if err = SysRollback(sc, SysRollData{Type: "DeleteRow", TableName: sqlBuilder.Table, Data: row}); err != nil {
+			return 0, err
+		}
+	}
+	return selectCost + deleteCost, nil
 }
 
 func (sc *SmartContract) insert(fields []string, ivalues []any,

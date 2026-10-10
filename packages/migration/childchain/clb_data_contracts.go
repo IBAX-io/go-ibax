@@ -23,7 +23,12 @@ VALUES
             warning LangRes("@1contract_start_votingdecisioncheck_only")
         }
 
-        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $VotingId,"voting->name":{"$begin":"voting_for_control_mode_template"}}).Columns("voting->type_decision,flags->success,voting->type").Row()
+        // The voting must be the one that VotingDecisionCheck executes now (decision 2), not any
+        // accepted voting
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $VotingId, "flags->decision": 2, "voting->name":{"$begin":"voting_for_control_mode_template"}}).Columns("voting->type_decision,flags->success,voting->type").Row()
+        if !$voting {
+            warning LangRes("@1voting_not_found")
+        }
         if Int($voting["voting.type"]) != 2 {
             warning LangRes("@1voting_type_invalid")
         }
@@ -183,14 +188,16 @@ VALUES
 }
 ', '%[1]d', 'ContractConditions("MainCondition")', '1', '%[1]d'),
 	(next_id('1_contracts'), 'DAODecisionCondition', '// This contract is used to set the rights of an ecosystem in the "DAO" control mode (control_mode 2):
-// only the contracts that an accepted voting runs have them.
-// @1VotingDecisionCheck marks the voting as being executed before it runs the contract of the voting''s
-// subject with the subject''s parameters, and sets the voting''s decision after the voting''s contracts,
-// in the same transaction. So a marked voting exists only while the contracts of its decision run.
+// only the contracts that an accepted system voting (type 2) runs have them.
+// @1VotingDecisionCheck marks a system voting as being executed before it runs the contract of the
+// voting''s subject with the subject''s parameters, and sets the voting''s decision after the voting''s
+// contracts, in the same transaction. So a marked voting exists only while the contracts of its
+// decision run. Only a template creates a system voting, and its subject is fixed when it is created;
+// a voting that a member creates directly runs its contracts with the rights of the transaction''s signer.
 
 contract DAODecisionCondition {
     conditions {
-        if !DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "flags->decision": "2"}).One("id") {
+        if !DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "voting->type": "2", "flags->decision": "2"}).One("id") {
             warning Sprintf(LangRes("@1x_not_access_action"), "DAODecisionCondition")
         }
     }

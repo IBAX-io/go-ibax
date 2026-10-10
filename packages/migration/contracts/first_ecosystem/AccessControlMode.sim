@@ -18,7 +18,12 @@ contract AccessControlMode {
             warning LangRes("@1contract_start_votingdecisioncheck_only")
         }
 
-        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $VotingId,"voting->name":{"$begin":"voting_for_control_mode_template"}}).Columns("voting->type_decision,flags->success,voting->type").Row()
+        // The voting must be the one that VotingDecisionCheck executes now (decision 2), not any
+        // accepted voting
+        $voting = DBFind("@1votings").Where({"ecosystem": $ecosystem_id, "id": $VotingId, "flags->decision": 2, "voting->name":{"$begin":"voting_for_control_mode_template"}}).Columns("voting->type_decision,flags->success,voting->type").Row()
+        if !$voting {
+            warning LangRes("@1voting_not_found")
+        }
         if Int($voting["voting.type"]) != 2 {
             warning LangRes("@1voting_type_invalid")
         }

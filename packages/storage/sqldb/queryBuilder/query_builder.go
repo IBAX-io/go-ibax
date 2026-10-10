@@ -448,6 +448,33 @@ func (b *SQLQueryBuilder) GetEcosystem() string {
 	return b.keyEcosystem
 }
 
+// KeyTable returns the name of the table without its ecosystem when it is a table of the first
+// ecosystem, which keeps the rows of all the ecosystems, and "" otherwise. The builder must be
+// prepared.
+func (b *SQLQueryBuilder) KeyTable() string {
+	if b.isKeyTable {
+		return b.keyName
+	}
+	return ""
+}
+
+// FieldValue returns the value of a field of the prepared builder
+func (b *SQLQueryBuilder) FieldValue(field string) (string, bool) {
+	for i, name := range b.Fields {
+		if name == field {
+			return b.stringValues[i], true
+		}
+	}
+	return "", false
+}
+
+// AddField adds a field and its value to the prepared builder
+func (b *SQLQueryBuilder) AddField(field, value string) {
+	b.Fields = append(b.Fields, field)
+	b.FieldValues = append(b.FieldValues, value)
+	b.stringValues = append(b.stringValues, value)
+}
+
 func (b *SQLQueryBuilder) IsEmptyWhere() bool {
 	return len(b.whereExpr) == 0
 }

@@ -34,8 +34,10 @@ type Permissions struct {
 	Insert    string `json:"insert"`
 	NewColumn string `json:"new_column"`
 	Update    string `json:"update"`
-	Read      string `json:"read"`
-	Filter    string `json:"filter"`
+	// Delete is who may delete the rows of the table: a table without it refuses deleting
+	Delete string `json:"delete,omitempty"`
+	Read   string `json:"read"`
+	Filter string `json:"filter"`
 	// Rows is the row scope of the data API: a filter of its query language, as JSON text
 	Rows string `json:"rows,omitempty"`
 }

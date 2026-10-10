@@ -82,8 +82,9 @@ var sqlFirstEcosystemCommon = `
 		t.Column("value", "text", {"default": ""})
 		t.Column("conditions", "text", {"default": ""})
 		t.Column("permissions", "jsonb", {"null": true})
+		t.Column("refs", "jsonb", {"default": "{}"})
 		t.Column("ecosystem", "bigint", {"default": "1"})
-	{{footer "primary" "unique(ecosystem, name)" "index(ecosystem, name)"}}
+	{{footer "primary" "unique(ecosystem, name)" "index(ecosystem, name)" "gin(refs)"}}
 
 	{{head "1_pages"}}
 		t.Column("id", "bigint", {"default": "0"})
@@ -95,8 +96,9 @@ var sqlFirstEcosystemCommon = `
 		t.Column("permissions", "jsonb", {"null": true})
 		t.Column("app_id", "bigint", {"default": "1"})
 		t.Column("validate_mode", "character(1)", {"default": "0"})
+		t.Column("refs", "jsonb", {"default": "{}"})
 		t.Column("ecosystem", "bigint", {"default": "1"})
-	{{footer "primary" "unique(ecosystem, name)" "index(ecosystem, name)"}}
+	{{footer "primary" "unique(ecosystem, name)" "index(ecosystem, name)" "gin(refs)"}}
 
 	{{head "1_snippets"}}
 		t.Column("id", "bigint", {"default": "0"})
@@ -105,8 +107,9 @@ var sqlFirstEcosystemCommon = `
 		t.Column("conditions", "text", {"default": ""})
 		t.Column("permissions", "jsonb", {"null": true})
 		t.Column("app_id", "bigint", {"default": "1"})
+		t.Column("refs", "jsonb", {"default": "{}"})
 		t.Column("ecosystem", "bigint", {"default": "1"})
-	{{footer "primary" "unique(ecosystem, name)" "index(ecosystem, name)"}}
+	{{footer "primary" "unique(ecosystem, name)" "index(ecosystem, name)" "gin(refs)"}}
 
 	{{head "1_languages"}}
 		t.Column("id", "bigint", {"default": "0"})
