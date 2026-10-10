@@ -256,10 +256,9 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 	}
 	if i > 0 && size-i >= 0 {
 		pars[in-1] = reflect.ValueOf(rt.stack[size-i : size])
-	} else {
-		if !pars[in-1].IsValid() {
-			pars[in-1] = reflect.Zero(finfo.Params[in-1])
-		}
+	} else if in > 0 && !pars[in-1].IsValid() {
+		// A function without parameters has no last one to default
+		pars[in-1] = reflect.Zero(finfo.Params[in-1])
 	}
 	if finfo.Name == `ExecContract` && (pars[2].Kind() != reflect.String || !pars[3].IsValid()) {
 		return fmt.Errorf(`unknown function %v`, pars[1])
