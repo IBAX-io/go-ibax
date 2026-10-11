@@ -43,8 +43,11 @@ API only: contracts read tables as before.
 In the genesis data, `buffer_data` is scoped to the reader's account, and `notifications` to those
 the reader sent, those sent to the reader's account, and those sent to a role the reader holds.
 
-A table that exists in the database but has no row in `1_tables` belongs to the node itself. It is
-never read through this API (`E_ACCESS_DENIED`).
+`tables`, the table definitions, has no row of its own in `1_tables`: a definition is written only
+by the table functions of contracts, never by a row write. `dataquery` describes it instead: read by
+everyone, within the ecosystem read, with no column read conditions; insert, update, new column and
+conditions `false`. Any other table that exists in the database but has no row in `1_tables`
+belongs to the node itself. It is never read through this API (`E_ACCESS_DENIED`).
 
 Every table in the genesis data of a new chain declares `permissions.read`.
 

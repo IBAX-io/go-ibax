@@ -107,20 +107,49 @@ func Describe(reader Reader, name string, ecosystem int64) (*Table, error) {
 	if err := t.readColumns(); err != nil {
 		return nil, err
 	}
-	if !found {
-		// A table of the node's own, not of an ecosystem: never read through the data API
-		if len(t.ordered) > 0 {
-			return nil, ErrAccessDenied(name)
-		}
-		return nil, ErrTableNotFound(name)
-	}
 	if len(t.ordered) == 0 {
 		return nil, ErrTableNotFound(name)
+	}
+	if !found {
+		if err := t.ownRecord(); err != nil {
+			return nil, err
+		}
 	}
 	if err := t.readConditions(); err != nil {
 		return nil, err
 	}
 	return t, nil
+}
+
+// selfDescribed are the tables of an ecosystem that are not rows of 1_tables, each with the record
+// that stands for its row
+var selfDescribed = map[string]sqldb.Table{
+	// The table definitions. The definition of a table is public (GET table/{name}), and so are its
+	// rows, each read within its ecosystem. They are written only by the table functions of
+	// contracts (CreateTable, PermTable, PermColumn, ...): never by a row write, whose permissions
+	// are "false", and its own definition is not one of its rows, which those functions would edit.
+	"tables": {
+		Name: "tables",
+		Permissions: sqldb.Permissions{
+			Insert:    "false",
+			NewColumn: "false",
+			Update:    "false",
+			Read:      "true",
+		},
+		Conditions: "false",
+	},
+}
+
+// ownRecord gives a table without a row in 1_tables its record. A table that is neither such a row
+// nor described here belongs to the node itself: never read through the data API.
+func (t *Table) ownRecord() error {
+	record, described := selfDescribed[t.Name]
+	if !described {
+		return ErrAccessDenied(t.Name)
+	}
+	record.Ecosystem = t.Ecosystem
+	t.Record = record
+	return nil
 }
 
 func queryFailed(err error, table string) *Error {

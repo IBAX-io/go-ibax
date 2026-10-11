@@ -40,8 +40,28 @@ func TestEveryEcosystemDeclaresItsTables(t *testing.T) {
 		declared[row[1]] = true
 	}
 	for name := range converter.FirstEcosystemTables {
+		// The table definitions are not a row of their own: see TestTheDefinitionsAreNoRowOfTheirOwn
 		if name != "tables" && !declared[name] {
 			t.Errorf("table %s is not declared for ecosystem 2", name)
+		}
+	}
+}
+
+// The table definitions are no row of 1_tables, of ecosystem 1 or of a new one. Were they one, the
+// row writes of contracts (DBInsert, DBUpdate) and the table functions (PermTable, EditTable,
+// NewColumn, ...) would take 1_tables for a table of the ecosystem, governed by that row, which a
+// change of its permissions could open. The data API reads them as dataquery describes them.
+func TestTheDefinitionsAreNoRowOfTheirOwn(t *testing.T) {
+	script, err := GetTableScript(SqlData{Ecosystem: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	own := regexp.MustCompile(`next_id\('1_tables'\),\s*'tables'`)
+	for name, data := range map[string]string{
+		"tables": tablesDataSQL, "first tables": firstTablesDataSQL, "ecosystem 2": script,
+	} {
+		if own.MatchString(data) {
+			t.Errorf("%s: 1_tables declares a row for the table definitions", name)
 		}
 	}
 }
