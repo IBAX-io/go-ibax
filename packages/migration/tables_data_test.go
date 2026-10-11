@@ -91,3 +91,39 @@ func TestNotificationsAreInsertedBySendAndBroadcast(t *testing.T) {
 	}
 	t.Fatal("no notifications table")
 }
+
+var tableColumns = regexp.MustCompile(`next_id\('1_tables'\),\s*'([a-z_0-9]+)',\s*'(\{[^']*\})',\s*'(\{[^']*\})'`)
+
+// The keys of an ecosystem are updated by the contracts that write them: DeleteMember marks a member
+// deleted, and MembershipDecide gives a member admitted to the ecosystem the public key of their
+// account when they already hold a key row there
+func TestKeysAreUpdatedByDeleteMemberAndMembershipDecide(t *testing.T) {
+	script, err := GetTableScript(SqlData{Ecosystem: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range tableColumns.FindAllStringSubmatch(script, -1) {
+		if row[1] != "keys" {
+			continue
+		}
+		var permissions, columns map[string]string
+		if err := json.Unmarshal([]byte(row[2]), &permissions); err != nil {
+			t.Fatal(err)
+		}
+		if err := json.Unmarshal([]byte(row[3]), &columns); err != nil {
+			t.Fatal(err)
+		}
+		for _, check := range []struct{ name, rule, contract string }{
+			{"update", permissions["update"], "@1DeleteMember"},
+			{"update", permissions["update"], "@1MembershipDecide"},
+			{"deleted", columns["deleted"], "@1DeleteMember"},
+			{"pub", columns["pub"], "@1MembershipDecide"},
+		} {
+			if !regexp.MustCompile(`ContractAccess\(.*"` + regexp.QuoteMeta(check.contract) + `"`).MatchString(check.rule) {
+				t.Errorf("keys %s = %s, want it to admit %s", check.name, check.rule, check.contract)
+			}
+		}
+		return
+	}
+	t.Fatal("no keys table")
+}

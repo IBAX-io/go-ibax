@@ -29,11 +29,11 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
         '{
             "read": "true",
             "insert": "true",
-            "update": "ContractAccess(\"@1TokensTransfer\",\"@1TokensLockoutMember\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1NewUser\")",
+            "update": "ContractAccess(\"@1TokensTransfer\",\"@1TokensLockoutMember\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1NewUser\",\"@1DeleteMember\",\"@1MembershipDecide\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
-            "pub": "ContractAccess(\"@1NewUser\")",
+            "pub": "ContractAccess(\"@1NewUser\",\"@1MembershipDecide\")",
             "amount": "ContractAccess(\"@1TokensTransfer\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\")",
             "maxpay": "ContractConditions(\"@1MainCondition\")",
             "deleted": "ContractAccess(\"@1DeleteMember\")",
