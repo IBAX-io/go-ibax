@@ -6,6 +6,7 @@
 package migration
 
 import (
+	"encoding/json"
 	"regexp"
 	"testing"
 
@@ -64,4 +65,29 @@ func TestTheDefinitionsAreNoRowOfTheirOwn(t *testing.T) {
 			t.Errorf("%s: 1_tables declares a row for the table definitions", name)
 		}
 	}
+}
+
+// The notifications of an ecosystem are written by NotificationsSend, to an account or a role of the
+// ecosystem that signs, and by NotificationsBroadcast of ecosystem 1, to the developers of every
+// other ecosystem
+func TestNotificationsAreInsertedBySendAndBroadcast(t *testing.T) {
+	script, err := GetTableScript(SqlData{Ecosystem: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range tableRow.FindAllStringSubmatch(script, -1) {
+		if row[1] != "notifications" {
+			continue
+		}
+		var permissions map[string]string
+		if err := json.Unmarshal([]byte(row[2]), &permissions); err != nil {
+			t.Fatal(err)
+		}
+		const want = `ContractAccess("@1NotificationsSend", "@1NotificationsBroadcast")`
+		if permissions["insert"] != want {
+			t.Errorf("notifications insert = %s, want %s", permissions["insert"], want)
+		}
+		return
+	}
+	t.Fatal("no notifications table")
 }

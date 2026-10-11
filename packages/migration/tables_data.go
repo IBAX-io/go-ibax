@@ -204,7 +204,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
         '{
             "read": "true",
             "rows": "{\"$or\": [{\"recipient->account\": \"$account\"}, {\"recipient->role_id\": {\"$in\": \"$roles\"}}, {\"sender->account\": \"$account\"}]}",
-            "insert": "ContractAccess(\"@1NotificationsSend\")",
+            "insert": "ContractAccess(\"@1NotificationsSend\", \"@1NotificationsBroadcast\")",
             "update": "ContractAccess(\"@1NotificationsClose\", \"@1NotificationsProcess\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
