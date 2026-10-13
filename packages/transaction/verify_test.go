@@ -6,7 +6,9 @@ package transaction
 
 import (
 	"bytes"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/vmihailenco/msgpack/v5"
 
@@ -141,5 +143,72 @@ func TestVerifyRefusesTransferOfAKeyThatDidNotSign(t *testing.T) {
 		if err := verify(append([]byte{signed[0]}, body...)); err == nil {
 			t.Errorf("%s: a transfer with a damaged signature passed Verify", kind.name)
 		}
+	}
+}
+
+// A contract call travels in the same stored fields as a transfer, and a signature covers only the
+// hash of the payload, so a call is held to the same relation: its body has to be the one the
+// payload encodes. A party who saw a call could otherwise keep its payload, hash and signature, put
+// a body of their own under them, and have the account the header names run a contract it never
+// asked for.
+//
+// The honest half of the relation is not asserted here: the parse of a call goes on to resolve the
+// contract the header names, which takes a chain a unit test has none of. What is asserted is what
+// the binding is for -- a body the payload does not encode is refused as the call is parsed, and
+// refused for that reason, before anything looks for the contract.
+func TestVerifyRefusesContractCallOfABodyItsPayloadDoesNotEncode(t *testing.T) {
+	crypto.InitAsymAlgo("ECC_Secp256k1")
+	crypto.InitHashAlgo("KECCAK256")
+	previous := conf.Config.LocalConf.NetworkID
+	conf.Config.LocalConf.NetworkID = 1
+	defer func() { conf.Config.LocalConf.NetworkID = previous }()
+
+	private, _, err := crypto.GenKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, _, err := NewTransactionInProc(types.SmartTransaction{
+		Header: &types.Header{
+			ID:          1,
+			EcosystemID: 1,
+			KeyID:       1,
+			Time:        time.Now().Unix(),
+			NetworkID:   conf.Config.LocalConf.NetworkID,
+		},
+		Params: map[string]any{"Name": "honest"},
+	}, private)
+	if err != nil {
+		t.Fatalf("building the contract call: %v", err)
+	}
+	if stored[0] != types.SmartContractTxType {
+		t.Fatalf("the transaction is of type %d, not a contract call", stored[0])
+	}
+
+	// The parameters the call runs with change; the payload, the hash and the signature stay the
+	// ones the key signed.
+	var parser SmartTransactionParser
+	if err := msgpack.Unmarshal(stored[1:], &parser); err != nil {
+		t.Fatalf("decoding the stored transaction: %v", err)
+	}
+	if parser.TxSmart == nil {
+		t.Fatal("the stored transaction carries no body")
+	}
+	params := parser.TxSmart.Params
+	if params == nil {
+		params = map[string]any{}
+	}
+	params["Name"] = "another"
+	params["Amount"] = "1000000000000000000"
+	parser.TxSmart.Params = params
+
+	body, err := msgpack.Marshal(&parser)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = (&Transaction{}).Unmarshall(bytes.NewBuffer(append([]byte{stored[0]}, body...)), true)
+	if err == nil {
+		t.Errorf("a contract call carrying a body its payload does not encode was accepted")
+	} else if !strings.Contains(err.Error(), "a body its payload does not encode") {
+		t.Errorf("the call was refused for another reason than its body: %v", err)
 	}
 }
