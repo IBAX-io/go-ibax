@@ -497,6 +497,12 @@ func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 	if sc.TxSmart.SignedBy != 0 {
 		var isNode bool
 		signedBy = sc.TxSmart.SignedBy
+		// A transaction that names a signer other than its own key is a node-signed delayed
+		// contract. The transfer transactions carry no contract, so such a signer is refused
+		// here: without this a header could name a node and skip the contract rule below.
+		if sc.TxContract == nil {
+			return 0, fmt.Errorf("%w: %v", errDelayedContract, `signed by another key without a contract`)
+		}
 		if syspar.IsCandidateNodeMode() {
 			return signedBy, nil
 		}
@@ -547,10 +553,9 @@ func (sc *SmartContract) CallContract(point string) (string, error) {
 		return ``, err
 	}
 
-	if err = sc.checkTxSign(); err != nil {
-		return ``, err
-	}
-
+	// The signer is checked before the transaction runs (CheckTxSign, called from
+	// SmartTransactionParser.Action for every transaction type); a contract body is never
+	// entered without it.
 	needPayment := sc.needPayment()
 	if needPayment {
 		err = sc.prepareMultiPay()
@@ -626,7 +631,12 @@ lp:
 	return result, nil
 }
 
-func (sc *SmartContract) checkTxSign() error {
+// CheckTxSign verifies that the key that signs the transaction is the signer the header names,
+// and that the signature holds. It is called before a transaction runs, whatever its type: a
+// contract transaction does not reach its contract body and a transfer transaction does not move
+// funds until this passes. The key is the one registered for the signer in 1_keys when there is
+// one, otherwise the public key in the header for a signer that is still registering.
+func (sc *SmartContract) CheckTxSign() error {
 	var public []byte
 	if len(sc.TxSmart.PublicKey) > 0 && string(sc.TxSmart.PublicKey) != `null` {
 		public = sc.TxSmart.PublicKey
@@ -645,7 +655,7 @@ func (sc *SmartContract) checkTxSign() error {
 	if !isFound {
 		// A key the ecosystem does not know signs only its own registration: @1NewUser, with the
 		// public key in the header (GetSignedBy has checked that it is the signer's)
-		if sc.TxContract.Name != NewUserContract || sc.TxSmart.SignedBy != 0 || len(public) == 0 {
+		if sc.TxContract == nil || sc.TxContract.Name != NewUserContract || sc.TxSmart.SignedBy != 0 || len(public) == 0 {
 			err = fmt.Errorf(eEcoKeyNotFound, converter.AddressToString(signedBy), sc.TxSmart.EcosystemID)
 			sc.GetLogger().WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("looking for keyid")
 			return err

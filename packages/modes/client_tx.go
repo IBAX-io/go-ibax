@@ -29,6 +29,9 @@ func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key i
 		if err = rtx.Unmarshall(bytes.NewBuffer(txData), true); err != nil {
 			return nil, err
 		}
+		if err = rtx.Verify(); err != nil {
+			return nil, err
+		}
 		rtxs = append(rtxs, rtx.SetRawTx())
 		retTx = append(retTx, fmt.Sprintf("%x", rtx.Hash()))
 	}
