@@ -7,6 +7,7 @@ package transaction
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -225,6 +226,23 @@ func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer, fill bool) erro
 	buffer.UnreadByte()
 	if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
 		return err
+	}
+	// A stored transaction carries the payload, the hash of that payload and the transaction the
+	// node runs as fields of their own, and nothing ties the three together. The signature covers
+	// the hash, so the payload is the part taken as given: a body its payload does not encode would
+	// otherwise run under a signature given for another transaction, and anyone who saw a signed
+	// transaction could put a body of their own under its hash and its signature. The client format
+	// derives the hash and the body from the payload; the stored format is held to the same relation
+	// here, before the queue and before a received block runs anything.
+	if len(s.Payload) == 0 || !bytes.Equal(s.Hash, crypto.DoubleHash(s.Payload)) {
+		return fmt.Errorf("the hash of a transaction is not the hash of its payload")
+	}
+	signed := new(types.SmartTransaction)
+	if err := msgpack.Unmarshal(s.Payload, &signed); err != nil {
+		return err
+	}
+	if !reflect.DeepEqual(s.TxSmart, signed) {
+		return fmt.Errorf("a transaction carries a body its payload does not encode")
 	}
 	if s.SmartContract.TxSmart.UTXO != nil || s.SmartContract.TxSmart.TransferSelf != nil {
 		return nil

@@ -21,8 +21,8 @@ import (
 )
 
 type transferCase struct {
-	Cryptoer, Hasher, Data string
-	NetworkID              int64
+	Cryptoer, Hasher, Data, PrivateKey string
+	NetworkID                          int64
 }
 
 // The signed client transactions of the cross-implementation vectors, on every suite
