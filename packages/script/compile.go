@@ -599,7 +599,7 @@ main:
 						if count != wantlen && (!extinfo.Variadic || count < wantlen) {
 							errtext = fmt.Sprintf(eWrongParams, extinfo.Name, wantlen)
 							logger.WithFields(log.Fields{"error": errtext, "type": consts.ParseError}).Error(errtext)
-							return fmt.Errorf(errtext)
+							return fmt.Errorf("%s", errtext)
 						}
 					}
 					if prev.Cmd == cmdCallVariadic {

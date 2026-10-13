@@ -156,7 +156,7 @@ func (connect *Connect) WaitTx(hash string) (int64, error) {
 		ret := multiRet.Results[hash]
 
 		if len(ret.BlockID) > 0 {
-			return converter.StrToInt64(ret.BlockID), fmt.Errorf(ret.Result)
+			return converter.StrToInt64(ret.BlockID), errors.New(ret.Result)
 		}
 		if ret.Message != nil {
 			errtext, err := json.Marshal(ret.Message)

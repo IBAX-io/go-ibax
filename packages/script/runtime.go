@@ -500,7 +500,7 @@ func SetVMError(eType string, eText any) error {
 		log.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("marshalling VMError")
 		out = []byte(`{"type": "panic", "error": "marshalling VMError"}`)
 	}
-	return fmt.Errorf(string(out))
+	return errors.New(string(out))
 }
 
 func (rt *RunTime) getResultValue(item mapItem) (value any, err error) {
