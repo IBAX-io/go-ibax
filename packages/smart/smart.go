@@ -515,6 +515,13 @@ func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 	if sc.TxSmart.SignedBy != 0 {
 		var isNode bool
 		signedBy = sc.TxSmart.SignedBy
+		// A transaction that names a signer other than its own key is a node-signed delayed
+		// contract, which always carries one. The transfer transactions carry none, so such a
+		// signer is refused here rather than read through a nil contract: without this a header
+		// could name another key and skip the rules below.
+		if sc.TxContract == nil {
+			return 0, fmt.Errorf("%w: %v", errDelayedContract, `signed by another key without a contract`)
+		}
 		if syspar.IsCandidateNodeMode() {
 			return signedBy, nil
 		}
@@ -562,10 +569,10 @@ func (sc *SmartContract) CallContract(point string) (string, error) {
 		return ``, err
 	}
 
-	if err = sc.checkTxSign(); err != nil {
-		return ``, err
-	}
-
+	// The signer is checked before the transaction runs: SmartTransactionParser.Action calls
+	// CheckTxSign for every type, so a contract body is never entered, and a transfer never
+	// moves funds, without it. CheckTxSign appends to sc.PublicKeys, so it must not run twice
+	// for one transaction.
 	needPayment := sc.needPayment()
 	if needPayment {
 		err = sc.prepareMultiPay()
@@ -641,7 +648,13 @@ lp:
 	return result, nil
 }
 
-func (sc *SmartContract) checkTxSign() error {
+// CheckTxSign verifies that the key that signs the transaction is the signer the header names,
+// and that the signature holds. It is called before a transaction runs, whatever its type: a
+// contract transaction does not reach its contract body and a transfer transaction does not
+// move funds until this passes. The key is the one registered for the signer in 1_keys when
+// there is one, otherwise the public key in the header, for a signer that is still
+// registering.
+func (sc *SmartContract) CheckTxSign() error {
 	var public []byte
 	if len(sc.TxSmart.PublicKey) > 0 && string(sc.TxSmart.PublicKey) != `null` {
 		public = sc.TxSmart.PublicKey

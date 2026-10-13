@@ -116,6 +116,13 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		//in.DbTransaction.BinLogSql = s.DbTransaction.BinLogSql
 	}()
 
+	// Every transaction proves the key that signs it before it runs, whatever its type. The
+	// transfer transactions move funds outside a contract, so this is the only place they are
+	// checked; contract transactions are checked here too, before their body runs.
+	if err = s.CheckTxSign(); err != nil {
+		return err
+	}
+
 	_transferSelf := s.TxSmart.TransferSelf
 	if _transferSelf != nil {
 		_, err = smart.TransferSelf(s.SmartContract, _transferSelf.Value, _transferSelf.Source, _transferSelf.Target)

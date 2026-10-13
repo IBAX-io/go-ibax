@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/rand"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -51,6 +52,32 @@ func (t *Transaction) IsSmartContract() bool {
 
 func (t *Transaction) SmartContract() *SmartTransactionParser {
 	return t.Inner.(*SmartTransactionParser)
+}
+
+// Verify checks a transaction when it enters the node, before it reaches the queue: the signature
+// holds and the key it signs with is the key the header names. The transfer transactions run no
+// contract, so before this their signature was checked nowhere on the way in; this is where the
+// node first refuses a forged TransferSelf or UTXO. The check is off the chain, so it uses the key
+// in the header; the key registered for the account decides at execution. Genesis and network-stop
+// transactions are authorized by other means.
+func (t *Transaction) Verify() error {
+	sc, ok := t.Inner.(*SmartTransactionParser)
+	if !ok {
+		return nil
+	}
+	if err := sc.Validate(); err != nil {
+		return err
+	}
+	// A signer whose own key signs must name itself: the header key must be the key of KeyID. A
+	// transaction that names another signer (a node for a delayed contract) is checked at
+	// execution.
+	if sc.TxSmart.SignedBy != 0 || len(sc.TxSmart.PublicKey) == 0 {
+		return nil
+	}
+	if sc.TxSmart.KeyID != crypto.Address(sc.TxSmart.PublicKey) {
+		return fmt.Errorf("the key in the header is not that of key %d", sc.TxSmart.KeyID)
+	}
+	return nil
 }
 
 // UnmarshallTransaction is unmarshalling transaction

@@ -53,6 +53,9 @@ func DisseminateTxs(rw io.ReadWriter) error {
 		if err = rtx.Unmarshall(bytes.NewBuffer(tran), true); err != nil {
 			return err
 		}
+		if err = rtx.Verify(); err != nil {
+			return err
+		}
 		rtxs = append(rtxs, rtx.SetRawTx())
 	}
 
