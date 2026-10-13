@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -183,4 +184,86 @@ func txTypeName(b byte) string {
 		return "SmartContract"
 	}
 	return "unknown"
+}
+
+// TestVerifyRefusesContractCallOfABodyItsPayloadDoesNotEncode covers the type-3 half of the stored
+// format. A contract call travels in the same fields as a transfer -- the payload, the hash of that
+// payload, the signature and the body the node runs -- and a signature covers only the hash, so a
+// call is held to the same relation: its body has to be the one the payload encodes. A party who saw
+// a call could otherwise keep its payload, hash and signature, put a body of their own under them,
+// and have the account the header names run a contract it never asked for. The vectors carry
+// transfers only, so a call is built from the key of each of them.
+//
+// The honest half of the relation is not asserted here, because the parse of a call goes on to
+// resolve the contract the header names, and a unit test has no chain to hold one. What is asserted
+// is what the binding is for: a body the payload does not encode is refused as the call is parsed,
+// and refused for that reason, before anything looks for the contract.
+func TestVerifyRefusesContractCallOfABodyItsPayloadDoesNotEncode(t *testing.T) {
+	var every syspar.AccountAlgorithmSet
+	for _, a := range []crypto.AsymAlgo{crypto.AsymAlgo_ECC_P256, crypto.AsymAlgo_ECC_Secp256k1, crypto.AsymAlgo_SM2, crypto.AsymAlgo_MLDSA65, crypto.AsymAlgo_MLDSA87} {
+		every = append(every, syspar.AccountAlgorithm{Algo: a})
+	}
+	syspar.SetAccountAlgorithms(every)
+	defer syspar.SetAccountAlgorithms(nil)
+
+	checked := 0
+	for _, c := range loadTransfers(t) {
+		crypto.InitAsymAlgo(c.Cryptoer)
+		crypto.InitHashAlgo(c.Hasher)
+		conf.Config.LocalConf.NetworkID = c.NetworkID
+
+		key, err := hex.DecodeString(c.PrivateKey)
+		if err != nil {
+			t.Fatalf("%s: decoding the key of the vector: %v", c.Cryptoer, err)
+		}
+		name := c.Cryptoer + "/call"
+		stored, _, err := NewTransactionInProc(types.SmartTransaction{
+			Header: &types.Header{
+				ID:          1,
+				EcosystemID: 1,
+				KeyID:       1,
+				Time:        time.Now().Unix(),
+				NetworkID:   c.NetworkID,
+			},
+			Params: map[string]any{"Name": "honest"},
+		}, key)
+		if err != nil {
+			t.Fatalf("%s: building the contract call: %v", name, err)
+		}
+		if stored[0] != types.SmartContractTxType {
+			t.Fatalf("%s: the transaction is of type %d, not a contract call", name, stored[0])
+		}
+		checked++
+
+		// The parameters the call runs with change; the payload, the hash and the signature stay
+		// the ones the key signed.
+		var p SmartTransactionParser
+		if err := msgpack.Unmarshal(stored[1:], &p); err != nil {
+			t.Fatalf("%s: decoding the stored transaction: %v", name, err)
+		}
+		if p.TxSmart == nil {
+			t.Fatalf("%s: the stored transaction carries no body", name)
+		}
+		params := p.TxSmart.Params
+		if params == nil {
+			params = map[string]any{}
+		}
+		params["Name"] = "another"
+		params["Amount"] = "1000000000000000000"
+		p.TxSmart.Params = params
+
+		body, err := msgpack.Marshal(&p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = (&Transaction{}).Unmarshall(bytes.NewBuffer(append([]byte{stored[0]}, body...)), true)
+		if err == nil {
+			t.Errorf("%s: a contract call carrying a body its payload does not encode was accepted", name)
+		} else if !strings.Contains(err.Error(), "a body its payload does not encode") {
+			t.Errorf("%s: the call was refused for another reason than its body: %v", name, err)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("the vectors had no key to build a contract call from")
+	}
 }
