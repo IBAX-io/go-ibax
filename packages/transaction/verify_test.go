@@ -24,6 +24,12 @@ import (
 // Verify is called when a transaction enters the node, before the queue, and must hold: the honest
 // transfer of the key that signs it passes, and a transfer naming another account, or carrying a
 // damaged signature, does not.
+//
+// The stored form carries the payload, the hash of that payload and the transaction the node runs
+// as fields of their own, and the signature covers the hash. A body the payload does not encode, or
+// a hash that is not the hash of the payload, must not be parsed at all: with the three unrelated,
+// a party who saw a signed transaction could keep its payload, hash and signature, send a body of
+// their own, and have the coins of the account the header names pay them.
 func TestVerifyRefusesTransferOfAKeyThatDidNotSign(t *testing.T) {
 	crypto.InitAsymAlgo("ECC_Secp256k1")
 	crypto.InitHashAlgo("KECCAK256")
@@ -64,6 +70,11 @@ func TestVerifyRefusesTransferOfAKeyThatDidNotSign(t *testing.T) {
 			}
 			return data
 		}
+		// unmarshall is what a node makes of the form of a stored transaction, before it asks who
+		// signed it
+		unmarshall := func(data []byte) error {
+			return (&Transaction{}).Unmarshall(bytes.NewBuffer(bytes.Clone(data)), true)
+		}
 		verify := func(data []byte) error {
 			tr := &Transaction{}
 			if err := tr.Unmarshall(bytes.NewBuffer(bytes.Clone(data)), true); err != nil {
@@ -71,9 +82,24 @@ func TestVerifyRefusesTransferOfAKeyThatDidNotSign(t *testing.T) {
 			}
 			return tr.Verify()
 		}
+		// tampered replaces one field of the stored transaction and keeps everything else, as a
+		// party who saw it can
+		tampered := func(data []byte, change func(*SmartTransactionParser)) []byte {
+			var parser SmartTransactionParser
+			if err := msgpack.Unmarshal(data[1:], &parser); err != nil {
+				t.Fatalf("%s: decoding the stored transaction: %v", kind.name, err)
+			}
+			change(&parser)
+			body, err := msgpack.Marshal(&parser)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return append([]byte{data[0]}, body...)
+		}
 
 		honest := types.Header{KeyID: keyID, EcosystemID: 1, NetworkID: conf.Config.LocalConf.NetworkID}
-		if err := verify(build(honest)); err != nil {
+		signed := build(honest)
+		if err := verify(signed); err != nil {
 			t.Errorf("%s: the transfer of the key that signs it was refused: %v", kind.name, err)
 		}
 
@@ -86,9 +112,22 @@ func TestVerifyRefusesTransferOfAKeyThatDidNotSign(t *testing.T) {
 			t.Errorf("%s: a transfer naming key %d, signed by key %d, passed Verify", kind.name, forged.KeyID, keyID)
 		}
 
+		// Another body under the payload, the hash and the signature of the signed transfer: what a
+		// party who saw the transfer sends to have the coins of the account it names pay them. The
+		// three are the ones the key signed, so the form itself must refuse the transaction.
+		swapped := tampered(signed, func(p *SmartTransactionParser) { p.TxSmart.KeyID++ })
+		if err := unmarshall(swapped); err == nil {
+			t.Errorf("%s: a stored transaction carrying a body its payload does not encode was accepted", kind.name)
+		}
+
+		// Another hash over the payload and the signature.
+		if err := unmarshall(tampered(signed, func(p *SmartTransactionParser) { p.Hash[0] ^= 0xff })); err == nil {
+			t.Errorf("%s: a stored transaction whose hash is not the hash of its payload was accepted", kind.name)
+		}
+
 		// The signature itself is damaged; everything else is intact.
 		var parser SmartTransactionParser
-		if err := msgpack.Unmarshal(stored[1:], &parser); err != nil {
+		if err := msgpack.Unmarshal(signed[1:], &parser); err != nil {
 			t.Fatalf("%s: decoding the stored transaction: %v", kind.name, err)
 		}
 		if len(parser.TxSignature) == 0 {
@@ -99,7 +138,7 @@ func TestVerifyRefusesTransferOfAKeyThatDidNotSign(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := verify(append([]byte{stored[0]}, body...)); err == nil {
+		if err := verify(append([]byte{signed[0]}, body...)); err == nil {
 			t.Errorf("%s: a transfer with a damaged signature passed Verify", kind.name)
 		}
 	}
