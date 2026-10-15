@@ -241,18 +241,18 @@ func (b *Block) upsertInfoBlock(dbTx *sqldb.DbTransaction, block *sqldb.BlockCha
 }
 
 type AfterTxs struct {
-	UsedTx      [][]byte
-	Rts         []*sqldb.RollbackTx
-	Lts         []*sqldb.LogTransaction
-	UpdTxStatus []*pbgo.TxResult
+	UsedTx   [][]byte
+	Rts      []*sqldb.RollbackTx
+	Lts      []*sqldb.LogTransaction
+	TxStatus []*sqldb.TransactionStatus
 }
 
 func (b *Block) GenAfterTxs() *AfterTxs {
 	after := b.AfterTxs
 	playTx := &AfterTxs{
-		Rts:         make([]*sqldb.RollbackTx, len(after.Rts)),
-		Lts:         make([]*sqldb.LogTransaction, len(after.Txs)),
-		UpdTxStatus: make([]*pbgo.TxResult, len(after.Txs)),
+		Rts:      make([]*sqldb.RollbackTx, len(after.Rts)),
+		Lts:      make([]*sqldb.LogTransaction, len(after.Txs)),
+		TxStatus: make([]*sqldb.TransactionStatus, len(after.Txs)),
 	}
 
 	for i := 0; i < len(after.Rts); i++ {
@@ -281,9 +281,20 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 		lt.Status = int64(tx.Lts.InvokeStatus)
 		playTx.Lts[i] = lt
 
-		u := new(pbgo.TxResult)
-		u = tx.UpdTxStatus
-		playTx.UpdTxStatus[i] = u
+		if u := tx.UpdTxStatus; u != nil {
+			var penalty int64
+			if u.Code == pbgo.TxInvokeStatusCode_PENALTY {
+				penalty = 1
+			}
+			playTx.TxStatus[i] = &sqldb.TransactionStatus{
+				Hash:     u.Hash,
+				Time:     tx.Lts.Timestamp,
+				WalletID: tx.Lts.Address,
+				BlockID:  tx.Lts.Block,
+				Error:    u.Result,
+				Penalty:  penalty,
+			}
+		}
 	}
 	return playTx
 }
@@ -314,8 +325,8 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 		if err := sqldb.CreateBatchesRollbackTx(tx, playTx.Rts); err != nil {
 			return errors.Wrap(err, "batches insert rollback tx")
 		}
-		if err := sqldb.UpdateBlockMsgBatches(tx, b.Header.BlockId, playTx.UpdTxStatus); err != nil {
-			return errors.Wrap(err, "batches update block msg transaction status")
+		if err := sqldb.UpsertBlockStatusBatches(tx, playTx.TxStatus); err != nil {
+			return errors.Wrap(err, "batches upsert transaction status")
 		}
 		return nil
 	})
