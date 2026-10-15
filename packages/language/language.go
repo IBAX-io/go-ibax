@@ -54,11 +54,6 @@ func DefLang() string {
 
 // UpdateLang updates language sources for the specified state
 func UpdateLang(state int, name, value string) error {
-	mutex.Lock()
-	defer mutex.Unlock()
-	if _, ok := lang[state]; !ok {
-		lang[state] = &cacheLang{make(map[string]*map[string]string)}
-	}
 	var ires map[string]string
 	err := json.Unmarshal([]byte(value), &ires)
 	if err != nil {
@@ -68,8 +63,17 @@ func UpdateLang(state int, name, value string) error {
 	for key, val := range ires {
 		ires[strings.ToLower(key)] = val
 	}
+	mutex.Lock()
+	defer mutex.Unlock()
+	cache, ok := lang[state]
+	if !ok {
+		// The sources of the state are not loaded yet: LangText loads all of them, this one
+		// included, when one is first asked for. A cache holding only this source would hide
+		// the others, so that LangRes would depend on how long the node has been running.
+		return nil
+	}
 	if len(ires) > 0 {
-		(*lang[state]).res[name] = &ires
+		cache.res[name] = &ires
 	}
 	return nil
 }

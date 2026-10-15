@@ -21,7 +21,8 @@ func source(state int, name string) (string, bool) {
 
 // Restore puts back the sources a block changed, added to an ecosystem and added in a new one
 func TestSnapshot(t *testing.T) {
-	lang = make(map[int]*cacheLang)
+	// the sources of ecosystem 1 are loaded; those of ecosystem 2 are not
+	lang = map[int]*cacheLang{1: {make(map[string]*map[string]string)}}
 	if err := UpdateLang(1, "kept", `{"en":"kept"}`); err != nil {
 		t.Fatal(err)
 	}
@@ -57,5 +58,26 @@ func TestSnapshot(t *testing.T) {
 	Restore(snap)
 	if _, ok := source(1, "added"); ok {
 		t.Fatal("the second block reached the snapshot")
+	}
+}
+
+func TestUpdateLangLeavesUnloadedStateToLoad(t *testing.T) {
+	const state = 1001
+	if err := UpdateLang(state, "new_source", `{"en": "New source"}`); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := lang[state]; ok {
+		t.Fatal("UpdateLang made a cache of one source for a state whose sources are not loaded")
+	}
+
+	lang[state] = &cacheLang{map[string]*map[string]string{"old_source": {"en": "Old source"}}}
+	defer delete(lang, state)
+	if err := UpdateLang(state, "new_source", `{"en": "New source"}`); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"old_source", "new_source"} {
+		if _, ok := lang[state].res[name]; !ok {
+			t.Errorf("%s is not in the loaded cache", name)
+		}
 	}
 }
