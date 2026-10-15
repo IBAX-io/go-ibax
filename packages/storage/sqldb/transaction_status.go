@@ -6,11 +6,9 @@
 package sqldb
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // TransactionStatus is model
@@ -44,38 +42,37 @@ func (ts *TransactionStatus) UpdateBlockID(dbTx *DbTransaction, newBlockID int64
 	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("block_id", newBlockID).Error
 }
 
-func UpdateBlockMsgBatches(dbTx *gorm.DB, newBlockID int64, updBlockMsg []*pbgo.TxResult) error {
-	if len(updBlockMsg) == 0 {
+// UpsertBlockStatusBatches records the status of each transaction of a block, on every node that
+// plays it: a node that did not take the transaction through /sendTx answers /txstatus for it too,
+// so a client that moved to another node follows what it sent
+func UpsertBlockStatusBatches(dbTx *gorm.DB, statuses []*TransactionStatus) error {
+	rows := presentStatuses(statuses)
+	if len(rows) == 0 {
 		return nil
 	}
-	var (
-		upErrStr, upBlockIdStr string
-		hashArr                []string
-		header                 = "UPDATE transactions_status SET"
-		colErr, colBlockId     = "error = CASE hash", "block_id = CASE hash"
-	)
-
-	for _, s := range updBlockMsg {
-		if s == nil {
-			continue
-		}
-		hashArr = append(hashArr, fmt.Sprintf("decode('%x','hex')", s.Hash))
-		upErrStr += fmt.Sprintf("WHEN decode('%x','hex') THEN '%s' ", s.Hash, strings.Replace(s.Result, `'`, `''`, -1))
-		upBlockIdStr += fmt.Sprintf("WHEN decode('%x','hex') THEN %d ", s.Hash, newBlockID)
-	}
-	if len(hashArr) == 0 {
-		return nil
-	}
-	sqlStr := fmt.Sprintf("%s ", header)
-	sqlStr += fmt.Sprintf(" %s %s END,", colErr, upErrStr)
-	sqlStr += fmt.Sprintf(" %s %s END", colBlockId, upBlockIdStr)
-	sqlStr += fmt.Sprintf(" WHERE hash in(%s)", strings.Join(hashArr, ","))
-	return dbTx.Exec(sqlStr).Error
+	return dbTx.Clauses(upsertBlockStatusClause).Create(&rows).Error
 }
 
-// SetError is updating transaction status error
+// A transaction status the node has, as the one that took it through /sendTx has, takes the block's
+var upsertBlockStatusClause = clause.OnConflict{
+	Columns:   []clause.Column{{Name: "hash"}},
+	DoUpdates: clause.AssignmentColumns([]string{"block_id", "error", "penalty"}),
+}
+
+func presentStatuses(statuses []*TransactionStatus) []*TransactionStatus {
+	rows := make([]*TransactionStatus, 0, len(statuses))
+	for _, s := range statuses {
+		if s != nil {
+			rows = append(rows, s)
+		}
+	}
+	return rows
+}
+
+// SetError is updating transaction status error. The status of a transaction in a block stays: a copy
+// sent again is refused as a duplicate, which says nothing of the one in the block
 func (ts *TransactionStatus) SetError(dbTx *DbTransaction, errorText string, transactionHash []byte) error {
-	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("error", errorText).Error
+	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ? AND block_id = 0", transactionHash).Update("error", errorText).Error
 }
 
 // UpdatePenalty is updating penalty
