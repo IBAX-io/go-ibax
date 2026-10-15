@@ -19,6 +19,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/conf/rules"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -775,9 +776,10 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 			"type":              int64(GasScenesType_TransferSelf),
 			"created_at":        sc.Timestamp,
 		})
-		_, _, err = sc.insert(values.Keys(), values.Values(), `1_history`)
-		if err != nil {
-			return false, err
+		if rules.Active(rules.TransferSelfHistory, blockId) {
+			if _, _, err = sc.insert(values.Keys(), values.Values(), `1_history`); err != nil {
+				return false, err
+			}
 		}
 		sc.TxInputsMap = txInputsMap
 		sc.TxOutputsMap = txOutputsMap
@@ -819,9 +821,10 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 			"type":              int64(GasScenesType_TransferSelf),
 			"created_at":        sc.Timestamp,
 		})
-		_, _, err = sc.insert(values.Keys(), values.Values(), `1_history`)
-		if err != nil {
-			return false, err
+		if rules.Active(rules.TransferSelfHistory, blockId) {
+			if _, _, err = sc.insert(values.Keys(), values.Values(), `1_history`); err != nil {
+				return false, err
+			}
 		}
 		sc.TxInputsMap = txInputsMap
 		sc.TxOutputsMap = txOutputsMap

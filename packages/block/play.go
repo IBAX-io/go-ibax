@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
+	"github.com/IBAX-io/go-ibax/packages/conf/rules"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/notificator"
@@ -298,10 +299,13 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 
 		var (
 			after    = &types.AfterTx{}
-			eco      = int64(1)
+			eco      int64
 			contract string
 			code     pbgo.TxInvokeStatusCode
 		)
+		if rules.Active(rules.TransferSelfHistory, t.BlockHeader.BlockId) {
+			eco = 1
+		}
 		if t.IsSmartContract() {
 			eco = t.SmartContract().TxSmart.EcosystemID
 			code = t.TxResult.Code
