@@ -142,6 +142,13 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		return err
 	}
 	b.EcoParams = ecoParams
+	b.Carried = nil
+	if b.AfterTxs != nil && !rules.Active(rules.JSONColumnsSorted, b.Header.BlockId) {
+		b.Carried = make(map[string]struct{}, len(b.AfterTxs.Rts))
+		for _, rt := range b.AfterTxs.Rts {
+			b.Carried[string(rt.DataHash)] = struct{}{}
+		}
+	}
 	// UTXO multiple ecosystem fuelRate
 	b.PrevSysPar = syspar.GetSysParCache()
 	var wg sync.WaitGroup
@@ -251,7 +258,7 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 			return err
 		}
 		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits,
-			consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar, b.EcoParams)
+			consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar, b.EcoParams, b.Carried)
 		if err != nil {
 			return err
 		}

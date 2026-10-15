@@ -31,6 +31,9 @@ type Block struct {
 	ClassifyTxsMap    map[int][]*transaction.Transaction
 	PrevSysPar        map[string]string
 	EcoParams         []sqldb.EcoParam // combustion percent,digits for each ecosystem
+	// Carried holds the data hashes of the rollback rows the block carries, for blocks before
+	// rules.JSONColumnsSorted only
+	Carried map[string]struct{}
 }
 
 // GetLogger is returns logger

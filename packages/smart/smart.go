@@ -92,6 +92,9 @@ type SmartContract struct {
 	TxOutputsMap    map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	PrevSysPar      map[string]string
 	EcoParams       []sqldb.EcoParam
+	// Carried holds the data hashes of the rollback rows the block carries, for blocks before
+	// rules.JSONColumnsSorted only
+	Carried map[string]struct{}
 }
 
 // AppendStack adds an element to the stack of contract call or removes the top element when name is empty

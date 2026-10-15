@@ -58,6 +58,12 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		KeyTableChkr: sqldb.KeyTableChecker{},
 		HexBytes:     sc.BlockHeader != nil && !rules.Active(rules.ByteRollbackRaw, sc.BlockHeader.BlockId),
 	}
+	if sc.Carried != nil {
+		sqlBuilder.Carried = func(statement string) bool {
+			_, ok := sc.Carried[string(crypto.Hash([]byte(statement)))]
+			return ok
+		}
+	}
 
 	queryCoster := querycost.GetQueryCoster(querycost.FormulaQueryCosterType)
 	if exists {
