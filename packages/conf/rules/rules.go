@@ -20,6 +20,9 @@ const (
 	// TransferSelfHistory: TransferSelf writes a 1_history row, and a transaction that is not a
 	// contract is logged in ecosystem 1 rather than 0 (#2064).
 	TransferSelfHistory Rule = iota
+	// ByteRollbackRaw: the rollback data of a bytea column holds the column's bytes as they are
+	// rather than their hex (f1a3650c).
+	ByteRollbackRaw
 )
 
 const (
@@ -30,7 +33,10 @@ const (
 // activation holds, per network ID, the first block each rule applies to.
 var activation = map[int64]map[Rule]int64{
 	testnet: {
+		// TransferSelf transactions end at block 1609; any block in (1609, 2545] fits.
 		TransferSelfHistory: 1729,
+		// the last bytea rollback data in hex is at block 2755; any block in (2755, 3055] fits.
+		ByteRollbackRaw: 3055,
 	},
 	mainnet: {},
 }

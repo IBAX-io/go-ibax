@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/conf/rules"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb/querycost"
@@ -55,6 +56,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		Where:        inWhere,
 		TxEcoID:      sc.TxSmart.EcosystemID,
 		KeyTableChkr: sqldb.KeyTableChecker{},
+		HexBytes:     sc.BlockHeader != nil && !rules.Active(rules.ByteRollbackRaw, sc.BlockHeader.BlockId),
 	}
 
 	queryCoster := querycost.GetQueryCoster(querycost.FormulaQueryCosterType)
@@ -147,12 +149,12 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		return 0, "", err
 	}
 
-		insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery)
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
-			return 0, "", err
-		}
-		rollDataHashStr = insertQuery
+	insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
+		return 0, "", err
+	}
+	rollDataHashStr = insertQuery
 	cost += insertCost
 	err = sc.DbTransaction.ExecSql(insertQuery)
 	if err != nil {

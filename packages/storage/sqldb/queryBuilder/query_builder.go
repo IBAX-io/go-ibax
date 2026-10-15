@@ -55,6 +55,9 @@ type SQLQueryBuilder struct {
 	KeyTableChkr KeyTableChecker
 	whereExpr    string
 	TxEcoID      int64
+	// HexBytes keeps the rollback data of bytea columns in hex, as blocks before
+	// rules.ByteRollbackRaw do.
+	HexBytes bool
 }
 
 func (b *SQLQueryBuilder) Prepare() error {
@@ -318,6 +321,9 @@ func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (
 		}
 		if k == `id` || (b.isKeyTable && !eco) {
 			continue
+		}
+		if b.HexBytes && v != "" && syspar.IsByteColumn(b.Table, k) {
+			v = string(converter.BinToHex([]byte(v)))
 		}
 		rollbackInfo[k] = v
 	}
