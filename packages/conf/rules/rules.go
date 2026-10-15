@@ -20,9 +20,12 @@ const (
 	// TransferSelfHistory: TransferSelf writes a 1_history row, and a transaction that is not a
 	// contract is logged in ecosystem 1 rather than 0 (#2064).
 	TransferSelfHistory Rule = iota
-	// ByteRollbackRaw: the rollback data of a bytea column holds the column's bytes as they are
-	// rather than their hex (f1a3650c).
-	ByteRollbackRaw
+	// ByteRollbackHexTwice: the rollback data of a bytea column holds the hex of the column's hex
+	// rather than its hex, since a row is read with its bytea columns in hex (630191f5).
+	ByteRollbackHexTwice
+	// ByteRollbackHexOnce: the rollback data of a bytea column holds the column's hex again, the hex
+	// the row is read in no longer being encoded a second time (f1a3650c).
+	ByteRollbackHexOnce
 	// FeeByDigits: fees are counted in the digits of the paying ecosystem rather than through
 	// price_create_rate and have no element fee; a contract's base cost is charged once per call,
 	// and a run that goes over its cost limit fails (6729de64..d967f160).
@@ -46,8 +49,11 @@ var activation = map[int64]map[Rule]int64{
 	testnet: {
 		// TransferSelf transactions end at block 1609; any block in (1609, 2545] fits.
 		TransferSelfHistory: 1729,
-		// the last bytea rollback data in hex is at block 2755; any block in (2755, 3055] fits.
-		ByteRollbackRaw: 3055,
+		// the last bytea rollback data in single hex is at block 1764, the first in double hex at
+		// block 2657; any block in (1764, 2657] fits.
+		ByteRollbackHexTwice: 2657,
+		// the last bytea rollback data in double hex is at block 2755; any block in (2755, 3055] fits.
+		ByteRollbackHexOnce: 3055,
 		// block 2560 was made before d967f160, block 2561 after.
 		FeeByDigits: 2561,
 		// block 2560 was made before d967f160, block 2561 after.

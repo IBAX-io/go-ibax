@@ -55,9 +55,9 @@ type SQLQueryBuilder struct {
 	KeyTableChkr KeyTableChecker
 	whereExpr    string
 	TxEcoID      int64
-	// HexBytes keeps the rollback data of bytea columns in hex, as blocks before
-	// rules.ByteRollbackRaw do.
-	HexBytes bool
+	// ByteHexTwice writes the rollback data of a bytea column as the hex of the hex the row is
+	// read in, as blocks from rules.ByteRollbackHexTwice to rules.ByteRollbackHexOnce do.
+	ByteHexTwice bool
 	// Carried, when set, reports whether the block being run carries the rollback row of a
 	// statement. Blocks before rules.JSONColumnsSorted wrote the jsonb columns of a statement in
 	// no fixed order; the order taken is the one whose statement the block carries.
@@ -376,7 +376,7 @@ func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (
 		if k == `id` || (b.isKeyTable && !eco) {
 			continue
 		}
-		if b.HexBytes && v != "" && syspar.IsByteColumn(b.Table, k) {
+		if b.ByteHexTwice && v != "" && syspar.IsByteColumn(b.Table, k) {
 			v = string(converter.BinToHex([]byte(v)))
 		}
 		rollbackInfo[k] = v

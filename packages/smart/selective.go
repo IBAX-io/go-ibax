@@ -56,7 +56,8 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		Where:        inWhere,
 		TxEcoID:      sc.TxSmart.EcosystemID,
 		KeyTableChkr: sqldb.KeyTableChecker{},
-		HexBytes:     sc.BlockHeader != nil && !rules.Active(rules.ByteRollbackRaw, sc.BlockHeader.BlockId),
+		ByteHexTwice: sc.BlockHeader != nil && rules.Active(rules.ByteRollbackHexTwice, sc.BlockHeader.BlockId) &&
+			!rules.Active(rules.ByteRollbackHexOnce, sc.BlockHeader.BlockId),
 	}
 	if sc.Carried != nil {
 		sqlBuilder.Carried = func(statement string) bool {
