@@ -20,7 +20,7 @@ func (s *Secp256k1) GenKeyPair() ([]byte, []byte, error) {
 		return nil, nil, err
 	}
 	pub := append(FillLeft(priv.X.Bytes()), FillLeft(priv.Y.Bytes())...)
-	return priv.D.Bytes(), pub, nil
+	return FillLeft(priv.D.Bytes()), pub, nil
 }
 
 func (s *Secp256k1) Sign(privateKey, hash []byte) ([]byte, error) {

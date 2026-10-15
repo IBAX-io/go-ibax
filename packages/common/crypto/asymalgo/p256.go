@@ -20,7 +20,7 @@ func (e *P256) GenKeyPair() ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return private.D.Bytes(), append(FillLeft(private.PublicKey.X.Bytes()), FillLeft(private.PublicKey.Y.Bytes())...), nil
+	return FillLeft(private.D.Bytes()), append(FillLeft(private.PublicKey.X.Bytes()), FillLeft(private.PublicKey.Y.Bytes())...), nil
 }
 
 func (e *P256) Sign(privateKey, hash []byte) ([]byte, error) {
