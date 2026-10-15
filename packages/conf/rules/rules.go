@@ -70,7 +70,21 @@ var activation = map[int64]map[Rule]int64{
 		TeEmissionAccess: 2,
 		DigitsAccess:     2,
 	},
-	mainnet: {},
+	mainnet: {
+		// mainnet's first block (2022-11-13 11:03 UTC) was made after #2058 and #2064 and before
+		// #2072; it has no UTXO transfers outside ecosystem 1 and no bytea rollback data up to block
+		// 20577.
+		// block 16992 was made before d967f160, block 16993 (2023-06-09) after.
+		FeeByDigits: 16993,
+		// block 16992 was made before d967f160, block 16993 after.
+		JSONColumnsSorted: 16993,
+		// mainnet carries no bytea rollback data; it is never double hex.
+		ByteRollbackHexTwice: 16993,
+		ByteRollbackHexOnce:  16993,
+		// these concern the first block only, which predates them.
+		TeEmissionAccess: 2,
+		DigitsAccess:     2,
+	},
 }
 
 // Active reports whether rule r applies to block blockID of this node's network.
