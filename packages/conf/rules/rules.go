@@ -37,6 +37,12 @@ const (
 	// its utxo_fee parameter is 1, and burns its combustion percent whatever its combustion flag,
 	// rather than paying whenever the ecosystem has a fuel rate and burning only with flag 2 (#2058).
 	UTXOFeeParam
+	// TeEmissionAccess: the first block gives @1TeEmission access to the emission of the
+	// ecosystems table (#2072).
+	TeEmissionAccess
+	// DigitsAccess: the first block gives @1NewToken access to the digits of the ecosystems table
+	// (#2133).
+	DigitsAccess
 )
 
 const (
@@ -60,6 +66,9 @@ var activation = map[int64]map[Rule]int64{
 		JSONColumnsSorted: 2561,
 		// UTXO transfers in ecosystems other than 1 end at block 1091; any block in (1091, 2425] fits.
 		UTXOFeeParam: 2425,
+		// these concern the first block only, which predates them.
+		TeEmissionAccess: 2,
+		DigitsAccess:     2,
 	},
 	mainnet: {},
 }

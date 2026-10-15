@@ -26,6 +26,10 @@ type SqlData struct {
 	Digits      int64
 	TokenSymbol string
 	TokenName   string
+	// TeEmissionAccess lets @1TeEmission update the emission of the first ecosystem's ecosystems
+	// table (#2072), DigitsAccess lets @1NewToken set its digits (#2133).
+	TeEmissionAccess bool
+	DigitsAccess     bool
 }
 
 var _ fizz.Translator = (*translators.Postgres)(nil)
@@ -171,6 +175,9 @@ func GetFirstEcosystemScript(data SqlData) (ret string, err error) {
 		firstDelayedContractsDataSQL,
 		firstEcosystemDataSQL,
 	}, data)
+	if err != nil {
+		return
+	}
 	ret += out
 
 	scripts := []string{
@@ -178,9 +185,10 @@ func GetFirstEcosystemScript(data SqlData) (ret string, err error) {
 		firstEcosystemPagesDataSQL,
 		firstEcosystemBlocksDataSQL,
 		platformParametersDataSQL,
-		firstTablesDataSQL,
 	}
-	ret += strings.Join(scripts, "\r\n")
+	ret += strings.Join(scripts, "\r\n") + "\r\n"
+	out, err = sqlTemplate([]string{firstTablesDataSQL}, data)
+	ret += out
 	return
 }
 
