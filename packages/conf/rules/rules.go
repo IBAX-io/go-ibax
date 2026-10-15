@@ -30,6 +30,10 @@ const (
 	// JSONColumnsSorted: the jsonb columns of a statement are written in sorted order rather than in
 	// no fixed order, which only the rollback rows a block carries record (d967f160).
 	JSONColumnsSorted
+	// UTXOFeeParam: a UTXO transfer in an ecosystem other than 1 pays that ecosystem's fee only when
+	// its utxo_fee parameter is 1, and burns its combustion percent whatever its combustion flag,
+	// rather than paying whenever the ecosystem has a fuel rate and burning only with flag 2 (#2058).
+	UTXOFeeParam
 )
 
 const (
@@ -48,6 +52,8 @@ var activation = map[int64]map[Rule]int64{
 		FeeByDigits: 2561,
 		// block 2560 was made before d967f160, block 2561 after.
 		JSONColumnsSorted: 2561,
+		// UTXO transfers in ecosystems other than 1 end at block 1091; any block in (1091, 2425] fits.
+		UTXOFeeParam: 2425,
 	},
 	mainnet: {},
 }

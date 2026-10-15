@@ -866,12 +866,20 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	txOutputsMap := sc.TxOutputsMap
 	ecoParams := sc.EcoParams
 
+	// blocks before rules.UTXOFeeParam charge every ecosystem with a fuel rate and burn only with
+	// combustion flag 2
+	utxoFeeParam := sc.BlockHeader == nil || rules.Active(rules.UTXOFeeParam, sc.BlockHeader.BlockId)
 	var comPercents = make(map[int64]int64)
-	for _, eco := range ecoParams {
-		comPercents[eco.Id] = eco.Percent
-	}
+	var charged = make(map[int64]bool)
 	var ecoDigits = make(map[int64]int)
 	for _, eco := range ecoParams {
+		if utxoFeeParam && !eco.UtxoFee {
+			continue
+		}
+		charged[eco.Id] = true
+		if utxoFeeParam || eco.Combustion {
+			comPercents[eco.Id] = eco.Percent
+		}
 		ecoDigits[eco.Id] = eco.Digits
 	}
 
@@ -989,8 +997,8 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 			var fuelRate2 = decimal.Zero
 			var taxes2 = decimal.Zero
 			ret, ok := fuels[ecosystem2]
-			percent, hasPercent := comPercents[ecosystem2]
-			if ok && hasPercent {
+			percent := comPercents[ecosystem2]
+			if ok && charged[ecosystem2] {
 
 				fuelRate2, err = decimal.NewFromString(ret)
 				if err != nil {
