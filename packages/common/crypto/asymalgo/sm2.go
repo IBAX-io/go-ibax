@@ -16,7 +16,7 @@ func (s *SM2) GenKeyPair() ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return priv.D.Bytes(), append(FillLeft(priv.PublicKey.X.Bytes()), FillLeft(priv.PublicKey.Y.Bytes())...), nil
+	return FillLeft(priv.D.Bytes()), append(FillLeft(priv.PublicKey.X.Bytes()), FillLeft(priv.PublicKey.Y.Bytes())...), nil
 }
 
 func (s *SM2) Sign(privateKey, hash []byte) ([]byte, error) {
