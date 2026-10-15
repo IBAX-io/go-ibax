@@ -14,6 +14,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/gogo/protobuf/sortkeys"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
@@ -27,6 +28,8 @@ type (
 		ConversionRate float64
 		Flag           GasPayAbleType
 		Arithmetic     Arithmetic
+		// legacy: the fee is counted as blocks before rules.FeeByDigits do
+		legacy bool
 	}
 	Combustion struct {
 		Flag    int64
@@ -46,6 +49,8 @@ type (
 		Indirect       bool
 		Combustion     *Combustion
 		Penalty        bool
+		// legacy: the fees are counted as blocks before rules.FeeByDigits do
+		legacy bool
 	}
 	multiPays []*PaymentInfo
 )
@@ -69,10 +74,15 @@ func NewFuelCategory(fuelType FuelType, decimal decimal.Decimal, flag GasPayAble
 	return *f
 }
 
-func (f *FuelCategory) writeFuelType(fuelType FuelType)      { f.FuelType = fuelType }
-func (f *FuelCategory) writeDecimal(decimal decimal.Decimal) { f.Decimal = decimal }
-func (f *FuelCategory) writeArithmetic(a Arithmetic)         { f.Arithmetic = a }
-func (f *FuelCategory) resetArithmetic()                     { f.Arithmetic = Arithmetic_NATIVE }
+func (f *FuelCategory) writeFuelType(fuelType FuelType) { f.FuelType = fuelType }
+func (f *FuelCategory) writeDecimal(decimal decimal.Decimal) {
+	if f.legacy {
+		decimal = decimal.Floor()
+	}
+	f.Decimal = decimal
+}
+func (f *FuelCategory) writeArithmetic(a Arithmetic) { f.Arithmetic = a }
+func (f *FuelCategory) resetArithmetic()             { f.Arithmetic = Arithmetic_NATIVE }
 func (f *FuelCategory) writeFlag(tf GasPayAbleType) {
 	if tf == GasPayAbleType_Invalid {
 		tf = GasPayAbleType_Capable
@@ -137,10 +147,18 @@ func (c Combustion) Detail(sum decimal.Decimal) any {
 }
 
 func (pay *PaymentInfo) PushFuelCategories(fes ...FuelCategory) {
+	if pay.legacy {
+		for i := range fes {
+			fes[i].writeDecimal(fes[i].Decimal.Mul(pay.FuelRate))
+		}
+	}
 	pay.FuelCategories = append(pay.FuelCategories, fes...)
 }
 
 func (pay *PaymentInfo) SetDecimalByType(fuelType FuelType, decimal decimal.Decimal) {
+	if pay.legacy {
+		decimal = decimal.Mul(pay.FuelRate)
+	}
 	for i, v := range pay.FuelCategories {
 		if v.FuelType == fuelType {
 			pay.FuelCategories[i].writeDecimal(decimal)
@@ -153,6 +171,9 @@ func (pay *PaymentInfo) GetPayMoney() decimal.Decimal {
 	var money decimal.Decimal
 	for i := 0; i < len(pay.FuelCategories); i++ {
 		f := pay.FuelCategories[i]
+		if pay.Penalty && f.FuelType == FuelType_element_fee {
+			continue
+		}
 		money = money.Add(f.Fees())
 	}
 	return money
@@ -190,6 +211,9 @@ func (pay *PaymentInfo) DetailCombustion() any {
 	var money decimal.Decimal
 	for i := 0; i < len(pay.FuelCategories); i++ {
 		f := pay.FuelCategories[i]
+		if pay.Penalty && f.FuelType == FuelType_element_fee {
+			continue
+		}
 		s := f.Fees().Mul(decimal.NewFromInt(c.Percent)).Div(decimal.New(100, 0)).Floor()
 		detail.Set(f.FuelType.String(), s)
 		money = money.Add(f.Fees())
@@ -261,6 +285,7 @@ func (sc *SmartContract) resetFromIDForNativePay(from int64) *PaymentInfo {
 		PayWallet:      new(sqldb.Key),
 		Combustion:     origin.Combustion,
 		TaxesSize:      origin.TaxesSize,
+		legacy:         origin.legacy,
 	}
 	return cpy
 }
@@ -281,7 +306,11 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	for i := 0; i < len(sc.multiPays); i++ {
 		pay := sc.multiPays[i]
 		pay.Penalty = sc.Penalty
-		pay.SetDecimalByType(FuelType_vmCost_fee, sc.TxUsedCost.Mul(pay.FuelRate).Mul(decimal.New(1, int32(pay.Ecosystem.Digits-sc.multiPays[0].Ecosystem.Digits))))
+		if pay.legacy {
+			pay.SetDecimalByType(FuelType_vmCost_fee, sc.TxUsedCost)
+		} else {
+			pay.SetDecimalByType(FuelType_vmCost_fee, sc.TxUsedCost.Mul(pay.FuelRate).Mul(decimal.New(1, int32(pay.Ecosystem.Digits-sc.multiPays[0].Ecosystem.Digits))))
+		}
 		money := pay.GetPayMoney()
 		wltAmount := pay.PayWallet.CapableAmount()
 		if wltAmount.Cmp(money) < 0 {
@@ -477,7 +506,9 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 	var (
 		err         error
 		storageFee  decimal.Decimal
+		elementFee  decimal.Decimal
 		expediteFee decimal.Decimal
+		legacy      = sc.legacyFee()
 		pays        []*PaymentInfo
 		feeMode     *sqldb.FeeModeInfo
 		curPay      = &PaymentInfo{
@@ -488,8 +519,17 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 			Combustion:     new(Combustion),
 			FuelCategories: make([]FuelCategory, 0),
 			TaxesSize:      syspar.SysInt64(syspar.TaxesSize),
+			legacy:         legacy,
 		}
 	)
+	newCategory := func(fuelType FuelType, fee decimal.Decimal, flag GasPayAbleType, convert float64) FuelCategory {
+		f := NewFuelCategory(fuelType, fee, flag, convert)
+		if legacy {
+			f.legacy = true
+			f.writeDecimal(f.Decimal)
+		}
+		return f
+	}
 	if _, err = curPay.Ecosystem.Get(sc.DbTransaction, curPay.TokenEco); err != nil {
 		return nil, err
 	}
@@ -513,11 +553,20 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		return nil, err
 	}
 
-	if expediteFee, err = expediteFeeBy(sc.TxSmart.Expedite, int32(curPay.Ecosystem.Digits)); err != nil {
-		return nil, err
+	if legacy {
+		if elementFee, err = sc.elementFeeLegacy(); err != nil {
+			return nil, err
+		}
+		if expediteFee, err = expediteFeeLegacy(sc.TxSmart.Expedite); err != nil {
+			return nil, err
+		}
+		storageFee = storageFeeLegacy(sc.TxSize)
+	} else {
+		if expediteFee, err = expediteFeeBy(sc.TxSmart.Expedite, int32(curPay.Ecosystem.Digits)); err != nil {
+			return nil, err
+		}
+		storageFee = storageFeeBy(sc.TxSize, int32(curPay.Ecosystem.Digits))
 	}
-
-	storageFee = storageFeeBy(sc.TxSize, int32(curPay.Ecosystem.Digits))
 
 	curPay.FromID, curPay.PaymentType = sc.getFromIdAndPayType(curPay.TokenEco)
 	if feeMode != nil && eco != consts.DefaultTokenEcosystem {
@@ -538,7 +587,8 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		for i := 0; i < len(keys); i++ {
 			k := keys[i]
 			flag := feeMode.FeeModeDetail[k]
-			if _, ok := FuelType_value[k]; ok && GasPayAbleType(flag.FlagToInt()) == GasPayAbleType_Capable {
+			if _, ok := FuelType_value[k]; ok && (legacy || k != FuelType_element_fee.String()) &&
+				GasPayAbleType(flag.FlagToInt()) == GasPayAbleType_Capable {
 				indirectBool = true
 				break
 			}
@@ -558,6 +608,7 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 			FuelCategories: make([]FuelCategory, 0),
 			PayWallet:      new(sqldb.Key),
 			Combustion:     new(Combustion),
+			legacy:         legacy,
 		}
 		// caller to reward and taxes for platform eco
 		cpyPlatCaller := sc.resetFromIDForNativePay(sc.TxSmart.KeyID)
@@ -582,12 +633,21 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 				categoryFee = decimal.NewFromInt(0)
 			case FuelType_storage_fee.String():
 				categoryFee = storageFee
+			case FuelType_element_fee.String():
+				if !legacy {
+					continue
+				}
+				categoryFee = elementFee
 			case FuelType_expedite_fee.String():
 				categoryFee = expediteFee
 			default:
 				continue
 			}
-			category := NewFuelCategory(FuelType(FuelType_value[k]), categoryFee, GasPayAbleType(flag.FlagToInt()), flag.ConversionRateToFloat())
+			category := newCategory(FuelType(FuelType_value[k]), categoryFee, GasPayAbleType(flag.FlagToInt()), flag.ConversionRateToFloat())
+			if legacy {
+				pushCategoryLegacy(category, decimal.NewFromFloat(feeMode.FollowFuel), curPay, indirectPay, cpyPlatCaller, cpyPlatIndirect)
+				continue
+			}
 
 			switch category.Flag {
 			case GasPayAbleType_Unable:
@@ -612,13 +672,52 @@ func (sc *SmartContract) getChangeAddress(eco int64) ([]*PaymentInfo, error) {
 		return pays, nil
 	}
 
-	curPay.PushFuelCategories(
-		NewFuelCategory(FuelType_vmCost_fee, decimal.NewFromInt(0), GasPayAbleType_Unable, 100),
-		NewFuelCategory(FuelType_storage_fee, storageFee, GasPayAbleType_Unable, 100),
-		NewFuelCategory(FuelType_expedite_fee, expediteFee, GasPayAbleType_Unable, 100),
-	)
+	if legacy {
+		curPay.PushFuelCategories(
+			newCategory(FuelType_vmCost_fee, decimal.NewFromInt(0), GasPayAbleType_Unable, 100),
+			newCategory(FuelType_storage_fee, storageFee, GasPayAbleType_Unable, 100),
+			newCategory(FuelType_element_fee, elementFee, GasPayAbleType_Unable, 100),
+			newCategory(FuelType_expedite_fee, expediteFee, GasPayAbleType_Unable, 100),
+		)
+	} else {
+		curPay.PushFuelCategories(
+			NewFuelCategory(FuelType_vmCost_fee, decimal.NewFromInt(0), GasPayAbleType_Unable, 100),
+			NewFuelCategory(FuelType_storage_fee, storageFee, GasPayAbleType_Unable, 100),
+			NewFuelCategory(FuelType_expedite_fee, expediteFee, GasPayAbleType_Unable, 100),
+		)
+	}
 	pays = append(pays, curPay)
 	return pays, nil
+}
+
+// pushCategoryLegacy hands a fee of an ecosystem's fee mode to its payers as blocks before
+// rules.FeeByDigits do: amounts are not moved between digits, and the expedite fee paid in the
+// platform ecosystem is divided by the follow fuel.
+func pushCategoryLegacy(category FuelCategory, followFuel decimal.Decimal, curPay, indirectPay, cpyPlatCaller, cpyPlatIndirect *PaymentInfo) {
+	div := category.Decimal.Div(followFuel)
+	switch category.Flag {
+	case GasPayAbleType_Unable:
+		cpyPlatCaller.PushFuelCategories(category)
+		if category.FuelType == FuelType_expedite_fee {
+			cpyPlatCaller.SetDecimalByType(category.FuelType, div)
+		}
+	case GasPayAbleType_Capable:
+		// exclude FuelType_expedite_fee
+		if category.FuelType != FuelType_expedite_fee {
+			curPay.PushFuelCategories(category)
+			category.writeArithmetic(Arithmetic_MUL)
+		}
+		indirectPay.PushFuelCategories(category)
+		category.resetArithmetic()
+		if category.FuelType == FuelType_expedite_fee {
+			category.writeArithmetic(Arithmetic_DIV)
+		}
+		cpyPlatIndirect.PushFuelCategories(category)
+		if category.FuelType == FuelType_expedite_fee {
+			cpyPlatIndirect.SetDecimalByType(category.FuelType, div)
+			indirectPay.SetDecimalByType(category.FuelType, div)
+		}
+	}
 }
 
 func (sc *SmartContract) prepareMultiPay() error {
@@ -778,6 +877,52 @@ func (sc *SmartContract) taxesWallet(eco int64) (taxesID int64, err error) {
 		err = fmt.Errorf("get eco[%d] taxes wallet err", eco)
 	}
 	return
+}
+
+// elementFeeLegacy is the element fee of blocks before rules.FeeByDigits: the price of creating the
+// contract's element times price_create_rate.
+func (sc *SmartContract) elementFeeLegacy() (decimal.Decimal, error) {
+	name := utils.ToSnakeCase(sc.TxContract.Name)
+	if !syspar.HasSys(syspar.PriceCreateExec + name) {
+		return decimal.Zero, nil
+	}
+	price := decimal.NewFromInt(syspar.GetPriceCreateExec(name)).
+		Mul(decimal.NewFromInt(syspar.SysInt64(syspar.PriceCreateRate)))
+	if price.GreaterThan(decimal.New(MaxPrice, 0)) {
+		sc.GetLogger().WithFields(log.Fields{"type": consts.NoFunds}).Error("Price value is more than the highest value")
+		return decimal.Zero, errMaxPrice
+	}
+	if price.LessThan(decimal.Zero) {
+		sc.GetLogger().WithFields(log.Fields{"type": consts.NoFunds}).Error("Price value is negative")
+		return decimal.Zero, errNegPrice
+	}
+	return price, nil
+}
+
+// storageFeeLegacy is the storage fee of blocks before rules.FeeByDigits, counted through
+// price_create_rate.
+func storageFeeLegacy(txSize int64) decimal.Decimal {
+	fee := decimal.NewFromInt(syspar.SysInt64(syspar.PriceTxSize)).
+		Mul(decimal.NewFromInt(syspar.SysInt64(syspar.PriceCreateRate))).
+		Mul(decimal.NewFromInt(txSize)).
+		Div(decimal.NewFromInt(consts.ChainSize))
+	if fee.LessThanOrEqual(decimal.Zero) {
+		fee = decimal.New(1, 0)
+	}
+	return fee
+}
+
+// expediteFeeLegacy is the expedite fee of blocks before rules.FeeByDigits, counted through
+// price_create_rate; an expedite that is not a number is no fee.
+func expediteFeeLegacy(expedite string) (decimal.Decimal, error) {
+	if len(expedite) == 0 {
+		return decimal.Zero, nil
+	}
+	fee, _ := decimal.NewFromString(expedite)
+	if fee.LessThan(decimal.Zero) {
+		return decimal.Zero, fmt.Errorf(eGreaterThan, expedite)
+	}
+	return fee.Mul(decimal.NewFromInt(syspar.SysInt64(syspar.PriceCreateRate))), nil
 }
 
 func storageFeeBy(txSize int64, digits int32) decimal.Decimal {

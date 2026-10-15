@@ -5,9 +5,11 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -110,7 +112,17 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 		}
 	}
 
-	if err := rt.SubCost(CostContract); err != nil {
+	if rt.legacyCost {
+		rt.cost -= CostContract
+		if syspar.HasSys(syspar.PriceCreateExec + utils.ToSnakeCase(name)) {
+			if price := syspar.GetPriceCreateExec(utils.ToSnakeCase(name)); price > 0 {
+				rt.cost -= price
+			}
+			if rt.cost < 0 {
+				rt.cost = 0
+			}
+		}
+	} else if err := rt.SubCost(CostContract); err != nil {
 		return nil, err
 	}
 

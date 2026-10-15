@@ -891,7 +891,14 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 		return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
 	}
 
-	if expediteFee, err = expediteFeeBy(sc.TxSmart.Expedite, consts.MoneyDigits); err != nil {
+	// blocks before rules.FeeByDigits count fees in units of fuel rather than in digits
+	legacyFee := sc.legacyFee()
+	if legacyFee {
+		expediteFee, err = expediteFeeLegacy(sc.TxSmart.Expedite)
+	} else {
+		expediteFee, err = expediteFeeBy(sc.TxSmart.Expedite, consts.MoneyDigits)
+	}
+	if err != nil {
 		return false, err
 	}
 	totalAmount := decimal.Zero
@@ -937,7 +944,11 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 				//	ecosystem fuelRate /10 *( bit + len(input))
 				money1 = fuelRate1.Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs1)))))
 				// utxo ecosystem 1 expediteFee
-				money1 = money1.Add(expediteFee)
+				if legacyFee {
+					money1 = money1.Add(expediteFee.Mul(fuelRate1))
+				} else {
+					money1 = money1.Add(expediteFee)
+				}
 				if money1.GreaterThan(totalAmount1) {
 					money1 = totalAmount1
 				}
@@ -986,7 +997,11 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 					return false, err
 				}
 				//	ecosystem fuelRate /10 *( bit + len(input))
-				money2 = fuelRate2.Mul(decimal.New(1, int32(ecoDigits2-ecoDigits1))).Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs)))))
+				shift := decimal.New(1, int32(ecoDigits2-ecoDigits1))
+				if legacyFee {
+					shift = decimal.New(1, 0)
+				}
+				money2 = fuelRate2.Mul(shift).Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs)))))
 
 				if money2.GreaterThan(totalAmount) {
 					money2 = totalAmount
@@ -1037,7 +1052,11 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 				//	ecosystem fuelRate /10 *( bit + len(input))
 				money1 = fuelRate1.Div(decimal.NewFromInt(10)).Mul(decimal.NewFromInt(sc.TxSize).Add(decimal.NewFromInt(int64(len(txInputs)))))
 				// utxo ecosystem 1 expediteFee
-				money1 = money1.Add(expediteFee)
+				if legacyFee {
+					money1 = money1.Add(expediteFee.Mul(fuelRate1))
+				} else {
+					money1 = money1.Add(expediteFee)
+				}
 				if money1.GreaterThan(totalAmount) {
 					money1 = totalAmount
 				}

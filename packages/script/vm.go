@@ -185,6 +185,10 @@ func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any, hash [
 		cost = syspar.GetMaxCost()
 	}
 	rt := NewRunTime(vm, cost)
+	if legacyCost(extend) && block.isParentContract() {
+		// blocks before rules.FeeByDigits charge the base cost of a contract for each of its functions
+		rt.cost -= block.Parent.contractBaseCost()
+	}
 	ret, err = rt.Run(block, params, extend)
 	extend[Extend_txcost] = rt.Cost()
 	if err != nil {

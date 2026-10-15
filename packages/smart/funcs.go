@@ -420,8 +420,13 @@ func ContractConditions(sc *SmartContract, names ...any) (bool, error) {
 			}
 			// After AppendStack: the conditions see their contract on top of $stack
 			vars := sc.getExtend()
-			methods := []string{`conditions`}
-			err := script.RunContractByName(sc.VM, contractName, methods, vars, sc.Hash)
+			var err error
+			if sc.legacyFee() {
+				// blocks before rules.FeeByDigits do not charge the contract's cost here
+				_, err = script.VMRun(sc.VM, block, []any{}, vars, sc.Hash)
+			} else {
+				err = script.RunContractByName(sc.VM, contractName, []string{`conditions`}, vars, sc.Hash)
+			}
 			if err != nil {
 				return false, err
 			}

@@ -23,6 +23,10 @@ const (
 	// ByteRollbackRaw: the rollback data of a bytea column holds the column's bytes as they are
 	// rather than their hex (f1a3650c).
 	ByteRollbackRaw
+	// FeeByDigits: fees are counted in the digits of the paying ecosystem rather than through
+	// price_create_rate and have no element fee; a contract's base cost is charged once per call,
+	// and a run that goes over its cost limit fails (6729de64..d967f160).
+	FeeByDigits
 )
 
 const (
@@ -37,6 +41,8 @@ var activation = map[int64]map[Rule]int64{
 		TransferSelfHistory: 1729,
 		// the last bytea rollback data in hex is at block 2755; any block in (2755, 3055] fits.
 		ByteRollbackRaw: 3055,
+		// block 2560 was made before d967f160, block 2561 after.
+		FeeByDigits: 2561,
 	},
 	mainnet: {},
 }

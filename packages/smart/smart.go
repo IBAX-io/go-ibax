@@ -17,6 +17,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/common"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/conf/rules"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -560,6 +561,48 @@ func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 }
 
 // CallContract calls the contract functions according to the specified flags
+// legacyFee reports whether the transaction is in a block before rules.FeeByDigits.
+func (sc *SmartContract) legacyFee() bool {
+	return sc.BlockHeader != nil && !rules.Active(rules.FeeByDigits, sc.BlockHeader.BlockId)
+}
+
+// runContractLegacy runs the methods of the contract as blocks before rules.FeeByDigits do: every
+// payer must hold an estimate of their cost before a method runs, and the base cost of the
+// contract is charged by each method. unpaid reports a wallet that cannot hold the estimate; the
+// transaction then fails without being paid for.
+func (sc *SmartContract) runContractLegacy(methods []string, needPayment bool, before int64) (unpaid bool, err error) {
+	ctrctExtend := sc.TxContract.Extend
+	var (
+		estimate decimal.Decimal
+		cfuncs   []*script.CodeBlock
+	)
+	for i := 0; i < len(methods); i++ {
+		cfunc := sc.TxContract.GetFunc(methods[i])
+		if cfunc == nil {
+			continue
+		}
+		if needPayment {
+			for _, pay := range sc.multiPays {
+				wltAmount, _ := decimal.NewFromString(pay.PayWallet.Amount)
+				estimateCost := int64(len(cfunc.Vars) + len(cfunc.Code))
+				estimate = estimate.Add(decimal.New(estimateCost*2, 0).Mul(pay.FuelRate))
+				if wltAmount.Cmp(estimate) < 0 {
+					return true, fmt.Errorf(eEcoCurrentBalance, pay.PayWallet.AccountID, pay.TokenEco)
+				}
+			}
+		}
+		cfuncs = append(cfuncs, cfunc)
+	}
+	ctrctExtend[script.Extend_txcost] = ctrctExtend[script.Extend_txcost].(int64) - script.CostContract
+	for i := 0; i < len(cfuncs); i++ {
+		if _, err = script.VMRun(sc.VM, cfuncs[i], nil, ctrctExtend, sc.Hash); err != nil {
+			break
+		}
+	}
+	sc.TxFuel = before - ctrctExtend[script.Extend_txcost].(int64)
+	return
+}
+
 func (sc *SmartContract) CallContract(point string) (string, error) {
 	var (
 		result string
@@ -605,11 +648,18 @@ func (sc *SmartContract) CallContract(point string) (string, error) {
 	ctrctExtend[script.Extend_this_contract] = nameContract
 
 	methods := []string{`conditions`, `action`}
-	err = script.RunContractById(sc.VM, int32(sc.TxSmart.ID), methods, sc.TxContract.Extend, sc.Hash)
-	if ctrctExtend[script.Extend_txcost].(int64) < 0 {
-		sc.TxFuel = before
+	if sc.legacyFee() {
+		var unpaid bool
+		if unpaid, err = sc.runContractLegacy(methods, needPayment, before); unpaid {
+			return ``, err
+		}
 	} else {
-		sc.TxFuel = before - ctrctExtend[script.Extend_txcost].(int64)
+		err = script.RunContractById(sc.VM, int32(sc.TxSmart.ID), methods, sc.TxContract.Extend, sc.Hash)
+		if ctrctExtend[script.Extend_txcost].(int64) < 0 {
+			sc.TxFuel = before
+		} else {
+			sc.TxFuel = before - ctrctExtend[script.Extend_txcost].(int64)
+		}
 	}
 	sc.TxUsedCost = decimal.New(sc.TxFuel, 0)
 
