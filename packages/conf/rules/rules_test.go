@@ -24,3 +24,14 @@ func TestActiveOn(t *testing.T) {
 		}
 	}
 }
+
+func TestGenesisHash(t *testing.T) {
+	for _, network := range []int64{testnet, mainnet} {
+		if h, ok := genesisHash(network); !ok || len(h) != 32 {
+			t.Errorf("network %d: %x, %v", network, h, ok)
+		}
+	}
+	if _, ok := genesisHash(1); ok {
+		t.Error("network 1 has a first block kept")
+	}
+}

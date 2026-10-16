@@ -11,7 +11,11 @@
 // per network ID. On any other network every rule applies from the first block.
 package rules
 
-import "github.com/IBAX-io/go-ibax/packages/conf"
+import (
+	"encoding/hex"
+
+	"github.com/IBAX-io/go-ibax/packages/conf"
+)
 
 // Rule is a change to block execution.
 type Rule int
@@ -85,6 +89,27 @@ var activation = map[int64]map[Rule]int64{
 		TeEmissionAccess: 2,
 		DigitsAccess:     2,
 	},
+}
+
+// genesis holds, per network ID, the hash of the network's first block.
+var genesis = map[int64]string{
+	testnet: "cbd5a088106f238487022defee4ef77dbfe1d376e9e206c1b0525a539e4340a5",
+	mainnet: "5f0c4ffab6e8821bb99327d8174c4a2478dc088eb9ee6220aeeb4d5c5e8de0d8",
+}
+
+// GenesisHash returns the hash of the first block of this node's network, and false on a network
+// whose first block is not kept here.
+func GenesisHash() ([]byte, bool) {
+	return genesisHash(conf.Config.LocalConf.NetworkID)
+}
+
+func genesisHash(networkID int64) ([]byte, bool) {
+	h, ok := genesis[networkID]
+	if !ok {
+		return nil, false
+	}
+	b, _ := hex.DecodeString(h)
+	return b, true
 }
 
 // Active reports whether rule r applies to block blockID of this node's network.
