@@ -12,7 +12,7 @@ import (
 )
 
 // VERSION is current version
-const VERSION = "1.4.4"
+const VERSION = "1.4.5"
 
 const BvRollbackHash = 2
 const BvIncludeRollbackHash = 3
