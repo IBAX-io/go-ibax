@@ -120,7 +120,7 @@ func TestVMCompile(t *testing.T) {
 						var i int
 						i = 50
 						return Sprintf("val=%d", i 0)
-					}`, `runtime`, `runtime panic error,reflect: CallSlice using int64 as type string`},
+					}`, `runtime`, `runtime run code crashed: reflect: CallSlice using int64 as type string [:4]`},
 		{`func nop {
 							return
 						}
@@ -298,7 +298,7 @@ func TestVMCompile(t *testing.T) {
 					i = MyFunc("qqq", 10)
 					return "OK"
 				}
-			}`, `seterr.getset`, `unknown identifier MyFunc`},
+			}`, `seterr.getset`, `unknown contract @38MyFunc [@38seterr:4]`},
 		{`func one() int {
 				return 9
 			}
@@ -571,7 +571,7 @@ func TestVMCompile(t *testing.T) {
 		func result() string {
 			myExec()
 			return "COND"
-		}`, `result`, `'conditions' cannot call contracts or functions which can modify the blockchain database.`},
+		}`, `result`, `'conditions' cannot call contracts or functions which can modify the blockchain database`},
 		{`func test string {
 			var s string
 			var m map
@@ -686,36 +686,30 @@ func TestVMCompile(t *testing.T) {
 		map[string]struct{}{"Sprintf": {}}})
 
 	for ikey, item := range test {
-		if ikey > 100 {
-			break
-		}
 		source := []rune(item.Input)
 		if err := vm.Compile(source, &OwnerInfo{StateID: uint32(ikey) + 22, Active: true, TableID: 1}); err != nil {
 			if err.Error() != item.Output {
-				t.Errorf(`%s != %s`, err, item.Output)
-				break
+				t.Errorf("%d: %s != %s", ikey, err, item.Output)
 			}
-		} else {
-			glob := types.NewMap()
-			glob.Set(`test`, `String value`)
-			glob.Set(`number`, 1001)
-			if out, err := vm.Call(item.Func, nil, map[string]any{
-				`rt_state`: uint32(ikey) + 22, `data`: make([]any, 0),
-				`test1`: 101, `test2`: `test 2`,
-				"glob": glob,
-				`test3`: func(param int64) string {
-					return fmt.Sprintf("test=%d=test", param)
-				},
-			}); err == nil {
-				if out[0].(string) != item.Output {
-					t.Error(fmt.Errorf("err want to %v, but out %v\n", item.Output, out[0]))
-					break
-				}
-			} else if err.Error() != item.Output {
-				t.Error(err)
-				break
+			continue
+		}
+		glob := types.NewMap()
+		glob.Set(`test`, `String value`)
+		glob.Set(`number`, 1001)
+		out, err := vm.Call(item.Func, nil, map[string]any{
+			`rt_state`: uint32(ikey) + 22, `data`: make([]any, 0),
+			`test1`: 101, `test2`: `test 2`,
+			"glob": glob,
+			`test3`: func(param int64) string {
+				return fmt.Sprintf("test=%d=test", param)
+			},
+		})
+		if err != nil {
+			if err.Error() != item.Output {
+				t.Errorf("%d: %s != %s", ikey, err, item.Output)
 			}
-
+		} else if fmt.Sprint(out[0]) != item.Output {
+			t.Errorf("%d: %v != %s", ikey, out[0], item.Output)
 		}
 	}
 }
@@ -806,5 +800,20 @@ func TestVM_CompileBlock(t *testing.T) {
 			}
 			assert.Equalf(t, tt.want, got, "CompileBlock(%v, %v)", tt.args.input, tt.args.owner)
 		})
+	}
+}
+
+func TestAssignMustHaveValue(t *testing.T) {
+	for src, valid := range map[string]bool{
+		"contract a {\n action {\n $result = 1\n }\n}":       true,
+		"contract a {\n action {\n var x int\n x = 1\n }\n}": true,
+		"contract a {\n action {\n $result =\n }\n}":         false,
+		"contract a {\n action {\n $result = }\n}":           false,
+		"contract a {\n action {\n var x int\n x =\n }\n}":   false,
+	} {
+		_, err := NewVM().CompileBlock([]rune(src), &OwnerInfo{StateID: 1})
+		if (err == nil) != valid {
+			t.Errorf("%q: error %v", src, err)
+		}
 	}
 }

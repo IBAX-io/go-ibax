@@ -31,6 +31,7 @@ type InToCxt struct {
 	OutputsMap     map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	PrevSysPar     map[string]string
 	EcoParams      []sqldb.EcoParam
+	Carried        map[string]struct{}
 }
 
 type OutCtx struct {

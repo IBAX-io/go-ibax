@@ -5,10 +5,12 @@
 package rollback
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/conf/rules"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -25,13 +27,27 @@ func rollbackUpdatedRow(tx map[string]string, where string, dbTx *sqldb.DbTransa
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollback.Data from json")
 		return err
 	}
+	// the rollback data of a bytea column is its hex, or the hex of its hex in blocks from
+	// rules.ByteRollbackHexTwice to rules.ByteRollbackHexOnce; either way the column gets its bytes back
+	blockID := converter.StrToInt64(tx["block_id"])
+	hexTwice := rules.Active(rules.ByteRollbackHexTwice, blockID) && !rules.Active(rules.ByteRollbackHexOnce, blockID)
 	addSQLUpdate := ""
 	for k, v := range rollbackInfo {
-		k = `"` + strings.Trim(k, `"`) + `"`
+		column := strings.Trim(k, `"`)
+		k = `"` + column + `"`
 		if v == "NULL" {
 			addSQLUpdate += k + `=NULL,`
-		} else if syspar.IsByteColumn(tx["table_name"], k) && len(v) != 0 {
-			addSQLUpdate += k + `=decode('` + v + `','HEX'),`
+		} else if syspar.IsByteColumn(tx["table_name"], column) && len(v) != 0 {
+			data, err := hex.DecodeString(v)
+			if err == nil && hexTwice {
+				v = string(data)
+				_, err = hex.DecodeString(v)
+			}
+			if err != nil {
+				logger.WithFields(log.Fields{"type": consts.ConversionError, "error": err, "rollback_id": tx["id"], "column": column}).Error("decoding bytea rollback data from hex")
+				return err
+			}
+			addSQLUpdate += k + `=decode('` + v + `','hex'),`
 		} else {
 			addSQLUpdate += k + `='` + strings.Replace(v, `'`, `''`, -1) + `',`
 		}

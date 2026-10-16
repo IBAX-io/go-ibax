@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
+	"github.com/IBAX-io/go-ibax/packages/conf/rules"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/notificator"
@@ -141,6 +142,13 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		return err
 	}
 	b.EcoParams = ecoParams
+	b.Carried = nil
+	if b.AfterTxs != nil && !rules.Active(rules.JSONColumnsSorted, b.Header.BlockId) {
+		b.Carried = make(map[string]struct{}, len(b.AfterTxs.Rts))
+		for _, rt := range b.AfterTxs.Rts {
+			b.Carried[string(rt.DataHash)] = struct{}{}
+		}
+	}
 	// UTXO multiple ecosystem fuelRate
 	b.PrevSysPar = syspar.GetSysParCache()
 	var wg sync.WaitGroup
@@ -250,7 +258,7 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 			return err
 		}
 		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits,
-			consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar, b.EcoParams)
+			consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar, b.EcoParams, b.Carried)
 		if err != nil {
 			return err
 		}
@@ -298,10 +306,13 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 
 		var (
 			after    = &types.AfterTx{}
-			eco      = int64(1)
+			eco      int64
 			contract string
 			code     pbgo.TxInvokeStatusCode
 		)
+		if rules.Active(rules.TransferSelfHistory, t.BlockHeader.BlockId) {
+			eco = 1
+		}
 		if t.IsSmartContract() {
 			eco = t.SmartContract().TxSmart.EcosystemID
 			code = t.TxResult.Code

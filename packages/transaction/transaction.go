@@ -110,6 +110,7 @@ func (tr *Transaction) WithOption(
 	outputsMap map[sqldb.KeyUTXO][]sqldb.SpentInfo,
 	prevSysPar map[string]string,
 	ecoParams []sqldb.EcoParam,
+	carried map[string]struct{},
 	opts ...TransactionOption) error {
 	in := &InToCxt{
 		SqlDbSavePoint: sqlDbSavePoint,
@@ -123,6 +124,7 @@ func (tr *Transaction) WithOption(
 		OutputsMap:     outputsMap,
 		PrevSysPar:     prevSysPar,
 		EcoParams:      ecoParams,
+		Carried:        carried,
 	}
 	in.DbTransaction.BinLogSql = nil
 	tr.InToCxt = in

@@ -16,12 +16,18 @@ func (s *SM2) GenKeyPair() ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return priv.D.Bytes(), append(FillLeft(priv.PublicKey.X.Bytes()), FillLeft(priv.PublicKey.Y.Bytes())...), nil
+	return FillLeft(priv.D.Bytes()), append(FillLeft(priv.PublicKey.X.Bytes()), FillLeft(priv.PublicKey.Y.Bytes())...), nil
 }
 
 func (s *SM2) Sign(privateKey, hash []byte) ([]byte, error) {
+	if len(hash) == 0 {
+		return nil, ErrSigningEmpty
+	}
 	pubkeyCurve := sm2.P256Sm2()
-	bi := new(big.Int).SetBytes(privateKey)
+	bi, err := privateScalar(privateKey, pubkeyCurve.Params().N)
+	if err != nil {
+		return nil, err
+	}
 	priv := new(sm2.PrivateKey)
 	priv.PublicKey.Curve = pubkeyCurve
 	priv.D = bi

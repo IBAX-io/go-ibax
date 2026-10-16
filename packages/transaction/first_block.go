@@ -16,6 +16,7 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/conf/rules"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -84,6 +85,9 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		Digits:      consts.MoneyDigits,
 		TokenSymbol: consts.DefaultTokenSymbol,
 		TokenName:   consts.DefaultTokenName,
+
+		TeEmissionAccess: rules.Active(rules.TeEmissionAccess, in.BlockHeader.BlockId),
+		DigitsAccess:     rules.Active(rules.DigitsAccess, in.BlockHeader.BlockId),
 	})
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing ecosystem schema")

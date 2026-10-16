@@ -415,16 +415,18 @@ func ContractConditions(sc *SmartContract, names ...any) (bool, error) {
 			if block == nil {
 				return true, nil
 			}
-			vars := sc.getExtend()
-			//if sc.TxContract == nil {
-			//	sc.TxContract = getContract
-			//	sc.TxContract.Extend = vars
-			//}
 			if err := sc.AppendStack(name); err != nil {
 				return false, err
 			}
-			methods := []string{`conditions`}
-			err := script.RunContractByName(sc.VM, contractName, methods, vars, sc.Hash)
+			// After AppendStack: the conditions see their contract on top of $stack
+			vars := sc.getExtend()
+			var err error
+			if sc.legacyFee() {
+				// blocks before rules.FeeByDigits do not charge the contract's cost here
+				_, err = script.VMRun(sc.VM, block, []any{}, vars, sc.Hash)
+			} else {
+				err = script.RunContractByName(sc.VM, contractName, []string{`conditions`}, vars, sc.Hash)
+			}
 			if err != nil {
 				return false, err
 			}

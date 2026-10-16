@@ -13,6 +13,7 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/IBAX-io/go-ibax/packages/conf/rules"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -110,6 +111,8 @@ type RunTime struct {
 	mem       int64
 	memVars   map[any]int64
 	errInfo   ErrInfo
+	// legacyCost: the run counts cost as blocks before rules.FeeByDigits do
+	legacyCost bool
 }
 
 // NewRunTime creates a new RunTime for the virtual machine
@@ -120,6 +123,13 @@ func NewRunTime(vm *VM, cost int64) *RunTime {
 		cost:    cost,
 		memVars: make(map[any]int64),
 	}
+}
+
+// legacyCost reports whether a run with these extended variables is for a block before
+// rules.FeeByDigits.
+func legacyCost(extend map[string]any) bool {
+	id, ok := extend[Extend_block].(int64)
+	return ok && id > 0 && !rules.Active(rules.FeeByDigits, id)
 }
 
 func isSysVar(name string) bool {
@@ -256,10 +266,9 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 	}
 	if i > 0 && size-i >= 0 {
 		pars[in-1] = reflect.ValueOf(rt.stack[size-i : size])
-	} else {
-		if !pars[in-1].IsValid() {
-			pars[in-1] = reflect.Zero(finfo.Params[in-1])
-		}
+	} else if in > 0 && !pars[in-1].IsValid() {
+		// A function without parameters has no last one to default
+		pars[in-1] = reflect.Zero(finfo.Params[in-1])
 	}
 	if finfo.Name == `ExecContract` && (pars[2].Kind() != reflect.String || !pars[3].IsValid()) {
 		return fmt.Errorf(`unknown function %v`, pars[1])
@@ -280,6 +289,16 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 	for i, ret := range result {
 		// first return value of every extend function that makes queries to DB is cost
 		if _, ok := rt.vm.FuncCallsDB[finfo.Name]; ok && i == 0 {
+			if rt.legacyCost {
+				if cost := ret.Int(); cost > rt.cost {
+					rt.cost = 0
+					rt.vm.logger.Error("paid CPU resource is over")
+					return fmt.Errorf("paid CPU resource is over")
+				} else {
+					rt.cost -= cost
+				}
+				continue
+			}
 			if err = rt.SubCost(ret.Int()); err != nil {
 				return
 			}
@@ -500,7 +519,7 @@ func SetVMError(eType string, eText any) error {
 		log.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("marshalling VMError")
 		out = []byte(`{"type": "panic", "error": "marshalling VMError"}`)
 	}
-	return fmt.Errorf(string(out))
+	return errors.New(string(out))
 }
 
 func (rt *RunTime) getResultValue(item mapItem) (value any, err error) {
@@ -639,7 +658,9 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	start := rt.len()
 	varoff := len(rt.vars)
 	for vkey, vpar := range block.Vars {
-		if err = rt.SubCost(1); err != nil {
+		if rt.legacyCost {
+			rt.cost--
+		} else if err = rt.SubCost(1); err != nil {
 			break
 		}
 		var value any
@@ -682,7 +703,12 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	labels := make([]int, 0)
 main:
 	for ci := 0; ci < len(block.Code); ci++ {
-		if err = rt.SubCost(1); err != nil {
+		if rt.legacyCost {
+			// running out ends the code; the error comes after the block is left
+			if rt.cost--; rt.cost <= 0 {
+				break
+			}
+		} else if err = rt.SubCost(1); err != nil {
 			break
 		}
 		if rt.timeLimit {
@@ -818,6 +844,13 @@ main:
 			rt.resetByIdx(mapoff + 1)
 			continue
 		case cmdCallVariadic, cmdCall:
+			if rt.legacyCost {
+				if !rt.subCallCostLegacy(cmd.Value.(*ObjInfo)) {
+					break main
+				}
+				err = rt.callFunc(cmd.Cmd, cmd.Value.(*ObjInfo))
+				break
+			}
 			var cost = int64(CostCall)
 			if cmd.Value.(*ObjInfo).Type == ObjectType_ExtFunc {
 				finfo := cmd.Value.(*ObjInfo).GetExtFuncInfo()
@@ -847,10 +880,15 @@ main:
 				break main
 			}
 		case cmdExtend, cmdCallExtend:
-			if err = rt.SubCost(CostExtend); err != nil {
-				break
+			if !rt.legacyCost {
+				if err = rt.SubCost(CostExtend); err != nil {
+					break
+				}
 			}
 			if val, ok := rt.extend[cmd.Value.(string)]; ok {
+				if rt.legacyCost {
+					rt.cost -= CostExtend
+				}
 				if cmd.Cmd == cmdCallExtend {
 					err = rt.extendFunc(cmd.Value.(string))
 					if err != nil {
@@ -1350,7 +1388,7 @@ main:
 			rt.resetByIdx(size - 1)
 		}
 	}
-	if err != nil {
+	if err != nil && !rt.legacyCost {
 		return
 	}
 	last := rt.popBlock()
@@ -1385,7 +1423,34 @@ main:
 	}
 
 	rt.resetByIdx(start)
+	if rt.legacyCost && rt.cost <= 0 {
+		rt.vm.logger.WithFields(log.Fields{"type": consts.VMError}).Warn("runtime cost limit overflow")
+		err = fmt.Errorf(`runtime cost limit overflow`)
+	}
 	return
+}
+
+// subCallCostLegacy charges the call of obj as blocks before rules.FeeByDigits do; false if the
+// cost left does not cover it, which ends the code
+func (rt *RunTime) subCallCostLegacy(obj *ObjInfo) bool {
+	if obj.Type != ObjectType_ExtFunc {
+		rt.cost -= CostCall
+		return true
+	}
+	if rt.vm.ExtCost == nil {
+		return true
+	}
+	cost := rt.vm.ExtCost(obj.GetExtFuncInfo().Name)
+	switch {
+	case cost > rt.cost:
+		rt.cost = 0
+		return false
+	case cost == -1:
+		rt.cost -= CostCall
+	default:
+		rt.cost -= cost
+	}
+	return true
 }
 
 // Run executes CodeBlock with the specified parameters and extended variables and functions
@@ -1398,6 +1463,7 @@ func (rt *RunTime) Run(block *CodeBlock, params []any, extend map[string]any) (r
 	}()
 	info := block.GetFuncInfo()
 	rt.extend = extend
+	rt.legacyCost = legacyCost(extend)
 	var (
 		genBlock bool
 		timer    *time.Timer

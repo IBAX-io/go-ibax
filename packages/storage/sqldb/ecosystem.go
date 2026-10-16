@@ -36,9 +36,11 @@ type FeeModeFlag struct {
 }
 
 type EcoParam struct {
-	Id      int64
-	Percent int64
-	Digits  int
+	Id         int64
+	Percent    int64
+	Digits     int
+	Combustion bool // the combustion flag is 2
+	UtxoFee    bool // the utxo_fee parameter is 1
 }
 
 func (f FeeModeFlag) FlagToInt() int64 {
@@ -106,10 +108,12 @@ func GetAllSystemCount() (int64, error) {
 func GetEcoParam(db *DbTransaction, ids []int64) ([]EcoParam, error) {
 	query :=
 		`
-			SELECT eco.id,(eco.fee_mode_info::json#>>'{combustion,percent}')::int as percent ,eco.digits
-			FROM "1_parameters" as par
-			LEFT JOIN "1_ecosystems" as eco ON par.ecosystem = eco.id 
-			WHERE par.name = 'utxo_fee' and par.value = '1' and par.ecosystem IN ?
+			SELECT eco.id,coalesce((eco.fee_mode_info::json#>>'{combustion,percent}')::int,0) as percent ,eco.digits,
+				coalesce((eco.fee_mode_info::json#>>'{combustion,flag}')::int = 2,false) as combustion,
+				EXISTS (SELECT 1 FROM "1_parameters" as par
+					WHERE par.ecosystem = eco.id and par.name = 'utxo_fee' and par.value = '1') as utxo_fee
+			FROM "1_ecosystems" as eco
+			WHERE eco.id IN ?
 		`
 
 	var ret []EcoParam

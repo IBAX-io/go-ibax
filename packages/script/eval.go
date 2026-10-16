@@ -5,6 +5,8 @@
 package script
 
 import (
+	"sync"
+
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -16,12 +18,20 @@ type evalCode struct {
 	Code   *CodeBlock
 }
 
+// The compiled conditions by the checksum of their source. Blocks play them, and so do API requests
+// that read tables and render pages, each in a goroutine of its own
 var (
-	evals = make(map[uint64]*evalCode)
+	evalsMutex sync.RWMutex
+	evals      = make(map[uint64]*evalCode)
 )
 
 // CompileEval compiles conditional expression
 func (vm *VM) CompileEval(input string, state uint32) error {
+	_, err := vm.compileCondition(input, state)
+	return err
+}
+
+func (vm *VM) compileCondition(input string, state uint32) (*CodeBlock, error) {
 	source := `func eval bool { return ` + input + `}`
 	if input == `1` || input == `0` {
 		source = `
@@ -36,10 +46,22 @@ func (vm *VM) CompileEval(input string, state uint32) error {
 
 	block, err := vm.CompileBlock([]rune(source), &OwnerInfo{StateID: state})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	crc := crypto.CalcChecksum([]byte(input))
+	evalsMutex.Lock()
 	evals[crc] = &evalCode{Source: input, Code: block}
+	evalsMutex.Unlock()
+	return block, nil
+}
+
+// compiledEval is the compiled condition of the source, nil when there is none yet
+func compiledEval(input string) *CodeBlock {
+	evalsMutex.RLock()
+	defer evalsMutex.RUnlock()
+	if eval, ok := evals[crypto.CalcChecksum([]byte(input))]; ok && eval.Source == input {
+		return eval.Code
+	}
 	return nil
 }
 
@@ -48,14 +70,15 @@ func (vm *VM) EvalIf(input string, state uint32, vars map[string]any) (bool, err
 	if len(input) == 0 {
 		return true, nil
 	}
-	crc := crypto.CalcChecksum([]byte(input))
-	if eval, ok := evals[crc]; !ok || eval.Source != input {
-		if err := vm.CompileEval(input, state); err != nil {
+	code := compiledEval(input)
+	if code == nil {
+		var err error
+		if code, err = vm.compileCondition(input, state); err != nil {
 			log.WithFields(log.Fields{"type": consts.EvalError, "error": err}).Error("compiling eval")
 			return false, err
 		}
 	}
-	ret, err := NewRunTime(vm, syspar.GetMaxCost()).Run(evals[crc].Code.Children[0], nil, vars)
+	ret, err := NewRunTime(vm, syspar.GetMaxCost()).Run(code.Children[0], nil, vars)
 	if err == nil {
 		if len(ret) == 0 {
 			return false, nil

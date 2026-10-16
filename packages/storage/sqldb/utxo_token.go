@@ -1,6 +1,7 @@
 package sqldb
 
 import (
+	"sort"
 	"sync"
 )
 
@@ -24,8 +25,20 @@ func InsertTxOutputs(outputTxHash []byte, txOutputsMapCtx map[KeyUTXO][]SpentInf
 func UpdateTxInputs(inputTxHash []byte, txInputsMapCtx map[KeyUTXO][]SpentInfo, outputsMap map[KeyUTXO][]SpentInfo) {
 	lock.Lock()
 	defer lock.Unlock()
+	// the inputs are numbered key by key in the order of ecosystem and key ID, not in the random
+	// order of the map, so that every node writes the same input_index
+	keys := make([]KeyUTXO, 0, len(txInputsMapCtx))
+	for txKeyUTXO := range txInputsMapCtx {
+		keys = append(keys, txKeyUTXO)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].Ecosystem != keys[j].Ecosystem {
+			return keys[i].Ecosystem < keys[j].Ecosystem
+		}
+		return keys[i].KeyId < keys[j].KeyId
+	})
 	var inputIndex int32
-	for txKeyUTXO, _ := range txInputsMapCtx {
+	for _, txKeyUTXO := range keys {
 		spentInfos := outputsMap[txKeyUTXO]
 		for i, info := range spentInfos {
 			if len(info.InputTxHash) == 0 {

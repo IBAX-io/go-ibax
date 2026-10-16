@@ -28,7 +28,7 @@ func (s durationSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 // CheckClockDrift queries an NTP server for clock drifts and warns the user if
 // one large enough is detected.
 func CheckClockDrift() (bool, error) {
-	drift, err := sntpDrift(ntpChecks)
+	drift, err := sntpDrift(ntpPool+":123", ntpChecks)
 	if err != nil {
 		return false, err
 	}
@@ -45,10 +45,11 @@ func CheckClockDrift() (bool, error) {
 // but should be fine for these purposes.
 //
 // Note, it executes two extra measurements compared to the number of requested
-// ones to be able to discard the two extremes as outliers.
-func sntpDrift(measurements int) (time.Duration, error) {
+// ones to be able to discard the two extremes as outliers. server is the host
+// and port of the NTP server.
+func sntpDrift(server string, measurements int) (time.Duration, error) {
 	// Resolve the address of the NTP server
-	addr, err := net.ResolveUDPAddr("udp", ntpPool+":123")
+	addr, err := net.ResolveUDPAddr("udp", server)
 	if err != nil {
 		return 0, err
 	}
@@ -62,21 +63,8 @@ func sntpDrift(measurements int) (time.Duration, error) {
 	var drifts []time.Duration
 	for i := 0; i < measurements+2; i++ {
 		// Dial the NTP server and send the time retrieval request
-		conn, err := net.DialUDP("udp", nil, addr)
+		sent, reply, err := sntpQuery(addr, request)
 		if err != nil {
-			return 0, err
-		}
-		defer conn.Close()
-
-		sent := time.Now()
-		if _, err = conn.Write(request); err != nil {
-			return 0, err
-		}
-		// Retrieve the reply and calculate the elapsed time
-		conn.SetDeadline(time.Now().Add(5 * time.Second))
-
-		reply := make([]byte, 48)
-		if _, err = conn.Read(reply); err != nil {
 			return 0, err
 		}
 		elapsed := time.Since(sent)
@@ -100,4 +88,26 @@ func sntpDrift(measurements int) (time.Duration, error) {
 		drift += drifts[i]
 	}
 	return drift / time.Duration(measurements), nil
+}
+
+// sntpQuery sends the request to the NTP server and returns when it was sent and the reply
+func sntpQuery(addr *net.UDPAddr, request []byte) (time.Time, []byte, error) {
+	conn, err := net.DialUDP("udp", nil, addr)
+	if err != nil {
+		return time.Time{}, nil, err
+	}
+	defer conn.Close()
+
+	sent := time.Now()
+	if _, err = conn.Write(request); err != nil {
+		return sent, nil, err
+	}
+	// Retrieve the reply
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+
+	reply := make([]byte, 48)
+	if _, err = conn.Read(reply); err != nil {
+		return sent, nil, err
+	}
+	return sent, reply, nil
 }

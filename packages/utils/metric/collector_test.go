@@ -8,26 +8,27 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/stretchr/testify/assert"
 )
 
-func MockValue(v int64) *Value {
-	return &Value{Time: 1, Metric: "test_metric", Key: "ecosystem_1", Value: v}
+func MockValue(timeBlock, v int64) *Value {
+	return &Value{Time: timeBlock, Metric: "test_metric", Key: "ecosystem_1", Value: v}
 }
 
 func MockCollectorFunc(v int64, err error) CollectorFunc {
-	return func() ([]*Value, error) {
+	return func(timeBlock int64) ([]*Value, error) {
 		if err != nil {
 			return nil, err
 		}
 
-		return []*Value{MockValue(v)}, nil
+		return []*Value{MockValue(timeBlock, v)}, nil
 	}
 }
 
 func TestValue(t *testing.T) {
-	value := MockValue(100)
-	result := map[string]any{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(100)}
+	value := MockValue(1, 100)
+	result := types.LoadMap(map[string]any{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(100)})
 	assert.Equal(t, result, value.ToMap())
 }
 
@@ -39,8 +40,8 @@ func TestCollector(t *testing.T) {
 	)
 
 	result := []any{
-		map[string]any{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(100)},
-		map[string]any{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(200)},
+		types.LoadMap(map[string]any{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(100)}),
+		types.LoadMap(map[string]any{"time": int64(1), "metric": "test_metric", "key": "ecosystem_1", "value": int64(200)}),
 	}
-	assert.Equal(t, result, c.Values())
+	assert.Equal(t, result, c.Values(1))
 }

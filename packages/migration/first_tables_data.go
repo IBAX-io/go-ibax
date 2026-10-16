@@ -29,20 +29,22 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
     (next_id('1_tables'), 'ecosystems',
         '{
             "insert": "ContractAccess(\"@1NewEcosystem\")",
-            "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1EcoFeeModeManage\",\"@1EditControlMode\",\"@1NewToken\",\"@1TeChange\",\"@1TeEmission\",\"@1TeBurn\")",
+            "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1EcoFeeModeManage\",\"@1EditControlMode\",\"@1NewToken\",\"@1TeChange\",{{if .TeEmissionAccess}}\"@1TeEmission\",{{end}}\"@1TeBurn\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
             "name": "ContractAccess(\"@1EditEcosystemName\")",
             "info": "ContractAccess(\"@1EcManageInfo\")",
+{{- if .DigitsAccess}}
             "digits": "ContractAccess(\"@1NewToken\")",
+{{- end}}
             "fee_mode_info": "ContractAccess(\"@1EcoFeeModeManage\")",
             "is_valued": "ContractAccess(\"@1VotingVesAccept\")",
-            "emission_amount": "ContractAccess(\"@1NewToken\",\"@1TeBurn\",\"@1TeEmission\")",
+            "emission_amount": "ContractAccess(\"@1NewToken\",\"@1TeBurn\"{{if .TeEmissionAccess}},\"@1TeEmission\"{{end}})",
             "token_symbol": "ContractAccess(\"@1NewToken\")",
             "token_name": "ContractAccess(\"@1NewToken\")",
-            "type_emission": "ContractAccess(\"@1TeChange\",\"@1NewToken\")",
-            "type_withdraw": "ContractAccess(\"@1TeChange\",\"@1NewToken\")",
+            "type_emission": "ContractAccess({{if .DigitsAccess}}\"@1TeChange\",\"@1NewToken\"{{else if .TeEmissionAccess}}\"@1TeChange\"{{else}}\"@1NewToken\",\"@1TeChange\"{{end}})",
+            "type_withdraw": "ContractAccess({{if .DigitsAccess}}\"@1TeChange\",\"@1NewToken\"{{else if .TeEmissionAccess}}\"@1TeChange\"{{else}}\"@1NewToken\",\"@1TeChange\"{{end}})",
             "control_mode": "ContractAccess(\"@1EditControlMode\")"
         }',
         'ContractConditions("@1MainCondition")'

@@ -55,6 +55,45 @@ type SQLQueryBuilder struct {
 	KeyTableChkr KeyTableChecker
 	whereExpr    string
 	TxEcoID      int64
+	// ByteHexTwice writes the rollback data of a bytea column as the hex of the hex the row is
+	// read in, as blocks from rules.ByteRollbackHexTwice to rules.ByteRollbackHexOnce do.
+	ByteHexTwice bool
+	// Carried, when set, reports whether the block being run carries the rollback row of a
+	// statement. Blocks before rules.JSONColumnsSorted wrote the jsonb columns of a statement in
+	// no fixed order; the order taken is the one whose statement the block carries.
+	Carried func(statement string) bool
+}
+
+// jsonOrder returns the order in which the jsonb columns go into a statement: sorted, or the first
+// order whose statement b.Carried reports.
+func (b *SQLQueryBuilder) jsonOrder(columns []string, statement func(order []string) string) []string {
+	sort.Strings(columns)
+	if b.Carried == nil || len(columns) < 2 {
+		return columns
+	}
+	for _, order := range permutations(columns) {
+		if b.Carried(statement(order)) {
+			return order
+		}
+	}
+	return columns
+}
+
+// permutations returns every order of items, starting with items as they are.
+func permutations(items []string) [][]string {
+	if len(items) < 2 {
+		return [][]string{append([]string{}, items...)}
+	}
+	var out [][]string
+	for i := range items {
+		rest := make([]string, 0, len(items)-1)
+		rest = append(rest, items[:i]...)
+		rest = append(rest, items[i+1:]...)
+		for _, p := range permutations(rest) {
+			out = append(out, append([]string{items[i]}, p...))
+		}
+	}
+	return out
 }
 
 func (b *SQLQueryBuilder) Prepare() error {
@@ -215,13 +254,9 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, e
 			expressions = append(expressions, `"`+b.Fields[i]+`"='`+escapeSingleQuotes(b.stringValues[i])+`'`)
 		}
 	}
-	var jsonColumnArr []string
-	for name := range jsonFields {
-		jsonColumnArr = append(jsonColumnArr, name)
-	}
-	sort.Strings(jsonColumnArr)
-	for _, name := range jsonColumnArr {
-		val := jsonFields[name]
+	jsonExprs := make(map[string]string, len(jsonFields))
+	jsonColumnArr := make([]string, 0, len(jsonFields))
+	for name, val := range jsonFields {
 		var initial string
 		out, err := json.Marshal(val)
 		if err != nil {
@@ -235,10 +270,27 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, e
 			initial = `'{}'`
 		}
 
-		expressions = append(expressions, fmt.Sprintf(`%s=%s::jsonb || '%s'::jsonb`, name, initial, string(out)))
+		jsonExprs[name] = fmt.Sprintf(`%s=%s::jsonb || '%s'::jsonb`, name, initial, string(out))
+		jsonColumnArr = append(jsonColumnArr, name)
 	}
-
-	return strings.Join(expressions, ","), nil
+	updateExpr := func(order []string) string {
+		all := append([]string{}, expressions...)
+		for _, name := range order {
+			all = append(all, jsonExprs[name])
+		}
+		return strings.Join(all, ",")
+	}
+	var whereExpr string
+	if b.Carried != nil && len(jsonColumnArr) > 1 {
+		var err error
+		if whereExpr, err = b.GetSQLWhereExpr(); err != nil {
+			return "", err
+		}
+	}
+	order := b.jsonOrder(jsonColumnArr, func(order []string) string {
+		return `UPDATE "` + strings.Trim(b.Table, `"`) + `" SET ` + updateExpr(order) + " " + whereExpr
+	})
+	return updateExpr(order), nil
 }
 
 func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, error) {
@@ -272,22 +324,19 @@ func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, erro
 		insValues = append(insValues, b.toSQLValue(b.stringValues[i], b.Fields[i]))
 	}
 
-	var jsonColumnArr []string
-	for name := range jsonFields {
-		jsonColumnArr = append(jsonColumnArr, name)
-	}
-	sort.Strings(jsonColumnArr)
-	for _, name := range jsonColumnArr {
-		val := jsonFields[name]
+	jsonValues := make(map[string]string, len(jsonFields))
+	jsonColumnArr := make([]string, 0, len(jsonFields))
+	for name, val := range jsonFields {
 		out, err := json.Marshal(val)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "type": consts.JSONMarshallError}).Error("marshalling update columns for jsonb")
 			return "", err
 		}
-		insFields = append(insFields, name)
-		insValues = append(insValues, fmt.Sprintf(`'%s'::jsonb`, string(out)))
+		jsonValues[name] = fmt.Sprintf(`'%s'::jsonb`, string(out))
+		jsonColumnArr = append(jsonColumnArr, name)
 	}
 
+	var idField, idValue []string
 	if !isID {
 		id, err := idGetter.GetNextID(b.Table)
 		if err != nil {
@@ -295,14 +344,22 @@ func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, erro
 		}
 
 		b.tableID = converter.Int64ToStr(id)
-		insFields = append(insFields, `id`)
-		insValues = append(insValues, wrapString(b.tableID, "'"))
+		idField = []string{`id`}
+		idValue = []string{wrapString(b.tableID, "'")}
 	}
 
-	flds := strings.Join(insFields, ",")
-	vls := strings.Join(insValues, ",")
-
-	return fmt.Sprintf(`INSERT INTO "%s" (%s) VALUES (%s)`, b.Table, flds, vls), nil
+	insertQuery := func(order []string) string {
+		flds := append([]string{}, insFields...)
+		vls := append([]string{}, insValues...)
+		for _, name := range order {
+			flds = append(flds, name)
+			vls = append(vls, jsonValues[name])
+		}
+		flds = append(flds, idField...)
+		vls = append(vls, idValue...)
+		return fmt.Sprintf(`INSERT INTO "%s" (%s) VALUES (%s)`, b.Table, strings.Join(flds, ","), strings.Join(vls, ","))
+	}
+	return insertQuery(b.jsonOrder(jsonColumnArr, insertQuery)), nil
 }
 
 func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (string, error) {
@@ -318,6 +375,9 @@ func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (
 		}
 		if k == `id` || (b.isKeyTable && !eco) {
 			continue
+		}
+		if b.ByteHexTwice && v != "" && syspar.IsByteColumn(b.Table, k) {
+			v = string(converter.BinToHex([]byte(v)))
 		}
 		rollbackInfo[k] = v
 	}

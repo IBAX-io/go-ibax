@@ -150,7 +150,7 @@ var (
 			isComma:    newCompileState(stateAssign, cfNothing),
 			lexIdent:   newCompileState(stateAssign, cfAssignVar),
 			lexExtend:  newCompileState(stateAssign, cfAssignVar),
-			isEq:       newCompileState(stateEval|stateToBody, cfAssign),
+			isEq:       newCompileState(stateEval|stateToBody|stateMustEval, cfAssign),
 			lexUnknown: newCompileState(errAssign, cfError),
 		},
 		stateTX: { // stateTX
