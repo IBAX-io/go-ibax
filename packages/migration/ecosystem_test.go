@@ -6,15 +6,20 @@
 package migration
 
 import (
-	"os"
+	"strings"
 	"testing"
+
+	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
+// The first ecosystem's script builds and registers the founder's wallet
 func TestGetEcosystemScript(t *testing.T) {
-	str, err := GetFirstEcosystemScript(SqlData{Wallet: -1744264011260937456})
+	const wallet = -1744264011260937456
+	script, err := GetFirstEcosystemScript(SqlData{Wallet: wallet})
 	if err != nil {
 		t.Fatal(err)
 	}
-	path, _ := os.Getwd()
-	os.WriteFile(path+"/eco.sql", []byte(str), 0777)
+	if !strings.Contains(script, converter.Int64ToStr(wallet)) {
+		t.Errorf("the script does not mention wallet %d", wallet)
+	}
 }
