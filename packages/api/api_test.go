@@ -28,6 +28,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var apiAddress = "http://localhost:7079"
@@ -37,6 +38,21 @@ var (
 	gAddress          string
 	gPrivate, gPublic string
 )
+
+// TestMain runs the tests of the package, which call the API of a node at apiAddress signed by the
+// private key in the file key, only when the node answers and the file is there
+func TestMain(m *testing.M) {
+	if _, err := os.Stat(`key`); err != nil {
+		fmt.Println("skipping the API tests: they need the private key of a node in the file key")
+		os.Exit(0)
+	}
+	var ret getUIDResult
+	if err := sendGet(`getuid`, nil, &ret); err != nil {
+		fmt.Printf("skipping the API tests: they need a node at %s: %v\n", apiAddress, err)
+		os.Exit(0)
+	}
+	os.Exit(m.Run())
+}
 
 // PrivateToPublicHex returns the hex public key for the specified hex private key.
 func PrivateToPublicHex(hexkey string) (string, error) {
@@ -839,12 +855,11 @@ func cutErr(err error) string {
 
 func TestGetAvatar(t *testing.T) {
 
-	err := keyLogin(1)
-	assert.NoError(t, err)
+	require.NoError(t, keyLogin(1))
 
-	url := `http://localhost:7079` + consts.ApiPath + "avatar/-1744264011260937456"
+	url := apiAddress + consts.ApiPath + "avatar/-1744264011260937456"
 	req, err := http.NewRequest(http.MethodGet, url, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	if len(gAuth) > 0 {
 		req.Header.Set("Authorization", jwtPrefix+gAuth)
@@ -852,7 +867,7 @@ func TestGetAvatar(t *testing.T) {
 
 	cli := http.DefaultClient
 	resp, err := cli.Do(req)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	defer resp.Body.Close()
 	mime := resp.Header.Get("Content-Type")

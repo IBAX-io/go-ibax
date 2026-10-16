@@ -21,12 +21,12 @@ func TestGetNotificationCountFilter(t *testing.T) {
 	testTable := []testItem{
 		{
 			Input:        []int64{3, 5},
-			Filter:       ` WHERE closed = false AND recipient_id IN (?) `,
+			Filter:       ` WHERE closed = 0 and ecosystem = '1' AND recipient->>'member_id' IN (?) `,
 			ParamsLength: 1,
 		},
 		{
 			Input:        nil,
-			Filter:       ` WHERE closed = false `,
+			Filter:       ` WHERE closed = 0 and ecosystem = '1' `,
 			ParamsLength: 0,
 		},
 	}
