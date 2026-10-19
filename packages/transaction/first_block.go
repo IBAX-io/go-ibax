@@ -134,18 +134,26 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		return err
 	}
 
+	// The founder's coins are an output of the first block, which TransferSelf moves to his account;
+	// a chain of the honor nodes only takes no TransferSelf, so there they are his account's balance
+	founderBalance := "0"
+	if data.HonorNodesOnly == 1 {
+		founderBalance = amount
+	}
 	err = sqldb.GetDB(dbTx).Exec(`insert into "1_keys" (id,account,pub,amount) values(?,?,?,?),(?,?,?,?)`,
-		keyID, converter.AddressToString(keyID), founder.Bytes(), 0, nodeKeyID, converter.AddressToString(nodeKeyID), nodeKey.Bytes(), 0).Error
+		keyID, converter.AddressToString(keyID), founder.Bytes(), founderBalance, nodeKeyID, converter.AddressToString(nodeKeyID), nodeKey.Bytes(), 0).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting key")
 		return err
 	}
 
-	err = sqldb.GetDB(dbTx).Exec(`insert into "spent_info" (output_index,output_tx_hash,output_key_id,output_value,ecosystem,block_id,type) values(?,?,?,?,?,?,?)`,
-		0, f.TxHash, keyID, amount, 1, 1, consts.UTXO_Type_First_Block).Error
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting spent info")
-		return err
+	if data.HonorNodesOnly != 1 {
+		err = sqldb.GetDB(dbTx).Exec(`insert into "spent_info" (output_index,output_tx_hash,output_key_id,output_value,ecosystem,block_id,type) values(?,?,?,?,?,?,?)`,
+			0, f.TxHash, keyID, amount, 1, 1, consts.UTXO_Type_First_Block).Error
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting spent info")
+			return err
+		}
 	}
 
 	err = smart.LoadContract(dbTx, 1)
