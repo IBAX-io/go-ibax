@@ -69,8 +69,22 @@ func (s *SmartTransactionParser) Init(t *InToCxt) error {
 	return nil
 }
 
+// checkTransferModel refuses the transfers of the UTXO model, TransferSelf and UTXO, on a chain only
+// the honor nodes generate: their fees stay out of 1_history, which the clearing of the alliance
+// reconciles, and they move the platform quota around its transfer rule. honor_nodes_only never
+// changes after genesis, so every node refuses them alike.
+func (s *SmartTransactionParser) checkTransferModel() error {
+	if s.TxSmart.TxType() != types.SmartContractTxType && syspar.IsHonorNodesOnly() {
+		return errors.New("a chain of the honor nodes only takes no TransferSelf nor UTXO transaction")
+	}
+	return nil
+}
+
 func (s *SmartTransactionParser) Validate() error {
 	if err := s.TxSmart.Validate(); err != nil {
+		return err
+	}
+	if err := s.checkTransferModel(); err != nil {
 		return err
 	}
 	// The header carries the key that signs; whether the account may sign with it is checked
@@ -136,6 +150,10 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	// transfer transactions move funds outside a contract, so this is the only place they are
 	// checked; contract transactions are checked here too, before their body runs.
 	if err = s.CheckTxSign(); err != nil {
+		return err
+	}
+	// A block another node made is checked as the queue checks a transaction
+	if err = s.checkTransferModel(); err != nil {
 		return err
 	}
 
