@@ -282,6 +282,36 @@ func (sc *SmartContract) IsCustomTable(table string) (isCustom bool, err error) 
 	return false, nil
 }
 
+// isParamsTable tells whether the table is one of the parameters of the ecosystem, the
+// parameters or the parameters of its applications
+func (sc *SmartContract) isParamsTable(table string) bool {
+	name := qb.GetTableName(sc.TxSmart.EcosystemID, table)
+	return name == `1_parameters` || name == `1_app_params`
+}
+
+// founderGate tells how a write of the parameters of the ecosystem of the transaction is checked.
+// See paramsFounderGate.
+func (sc *SmartContract) founderGate() (gated, allowed bool, err error) {
+	mode, err := sqldb.ControlMode(sc.DbTransaction, sc.TxSmart.EcosystemID)
+	if err != nil {
+		return false, false, logErrorDB(err, "getting the control mode")
+	}
+	gated, allowed = paramsFounderGate(mode, sc.actingKeyID(), converter.StrToInt64(EcosysParam(sc, `founder_account`)))
+	return gated, allowed, nil
+}
+
+// paramsFounderGate tells how a write of the parameters of an ecosystem is checked. In control
+// mode 2 the votings govern the ecosystem, and its founder may have handed it over and destroyed
+// his key: the permissions of the tables and of their columns check the write (gated is false),
+// which name the contracts that change the parameters, themselves run by a voting. In any other
+// mode the founder alone writes them (gated is true; allowed tells whether the key is his).
+func paramsFounderGate(controlMode, keyID, founder int64) (gated, allowed bool) {
+	if controlMode == 2 {
+		return false, false
+	}
+	return true, keyID != 0 && keyID == founder
+}
+
 func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]string, error) {
 	var (
 		err             error
@@ -289,12 +319,21 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 	)
 	logger := sc.GetLogger()
 	isRead := action == `read`
-	if qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_parameters` || qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_app_params` {
-		if isRead || sc.actingKeyID() == converter.StrToInt64(EcosysParam(sc, `founder_account`)) {
+	if sc.isParamsTable(table) {
+		if isRead {
 			return tablePermission, nil
 		}
-		logger.WithFields(log.Fields{"type": consts.AccessDenied}).Error("Access denied")
-		return tablePermission, errAccessDenied
+		gated, allowed, err := sc.founderGate()
+		if err != nil {
+			return tablePermission, err
+		}
+		if gated {
+			if allowed {
+				return tablePermission, nil
+			}
+			logger.WithFields(log.Fields{"type": consts.AccessDenied}).Error("Access denied")
+			return tablePermission, errAccessDenied
+		}
 	}
 
 	if isCustom, err := sc.IsCustomTable(table); err != nil {
@@ -353,15 +392,21 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 	if sc.FullAccess {
 		return nil
 	}
-	if qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_parameters` || qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_app_params` {
-		if update {
-			if sc.actingKeyID() == converter.StrToInt64(EcosysParam(sc, `founder_account`)) {
+	if sc.isParamsTable(table) {
+		if !update {
+			return nil
+		}
+		gated, allowed, err := sc.founderGate()
+		if err != nil {
+			return err
+		}
+		if gated {
+			if allowed {
 				return nil
 			}
 			log.WithFields(log.Fields{"key_id": sc.actingKeyID()}).Error("ACCESS DENIED")
 			return errAccessDenied
 		}
-		return nil
 	}
 	prefix, name := PrefixName(table)
 	tables := &sqldb.Table{}

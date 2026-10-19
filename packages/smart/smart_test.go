@@ -116,3 +116,23 @@ func TestContractConditionsStack(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, []any{"@1StackTx"}, sc.TxContract.StackCont)
 }
+
+// The founder alone writes the parameters of an ecosystem out of DAO mode; in DAO mode the
+// permissions of the tables do, the founder no more than any other key
+func TestParamsFounderGate(t *testing.T) {
+	for _, c := range []struct {
+		mode, key, founder int64
+		gated, allowed     bool
+	}{
+		{1, 7, 7, true, true},
+		{1, 8, 7, true, false},
+		{1, 0, 0, true, false},
+		{0, 7, 7, true, true},
+		{2, 7, 7, false, false},
+		{2, 8, 7, false, false},
+	} {
+		gated, allowed := paramsFounderGate(c.mode, c.key, c.founder)
+		require.Equal(t, c.gated, gated, "mode %d key %d", c.mode, c.key)
+		require.Equal(t, c.allowed, allowed, "mode %d key %d", c.mode, c.key)
+	}
+}

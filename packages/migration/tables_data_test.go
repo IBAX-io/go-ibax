@@ -201,13 +201,14 @@ func TestAgenciesAreSuspendedAndResumedByMembershipSuspendAndResume(t *testing.T
 			}
 		}
 	}
-	// The wallet of an agency takes the member role on admission and on resumption, and
-	// loses it on suspension
+	// The wallet of an agency takes its roles on admission, on resumption and when its tier
+	// changes, and loses them on suspension and when its tier changes; the founder loses his on
+	// the handover of the governance
 	for rule, contracts := range map[string][]string{
-		"roles_participants insert":       {"@1MembershipAdmit", "@1MembershipResume"},
-		"roles_participants update":       {"@1MembershipSuspend"},
-		"roles_participants deleted":      {"@1MembershipSuspend"},
-		"roles_participants date_deleted": {"@1MembershipSuspend"},
+		"roles_participants insert":       {"@1MembershipAdmit", "@1MembershipResume", "@1MembershipTierSet"},
+		"roles_participants update":       {"@1MembershipSuspend", "@1MembershipTierSet", "@1GovernanceHandover"},
+		"roles_participants deleted":      {"@1MembershipSuspend", "@1MembershipTierSet", "@1GovernanceHandover"},
+		"roles_participants date_deleted": {"@1MembershipSuspend", "@1MembershipTierSet", "@1GovernanceHandover"},
 	} {
 		for _, contract := range contracts {
 			if !regexp.MustCompile(`ContractAccess\(.*"` + contract + `"`).MatchString(rules[rule]) {

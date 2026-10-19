@@ -186,13 +186,13 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     (next_id('1_tables'), 'roles_participants',
         '{
             "read": "true",
-            "insert": "ContractAccess(\"@1RolesAssign\",\"@1VotingDecisionCheck\",\"@1RolesInstall\",\"@1MembershipAdmit\",\"@1MembershipResume\")",
-            "update": "ContractAccess(\"@1RolesUnassign\",\"@1MembershipSuspend\")",
+            "insert": "ContractAccess(\"@1RolesAssign\",\"@1VotingDecisionCheck\",\"@1RolesInstall\",\"@1MembershipAdmit\",\"@1MembershipResume\",\"@1MembershipTierSet\")",
+            "update": "ContractAccess(\"@1RolesUnassign\",\"@1MembershipSuspend\",\"@1MembershipTierSet\",\"@1GovernanceHandover\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
-            "deleted": "ContractAccess(\"@1RolesUnassign\",\"@1MembershipSuspend\")",
-            "date_deleted": "ContractAccess(\"@1RolesUnassign\",\"@1MembershipSuspend\")",
+            "deleted": "ContractAccess(\"@1RolesUnassign\",\"@1MembershipSuspend\",\"@1MembershipTierSet\",\"@1GovernanceHandover\")",
+            "date_deleted": "ContractAccess(\"@1RolesUnassign\",\"@1MembershipSuspend\",\"@1MembershipTierSet\",\"@1GovernanceHandover\")",
             "member": "false",
             "role": "false",
             "date_created": "false",
