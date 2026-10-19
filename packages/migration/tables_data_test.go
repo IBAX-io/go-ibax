@@ -127,3 +127,36 @@ func TestKeysAreUpdatedByDeleteMemberAndMembershipDecide(t *testing.T) {
 	}
 	t.Fatal("no keys table")
 }
+
+// An account of an ecosystem is inserted by the contracts that create accounts, and its coins with
+// it by TokensTransfer alone: were the insertion of keys open, a contract of any ecosystem would
+// insert an account of ecosystem 1 with the amount of its choice. The contracts that create
+// accounts outside the system set are AgencyOfficialAttest of the federal chain (the account of an
+// attested official, with its key) and BridgeMint, EcoFeeModeManage and AddAirdrop of the platform
+// applications; the contracts that create accounts have the history of their creation.
+func TestKeysAreInsertedByTheContractsThatCreateAccounts(t *testing.T) {
+	script, err := GetTableScript(SqlData{Ecosystem: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	permissions := map[string]map[string]string{}
+	for _, row := range tableRow.FindAllStringSubmatch(script, -1) {
+		if row[1] != "keys" && row[1] != "history" {
+			continue
+		}
+		var p map[string]string
+		if err := json.Unmarshal([]byte(row[2]), &p); err != nil {
+			t.Fatal(err)
+		}
+		permissions[row[1]] = p
+	}
+	const keys = `ContractAccess("@1NewUser","@1NewUserWithSeed","@1TokensTransfer","@1MembershipRequest","@1MembershipDecide","@1MembershipAdd","@1AgencyOfficialAttest","@1BridgeMint","@1EcoFeeModeManage","@1AddAirdrop")`
+	if permissions["keys"]["insert"] != keys {
+		t.Errorf("keys insert = %s, want %s", permissions["keys"]["insert"], keys)
+	}
+	for _, contract := range []string{"@1NewUserWithSeed", "@1BridgeMint", "@1EcoFeeModeManage", "@1AddAirdrop"} {
+		if !regexp.MustCompile(`ContractAccess\(.*"` + contract + `"`).MatchString(permissions["history"]["insert"]) {
+			t.Errorf("history insert = %s, want it to admit %s", permissions["history"]["insert"], contract)
+		}
+	}
+}
