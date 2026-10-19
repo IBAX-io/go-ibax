@@ -79,6 +79,9 @@ const (
 	Test = `test`
 	// PrivateBlockchain is value defining blockchain mode
 	PrivateBlockchain = `private_blockchain`
+	// HonorNodesOnly is 1 on a chain whose blocks only the honor nodes generate: it never
+	// enters the candidate node mode. The first block sets it, nothing changes it.
+	HonorNodesOnly = `honor_nodes_only`
 
 	// CostDefault is the default maximum cost of F
 	CostDefault = int64(20000000)
@@ -642,6 +645,11 @@ func GetFirstBlockData() (*types.FirstBlock, error) {
 	}
 
 	return firstBlockData, nil
+}
+
+// IsHonorNodesOnly reports whether only the honor nodes generate the blocks of the chain
+func IsHonorNodesOnly() bool {
+	return SysString(HonorNodesOnly) == `1`
 }
 
 // IsPrivateBlockchain returns the value of private_blockchain system parameter or true

@@ -16,6 +16,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -40,6 +41,10 @@ func (b *Block) Check() error {
 	if b.Header.Timestamp > time.Now().Unix() {
 		logger.WithFields(log.Fields{"type": consts.ParameterExceeded}).Error("block time is larger than now")
 		return ErrIncorrectBlockTime
+	}
+	if err := checkConsensusMode(b.Header, syspar.IsHonorNodesOnly()); err != nil {
+		logger.WithFields(log.Fields{"type": consts.BlockError, "consensus_mode": b.Header.ConsensusMode}).Error("a chain of honor nodes only takes no block of another consensus mode")
+		return err
 	}
 	var (
 		exists bool
@@ -93,6 +98,14 @@ func (b *Block) Check() error {
 	if err != nil {
 		transaction.CleanCache()
 		return err
+	}
+	return nil
+}
+
+// checkConsensusMode refuses, on a chain of honor nodes only, a block of another consensus mode
+func checkConsensusMode(header *types.BlockHeader, honorNodesOnly bool) error {
+	if honorNodesOnly && header.ConsensusMode != consts.HonorNodeMode {
+		return utils.WithBan(fmt.Errorf("consensus mode %d of block %d: only the honor nodes generate the blocks of this chain", header.ConsensusMode, header.BlockId))
 	}
 	return nil
 }

@@ -117,6 +117,12 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		return err
 	}
 
+	err = sqldb.GetDB(dbTx).Exec(`update "1_platform_parameters" SET value = ? where name = ?`, strconv.FormatUint(data.HonorNodesOnly, 10), syspar.HonorNodesOnly).Error
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating honor_nodes_only")
+		return err
+	}
+
 	err = sqldb.GetDB(dbTx).Exec(`update "1_platform_parameters" SET value = ? where name = ?`, algos.String(), syspar.AccountAlgorithms).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating account_algorithms")

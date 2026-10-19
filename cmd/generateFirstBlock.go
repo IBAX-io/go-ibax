@@ -25,6 +25,7 @@ import (
 var stopNetworkBundleFilepath string
 var testBlockchain bool
 var privateBlockchain bool
+var honorNodesOnly bool
 var accountAlgorithms string
 
 // generateFirstBlockCmd represents the generateFirstBlock command
@@ -46,6 +47,7 @@ func init() {
 	generateFirstBlockCmd.Flags().StringVar(&stopNetworkBundleFilepath, "stopNetworkCert", "", "Filepath to the fullchain of certificates for network stopping")
 	generateFirstBlockCmd.Flags().BoolVar(&testBlockchain, "test", false, "if true - test blockchain")
 	generateFirstBlockCmd.Flags().BoolVar(&privateBlockchain, "private", false, "if true - all transactions will be free")
+	generateFirstBlockCmd.Flags().BoolVar(&honorNodesOnly, "honorNodesOnly", false, "if true - only the honor nodes generate blocks, the chain never enters the candidate node mode")
 	generateFirstBlockCmd.Flags().StringVar(&accountAlgorithms, "accountAlgorithms", "", `algorithms account keys may have, as the platform parameter account_algorithms, e.g. [{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"}] (default: the node algorithm, with the latest days FIPS allows on a FIPS node and no days otherwise)`)
 }
 
@@ -108,6 +110,10 @@ func genesisBlock() ([]byte, error) {
 	if privateBlockchain == true {
 		pb = 1
 	}
+	var honorOnly uint64
+	if honorNodesOnly {
+		honorOnly = 1
+	}
 
 	fbp := new(transaction.FirstBlockParser)
 	first := &types.FirstBlock{
@@ -118,6 +124,7 @@ func genesisBlock() ([]byte, error) {
 		StopNetworkCertBundle: stopNetworkCert,
 		Test:                  test,
 		PrivateBlockchain:     pb,
+		HonorNodesOnly:        honorOnly,
 		AccountAlgorithms:     algos,
 	}
 	if _, _, err := transaction.CheckFirstBlockAccounts(first); err != nil {

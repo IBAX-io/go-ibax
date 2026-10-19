@@ -39,6 +39,8 @@ type FirstBlock struct {
 	StopNetworkCertBundle []byte
 	Test                  int64
 	PrivateBlockchain     uint64
+	// HonorNodesOnly is the value of the platform parameter honor_nodes_only
+	HonorNodesOnly uint64
 	// AccountAlgorithms is the initial value of the platform parameter account_algorithms
 	AccountAlgorithms string
 }
