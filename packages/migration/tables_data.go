@@ -40,7 +40,8 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "blocked": "ContractAccess(\"@1TokensLockoutMember\")",
             "account": "false",
             "ecosystem": "false",
-            "multi": "ContractConditions(\"@1MainCondition\")"
+            "multi": "ContractConditions(\"@1MainCondition\")",
+            "conditions": "false"
         }',
         'ContractConditions("@1MainCondition")', '{{.Ecosystem}}'
     ),

@@ -40,6 +40,11 @@ const (
 	eKeyNotFound           = `sender %s has not been found`
 	eEcoKeyNotFound        = `sender %s has not been found in ecosystem %d`
 	eEcoKeyDisable         = `%s disable in ecosystem %d`
+	eCallAsAccount         = `account %s is not an account of the ecosystem that contracts control`
+	eCallAsKey             = `account %s has a key: contracts do not control it`
+	eCallAsCaller          = `the conditions of account %s do not name the calling contract`
+	eContractParams        = `the parameters of the contract: %v`
+	eKeyControlled         = `account %s is controlled by contracts and signs no transaction`
 	eEcoFuelRate           = `fuel rate must be greater than 0 or empty in ecosystem %d`
 	eEcoCurrentBalance     = `account %s current balance is not enough in ecosystem %d`
 	eEcoCurrentBalanceDiff = eEcoCurrentBalance + `, at least [%s] difference`

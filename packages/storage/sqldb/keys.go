@@ -26,6 +26,8 @@ type Key struct {
 	Maxpay    string `gorm:"not null"`
 	Deleted   int64  `gorm:"not null"`
 	Blocked   int64  `gorm:"not null"`
+	// Conditions name the contracts that control an account without a key
+	Conditions string `gorm:"column:conditions"`
 }
 
 // SetTablePrefix is setting table prefix

@@ -153,6 +153,7 @@ var (
 		"DeleteCLB":             {},
 		"DelColumn":             {},
 		"DelTable":              {},
+		"CallContractAs":        {},
 	}
 	// map for table name to parameter with conditions
 	tableParamConditions = map[string]string{
@@ -187,6 +188,7 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"ContractAccess":               ContractAccess,
 		"RoleAccess":                   RoleAccess,
 		"ContractConditions":           ContractConditions,
+		"CallContractAs":               CallContractAs,
 		"ContractName":                 contractName,
 		"ValidateEditContractNewValue": ValidateEditContractNewValue,
 		"CreateColumn":                 CreateColumn,

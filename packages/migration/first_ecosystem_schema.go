@@ -72,6 +72,7 @@ var sqlFirstEcosystemCommon = `
 		t.Column("blocked", "bigint", {"default": "0"})
 		t.Column("ecosystem", "bigint", {"default": "1"})
 		t.Column("account", "char(24)", {})
+		t.Column("conditions", "text", {"default": ""})
 		t.PrimaryKey("ecosystem", "id")
 	{{footer "index(account)" "unique(ecosystem, account)"}}
 

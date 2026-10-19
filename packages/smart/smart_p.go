@@ -594,12 +594,12 @@ func BndWallet(sc *SmartContract, tblid int64, state int64) error {
 		return err
 	}
 
-	if _, _, err := sc.update([]string{"wallet_id"}, []any{sc.TxSmart.KeyID}, "1_contracts", "id", tblid); err != nil {
+	if _, _, err := sc.update([]string{"wallet_id"}, []any{sc.actingKeyID()}, "1_contracts", "id", tblid); err != nil {
 		log.WithFields(log.Fields{"error": err, "contract_id": tblid}).Error("on updating contract wallet")
 		return err
 	}
 
-	return SetContractWallet(sc, tblid, state, sc.TxSmart.KeyID)
+	return SetContractWallet(sc, tblid, state, sc.actingKeyID())
 }
 
 // UnbndWallet sets Active status of the contract in smartVM

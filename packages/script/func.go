@@ -200,6 +200,19 @@ func ExContract(rt *RunTime, state uint32, name string, params *types.Map) (any,
 	return ExecContract(rt, name, strings.Join(names, `,`), vals...)
 }
 
+// ExContractAs executes the name contract as ExContract does, with $key_id and $account_id
+// the given account's while it and the contracts it calls run
+func ExContractAs(rt *RunTime, state uint32, name string, params *types.Map, keyID int64, accountID string) (any, error) {
+	prevKeyID, prevAccountID := rt.extend[Extend_key_id], rt.extend[Extend_account_id]
+	rt.setExtendVar(Extend_key_id, keyID)
+	rt.setExtendVar(Extend_account_id, accountID)
+	defer func() {
+		rt.setExtendVar(Extend_key_id, prevKeyID)
+		rt.setExtendVar(Extend_account_id, prevAccountID)
+	}()
+	return ExContract(rt, state, name, params)
+}
+
 // GetSettings returns the value of the parameter
 func GetSettings(rt *RunTime, cntname, name string) (any, error) {
 	contract, found := rt.vm.Objects[cntname]

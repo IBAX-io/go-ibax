@@ -91,6 +91,8 @@ type SmartContract struct {
 	TxOutputsMap    map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	PrevSysPar      map[string]string
 	EcoParams       []sqldb.EcoParam
+	// callAs is the account that CallContractAs runs a contract as, 0 outside it
+	callAs int64
 }
 
 // AppendStack adds an element to the stack of contract call or removes the top element when name is empty
@@ -127,12 +129,19 @@ func (sc *SmartContract) isAllowStack(fn string) bool {
 func InitVM() {
 	script.GetVM().SetExtendCost(getCost)
 	script.GetVM().SetFuncCallsDB(funcCallsDBP)
-	script.GetVM().Extend(&script.ExtendData{
-		Objects: EmbedFuncs(defineVMType()), AutoPars: map[string]string{
+	script.GetVM().Extend(extendData(defineVMType()))
+}
+
+// extendData is what the contracts of a VM of the type call in Go, and the parameters of it the
+// VM passes by itself
+func extendData(vt script.VMType) *script.ExtendData {
+	return &script.ExtendData{
+		Objects: EmbedFuncs(vt), AutoPars: map[string]string{
 			`*smart.SmartContract`: `sc`,
+			`*script.RunTime`:      `rt`,
 		},
 		WriteFuncs: writeFuncs,
-	})
+	}
 }
 
 func defineVMType() script.VMType {
@@ -281,7 +290,7 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 	logger := sc.GetLogger()
 	isRead := action == `read`
 	if qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_parameters` || qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_app_params` {
-		if isRead || sc.TxSmart.KeyID == converter.StrToInt64(EcosysParam(sc, `founder_account`)) {
+		if isRead || sc.actingKeyID() == converter.StrToInt64(EcosysParam(sc, `founder_account`)) {
 			return tablePermission, nil
 		}
 		logger.WithFields(log.Fields{"type": consts.AccessDenied}).Error("Access denied")
@@ -346,10 +355,10 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 	}
 	if qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_parameters` || qb.GetTableName(sc.TxSmart.EcosystemID, table) == `1_app_params` {
 		if update {
-			if sc.TxSmart.KeyID == converter.StrToInt64(EcosysParam(sc, `founder_account`)) {
+			if sc.actingKeyID() == converter.StrToInt64(EcosysParam(sc, `founder_account`)) {
 				return nil
 			}
-			log.WithFields(log.Fields{"txSmart.KeyId": sc.TxSmart.KeyID}).Error("ACCESS DENIED")
+			log.WithFields(log.Fields{"key_id": sc.actingKeyID()}).Error("ACCESS DENIED")
 			return errAccessDenied
 		}
 		return nil
@@ -663,6 +672,11 @@ func (sc *SmartContract) CheckTxSign() error {
 		// $key_id and $account_id are the signer's, as for any other transaction
 		sc.Key.ID = signedBy
 		sc.Key.AccountID = converter.AddressToString(signedBy)
+	}
+	if isFound && len(sc.Key.Conditions) > 0 {
+		err = fmt.Errorf(eKeyControlled, converter.AddressToString(signedBy))
+		sc.GetLogger().WithFields(log.Fields{"type": consts.AccessDenied, "error": err}).Error("signed by an account of contracts")
+		return err
 	}
 	if isFound && sc.Key.Disable() {
 		err = fmt.Errorf(eEcoKeyDisable, converter.AddressToString(signedBy), sc.TxSmart.EcosystemID)
