@@ -28,8 +28,8 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     (next_id('1_tables'), 'keys',
         '{
             "read": "true",
-            "insert": "ContractAccess(\"@1NewUser\",\"@1NewUserWithSeed\",\"@1TokensTransfer\",\"@1MembershipRequest\",\"@1MembershipDecide\",\"@1MembershipAdd\",\"@1AgencyOfficialAttest\",\"@1BridgeMint\",\"@1EcoFeeModeManage\",\"@1AddAirdrop\")",
-            "update": "ContractAccess(\"@1TokensTransfer\",\"@1TokensLockoutMember\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1NewUser\",\"@1DeleteMember\",\"@1MembershipDecide\")",
+            "insert": "ContractAccess(\"@1NewUser\",\"@1NewUserWithSeed\",\"@1TokensTransfer\",\"@1MembershipRequest\",\"@1MembershipDecide\",\"@1MembershipAdd\",\"@1AgencyOfficialAttest\",\"@1BridgeMint\",\"@1EcoFeeModeManage\",\"@1AddAirdrop\",\"@1MembershipAdmit\")",
+            "update": "ContractAccess(\"@1TokensTransfer\",\"@1TokensLockoutMember\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\",\"@1NewUser\",\"@1DeleteMember\",\"@1MembershipDecide\",\"@1MembershipSuspend\",\"@1MembershipResume\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
@@ -37,7 +37,7 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
             "amount": "ContractAccess(\"@1TokensTransfer\",\"@1NewToken\",\"@1TeBurn\",\"@1ProfileEdit\")",
             "maxpay": "ContractConditions(\"@1MainCondition\")",
             "deleted": "ContractAccess(\"@1DeleteMember\")",
-            "blocked": "ContractAccess(\"@1TokensLockoutMember\")",
+            "blocked": "ContractAccess(\"@1TokensLockoutMember\",\"@1MembershipSuspend\",\"@1MembershipResume\")",
             "account": "false",
             "ecosystem": "false",
             "multi": "ContractConditions(\"@1MainCondition\")",
@@ -186,13 +186,13 @@ var tablesDataSQL = `INSERT INTO "1_tables" ("id", "name", "permissions","column
     (next_id('1_tables'), 'roles_participants',
         '{
             "read": "true",
-            "insert": "ContractAccess(\"@1RolesAssign\",\"@1VotingDecisionCheck\",\"@1RolesInstall\")",
-            "update": "ContractAccess(\"@1RolesUnassign\")",
+            "insert": "ContractAccess(\"@1RolesAssign\",\"@1VotingDecisionCheck\",\"@1RolesInstall\",\"@1MembershipAdmit\",\"@1MembershipResume\")",
+            "update": "ContractAccess(\"@1RolesUnassign\",\"@1MembershipSuspend\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
-            "deleted": "ContractAccess(\"@1RolesUnassign\")",
-            "date_deleted": "ContractAccess(\"@1RolesUnassign\")",
+            "deleted": "ContractAccess(\"@1RolesUnassign\",\"@1MembershipSuspend\")",
+            "date_deleted": "ContractAccess(\"@1RolesUnassign\",\"@1MembershipSuspend\")",
             "member": "false",
             "role": "false",
             "date_created": "false",

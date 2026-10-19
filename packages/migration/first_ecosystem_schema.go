@@ -20,6 +20,7 @@ var sqlFirstEcosystemSchema = `
 		t.Column("type_withdraw", "bigint", {"default": "0"})
 		t.Column("control_mode", "bigint", {"default": "1"})
 		t.Column("digits", "bigint", {"default": "0"})
+		t.Column("frozen", "bigint", {"default": "0"})
 	{{footer "primary"}}
 
 	{{head "1_platform_parameters"}}

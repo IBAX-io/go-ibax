@@ -655,6 +655,18 @@ func (sc *SmartContract) CheckTxSign() error {
 		return err
 	}
 
+	// A frozen ecosystem (a suspended agency of the federal chain) runs no transaction until ecosystem
+	// 1 resumes it
+	frozen, err := sqldb.IsFrozen(sc.DbTransaction, sc.TxSmart.EcosystemID)
+	if err != nil {
+		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting ecosystem")
+		return err
+	}
+	if frozen {
+		err = fmt.Errorf(eEcoFrozen, sc.TxSmart.EcosystemID)
+		sc.GetLogger().WithFields(log.Fields{"type": consts.AccessDenied, "error": err}).Error("frozen ecosystem")
+		return err
+	}
 	isFound, err := sc.Key.SetTablePrefix(sc.TxSmart.EcosystemID).Get(sc.DbTransaction, signedBy)
 	if err != nil {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting wallet")

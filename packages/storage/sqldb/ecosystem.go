@@ -28,6 +28,9 @@ type Ecosystem struct {
 	Digits         int64
 	Info           string `gorm:"type:jsonb"`
 	FeeModeInfo    string `json:"fee_mode_info" gorm:"type:jsonb"`
+	// Frozen is not 0 for an ecosystem whose transactions the nodes refuse (a suspended agency of
+	// the federal chain)
+	Frozen int64
 }
 
 type FeeModeFlag struct {
@@ -126,6 +129,19 @@ func GetEcoParam(db *DbTransaction, ids []int64) ([]EcoParam, error) {
 // Get is fill receiver from db
 func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
 	return isFound(GetDB(dbTx).First(sys, "id = ?", id))
+}
+
+// IsFrozen reports whether the nodes refuse the transactions of the ecosystem. Ecosystem 1, which
+// governs the others and resumes them, is never frozen.
+func IsFrozen(dbTx *DbTransaction, id int64) (bool, error) {
+	if id == consts.DefaultTokenEcosystem {
+		return false, nil
+	}
+	var frozen []int64
+	if err := GetDB(dbTx).Model(&Ecosystem{}).Where("id = ?", id).Pluck("frozen", &frozen).Error; err != nil {
+		return false, err
+	}
+	return len(frozen) > 0 && frozen[0] != 0, nil
 }
 
 // Delete is deleting record

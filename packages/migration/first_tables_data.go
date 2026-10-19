@@ -31,7 +31,7 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
         '{
             "read": "true",
             "insert": "ContractAccess(\"@1NewEcosystem\")",
-            "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1EcoFeeModeManage\",\"@1EditControlMode\",\"@1NewToken\",\"@1TeChange\",\"@1TeEmission\",\"@1TeBurn\")",
+            "update": "ContractAccess(\"@1EditEcosystemName\",\"@1VotingVesAccept\",\"@1EcManageInfo\",\"@1EcoFeeModeManage\",\"@1EditControlMode\",\"@1NewToken\",\"@1TeChange\",\"@1TeEmission\",\"@1TeBurn\",\"@1MembershipSuspend\",\"@1MembershipResume\")",
             "new_column": "ContractConditions(\"@1MainCondition\")"
         }',
         '{
@@ -45,7 +45,8 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "token_name": "ContractAccess(\"@1NewToken\")",
             "type_emission": "ContractAccess(\"@1TeChange\",\"@1NewToken\")",
             "type_withdraw": "ContractAccess(\"@1TeChange\",\"@1NewToken\")",
-            "control_mode": "ContractAccess(\"@1EditControlMode\")"
+            "control_mode": "ContractAccess(\"@1EditControlMode\")",
+            "frozen": "ContractAccess(\"@1MembershipSuspend\",\"@1MembershipResume\")"
         }',
         'ContractConditions("@1MainCondition")'
     ),

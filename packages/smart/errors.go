@@ -45,6 +45,7 @@ const (
 	eCallAsCaller          = `the conditions of account %s do not name the calling contract`
 	eContractParams        = `the parameters of the contract: %v`
 	eKeyControlled         = `account %s is controlled by contracts and signs no transaction`
+	eEcoFrozen             = `ecosystem %d is frozen and runs no transaction`
 	eEcoFuelRate           = `fuel rate must be greater than 0 or empty in ecosystem %d`
 	eEcoCurrentBalance     = `account %s current balance is not enough in ecosystem %d`
 	eEcoCurrentBalanceDiff = eEcoCurrentBalance + `, at least [%s] difference`

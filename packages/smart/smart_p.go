@@ -524,25 +524,20 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 		return 0, logErrorDB(err, "inserting default menu")
 	}
 
-	var (
-		ret []any
-		pub string
-	)
-	_, ret, err = DBSelect(sc, "@1keys", "pub", wallet, `id`, 0, 1, nil, "", "", false)
-	if err != nil {
+	// The account of the founder is its account of ecosystem 1
+	founder := &sqldb.Key{}
+	if _, err = founder.SetTablePrefix(consts.DefaultTokenEcosystem).Get(sc.DbTransaction, wallet); err != nil {
 		return 0, logErrorDB(err, "getting pub key")
 	}
-
-	if Len(ret) > 0 {
-		if v, found := ret[0].(*types.Map).Get("pub"); found {
-			pub = v.(string)
-		}
-	}
+	// The founder is the same account in the new ecosystem: a key signs there as it signs here, and
+	// an account that contracts control (a multisig wallet) is controlled there by the same
+	// contracts, which run as it with CallContractAs in the transactions of the new ecosystem
 	if _, _, err := DBInsert(sc, `@1keys`, types.LoadMap(map[string]any{
-		"id":        wallet,
-		"account":   converter.AddressToString(wallet),
-		"pub":       pub,
-		"ecosystem": idStr,
+		"id":         wallet,
+		"account":    converter.AddressToString(wallet),
+		"pub":        string(founder.PublicKey),
+		"conditions": founder.Conditions,
+		"ecosystem":  idStr,
 	})); err != nil {
 		return 0, logErrorDB(err, "inserting key")
 	}

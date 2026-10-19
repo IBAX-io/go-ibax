@@ -132,7 +132,8 @@ func TestKeysAreUpdatedByDeleteMemberAndMembershipDecide(t *testing.T) {
 // it by TokensTransfer alone: were the insertion of keys open, a contract of any ecosystem would
 // insert an account of ecosystem 1 with the amount of its choice. The contracts that create
 // accounts outside the system set are AgencyOfficialAttest of the federal chain (the account of an
-// attested official, with its key) and BridgeMint, EcoFeeModeManage and AddAirdrop of the platform
+// attested official, with its key), MembershipAdmit of the federal chain (the accounts of the
+// officials of an admitted agency in its ecosystem) and BridgeMint, EcoFeeModeManage and AddAirdrop of the platform
 // applications; the contracts that create accounts have the history of their creation.
 func TestKeysAreInsertedByTheContractsThatCreateAccounts(t *testing.T) {
 	script, err := GetTableScript(SqlData{Ecosystem: 2})
@@ -150,13 +151,68 @@ func TestKeysAreInsertedByTheContractsThatCreateAccounts(t *testing.T) {
 		}
 		permissions[row[1]] = p
 	}
-	const keys = `ContractAccess("@1NewUser","@1NewUserWithSeed","@1TokensTransfer","@1MembershipRequest","@1MembershipDecide","@1MembershipAdd","@1AgencyOfficialAttest","@1BridgeMint","@1EcoFeeModeManage","@1AddAirdrop")`
+	const keys = `ContractAccess("@1NewUser","@1NewUserWithSeed","@1TokensTransfer","@1MembershipRequest","@1MembershipDecide","@1MembershipAdd","@1AgencyOfficialAttest","@1BridgeMint","@1EcoFeeModeManage","@1AddAirdrop","@1MembershipAdmit")`
 	if permissions["keys"]["insert"] != keys {
 		t.Errorf("keys insert = %s, want %s", permissions["keys"]["insert"], keys)
 	}
 	for _, contract := range []string{"@1NewUserWithSeed", "@1BridgeMint", "@1EcoFeeModeManage", "@1AddAirdrop"} {
 		if !regexp.MustCompile(`ContractAccess\(.*"` + contract + `"`).MatchString(permissions["history"]["insert"]) {
 			t.Errorf("history insert = %s, want it to admit %s", permissions["history"]["insert"], contract)
+		}
+	}
+}
+
+// An agency of the federal chain is suspended and resumed by the votes of the members: the
+// suspension freezes its ecosystem, whose transactions the nodes refuse, and blocks its wallet in
+// ecosystem 1, and the resumption undoes both. No other contract freezes an ecosystem.
+func TestAgenciesAreSuspendedAndResumedByMembershipSuspendAndResume(t *testing.T) {
+	script, err := GetTableScript(SqlData{Ecosystem: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rules := map[string]string{}
+	for name, data := range map[string]string{"": script, "first ": firstTablesDataSQL} {
+		for _, row := range tableColumns.FindAllStringSubmatch(data, -1) {
+			if row[1] != "keys" && row[1] != "ecosystems" && row[1] != "roles_participants" {
+				continue
+			}
+			var permissions, columns map[string]string
+			if err := json.Unmarshal([]byte(row[2]), &permissions); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal([]byte(row[3]), &columns); err != nil {
+				t.Fatal(err)
+			}
+			rules[name+row[1]+" insert"] = permissions["insert"]
+			rules[name+row[1]+" update"] = permissions["update"]
+			for column, rule := range columns {
+				rules[name+row[1]+" "+column] = rule
+			}
+		}
+	}
+	const frozen = `ContractAccess("@1MembershipSuspend","@1MembershipResume")`
+	if rules["first ecosystems frozen"] != frozen {
+		t.Errorf("ecosystems frozen = %s, want %s", rules["first ecosystems frozen"], frozen)
+	}
+	for _, rule := range []string{"first ecosystems update", "keys update", "keys blocked"} {
+		for _, contract := range []string{"@1MembershipSuspend", "@1MembershipResume"} {
+			if !regexp.MustCompile(`ContractAccess\(.*"` + contract + `"`).MatchString(rules[rule]) {
+				t.Errorf("%s = %s, want it to admit %s", rule, rules[rule], contract)
+			}
+		}
+	}
+	// The wallet of an agency takes the member role on admission and on resumption, and
+	// loses it on suspension
+	for rule, contracts := range map[string][]string{
+		"roles_participants insert":       {"@1MembershipAdmit", "@1MembershipResume"},
+		"roles_participants update":       {"@1MembershipSuspend"},
+		"roles_participants deleted":      {"@1MembershipSuspend"},
+		"roles_participants date_deleted": {"@1MembershipSuspend"},
+	} {
+		for _, contract := range contracts {
+			if !regexp.MustCompile(`ContractAccess\(.*"` + contract + `"`).MatchString(rules[rule]) {
+				t.Errorf("%s = %s, want it to admit %s", rule, rules[rule], contract)
+			}
 		}
 	}
 }
