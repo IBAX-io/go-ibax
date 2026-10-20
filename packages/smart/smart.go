@@ -312,6 +312,22 @@ func paramsFounderGate(controlMode, keyID, founder int64) (gated, allowed bool) 
 	return true, keyID != 0 && keyID == founder
 }
 
+// bftTables are the tables of the evidence and the reviews of the BFT consensus (F18). The
+// evidence and review transactions of the node write them; no contract writes them or changes
+// their columns or permissions, whatever their permissions say.
+var bftTables = map[string]bool{`1_bft_evidence`: true, `1_bft_reviews`: true}
+
+// errBftTable refuses a contract a write or a change of a table of bftTables
+var errBftTable = errors.New(`the table is written by the consensus only`)
+
+// denyBftTable refuses a change of a table of bftTables, named as a contract names it
+func (sc *SmartContract) denyBftTable(name string) error {
+	if table := qb.GetTableName(sc.TxSmart.EcosystemID, strings.ToLower(name)); bftTables[table] {
+		return fmt.Errorf("table %s: %w", table, errBftTable)
+	}
+	return nil
+}
+
 func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]string, error) {
 	var (
 		err             error
@@ -319,6 +335,9 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 	)
 	logger := sc.GetLogger()
 	isRead := action == `read`
+	if !isRead && bftTables[strings.ToLower(table)] {
+		return tablePermission, fmt.Errorf("table %s: %w", table, errBftTable)
+	}
 	if sc.isParamsTable(table) {
 		if isRead {
 			return tablePermission, nil
@@ -370,6 +389,9 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 
 // AccessTable checks the access right to the table
 func (sc *SmartContract) AccessTable(table, action string) error {
+	if action != `read` && bftTables[strings.ToLower(table)] {
+		return fmt.Errorf("table %s: %w", table, errBftTable)
+	}
 	if sc.FullAccess {
 		return nil
 	}

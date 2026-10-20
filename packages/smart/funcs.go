@@ -1201,6 +1201,9 @@ func Len(in []any) int64 {
 
 // PermTable is changing permission of table
 func PermTable(sc *SmartContract, name, permissions string) error {
+	if err := sc.denyBftTable(name); err != nil {
+		return err
+	}
 	if err := validateAccess(sc, "PermTable"); err != nil {
 		return err
 	}
@@ -1287,6 +1290,9 @@ func columnConditions(sc *SmartContract, columns string) (err error) {
 
 // TableConditions is contract func
 func TableConditions(sc *SmartContract, name, columns, permissions string) (err error) {
+	if err := sc.denyBftTable(name); err != nil {
+		return err
+	}
 	isEdit := len(columns) == 0
 	name = strings.ToLower(name)
 	if err := validateAccess(sc, "TableConditions"); err != nil {
@@ -1363,6 +1369,9 @@ func ValidateCondition(sc *SmartContract, condition string, state int64) error {
 
 // ColumnCondition is contract func
 func ColumnCondition(sc *SmartContract, tableName, name, coltype, permissions string) error {
+	if err := sc.denyBftTable(tableName); err != nil {
+		return err
+	}
 	name = converter.EscapeSQL(strings.ToLower(name))
 	tableName = converter.EscapeSQL(strings.ToLower(tableName))
 	if err := validateAccess(sc, "ColumnCondition"); err != nil {
@@ -1485,6 +1494,9 @@ func checkTableNameRule(name string) error {
 
 // CreateColumn is creating column
 func CreateColumn(sc *SmartContract, tableName, name, colType, permissions string) (err error) {
+	if err := sc.denyBftTable(tableName); err != nil {
+		return err
+	}
 	var (
 		sqlColType string
 		permout    []byte
@@ -1546,6 +1558,9 @@ func CreateColumn(sc *SmartContract, tableName, name, colType, permissions strin
 
 // PermColumn is contract func
 func PermColumn(sc *SmartContract, tableName, name, permissions string) error {
+	if err := sc.denyBftTable(tableName); err != nil {
+		return err
+	}
 	if err := validateAccess(sc, "PermColumn"); err != nil {
 		return err
 	}
@@ -2266,6 +2281,9 @@ func UpdateRolesNotifications(sc *SmartContract, ecosystemID int64, roles ...any
 	sc.Notifications.AddRoles(ecosystemID, rolesList...)
 }
 func DelColumn(sc *SmartContract, tableName, name string) (err error) {
+	if err := sc.denyBftTable(tableName); err != nil {
+		return err
+	}
 	var (
 		count   int64
 		permout []byte
@@ -2344,6 +2362,9 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 }
 
 func DelTable(sc *SmartContract, tableName string) (err error) {
+	if err := sc.denyBftTable(tableName); err != nil {
+		return err
+	}
 	var (
 		count int64
 	)

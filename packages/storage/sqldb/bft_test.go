@@ -31,7 +31,7 @@ func TestBftTables(t *testing.T) {
 	cert := &BftCertificate{Height: 5, Round: 1, Hash: []byte{5}, Data: []byte{1, 2}}
 	require.NoError(t, cert.Create(dbTx))
 	require.NoError(t, tx.SavePoint("certificate").Error)
-	require.Error(t, (&BftCertificate{Height: 5}).Create(dbTx))
+	require.ErrorContains(t, (&BftCertificate{Height: 5, Hash: []byte{6}, Data: []byte{6}}).Create(dbTx), "duplicate key")
 	require.NoError(t, tx.RollbackTo("certificate").Error)
 	got := &BftCertificate{}
 	found, err := got.Get(dbTx, 5)
@@ -67,7 +67,7 @@ func TestBftTables(t *testing.T) {
 	require.False(t, found)
 	// the key of an evidence is unique
 	require.NoError(t, tx.SavePoint("evidence").Error)
-	require.Error(t, tx.Create(&BftEvidence{ID: 2, PublicKey: key, Height: 7, Round: 2, Kind: 3}).Error)
+	require.ErrorContains(t, tx.Create(&BftEvidence{ID: 2, PublicKey: key, Height: 7, Round: 2, Kind: 3, Data: []byte{8}}).Error, "duplicate key")
 	require.NoError(t, tx.RollbackTo("evidence").Error)
 
 	reviews := []*BftReview{
@@ -96,7 +96,7 @@ func TestBftTables(t *testing.T) {
 	require.Equal(t, int64(2), rs[0].ID)
 	// one review of an evidence
 	require.NoError(t, tx.SavePoint("review").Error)
-	require.Error(t, tx.Create(&BftReview{ID: 4, EvidenceID: 1}).Error)
+	require.ErrorContains(t, tx.Create(&BftReview{ID: 4, EvidenceID: 1, PublicKey: key}).Error, "duplicate key")
 	require.NoError(t, tx.RollbackTo("review").Error)
 
 	// the sign state is written outside the transaction of a block, and only of the last height
