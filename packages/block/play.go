@@ -27,6 +27,11 @@ import (
 
 // PlaySafe is inserting block safely
 func (b *Block) PlaySafe() error {
+	return b.playSafe(nil)
+}
+
+// playSafe executes the block and inserts it, and runs also in the transaction of the block
+func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 	logger := b.GetLogger()
 	dbTx, err := sqldb.StartTransaction()
 	if err != nil {
@@ -48,6 +53,12 @@ func (b *Block) PlaySafe() error {
 	if err := b.InsertIntoBlockchain(dbTx); err != nil {
 		dbTx.Rollback()
 		return err
+	}
+	if also != nil {
+		if err := also(dbTx); err != nil {
+			dbTx.Rollback()
+			return err
+		}
 	}
 	err = dbTx.Commit()
 	if err != nil {
@@ -74,10 +85,15 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	txsMap := b.ClassifyTxsMap
 	processedTx := make([][]byte, 0, len(b.Transactions))
 
+	// a validator's trial of the block of another node bans no key and marks no transaction bad
+	mark := !b.trial || b.GenBlock
 	processBadTx := func() chan badTxStruct {
 		ch := make(chan badTxStruct)
 		go func() {
 			for badTxItem := range ch {
+				if !mark {
+					continue
+				}
 				transaction.BadTxForBan(badTxItem.keyID)
 				_ = transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
 			}
@@ -260,8 +276,10 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 		err = t.Play()
 		if err != nil {
 			if err == transaction.ErrNetworkStopping {
-				// Set the node in a pause state
-				node.PauseNodeActivity(node.PauseTypeStopingNetwork)
+				// Set the node in a pause state, when the block is not a trial
+				if !b.trial {
+					node.PauseNodeActivity(node.PauseTypeStopingNetwork)
+				}
 				return err
 			}
 			errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())))

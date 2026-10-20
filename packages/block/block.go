@@ -32,6 +32,7 @@ type Block struct {
 	PrevSysPar        map[string]string
 	EcoParams         []sqldb.EcoParam // combustion percent,digits for each ecosystem
 	size              *blockSize       // the encoded length of the block being generated
+	trial             bool             // the block is executed by Trial and rolled back
 }
 
 // GetLogger is returns logger

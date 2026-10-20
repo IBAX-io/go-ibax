@@ -19,7 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//cacheLang is cache for language, first level is lang_name, second is lang dictionary
+// cacheLang is cache for language, first level is lang_name, second is lang dictionary
 type cacheLang struct {
 	res map[string]*map[string]string
 }
@@ -72,6 +72,39 @@ func UpdateLang(state int, name, value string) error {
 		(*lang[state]).res[name] = &ires
 	}
 	return nil
+}
+
+// Snapshot is the language sources of every ecosystem as they are now
+type Snapshot map[int]map[string]*map[string]string
+
+// TakeSnapshot copies the language sources that UpdateLang and the loading change; the sources of a
+// name are replaced, never changed in place, so the maps of the sources are shared
+func TakeSnapshot() Snapshot {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	s := make(Snapshot, len(lang))
+	for state, c := range lang {
+		res := make(map[string]*map[string]string, len(c.res))
+		for name, v := range c.res {
+			res[name] = v
+		}
+		s[state] = res
+	}
+	return s
+}
+
+// Restore puts the language sources back to the snapshot
+func Restore(s Snapshot) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	lang = make(map[int]*cacheLang, len(s))
+	for state, res := range s {
+		c := &cacheLang{make(map[string]*map[string]string, len(res))}
+		for name, v := range res {
+			c.res[name] = v
+		}
+		lang[state] = c
+	}
 }
 
 // loadLang download the language sources from database for the state

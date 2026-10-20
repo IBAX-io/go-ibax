@@ -24,6 +24,18 @@ type Hash [HashSize]byte
 // Nil is the hash of nil, the value a validator votes for when it votes for no block
 var Nil Hash
 
+// ErrHashSize is the error of a block hash that is not HashSize bytes long
+var ErrHashSize = errors.New("bft: the block hash is not 32 bytes long")
+
+// HashOf is the hash of a block, of its header's BlockHash
+func HashOf(blockHash []byte) (h Hash, err error) {
+	if len(blockHash) != HashSize {
+		return h, ErrHashSize
+	}
+	copy(h[:], blockHash)
+	return h, nil
+}
+
 // MsgType is the type of a signed message
 type MsgType uint8
 

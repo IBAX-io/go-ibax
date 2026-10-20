@@ -44,30 +44,75 @@ func GetVM() *VM {
 	return _vm.smartVM
 }
 
-var smartObjects map[string]*ObjInfo
-var children uint32
+// VMSnapshot is the state of the virtual machine that executing a block changes: the objects by
+// name and their values (FlushBlock sets the value of a function in place), the children by index
+// (FlushBlock replaces an edited contract in place and appends the new ones) and the owner of each
+// contract (ActivateContract and SetContractWallet change it in place).
+type VMSnapshot struct {
+	objects  map[string]*ObjInfo
+	values   map[*ObjInfo]ObjInfo
+	children []*CodeBlock
+	owners   map[*OwnerInfo]OwnerInfo
+}
 
+// Snapshot takes the state of the virtual machine that Restore puts back
+func (vm *VM) Snapshot() *VMSnapshot {
+	s := &VMSnapshot{
+		objects:  make(map[string]*ObjInfo, len(vm.Objects)),
+		values:   make(map[*ObjInfo]ObjInfo, len(vm.Objects)),
+		children: append([]*CodeBlock(nil), vm.Children...),
+		owners:   make(map[*OwnerInfo]OwnerInfo),
+	}
+	for k, v := range vm.Objects {
+		s.objects[k] = v
+		s.values[v] = *v
+	}
+	for _, c := range vm.Children {
+		if c == nil {
+			continue
+		}
+		if c.Owner != nil {
+			s.owners[c.Owner] = *c.Owner
+		}
+		if c.Type == ObjectType_Contract && c.GetContractInfo().Owner != nil {
+			s.owners[c.GetContractInfo().Owner] = *c.GetContractInfo().Owner
+		}
+	}
+	return s
+}
+
+// Restore puts the virtual machine back to the state of the snapshot
+func (vm *VM) Restore(s *VMSnapshot) {
+	objects := make(map[string]*ObjInfo, len(s.objects))
+	for k, v := range s.objects {
+		*v = s.values[v]
+		objects[k] = v
+	}
+	vm.Objects = objects
+	vm.Children = append([]*CodeBlock(nil), s.children...)
+	for o, v := range s.owners {
+		*o = v
+	}
+}
+
+var smartSnapshot *VMSnapshot
+
+// SavepointSmartVMObjects takes the state of the smart virtual machine before a batch of blocks
 func SavepointSmartVMObjects() {
-	smartObjects = make(map[string]*ObjInfo)
-	for k, v := range GetVM().Objects {
-		smartObjects[k] = v
-	}
-	children = uint32(len(GetVM().Children))
+	smartSnapshot = GetVM().Snapshot()
 }
 
+// RollbackSmartVMObjects puts the smart virtual machine back to the savepoint
 func RollbackSmartVMObjects() {
-	GetVM().Objects = make(map[string]*ObjInfo)
-	for k, v := range smartObjects {
-		GetVM().Objects[k] = v
+	if smartSnapshot != nil {
+		GetVM().Restore(smartSnapshot)
 	}
-
-	GetVM().Children = GetVM().Children[:children]
-	smartObjects = nil
+	smartSnapshot = nil
 }
 
+// ReleaseSmartVMObjects drops the savepoint
 func ReleaseSmartVMObjects() {
-	smartObjects = nil
-	children = 0
+	smartSnapshot = nil
 }
 
 func VMCompileEval(vm *VM, src string, prefix uint32) error {
