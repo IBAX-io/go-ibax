@@ -11,6 +11,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/network/bftnet"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 
 	log "github.com/sirupsen/logrus"
@@ -80,6 +81,23 @@ func HandleTCPRequest(rw net.Conn) {
 			}
 			return
 		}
+
+	case network.RequestTypeBftMessages:
+		if s := bftnet.Current(); s != nil {
+			if err = s.Serve(rw); err != nil {
+				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": rw.RemoteAddr()}).Debug("bft stream closed")
+			}
+		}
+		return
+
+	case network.RequestTypeBftCertificates:
+		if s := bftnet.Current(); s != nil {
+			rw.SetDeadline(time.Now().Add(consts.ReadTimeout * time.Second))
+			if err = s.ServeCertificates(rw); err != nil {
+				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": rw.RemoteAddr()}).Debug("bft certificates request")
+			}
+		}
+		return
 	}
 
 	if err != nil || response == nil {

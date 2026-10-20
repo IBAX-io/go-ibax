@@ -30,6 +30,10 @@ const (
 	RequestTypeMaxBlock
 	RequestTypeVoting
 	RequestSyncMatchineState
+	// RequestTypeBftMessages opens a stream of the F18 consensus messages (package bftnet)
+	RequestTypeBftMessages
+	// RequestTypeBftCertificates fetches the F18 certificates of a range of heights
+	RequestTypeBftCertificates
 
 	// BlocksPerRequest contains count of blocks per request
 	BlocksPerRequest int = 10
