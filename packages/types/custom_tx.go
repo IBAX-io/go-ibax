@@ -43,6 +43,11 @@ type FirstBlock struct {
 	HonorNodesOnly uint64
 	// AccountAlgorithms is the initial value of the platform parameter account_algorithms
 	AccountAlgorithms string
+	// BftConsensus is the value of the platform parameter bft_consensus
+	BftConsensus uint64
+	// HonorNodes is the initial value of the platform parameter honor_nodes: the validators of a
+	// chain of the BFT consensus, which its first block names
+	HonorNodes string
 }
 
 func (t *FirstBlock) TxType() byte { return FirstBlockTxType }

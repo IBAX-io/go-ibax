@@ -140,3 +140,25 @@ func DuplicateHonorNode(fn []*HonorNode) error {
 	}
 	return dup
 }
+
+// MinBftValidators is the least number of validators of a chain of the BFT consensus: with N
+// validators it bears f = (N-1)/3 faulty ones, and 4 is the least N with f = 1
+const MinBftValidators = 4
+
+// CheckBftValidators checks a value of honor_nodes on a chain of the BFT consensus: valid nodes,
+// no two alike, and at least MinBftValidators of them not stopped
+func CheckBftValidators(nodes []*HonorNode) error {
+	if err := DuplicateHonorNode(nodes); err != nil {
+		return err
+	}
+	var active int
+	for _, n := range nodes {
+		if !n.Stopped {
+			active++
+		}
+	}
+	if active < MinBftValidators {
+		return fmt.Errorf("%d validators are not stopped: a chain of the BFT consensus has at least %d", active, MinBftValidators)
+	}
+	return nil
+}

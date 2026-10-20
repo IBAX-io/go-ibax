@@ -82,6 +82,9 @@ const (
 	// HonorNodesOnly is 1 on a chain whose blocks only the honor nodes generate: it never
 	// enters the candidate node mode. The first block sets it, nothing changes it.
 	HonorNodesOnly = `honor_nodes_only`
+	// BftConsensus is 1 on a chain whose blocks the validators commit one by one, each by the
+	// votes of more than two thirds of them (F18). The first block sets it, nothing changes it.
+	BftConsensus = `bft_consensus`
 
 	// CostDefault is the default maximum cost of F
 	CostDefault = int64(20000000)
@@ -645,6 +648,11 @@ func GetFirstBlockData() (*types.FirstBlock, error) {
 	}
 
 	return firstBlockData, nil
+}
+
+// IsBftConsensus reports whether the validators commit the blocks of the chain by the BFT consensus
+func IsBftConsensus() bool {
+	return SysString(BftConsensus) == `1`
 }
 
 // IsHonorNodesOnly reports whether only the honor nodes generate the blocks of the chain

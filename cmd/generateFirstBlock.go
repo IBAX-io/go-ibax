@@ -26,6 +26,8 @@ var stopNetworkBundleFilepath string
 var testBlockchain bool
 var privateBlockchain bool
 var honorNodesOnly bool
+var bftConsensus bool
+var honorNodesFilepath string
 var accountAlgorithms string
 
 // generateFirstBlockCmd represents the generateFirstBlock command
@@ -48,6 +50,8 @@ func init() {
 	generateFirstBlockCmd.Flags().BoolVar(&testBlockchain, "test", false, "if true - test blockchain")
 	generateFirstBlockCmd.Flags().BoolVar(&privateBlockchain, "private", false, "if true - all transactions will be free")
 	generateFirstBlockCmd.Flags().BoolVar(&honorNodesOnly, "honorNodesOnly", false, "if true - only the honor nodes generate blocks, the chain never enters the candidate node mode")
+	generateFirstBlockCmd.Flags().BoolVar(&bftConsensus, "bftConsensus", false, "if true - the validators commit each block by the votes of more than two thirds of them (needs --honorNodesOnly and --honorNodes)")
+	generateFirstBlockCmd.Flags().StringVar(&honorNodesFilepath, "honorNodes", "", "file of the validators of a chain of the BFT consensus, in the JSON of the platform parameter honor_nodes; this node first")
 	generateFirstBlockCmd.Flags().StringVar(&accountAlgorithms, "accountAlgorithms", "", `algorithms account keys may have, as the platform parameter account_algorithms, e.g. [{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"}] (default: the node algorithm, with the latest days FIPS allows on a FIPS node and no days otherwise)`)
 }
 
@@ -114,6 +118,19 @@ func genesisBlock() ([]byte, error) {
 	if honorNodesOnly {
 		honorOnly = 1
 	}
+	var bft uint64
+	var honorNodes string
+	if len(honorNodesFilepath) > 0 && !bftConsensus {
+		log.Fatal("--honorNodes names the validators of a chain of the BFT consensus: it needs --bftConsensus")
+	}
+	if bftConsensus {
+		bft = 1
+		data, err := os.ReadFile(honorNodesFilepath)
+		if err != nil {
+			log.WithError(err).WithFields(log.Fields{"filepath": honorNodesFilepath}).Fatal("Reading the honor nodes")
+		}
+		honorNodes = strings.TrimSpace(string(data))
+	}
 
 	fbp := new(transaction.FirstBlockParser)
 	first := &types.FirstBlock{
@@ -126,9 +143,11 @@ func genesisBlock() ([]byte, error) {
 		PrivateBlockchain:     pb,
 		HonorNodesOnly:        honorOnly,
 		AccountAlgorithms:     algos,
+		BftConsensus:          bft,
+		HonorNodes:            honorNodes,
 	}
 	if _, _, err := transaction.CheckFirstBlockAccounts(first); err != nil {
-		log.WithError(err).Fatal("checking the accounts of the first block")
+		log.WithError(err).Fatal("checking the first block")
 	}
 	tx, err := fbp.BinMarshal(first)
 	if err != nil {

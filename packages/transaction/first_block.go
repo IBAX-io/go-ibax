@@ -6,6 +6,7 @@ package transaction
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -123,6 +124,20 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		return err
 	}
 
+	err = sqldb.GetDB(dbTx).Exec(`update "1_platform_parameters" SET value = ? where name = ?`, strconv.FormatUint(data.BftConsensus, 10), syspar.BftConsensus).Error
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating bft_consensus")
+		return err
+	}
+
+	if data.BftConsensus == 1 {
+		err = sqldb.GetDB(dbTx).Exec(`update "1_platform_parameters" SET value = ? where name = ?`, data.HonorNodes, syspar.HonorNodes).Error
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating honor_nodes")
+			return err
+		}
+	}
+
 	err = sqldb.GetDB(dbTx).Exec(`update "1_platform_parameters" SET value = ? where name = ?`, algos.String(), syspar.AccountAlgorithms).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating account_algorithms")
@@ -195,7 +210,42 @@ func CheckFirstBlockAccounts(data *types.FirstBlock) (syspar.AccountAlgorithmSet
 	if founder.Address() != data.KeyID {
 		return nil, crypto.AccountKey{}, fmt.Errorf("the founder key is not that of key %d", data.KeyID)
 	}
+	if err := CheckFirstBlockConsensus(data); err != nil {
+		return nil, crypto.AccountKey{}, err
+	}
 	return algos, founder, nil
+}
+
+// CheckFirstBlockConsensus checks the consensus of the first block. A chain of the BFT consensus
+// (F18) is a chain of the honor nodes only, as the candidate node mode would change who generates
+// the blocks by votes of the candidates, and its first block names all its validators, at least
+// syspar.MinBftValidators of them, the node that generates it first. Another chain names none:
+// its nodes join after the first block, as before.
+func CheckFirstBlockConsensus(data *types.FirstBlock) error {
+	switch data.BftConsensus {
+	case 0:
+		if len(data.HonorNodes) > 0 {
+			return errors.New("the first block names the honor nodes only on a chain of the BFT consensus")
+		}
+		return nil
+	case 1:
+	default:
+		return fmt.Errorf("bft_consensus is %d: it is 0 or 1", data.BftConsensus)
+	}
+	if data.HonorNodesOnly != 1 {
+		return errors.New("a chain of the BFT consensus is a chain of the honor nodes only")
+	}
+	var nodes []*syspar.HonorNode
+	if err := json.Unmarshal([]byte(data.HonorNodes), &nodes); err != nil {
+		return fmt.Errorf("the honor nodes of the first block: %w", err)
+	}
+	if err := syspar.CheckBftValidators(nodes); err != nil {
+		return fmt.Errorf("the honor nodes of the first block: %w", err)
+	}
+	if !bytes.Equal(nodes[0].PublicKey, data.NodePublicKey) || nodes[0].Stopped {
+		return errors.New("the first honor node of the first block is the node that generates it")
+	}
+	return nil
 }
 
 func (s *FirstBlockParser) BinMarshal(data *types.FirstBlock) ([]byte, error) {

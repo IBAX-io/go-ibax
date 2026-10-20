@@ -158,6 +158,11 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 					return 0, logErrorValue(err, consts.InvalidObject, err.Error(), value)
 				}
 			}
+			if syspar.IsBftConsensus() {
+				if err = syspar.CheckBftValidators(fnodes); err != nil {
+					return 0, logErrorValue(err, consts.InvalidObject, err.Error(), value)
+				}
+			}
 			checked = len(fnodes) > 0
 		default:
 			if strings.HasPrefix(name, `extend_cost_`) || strings.HasSuffix(name, `_price`) {
