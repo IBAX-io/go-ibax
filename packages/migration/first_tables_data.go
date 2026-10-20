@@ -96,6 +96,43 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
         }',
         'ContractConditions("@1MainCondition")'
     ),
+    (next_id('1_tables'), 'bft_evidence',
+        '{
+            "read": "true",
+            "insert": "false",
+            "update": "false",
+            "new_column": "false"
+        }',
+        '{
+            "public_key": "false",
+            "height": "false",
+            "round": "false",
+            "kind": "false",
+            "data": "false",
+            "block_id": "false"
+        }',
+        'false'
+    ),
+    (next_id('1_tables'), 'bft_reviews',
+        '{
+            "read": "true",
+            "insert": "false",
+            "update": "false",
+            "new_column": "false"
+        }',
+        '{
+            "evidence_id": "false",
+            "public_key": "false",
+            "stop_height": "false",
+            "deadline": "false",
+            "status": "false",
+            "reason": "false",
+            "version": "false",
+            "decided_block": "false",
+            "restore_height": "false"
+        }',
+        'false'
+    ),
     (next_id('1_tables'), 'time_zones',
         '{
             "read": "true",

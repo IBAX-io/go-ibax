@@ -60,6 +60,29 @@ var sqlFirstEcosystemSchema = `
 		t.Column("ban_time", "bigint", {"default": "0"})
 		t.Column("reason", "text", {"default": ""})
 	{{footer "primary" }}
+
+	{{head "1_bft_evidence"}}
+		t.Column("id", "bigint", {"default": "0"})
+		t.Column("public_key", "bytea", {"default": ""})
+		t.Column("height", "bigint", {"default": "0"})
+		t.Column("round", "bigint", {"default": "0"})
+		t.Column("kind", "bigint", {"default": "0"})
+		t.Column("data", "bytea", {"default": ""})
+		t.Column("block_id", "bigint", {"default": "0"})
+	{{footer "primary" "unique(public_key, height, round, kind)"}}
+
+	{{head "1_bft_reviews"}}
+		t.Column("id", "bigint", {"default": "0"})
+		t.Column("evidence_id", "bigint", {"default": "0"})
+		t.Column("public_key", "bytea", {"default": ""})
+		t.Column("stop_height", "bigint", {"default": "0"})
+		t.Column("deadline", "bigint", {"default": "0"})
+		t.Column("status", "bigint", {"default": "0"})
+		t.Column("reason", "text", {"default": ""})
+		t.Column("version", "string", {"default": "", "size":255})
+		t.Column("decided_block", "bigint", {"default": "0"})
+		t.Column("restore_height", "bigint", {"default": "0"})
+	{{footer "primary" "unique(evidence_id)" "index(public_key)" "index(status)"}}
 `
 
 var sqlFirstEcosystemCommon = `

@@ -360,6 +360,13 @@ func (s *sim) check(nodes ...int) (all, most uint64) {
 			if len(signers) < s.set.Quorum() {
 				s.t.Fatalf("the certificate of height %d has %d signers", h, len(signers))
 			}
+			cert, err := UnmarshalCertificate(CertificateOf(c).Marshal())
+			if err != nil {
+				s.t.Fatalf("the certificate of height %d: %v", h, err)
+			}
+			if err := cert.Verify(s.set, testNetwork, h, hash); err != nil {
+				s.t.Fatalf("the certificate of height %d: %v", h, err)
+			}
 			if h > top {
 				top = h
 			}

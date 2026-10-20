@@ -5,7 +5,12 @@
 
 package bft
 
-import "bytes"
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"math"
+)
 
 // Quorum is the number of votes of a set of n validators that commits: more than two thirds,
 // Q(n) = floor(2n/3) + 1
@@ -65,4 +70,40 @@ func (v Validators) Index(key []byte) (uint32, bool) {
 		}
 	}
 	return 0, false
+}
+
+// Marshal is the stored form of the set: count u16 ‖ count × (len u16 ‖ node public key)
+func (v Validators) Marshal() []byte {
+	if len(v.Keys) > math.MaxUint16 {
+		panic("bft: a set of more than a uint16 of validators")
+	}
+	b := binary.BigEndian.AppendUint16(nil, uint16(len(v.Keys)))
+	for _, k := range v.Keys {
+		b = appendBytes16(b, k)
+	}
+	return b
+}
+
+// UnmarshalValidators decodes a set; it refuses an empty key, a key twice and bytes left over
+func UnmarshalValidators(b []byte) (Validators, error) {
+	r := reader{b: b}
+	n := int(r.u16())
+	var v Validators
+	for i := 0; i < n && r.err == nil; i++ {
+		k := r.bytes16()
+		if r.err != nil {
+			break
+		}
+		if len(k) == 0 {
+			return Validators{}, fmt.Errorf("%w: an empty key of a validator", ErrFormat)
+		}
+		if _, ok := v.Index(k); ok {
+			return Validators{}, fmt.Errorf("%w: a validator twice", ErrFormat)
+		}
+		v.Keys = append(v.Keys, k)
+	}
+	if err := r.done(); err != nil {
+		return Validators{}, err
+	}
+	return v, nil
 }

@@ -36,6 +36,23 @@ var (
 		t.Column("time", "bigint", {"default": "0"})
 	{{footer "primary(block_id)"}}
 
+	{{head "bft_certificates"}}
+		t.Column("height", "bigint", {"default": "0"})
+		t.Column("round", "bigint", {"default": "0"})
+		t.Column("hash", "bytea", {"default": ""})
+		t.Column("data", "bytea", {"default": ""})
+	{{footer "primary(height)"}}
+
+	{{head "bft_validator_sets"}}
+		t.Column("from_height", "bigint", {"default": "0"})
+		t.Column("data", "bytea", {"default": ""})
+	{{footer "primary(from_height)"}}
+
+	{{head "bft_sign_state"}}
+		t.Column("height", "bigint", {"default": "0"})
+		t.Column("data", "bytea", {"default": ""})
+	{{footer "primary(height)"}}
+
 	{{head "info_block"}}
 		t.Column("hash", "bytea", {"default": ""})
 		t.Column("rollbacks_hash", "bytea", {"default": ""})
