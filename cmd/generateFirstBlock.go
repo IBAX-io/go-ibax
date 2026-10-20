@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	consensus "github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -51,7 +52,7 @@ func init() {
 	generateFirstBlockCmd.Flags().BoolVar(&privateBlockchain, "private", false, "if true - all transactions will be free")
 	generateFirstBlockCmd.Flags().BoolVar(&honorNodesOnly, "honorNodesOnly", false, "if true - only the honor nodes generate blocks, the chain never enters the candidate node mode")
 	generateFirstBlockCmd.Flags().BoolVar(&bftConsensus, "bftConsensus", false, "if true - the validators commit each block by the votes of more than two thirds of them (needs --honorNodesOnly and --honorNodes)")
-	generateFirstBlockCmd.Flags().StringVar(&honorNodesFilepath, "honorNodes", "", "file of the validators of a chain of the BFT consensus, in the JSON of the platform parameter honor_nodes; this node first")
+	generateFirstBlockCmd.Flags().StringVar(&honorNodesFilepath, "honorNodes", "", "file of the validators of a chain of the BFT consensus, in the JSON of the platform parameter honor_nodes, each with the key_id of its operator; this node first, operated by the founder")
 	generateFirstBlockCmd.Flags().StringVar(&accountAlgorithms, "accountAlgorithms", "", `algorithms account keys may have, as the platform parameter account_algorithms, e.g. [{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"}] (default: the node algorithm, with the latest days FIPS allows on a FIPS node and no days otherwise)`)
 }
 
@@ -124,6 +125,9 @@ func genesisBlock() ([]byte, error) {
 		log.Fatal("--honorNodes names the validators of a chain of the BFT consensus: it needs --bftConsensus")
 	}
 	if bftConsensus {
+		if crypto.HashSize() != consensus.HashSize {
+			log.WithFields(log.Fields{"size": crypto.HashSize()}).Fatal("--bftConsensus needs a hash of 32 bytes: the votes sign the hash of a block")
+		}
 		bft = 1
 		data, err := os.ReadFile(honorNodesFilepath)
 		if err != nil {

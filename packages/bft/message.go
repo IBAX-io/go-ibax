@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 )
@@ -174,6 +175,9 @@ type Proposal struct {
 	Hash       Hash
 	Block      []byte
 	Signature  []byte
+	// Received is when the node took the proposal from the network, for Timely: the node neither
+	// signs nor sends it
+	Received time.Time
 }
 
 // Sign signs the proposal with the node private key of its proposer

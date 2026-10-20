@@ -15,8 +15,9 @@ import (
 // validators 1, 2, 3 and 0 in rounds 0 to 3.
 
 type cornerApp struct {
-	invalid map[Hash]bool
-	values  int
+	invalid  map[Hash]bool
+	untimely map[Hash]bool
+	values   int
 }
 
 func (a *cornerApp) Value(height uint64, round uint32) ([]byte, Hash, error) {
@@ -26,6 +27,10 @@ func (a *cornerApp) Value(height uint64, round uint32) ([]byte, Hash, error) {
 
 func (a *cornerApp) Valid(height uint64, hash Hash, block []byte) bool {
 	return !a.invalid[hash]
+}
+
+func (a *cornerApp) Timely(p *Proposal) bool {
+	return !a.untimely[p.Hash]
 }
 
 type corner struct {
@@ -41,7 +46,7 @@ var hashA, hashB = testHash(0xa1), testHash(0xb2)
 
 func newCorner(t *testing.T) *corner {
 	vs, set := testSet(t, 4)
-	c := &corner{t: t, vs: vs, set: set, app: &cornerApp{invalid: map[Hash]bool{}}}
+	c := &corner{t: t, vs: vs, set: set, app: &cornerApp{invalid: map[Hash]bool{}, untimely: map[Hash]bool{}}}
 	c.m = NewMachine(DefaultConfig, c.app, vs[0].private, vs[0].public, testNetwork, 1, set)
 	return c
 }
@@ -374,6 +379,40 @@ func TestCornerInvalidBlock(t *testing.T) {
 	if c.m.Decided() {
 		t.Fatal("an invalid block committed")
 	}
+}
+
+func TestCornerUntimelyProposal(t *testing.T) {
+	// L23: a new proposal of a block off the clock gets a prevote of nil, though it is valid
+	c := newCorner(t)
+	c.app.untimely[hashB] = true
+	c.take(c.m.Start())
+	c.proposal(0, NoRound, hashB)
+	c.wantVote(TypePrevote, 0, Nil)
+
+	// L29: the same block proposed again with the prevotes of a quorum in its valid round gets a
+	// prevote: the time is checked only when a value is new
+	c = newCorner(t)
+	c.app.untimely[hashB] = true
+	c.take(c.m.Start())
+	c.timeout(0, StepPropose)
+	c.wantVote(TypePrevote, 0, Nil)
+	c.prevotes(0, hashB, 1, 2, 3)
+	c.timeout(0, StepPrevote)
+	c.wantVote(TypePrecommit, 0, Nil)
+	c.nextRound(0)
+	c.proposal(1, 0, hashB)
+	c.wantVote(TypePrevote, 1, hashB)
+
+	// the proposer prevotes its own new block: Value gave it its time
+	c = newCorner(t)
+	c.app.untimely[testHash(0xaa)] = true
+	c.take(c.m.Start())
+	for r := uint32(0); r < 3; r++ {
+		c.timeout(r, StepPropose)
+		c.timeout(r, StepPrevote)
+		c.nextRound(r)
+	}
+	c.wantVote(TypePrevote, 3, testHash(0xaa))
 }
 
 func TestCornerEvidence(t *testing.T) {

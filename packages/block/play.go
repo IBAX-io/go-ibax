@@ -60,6 +60,12 @@ func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 			return err
 		}
 	}
+	if syspar.IsBftConsensus() {
+		if err := storeValidators(dbTx, b.Header.BlockId+1); err != nil {
+			dbTx.Rollback()
+			return err
+		}
+	}
 	err = dbTx.Commit()
 	if err != nil {
 		return err
@@ -259,6 +265,9 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 	_lock.Lock()
 	defer _lock.Unlock()
 	limits := transaction.NewLimits(b.limitMode())
+	if !b.genStart.IsZero() {
+		limits.StartAt(b.genStart)
+	}
 	rand := random.NewRand(b.Header.Timestamp)
 	logger := b.GetLogger()
 	for curTx := 0; curTx < len(txs); curTx++ {
@@ -287,6 +296,16 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 				return fmt.Errorf("%v; %w", err, errRoll)
 			}
 			if b.GenBlock {
+				if err == transaction.ErrTimeLeft {
+					// the time left to the block stopped the transaction: it waits for the next
+					// block, unless no transaction is in the block and none stopped before it,
+					// so it had the most time a block leaves a transaction, and never fits
+					if len(*processedTx) == 0 && !b.genStopped {
+						txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: errTxTooLong.Error(), keyID: t.KeyID()}
+					}
+					b.genStopped = true
+					break
+				}
 				if errors.Cause(err) == transaction.ErrLimitStop {
 					if curTx == 0 {
 						txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: err.Error(), keyID: t.KeyID()}

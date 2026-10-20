@@ -6,6 +6,8 @@
 package block
 
 import (
+	"time"
+
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -18,6 +20,9 @@ var (
 	ErrIncorrectRollbackHash = errors.New("Rollback hash doesn't match")
 	ErrEmptyBlock            = errors.New("Block doesn't contain transactions")
 	ErrIncorrectBlockTime    = utils.WithBan(errors.New("Incorrect block time"))
+	// errTxTooLong is a transaction that does not end within the time a block of a chain of the
+	// BFT consensus leaves its first transaction
+	errTxTooLong = errors.New("the transaction does not end within the time a block leaves it")
 )
 
 // Block is storing block data
@@ -33,6 +38,11 @@ type Block struct {
 	EcoParams         []sqldb.EcoParam // combustion percent,digits for each ecosystem
 	size              *blockSize       // the encoded length of the block being generated
 	trial             bool             // the block is executed by Trial and rolled back
+	// genStart is when the proposer of a chain of the BFT consensus began the block: its
+	// transactions run within max_block_generation_time from then (syspar.GetBftTimeliness)
+	genStart time.Time
+	// genStopped is that the time left to the block stopped a transaction of it
+	genStopped bool
 }
 
 // GetLogger is returns logger

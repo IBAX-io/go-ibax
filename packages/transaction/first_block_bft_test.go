@@ -8,6 +8,7 @@ package transaction
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -19,6 +20,7 @@ type bftTestNode struct {
 	TCPAddress string `json:"tcp_address"`
 	APIAddress string `json:"api_address"`
 	PublicKey  string `json:"public_key"`
+	KeyID      string `json:"key_id,omitempty"`
 	Stopped    bool   `json:"stopped,omitempty"`
 }
 
@@ -40,9 +42,10 @@ func bftTestFirstBlock(t *testing.T, n int) (*types.FirstBlock, []bftTestNode) {
 			TCPAddress: fmt.Sprintf("127.0.0.1:%d", 7078+i),
 			APIAddress: fmt.Sprintf("http://127.0.0.1:%d", 7079+i),
 			PublicKey:  crypto.PubToHex(pub),
+			KeyID:      strconv.Itoa(-5000 + i),
 		}
 	}
-	return &types.FirstBlock{NodePublicKey: first, HonorNodesOnly: 1, BftConsensus: 1}, nodes
+	return &types.FirstBlock{KeyID: -5000, NodePublicKey: first, HonorNodesOnly: 1, BftConsensus: 1}, nodes
 }
 
 func bftTestSetNodes(t *testing.T, fb *types.FirstBlock, nodes []bftTestNode) {
@@ -104,6 +107,22 @@ func TestCheckFirstBlockConsensus(t *testing.T) {
 			nodes[0].Stopped = true
 			return nodes
 		}, "the node that generates it"},
+		{"a validator without its operator", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
+			nodes[2].KeyID = ""
+			return nodes
+		}, "honor node 2 has no key_id"},
+		{"an operator of key 0", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
+			nodes[3].KeyID = "0"
+			return nodes
+		}, "honor node 3 has no key_id"},
+		{"an operator not a key", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
+			nodes[1].KeyID = "x"
+			return nodes
+		}, "key_id"},
+		{"the first node of another operator", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
+			nodes[0].KeyID = nodes[1].KeyID
+			return nodes
+		}, "the founder of the chain"},
 	}
 	for _, c := range cases {
 		fb, nodes := bftTestFirstBlock(t, 4)
@@ -118,5 +137,17 @@ func TestCheckFirstBlockConsensus(t *testing.T) {
 	fb.HonorNodes = "[{]"
 	if err := CheckFirstBlockConsensus(fb); err == nil {
 		t.Fatal("honor nodes of invalid JSON pass")
+	}
+}
+
+// The operators of the validators are their key_id, in the order of the nodes, as a string or a
+// number
+func TestBftOperators(t *testing.T) {
+	ids, err := BftOperators(`[{"key_id":"-12"},{"key_id":34},{"key_id":"-12"}]`)
+	if err != nil || len(ids) != 3 || ids[0] != -12 || ids[1] != 34 || ids[2] != -12 {
+		t.Fatalf("%v %v", ids, err)
+	}
+	if _, err := BftOperators(`[{"key_id":"1"},{}]`); err == nil || !strings.Contains(err.Error(), "honor node 1") {
+		t.Fatalf("a node without key_id: %v", err)
 	}
 }

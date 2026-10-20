@@ -38,6 +38,11 @@ func QueueParserBlocks(ctx context.Context, d *daemon) error {
 	}
 	DBLock()
 	defer DBUnlock()
+	if syspar.IsBftConsensus() {
+		// a chain of the BFT consensus has no queue of announced blocks: a node commits a block
+		// by its certificate (BlocksCollection)
+		return nil
+	}
 
 	infoBlock := &sqldb.InfoBlock{}
 	_, err := infoBlock.Get()

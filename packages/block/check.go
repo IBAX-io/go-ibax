@@ -38,7 +38,15 @@ func (b *Block) Check() error {
 		}
 	}
 
-	if b.Header.Timestamp > time.Now().Unix() {
+	bftChain := syspar.IsBftConsensus()
+	if bftChain {
+		// a validator checks the time against its clock with bft_max_clock_drift_ms (Validate);
+		// the time slots of the honor nodes do not apply
+		if b.Header.Timestamp <= b.PrevHeader.Timestamp {
+			return fmt.Errorf("%w: block %d at %d, not after block %d at %d", ErrIncorrectBlockTime,
+				b.Header.BlockId, b.Header.Timestamp, b.PrevHeader.BlockId, b.PrevHeader.Timestamp)
+		}
+	} else if b.Header.Timestamp > time.Now().Unix() {
 		logger.WithFields(log.Fields{"type": consts.ParameterExceeded}).Error("block time is larger than now")
 		return ErrIncorrectBlockTime
 	}
@@ -50,7 +58,7 @@ func (b *Block) Check() error {
 		exists bool
 		err    error
 	)
-	if syspar.IsHonorNodeMode() {
+	if syspar.IsHonorNodeMode() && !bftChain {
 		// is this block too early? Allowable error = error_time
 		exists, err = protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Timestamp, 0), int(b.Header.NodePosition))
 	}
@@ -86,7 +94,9 @@ func (b *Block) Check() error {
 
 		err := t.Check(b.Header.Timestamp)
 		if err != nil {
-			transaction.MarkTransactionBad(t.Hash(), err.Error())
+			if !b.trial {
+				transaction.MarkTransactionBad(t.Hash(), err.Error())
+			}
 			delete(txHashes, hexHash)
 			b.Transactions = append(b.Transactions[:i], b.Transactions[i+1:]...)
 			return errors.Wrap(err, "check transaction")

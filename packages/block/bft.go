@@ -6,14 +6,22 @@
 package block
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"slices"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
+	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/language"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/gogo/protobuf/proto"
 )
 
 // memState is the state outside the database that executing a block changes: the contracts of the
@@ -95,6 +103,9 @@ func Commit(binData []byte, cert *bft.Certificate) (*Block, error) {
 	if hash != cert.Hash {
 		return nil, fmt.Errorf("the certificate of height %d commits another block than %x", cert.Height, b.Header.BlockHash)
 	}
+	if err := b.checkContent(); err != nil {
+		return nil, err
+	}
 	c := &sqldb.BftCertificate{
 		Height: b.Header.BlockId,
 		Round:  int64(cert.Round),
@@ -105,4 +116,136 @@ func Commit(binData []byte, cert *bft.Certificate) (*Block, error) {
 		return nil, err
 	}
 	return b, nil
+}
+
+// checkContent checks that the hash of the block is the hash of its content: its header, the
+// last block it follows, and the merkle root of its transactions as the block carries them. A
+// parsed block takes its hash and its merkle root as they are written, so a certificate, which
+// commits the hash, commits the content only by this check.
+func (b *Block) checkContent() error {
+	raw := &types.BlockData{}
+	if err := proto.Unmarshal(b.BinData, raw); err != nil {
+		return fmt.Errorf("parsing the block: %w", err)
+	}
+	merkle := raw.GenMerkleRoot()
+	if !bytes.Equal(merkle, raw.MerkleRoot) {
+		return fmt.Errorf("block %d: the merkle root is not that of its transactions", b.Header.BlockId)
+	}
+	if !bytes.Equal(b.Header.GenHash(b.PrevHeader, merkle), b.Header.BlockHash) {
+		return fmt.Errorf("block %d: the hash is not that of its content", b.Header.BlockId)
+	}
+	return nil
+}
+
+// Propose makes the proposal of the proposer from a block it began at start: the trial executes
+// it, leaves out the transactions that fail, do not fit, or do not end within
+// max_block_generation_time from start, and sets its rollbacks hash, its hash and BinData. A block
+// left without transactions is ErrEmptyBlock.
+func Propose(binData []byte, classifyTxsMap map[int][]*transaction.Transaction, start time.Time) (*Block, error) {
+	b, err := ProcessBlockByBinData(binData, false)
+	if err != nil {
+		return nil, err
+	}
+	b.GenBlock = true
+	b.ClassifyTxsMap = classifyTxsMap
+	b.genStart = start
+	if err := b.Trial(); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// Validate is valid(v) of a validator for the proposal of a block at a height (design 4.2, 4.4):
+// it parses, it is of the height, its hash is the hash and the hash of its content, it is of the
+// chain, its time is above the time of the last block, its checks pass and its trial succeeds.
+// The clock takes no part in it: Timely checks the time of a new proposal.
+func Validate(binData []byte, height int64, hash bft.Hash) error {
+	b, err := ProcessBlockByBinData(binData, true)
+	if err != nil {
+		return err
+	}
+	if b.Header.BlockId != height {
+		return fmt.Errorf("a block %d proposed at height %d", b.Header.BlockId, height)
+	}
+	got, err := bft.HashOf(b.Header.BlockHash)
+	if err != nil {
+		return err
+	}
+	if got != hash {
+		return fmt.Errorf("block %d: the hash %x is not the hash proposed", height, b.Header.BlockHash)
+	}
+	if err := b.checkContent(); err != nil {
+		return err
+	}
+	if b.Header.NetworkId != conf.Config.LocalConf.NetworkID || b.Header.Version != consts.BlockVersion {
+		return fmt.Errorf("block %d: network %d, version %d", height, b.Header.NetworkId, b.Header.Version)
+	}
+	b.trial = true
+	err = b.Check()
+	b.trial = false
+	if err != nil {
+		return err
+	}
+	return b.Trial()
+}
+
+// Timely checks the time of the block of a new proposal against the clock of a validator when it
+// took the proposal (design 4.4): at most early ahead of it and at most late behind it
+func Timely(binData []byte, received time.Time, early, late time.Duration) error {
+	raw := &types.BlockData{}
+	if err := proto.Unmarshal(binData, raw); err != nil {
+		return fmt.Errorf("parsing the block: %w", err)
+	}
+	if raw.Header == nil {
+		return fmt.Errorf("a block without a header")
+	}
+	off := time.Unix(raw.Header.Timestamp, 0).Sub(received)
+	if off > early || -off > late {
+		return fmt.Errorf("block %d: its time is %v off the clock, more than %v ahead or %v behind", raw.Header.BlockId, off, early, late)
+	}
+	return nil
+}
+
+// storeValidators writes, in the transaction of block height−1, the validators set of height if
+// it is not the set before: the nodes of honor_nodes in their order, but the stopped ones and
+// those an evidence keeps out of height (design 4.5)
+func storeValidators(dbTx *sqldb.DbTransaction, height int64) error {
+	set, err := ValidatorsOf(dbTx, height)
+	if err != nil {
+		return err
+	}
+	data := set.Marshal()
+	last := &sqldb.BftValidatorSet{}
+	found, err := last.GetAt(dbTx, height)
+	if err != nil {
+		return err
+	}
+	if found && bytes.Equal(last.Data, data) {
+		return nil
+	}
+	return (&sqldb.BftValidatorSet{FromHeight: height, Data: data}).Create(dbTx)
+}
+
+// ValidatorsOf is the validators set of a height as the database of the transaction has it
+func ValidatorsOf(dbTx *sqldb.DbTransaction, height int64) (bft.Validators, error) {
+	par := &sqldb.PlatformParameter{}
+	if _, err := par.Get(dbTx, syspar.HonorNodes); err != nil {
+		return bft.Validators{}, err
+	}
+	var nodes []*syspar.HonorNode
+	if err := json.Unmarshal([]byte(par.Value), &nodes); err != nil {
+		return bft.Validators{}, fmt.Errorf("honor_nodes: %w", err)
+	}
+	stopped, err := (&sqldb.BftReview{}).GetStopped(dbTx, height)
+	if err != nil {
+		return bft.Validators{}, err
+	}
+	var set bft.Validators
+	for _, n := range nodes {
+		if n.Stopped || slices.ContainsFunc(stopped, func(r sqldb.BftReview) bool { return bytes.Equal(r.PublicKey, n.PublicKey) }) {
+			continue
+		}
+		set.Keys = append(set.Keys, n.PublicKey)
+	}
+	return set, nil
 }

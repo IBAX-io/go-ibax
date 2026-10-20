@@ -36,6 +36,12 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	}
 	DBLock()
 	defer DBUnlock()
+	if syspar.IsBftConsensus() {
+		// the consensus driver makes the blocks of the chain
+		startBftConsensus(ctx, d.logger)
+		d.sleepTime = time.Second
+		return nil
+	}
 	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
 	if err == nil && len(candidateNodes) > 0 {
 		syspar.SetRunModel(consts.CandidateNodeMode)
@@ -164,7 +170,13 @@ func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) 
 func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time.Time) ([][]byte, map[int][]*transaction.Transaction, error) {
 	classifyTxsMap := make(map[int][]*transaction.Transaction)
 	var done = make(<-chan time.Time, 1)
-	if syspar.IsHonorNodeMode() {
+	limited := syspar.IsHonorNodeMode() || syspar.IsBftConsensus()
+	if syspar.IsBftConsensus() {
+		// the proposer of a chain of the BFT consensus has no time slot: it takes transactions
+		// for half of max_block_generation_time, and its trial executes them again in about as
+		// long, so it makes the block within max_block_generation_time (syspar.GetBftTimeliness)
+		done = time.After(time.Duration(syspar.GetMaxBlockGenerationTime()) * time.Millisecond / 2)
+	} else if limited {
 		btc := protocols.NewBlockTimeCounter()
 		_, endTime, err := btc.RangeByTime(st)
 		if err != nil {
@@ -220,7 +232,7 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 	}
 
 	for i, txItem := range txs {
-		if syspar.IsHonorNodeMode() {
+		if limited {
 			select {
 			case <-done:
 				return txList, classifyTxsMap, nil

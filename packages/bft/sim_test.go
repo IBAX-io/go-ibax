@@ -75,6 +75,11 @@ func (a *simApp) Valid(height uint64, hash Hash, block []byte) bool {
 	return sha256.Sum256(block) == hash && !containsTag(block, " forged-time")
 }
 
+// Timely takes every proposal: Valid refuses the blocks of a forged time
+func (a *simApp) Timely(p *Proposal) bool {
+	return true
+}
+
 func containsTag(b []byte, tag string) bool {
 	return len(b) >= len(tag) && string(b[len(b)-len(tag):]) == tag
 }

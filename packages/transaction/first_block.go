@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/migration"
@@ -136,6 +137,14 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating honor_nodes")
 			return err
 		}
+		for _, p := range syspar.BftParameters {
+			err = sqldb.GetDB(dbTx).Exec(`insert into "1_platform_parameters" (id, name, value, conditions)
+				values (next_id('1_platform_parameters'), ?, ?, 'ContractAccess("@1UpdatePlatformParam")')`, p[0], p[1]).Error
+			if err != nil {
+				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "name": p[0]}).Error("inserting a platform parameter of the BFT consensus")
+				return err
+			}
+		}
 	}
 
 	err = sqldb.GetDB(dbTx).Exec(`update "1_platform_parameters" SET value = ? where name = ?`, algos.String(), syspar.AccountAlgorithms).Error
@@ -160,6 +169,41 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting key")
 		return err
+	}
+
+	// Each validator has the account of its node, which signs the delayed contracts of the blocks
+	// it proposes, and the account of its operator, which takes their fees, as the node of the
+	// first block has its own and the founder's
+	if data.BftConsensus == 1 {
+		operators, err := BftOperators(data.HonorNodes)
+		if err != nil {
+			return err
+		}
+		var nodes []*syspar.HonorNode
+		if err := json.Unmarshal([]byte(data.HonorNodes), &nodes); err != nil {
+			return err
+		}
+		created := map[int64]bool{keyID: true, nodeKeyID: true}
+		insert := func(id int64, pub []byte) error {
+			if created[id] {
+				return nil
+			}
+			created[id] = true
+			err := sqldb.GetDB(dbTx).Exec(`insert into "1_keys" (id,account,pub) values(?,?,?)`, id, converter.AddressToString(id), pub).Error
+			if err != nil {
+				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "key_id": id}).Error("inserting an account of a validator")
+			}
+			return err
+		}
+		for i, n := range nodes {
+			key := crypto.NodeAccountKey(n.PublicKey)
+			if err := insert(key.Address(), key.Bytes()); err != nil {
+				return err
+			}
+			if err := insert(operators[i], []byte{}); err != nil {
+				return err
+			}
+		}
 	}
 
 	if data.HonorNodesOnly != 1 {
@@ -245,7 +289,38 @@ func CheckFirstBlockConsensus(data *types.FirstBlock) error {
 	if !bytes.Equal(nodes[0].PublicKey, data.NodePublicKey) || nodes[0].Stopped {
 		return errors.New("the first honor node of the first block is the node that generates it")
 	}
+	operators, err := BftOperators(data.HonorNodes)
+	if err != nil {
+		return fmt.Errorf("the honor nodes of the first block: %w", err)
+	}
+	if operators[0] != data.KeyID {
+		return fmt.Errorf("the first honor node of the first block is operated by key %d, the founder of the chain", data.KeyID)
+	}
 	return nil
+}
+
+// BftOperators is the key_id of each node of honor_nodes, in their order: the account of the
+// operator of the node, which the fees of the blocks it proposes go to (its KeyID) and
+// NodeOwnerCondition reads. On a chain of the BFT consensus the first block names it for each
+// validator and creates its account of ecosystem 1, with the account of its node, since no
+// transaction may create an account there and a proposer without them has every transaction and
+// every delayed contract of its block fail.
+func BftOperators(honorNodes string) ([]int64, error) {
+	var nodes []struct {
+		KeyID json.RawMessage `json:"key_id"`
+	}
+	if err := json.Unmarshal([]byte(honorNodes), &nodes); err != nil {
+		return nil, err
+	}
+	ids := make([]int64, len(nodes))
+	for i, n := range nodes {
+		id, err := strconv.ParseInt(strings.Trim(string(n.KeyID), `"`), 10, 64)
+		if err != nil || id == 0 {
+			return nil, fmt.Errorf("honor node %d has no key_id of its operator", i)
+		}
+		ids[i] = id
+	}
+	return ids, nil
 }
 
 func (s *FirstBlockParser) BinMarshal(data *types.FirstBlock) ([]byte, error) {

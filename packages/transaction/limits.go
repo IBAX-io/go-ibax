@@ -59,6 +59,8 @@ var (
 	ErrLimitSkip = errors.New(`skip tx`)
 	// ErrLimitStop returns when the generation of the block should be stopped
 	ErrLimitStop = errors.New(`stop generating block`)
+	// ErrTimeLeft is ErrLimitStop for a transaction the time left to the block stopped
+	ErrTimeLeft = errors.WithMessage(ErrLimitStop, "the block has no time left")
 )
 
 // NewLimits initializes Limits structure.
@@ -143,6 +145,26 @@ func (bl *timeBlockLimit) check(t TransactionCaller, mode LimitMode) error {
 	}
 
 	return limitError("txBlockTimeLimit", "Block generation time exceeded")
+}
+
+// StartAt starts the time of the block being generated at start
+func (limits *Limits) StartAt(start time.Time) {
+	for _, l := range limits.Limiters {
+		if bl, ok := l.(*timeBlockLimit); ok {
+			bl.Start = start
+		}
+	}
+}
+
+// TimeLeft is the time left to the block being generated, in ms, at most
+// max_block_generation_time
+func (limits *Limits) TimeLeft() int64 {
+	for _, l := range limits.Limiters {
+		if bl, ok := l.(*timeBlockLimit); ok {
+			return max(0, min(bl.Limit, bl.Limit-time.Since(bl.Start)).Milliseconds())
+		}
+	}
+	return syspar.GetMaxBlockGenerationTime()
 }
 
 // Checking the max tx from one user in the block

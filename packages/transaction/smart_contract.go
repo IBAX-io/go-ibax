@@ -64,6 +64,10 @@ func (s *SmartTransactionParser) Init(t *InToCxt) error {
 	s.RollBackTx = make([]*types.RollbackTx, 0)
 	if s.GenBlock {
 		s.TimeLimit = syspar.GetMaxBlockGenerationTime()
+		if syspar.IsBftConsensus() && t.TxCheckLimits != nil {
+			// the proposer makes its block within max_block_generation_time
+			s.TimeLimit = t.TxCheckLimits.TimeLeft()
+		}
 	}
 	s.Key = &sqldb.Key{}
 	return nil
@@ -182,6 +186,9 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		return
 	}
 	res, err = s.CallContract(in.SqlDbSavePoint)
+	if err == smart.ErrTimeLeft {
+		return ErrTimeLeft
+	}
 	if err == nil && s.TxSmart != nil {
 		err = in.TxCheckLimits.CheckLimit(s)
 	}

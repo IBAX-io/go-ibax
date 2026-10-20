@@ -150,8 +150,9 @@ func processBlock(buf *bytes.Buffer, honorNodeID int64) error {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting QueueBlock")
 		return utils.ErrInfo(err)
 	}
-	// we accept only new blocks
-	if !found && newBlockID >= infoBlock.BlockID {
+	// we accept only new blocks; a chain of the BFT consensus commits a block by its certificate
+	// and queues none
+	if !found && newBlockID >= infoBlock.BlockID && !syspar.IsBftConsensus() {
 		queueBlock := &sqldb.QueueBlock{Hash: blockHash, HonorNodeID: honorNodeID, BlockID: newBlockID}
 		err = queueBlock.Create()
 		if err != nil {

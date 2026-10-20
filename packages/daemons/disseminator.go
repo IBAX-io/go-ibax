@@ -100,10 +100,17 @@ func sendTransactions(ctx context.Context, logger *log.Entry) error {
 
 // send block and transactions hashes
 func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.Entry) error {
-	block, err := sqldb.BlockGetUnsent()
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting unsent blocks")
-		return err
+	bftChain := syspar.IsBftConsensus()
+	var block *sqldb.InfoBlock
+	var err error
+	if !bftChain {
+		// a validator of a chain of the BFT consensus announces no block: the others commit it
+		// by its certificate
+		block, err = sqldb.BlockGetUnsent()
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting unsent blocks")
+			return err
+		}
 	}
 
 	trs, err := sqldb.GetAllUnsentTransactions(syspar.GetMaxTxCount())
@@ -124,7 +131,10 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 		banHosts       []string
 		candidateNodes sqldb.CandidateNodes
 	)
-	if ok {
+	if bftChain {
+		// a chain of the BFT consensus bans no node locally: every validator has all transactions
+		hosts = syspar.GetRemoteHosts()
+	} else if ok {
 		hosts, banHosts, err = node.GetNodesBanService().FilterHosts(syspar.GetRemoteHosts())
 	} else {
 		candidateNodes, err = GetCandidateNodes()

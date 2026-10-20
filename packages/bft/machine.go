@@ -70,6 +70,11 @@ type App interface {
 	// Valid reports whether the block may be committed at the height (valid(v)): it decodes, its
 	// hash is the hash, it follows the last block, its time is right and its transactions apply
 	Valid(height uint64, hash Hash, block []byte) bool
+	// Timely reports whether the time of the block of a new proposal, one of no valid round, is
+	// within the bounds of the clock of the node when it took the proposal (design 4.4). Only
+	// L23 asks it: a value of a valid round had the prevotes of a quorum, and the time of a
+	// block takes no part in the safety.
+	Timely(p *Proposal) bool
 }
 
 // Timeout is a timeout the node schedules, and gives back to OnTimeout when it expires
@@ -146,6 +151,8 @@ type Machine struct {
 	locked           map[uint32]bool // L36 ran for the round
 	precommitTimeout map[uint32]bool // L47 ran for the round
 
+	signChanged bool // the machine signed, locked or took a valid value since TakeSignState
+
 	out []Output
 }
 
@@ -177,6 +184,7 @@ func (m *Machine) NewHeight(height uint64, set Validators) {
 	m.prevoteTimeout = map[uint32]bool{}
 	m.locked = map[uint32]bool{}
 	m.precommitTimeout = map[uint32]bool{}
+	m.signChanged = false
 }
 
 // Height is the height of the machine, Round its round and Step its step
@@ -348,11 +356,18 @@ func (m *Machine) isValid(p *Proposal) bool {
 	return v
 }
 
+// isTimely is Timely of the app for the proposal of another validator: the proposal of the node
+// has the time Value gave its block
+func (m *Machine) isTimely(p *Proposal) bool {
+	return m.validator && p.Validator == m.self || m.app.Timely(p)
+}
+
 func (m *Machine) sign(t MsgType, hash Hash, validRound int32) []byte {
 	sig, err := Sign(m.privateKey, m.networkID, m.height, m.round, t, hash, validRound)
 	if err != nil {
 		panic(fmt.Errorf("bft: signing by the node key: %w", err))
 	}
+	m.signChanged = true
 	return sig
 }
 
@@ -410,7 +425,7 @@ func (m *Machine) rule() bool {
 	// L22-L27: upon <PROPOSAL, h_p, round_p, v, -1> from proposer(h_p, round_p) while
 	// step_p = propose
 	if p != nil && m.step == StepPropose && p.ValidRound == NoRound {
-		if m.isValid(p) && (m.lockedRound == NoRound || m.lockedValue.Hash == p.Hash) { // L23
+		if m.isTimely(p) && m.isValid(p) && (m.lockedRound == NoRound || m.lockedValue.Hash == p.Hash) { // L23
 			m.broadcastVote(TypePrevote, p.Hash) // L24
 		} else {
 			m.broadcastVote(TypePrevote, Nil) // L26
@@ -449,6 +464,7 @@ func (m *Machine) rule() bool {
 			m.step = StepPrecommit                     // L41
 		}
 		m.validValue, m.validRound = p, int32(r) // L42, L43
+		m.signChanged = true
 		return true
 	}
 

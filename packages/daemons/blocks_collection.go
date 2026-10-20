@@ -45,6 +45,10 @@ func blocksCollection(ctx context.Context, d *daemon) (err error) {
 	}
 	defer atomic.StoreUint32(&d.atomic, 0)
 
+	if syspar.IsBftConsensus() {
+		return updateChainBft(ctx, d)
+	}
+
 	//if !NtpDriftFlag {
 	//	d.logger.WithFields(log.Fields{"type": consts.Ntpdate}).Error("ntp time not ntpdate")
 	//	return nil

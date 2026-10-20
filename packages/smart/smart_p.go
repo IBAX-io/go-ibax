@@ -92,6 +92,9 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 	if !found {
 		return 0, logErrorf(eParamNotFound, name, consts.NotFound, "system parameter get")
 	}
+	if name == syspar.BftConsensus {
+		return 0, logErrorShort(errBftConsensusFixed, consts.AccessDenied)
+	}
 	cond := par.Conditions
 	if len(cond) > 0 && !sc.taxes {
 		ret, err := sc.EvalIf(cond)
@@ -103,6 +106,11 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 		}
 	}
 	if len(value) > 0 {
+		if syspar.IsBftConsensus() {
+			if err := syspar.CheckBftParameter(name, value); err != nil {
+				return 0, logErrorValue(err, consts.InvalidObject, err.Error(), value)
+			}
+		}
 		var (
 			ok, checked bool
 			list        [][]string

@@ -658,7 +658,13 @@ func (sc *SmartContract) CallContract(point string) (string, error) {
 	ctrctExtend[script.Extend_this_contract] = nameContract
 
 	methods := []string{`conditions`, `action`}
+	start := time.Now()
 	err = script.RunContractById(sc.VM, int32(sc.TxSmart.ID), methods, sc.TxContract.Extend, sc.Hash)
+	if err != nil && sc.GenBlock && syspar.IsBftConsensus() && time.Since(start) >= time.Duration(sc.TimeLimit)*time.Millisecond {
+		// the time limit of the proposer stopped the contract, and the validators run it with
+		// no limit: the block leaves it out rather than takes it as failed
+		return ``, ErrTimeLeft
+	}
 	if ctrctExtend[script.Extend_txcost].(int64) < 0 {
 		sc.TxFuel = before
 	} else {

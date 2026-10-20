@@ -54,6 +54,9 @@ const (
 var (
 	errDelayedContract   = errors.New(`incorrect delayed contract`)
 	errAccessDenied      = errors.New(`access denied`)
+	errBftConsensusFixed = errors.New(`bft_consensus is fixed by the first block`)
+	// ErrTimeLeft is the stop of a contract of the proposer by the time left to its block
+	ErrTimeLeft          = errors.New(`the block has no time left`)
 	errConditionEmpty    = errors.New(`conditions is empty`)
 	errContractNotFound  = errors.New(`contract has not been found`)
 	errTaxes             = errors.New("not enough money to pay the taxes fee")

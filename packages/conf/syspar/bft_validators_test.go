@@ -8,6 +8,7 @@ package syspar
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 )
@@ -55,5 +56,40 @@ func TestCheckBftValidators(t *testing.T) {
 	bad[2].TCPAddress = ""
 	if err := CheckBftValidators(bad); err != errHonorNodeInvalidValues {
 		t.Fatalf("an invalid node: %v", err)
+	}
+}
+
+// bft_timeout_propose_ms stays above max_block_generation_time, the starting values too
+func TestCheckBftParameter(t *testing.T) {
+	mutex.Lock()
+	saved := cache
+	cache = map[string]string{MaxBlockGenerationTime: "2000", BftTimeoutPropose: "3000"}
+	mutex.Unlock()
+	defer func() {
+		mutex.Lock()
+		cache = saved
+		mutex.Unlock()
+	}()
+	for _, tc := range []struct {
+		name, value string
+		ok          bool
+	}{
+		{BftTimeoutPropose, "3000", true},
+		{BftTimeoutPropose, "2001", true},
+		{BftTimeoutPropose, "2000", false},
+		{BftTimeoutPropose, "0", false},
+		{BftTimeoutPropose, "x", false},
+		{MaxBlockGenerationTime, "2999", true},
+		{MaxBlockGenerationTime, "3000", false},
+		{MaxBlockGenerationTime, "-1", false},
+		{BftMaxClockDrift, "x", true}, // no pair: the checks of the parameter apply
+	} {
+		if err := CheckBftParameter(tc.name, tc.value); (err == nil) != tc.ok {
+			t.Errorf("%s %s: %v", tc.name, tc.value, err)
+		}
+	}
+	early, late := GetBftTimeliness()
+	if early != 2*time.Second || late != 5*time.Second {
+		t.Errorf("the bounds %v and %v, want 2s and 5s", early, late)
 	}
 }

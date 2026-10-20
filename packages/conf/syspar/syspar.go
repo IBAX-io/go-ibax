@@ -650,9 +650,13 @@ func GetFirstBlockData() (*types.FirstBlock, error) {
 	return firstBlockData, nil
 }
 
-// IsBftConsensus reports whether the validators commit the blocks of the chain by the BFT consensus
+// IsBftConsensus reports whether the validators commit the blocks of the chain by the BFT
+// consensus. The first block fixes it: the node reads it from the data of the first block, which
+// no transaction changes, and not from the platform parameter, which only shows it.
 func IsBftConsensus() bool {
-	return SysString(BftConsensus) == `1`
+	mutex.RLock()
+	defer mutex.RUnlock()
+	return firstBlockData != nil && firstBlockData.BftConsensus == 1
 }
 
 // IsHonorNodesOnly reports whether only the honor nodes generate the blocks of the chain
