@@ -106,7 +106,6 @@ func (b *Block) Check() error {
 	// hash compare could be failed in the case of fork
 	err = b.CheckSign()
 	if err != nil {
-		transaction.CleanCache()
 		return err
 	}
 	return nil

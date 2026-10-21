@@ -12,7 +12,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-	"github.com/IBAX-io/go-ibax/packages/transaction"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -65,6 +64,5 @@ func DBLock() {
 
 // DBUnlock unlocks database
 func DBUnlock() {
-	transaction.CleanCache()
 	mutex.Unlock()
 }

@@ -22,7 +22,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	"github.com/pkg/errors"
@@ -234,8 +233,6 @@ func ReplaceBlocksFromHost(ctx context.Context, host string, blockID, replaceCou
 	if err != nil {
 		return err
 	}
-	transaction.CleanCache()
-
 	// mark all transaction as unverified
 	_, err = sqldb.MarkVerifiedAndNotUsedTransactionsUnverified()
 	if err != nil {
