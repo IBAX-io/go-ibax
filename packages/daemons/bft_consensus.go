@@ -553,14 +553,22 @@ func (d *bftDriver) Certificates(from uint64, count int) ([][]byte, error) {
 // MaxBlockSize is bftnet.Handler.MaxBlockSize
 func (d *bftDriver) MaxBlockSize() int64 { return syspar.GetMaxBlockSize() }
 
+// maxTimeWait is how long a proposer waits at most for its clock to pass the time of the last
+// block: the time of a block of an honest proposer is not ahead of its clock, so the clock of the
+// next is past it within a second but for the drift of the clocks
+const maxTimeWait = time.Second
+
 // bftApp is the node the machine asks for a block and for its validity
 type bftApp struct {
 	logger *log.Entry
 }
 
 // Value generates the block of the proposer: its time is the clock in seconds and above the time
-// of the last block, so a chain has at most about one block a second, and the proposer makes it
-// within max_block_generation_time from when it read the clock (syspar.GetBftTimeliness)
+// of the last block, so a chain has at most one block a second, and the proposer makes it within
+// max_block_generation_time from when it began (syspar.GetBftTimeliness). A proposer whose clock
+// is not yet past the time of the last block waits for it, up to maxTimeWait, out of that time:
+// else a chain that commits faster than a block a second takes its blocks ever further ahead of
+// the clocks, until the validators refuse them as untimely (design 4.4)
 func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 	prev := &sqldb.InfoBlock{}
 	if _, err := prev.Get(); err != nil {
@@ -570,6 +578,9 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 		return nil, bft.Hash{}, fmt.Errorf("the last block %d is not before height %d", prev.BlockID, height)
 	}
 	start := time.Now()
+	if wait := time.Unix(prev.Time+1, 0).Sub(faults.Now()); wait > 0 {
+		time.Sleep(min(wait, maxTimeWait))
+	}
 	ts := max(faults.Now().Unix(), prev.Time+1)
 	privateKey, publicKey := utils.GetNodeKeys()
 	dtx := DelayedTx{privateKey: privateKey, publicKey: publicKey, logger: a.logger, time: ts}
