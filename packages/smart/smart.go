@@ -84,7 +84,6 @@ type SmartContract struct {
 	Key             *sqldb.Key
 	RollBackTx      []*types.RollbackTx
 	multiPays       multiPays
-	taxes           bool
 	Penalty         bool
 	TokenEcosystems map[int64]any
 	OutputsMap      map[sqldb.KeyUTXO][]sqldb.SpentInfo
