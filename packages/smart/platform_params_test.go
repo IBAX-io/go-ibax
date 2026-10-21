@@ -20,6 +20,9 @@ func TestDBWriteDeniesPlatformParameters(t *testing.T) {
 			if eco != 1 && name == "platform_parameters" {
 				continue
 			}
+			if _, err := DBDelete(sc, name, 1); err == nil {
+				t.Errorf("ecosystem %d: DBDelete(%q) was allowed", eco, name)
+			}
 			if _, _, err := DBInsert(sc, name, values); err == nil {
 				t.Errorf("ecosystem %d: DBInsert(%q) was allowed", eco, name)
 			}

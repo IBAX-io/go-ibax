@@ -108,10 +108,10 @@ func InterfaceReferrers(sc *SmartContract, kind, name string) ([]any, error) {
 // permissions say who may: the delete permission is evaluated as the others are, and a table
 // without one refuses deleting. The row is kept in the rollback of the transaction.
 func DBDelete(sc *SmartContract, tblname string, id int64) (qcost int64, err error) {
-	if tblname == "platform_parameters" {
+	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
+	if tblname == platformParametersTable {
 		return 0, fmt.Errorf("platform parameters access denied")
 	}
-	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
 	perm, err := sc.AccessTablePerm(tblname, "delete")
 	if err != nil {
 		return 0, err

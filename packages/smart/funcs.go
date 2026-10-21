@@ -903,15 +903,12 @@ func mapToParams(values *types.Map) (params []string, val []any, err error) {
 }
 
 // platformParametersTable is changed only through UpdatePlatformParam, which checks the
-// conditions of the parameter.
+// conditions of the parameter. DBInsert, DBUpdateExt and DBDelete refuse it by the resolved
+// table name, whatever spelling the contract uses.
 const platformParametersTable = "1_platform_parameters"
 
 // DBInsert inserts a record into the specified database table
 func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64, ret int64, err error) {
-	if tblname == "platform_parameters" {
-		return 0, 0, fmt.Errorf("platform parameters access denied")
-	}
-
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
 	if tblname == platformParametersTable {
 		return 0, 0, fmt.Errorf("platform parameters access denied")
@@ -1080,9 +1077,6 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 // DBUpdateExt updates the record in the specified table. You can specify 'where' query in params and then the values for this query
 func DBUpdateExt(sc *SmartContract, tblname string, where *types.Map,
 	values *types.Map) (qcost int64, err error) {
-	if tblname == "platform_parameters" {
-		return 0, fmt.Errorf("platform parameters access denied")
-	}
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
 	if tblname == platformParametersTable {
 		return 0, fmt.Errorf("platform parameters access denied")
