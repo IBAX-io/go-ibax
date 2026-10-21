@@ -78,6 +78,7 @@ func init() {
 	cmdFlags.Int64Var(&conf.Config.LocalConf.MaxPageGenerationTime, "mpgt", 3000, "Max page generation time in ms")
 	cmdFlags.Int64Var(&conf.Config.LocalConf.HTTPServerMaxBodySize, "mbs", 1<<20, "Max server body size in byte")
 	cmdFlags.Int64Var(&conf.Config.LocalConf.NetworkID, "networkID", 1, "Network ID")
+	cmdFlags.StringVar(&conf.Config.LocalConf.TimeSource, "timeSource", "pool.ntp.org:123", "NTP server, host:port, a validator of a chain of the BFT consensus checks its clock against")
 	cmdFlags.StringVar(&conf.Config.LocalConf.RunNodeMode, "runMode", consts.NoneCLB, "running node mode, example NONE|CLB|CLBMaster|SubNode")
 
 	// TCP Server

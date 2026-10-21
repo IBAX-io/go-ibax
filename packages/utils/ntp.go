@@ -40,6 +40,12 @@ func CheckClockDrift() (bool, error) {
 	return true, nil
 }
 
+// ClockDrift is how far the clock of the node is ahead of the NTP server at host:port, behind it
+// if it is negative
+func ClockDrift(server string) (time.Duration, error) {
+	return sntpDrift(server, ntpChecks)
+}
+
 // sntpDrift does a naive time resolution against an NTP server and returns the
 // measured drift. This method uses the simple version of NTP. It's not precise
 // but should be fine for these purposes.

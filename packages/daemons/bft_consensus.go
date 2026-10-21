@@ -84,11 +84,13 @@ type bftDriver struct {
 	store    func(*bft.SignState) error
 	transmit func(bft.Output)
 
-	// evidence is the evidence the driver took, submit submits one in a transaction, and overdue
-	// is when the driver last logged the overdue reviews
+	// evidence is the evidence the driver took, and submit submits one in a transaction
 	evidence bftEvidence
 	submit   func([]byte) error
-	overdue  time.Time
+
+	// watch is the state of the alerts, and clockDrift measures the clock against a time source
+	watch      bftWatch
+	clockDrift func(server string) (time.Duration, error)
 }
 
 func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
@@ -105,6 +107,7 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 		return (&sqldb.BftSignState{Height: int64(s.Height), Data: s.Marshal()}).Save()
 	}
 	d.submit = submitEvidenceTx
+	d.clockDrift = utils.ClockDrift
 	d.transmit = func(o bft.Output) {
 		if o.Proposal != nil {
 			d.svc.SendProposal(o.Proposal)
@@ -219,6 +222,7 @@ func (d *bftDriver) reset() error {
 	d.pool = bft.NewPool(d.networkID, syspar.GetBftMaxFutureRounds(), last+1, set)
 	d.mu.Unlock()
 	d.newMachine(last+1, set)
+	d.watch.moveTo(last+1, set, time.Now())
 	return nil
 }
 
@@ -265,6 +269,9 @@ func (d *bftDriver) syncHeight() error {
 		return err
 	}
 	d.unsaved, d.unsent = nil, nil
+	// the watch moves first: the handler records the precommits the pool admits for the new height
+	from, now := d.m.Height(), time.Now()
+	d.watch.moveTo(last+1, set, now)
 	d.mu.Lock()
 	var kept []any
 	if d.pool.Height() == last {
@@ -280,7 +287,11 @@ func (d *bftDriver) syncHeight() error {
 	d.mu.Unlock()
 	d.newMachine(last+1, set)
 	d.logger.WithFields(log.Fields{"height": last + 1, "validators": set.N()}).Debug("moved to the height")
+	d.onHeight(from, last+1, set, now)
 	for _, m := range kept {
+		if v, ok := m.(*bft.Vote); ok {
+			d.watch.precommit(v, now)
+		}
 		d.give(m)
 	}
 	return nil
@@ -316,6 +327,7 @@ func (d *bftDriver) event(e any) {
 		return
 	}
 	if t, ok := e.(bft.Timeout); ok {
+		d.countTimeout(t)
 		d.apply(d.m.OnTimeout(t))
 		return
 	}
@@ -329,16 +341,20 @@ func (d *bftDriver) tick() {
 		return
 	}
 	d.submitEvidence()
-	d.logOverdue()
+	now := time.Now()
+	d.checkOverdue(now)
+	d.checkClock(now)
 	DBLock()
 	defer DBUnlock()
 	if err := d.syncHeight(); err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the height")
 		return
 	}
-	if !d.m.Decided() && d.hasWork() {
+	busy := !d.m.Decided() && d.hasWork()
+	if busy {
 		d.apply(d.m.Start())
 	}
+	d.checkLiveness(now, busy, d.m.Round(), d.silent)
 	if time.Since(d.resent) < bftResend {
 		return
 	}
@@ -437,6 +453,9 @@ func (d *bftDriver) saveUnsaved() {
 			d.pool.AddVote(o.Vote)
 		}
 		d.mu.Unlock()
+		if o.Vote != nil {
+			d.watch.precommit(o.Vote, time.Now())
+		}
 		d.transmit(o)
 	}
 	d.unsent = nil
@@ -491,6 +510,7 @@ func (d *bftDriver) Vote(v *bft.Vote) bool {
 	if a == bft.Dropped {
 		return false
 	}
+	d.watch.precommit(v, time.Now())
 	d.post(v)
 	return true
 }

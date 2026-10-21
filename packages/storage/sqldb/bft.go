@@ -157,6 +157,29 @@ func (r *BftReview) GetStopped(dbTx *DbTransaction, height int64) ([]BftReview, 
 	return rs, err
 }
 
+// GetStoppedIn reads the reviews of the nodes an evidence stops from a height after from and up to
+// to
+func (r *BftReview) GetStoppedIn(dbTx *DbTransaction, from, to int64) ([]BftReview, error) {
+	var rs []BftReview
+	err := GetDB(dbTx).Where("stop_height > ? AND stop_height <= ?", from, to).Order("id").Find(&rs).Error
+	return rs, err
+}
+
+// BftRounds reads how many of the certificates of the heights after from were committed at each
+// round
+func BftRounds(from int64) (map[int64]int64, error) {
+	var rows []struct{ Round, Count int64 }
+	if err := DBConn.Model(&BftCertificate{}).Select("round, count(*) AS count").Where("height > ?", from).
+		Group("round").Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	rounds := map[int64]int64{}
+	for _, r := range rows {
+		rounds[r.Round] = r.Count
+	}
+	return rounds, nil
+}
+
 // GetOverdue reads the open reviews past their deadline at the unix time now
 func (r *BftReview) GetOverdue(dbTx *DbTransaction, now int64) ([]BftReview, error) {
 	var rs []BftReview

@@ -105,6 +105,9 @@ type (
 		HTTPServerMaxBodySize int64
 		NetworkID             int64
 		MaxPageGenerationTime int64 // in milliseconds
+		// TimeSource is the NTP server, host:port, a validator of a chain of the BFT consensus
+		// checks its clock against
+		TimeSource string
 	}
 	// GlobalConfig is storing all startup config as global struct
 	GlobalConfig struct {

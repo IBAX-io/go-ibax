@@ -187,8 +187,10 @@ func BftApplyEvidence(sc *SmartContract, body []byte) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	sc.GetLogger().WithFields(log.Fields{"type": consts.BlockError, "review": review, "height": e.Height,
-		"round": e.Round, "kind": e.Kind, "stop_height": stop, "validators": next.N()}).Warn("a validator is stopped by an evidence")
+	// the driver logs the alert of the stop once the block is committed: a trial of the block
+	// runs this too
+	sc.GetLogger().WithFields(log.Fields{"review": review, "height": e.Height, "round": e.Round, "kind": e.Kind,
+		"stop_height": stop, "validators": next.N()}).Debug("an evidence stops a validator")
 	return converter.StrToInt64(review), nil
 }
 

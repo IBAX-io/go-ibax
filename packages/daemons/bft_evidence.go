@@ -20,7 +20,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
@@ -34,7 +33,7 @@ import (
 const (
 	// bftEvidences is the evidence the driver remembers and the evidence it keeps to submit
 	bftEvidences = 1024
-	// bftOverdueEvery is how often the driver logs the reviews past their deadline
+	// bftOverdueEvery is how often the driver logs a review past its deadline again
 	bftOverdueEvery = 24 * time.Hour
 )
 
@@ -161,22 +160,4 @@ func submitEvidenceTx(body []byte) error {
 		return err
 	}
 	return transaction.CreateTransaction(txData, stp.Hash, sc.KeyID, stp.Timestamp)
-}
-
-// logOverdue logs, once each bftOverdueEvery, the reviews open past their deadline (design 4.5):
-// the node stays out of the set until the vote of its review concludes
-func (d *bftDriver) logOverdue() {
-	if time.Since(d.overdue) < bftOverdueEvery {
-		return
-	}
-	d.overdue = time.Now()
-	reviews, err := (&sqldb.BftReview{}).GetOverdue(nil, d.overdue.Unix())
-	if err != nil {
-		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting the overdue reviews")
-		return
-	}
-	for _, r := range reviews {
-		d.logger.WithFields(log.Fields{"type": consts.BlockError, "review": r.ID, "public_key": fmt.Sprintf("%x", r.PublicKey),
-			"stop_height": r.StopHeight, "deadline": time.Unix(r.Deadline, 0).UTC()}).Warn("the review of a stopped validator is overdue")
-	}
 }
