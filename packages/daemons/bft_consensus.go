@@ -19,6 +19,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/network/bftnet"
 	"github.com/IBAX-io/go-ibax/packages/service/bftmon"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
@@ -489,14 +490,25 @@ func (d *bftDriver) post(m any) {
 	}
 }
 
+// countAdmission counts a message the pool dropped as dropped or duplicate, and reports whether
+// it kept it
+func countAdmission(a bft.Admission) bool {
+	switch {
+	case a == bft.Duplicate:
+		bftmon.Count(bftmon.MessagesDuplicate)
+	case !a.Kept():
+		bftmon.Count(bftmon.MessagesDropped)
+	}
+	return a.Kept()
+}
+
 // Proposal is bftnet.Handler.Proposal
 func (d *bftDriver) Proposal(p *bft.Proposal) bool {
-	p.Received = time.Now()
+	p.Received = faults.Now()
 	d.mu.Lock()
 	a := d.pool.AddProposal(p)
 	d.mu.Unlock()
-	if a == bft.Dropped {
-		bftmon.Count(bftmon.MessagesDropped)
+	if !countAdmission(a) {
 		return false
 	}
 	bftmon.Count(bftmon.MessagesAdmitted)
@@ -509,8 +521,7 @@ func (d *bftDriver) Vote(v *bft.Vote) bool {
 	d.mu.Lock()
 	a := d.pool.AddVote(v)
 	d.mu.Unlock()
-	if a == bft.Dropped {
-		bftmon.Count(bftmon.MessagesDropped)
+	if !countAdmission(a) {
 		return false
 	}
 	bftmon.Count(bftmon.MessagesAdmitted)
@@ -559,7 +570,7 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 		return nil, bft.Hash{}, fmt.Errorf("the last block %d is not before height %d", prev.BlockID, height)
 	}
 	start := time.Now()
-	ts := max(start.Unix(), prev.Time+1)
+	ts := max(faults.Now().Unix(), prev.Time+1)
 	privateKey, publicKey := utils.GetNodeKeys()
 	dtx := DelayedTx{privateKey: privateKey, publicKey: publicKey, logger: a.logger, time: ts}
 	txs, err := dtx.RunForDelayBlockID(int64(height))

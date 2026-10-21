@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -44,7 +45,7 @@ func newConnection(addr string) (net.Conn, error) {
 		return nil, err
 	}
 
-	conn, err := net.DialTimeout("tcp", host, consts.TCPConnTimeout)
+	conn, err := faults.Dial(host, consts.TCPConnTimeout)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.ConnectionError, "error": err, "address": host}).Debug("dialing tcp")
 		return nil, err

@@ -42,10 +42,14 @@ const (
 const (
 	// MessagesAdmitted is the proposals and the votes the pool admitted
 	MessagesAdmitted = "admitted"
-	// MessagesDropped is the proposals and the votes the pool dropped: of no validator of the set
+	// MessagesDropped is the proposals and the votes the pool refused: of no validator of the set
 	// or not of the proposer, out of the windows of the height and the round, of a signature that
-	// does not verify, or one the pool has
+	// does not verify, or past the two the pool keeps of a validator, height, round and type
 	MessagesDropped = "dropped"
+	// MessagesDuplicate is the proposals and the votes of the validator, height, round, type and
+	// hash of one the pool has: the resends and the relays of the validators, which grow with the
+	// rounds of a height as the others do not
+	MessagesDuplicate = "duplicate"
 	// MessagesUndecoded is the frames whose payload does not decode
 	MessagesUndecoded = "undecoded"
 	// StreamsRefused is the streams the node closed past their rate or of an address it refuses

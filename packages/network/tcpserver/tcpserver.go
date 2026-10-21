@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/network/bftnet"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
@@ -135,7 +136,7 @@ func TcpListener(laddr string) error {
 				go func(conn net.Conn) {
 					HandleTCPRequest(conn)
 					conn.Close()
-				}(conn)
+				}(faults.Accepted(conn))
 			}
 		}
 	}()

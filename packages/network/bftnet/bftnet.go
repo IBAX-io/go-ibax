@@ -31,6 +31,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/service/bftmon"
 )
@@ -291,7 +292,7 @@ func (s *Service) ServeCertificates(rw io.ReadWriter) error {
 // from the node at addr
 func FetchCertificates(addr string, from uint64, count int, timeout time.Duration) ([][]byte, error) {
 	count = min(max(count, 0), MaxCertificates)
-	conn, err := net.DialTimeout("tcp", addr, timeout)
+	conn, err := faults.Dial(addr, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +423,7 @@ func (p *peer) run() {
 }
 
 func (p *peer) connect() (net.Conn, error) {
-	conn, err := net.DialTimeout("tcp", p.addr, p.cfg.Dial)
+	conn, err := faults.Dial(p.addr, p.cfg.Dial)
 	if err != nil {
 		return nil, err
 	}

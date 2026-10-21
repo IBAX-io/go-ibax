@@ -34,25 +34,27 @@ func requireAdmission(t *testing.T, want, got Admission, what string) {
 }
 
 // The pool admits the first message of a validator, height, round and type and a second one for
-// another hash, and nothing more of them
+// another hash, and nothing more of them: one for the hash of a message it has is a duplicate
 func TestPoolPerKey(t *testing.T) {
 	vs, set := testSet(t, 4)
 	p := NewPool(testNetwork, 10, 5, set)
 	a := testVote(t, vs, 1, TypePrevote, 5, 0, testHash(1))
 	requireAdmission(t, Admitted, p.AddVote(a), "the first prevote")
-	requireAdmission(t, Dropped, p.AddVote(a), "the same prevote")
-	requireAdmission(t, Dropped, p.AddVote(testVote(t, vs, 1, TypePrevote, 5, 0, testHash(1))), "the same hash signed again")
+	requireAdmission(t, Duplicate, p.AddVote(a), "the same prevote")
+	requireAdmission(t, Duplicate, p.AddVote(testVote(t, vs, 1, TypePrevote, 5, 0, testHash(1))), "the same hash signed again")
 	requireAdmission(t, Conflicting, p.AddVote(testVote(t, vs, 1, TypePrevote, 5, 0, Nil)), "a prevote for nil")
 	requireAdmission(t, Dropped, p.AddVote(testVote(t, vs, 1, TypePrevote, 5, 0, testHash(2))), "a third prevote")
+	requireAdmission(t, Duplicate, p.AddVote(testVote(t, vs, 1, TypePrevote, 5, 0, Nil)), "the second prevote again")
 	requireAdmission(t, Admitted, p.AddVote(testVote(t, vs, 1, TypePrecommit, 5, 0, testHash(2))), "a precommit of the round")
 	requireAdmission(t, Admitted, p.AddVote(testVote(t, vs, 1, TypePrevote, 5, 1, testHash(2))), "a prevote of the next round")
 	requireAdmission(t, Admitted, p.AddVote(testVote(t, vs, 2, TypePrevote, 5, 0, testHash(1))), "a prevote of another validator")
 
 	pr := testProposal(t, vs, set, 5, 0, testHash(1))
 	requireAdmission(t, Admitted, p.AddProposal(pr), "the proposal")
-	requireAdmission(t, Dropped, p.AddProposal(pr), "the same proposal")
+	requireAdmission(t, Duplicate, p.AddProposal(pr), "the same proposal")
 	requireAdmission(t, Conflicting, p.AddProposal(testProposal(t, vs, set, 5, 0, testHash(3))), "another proposal")
 	requireAdmission(t, Dropped, p.AddProposal(testProposal(t, vs, set, 5, 0, testHash(4))), "a third proposal")
+	requireAdmission(t, Duplicate, p.AddProposal(testProposal(t, vs, set, 5, 0, testHash(3))), "the second proposal again")
 	if got := len(p.Messages(5)); got != 7 {
 		t.Fatalf("%d messages kept, want 7", got)
 	}

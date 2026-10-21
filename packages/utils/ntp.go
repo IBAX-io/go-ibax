@@ -9,6 +9,8 @@ import (
 	"sort"
 
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/faults"
 )
 
 const (
@@ -73,7 +75,7 @@ func sntpDrift(server string, measurements int) (time.Duration, error) {
 		if err != nil {
 			return 0, err
 		}
-		elapsed := time.Since(sent)
+		elapsed := faults.Now().Sub(sent)
 
 		// Reconstruct the time from the reply data
 		sec := uint64(reply[43]) | uint64(reply[42])<<8 | uint64(reply[41])<<16 | uint64(reply[40])<<24
@@ -104,7 +106,7 @@ func sntpQuery(addr *net.UDPAddr, request []byte) (time.Time, []byte, error) {
 	}
 	defer conn.Close()
 
-	sent := time.Now()
+	sent := faults.Now()
 	if _, err = conn.Write(request); err != nil {
 		return sent, nil, err
 	}

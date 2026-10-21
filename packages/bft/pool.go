@@ -28,14 +28,20 @@ import "math"
 type Admission uint8
 
 const (
-	// Dropped is a message the pool refused, or one it has already
+	// Dropped is a message the pool refused
 	Dropped Admission = iota
 	// Admitted is the first message of its validator, height, round and type
 	Admitted
 	// Conflicting is a second message of its validator, height, round and type for another
 	// hash: the node relays it and gives it to the machine, which makes the evidence
 	Conflicting
+	// Duplicate is a message of the validator, height, round, type and hash of one the pool has,
+	// a resend or a relay of it: the pool drops it without checking its signature
+	Duplicate
 )
+
+// Kept reports whether the pool kept the message: admitted or conflicting
+func (a Admission) Kept() bool { return a == Admitted || a == Conflicting }
 
 type poolKey struct {
 	round     uint32
@@ -98,11 +104,11 @@ func (p *Pool) Advance(committed uint32, next Validators) []any {
 	for _, m := range held.order {
 		switch m := m.(type) {
 		case *Proposal:
-			if p.AddProposal(m) != Dropped {
+			if p.AddProposal(m).Kept() {
 				kept = append(kept, m)
 			}
 		case *Vote:
-			if p.AddVote(m) != Dropped {
+			if p.AddVote(m).Kept() {
 				kept = append(kept, m)
 			}
 		}
@@ -144,7 +150,12 @@ func (p *Pool) AddProposal(m *Proposal) Admission {
 	}
 	k := poolKey{m.Round, TypeProposal, m.Validator}
 	kept := h.proposals[k]
-	if len(kept) >= 2 || len(kept) == 1 && kept[0].Hash == m.Hash {
+	for _, o := range kept {
+		if o.Hash == m.Hash {
+			return Duplicate
+		}
+	}
+	if len(kept) >= 2 {
 		return Dropped
 	}
 	if m.Verify(key, p.networkID) != nil {
@@ -173,7 +184,12 @@ func (p *Pool) AddVote(m *Vote) Admission {
 	}
 	k := poolKey{m.Round, m.Type, m.Validator}
 	kept := h.votes[k]
-	if len(kept) >= 2 || len(kept) == 1 && kept[0].Hash == m.Hash {
+	for _, o := range kept {
+		if o.Hash == m.Hash {
+			return Duplicate
+		}
+	}
+	if len(kept) >= 2 {
 		return Dropped
 	}
 	if m.Verify(key, p.networkID) != nil {

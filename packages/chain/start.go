@@ -25,6 +25,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/daemons"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/modes"
 	"github.com/IBAX-io/go-ibax/packages/network/httpserver"
 	"github.com/IBAX-io/go-ibax/packages/publisher"
@@ -70,6 +71,7 @@ func Start() {
 		log.Errorf("logs init failed: %v\n", utils.ErrInfo(err))
 		exitErr(1)
 	}
+	faults.Watch(filepath.Join(conf.Config.DirPathConf.DataDir, faults.File))
 
 	jwtSecretPath := filepath.Join(conf.Config.DirPathConf.KeysDir, consts.JWTSecretFilename)
 	jwtSecret, err := loadJWTSecret(jwtSecretPath)
