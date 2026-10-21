@@ -891,6 +891,10 @@ func mapToParams(values *types.Map) (params []string, val []any, err error) {
 	return
 }
 
+// platformParametersTable is changed only through UpdatePlatformParam, which checks the
+// conditions of the parameter.
+const platformParametersTable = "1_platform_parameters"
+
 // DBInsert inserts a record into the specified database table
 func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64, ret int64, err error) {
 	if tblname == "platform_parameters" {
@@ -898,6 +902,9 @@ func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64
 	}
 
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
+	if tblname == platformParametersTable {
+		return 0, 0, fmt.Errorf("platform parameters access denied")
+	}
 	if err = sc.AccessTable(tblname, "insert"); err != nil {
 		return
 	}
@@ -1066,6 +1073,9 @@ func DBUpdateExt(sc *SmartContract, tblname string, where *types.Map,
 		return 0, fmt.Errorf("platform parameters access denied")
 	}
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
+	if tblname == platformParametersTable {
+		return 0, fmt.Errorf("platform parameters access denied")
+	}
 	if err = sc.AccessTable(tblname, "update"); err != nil {
 		return
 	}
