@@ -5,6 +5,7 @@
 package rollback
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -25,23 +26,39 @@ func rollbackUpdatedRow(tx map[string]string, where string, dbTx *sqldb.DbTransa
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollback.Data from json")
 		return err
 	}
-	addSQLUpdate := ""
-	for k, v := range rollbackInfo {
-		k = `"` + strings.Trim(k, `"`) + `"`
-		if v == "NULL" {
-			addSQLUpdate += k + `=NULL,`
-		} else if syspar.IsByteColumn(tx["table_name"], k) && len(v) != 0 {
-			addSQLUpdate += k + `=decode('` + v + `','HEX'),`
-		} else {
-			addSQLUpdate += k + `='` + strings.Replace(v, `'`, `''`, -1) + `',`
-		}
+	addSQLUpdate, err := rollbackAssignments(rollbackInfo, func(column string) bool {
+		return syspar.IsByteColumn(tx["table_name"], column)
+	})
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.ConversionError, "error": err, "rollback_id": tx["id"]}).Error("decoding bytea rollback data from hex")
+		return err
 	}
-	addSQLUpdate = addSQLUpdate[0 : len(addSQLUpdate)-1]
 	if err := dbTx.Update(tx["table_name"], addSQLUpdate, where); err != nil {
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err, "rollback_id": tx["id"], "block_id": tx["block_id"], "where": where}).Error("updating table for rollback ")
 		return err
 	}
 	return nil
+}
+
+// rollbackAssignments makes the SET list that puts back the columns of a row. The rollback data of
+// a bytea column is the hex of its bytes; isByte is asked with the column name unquoted.
+func rollbackAssignments(rollbackInfo map[string]string, isByte func(column string) bool) (string, error) {
+	addSQLUpdate := ""
+	for k, v := range rollbackInfo {
+		column := strings.Trim(k, `"`)
+		k = `"` + column + `"`
+		if v == "NULL" {
+			addSQLUpdate += k + `=NULL,`
+		} else if isByte(column) && len(v) != 0 {
+			if _, err := hex.DecodeString(v); err != nil {
+				return "", fmt.Errorf("column %s: %w", column, err)
+			}
+			addSQLUpdate += k + `=decode('` + v + `','hex'),`
+		} else {
+			addSQLUpdate += k + `='` + strings.Replace(v, `'`, `''`, -1) + `',`
+		}
+	}
+	return addSQLUpdate[0 : len(addSQLUpdate)-1], nil
 }
 
 func rollbackInsertedRow(tx map[string]string, where string, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
