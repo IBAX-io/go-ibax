@@ -82,7 +82,7 @@ func GetWhere(inWhere *types.Map) (string, error) {
 			if len(value) == 0 {
 				return `false`, errWhereFalse
 			}
-			ret = fmt.Sprintf(`%s ('%s')`, action, value)
+			ret = fmt.Sprintf(`%s ('%s')`, action, escape(value))
 		case []any:
 			var list []string
 			for _, ival := range value {
