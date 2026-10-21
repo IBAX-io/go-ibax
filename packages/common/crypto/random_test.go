@@ -26,3 +26,17 @@ func TestRandSeq(t *testing.T) {
 		t.Fatalf("RandSeq(0) = %q", s)
 	}
 }
+
+func TestRandInt63(t *testing.T) {
+	seen := make(map[int64]bool)
+	for i := 0; i < 1000; i++ {
+		n := RandInt63()
+		if n < 0 {
+			t.Fatalf("negative: %d", n)
+		}
+		if seen[n] {
+			t.Fatalf("%d drawn twice", n)
+		}
+		seen[n] = true
+	}
+}

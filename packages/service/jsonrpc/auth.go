@@ -18,7 +18,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	log "github.com/sirupsen/logrus"
-	"math/rand"
 	"net/http"
 	"time"
 
@@ -108,7 +107,7 @@ func (a *authApi) GetUid(ctx RequestContext) (*GetUIDResult, *Error) {
 		}
 	}
 
-	result.UID = converter.Int64ToStr(rand.New(rand.NewSource(time.Now().Unix())).Int63())
+	result.UID = converter.Int64ToStr(crypto.RandInt63())
 	claims := JWTClaims{
 		UID:         result.UID,
 		EcosystemID: "1",
