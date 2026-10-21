@@ -1100,15 +1100,15 @@ func DBUpdate(sc *SmartContract, tblname string, id int64, values *types.Map) (q
 	return DBUpdateExt(sc, tblname, types.LoadMap(map[string]any{`id`: id}), values)
 }
 
-// EcosysParam returns the value of the specified parameter for the ecosystem
-func EcosysParam(sc *SmartContract, name string) string {
+// EcosysParam returns the value of the specified parameter for the ecosystem. It is read in the
+// transaction of the block, so it is the value the block has made so far.
+func EcosysParam(sc *SmartContract, name string) (string, error) {
 	sp := &sqldb.StateParameter{}
 	sp.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
-	_, err := sp.Get(nil, name)
-	if err != nil {
-		return logErrorDB(err, "getting ecosystem param").Error()
+	if _, err := sp.Get(sc.DbTransaction, name); err != nil {
+		return ``, logErrorDB(err, "getting ecosystem param")
 	}
-	return sp.Value
+	return sp.Value, nil
 }
 
 // AppParam returns the value of the specified app parameter for the ecosystem
