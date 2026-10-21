@@ -8,6 +8,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/statsd"
+	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/didip/tollbooth"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -38,7 +39,7 @@ func clientMiddleware(next http.Handler, m Mode) http.Handler {
 
 func loggerFromRequest(r *http.Request) *log.Entry {
 	return log.WithFields(log.Fields{
-		"headers":  r.Header,
+		"headers":  utils.LogHeaders(r.Header),
 		"path":     r.URL.Path,
 		"protocol": r.Proto,
 		"remote":   r.RemoteAddr,
