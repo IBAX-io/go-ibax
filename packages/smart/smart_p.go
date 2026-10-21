@@ -806,11 +806,11 @@ func RegexpMatch(str, reg string) bool {
 
 func DBCount(sc *SmartContract, tableName string, inWhere *types.Map) (count int64, err error) {
 	tblname := qb.GetTableName(sc.TxSmart.EcosystemID, tableName)
-	where, err := qb.GetWhere(inWhere)
+	where, whereArgs, err := qb.GetWhere(inWhere)
 	if err != nil {
 		return 0, err
 	}
-	err = sqldb.GetDB(sc.DbTransaction).Table(tblname).Where(where).Count(&count).Error
+	err = sqldb.GetDB(sc.DbTransaction).Table(tblname).Where(where, whereArgs...).Count(&count).Error
 	return
 }
 

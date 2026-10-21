@@ -302,18 +302,15 @@ func (dbTx *DbTransaction) GetRecordsCountTx(tableName, where string) (count int
 	return count, err
 }
 
-// Update is updating table rows
-func (dbTx *DbTransaction) Update(tblname, set, where string) error {
+// Update is updating table rows. args are the values bound to the placeholders of set and where.
+func (dbTx *DbTransaction) Update(tblname, set, where string, args ...any) error {
 	sql := `UPDATE "` + strings.Trim(tblname, `"`) + `" SET ` + set + " " + where
-	return dbTx.ExecSql(sql)
+	return dbTx.ExecSql(sql, args...)
 }
 
-// ExecSql is exec sql
-func (dbTx *DbTransaction) ExecSql(sql string) error {
-	queryFn := func(tx *gorm.DB) *gorm.DB {
-		return tx.Exec(sql)
-	}
-	err := queryFn(GetDB(dbTx)).Error
+// ExecSql executes the statement with args bound to its placeholders
+func (dbTx *DbTransaction) ExecSql(sql string, args ...any) error {
+	err := GetDB(dbTx).Exec(sql, args...).Error
 	if err != nil {
 		return err
 	}
@@ -321,9 +318,9 @@ func (dbTx *DbTransaction) ExecSql(sql string) error {
 	return nil
 }
 
-// Delete is deleting table rows
-func (dbTx *DbTransaction) Delete(tblname, where string) error {
-	return dbTx.ExecSql(`DELETE FROM "` + tblname + `" ` + where)
+// Delete is deleting table rows. args are the values bound to the placeholders of where.
+func (dbTx *DbTransaction) Delete(tblname, where string, args ...any) error {
+	return dbTx.ExecSql(`DELETE FROM "`+tblname+`" `+where, args...)
 }
 
 // GetColumnCount is counting rows in table

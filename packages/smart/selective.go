@@ -63,18 +63,18 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 
 	queryCoster := querycost.GetQueryCoster(querycost.FormulaQueryCosterType)
 	if exists {
-		selectQuery, err := sqlBuilder.GetSelectExpr()
+		selectQuery, selectArgs, err := sqlBuilder.GetSelectExpr()
 		if err != nil {
 			logger.WithError(err).Error("on getting sql select statement")
 			return 0, "", err
 		}
 
-		selectCost, err := queryCoster.QueryCost(sc.DbTransaction, selectQuery)
+		selectCost, err := queryCoster.QueryCost(sc.DbTransaction, selectQuery, selectArgs...)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table, "query": selectQuery, "fields": fields, "values": ivalues, "where": inWhere}).Error("getting query total cost")
 			return 0, "", err
 		}
-		rows = sc.DbTransaction.GetOneRowTransaction(selectQuery)
+		rows = sc.DbTransaction.GetOneRowTransaction(selectQuery, selectArgs...)
 		logData, err = rows.String()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": selectQuery}).Error("getting one row transaction")
@@ -94,28 +94,29 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	var rollDataHashStr string
 
 	if !sqlBuilder.Where.IsEmpty() && len(logData) > 0 {
-		updateExpr, err := sqlBuilder.GetSQLUpdateExpr(logData)
+		updateExpr, updateArgs, err := sqlBuilder.GetSQLUpdateExpr(logData)
 		if err != nil {
 			logger.WithError(err).Error("on getting update expression for update")
 			return 0, "", err
 		}
 
-		whereExpr, err := sqlBuilder.GetSQLWhereExpr()
+		whereExpr, whereArgs, err := sqlBuilder.GetSQLWhereExpr()
 		if err != nil {
 			logger.WithError(err).Error("on getting where expression for update")
 			return 0, "", err
 		}
+		args := append(updateArgs, whereArgs...)
 		if !sc.ChildChain {
 			updateQuery := `UPDATE "` + sqlBuilder.Table + `" SET ` + updateExpr + " " + whereExpr
-			updateCost, err := queryCoster.QueryCost(sc.DbTransaction, updateQuery)
+			updateCost, err := queryCoster.QueryCost(sc.DbTransaction, updateQuery, args...)
 			if err != nil {
 				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": updateQuery}).Error("getting query total cost for update query")
 				return 0, "", err
 			}
 			cost += updateCost
 		}
-		rollDataHashStr = `UPDATE "` + strings.Trim(sqlBuilder.Table, `"`) + `" SET ` + updateExpr + " " + whereExpr
-		err = sc.DbTransaction.Update(sqlBuilder.Table, updateExpr, whereExpr)
+		rollDataHashStr = qb.BoundStatement(`UPDATE "`+strings.Trim(sqlBuilder.Table, `"`)+`" SET `+updateExpr+" "+whereExpr, args)
+		err = sc.DbTransaction.Update(sqlBuilder.Table, updateExpr, whereExpr, args...)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Error("getting update query")
 			return 0, "", err
@@ -145,20 +146,20 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		return cost, sqlBuilder.TableID(), nil
 	}
 
-	insertQuery, err := sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
+	insertQuery, insertArgs, err := sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
 	if err != nil {
 		logger.WithError(err).Error("on build insert query")
 		return 0, "", err
 	}
 
-	insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery)
+	insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery, insertArgs...)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
 		return 0, "", err
 	}
-	rollDataHashStr = insertQuery
+	rollDataHashStr = qb.BoundStatement(insertQuery, insertArgs)
 	cost += insertCost
-	err = sc.DbTransaction.ExecSql(insertQuery)
+	err = sc.DbTransaction.ExecSql(insertQuery, insertArgs...)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
 		return 0, "", err
@@ -193,17 +194,17 @@ func (sc *SmartContract) deleteRow(table string, id int64, generalRollback bool)
 		TxEcoID:      sc.TxSmart.EcosystemID,
 		KeyTableChkr: sqldb.KeyTableChecker{},
 	}
-	whereExpr, err := sqlBuilder.GetSQLWhereExpr()
+	whereExpr, whereArgs, err := sqlBuilder.GetSQLWhereExpr()
 	if err != nil {
 		return 0, err
 	}
 	queryCoster := querycost.GetQueryCoster(querycost.FormulaQueryCosterType)
 	selectQuery := `SELECT to_jsonb(t)::text FROM "` + sqlBuilder.Table + `" t ` + whereExpr
-	selectCost, err := queryCoster.QueryCost(sc.DbTransaction, selectQuery)
+	selectCost, err := queryCoster.QueryCost(sc.DbTransaction, selectQuery, whereArgs...)
 	if err != nil {
 		return 0, logErrorDB(err, "getting query total cost")
 	}
-	row, err := sc.DbTransaction.Single(selectQuery).String()
+	row, err := sc.DbTransaction.Single(selectQuery, whereArgs...).String()
 	if err != nil {
 		return 0, logErrorDB(err, "selecting the row to delete")
 	}
@@ -211,11 +212,11 @@ func (sc *SmartContract) deleteRow(table string, id int64, generalRollback bool)
 		return 0, errDelNotExistRecord
 	}
 	deleteQuery := `DELETE FROM "` + sqlBuilder.Table + `" ` + whereExpr
-	deleteCost, err := queryCoster.QueryCost(sc.DbTransaction, deleteQuery)
+	deleteCost, err := queryCoster.QueryCost(sc.DbTransaction, deleteQuery, whereArgs...)
 	if err != nil {
 		return 0, logErrorDB(err, "getting query total cost for delete query")
 	}
-	if err = sc.DbTransaction.Delete(sqlBuilder.Table, whereExpr); err != nil {
+	if err = sc.DbTransaction.Delete(sqlBuilder.Table, whereExpr, whereArgs...); err != nil {
 		return 0, logErrorDB(err, "deleting the row")
 	}
 	if generalRollback {

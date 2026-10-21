@@ -54,6 +54,7 @@ type SQLQueryBuilder struct {
 	Where        *types.Map
 	KeyTableChkr KeyTableChecker
 	whereExpr    string
+	whereArgs    []any
 	TxEcoID      int64
 }
 
@@ -114,23 +115,24 @@ func (b *SQLQueryBuilder) TableID() string {
 	return b.tableID
 }
 
-func (b *SQLQueryBuilder) GetSelectExpr() (string, error) {
+// GetSelectExpr returns the select query and the values bound to its placeholders
+func (b *SQLQueryBuilder) GetSelectExpr() (string, []any, error) {
 	if err := b.Prepare(); err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	fieldsExpr, err := b.GetSQLSelectFieldsExpr()
 	if err != nil {
 		b.WithError(err).Error("on getting sql fields statement")
-		return "", err
+		return "", nil, err
 	}
 
-	whereExpr, err := b.GetSQLWhereExpr()
+	whereExpr, whereArgs, err := b.GetSQLWhereExpr()
 	if err != nil {
 		b.WithError(err).Error("on getting sql where statement")
-		return "", err
+		return "", nil, err
 	}
-	return fmt.Sprintf(`SELECT %s FROM "%s" %s`, fieldsExpr, b.Table, whereExpr), nil
+	return fmt.Sprintf(`SELECT %s FROM "%s" %s`, fieldsExpr, b.Table, whereExpr), whereArgs, nil
 }
 
 func (b *SQLQueryBuilder) GetSQLSelectFieldsExpr() (string, error) {
@@ -149,40 +151,41 @@ func (b *SQLQueryBuilder) GetSQLSelectFieldsExpr() (string, error) {
 	return strings.Join(sqlFields, ","), nil
 }
 
-func (b *SQLQueryBuilder) GetSQLWhereExpr() (string, error) {
-	var err error
-
-	if err = b.Prepare(); err != nil {
-		return "", err
+// GetSQLWhereExpr returns the WHERE clause and the values bound to its placeholders
+func (b *SQLQueryBuilder) GetSQLWhereExpr() (string, []any, error) {
+	if err := b.Prepare(); err != nil {
+		return "", nil, err
 	}
 	if b.Where.IsEmpty() {
-		return "", nil
+		return "", nil, nil
 	}
 	if b.whereExpr != "" {
-		return b.whereExpr, nil
+		return b.whereExpr, b.whereArgs, nil
 	}
 	if b.isKeyTable {
 		if _, isEcosystem := b.Where.Get(`ecosystem`); !isEcosystem {
 			b.Where.Set(`ecosystem`, converter.StrToInt64(b.keyEcosystem))
 		}
 	}
-	b.whereExpr, err = GetWhere(b.Where)
+	where, args, err := GetWhere(b.Where)
 	if err != nil {
-		return ``, err
+		return ``, nil, err
 	}
-	if len(b.whereExpr) > 0 {
-		b.whereExpr = " WHERE " + b.whereExpr
-		return b.whereExpr, nil
+	if len(where) == 0 {
+		return "", nil, nil
 	}
-	return "", nil
+	b.whereExpr, b.whereArgs = " WHERE "+where, args
+	return b.whereExpr, b.whereArgs, nil
 }
 
-func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, error) {
+// GetSQLUpdateExpr returns the SET list of the update and the values bound to its placeholders
+func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, []any, error) {
 	if err := b.Prepare(); err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	expressions := make([]string, 0, len(b.Fields))
+	args := make([]any, 0, len(b.Fields))
 	jsonFields := make(map[string]map[string]string)
 
 	for i := 0; i < len(b.Fields); i++ {
@@ -196,23 +199,30 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, e
 				if jsonFields[colfield[0]] == nil {
 					jsonFields[colfield[0]] = make(map[string]string)
 				}
-				jsonFields[colfield[0]][colfield[1]] = escapeSingleQuotes(b.stringValues[i])
+				jsonFields[colfield[0]][colfield[1]] = b.stringValues[i]
 				continue
 			}
 		}
 
-		if syspar.IsByteColumn(b.Table, b.Fields[i]) && len(b.stringValues[i]) != 0 {
-			expressions = append(expressions, b.Fields[i]+"="+toSQLHexExpr(b.stringValues[i]))
-		} else if b.Fields[i][:1] == "+" || b.Fields[i][:1] == "-" {
-			expressions = append(expressions, toArithmeticUpdateExpr(b.Fields[i], b.stringValues[i]))
-		} else if b.stringValues[i] == `NULL` {
-			expressions = append(expressions, b.Fields[i]+"= NULL")
-		} else if strings.HasPrefix(b.Fields[i], prefTimestampSpace) {
-			expressions = append(expressions, toTimestampUpdateExpr(b.Fields[i], b.stringValues[i]))
-		} else if strings.HasPrefix(b.stringValues[i], prefTimestampSpace) {
-			expressions = append(expressions, b.Fields[i]+`= timestamp '`+escapeSingleQuotes(b.stringValues[i][len(`timestamp `):])+`'`)
-		} else {
-			expressions = append(expressions, `"`+b.Fields[i]+`"='`+escapeSingleQuotes(b.stringValues[i])+`'`)
+		field, value := b.Fields[i], b.stringValues[i]
+		switch {
+		case syspar.IsByteColumn(b.Table, field) && len(value) != 0:
+			expressions = append(expressions, field+"="+sqlHexExpr)
+			args = append(args, hex.EncodeToString([]byte(value)))
+		case field[:1] == "+" || field[:1] == "-":
+			expressions = append(expressions, field[1:]+"="+field[1:]+field[:1]+`?::numeric`)
+			args = append(args, value)
+		case value == `NULL`:
+			expressions = append(expressions, field+"= NULL")
+		case strings.HasPrefix(field, prefTimestampSpace):
+			expressions = append(expressions, field[len(prefTimestampSpace):]+`= to_timestamp(?)`)
+			args = append(args, value)
+		case strings.HasPrefix(value, prefTimestampSpace):
+			expressions = append(expressions, field+`= ?::timestamp`)
+			args = append(args, value[len(prefTimestampSpace):])
+		default:
+			expressions = append(expressions, `"`+field+`"=?`)
+			args = append(args, value)
 		}
 	}
 	var jsonColumnArr []string
@@ -226,7 +236,7 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, e
 		out, err := json.Marshal(val)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "type": consts.JSONMarshallError}).Error("marshalling update columns for jsonb")
-			return "", err
+			return "", nil, err
 		}
 
 		if len(logData[name]) > 0 && logData[name] != `NULL` {
@@ -235,26 +245,29 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, e
 			initial = `'{}'`
 		}
 
-		expressions = append(expressions, fmt.Sprintf(`%s=%s::jsonb || '%s'::jsonb`, name, initial, string(out)))
+		expressions = append(expressions, fmt.Sprintf(`%s=%s::jsonb || ?::jsonb`, name, initial))
+		args = append(args, string(out))
 	}
 
-	return strings.Join(expressions, ","), nil
+	return strings.Join(expressions, ","), args, nil
 }
 
-func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, error) {
+// GetSQLInsertQuery returns the insert query and the values bound to its placeholders
+func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, []any, error) {
 	if err := b.Prepare(); err != nil {
-		return "", err
+		return "", nil, err
 	}
 
 	isID := false
 	insFields := []string{}
 	insValues := []string{}
+	args := make([]any, 0, len(b.Fields)+1)
 	jsonFields := make(map[string]map[string]string)
 
 	for i := 0; i < len(b.Fields); i++ {
 		if b.Fields[i] == `id` {
 			isID = true
-			b.tableID = escapeSingleQuotes(b.stringValues[i])
+			b.tableID = b.stringValues[i]
 		}
 
 		if strings.Contains(b.Fields[i], `->`) {
@@ -263,13 +276,17 @@ func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, erro
 				if jsonFields[colfield[0]] == nil {
 					jsonFields[colfield[0]] = make(map[string]string)
 				}
-				jsonFields[colfield[0]][colfield[1]] = escapeSingleQuotes(b.stringValues[i])
+				jsonFields[colfield[0]][colfield[1]] = b.stringValues[i]
 				continue
 			}
 		}
 
 		insFields = append(insFields, toSQLField(b.Fields[i]))
-		insValues = append(insValues, b.toSQLValue(b.stringValues[i], b.Fields[i]))
+		expr, arg := b.toSQLValue(b.stringValues[i], b.Fields[i])
+		insValues = append(insValues, expr)
+		if arg != nil {
+			args = append(args, arg)
+		}
 	}
 
 	var jsonColumnArr []string
@@ -282,27 +299,29 @@ func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, erro
 		out, err := json.Marshal(val)
 		if err != nil {
 			log.WithFields(log.Fields{"error": err, "type": consts.JSONMarshallError}).Error("marshalling update columns for jsonb")
-			return "", err
+			return "", nil, err
 		}
 		insFields = append(insFields, name)
-		insValues = append(insValues, fmt.Sprintf(`'%s'::jsonb`, string(out)))
+		insValues = append(insValues, `?::jsonb`)
+		args = append(args, string(out))
 	}
 
 	if !isID {
 		id, err := idGetter.GetNextID(b.Table)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 
 		b.tableID = converter.Int64ToStr(id)
 		insFields = append(insFields, `id`)
-		insValues = append(insValues, wrapString(b.tableID, "'"))
+		insValues = append(insValues, `?`)
+		args = append(args, b.tableID)
 	}
 
 	flds := strings.Join(insFields, ",")
 	vls := strings.Join(insValues, ",")
 
-	return fmt.Sprintf(`INSERT INTO "%s" (%s) VALUES (%s)`, b.Table, flds, vls), nil
+	return fmt.Sprintf(`INSERT INTO "%s" (%s) VALUES (%s)`, b.Table, flds, vls), args, nil
 }
 
 func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (string, error) {
@@ -331,24 +350,26 @@ func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (
 	return string(jsonRollbackInfo), nil
 }
 
-func (b SQLQueryBuilder) toSQLValue(rawValue, rawField string) string {
+// toSQLValue returns the expression of an inserted value and the value bound to its placeholder,
+// nil when the expression has none
+func (b SQLQueryBuilder) toSQLValue(rawValue, rawField string) (string, any) {
 	if syspar.IsByteColumn(b.Table, rawField) && len(rawValue) != 0 {
-		return toSQLHexExpr(rawValue)
+		return sqlHexExpr, hex.EncodeToString([]byte(rawValue))
 	}
 
 	if rawValue == `NULL` {
-		return `NULL`
+		return `NULL`, nil
 	}
 
 	if strings.HasPrefix(rawField, prefTimestamp) {
-		return toWrapedTimestamp(rawValue)
+		return `to_timestamp(?)`, rawValue
 	}
 
 	if strings.HasPrefix(rawValue, prefTimestamp) {
-		return toTimestamp(rawValue)
+		return `?::timestamp`, rawValue[len(prefTimestampSpace):]
 	}
 
-	return wrapString(escapeSingleQuotes(rawValue), "'")
+	return `?`, rawValue
 }
 
 func (b SQLQueryBuilder) normalizeValues() error {
@@ -381,24 +402,16 @@ func isParamsContainsEcosystem(fields []string, ivalues []any) (bool, int) {
 	return false, -1
 }
 
-func toSQLHexExpr(value string) string {
-	return fmt.Sprintf(" decode('%s','HEX')", hex.EncodeToString([]byte(value)))
-}
+// sqlHexExpr is the expression of a bytea value, bound as its hex
+const sqlHexExpr = ` decode(?,'HEX')`
 
-func toArithmeticUpdateExpr(field, value string) string {
-	return field[1:] + "=" + field[1:] + field[:1] + escapeSingleQuotes(value)
-}
-
-func toTimestampUpdateExpr(field, value string) string {
-	return field[len(prefTimestampSpace):] + `= to_timestamp('` + escapeSingleQuotes(value) + `')`
-}
-
-func toWrapedTimestamp(value string) string {
-	return `to_timestamp('` + escapeSingleQuotes(value) + `')`
-}
-
-func toTimestamp(value string) string {
-	return prefTimestampSpace + wrapString(escapeSingleQuotes(value[len(prefTimestampSpace):]), "'")
+// BoundStatement returns a statement together with the values bound to its placeholders, the form
+// in which a statement is hashed
+func BoundStatement(query string, args []any) string {
+	if len(args) == 0 {
+		return query
+	}
+	return query + " " + fmt.Sprintf("%q", args)
 }
 
 func toSQLField(rawField string) string {
@@ -419,10 +432,6 @@ func toSQLField(rawField string) string {
 
 func wrapString(raw, wrapper string) string {
 	return wrapper + raw + wrapper
-}
-
-func escapeSingleQuotes(val string) string {
-	return strings.Replace(val, `'`, `''`, -1)
 }
 
 // CheckNow allows check if the content contains postgres NOW()

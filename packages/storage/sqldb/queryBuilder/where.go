@@ -5,6 +5,7 @@
 package queryBuilder
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"regexp"
@@ -53,99 +54,95 @@ func PrepareWhere(where string) string {
 	return whereStr
 }
 
-func GetWhere(inWhere *types.Map) (string, error) {
+// GetWhere makes the condition of a where map. The values are never put in the condition: each one
+// is a ? placeholder and the values are returned in the order of their placeholders, as strings,
+// so a database string literal is what each value is compared as.
+func GetWhere(inWhere *types.Map) (string, []any, error) {
 	var (
 		where string
 		cond  []string
+		args  []any
 	)
 	if inWhere == nil {
 		inWhere = types.NewMap()
 	}
-	escape := func(value any) string {
-		return strings.Replace(fmt.Sprint(value), `'`, `''`, -1)
+	str := func(value any) string {
+		return fmt.Sprint(value)
 	}
-	oper := func(action string, v any) (string, error) {
-		switch value := v.(type) {
-		default:
-			return fmt.Sprintf(`%s '%s'`, action, escape(value)), nil
-		}
+	oper := func(action string, v any) (string, []any, error) {
+		return action + ` ?`, []any{str(v)}, nil
 	}
-	like := func(pattern string, v any) (string, error) {
-		switch value := v.(type) {
-		default:
-			return fmt.Sprintf(pattern, escape(value)), nil
-		}
+	like := func(action, prefix, suffix string, v any) (string, []any, error) {
+		return action + ` ?`, []any{prefix + str(v) + suffix}, nil
 	}
-	in := func(action string, v any) (ret string, err error) {
+	in := func(action string, v any) (string, []any, error) {
+		var list []any
 		switch value := v.(type) {
 		case string:
-			if len(value) == 0 {
-				return `false`, errWhereFalse
+			if len(value) > 0 {
+				list = append(list, value)
 			}
-			ret = fmt.Sprintf(`%s ('%s')`, action, escape(value))
 		case []any:
-			var list []string
 			for _, ival := range value {
-				list = append(list, escape(ival))
+				list = append(list, str(ival))
 			}
-			if len(list) > 0 {
-				ret = fmt.Sprintf(`%s ('%s')`, action, strings.Join(list, `', '`))
-			} else {
-				return `false`, errWhereFalse
-			}
+		default:
+			return ``, nil, nil
 		}
-		return
+		if len(list) == 0 {
+			return `false`, nil, errWhereFalse
+		}
+		return action + ` (` + strings.TrimSuffix(strings.Repeat(`?,`, len(list)), `,`) + `)`, list, nil
 	}
-	logic := func(action string, v any) (ret string, err error) {
-		switch value := v.(type) {
-		case []any:
-			var list []string
-			for _, ival := range value {
-				switch avalue := ival.(type) {
-				case *types.Map:
-					where, err := GetWhere(avalue)
-					if err != nil {
-						return ``, err
-					}
-					if len(where) > 0 {
-						list = append(list, where)
-					}
+	logic := func(action string, v any) (string, []any, error) {
+		value, ok := v.([]any)
+		if !ok {
+			return ``, nil, nil
+		}
+		var (
+			list  []string
+			largs []any
+		)
+		for _, ival := range value {
+			if avalue, ok := ival.(*types.Map); ok {
+				where, wargs, err := GetWhere(avalue)
+				if err != nil {
+					return ``, nil, err
+				}
+				if len(where) > 0 {
+					list = append(list, where)
+					largs = append(largs, wargs...)
 				}
 			}
-			if len(list) > 0 {
-				ret = fmt.Sprintf(`(%s)`, strings.Join(list, ` `+action+` `))
-			}
 		}
-		return
+		if len(list) == 0 {
+			return ``, nil, nil
+		}
+		return `(` + strings.Join(list, ` `+action+` `) + `)`, largs, nil
 	}
 	for _, key := range inWhere.Keys() {
 		v, _ := inWhere.Get(key)
 		key = PrepareWhere(converter.Sanitize(strings.ToLower(key), `->$`))
 		switch key {
 		case `$like`:
-			return like(`like '%%%s%%'`, v)
+			return like(`like`, `%`, `%`, v)
 		case `$end`:
-			return like(`like '%%%s'`, v)
+			return like(`like`, `%`, ``, v)
 		case `$begin`:
-			return like(`like '%s%%'`, v)
+			return like(`like`, ``, `%`, v)
 		case `$ilike`:
-			return like(`ilike '%%%s%%'`, v)
+			return like(`ilike`, `%`, `%`, v)
 		case `$iend`:
-			return like(`ilike '%%%s'`, v)
+			return like(`ilike`, `%`, ``, v)
 		case `$ibegin`:
-			return like(`ilike '%s%%'`, v)
-		case `$and`:
-			icond, err := logic(`and`, v)
+			return like(`ilike`, ``, `%`, v)
+		case `$and`, `$or`:
+			icond, iargs, err := logic(key[1:], v)
 			if err != nil {
-				return ``, err
+				return ``, nil, err
 			}
 			cond = append(cond, icond)
-		case `$or`:
-			icond, err := logic(`or`, v)
-			if err != nil {
-				return ``, err
-			}
-			cond = append(cond, icond)
+			args = append(args, iargs...)
 		case `$in`:
 			return in(`in`, v)
 		case `$nin`:
@@ -172,50 +169,53 @@ func GetWhere(inWhere *types.Map) (string, error) {
 				for _, iarr := range value {
 					switch avalue := iarr.(type) {
 					case *types.Map:
-						ret, err := GetWhere(avalue)
+						ret, rargs, err := GetWhere(avalue)
 						if err == errWhereFalse {
 							acond = append(acond, ret)
 						} else {
 							if err != nil {
-								return ``, err
+								return ``, nil, err
 							}
-							acond = append(acond, fmt.Sprintf(`(%s %s)`, key, ret))
+							acond = append(acond, `(`+key+` `+ret+`)`)
+							args = append(args, rargs...)
 						}
 					default:
-						acond = append(acond, fmt.Sprintf(`%s = '%s'`, key, escape(avalue)))
+						acond = append(acond, key+` = ?`)
+						args = append(args, str(avalue))
 					}
 				}
 				if len(acond) > 0 {
-					cond = append(cond, fmt.Sprintf(`(%s)`, strings.Join(acond, ` and `)))
+					cond = append(cond, `(`+strings.Join(acond, ` and `)+`)`)
 				}
 			case *types.Map:
-				ret, err := GetWhere(value)
+				ret, rargs, err := GetWhere(value)
 				if err == errWhereFalse {
 					cond = append(cond, ret)
 				} else {
 					if err != nil {
-						return ``, err
+						return ``, nil, err
 					}
-					cond = append(cond, fmt.Sprintf(`(%s %s)`, key, ret))
+					cond = append(cond, `(`+key+` `+ret+`)`)
+					args = append(args, rargs...)
 				}
 			case []byte:
-				cond = append(cond, fmt.Sprintf(`%s = %s`, key, fmt.Sprintf(" decode('%x','HEX')", value)))
+				cond = append(cond, key+` = decode(?,'HEX')`)
+				args = append(args, hex.EncodeToString(value))
 			default:
-				ival := escape(value)
-				if ival == `$isnull` {
-					ival = fmt.Sprintf(`%s is null`, key)
+				if ival := str(value); ival == `$isnull` {
+					cond = append(cond, key+` is null`)
 				} else {
-					ival = fmt.Sprintf(`%s = '%s'`, key, ival)
+					cond = append(cond, key+` = ?`)
+					args = append(args, ival)
 				}
-				cond = append(cond, ival)
 			}
 		}
 	}
 	if len(cond) > 0 {
 		where = strings.Join(cond, ` and `)
 		if err := CheckNow(where); err != nil {
-			return ``, err
+			return ``, nil, err
 		}
 	}
-	return where, nil
+	return where, args, nil
 }

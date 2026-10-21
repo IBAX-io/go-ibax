@@ -8,7 +8,6 @@ package smart
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -125,8 +124,8 @@ func DBDelete(sc *SmartContract, tblname string, id int64) (qcost int64, err err
 // SysRollbackDeleteRow inserts again the row a transaction deleted
 func SysRollbackDeleteRow(dbTx *sqldb.DbTransaction, sysData SysRollData) error {
 	table := `"` + sysData.TableName + `"`
-	err := dbTx.ExecSql(`INSERT INTO ` + table + ` SELECT * FROM jsonb_populate_record(NULL::` + table +
-		`, '` + strings.ReplaceAll(sysData.Data, `'`, `''`) + `'::jsonb)`)
+	err := dbTx.ExecSql(`INSERT INTO `+table+` SELECT * FROM jsonb_populate_record(NULL::`+table+
+		`, ?::jsonb)`, sysData.Data)
 	if err != nil {
 		return logErrorDB(err, "inserting the deleted row")
 	}

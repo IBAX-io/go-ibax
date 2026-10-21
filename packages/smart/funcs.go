@@ -976,12 +976,12 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 		return 0, nil, err
 	}
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
-	where, err := qb.GetWhere(inWhere)
+	where, whereArgs, err := qb.GetWhere(inWhere)
 	if err != nil {
 		return 0, nil, err
 	}
 	if id != 0 {
-		where = fmt.Sprintf(`id='%d'`, id)
+		where, whereArgs = `id = ?`, []any{converter.Int64ToStr(id)}
 		limit = 1
 	}
 	if limit == 0 {
@@ -997,7 +997,7 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 	if err = sc.AccessColumns(tblname, &columns, false); err != nil {
 		return 0, nil, err
 	}
-	q := sqldb.GetDB(sc.DbTransaction).Table(tblname).Select(PrepareColumns(columns)).Where(where)
+	q := sqldb.GetDB(sc.DbTransaction).Table(tblname).Select(PrepareColumns(columns)).Where(where, whereArgs...)
 
 	//group + order => false
 	//group + no order => true
@@ -2469,9 +2469,7 @@ func PubToHex(in any) (ret string) {
 
 func SendExternalTransaction(sc *SmartContract, uid, url, externalContract string,
 	params *types.Map, resultContract string) (err error) {
-	var (
-		out, insertQuery string
-	)
+	var out string
 	if _, err := syspar.GetThisNodePosition(); err != nil {
 		return nil
 	}
@@ -2490,11 +2488,11 @@ func SendExternalTransaction(sc *SmartContract, uid, url, externalContract strin
 			resultContract, sc.Timestamp},
 		KeyTableChkr: sqldb.KeyTableChecker{},
 	}
-	insertQuery, err = sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
+	insertQuery, insertArgs, err := sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
 	if err != nil {
 		return
 	}
-	return sqldb.GetDB(sc.DbTransaction).Exec(insertQuery).Error
+	return sqldb.GetDB(sc.DbTransaction).Exec(insertQuery, insertArgs...).Error
 }
 
 func IsHonorNodeKey(id int64) bool {
