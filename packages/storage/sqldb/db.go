@@ -201,8 +201,7 @@ func GormClose() error {
 
 // DbTransaction is gorm.DB wrapper
 type DbTransaction struct {
-	conn      *gorm.DB
-	BinLogSql [][]byte
+	conn *gorm.DB
 }
 
 func NewDbTransaction(conn *gorm.DB) *DbTransaction {
@@ -310,12 +309,7 @@ func (dbTx *DbTransaction) Update(tblname, set, where string, args ...any) error
 
 // ExecSql executes the statement with args bound to its placeholders
 func (dbTx *DbTransaction) ExecSql(sql string, args ...any) error {
-	err := GetDB(dbTx).Exec(sql, args...).Error
-	if err != nil {
-		return err
-	}
-	dbTx.BinLogSql = append(dbTx.BinLogSql, []byte(sql))
-	return nil
+	return GetDB(dbTx).Exec(sql, args...).Error
 }
 
 // Delete is deleting table rows. args are the values bound to the placeholders of where.

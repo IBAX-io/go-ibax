@@ -302,13 +302,6 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 	playTx := b.GenAfterTxs()
 	return sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
-		//if !b.GenBlock && !b.IsGenesis() && conf.Config.BlockSyncMethod.Method == types.BlockSyncMethod_SQLDML.String() {
-		//	for i := 0; i < len(b.AfterTxs.TxBinLogSql); i++ {
-		//		if err := tx.Exec(string(b.AfterTxs.TxBinLogSql[i])).Error; err != nil {
-		//			return errors.Wrap(err, "batches exec sql for tx")
-		//		}
-		//	}
-		//}
 		if err := sqldb.DeleteTransactions(tx, playTx.UsedTx); err != nil {
 			return errors.Wrap(err, "batches delete used transactions")
 		}

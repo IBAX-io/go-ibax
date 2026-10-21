@@ -126,14 +126,6 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			return
 		}
 	}()
-	//if !b.GenBlock && !b.IsGenesis() && conf.Config.BlockSyncMethod.Method == types.BlockSyncMethod_SQLDML.String() {
-	//	if b.SysUpdate {
-	//		if err := syspar.SysUpdate(dbTx); err != nil {
-	//			return fmt.Errorf("updating syspar: %w", err)
-	//		}
-	//	}
-	//	return nil
-	//}
 
 	var keyIds []int64
 	var keyIdsMap = make(map[int64]bool)
@@ -377,7 +369,6 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
-		//afters.TxBinLogSql = append(afters.TxBinLogSql, t.DbTransaction.BinLogSql...)
 		*processedTx = append(*processedTx, t.FullData)
 
 		sqldb.UpdateTxInputs(t.Hash(), t.TxInputsMap, b.OutputsMap)

@@ -6,12 +6,6 @@ package types;
 
 import "play.proto";
 
-// BlockSyncMethod define block sync method.
-enum BlockSyncMethod{
-  CONTRACTVM = 0;
-  SQLDML = 1;
-}
-
 //BlockHeader is a structure of the block's header
 message BlockHeader{
   int64 block_id = 1;

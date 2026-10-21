@@ -23,11 +23,9 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion3 // please upgrade the proto package
 
-//AfterTxs defined block batch process tx for sql DML
+// AfterTxs defined block batch process tx for sql DML
 type AfterTxs struct {
-	Txs []*AfterTx `protobuf:"bytes,1,rep,name=txs,proto3" json:"txs,omitempty"`
-	//TxBinLogSql defined contract exec sql for tx DML
-	//  repeated bytes tx_bin_log_sql = 2;
+	Txs []*AfterTx    `protobuf:"bytes,1,rep,name=txs,proto3" json:"txs,omitempty"`
 	Rts []*RollbackTx `protobuf:"bytes,3,rep,name=rts,proto3" json:"rts,omitempty"`
 }
 

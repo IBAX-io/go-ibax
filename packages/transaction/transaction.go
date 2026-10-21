@@ -138,7 +138,6 @@ func (tr *Transaction) WithOption(
 		PrevSysPar:     prevSysPar,
 		EcoParams:      ecoParams,
 	}
-	in.DbTransaction.BinLogSql = nil
 	tr.InToCxt = in
 	tr.OutCtx = &OutCtx{
 		TxResult: &pbgo.TxResult{Hash: tr.Hash()},

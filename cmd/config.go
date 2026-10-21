@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/IBAX-io/go-ibax/packages/types"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
@@ -144,9 +143,6 @@ func init() {
 	// CryptoSettings
 	cmdFlags.StringVar(&conf.Config.CryptoSettings.Hasher, "hasher", crypto.HashAlgo_KECCAK256.String(), fmt.Sprintf("Hash Algorithm (%s | %s | %s | %s | %s | %s)", crypto.HashAlgo_SHA256, crypto.HashAlgo_SHA384, crypto.HashAlgo_SHA512, crypto.HashAlgo_SHA3_256, crypto.HashAlgo_KECCAK256, crypto.HashAlgo_SM3))
 	cmdFlags.StringVar(&conf.Config.CryptoSettings.Cryptoer, "cryptoer", crypto.AsymAlgo_ECC_Secp256k1.String(), fmt.Sprintf("Key and Sign Algorithm (%s | %s | %s | %s | %s)", crypto.AsymAlgo_ECC_P256, crypto.AsymAlgo_ECC_Secp256k1, crypto.AsymAlgo_SM2, crypto.AsymAlgo_MLDSA65, crypto.AsymAlgo_MLDSA87))
-
-	// BlockSyncMethod
-	cmdFlags.StringVar(&conf.Config.BlockSyncMethod.Method, "sync", types.BlockSyncMethod_CONTRACTVM.String(), fmt.Sprintf("Block sync method (%s | %s)", types.BlockSyncMethod_CONTRACTVM, types.BlockSyncMethod_SQLDML))
 
 	viper.BindPFlags(configCmd.PersistentFlags())
 }

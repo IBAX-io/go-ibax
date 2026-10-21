@@ -147,7 +147,6 @@ func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
 			WithOutCtxTxOutputs(s.TxOutputsMap),
 			WithOutCtxTxInputs(s.TxInputsMap),
 		)
-		//in.DbTransaction.BinLogSql = s.DbTransaction.BinLogSql
 	}()
 
 	// Every transaction proves the key that signs it before it runs, whatever its type. The
