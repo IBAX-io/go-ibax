@@ -116,13 +116,16 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 	_, maxBlockID, err := tcpclient.HostWithMaxBlock(ctx, remoteHosts)
 	if err != nil {
 		if err == tcpclient.ErrNodesUnavailable {
-			return false, nil
+			return unreachableRelevant(), nil
 		}
 		return false, errors.Wrapf(err, "choosing best host")
 	}
 
 	// Node can't connect to others
 	if maxBlockID == -1 {
+		if unreachableRelevant() {
+			return true, nil
+		}
 		log.WithFields(log.Fields{"hosts": remoteHosts}).Info("can't connect to others, stopping node relevance")
 		return false, nil
 	}
@@ -134,6 +137,15 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 	}
 
 	return true, nil
+}
+
+// unreachableRelevant reports whether a node that reaches none of the others stays relevant. On a
+// chain of the BFT consensus it does: alone it commits no block, as a block takes the precommits
+// of a quorum, and once it reaches the others it takes the blocks it lacks by their certificates.
+// Paused, it would answer no API call until the next check, rollback_blocks blocks later, though
+// the others start only after it, as when the validators of a chain start together.
+func unreachableRelevant() bool {
+	return syspar.IsBftConsensus()
 }
 
 func (n *NodeRelevanceService) pauseNodeActivity() {

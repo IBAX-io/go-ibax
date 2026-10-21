@@ -300,9 +300,8 @@ func (d *bftDriver) syncHeight() error {
 
 // bftStopped reports whether the network is stopped (StopNetwork): the node then signs nothing.
 // The pause of a node behind is no stop: it takes the blocks of the others by their certificates,
-// and its messages of a height the others left change nothing, while the pause of a node that
-// could not reach the others when it started would keep it out of the consensus until the next
-// check of its relevance.
+// and its messages of a height the others left change nothing; a node that reaches none of the
+// others is not paused (node.unreachableRelevant).
 func bftStopped() bool {
 	return node.NodePauseType() == node.PauseTypeStopingNetwork
 }
