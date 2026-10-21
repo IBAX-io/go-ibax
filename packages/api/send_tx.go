@@ -92,10 +92,10 @@ func txHandlerBatches(r *http.Request, m Mode, mtx map[string][]byte) ([]string,
 	for _, datum := range mtx {
 		txData = append(txData, datum)
 	}
-	if int64(len(txData)) > syspar.GetMaxTxSize() {
-		logger.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_size": syspar.GetMaxTxSize(), "size": len(txData)}).Error("transaction size exceeds max size")
+	if size := transaction.LargestTxSize(txData); int64(size) > syspar.GetMaxTxSize() {
+		logger.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_size": syspar.GetMaxTxSize(), "size": size}).Error("transaction size exceeds max size")
 		transaction.BadTxForBan(client.KeyID)
-		return nil, errLimitTxSize.Errorf(len(txData))
+		return nil, errLimitTxSize.Errorf(size)
 	}
 
 	hash, err := m.ClientTxProcessor.ProcessClientTxBatches(txData, client.KeyID, logger)
