@@ -116,7 +116,7 @@ func TestFIPSSuites(t *testing.T) {
 		t.Skip("not in FIPS 140-3 mode")
 	}
 	t.Logf("Go Cryptographic Module %s, enforced %v", FIPSModule(), fips140.Enforced())
-	defer func() { asymAlgo, hashAlgo = AsymAlgo_ECC_P256, HashAlgo_SHA256 }()
+	defer func() { setAsymAlgo(AsymAlgo_ECC_P256); setHashAlgo(HashAlgo_SHA256) }()
 	for _, cryptoer := range fipsCryptoers {
 		a := AsymAlgo(AsymAlgo_value[cryptoer])
 		if err := CheckNodeAlgo(a); err != nil {

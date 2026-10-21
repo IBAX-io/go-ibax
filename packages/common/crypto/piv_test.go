@@ -16,8 +16,8 @@ import (
 
 // withHash runs f on a network of hash h
 func withHash(h HashAlgo, f func()) {
-	defer func(prev HashAlgo) { hashAlgo = prev }(hashAlgo)
-	hashAlgo = h
+	defer hashAlgo.Store(hashAlgo.Load())
+	setHashAlgo(h)
 	f()
 }
 
