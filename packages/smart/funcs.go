@@ -1601,13 +1601,15 @@ func httpRequest(req *http.Request, headers map[string]any) (string, error) {
 	for key, v := range headers {
 		req.Header.Set(key, fmt.Sprint(v))
 	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	if err := checkHTTPScheme(req); err != nil {
+		return ``, logError(err, consts.NetworkError, "http request")
+	}
+	resp, err := contractHTTPClient.Do(req)
 	if err != nil {
 		return ``, logError(err, consts.NetworkError, "http request")
 	}
 	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
+	data, err := readHTTPBody(resp.Body)
 	if err != nil {
 		return ``, logError(err, consts.IOError, "reading http answer")
 	}
