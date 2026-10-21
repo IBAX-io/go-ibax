@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
@@ -54,10 +55,17 @@ func PrepareWhere(where string) string {
 	return whereStr
 }
 
-// GetWhere makes the condition of a where map. The values are never put in the condition: each one
-// is a ? placeholder and the values are returned in the order of their placeholders, as strings,
-// so a database string literal is what each value is compared as.
-func GetWhere(inWhere *types.Map) (string, []any, error) {
+// GetWhere makes the condition of a where map on the table. The values are never put in the
+// condition: each one is a ? placeholder and the values are returned in the order of their
+// placeholders, as strings, so a database string literal is what each value is compared as. A value
+// compared with a date or time column must be a literal.
+func GetWhere(table string, inWhere *types.Map) (string, []any, error) {
+	return getWhere(table, ``, inWhere)
+}
+
+// getWhere makes the condition of a where map whose operators apply to the column, empty when they
+// apply to no column of the table
+func getWhere(table, column string, inWhere *types.Map) (string, []any, error) {
 	var (
 		where string
 		cond  []string
@@ -69,7 +77,14 @@ func GetWhere(inWhere *types.Map) (string, []any, error) {
 	str := func(value any) string {
 		return fmt.Sprint(value)
 	}
+	dataType := ``
+	if len(column) > 0 {
+		dataType = syspar.ColumnDataType(table, column)
+	}
 	oper := func(action string, v any) (string, []any, error) {
+		if err := checkDateTimeValue(dataType, str(v)); err != nil {
+			return ``, nil, err
+		}
 		return action + ` ?`, []any{str(v)}, nil
 	}
 	like := func(action, prefix, suffix string, v any) (string, []any, error) {
@@ -89,6 +104,11 @@ func GetWhere(inWhere *types.Map) (string, []any, error) {
 		default:
 			return ``, nil, nil
 		}
+		for _, ival := range list {
+			if err := checkDateTimeValue(dataType, ival.(string)); err != nil {
+				return ``, nil, err
+			}
+		}
 		if len(list) == 0 {
 			return `false`, nil, errWhereFalse
 		}
@@ -105,7 +125,7 @@ func GetWhere(inWhere *types.Map) (string, []any, error) {
 		)
 		for _, ival := range value {
 			if avalue, ok := ival.(*types.Map); ok {
-				where, wargs, err := GetWhere(avalue)
+				where, wargs, err := getWhere(table, column, avalue)
 				if err != nil {
 					return ``, nil, err
 				}
@@ -160,8 +180,14 @@ func GetWhere(inWhere *types.Map) (string, []any, error) {
 		case `$lte`:
 			return oper(`<=`, v)
 		default:
+			keyColumn := ``
 			if !strings.Contains(key, `>`) && len(key) > 0 {
+				keyColumn = key
 				key = `"` + key + `"`
+			}
+			keyDataType := ``
+			if len(keyColumn) > 0 {
+				keyDataType = syspar.ColumnDataType(table, keyColumn)
 			}
 			switch value := v.(type) {
 			case []any:
@@ -169,7 +195,7 @@ func GetWhere(inWhere *types.Map) (string, []any, error) {
 				for _, iarr := range value {
 					switch avalue := iarr.(type) {
 					case *types.Map:
-						ret, rargs, err := GetWhere(avalue)
+						ret, rargs, err := getWhere(table, keyColumn, avalue)
 						if err == errWhereFalse {
 							acond = append(acond, ret)
 						} else {
@@ -180,6 +206,9 @@ func GetWhere(inWhere *types.Map) (string, []any, error) {
 							args = append(args, rargs...)
 						}
 					default:
+						if err := checkDateTimeValue(keyDataType, str(avalue)); err != nil {
+							return ``, nil, err
+						}
 						acond = append(acond, key+` = ?`)
 						args = append(args, str(avalue))
 					}
@@ -188,7 +217,7 @@ func GetWhere(inWhere *types.Map) (string, []any, error) {
 					cond = append(cond, `(`+strings.Join(acond, ` and `)+`)`)
 				}
 			case *types.Map:
-				ret, rargs, err := GetWhere(value)
+				ret, rargs, err := getWhere(table, keyColumn, value)
 				if err == errWhereFalse {
 					cond = append(cond, ret)
 				} else {
@@ -205,6 +234,9 @@ func GetWhere(inWhere *types.Map) (string, []any, error) {
 				if ival := str(value); ival == `$isnull` {
 					cond = append(cond, key+` is null`)
 				} else {
+					if err := checkDateTimeValue(keyDataType, ival); err != nil {
+						return ``, nil, err
+					}
 					cond = append(cond, key+` = ?`)
 					args = append(args, ival)
 				}

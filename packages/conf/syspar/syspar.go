@@ -108,7 +108,7 @@ var (
 	errNodeDisabled     = errors.New("node is disabled")
 	nodePubKey          []byte
 	nodePrivKey         []byte
-	cacheTableColType   = make([]map[string]string, 0)
+	cacheTableColType   = make(map[string]map[string]string)
 	runModel            uint8
 	accountAlgos        AccountAlgorithmSet
 )
@@ -698,33 +698,49 @@ func GetPriceCreateExec(s string) (price int64) {
 	return
 }
 
-// SysTableColType reloads/updates values of all ecosystem table column data type
+// SysTableColType reloads the data types of the ecosystem table columns whose values the query
+// builder treats apart: bytea, date and time
 func SysTableColType(dbTx *sqldb.DbTransaction) error {
-	var err error
-	mutex.RLock()
-	defer mutex.RUnlock()
-	cacheTableColType, err = dbTx.GetAllTransaction(`
-		SELECT table_name,column_name,data_type,character_maximum_length
-		FROM information_schema.columns Where table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name ~ '[\d]' AND data_type = 'bytea' ORDER BY ordinal_position ASC;`, -1)
+	rows, err := dbTx.GetAllTransaction(`
+		SELECT table_name,column_name,data_type
+		FROM information_schema.columns Where table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name ~ '[\d]'
+		AND (data_type = 'bytea' OR data_type = 'date' OR data_type LIKE 'time%') ORDER BY ordinal_position ASC;`, -1)
 	if err != nil {
 		return err
 	}
+	colTypes := make(map[string]map[string]string)
+	for _, row := range rows {
+		table := row["table_name"]
+		if colTypes[table] == nil {
+			colTypes[table] = make(map[string]string)
+		}
+		colTypes[table][row["column_name"]] = row["data_type"]
+	}
+	SetTableColType(colTypes)
 	return nil
 }
 
-func GetTableColType() []map[string]string {
+// SetTableColType replaces the data types of the columns, by table and column
+func SetTableColType(colTypes map[string]map[string]string) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	cacheTableColType = colTypes
+}
+
+// GetTableColType returns the data types SysTableColType loaded, by table and column
+func GetTableColType() map[string]map[string]string {
 	mutex.RLock()
 	defer mutex.RUnlock()
 	return cacheTableColType
 }
 
+// ColumnDataType returns the data type of a bytea, date or time column, empty for any other column
+func ColumnDataType(table, column string) string {
+	return GetTableColType()[table][column]
+}
+
 func IsByteColumn(table, column string) bool {
-	for _, row := range GetTableColType() {
-		if row["table_name"] == table && row["column_name"] == column {
-			return true
-		}
-	}
-	return false
+	return ColumnDataType(table, column) == "bytea"
 }
 
 func SetRunModel(setVal uint8) {

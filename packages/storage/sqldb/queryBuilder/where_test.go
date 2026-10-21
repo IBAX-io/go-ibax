@@ -56,7 +56,7 @@ func TestGetWhereBindsValues(t *testing.T) {
 		{`isnull`, where(`name`, `$isnull`), `"name" is null`, nil},
 		{`json`, where(`doc->title`, value), `doc->>'title' = ?`, []any{value}},
 	} {
-		sql, args, err := GetWhere(c.where)
+		sql, args, err := GetWhere(``, c.where)
 		if err != nil {
 			t.Fatalf("%s: %v", c.name, err)
 		}

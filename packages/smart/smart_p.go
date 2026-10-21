@@ -806,7 +806,7 @@ func RegexpMatch(str, reg string) bool {
 
 func DBCount(sc *SmartContract, tableName string, inWhere *types.Map) (count int64, err error) {
 	tblname := qb.GetTableName(sc.TxSmart.EcosystemID, tableName)
-	where, whereArgs, err := qb.GetWhere(inWhere)
+	where, whereArgs, err := qb.GetWhere(tblname, inWhere)
 	if err != nil {
 		return 0, err
 	}

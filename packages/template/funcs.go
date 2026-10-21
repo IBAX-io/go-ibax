@@ -620,6 +620,9 @@ func dbfindTag(par parFunc) string {
 	if err != nil {
 		return err.Error()
 	}
+	state = converter.StrToInt64(getVar(par.Workspace, `ecosystem_id`))
+	tblname := converter.ParseTable(strings.Trim(macro((*par.Pars)[`Name`], par.Workspace.Vars), `"`), state)
+	tblname = strings.ToLower(tblname)
 	if par.Node.Attr[`where`] != nil {
 		where = macro(par.Node.Attr[`where`].(string), par.Workspace.Vars)
 		if strings.HasPrefix(where, `{`) {
@@ -635,12 +638,12 @@ func dbfindTag(par parFunc) string {
 					return errWhere.Error()
 				}
 			case map[string]any:
-				where, whereArgs, err = qb.GetWhere(types.LoadMap(v))
+				where, whereArgs, err = qb.GetWhere(tblname, types.LoadMap(v))
 				if err != nil {
 					return err.Error()
 				}
 			case *types.Map:
-				where, whereArgs, err = qb.GetWhere(v)
+				where, whereArgs, err = qb.GetWhere(tblname, v)
 				if err != nil {
 					return err.Error()
 				}
@@ -669,7 +672,6 @@ func dbfindTag(par parFunc) string {
 		prefix = par.Node.Attr[`prefix`].(string)
 		limit = 1
 	}
-	state = converter.StrToInt64(getVar(par.Workspace, `ecosystem_id`))
 	if par.Node.Attr["cutoff"] != nil {
 		for _, v := range strings.Split(par.Node.Attr["cutoff"].(string), ",") {
 			cutoffColumns[v] = true
@@ -677,8 +679,6 @@ func dbfindTag(par parFunc) string {
 	}
 
 	sc := par.Workspace.SmartContract
-	tblname := converter.ParseTable(strings.Trim(macro((*par.Pars)[`Name`], par.Workspace.Vars), `"`), state)
-	tblname = strings.ToLower(tblname)
 
 	inColumns = ``
 	if par.Node.Attr[`order`] != nil {

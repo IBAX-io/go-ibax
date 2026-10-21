@@ -976,7 +976,7 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 		return 0, nil, err
 	}
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
-	where, whereArgs, err := qb.GetWhere(inWhere)
+	where, whereArgs, err := qb.GetWhere(tblname, inWhere)
 	if err != nil {
 		return 0, nil, err
 	}

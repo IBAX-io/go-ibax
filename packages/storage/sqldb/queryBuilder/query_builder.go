@@ -22,7 +22,6 @@ import (
 )
 
 const (
-	prefTimestamp      = "timestamp"
 	prefTimestampSpace = "timestamp "
 )
 
@@ -167,7 +166,7 @@ func (b *SQLQueryBuilder) GetSQLWhereExpr() (string, []any, error) {
 			b.Where.Set(`ecosystem`, converter.StrToInt64(b.keyEcosystem))
 		}
 	}
-	where, args, err := GetWhere(b.Where)
+	where, args, err := GetWhere(b.Table, b.Where)
 	if err != nil {
 		return ``, nil, err
 	}
@@ -215,12 +214,21 @@ func (b *SQLQueryBuilder) GetSQLUpdateExpr(logData map[string]string) (string, [
 		case value == `NULL`:
 			expressions = append(expressions, field+"= NULL")
 		case strings.HasPrefix(field, prefTimestampSpace):
+			if err := checkUnixTime(value); err != nil {
+				return "", nil, err
+			}
 			expressions = append(expressions, field[len(prefTimestampSpace):]+`= to_timestamp(?)`)
 			args = append(args, value)
 		case strings.HasPrefix(value, prefTimestampSpace):
+			if err := checkDateTimeValue("timestamp", value[len(prefTimestampSpace):]); err != nil {
+				return "", nil, err
+			}
 			expressions = append(expressions, field+`= ?::timestamp`)
 			args = append(args, value[len(prefTimestampSpace):])
 		default:
+			if err := checkDateTimeValue(syspar.ColumnDataType(b.Table, field), value); err != nil {
+				return "", nil, err
+			}
 			expressions = append(expressions, `"`+field+`"=?`)
 			args = append(args, value)
 		}
@@ -282,7 +290,10 @@ func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, []an
 		}
 
 		insFields = append(insFields, toSQLField(b.Fields[i]))
-		expr, arg := b.toSQLValue(b.stringValues[i], b.Fields[i])
+		expr, arg, err := b.toSQLValue(b.stringValues[i], b.Fields[i])
+		if err != nil {
+			return "", nil, err
+		}
 		insValues = append(insValues, expr)
 		if arg != nil {
 			args = append(args, arg)
@@ -350,38 +361,42 @@ func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (
 	return string(jsonRollbackInfo), nil
 }
 
-// toSQLValue returns the expression of an inserted value and the value bound to its placeholder,
-// nil when the expression has none
-func (b SQLQueryBuilder) toSQLValue(rawValue, rawField string) (string, any) {
+// toSQLValue returns the expression of a value and the value bound to its placeholder, nil when
+// the expression has none. A value of a date or time column must be a literal
+func (b SQLQueryBuilder) toSQLValue(rawValue, rawField string) (string, any, error) {
 	if syspar.IsByteColumn(b.Table, rawField) && len(rawValue) != 0 {
-		return sqlHexExpr, hex.EncodeToString([]byte(rawValue))
+		return sqlHexExpr, hex.EncodeToString([]byte(rawValue)), nil
 	}
 
 	if rawValue == `NULL` {
-		return `NULL`, nil
+		return `NULL`, nil, nil
 	}
 
-	if strings.HasPrefix(rawField, prefTimestamp) {
-		return `to_timestamp(?)`, rawValue
+	if strings.HasPrefix(rawField, prefTimestampSpace) {
+		if err := checkUnixTime(rawValue); err != nil {
+			return "", nil, err
+		}
+		return `to_timestamp(?)`, rawValue, nil
 	}
 
-	if strings.HasPrefix(rawValue, prefTimestamp) {
-		return `?::timestamp`, rawValue[len(prefTimestampSpace):]
+	if strings.HasPrefix(rawValue, prefTimestampSpace) {
+		value := rawValue[len(prefTimestampSpace):]
+		if err := checkDateTimeValue("timestamp", value); err != nil {
+			return "", nil, err
+		}
+		return `?::timestamp`, value, nil
 	}
 
-	return `?`, rawValue
+	if err := checkDateTimeValue(syspar.ColumnDataType(b.Table, rawField), rawValue); err != nil {
+		return "", nil, err
+	}
+	return `?`, rawValue, nil
 }
 
 func (b SQLQueryBuilder) normalizeValues() error {
 	for i, v := range b.FieldValues {
 		switch val := v.(type) {
 		case string:
-			if strings.HasPrefix(strings.TrimSpace(val), prefTimestamp) {
-				if err := CheckNow(val); err != nil {
-					return err
-				}
-			}
-
 			if len(b.Fields) > i && syspar.IsByteColumn(b.Table, b.Fields[i]) {
 				if vbyte, err := hex.DecodeString(val); err == nil {
 					b.FieldValues[i] = vbyte
