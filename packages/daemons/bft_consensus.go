@@ -78,6 +78,11 @@ type bftDriver struct {
 	unsaved *bft.SignState
 	unsent  []bft.Output
 	resent  time.Time
+
+	// store stores a sign state and transmit sends a message the machine signed: saveUnsaved
+	// calls transmit only after store stored the state that has the message
+	store    func(*bft.SignState) error
+	transmit func(bft.Output)
 }
 
 func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
@@ -90,6 +95,16 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 	cfg := bftnet.DefaultConfig
 	cfg.Rate = syspar.GetBftPeerMsgRate()
 	d.svc = bftnet.NewService(cfg, d)
+	d.store = func(s *bft.SignState) error {
+		return (&sqldb.BftSignState{Height: int64(s.Height), Data: s.Marshal()}).Save()
+	}
+	d.transmit = func(o bft.Output) {
+		if o.Proposal != nil {
+			d.svc.SendProposal(o.Proposal)
+		} else {
+			d.svc.SendVote(o.Vote)
+		}
+	}
 	return d
 }
 
@@ -399,7 +414,7 @@ func (d *bftDriver) apply(out []bft.Output) {
 func (d *bftDriver) saveUnsaved() {
 	if d.unsaved != nil {
 		s := d.unsaved
-		if err := (&sqldb.BftSignState{Height: int64(s.Height), Data: s.Marshal()}).Save(); err != nil {
+		if err := d.store(s); err != nil {
 			d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("storing the sign state, the messages wait")
 			return
 		}
@@ -413,11 +428,7 @@ func (d *bftDriver) saveUnsaved() {
 			d.pool.AddVote(o.Vote)
 		}
 		d.mu.Unlock()
-		if o.Proposal != nil {
-			d.svc.SendProposal(o.Proposal)
-		} else {
-			d.svc.SendVote(o.Vote)
-		}
+		d.transmit(o)
 	}
 	d.unsent = nil
 }
