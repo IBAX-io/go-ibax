@@ -7,9 +7,7 @@ package block
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
@@ -18,6 +16,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/language"
 	"github.com/IBAX-io/go-ibax/packages/script"
+	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -211,7 +210,7 @@ func Timely(binData []byte, received time.Time, ahead, behind time.Duration) err
 // it is not the set before: the nodes of honor_nodes in their order, but the stopped ones and
 // those an evidence keeps out of height (design 4.5)
 func storeValidators(dbTx *sqldb.DbTransaction, height int64) error {
-	set, err := ValidatorsOf(dbTx, height)
+	set, err := smart.BftValidatorsOf(dbTx, height)
 	if err != nil {
 		return err
 	}
@@ -225,28 +224,4 @@ func storeValidators(dbTx *sqldb.DbTransaction, height int64) error {
 		return nil
 	}
 	return (&sqldb.BftValidatorSet{FromHeight: height, Data: data}).Create(dbTx)
-}
-
-// ValidatorsOf is the validators set of a height as the database of the transaction has it
-func ValidatorsOf(dbTx *sqldb.DbTransaction, height int64) (bft.Validators, error) {
-	par := &sqldb.PlatformParameter{}
-	if _, err := par.Get(dbTx, syspar.HonorNodes); err != nil {
-		return bft.Validators{}, err
-	}
-	var nodes []*syspar.HonorNode
-	if err := json.Unmarshal([]byte(par.Value), &nodes); err != nil {
-		return bft.Validators{}, fmt.Errorf("honor_nodes: %w", err)
-	}
-	stopped, err := (&sqldb.BftReview{}).GetStopped(dbTx, height)
-	if err != nil {
-		return bft.Validators{}, err
-	}
-	var set bft.Validators
-	for _, n := range nodes {
-		if n.Stopped || slices.ContainsFunc(stopped, func(r sqldb.BftReview) bool { return bytes.Equal(r.PublicKey, n.PublicKey) }) {
-			continue
-		}
-		set.Keys = append(set.Keys, n.PublicKey)
-	}
-	return set, nil
 }

@@ -102,26 +102,47 @@ func GetBftTimeliness() (ahead, behind time.Duration) {
 	return drift, drift + time.Second + time.Duration(GetMaxBlockGenerationTime())*time.Millisecond
 }
 
+// bftPairs are the parameters of a chain of the BFT consensus that a vote changes only with the
+// parameter they pair with, the longer one above the shorter: a proposer makes its block within
+// max_block_generation_time, so a validator waits longer for the proposal, bft_timeout_propose_ms;
+// the vote of a review lasts bft_review_voting_days, so a review has longer to reach its
+// conclusion, bft_stop_review_days (design 4.5)
+var bftPairs = []struct {
+	longer, shorter string
+	reason          string
+}{
+	{BftTimeoutPropose, MaxBlockGenerationTime, "the validators would time out before the proposal of a proposer that takes its time"},
+	{BftStopReviewDays, BftReviewVotingDays, "a review would be overdue before the vote of its conclusion ends"},
+}
+
+// pairValue is the value a node reads of a parameter of bftPairs
+func pairValue(name string) int64 {
+	if name == MaxBlockGenerationTime {
+		return GetMaxBlockGenerationTime()
+	}
+	return bftInt(name)
+}
+
 // CheckBftParameter checks a new value of a platform parameter on a chain of the BFT consensus
-// against the parameter it pairs with: a proposer makes its block within
-// max_block_generation_time, so a validator waits longer for the proposal, bft_timeout_propose_ms
+// against the parameter it pairs with in bftPairs
 func CheckBftParameter(name, value string) error {
-	timeout, generation := bftInt(BftTimeoutPropose), GetMaxBlockGenerationTime()
-	v, err := strconv.ParseInt(value, 10, 64)
-	switch name {
-	case BftTimeoutPropose:
-		timeout = v
-	case MaxBlockGenerationTime:
-		generation = v
-	default:
-		return nil
-	}
-	if err != nil || v <= 0 {
-		return fmt.Errorf("%s is %q: it is a positive integer", name, value)
-	}
-	if timeout <= generation {
-		return fmt.Errorf("%s %d is not above %s %d: the validators would time out before the proposal of a proposer that takes its time",
-			BftTimeoutPropose, timeout, MaxBlockGenerationTime, generation)
+	for _, p := range bftPairs {
+		if name != p.longer && name != p.shorter {
+			continue
+		}
+		v, err := strconv.ParseInt(value, 10, 64)
+		if err != nil || v <= 0 {
+			return fmt.Errorf("%s is %q: it is a positive integer", name, value)
+		}
+		longer, shorter := pairValue(p.longer), pairValue(p.shorter)
+		if name == p.longer {
+			longer = v
+		} else {
+			shorter = v
+		}
+		if longer <= shorter {
+			return fmt.Errorf("%s %d is not above %s %d: %s", p.longer, longer, p.shorter, shorter, p.reason)
+		}
 	}
 	return nil
 }
@@ -134,4 +155,14 @@ func GetBftStallAlarm() time.Duration {
 // GetBftEvidenceMaxAge is bft_evidence_max_age
 func GetBftEvidenceMaxAge() uint64 {
 	return uint64(bftInt(BftEvidenceMaxAge))
+}
+
+// GetBftStopReviewDays is bft_stop_review_days
+func GetBftStopReviewDays() int64 {
+	return bftInt(BftStopReviewDays)
+}
+
+// GetBftReviewVotingDays is bft_review_voting_days
+func GetBftReviewVotingDays() int64 {
+	return bftInt(BftReviewVotingDays)
 }

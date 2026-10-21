@@ -129,7 +129,9 @@ INSERT INTO "1_tables" ("id", "name", "permissions","columns", "conditions") VAL
             "reason": "false",
             "version": "false",
             "decided_block": "false",
-            "restore_height": "false"
+            "restore_height": "false",
+            "validators": "false",
+            "quorum": "false"
         }',
         'false'
     ),

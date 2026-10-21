@@ -167,7 +167,7 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 				}
 			}
 			if syspar.IsBftConsensus() {
-				if err = syspar.CheckBftValidators(fnodes); err != nil {
+				if err = sc.checkBftHonorNodes(par.Value, fnodes); err != nil {
 					return 0, logErrorValue(err, consts.InvalidObject, err.Error(), value)
 				}
 			}
@@ -206,6 +206,43 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 	}
 	sc.SysUpdate = true
 	return 0, nil
+}
+
+// checkBftHonorNodes checks a new value of honor_nodes on a chain of the BFT consensus against
+// the value prev it replaces, by the set of the next height (syspar.CheckBftValidatorsChange)
+func (sc *SmartContract) checkBftHonorNodes(prev string, next []*syspar.HonorNode) error {
+	var before []*syspar.HonorNode
+	if err := json.Unmarshal([]byte(prev), &before); err != nil {
+		return fmt.Errorf("honor_nodes: %w", err)
+	}
+	if sc.BlockHeader == nil {
+		return fmt.Errorf("honor_nodes changes in a block")
+	}
+	out, err := bftOut(sc.DbTransaction, sc.BlockHeader.BlockId+1)
+	if err != nil {
+		return err
+	}
+	return syspar.CheckBftValidatorsChange(before, next, out)
+}
+
+// setHonorNodes writes a value of honor_nodes the node made, not a contract: its checks are
+// those of a vote that changes the parameter on a chain of the BFT consensus
+func (sc *SmartContract) setHonorNodes(par *sqldb.PlatformParameter, value string) error {
+	var next []*syspar.HonorNode
+	if err := json.Unmarshal([]byte(value), &next); err != nil {
+		return logError(err, consts.JSONUnmarshallError, "unmarshalling honor_nodes")
+	}
+	if err := sc.checkBftHonorNodes(par.Value, next); err != nil {
+		return logErrorValue(err, consts.InvalidObject, err.Error(), value)
+	}
+	if _, _, err := sc.update([]string{"value"}, []any{value}, "1_platform_parameters", "id", par.ID); err != nil {
+		return err
+	}
+	if err := syspar.SysUpdate(sc.DbTransaction); err != nil {
+		return logErrorDB(err, "updating syspar")
+	}
+	sc.SysUpdate = true
+	return nil
 }
 
 // checkAccountAlgorithms refuses a new value of account_algorithms that is malformed, moves a

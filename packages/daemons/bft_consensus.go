@@ -83,6 +83,12 @@ type bftDriver struct {
 	// calls transmit only after store stored the state that has the message
 	store    func(*bft.SignState) error
 	transmit func(bft.Output)
+
+	// evidence is the evidence the driver took, submit submits one in a transaction, and overdue
+	// is when the driver last logged the overdue reviews
+	evidence bftEvidence
+	submit   func([]byte) error
+	overdue  time.Time
 }
 
 func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
@@ -98,6 +104,7 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 	d.store = func(s *bft.SignState) error {
 		return (&sqldb.BftSignState{Height: int64(s.Height), Data: s.Marshal()}).Save()
 	}
+	d.submit = submitEvidenceTx
 	d.transmit = func(o bft.Output) {
 		if o.Proposal != nil {
 			d.svc.SendProposal(o.Proposal)
@@ -321,6 +328,8 @@ func (d *bftDriver) tick() {
 	if bftStopped() {
 		return
 	}
+	d.submitEvidence()
+	d.logOverdue()
 	DBLock()
 	defer DBUnlock()
 	if err := d.syncHeight(); err != nil {
@@ -372,7 +381,7 @@ func (d *bftDriver) send(m any) {
 }
 
 // apply does what the machine returned: it stores the sign state, then puts the messages the
-// machine signed in the pool and sends them, schedules the timeouts, sends the evidence and
+// machine signed in the pool and sends them, schedules the timeouts, takes and sends the evidence and
 // commits a decision. A message is sent only after the state that has it is stored.
 func (d *bftDriver) apply(out []bft.Output) {
 	defer func() {
@@ -397,9 +406,9 @@ func (d *bftDriver) apply(out []bft.Output) {
 				}
 			})
 		case o.Evidence != nil:
-			d.logger.WithFields(log.Fields{"type": consts.BlockError, "height": o.Evidence.Height,
-				"round": o.Evidence.Round, "validator": o.Evidence.Validator}).Warn("evidence of a conflicting message")
-			d.svc.SendEvidence(o.Evidence.Marshal())
+			if body := o.Evidence.Marshal(); d.takeEvidence(body) {
+				d.svc.SendEvidence(body)
+			}
 		case o.Commit != nil:
 			commit = o.Commit
 		}
@@ -486,8 +495,8 @@ func (d *bftDriver) Vote(v *bft.Vote) bool {
 	return true
 }
 
-// Evidence is bftnet.Handler.Evidence: the evidence transactions come with step 8
-func (d *bftDriver) Evidence(body []byte) bool { return false }
+// Evidence is bftnet.Handler.Evidence
+func (d *bftDriver) Evidence(body []byte) bool { return d.takeEvidence(body) }
 
 // Certificates is bftnet.Handler.Certificates
 func (d *bftDriver) Certificates(from uint64, count int) ([][]byte, error) {

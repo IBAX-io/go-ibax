@@ -84,6 +84,31 @@ VALUES
     }
 }
 ', '1', 'ContractConditions("MainCondition")', '1', '1'),
+	(next_id('1_contracts'), 'BftEvidence', '// BftEvidence takes the evidence that a validator of a chain of the BFT consensus signed two
+// conflicting messages (F18 design 4.5). A validator signs it with the key of its node, for no fee.
+// The node checks the evidence and stops the validator from the next height, then the vote of the
+// review of the stop starts, once the voting application has the template of the reviews.
+contract BftEvidence {
+    data {
+        Evidence bytes
+    }
+
+    action {
+        var review app_id template int params map
+        review = BftApplyEvidence($Evidence)
+        app_id = Int(DBFind("@1applications").Where({"ecosystem": 1, "name": "VotingDApps"}).One("id"))
+        if app_id > 0 {
+            template = Int(AppParam(app_id, "voting_template_bft_review", 1))
+        }
+        if template > 0 {
+            params["ReviewId"] = review
+            params["Conclusion"] = "maintain"
+            CallContract("@1VotingRunBftReview", params)
+        }
+        $result = review
+    }
+}
+', '1', 'ContractConditions("MainCondition")', '1', '1'),
 	(next_id('1_contracts'), 'BindWallet', 'contract BindWallet {
 	data {
 		Id  int

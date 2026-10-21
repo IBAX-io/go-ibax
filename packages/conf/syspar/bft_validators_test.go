@@ -59,11 +59,13 @@ func TestCheckBftValidators(t *testing.T) {
 	}
 }
 
-// bft_timeout_propose_ms stays above max_block_generation_time, the starting values too
+// bft_timeout_propose_ms stays above max_block_generation_time, and bft_stop_review_days above
+// bft_review_voting_days, the starting values too
 func TestCheckBftParameter(t *testing.T) {
 	mutex.Lock()
 	saved := cache
-	cache = map[string]string{MaxBlockGenerationTime: "2000", BftTimeoutPropose: "3000"}
+	cache = map[string]string{MaxBlockGenerationTime: "2000", BftTimeoutPropose: "3000",
+		BftStopReviewDays: "7", BftReviewVotingDays: "3"}
 	mutex.Unlock()
 	defer func() {
 		mutex.Lock()
@@ -82,6 +84,13 @@ func TestCheckBftParameter(t *testing.T) {
 		{MaxBlockGenerationTime, "2999", true},
 		{MaxBlockGenerationTime, "3000", false},
 		{MaxBlockGenerationTime, "-1", false},
+		{BftStopReviewDays, "7", true},
+		{BftStopReviewDays, "4", true},
+		{BftStopReviewDays, "3", false},
+		{BftStopReviewDays, "0", false},
+		{BftReviewVotingDays, "6", true},
+		{BftReviewVotingDays, "7", false},
+		{BftReviewVotingDays, "-3", false},
 		{BftMaxClockDrift, "x", true}, // no pair: the checks of the parameter apply
 	} {
 		if err := CheckBftParameter(tc.name, tc.value); (err == nil) != tc.ok {
@@ -91,5 +100,57 @@ func TestCheckBftParameter(t *testing.T) {
 	ahead, behind := GetBftTimeliness()
 	if ahead != 2*time.Second || behind != 5*time.Second {
 		t.Errorf("the bounds %v ahead and %v behind, want 2s and 5s", ahead, behind)
+	}
+}
+
+// A vote takes no validator out of a set it leaves below MinBftValidators; it adds validators, and
+// removes a node an evidence put out, whatever the size of the set
+func TestCheckBftValidatorsChange(t *testing.T) {
+	crypto.InitAsymAlgo("ECC_P256")
+	nodes := bftTestNodes(t, MinBftValidators+2)
+	var outKeys [][]byte
+	out := func(publicKey []byte) bool {
+		for _, k := range outKeys {
+			if string(k) == string(publicKey) {
+				return true
+			}
+		}
+		return false
+	}
+	without := func(nodes []*HonorNode, i int) []*HonorNode {
+		return append(append([]*HonorNode{}, nodes[:i]...), nodes[i+1:]...)
+	}
+	stop := func(nodes []*HonorNode, i int) []*HonorNode {
+		next := make([]*HonorNode, len(nodes))
+		for j, n := range nodes {
+			c := *n
+			next[j] = &c
+		}
+		next[i].Stopped = true
+		return next
+	}
+	five := nodes[:MinBftValidators+1]
+	four := nodes[:MinBftValidators]
+	for _, tc := range []struct {
+		what       string
+		prev, next []*HonorNode
+		out        [][]byte
+		ok         bool
+	}{
+		{"5 to 4 by a removal", five, without(five, 0), nil, true},
+		{"4 to 3 by a removal", four, without(four, 0), nil, false},
+		{"4 to 3 by a stop", four, stop(four, 1), nil, false},
+		{"5 to 4 by a stop", five, stop(five, 1), nil, true},
+		{"3 to 4 by an addition", without(four, 0), four, nil, true},
+		{"2 to 3 by an addition", four[:2], four[:3], nil, true},
+		{"3 out of 4 with a node out, the node removed", four, without(four, 0), [][]byte{four[0].PublicKey}, true},
+		{"3 out of 4 with a node out, another removed", four, without(four, 1), [][]byte{four[0].PublicKey}, false},
+		{"a stopped node removed from a set of 3", stop(four, 2), without(four, 2), nil, true},
+		{"a duplicate added", four, append(append([]*HonorNode{}, four...), four[0]), nil, false},
+	} {
+		outKeys = tc.out
+		if err := CheckBftValidatorsChange(tc.prev, tc.next, out); (err == nil) != tc.ok {
+			t.Errorf("%s: %v", tc.what, err)
+		}
 	}
 }

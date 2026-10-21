@@ -145,20 +145,42 @@ func DuplicateHonorNode(fn []*HonorNode) error {
 // validators it bears f = (N-1)/3 faulty ones, and 4 is the least N with f = 1
 const MinBftValidators = 4
 
-// CheckBftValidators checks a value of honor_nodes on a chain of the BFT consensus: valid nodes,
-// no two alike, and at least MinBftValidators of them not stopped
+// CheckBftValidators checks the honor_nodes of the first block of a chain of the BFT consensus:
+// valid nodes, no two alike, and at least MinBftValidators of them not stopped
 func CheckBftValidators(nodes []*HonorNode) error {
 	if err := DuplicateHonorNode(nodes); err != nil {
 		return err
 	}
-	var active int
-	for _, n := range nodes {
-		if !n.Stopped {
-			active++
-		}
-	}
-	if active < MinBftValidators {
+	if active := activeBftValidators(nodes, nil); active < MinBftValidators {
 		return fmt.Errorf("%d validators are not stopped: a chain of the BFT consensus has at least %d", active, MinBftValidators)
 	}
 	return nil
+}
+
+// CheckBftValidatorsChange checks a new value of honor_nodes on a chain of the BFT consensus
+// against the value it replaces (design 4.1): valid nodes, no two alike, and a vote that removes
+// or stops a validator of the set fails if the set then has fewer than MinBftValidators. The set
+// is the nodes neither stopped nor out by an evidence, which out reports. A vote that adds
+// validators, or removes a node an evidence put out, runs whatever the size of the set: only an
+// evidence takes the set below MinBftValidators, and only a vote takes it back.
+func CheckBftValidatorsChange(prev, next []*HonorNode, out func(publicKey []byte) bool) error {
+	if err := DuplicateHonorNode(next); err != nil {
+		return err
+	}
+	before, after := activeBftValidators(prev, out), activeBftValidators(next, out)
+	if after < MinBftValidators && after < before {
+		return fmt.Errorf("the set goes from %d to %d validators: a vote takes no validator out of a set below %d", before, after, MinBftValidators)
+	}
+	return nil
+}
+
+// activeBftValidators is the nodes neither stopped nor out
+func activeBftValidators(nodes []*HonorNode, out func(publicKey []byte) bool) int {
+	var active int
+	for _, n := range nodes {
+		if !n.Stopped && (out == nil || !out(n.PublicKey)) {
+			active++
+		}
+	}
+	return active
 }

@@ -47,6 +47,7 @@ var (
 	builtinContract = map[string]bool{
 		CallDelayedContract: true,
 		NewBadBlockContract: true,
+		BftEvidenceContract: true,
 	}
 )
 

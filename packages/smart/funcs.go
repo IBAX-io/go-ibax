@@ -154,6 +154,8 @@ var (
 		"DelColumn":             {},
 		"DelTable":              {},
 		"CallContractAs":        {},
+		"BftApplyEvidence":      {},
+		"BftConcludeReview":     {},
 	}
 	// map for table name to parameter with conditions
 	tableParamConditions = map[string]string{
@@ -189,6 +191,8 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"RoleAccess":                   RoleAccess,
 		"ContractConditions":           ContractConditions,
 		"CallContractAs":               CallContractAs,
+		"BftApplyEvidence":             BftApplyEvidence,
+		"BftConcludeReview":            BftConcludeReview,
 		"ContractName":                 contractName,
 		"ValidateEditContractNewValue": ValidateEditContractNewValue,
 		"CreateColumn":                 CreateColumn,

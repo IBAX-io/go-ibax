@@ -82,6 +82,8 @@ var sqlFirstEcosystemSchema = `
 		t.Column("version", "string", {"default": "", "size":255})
 		t.Column("decided_block", "bigint", {"default": "0"})
 		t.Column("restore_height", "bigint", {"default": "0"})
+		t.Column("validators", "bigint", {"default": "0"})
+		t.Column("quorum", "bigint", {"default": "0"})
 	{{footer "primary" "unique(evidence_id)" "index(public_key)" "index(status)"}}
 `
 

@@ -683,6 +683,10 @@ func (sc *SmartContract) payFreeContract() bool {
 		ispay bool
 	)
 
+	// a validator submits an evidence for no fee (F18 design 4.5), whatever pay_free_contract says
+	if sc.TxContract.Name == BftEvidenceContract && sc.TxSmart.SignedBy != 0 {
+		return false
+	}
 	pfc := syspar.SysString(syspar.PayFreeContract)
 	if len(pfc) > 0 {
 		pfca = strings.Split(pfc, ",")

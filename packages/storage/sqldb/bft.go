@@ -122,7 +122,8 @@ const (
 // BftReview is the review of the stop of a node by an evidence. The node is out of the set from
 // StopHeight on, and back from RestoreHeight on when the review restores it. Deadline is the unix
 // time the review is overdue after; DecidedBlock is the block of the conclusion, Reason and
-// Version the cause and the fixed version of a restore.
+// Version the cause and the fixed version of a restore. Validators and Quorum are the size and the
+// quorum of the set the stop leaves: the record of the stop is the record of its event.
 type BftReview struct {
 	ID            int64
 	EvidenceID    int64
@@ -134,11 +135,18 @@ type BftReview struct {
 	Version       string
 	DecidedBlock  int64
 	RestoreHeight int64
+	Validators    int64
+	Quorum        int64
 }
 
 // TableName returns name of table
 func (BftReview) TableName() string {
 	return "1_bft_reviews"
+}
+
+// Get reads the review of an id
+func (r *BftReview) Get(dbTx *DbTransaction, id int64) (bool, error) {
+	return isFound(GetDB(dbTx).Where("id = ?", id).First(r))
 }
 
 // GetStopped reads the reviews that keep a node out of the set of a height
