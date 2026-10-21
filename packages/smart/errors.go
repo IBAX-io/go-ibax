@@ -49,12 +49,12 @@ const (
 	eEcoFuelRate           = `fuel rate must be greater than 0 or empty in ecosystem %d`
 	eEcoCurrentBalance     = `account %s current balance is not enough in ecosystem %d`
 	eEcoCurrentBalanceDiff = eEcoCurrentBalance + `, at least [%s] difference`
+	eFixedByFirstBlock     = `%s is fixed by the first block`
 )
 
 var (
-	errDelayedContract   = errors.New(`incorrect delayed contract`)
-	errAccessDenied      = errors.New(`access denied`)
-	errBftConsensusFixed = errors.New(`bft_consensus is fixed by the first block`)
+	errDelayedContract = errors.New(`incorrect delayed contract`)
+	errAccessDenied    = errors.New(`access denied`)
 	// ErrTimeLeft is the stop of a contract of the proposer by the time left to its block
 	ErrTimeLeft          = errors.New(`the block has no time left`)
 	errConditionEmpty    = errors.New(`conditions is empty`)

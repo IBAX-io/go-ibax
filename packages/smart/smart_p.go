@@ -98,8 +98,8 @@ func updatePlatformParam(sc *SmartContract, name, value, conditions string, chec
 	if !found {
 		return 0, logErrorf(eParamNotFound, name, consts.NotFound, "system parameter get")
 	}
-	if name == syspar.BftConsensus {
-		return 0, logErrorShort(errBftConsensusFixed, consts.AccessDenied)
+	if name == syspar.BftConsensus || name == syspar.HonorNodesOnly {
+		return 0, logErrorfShort(eFixedByFirstBlock, name, consts.AccessDenied)
 	}
 	cond := par.Conditions
 	if len(cond) > 0 && checkConditions {

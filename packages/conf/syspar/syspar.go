@@ -659,9 +659,13 @@ func IsBftConsensus() bool {
 	return firstBlockData != nil && firstBlockData.BftConsensus == 1
 }
 
-// IsHonorNodesOnly reports whether only the honor nodes generate the blocks of the chain
+// IsHonorNodesOnly reports whether only the honor nodes generate the blocks of the chain. The
+// first block fixes it, as it fixes IsBftConsensus: the node reads it from the data of the first
+// block and not from the platform parameter, which only shows it.
 func IsHonorNodesOnly() bool {
-	return SysString(HonorNodesOnly) == `1`
+	mutex.RLock()
+	defer mutex.RUnlock()
+	return firstBlockData != nil && firstBlockData.HonorNodesOnly == 1
 }
 
 // IsPrivateBlockchain returns the value of private_blockchain system parameter or true

@@ -46,7 +46,7 @@ func tamper(t *testing.T, binData []byte, change func(*types.BlockData)) []byte 
 // hash; Timely takes it within the bounds of syspar.GetBftTimeliness and refuses it out of them;
 // the commit applies it with the hash and the rollbacks hash the chain has, and writes the
 // validators set of the next height the chain has. Before that, no contract changes
-// bft_consensus, and a change of its row changes no consensus.
+// bft_consensus or honor_nodes_only, and a change of their rows changes no consensus.
 func TestValidateAndCommitOnBftChain(t *testing.T) {
 	config, name := os.Getenv("IBAX_TEST_BFT_CONFIG"), os.Getenv("IBAX_TEST_BFT_DB")
 	if config == "" || name == "" {
@@ -76,20 +76,26 @@ func TestValidateAndCommitOnBftChain(t *testing.T) {
 	}
 	load()
 	require.True(t, syspar.IsBftConsensus(), "the chain of %s is not of the BFT consensus", name)
+	require.True(t, syspar.IsHonorNodesOnly(), "the chain of %s is not of the honor nodes only", name)
 
-	// the first block fixes the consensus: no contract changes the parameter, and a change of the
-	// row changes nothing the node reads
+	// the first block fixes the consensus: no contract changes the parameters, and a change of
+	// their rows changes nothing the node reads
 	dbTx, err := sqldb.StartTransaction()
 	require.NoError(t, err)
-	_, err = smart.UpdatePlatformParam(&smart.SmartContract{DbTransaction: dbTx}, syspar.BftConsensus, "0", "")
-	require.ErrorContains(t, err, "fixed by the first block")
-	require.NoError(t, sqldb.GetDB(dbTx).Exec(`UPDATE "1_platform_parameters" SET value = '0' WHERE name = ?`, syspar.BftConsensus).Error)
+	for _, par := range []string{syspar.BftConsensus, syspar.HonorNodesOnly} {
+		_, err = smart.UpdatePlatformParam(&smart.SmartContract{DbTransaction: dbTx}, par, "0", "")
+		require.ErrorContains(t, err, par+" is fixed by the first block")
+		require.NoError(t, sqldb.GetDB(dbTx).Exec(`UPDATE "1_platform_parameters" SET value = '0' WHERE name = ?`, par).Error)
+	}
 	require.NoError(t, syspar.SysUpdate(dbTx))
 	require.Equal(t, "0", syspar.SysString(syspar.BftConsensus))
+	require.Equal(t, "0", syspar.SysString(syspar.HonorNodesOnly))
 	require.True(t, syspar.IsBftConsensus(), "a change of the row of bft_consensus changes the consensus")
+	require.True(t, syspar.IsHonorNodesOnly(), "a change of the row of honor_nodes_only changes the consensus")
 	require.NoError(t, dbTx.Rollback())
 	load()
 	require.Equal(t, "1", syspar.SysString(syspar.BftConsensus))
+	require.Equal(t, "1", syspar.SysString(syspar.HonorNodesOnly))
 
 	last := &sqldb.BlockChain{}
 	found, err := last.GetMaxBlock()
