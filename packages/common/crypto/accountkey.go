@@ -69,8 +69,8 @@ func PSSHash(h HashAlgo) stdcrypto.Hash {
 // CheckAccountAlgoNetwork refuses an algorithm accounts cannot have on this network whatever the
 // node: RSA without a PSS hash (KECCAK256 and SM3 networks). All nodes of a network share its hash.
 func CheckAccountAlgoNetwork(a AsymAlgo) error {
-	if IsRSAAlgo(a) && PSSHash(hashAlgo) == 0 {
-		return fmt.Errorf("%s keys sign with RSASSA-PSS, which is not defined with the network hash %s; RSA needs SHA256, SHA384, SHA512 or SHA3_256", a, hashAlgo)
+	if h := networkHashAlgo(); IsRSAAlgo(a) && PSSHash(h) == 0 {
+		return fmt.Errorf("%s keys sign with RSASSA-PSS, which is not defined with the network hash %s; RSA needs SHA256, SHA384, SHA512 or SHA3_256", a, h)
 	}
 	return nil
 }

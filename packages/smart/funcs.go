@@ -902,13 +902,17 @@ func mapToParams(values *types.Map) (params []string, val []any, err error) {
 	return
 }
 
+// platformParametersTable is changed only through UpdatePlatformParam, which checks the
+// conditions of the parameter. DBInsert, DBUpdateExt and DBDelete refuse it by the resolved
+// table name, whatever spelling the contract uses.
+const platformParametersTable = "1_platform_parameters"
+
 // DBInsert inserts a record into the specified database table
 func DBInsert(sc *SmartContract, tblname string, values *types.Map) (qcost int64, ret int64, err error) {
-	if tblname == "platform_parameters" {
+	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
+	if tblname == platformParametersTable {
 		return 0, 0, fmt.Errorf("platform parameters access denied")
 	}
-
-	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
 	if err = sc.AccessTable(tblname, "insert"); err != nil {
 		return
 	}
@@ -972,12 +976,12 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 		return 0, nil, err
 	}
 	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
-	where, err := qb.GetWhere(inWhere)
+	where, whereArgs, err := qb.GetWhere(inWhere)
 	if err != nil {
 		return 0, nil, err
 	}
 	if id != 0 {
-		where = fmt.Sprintf(`id='%d'`, id)
+		where, whereArgs = `id = ?`, []any{converter.Int64ToStr(id)}
 		limit = 1
 	}
 	if limit == 0 {
@@ -993,7 +997,7 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 	if err = sc.AccessColumns(tblname, &columns, false); err != nil {
 		return 0, nil, err
 	}
-	q := sqldb.GetDB(sc.DbTransaction).Table(tblname).Select(PrepareColumns(columns)).Where(where)
+	q := sqldb.GetDB(sc.DbTransaction).Table(tblname).Select(PrepareColumns(columns)).Where(where, whereArgs...)
 
 	//group + order => false
 	//group + no order => true
@@ -1073,10 +1077,10 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 // DBUpdateExt updates the record in the specified table. You can specify 'where' query in params and then the values for this query
 func DBUpdateExt(sc *SmartContract, tblname string, where *types.Map,
 	values *types.Map) (qcost int64, err error) {
-	if tblname == "platform_parameters" {
+	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
+	if tblname == platformParametersTable {
 		return 0, fmt.Errorf("platform parameters access denied")
 	}
-	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
 	if err = sc.AccessTable(tblname, "update"); err != nil {
 		return
 	}
@@ -1096,15 +1100,15 @@ func DBUpdate(sc *SmartContract, tblname string, id int64, values *types.Map) (q
 	return DBUpdateExt(sc, tblname, types.LoadMap(map[string]any{`id`: id}), values)
 }
 
-// EcosysParam returns the value of the specified parameter for the ecosystem
-func EcosysParam(sc *SmartContract, name string) string {
+// EcosysParam returns the value of the specified parameter for the ecosystem. It is read in the
+// transaction of the block, so it is the value the block has made so far.
+func EcosysParam(sc *SmartContract, name string) (string, error) {
 	sp := &sqldb.StateParameter{}
 	sp.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
-	_, err := sp.Get(nil, name)
-	if err != nil {
-		return logErrorDB(err, "getting ecosystem param").Error()
+	if _, err := sp.Get(sc.DbTransaction, name); err != nil {
+		return ``, logErrorDB(err, "getting ecosystem param")
 	}
-	return sp.Value
+	return sp.Value, nil
 }
 
 // AppParam returns the value of the specified app parameter for the ecosystem
@@ -1634,13 +1638,15 @@ func httpRequest(req *http.Request, headers map[string]any) (string, error) {
 	for key, v := range headers {
 		req.Header.Set(key, fmt.Sprint(v))
 	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	if err := checkHTTPScheme(req); err != nil {
+		return ``, logError(err, consts.NetworkError, "http request")
+	}
+	resp, err := contractHTTPClient.Do(req)
 	if err != nil {
 		return ``, logError(err, consts.NetworkError, "http request")
 	}
 	defer resp.Body.Close()
-	data, err := io.ReadAll(resp.Body)
+	data, err := readHTTPBody(resp.Body)
 	if err != nil {
 		return ``, logError(err, consts.IOError, "reading http answer")
 	}
@@ -2463,9 +2469,7 @@ func PubToHex(in any) (ret string) {
 
 func SendExternalTransaction(sc *SmartContract, uid, url, externalContract string,
 	params *types.Map, resultContract string) (err error) {
-	var (
-		out, insertQuery string
-	)
+	var out string
 	if _, err := syspar.GetThisNodePosition(); err != nil {
 		return nil
 	}
@@ -2484,11 +2488,11 @@ func SendExternalTransaction(sc *SmartContract, uid, url, externalContract strin
 			resultContract, sc.Timestamp},
 		KeyTableChkr: sqldb.KeyTableChecker{},
 	}
-	insertQuery, err = sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
+	insertQuery, insertArgs, err := sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
 	if err != nil {
 		return
 	}
-	return sqldb.GetDB(sc.DbTransaction).Exec(insertQuery).Error
+	return sqldb.GetDB(sc.DbTransaction).Exec(insertQuery, insertArgs...).Error
 }
 
 func IsHonorNodeKey(id int64) bool {

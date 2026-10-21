@@ -9,6 +9,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
+	"sync/atomic"
 
 	log "github.com/sirupsen/logrus"
 
@@ -16,10 +17,33 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/hashalgo"
 )
 
+// The node algorithm and the network hash are selected from the configuration (InitAsymAlgo,
+// InitHashAlgo) before anything signs or hashes; using either before is a programming error, which
+// panics rather than falling back to an algorithm the network may not use.
 var (
-	asymAlgo AsymAlgo
-	hashAlgo HashAlgo
+	asymAlgo atomic.Pointer[AsymAlgo]
+	hashAlgo atomic.Pointer[HashAlgo]
 )
+
+func setAsymAlgo(a AsymAlgo) { asymAlgo.Store(&a) }
+
+func setHashAlgo(h HashAlgo) { hashAlgo.Store(&h) }
+
+// nodeAsymAlgo is the selected node algorithm
+func nodeAsymAlgo() AsymAlgo {
+	if a := asymAlgo.Load(); a != nil {
+		return *a
+	}
+	panic("crypto: the node algorithm is not initialized (InitAsymAlgo)")
+}
+
+// networkHashAlgo is the selected network hash
+func networkHashAlgo() HashAlgo {
+	if h := hashAlgo.Load(); h != nil {
+		return *h
+	}
+	panic("crypto: the network hash is not initialized (InitHashAlgo)")
+}
 
 func NewAsymAlgo(a AsymAlgo) AsymProvider {
 	switch a {
@@ -36,9 +60,9 @@ func NewAsymAlgo(a AsymAlgo) AsymProvider {
 	case AsymAlgo_ECC_P384:
 		return &asymalgo.P384{}
 	case AsymAlgo_RSA2048:
-		return &asymalgo.RSA{Bits: 2048, Hash: PSSHash(hashAlgo)}
+		return &asymalgo.RSA{Bits: 2048, Hash: PSSHash(networkHashAlgo())}
 	case AsymAlgo_RSA3072:
-		return &asymalgo.RSA{Bits: 3072, Hash: PSSHash(hashAlgo)}
+		return &asymalgo.RSA{Bits: 3072, Hash: PSSHash(networkHashAlgo())}
 	}
 	panic(fmt.Errorf("curve algo [%v] is not supported yet", a))
 }
@@ -51,12 +75,12 @@ func InitAsymAlgo(s string) {
 	if err := CheckNodeAlgo(AsymAlgo(v)); err != nil {
 		log.Fatal(err)
 	}
-	asymAlgo = AsymAlgo(v)
+	setAsymAlgo(AsymAlgo(v))
 }
 
 // GetAsymProvider is the provider of the node algorithm
 func GetAsymProvider() AsymProvider {
-	return NewAsymAlgo(asymAlgo)
+	return NewAsymAlgo(nodeAsymAlgo())
 }
 
 func NewHashAlgo(a HashAlgo) HashProvider {
@@ -85,11 +109,11 @@ func InitHashAlgo(s string) {
 	if err := CheckHashAlgo(HashAlgo(v)); err != nil {
 		log.Fatal(err)
 	}
-	hashAlgo = HashAlgo(v)
+	setHashAlgo(HashAlgo(v))
 }
 
 func GetHashProvider() HashProvider {
-	return NewHashAlgo(hashAlgo)
+	return NewHashAlgo(networkHashAlgo())
 }
 
 // The node algorithm signs blocks, candidate votes and the requests between nodes, with the keys
@@ -98,7 +122,7 @@ func GetHashProvider() HashProvider {
 
 // NodeAlgo is the signature algorithm of the network's node keys
 func NodeAlgo() AsymAlgo {
-	return asymAlgo
+	return nodeAsymAlgo()
 }
 
 // NodeAccountKey is the account public key of a node public key: the node account signs its

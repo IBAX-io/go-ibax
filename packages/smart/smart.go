@@ -84,7 +84,6 @@ type SmartContract struct {
 	Key             *sqldb.Key
 	RollBackTx      []*types.RollbackTx
 	multiPays       multiPays
-	taxes           bool
 	Penalty         bool
 	TokenEcosystems map[int64]any
 	OutputsMap      map[sqldb.KeyUTXO][]sqldb.SpentInfo
@@ -297,7 +296,11 @@ func (sc *SmartContract) founderGate() (gated, allowed bool, err error) {
 	if err != nil {
 		return false, false, logErrorDB(err, "getting the control mode")
 	}
-	gated, allowed = paramsFounderGate(mode, sc.actingKeyID(), converter.StrToInt64(EcosysParam(sc, `founder_account`)))
+	founder, err := EcosysParam(sc, `founder_account`)
+	if err != nil {
+		return false, false, err
+	}
+	gated, allowed = paramsFounderGate(mode, sc.actingKeyID(), converter.StrToInt64(founder))
 	return gated, allowed, nil
 }
 

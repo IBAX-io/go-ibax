@@ -726,8 +726,7 @@ func (sc *SmartContract) fuelRate(eco int64, followFuel float64) (decimal.Decima
 		if err != nil {
 			return zero, err
 		}
-		sc.taxes = true
-		_, err = UpdatePlatformParam(sc, syspar.FuelRate, string(fuel), "")
+		_, err = updatePlatformParam(sc, syspar.FuelRate, string(fuel), "", false)
 		if err != nil {
 			return zero, err
 		}
@@ -771,8 +770,7 @@ func (sc *SmartContract) taxesWallet(eco int64) (taxesID int64, err error) {
 		if err != nil {
 			return
 		}
-		sc.taxes = true
-		_, err = UpdatePlatformParam(sc, syspar.TaxesWallet, string(tax), "")
+		_, err = updatePlatformParam(sc, syspar.TaxesWallet, string(tax), "", false)
 		if err != nil {
 			return
 		}

@@ -44,7 +44,7 @@ func Disseminator(rw io.ReadWriter) error {
 	 *   tx_hash - 32 bytes
 	 * </>
 	 * {if type==0}:
-	 *  block_id - 3 bytes
+	 *  block_id - 8 bytes
 	 *  hash - 32 bytes
 	 * <any number of the next sets>
 	 *   tx_hash - 32 bytes
@@ -67,7 +67,7 @@ func Disseminator(rw io.ReadWriter) error {
 	if newDataType == 0 {
 		banned := n != nil && node.GetNodesBanService().IsBanned(*n)
 		if banned {
-			buf.Next(3)
+			buf.Next(sqldb.BlockIDSize)
 			buf.Next(crypto.HashSize())
 		} else {
 			err := processBlock(buf, honorNodeID)
@@ -137,7 +137,7 @@ func processBlock(buf *bytes.Buffer, honorNodeID int64) error {
 	}
 
 	// get block ID
-	newBlockID := converter.BinToDec(buf.Next(3))
+	newBlockID := converter.BinToDec(buf.Next(sqldb.BlockIDSize))
 	log.WithFields(log.Fields{"new_block_id": newBlockID}).Debug("Generated new block id")
 
 	// get block hash

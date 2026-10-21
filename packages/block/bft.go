@@ -38,7 +38,6 @@ func takeMemState() memState {
 func (m memState) restore() error {
 	script.GetVM().Restore(m.vm)
 	language.Restore(m.lang)
-	transaction.CleanCache()
 	if err := syspar.SysUpdate(nil); err != nil {
 		return fmt.Errorf("reloading the platform parameters: %w", err)
 	}

@@ -601,6 +601,7 @@ func dbfindTag(par parFunc) string {
 	defaultTail(par, `dbfind`)
 	prefix := ``
 	where := ``
+	var whereArgs []any
 	order := ``
 	limit := 25
 
@@ -634,12 +635,12 @@ func dbfindTag(par parFunc) string {
 					return errWhere.Error()
 				}
 			case map[string]any:
-				where, err = qb.GetWhere(types.LoadMap(v))
+				where, whereArgs, err = qb.GetWhere(types.LoadMap(v))
 				if err != nil {
 					return err.Error()
 				}
 			case *types.Map:
-				where, err = qb.GetWhere(v)
+				where, whereArgs, err = qb.GetWhere(v)
 				if err != nil {
 					return err.Error()
 				}
@@ -651,7 +652,8 @@ func dbfindTag(par parFunc) string {
 		}
 	}
 	if par.Node.Attr[`whereid`] != nil {
-		where = fmt.Sprintf(` id='%d'`, converter.StrToInt64(macro(par.Node.Attr[`whereid`].(string), par.Workspace.Vars)))
+		where = `id = ?`
+		whereArgs = []any{converter.Int64ToStr(converter.StrToInt64(macro(par.Node.Attr[`whereid`].(string), par.Workspace.Vars)))}
 	}
 	if par.Node.Attr[`limit`] != nil {
 		limit = converter.StrToInt(par.Node.Attr[`limit`].(string))
@@ -754,7 +756,7 @@ func dbfindTag(par parFunc) string {
 	}
 	if par.Node.Attr[`countvar`] != nil {
 		var count int64
-		err = sqldb.GetDB(nil).Table(tblname).Where(where).Count(&count).Error
+		err = sqldb.GetDB(nil).Table(tblname).Where(where, whereArgs...).Count(&count).Error
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Debug("selecting count from table in DBFind")
 		}
@@ -767,7 +769,7 @@ func dbfindTag(par parFunc) string {
 		where = ` where ` + where
 	}
 	list, err := sc.DbTransaction.GetAllTransaction(`select `+strings.Join(queryColumns, `, `)+` from "`+tblname+`"`+
-		where+order+offset, limit)
+		where+order+offset, limit, whereArgs...)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all from db")
 		return err.Error()

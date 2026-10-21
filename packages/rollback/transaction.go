@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -20,49 +21,59 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func rollbackUpdatedRow(tx map[string]string, where string, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
+func rollbackUpdatedRow(tx map[string]string, where string, whereArgs []any, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
 	var rollbackInfo map[string]string
 	if err := json.Unmarshal([]byte(tx["data"]), &rollbackInfo); err != nil {
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("unmarshalling rollback.Data from json")
 		return err
 	}
-	addSQLUpdate, err := rollbackAssignments(rollbackInfo, func(column string) bool {
+	addSQLUpdate, setArgs, err := rollbackAssignments(rollbackInfo, func(column string) bool {
 		return syspar.IsByteColumn(tx["table_name"], column)
 	})
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.ConversionError, "error": err, "rollback_id": tx["id"]}).Error("decoding bytea rollback data from hex")
 		return err
 	}
-	if err := dbTx.Update(tx["table_name"], addSQLUpdate, where); err != nil {
+	if err := dbTx.Update(tx["table_name"], addSQLUpdate, where, append(setArgs, whereArgs...)...); err != nil {
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err, "rollback_id": tx["id"], "block_id": tx["block_id"], "where": where}).Error("updating table for rollback ")
 		return err
 	}
 	return nil
 }
 
-// rollbackAssignments makes the SET list that puts back the columns of a row. The rollback data of
-// a bytea column is the hex of its bytes; isByte is asked with the column name unquoted.
-func rollbackAssignments(rollbackInfo map[string]string, isByte func(column string) bool) (string, error) {
-	addSQLUpdate := ""
-	for k, v := range rollbackInfo {
+// rollbackAssignments makes the SET list that puts back the columns of a row, in the order of the
+// column names, and the values bound to its placeholders. The rollback data of a bytea column is
+// the hex of its bytes; isByte is asked with the column name unquoted.
+func rollbackAssignments(rollbackInfo map[string]string, isByte func(column string) bool) (string, []any, error) {
+	keys := make([]string, 0, len(rollbackInfo))
+	for k := range rollbackInfo {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	set := make([]string, 0, len(keys))
+	args := make([]any, 0, len(keys))
+	for _, k := range keys {
+		v := rollbackInfo[k]
 		column := strings.Trim(k, `"`)
 		k = `"` + column + `"`
 		if v == "NULL" {
-			addSQLUpdate += k + `=NULL,`
+			set = append(set, k+`=NULL`)
 		} else if isByte(column) && len(v) != 0 {
 			if _, err := hex.DecodeString(v); err != nil {
-				return "", fmt.Errorf("column %s: %w", column, err)
+				return "", nil, fmt.Errorf("column %s: %w", column, err)
 			}
-			addSQLUpdate += k + `=decode('` + v + `','hex'),`
+			set = append(set, k+`=decode(?,'hex')`)
+			args = append(args, v)
 		} else {
-			addSQLUpdate += k + `='` + strings.Replace(v, `'`, `''`, -1) + `',`
+			set = append(set, k+`=?`)
+			args = append(args, v)
 		}
 	}
-	return addSQLUpdate[0 : len(addSQLUpdate)-1], nil
+	return strings.Join(set, ","), args, nil
 }
 
-func rollbackInsertedRow(tx map[string]string, where string, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
-	if err := dbTx.Delete(tx["table_name"], where); err != nil {
+func rollbackInsertedRow(tx map[string]string, where string, whereArgs []any, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
+	if err := dbTx.Delete(tx["table_name"], where, whereArgs...); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "rollback_id": tx["id"], "table": tx["table_name"], "where": where}).Error("deleting from table for rollback")
 		return err
 	}
@@ -136,33 +147,25 @@ func rollbackTransaction(txHash []byte, dbTx *sqldb.DbTransaction, logger *log.E
 				isFirstTable = true
 			}
 		}
-		where := ` WHERE "id"='`
-
-		if len(tx["data"]) <= 0 {
-			if isFirstTable {
-				var a []string
-				if strings.Contains(tx["table_id"], ",") {
-					a = strings.Split(tx["table_id"], ",")
-					ecoID = a[1]
-					where += a[0] + `'`
-				}
+		id := tx["table_id"]
+		if len(tx["data"]) == 0 && isFirstTable {
+			// the rollback of a row inserted into a table of the first ecosystem is "id,ecosystem"
+			if a := strings.Split(id, ","); len(a) > 1 {
+				id, ecoID = a[0], a[1]
 			}
 		}
-		if len(tx["data"]) > 0 && isFirstTable {
-			where += tx["table_id"] + `'`
-		}
+		where, whereArgs := ` WHERE "id"=?`, []any{id}
 		if isFirstTable {
-			where += fmt.Sprintf(` AND "ecosystem"='%d'`, converter.StrToInt64(ecoID))
+			where += ` AND "ecosystem"=?`
+			whereArgs = append(whereArgs, converter.Int64ToStr(converter.StrToInt64(ecoID)))
 			tx[`table_name`] = `1_` + keyName
-		} else {
-			where += tx["table_id"] + `'`
 		}
 		if len(tx["data"]) > 0 {
-			if err := rollbackUpdatedRow(tx, where, dbTx, logger); err != nil {
+			if err := rollbackUpdatedRow(tx, where, whereArgs, dbTx, logger); err != nil {
 				return err
 			}
 		} else {
-			if err := rollbackInsertedRow(tx, where, dbTx, logger); err != nil {
+			if err := rollbackInsertedRow(tx, where, whereArgs, dbTx, logger); err != nil {
 				return err
 			}
 		}

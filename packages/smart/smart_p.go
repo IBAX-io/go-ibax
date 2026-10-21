@@ -80,6 +80,12 @@ func getCost(name string) int64 {
 
 // UpdatePlatformParam updates the system parameter
 func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int64, error) {
+	return updatePlatformParam(sc, name, value, conditions, true)
+}
+
+// updatePlatformParam updates the system parameter; checkConditions is false only for the
+// entries the fee payment adds itself.
+func updatePlatformParam(sc *SmartContract, name, value, conditions string, checkConditions bool) (int64, error) {
 	var (
 		fields []string
 		values []any
@@ -96,7 +102,7 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 		return 0, logErrorShort(errBftConsensusFixed, consts.AccessDenied)
 	}
 	cond := par.Conditions
-	if len(cond) > 0 && !sc.taxes {
+	if len(cond) > 0 && checkConditions {
 		ret, err := sc.EvalIf(cond)
 		if err != nil {
 			return 0, logError(err, consts.EvalError, "evaluating conditions")
@@ -800,11 +806,11 @@ func RegexpMatch(str, reg string) bool {
 
 func DBCount(sc *SmartContract, tableName string, inWhere *types.Map) (count int64, err error) {
 	tblname := qb.GetTableName(sc.TxSmart.EcosystemID, tableName)
-	where, err := qb.GetWhere(inWhere)
+	where, whereArgs, err := qb.GetWhere(inWhere)
 	if err != nil {
 		return 0, err
 	}
-	err = sqldb.GetDB(sc.DbTransaction).Table(tblname).Where(where).Count(&count).Error
+	err = sqldb.GetDB(sc.DbTransaction).Table(tblname).Where(where, whereArgs...).Count(&count).Error
 	return
 }
 

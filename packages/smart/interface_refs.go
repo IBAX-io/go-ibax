@@ -8,7 +8,6 @@ package smart
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -108,10 +107,10 @@ func InterfaceReferrers(sc *SmartContract, kind, name string) ([]any, error) {
 // permissions say who may: the delete permission is evaluated as the others are, and a table
 // without one refuses deleting. The row is kept in the rollback of the transaction.
 func DBDelete(sc *SmartContract, tblname string, id int64) (qcost int64, err error) {
-	if tblname == "platform_parameters" {
+	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
+	if tblname == platformParametersTable {
 		return 0, fmt.Errorf("platform parameters access denied")
 	}
-	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
 	perm, err := sc.AccessTablePerm(tblname, "delete")
 	if err != nil {
 		return 0, err
@@ -125,8 +124,8 @@ func DBDelete(sc *SmartContract, tblname string, id int64) (qcost int64, err err
 // SysRollbackDeleteRow inserts again the row a transaction deleted
 func SysRollbackDeleteRow(dbTx *sqldb.DbTransaction, sysData SysRollData) error {
 	table := `"` + sysData.TableName + `"`
-	err := dbTx.ExecSql(`INSERT INTO ` + table + ` SELECT * FROM jsonb_populate_record(NULL::` + table +
-		`, '` + strings.ReplaceAll(sysData.Data, `'`, `''`) + `'::jsonb)`)
+	err := dbTx.ExecSql(`INSERT INTO `+table+` SELECT * FROM jsonb_populate_record(NULL::`+table+
+		`, ?::jsonb)`, sysData.Data)
 	if err != nil {
 		return logErrorDB(err, "inserting the deleted row")
 	}

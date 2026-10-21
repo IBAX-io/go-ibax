@@ -86,11 +86,6 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer, fill bool) error {
 	}
 	inner.setTxSize(int64(len(rtx.FullData)))
 	rtx.Inner = inner
-	if cache, ok := txCache.Get(fmt.Sprintf("%x", rtx.Hash())); ok {
-		rtx = cache
-		return nil
-	}
-	txCache.Set(rtx)
 	return nil
 }
 

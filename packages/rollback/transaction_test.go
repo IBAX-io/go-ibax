@@ -5,6 +5,7 @@
 package rollback
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -15,21 +16,22 @@ func TestRollbackAssignments(t *testing.T) {
 		asked = append(asked, column)
 		return column == "pub"
 	}
-	set, err := rollbackAssignments(map[string]string{`"pub"`: "0a0b", "name": "it's", "amount": "NULL"}, isByte)
+	set, args, err := rollbackAssignments(map[string]string{`"pub"`: "0a0b", "name": "it's", "amount": "NULL"}, isByte)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"pub"=decode('0a0b','hex')`, `"name"='it''s'`, `"amount"=NULL`} {
-		if !strings.Contains(set, want) {
-			t.Errorf("%s is not in %s", want, set)
-		}
+	if want := `"pub"=decode(?,'hex'),"amount"=NULL,"name"=?`; set != want {
+		t.Errorf("set %s, want %s", set, want)
+	}
+	if want := []any{"0a0b", "it's"}; !reflect.DeepEqual(args, want) {
+		t.Errorf("args %q, want %q", args, want)
 	}
 	for _, column := range asked {
 		if strings.Contains(column, `"`) {
 			t.Errorf("isByte was asked for the quoted column %s", column)
 		}
 	}
-	if _, err := rollbackAssignments(map[string]string{"pub": "0a0b','x"}, isByte); err == nil {
+	if _, _, err := rollbackAssignments(map[string]string{"pub": "0a0b','x"}, isByte); err == nil {
 		t.Error("rollback data of a bytea column that is not hex was taken")
 	}
 }

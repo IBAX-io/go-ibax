@@ -57,11 +57,11 @@ func TestGetCryptoer(t *testing.T) {
 }
 
 func TestMatchesDataHash(t *testing.T) {
-	defer func() { asymAlgo, hashAlgo = AsymAlgo_ECC_P256, HashAlgo_SHA256 }()
+	defer func() { setAsymAlgo(AsymAlgo_ECC_P256); setHashAlgo(HashAlgo_SHA256) }()
 	data := []byte("binary data")
 	sum := sha256.Sum256(data)
 	for _, hasher := range []string{"SHA256", "SHA3_256", "SHA512"} {
-		hashAlgo = HashAlgo(HashAlgo_value[hasher])
+		setHashAlgo(HashAlgo(HashAlgo_value[hasher]))
 		for _, c := range []struct {
 			name, hash string
 			ok         bool
