@@ -15,6 +15,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/statsd"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
@@ -36,7 +37,7 @@ func authRequire(next func(w http.ResponseWriter, r *http.Request)) func(w http.
 
 func loggerFromRequest(r *http.Request) *log.Entry {
 	return log.WithFields(log.Fields{
-		"headers":  r.Header,
+		"headers":  utils.LogHeaders(r.Header),
 		"path":     r.URL.Path,
 		"protocol": r.Proto,
 		"remote":   r.RemoteAddr,
