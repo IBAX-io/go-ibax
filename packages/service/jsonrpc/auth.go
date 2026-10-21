@@ -251,6 +251,13 @@ func (a authApi) Login(ctx RequestContext, form *loginForm) (*LoginResult, *Erro
 				return nil, DefaultError("Public key is undefined")
 			}
 
+			if !conf.Config.IsSupportingCLB() {
+				if err := sqldb.CheckNodeKey(nil, conf.Config.KeyID); err != nil {
+					logger.WithFields(log.Fields{"type": consts.AccessDenied, "error": err}).Error("checking node key account")
+					return nil, DefaultError(err.Error())
+				}
+			}
+
 			nodePrivateKey := syspar.GetNodePrivKey()
 
 			contract := smart.GetContract("NewUser", 1)

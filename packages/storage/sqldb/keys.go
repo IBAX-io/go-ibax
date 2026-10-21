@@ -6,6 +6,7 @@
 package sqldb
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/shopspring/decimal"
@@ -68,6 +69,27 @@ func (m *Key) AccountKeyID() int64 {
 		m.accountKeyID = converter.StringToAddress(m.AccountID)
 	}
 	return m.accountKeyID
+}
+
+// ErrNodeKeyNotRegistered is returned when the node key has no usable account in ecosystem 1,
+// so the node cannot sign the transactions it creates on behalf of users.
+var ErrNodeKeyNotRegistered = errors.New("the node key account is not registered or is disabled")
+
+// CheckNodeKey returns ErrNodeKeyNotRegistered unless keyID has an enabled account in ecosystem 1.
+func CheckNodeKey(db *DbTransaction, keyID int64) error {
+	key := &Key{}
+	found, err := key.SetTablePrefix(1).Get(db, keyID)
+	if err != nil {
+		return err
+	}
+	return nodeKeyUsable(found, key)
+}
+
+func nodeKeyUsable(found bool, key *Key) error {
+	if !found || key.Disable() {
+		return ErrNodeKeyNotRegistered
+	}
+	return nil
 }
 
 // KeyTableName returns name of key table
