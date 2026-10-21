@@ -2,7 +2,7 @@ name: crypto
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
   pull_request:
     paths:
       - 'packages/common/crypto/**'
@@ -25,8 +25,8 @@ jobs:
         go: ['1.27', 'stable']
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go }}
       - name: Sign and verify under every suite
@@ -44,8 +44,8 @@ jobs:
     env:
       GOFIPS140: ${{ matrix.module }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version: '1.27'
       - name: Build the node against the module
