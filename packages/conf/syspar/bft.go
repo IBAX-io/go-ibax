@@ -92,11 +92,12 @@ func GetBftMaxClockDrift() time.Duration {
 	return bftMs(BftMaxClockDrift)
 }
 
-// GetBftTimeliness is how far the time of the block of a new proposal may be from the clock of a
-// validator when it takes the proposal (design 4.4): early by at most bft_max_clock_drift_ms, and
-// late by at most that, the second the proposer rounds its clock down to, and
-// max_block_generation_time, in which the proposer makes the block after it reads its clock
-func GetBftTimeliness() (early, late time.Duration) {
+// GetBftTimeliness is how far the time of the block of a new proposal may be from the time a
+// validator takes the proposal (design 4.4): ahead of it by at most bft_max_clock_drift_ms, and
+// behind it by at most that, the second the proposer rounds its clock down to, and
+// max_block_generation_time, in which the proposer makes the block after it reads its clock, so
+// that only puts the time of the block behind
+func GetBftTimeliness() (ahead, behind time.Duration) {
 	drift := GetBftMaxClockDrift()
 	return drift, drift + time.Second + time.Duration(GetMaxBlockGenerationTime())*time.Millisecond
 }

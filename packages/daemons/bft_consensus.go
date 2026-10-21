@@ -586,8 +586,8 @@ func (a bftApp) Valid(height uint64, hash bft.Hash, bin []byte) bool {
 
 // Timely is block.Timely at the time the node took the proposal
 func (a bftApp) Timely(p *bft.Proposal) bool {
-	early, late := syspar.GetBftTimeliness()
-	err := block.Timely(p.Block, p.Received, early, late)
+	ahead, behind := syspar.GetBftTimeliness()
+	err := block.Timely(p.Block, p.Received, ahead, behind)
 	if err != nil {
 		a.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": p.Height, "round": p.Round}).Warn("an untimely proposal")
 	}

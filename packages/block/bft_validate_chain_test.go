@@ -151,11 +151,12 @@ func TestValidateAndCommitOnBftChain(t *testing.T) {
 			body := tamper(t, want.Data, func(r *types.BlockData) { r.TxFullData = append(r.TxFullData, r.TxFullData[0]) })
 			require.ErrorContainsf(t, block.Validate(body, want.ID, hash), "merkle root", what("with another transaction"))
 		}
-		early, late := syspar.GetBftTimeliness()
-		require.NoErrorf(t, block.Timely(want.Data, at.Add(-early), early, late), what("early within the bounds"))
-		require.NoErrorf(t, block.Timely(want.Data, at.Add(late), early, late), what("late within the bounds"))
-		require.ErrorContainsf(t, block.Timely(want.Data, at.Add(-early-time.Millisecond), early, late), "off the clock", what("early"))
-		require.ErrorContainsf(t, block.Timely(want.Data, at.Add(late+time.Millisecond), early, late), "off the clock", what("late"))
+		// taken at a time t, the time of the block is ahead of t, or behind it
+		ahead, behind := syspar.GetBftTimeliness()
+		require.NoErrorf(t, block.Timely(want.Data, at.Add(-ahead), ahead, behind), what("ahead within the bound"))
+		require.NoErrorf(t, block.Timely(want.Data, at.Add(behind), ahead, behind), what("behind within the bound"))
+		require.ErrorContainsf(t, block.Timely(want.Data, at.Add(-ahead-time.Millisecond), ahead, behind), "off the clock", what("ahead"))
+		require.ErrorContainsf(t, block.Timely(want.Data, at.Add(behind+time.Millisecond), ahead, behind), "off the clock", what("behind"))
 		require.NoErrorf(t, block.Validate(want.Data, want.ID, hash), what("at its height, hash and time"))
 
 		_, err = block.Commit(want.Data, cert)

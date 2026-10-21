@@ -189,9 +189,10 @@ func Validate(binData []byte, height int64, hash bft.Hash) error {
 	return b.Trial()
 }
 
-// Timely checks the time of the block of a new proposal against the clock of a validator when it
-// took the proposal (design 4.4): at most early ahead of it and at most late behind it
-func Timely(binData []byte, received time.Time, early, late time.Duration) error {
+// Timely checks the time of the block of a new proposal against the time a validator took the
+// proposal (design 4.4): the time of the block is ahead of it by at most ahead, and behind it by
+// at most behind
+func Timely(binData []byte, received time.Time, ahead, behind time.Duration) error {
 	raw := &types.BlockData{}
 	if err := proto.Unmarshal(binData, raw); err != nil {
 		return fmt.Errorf("parsing the block: %w", err)
@@ -200,8 +201,8 @@ func Timely(binData []byte, received time.Time, early, late time.Duration) error
 		return fmt.Errorf("a block without a header")
 	}
 	off := time.Unix(raw.Header.Timestamp, 0).Sub(received)
-	if off > early || -off > late {
-		return fmt.Errorf("block %d: its time is %v off the clock, more than %v ahead or %v behind", raw.Header.BlockId, off, early, late)
+	if off > ahead || -off > behind {
+		return fmt.Errorf("block %d: its time is %v off the clock, more than %v ahead or %v behind", raw.Header.BlockId, off, ahead, behind)
 	}
 	return nil
 }

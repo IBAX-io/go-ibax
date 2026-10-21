@@ -88,8 +88,8 @@ func TestCheckBftParameter(t *testing.T) {
 			t.Errorf("%s %s: %v", tc.name, tc.value, err)
 		}
 	}
-	early, late := GetBftTimeliness()
-	if early != 2*time.Second || late != 5*time.Second {
-		t.Errorf("the bounds %v and %v, want 2s and 5s", early, late)
+	ahead, behind := GetBftTimeliness()
+	if ahead != 2*time.Second || behind != 5*time.Second {
+		t.Errorf("the bounds %v ahead and %v behind, want 2s and 5s", ahead, behind)
 	}
 }
