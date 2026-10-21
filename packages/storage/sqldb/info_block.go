@@ -69,10 +69,13 @@ func BlockGetUnsent() (*InfoBlock, error) {
 	return ib, err
 }
 
-// Marshall returns block as []byte
+// BlockIDSize is the size of a block id in the messages between nodes
+const BlockIDSize = 8
+
+// Marshall returns the id and the hash of the block, the way it is announced to other nodes
 func (ib *InfoBlock) Marshall() []byte {
 	if ib != nil {
-		toBeSent := converter.DecToBin(ib.BlockID, 3)
+		toBeSent := converter.DecToBin(ib.BlockID, BlockIDSize)
 		return append(toBeSent, ib.Hash...)
 	}
 	return []byte{}
