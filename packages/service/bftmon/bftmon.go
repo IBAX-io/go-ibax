@@ -38,6 +38,20 @@ const (
 	TimeoutPrecommit = "precommit"
 )
 
+// The counts of the consensus messages the node received, by what became of them
+const (
+	// MessagesAdmitted is the proposals and the votes the pool admitted
+	MessagesAdmitted = "admitted"
+	// MessagesDropped is the proposals and the votes the pool dropped: of no validator of the set
+	// or not of the proposer, out of the windows of the height and the round, of a signature that
+	// does not verify, or one the pool has
+	MessagesDropped = "dropped"
+	// MessagesUndecoded is the frames whose payload does not decode
+	MessagesUndecoded = "undecoded"
+	// StreamsRefused is the streams the node closed past their rate or of an address it refuses
+	StreamsRefused = "refused_streams"
+)
+
 // EscalationHeights is the last heights the escalation rate is of: the share of them committed
 // after round 0
 const EscalationHeights = 1000
@@ -64,7 +78,8 @@ type Alert struct {
 // the public keys of the others, all as of the last busy height the node assessed (Assessed is
 // false before the first). ClockDrift is how far the clock of the node is ahead of its time
 // source. Timeouts is the timeouts that took effect at the height and round of the machine, by
-// step, since the node started.
+// step, since the node started. Messages is the counts of the consensus messages since the node
+// started, by what became of them.
 type State struct {
 	Height     uint64           `json:"height"`
 	Validators int              `json:"validators"`
@@ -76,11 +91,12 @@ type State struct {
 	ClockDrift int64            `json:"clock_drift_ms"`
 	Alerts     map[string]Alert `json:"alerts"`
 	Timeouts   map[string]int64 `json:"timeouts"`
+	Messages   map[string]int64 `json:"messages"`
 }
 
 var (
 	mu    sync.Mutex
-	state = State{Alerts: map[string]Alert{}, Timeouts: map[string]int64{}}
+	state = State{Alerts: map[string]Alert{}, Timeouts: map[string]int64{}, Messages: map[string]int64{}}
 )
 
 // Update changes the state under its lock
@@ -109,6 +125,11 @@ func Clear(alert string) {
 	})
 }
 
+// Count adds one to a count of the consensus messages
+func Count(name string) {
+	Update(func(s *State) { s.Messages[name]++ })
+}
+
 // Get is a copy of the state
 func Get() State {
 	mu.Lock()
@@ -117,5 +138,6 @@ func Get() State {
 	s.Offline = slices.Clone(state.Offline)
 	s.Alerts = maps.Clone(state.Alerts)
 	s.Timeouts = maps.Clone(state.Timeouts)
+	s.Messages = maps.Clone(state.Messages)
 	return s
 }

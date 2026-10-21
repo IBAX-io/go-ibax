@@ -20,6 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network/bftnet"
+	"github.com/IBAX-io/go-ibax/packages/service/bftmon"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
@@ -496,8 +497,10 @@ func (d *bftDriver) Proposal(p *bft.Proposal) bool {
 	a := d.pool.AddProposal(p)
 	d.mu.Unlock()
 	if a == bft.Dropped {
+		bftmon.Count(bftmon.MessagesDropped)
 		return false
 	}
+	bftmon.Count(bftmon.MessagesAdmitted)
 	d.post(p)
 	return true
 }
@@ -508,8 +511,10 @@ func (d *bftDriver) Vote(v *bft.Vote) bool {
 	a := d.pool.AddVote(v)
 	d.mu.Unlock()
 	if a == bft.Dropped {
+		bftmon.Count(bftmon.MessagesDropped)
 		return false
 	}
+	bftmon.Count(bftmon.MessagesAdmitted)
 	d.watch.precommit(v, time.Now())
 	d.post(v)
 	return true

@@ -82,11 +82,10 @@ func (b *Block) Trial() error {
 	return err
 }
 
-// Commit executes the block a certificate commits, as a block another node made, and stores the
-// block and the certificate in one database transaction: a node has the certificate of a height
-// if and only if it has its block. The block is parsed again from BinData, so nothing a trial left
-// on the parsed transactions reaches the commit.
-func Commit(binData []byte, cert *bft.Certificate) (*Block, error) {
+// Certify parses the block a certificate commits and checks that the certificate is of it: of its
+// height and of its hash, the hash of its content. It checks nothing of the certificate's
+// precommits, which bft.Certificate.Verify does.
+func Certify(binData []byte, cert *bft.Certificate) (*Block, error) {
 	b, err := ProcessBlockByBinData(binData, true)
 	if err != nil {
 		return nil, err
@@ -102,6 +101,18 @@ func Commit(binData []byte, cert *bft.Certificate) (*Block, error) {
 		return nil, fmt.Errorf("the certificate of height %d commits another block than %x", cert.Height, b.Header.BlockHash)
 	}
 	if err := b.checkContent(); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// Commit executes the block a certificate commits, as a block another node made, and stores the
+// block and the certificate in one database transaction: a node has the certificate of a height
+// if and only if it has its block. The block is parsed again from BinData, so nothing a trial left
+// on the parsed transactions reaches the commit.
+func Commit(binData []byte, cert *bft.Certificate) (*Block, error) {
+	b, err := Certify(binData, cert)
+	if err != nil {
 		return nil, err
 	}
 	c := &sqldb.BftCertificate{

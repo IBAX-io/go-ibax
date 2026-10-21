@@ -32,6 +32,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/service/bftmon"
 )
 
 // The kinds of the frames of a stream
@@ -214,6 +215,7 @@ func (b *bucket) take(rate int, now time.Time) bool {
 func (s *Service) Serve(conn net.Conn) error {
 	host := hostOf(conn.RemoteAddr())
 	if s.isRefused(host) {
+		bftmon.Count(bftmon.StreamsRefused)
 		return ErrRefused
 	}
 	rate := &bucket{tokens: float64(s.cfg.Rate), last: s.now()}
@@ -230,9 +232,11 @@ func (s *Service) Serve(conn net.Conn) error {
 		}
 		if !rate.take(s.cfg.Rate, s.now()) {
 			s.refuse(host)
+			bftmon.Count(bftmon.StreamsRefused)
 			return ErrRate
 		}
 		if s.isRefused(host) {
+			bftmon.Count(bftmon.StreamsRefused)
 			return ErrRefused
 		}
 		if s.take(kind, payload) {
@@ -255,6 +259,7 @@ func (s *Service) take(kind uint8, payload []byte) bool {
 	case FrameEvidence:
 		return s.handler.Evidence(payload)
 	}
+	bftmon.Count(bftmon.MessagesUndecoded)
 	return false
 }
 

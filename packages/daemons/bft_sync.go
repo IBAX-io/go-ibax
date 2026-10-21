@@ -105,17 +105,27 @@ func syncBatch(ctx context.Context, host string, from uint64) (int, error) {
 
 // commitSynced commits a block of a height by its certificate
 func commitSynced(height uint64, data, raw []byte) error {
-	cert, err := bft.UnmarshalCertificate(data)
+	cert, err := syncedCertificate(height, data)
 	if err != nil {
 		return err
-	}
-	set, err := validatorsAt(height)
-	if err != nil {
-		return err
-	}
-	if err := cert.Verify(set, uint64(conf.Config.LocalConf.NetworkID), height, cert.Hash); err != nil {
-		return fmt.Errorf("the certificate of height %d: %w", height, err)
 	}
 	_, err = block.Commit(raw, cert)
 	return err
+}
+
+// syncedCertificate decodes the certificate a peer sent for a height and verifies its precommits
+// against the validators of the height; block.Certify checks that it is of the block
+func syncedCertificate(height uint64, data []byte) (*bft.Certificate, error) {
+	cert, err := bft.UnmarshalCertificate(data)
+	if err != nil {
+		return nil, err
+	}
+	set, err := validatorsAt(height)
+	if err != nil {
+		return nil, err
+	}
+	if err := cert.Verify(set, uint64(conf.Config.LocalConf.NetworkID), height, cert.Hash); err != nil {
+		return nil, fmt.Errorf("the certificate of height %d: %w", height, err)
+	}
+	return cert, nil
 }

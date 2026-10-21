@@ -18,6 +18,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/network"
+	"github.com/IBAX-io/go-ibax/packages/service/bftmon"
 )
 
 // testHandler admits each message once, by its wire form
@@ -182,6 +183,7 @@ func TestServeRate(t *testing.T) {
 	s := NewService(cfg, h)
 	now := time.Unix(1000, 0)
 	s.now = func() time.Time { return now }
+	refused := bftmon.Get().Messages[bftmon.StreamsRefused]
 
 	serve := func(frames int) (error, int) {
 		server, client := net.Pipe()
@@ -227,6 +229,9 @@ func TestServeRate(t *testing.T) {
 	}
 	if _, votes, _ := h.counts(); votes != 15 {
 		t.Fatalf("%d votes taken, want 15", votes)
+	}
+	if n := bftmon.Get().Messages[bftmon.StreamsRefused] - refused; n != 4 {
+		t.Fatalf("%d streams counted refused, want 4", n)
 	}
 
 	// a frame too long closes the stream
