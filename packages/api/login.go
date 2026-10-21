@@ -162,6 +162,14 @@ func (m Mode) loginHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			if !conf.Config.IsSupportingCLB() {
+				if err := sqldb.CheckNodeKey(nil, conf.Config.KeyID); err != nil {
+					logger.WithFields(log.Fields{"type": consts.AccessDenied, "error": err}).Error("checking node key account")
+					errorResponse(w, err)
+					return
+				}
+			}
+
 			nodePrivateKey := syspar.GetNodePrivKey()
 
 			contract := smart.GetContract("NewUser", 1)

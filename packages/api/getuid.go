@@ -6,10 +6,10 @@
 package api
 
 import (
-	"math/rand"
 	"net/http"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -48,7 +48,7 @@ func getUIDHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	result.UID = converter.Int64ToStr(rand.New(rand.NewSource(time.Now().Unix())).Int63())
+	result.UID = converter.Int64ToStr(crypto.RandInt63())
 	claims := JWTClaims{
 		UID:         result.UID,
 		EcosystemID: "1",

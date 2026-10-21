@@ -18,7 +18,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	log "github.com/sirupsen/logrus"
-	"math/rand"
 	"net/http"
 	"time"
 
@@ -108,7 +107,7 @@ func (a *authApi) GetUid(ctx RequestContext) (*GetUIDResult, *Error) {
 		}
 	}
 
-	result.UID = converter.Int64ToStr(rand.New(rand.NewSource(time.Now().Unix())).Int63())
+	result.UID = converter.Int64ToStr(crypto.RandInt63())
 	claims := JWTClaims{
 		UID:         result.UID,
 		EcosystemID: "1",
@@ -250,6 +249,13 @@ func (a authApi) Login(ctx RequestContext, form *loginForm) (*LoginResult, *Erro
 			if len(publicKey) == 0 {
 				logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("public key is empty")
 				return nil, DefaultError("Public key is undefined")
+			}
+
+			if !conf.Config.IsSupportingCLB() {
+				if err := sqldb.CheckNodeKey(nil, conf.Config.KeyID); err != nil {
+					logger.WithFields(log.Fields{"type": consts.AccessDenied, "error": err}).Error("checking node key account")
+					return nil, DefaultError(err.Error())
+				}
 			}
 
 			nodePrivateKey := syspar.GetNodePrivKey()

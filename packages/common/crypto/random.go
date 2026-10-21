@@ -23,3 +23,12 @@ func RandSeq(n int) string {
 	}
 	return string(b)
 }
+
+// RandInt63 returns a non-negative random int64 from crypto/rand
+func RandInt63() int64 {
+	n, err := crand.Int(crand.Reader, new(big.Int).Lsh(big.NewInt(1), 63))
+	if err != nil {
+		panic(err)
+	}
+	return n.Int64()
+}
