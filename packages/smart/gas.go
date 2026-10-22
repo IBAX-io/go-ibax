@@ -405,36 +405,35 @@ func (sc *SmartContract) needPayment() bool {
 	return sc.TxSmart.EcosystemID > 0 && !sc.ChildChain && !syspar.IsPrivateBlockchain() && sc.payFreeContract()
 }
 
+// hasExistKeyID adds the account of the id to the ecosystem and to ecosystem 1 where it has none.
+// The rows are the fee payment's own entries, not writes of the contract, so the permissions of
+// the keys table do not apply to them
 func (sc *SmartContract) hasExistKeyID(eco, id int64) error {
-	key := &sqldb.Key{}
-	found, err := key.SetTablePrefix(eco).Get(sc.DbTransaction, id)
-	if err != nil {
-		return err
-	}
-	if !found {
-		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
-			"id":        id,
-			"account":   converter.IDToAddress(id),
-			"ecosystem": eco,
-		}))
+	for _, e := range []int64{eco, consts.DefaultTokenEcosystem} {
+		found, err := (&sqldb.Key{}).SetTablePrefix(e).Get(sc.DbTransaction, id)
 		if err != nil {
 			return err
 		}
-	}
-	keyOne := &sqldb.Key{}
-	if foundOne, err := keyOne.SetTablePrefix(1).Get(sc.DbTransaction, id); err != nil {
-		return err
-	} else if !foundOne {
-		_, _, err = DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
-			"id":        id,
-			"account":   converter.IDToAddress(id),
-			"ecosystem": 1,
-		}))
-		if err != nil {
+		if found {
+			continue
+		}
+		if err = sc.insertFeeKey(e, id); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func (sc *SmartContract) insertFeeKey(eco, id int64) error {
+	fullAccess := sc.FullAccess
+	sc.FullAccess = true
+	defer func() { sc.FullAccess = fullAccess }()
+	_, _, err := DBInsert(sc, "@1keys", types.LoadMap(map[string]any{
+		"id":        id,
+		"account":   converter.IDToAddress(id),
+		"ecosystem": eco,
+	}))
+	return err
 }
 
 func (sc *SmartContract) getFromIdAndPayType(eco int64) (int64, PaymentType) {
