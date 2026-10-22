@@ -117,10 +117,14 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			cost += updateCost
 		}
 		rollDataHashStr = qb.BoundStatement(`UPDATE "`+strings.Trim(sqlBuilder.Table, `"`)+`" SET `+updateExpr+" "+whereExpr, args)
+		prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 		err = sc.DbTransaction.Update(sqlBuilder.Table, updateExpr, whereExpr, args...)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Error("getting update query")
 			return 0, "", err
+		}
+		if maxIDCached && !setsID(fields) {
+			sc.DbTransaction.KeepMaxID(sqlBuilder.Table, prevMaxID)
 		}
 
 		for i := 0; i < len(rows.List) && generalRollback; i++ {
@@ -167,7 +171,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		return 0, "", err
 	}
 	if id, err := strconv.ParseInt(sqlBuilder.TableID(), 10, 64); maxIDCached && err == nil {
-		sc.DbTransaction.Inserted(sqlBuilder.Table, prevMaxID, id)
+		sc.DbTransaction.KeepMaxID(sqlBuilder.Table, max(prevMaxID, id))
 	}
 
 	if generalRollback {
@@ -246,6 +250,19 @@ func (sc *SmartContract) update(fields []string, values []any,
 	table string, whereField string, whereValue any) (int64, string, error) {
 	return sc.updateWhere(fields, values, table, types.LoadMap(map[string]any{
 		whereField: fmt.Sprint(whereValue)}))
+}
+
+// setsID tells whether an update of the fields may change the id of a row: a field names a column,
+// with the sign of an increment or the prefix of a timestamp
+func setsID(fields []string) bool {
+	for _, field := range fields {
+		field = strings.TrimPrefix(field, "timestamp ")
+		field = strings.TrimLeft(field, "+-")
+		if strings.TrimSpace(field) == "id" {
+			return true
+		}
+	}
+	return false
 }
 
 func shortString(raw string, length int) string {

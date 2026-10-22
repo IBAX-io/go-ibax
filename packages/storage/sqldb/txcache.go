@@ -216,11 +216,11 @@ func (tr *DbTransaction) CachedMaxID(table string) (int64, bool) {
 	return v.(int64), true
 }
 
-// Inserted keeps in the cache the highest id of the table after a row with the id was inserted
-// into it, the highest id before being prev
-func (tr *DbTransaction) Inserted(table string, prev, id int64) {
+// KeepMaxID puts back in the cache the highest id of the table after a write that the caller
+// knows leaves it at id: the write itself made the cache forget the table
+func (tr *DbTransaction) KeepMaxID(table string, id int64) {
 	if tr == nil || tr.cache == nil {
 		return
 	}
-	tr.cache.put(table, maxIDKey, max(prev, id))
+	tr.cache.put(table, maxIDKey, id)
 }

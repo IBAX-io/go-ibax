@@ -92,11 +92,8 @@ func TestTxCache(t *testing.T) {
 	if _, ok := tr.CachedMaxID("1_keys"); !ok {
 		t.Fatal("max id not cached")
 	}
-	tr.Inserted("1_keys", 7, 8)
-	if id, _ := tr.CachedMaxID("1_keys"); id != 8 {
-		t.Fatalf("max id %d, want 8", id)
-	}
-	tr.Inserted("1_keys", 8, 3)
+	c.forget("1_keys")
+	tr.KeepMaxID("1_keys", 8)
 	if id, _ := tr.CachedMaxID("1_keys"); id != 8 {
 		t.Fatalf("max id %d, want 8", id)
 	}
