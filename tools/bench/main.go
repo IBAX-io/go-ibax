@@ -8,6 +8,7 @@
 //	bench setup -node URL[,URL...] -key FILE [-algo ALGO] [-accounts N] [-file FILE]
 //	bench run   -node URL[,URL...] -key FILE [-file FILE] [-workloads self,utxo,contract,write]
 //	            [-rates 100,200,...] [-duration 30s] [-p99 2s] [-metrics URL[,URL...]] [-out DIR]
+//	bench send  -node URL[,URL...] -key FILE -n N [-rate R] CONTRACT [NAME=VALUE...]
 //
 // setup makes the accounts of the bench, of an account algorithm, each a member of ecosystem 1
 // with coins on its account and in UTXO, and the contract of the write-heavy workload, signed by
@@ -20,6 +21,12 @@
 // block of the node, which it reads every -poll. It writes the steps, with the metrics of the nodes
 // of -metrics (the /metrics of --metricsListen), as JSON and Markdown in -out, and exits 1 if no
 // rate of a workload passed. setup on a file that exists makes only the contract, if it is missing.
+//
+// send sends N transactions of a contract of ecosystem 1 signed by the founder, R a second (100 by
+// default), open loop, and waits for them to reach blocks; {i} in a VALUE is the number of the
+// transaction, 1 to N, so that no two are alike. It prints "sent N in_blocks K refused R seconds S"
+// and "latency_ms p50 A p95 B max C" of the transactions in blocks, and exits 1 when a transaction
+// reached no block.
 package main
 
 import (
@@ -36,8 +43,8 @@ import (
 
 func main() {
 	log.SetFlags(log.Ltime)
-	if len(os.Args) < 2 || (os.Args[1] != "setup" && os.Args[1] != "run") {
-		fmt.Fprintln(os.Stderr, "usage: bench setup|run [flags]; bench setup -h tells the flags")
+	if len(os.Args) < 2 || (os.Args[1] != "setup" && os.Args[1] != "run" && os.Args[1] != "send") {
+		fmt.Fprintln(os.Stderr, "usage: bench setup|run|send [flags]; bench setup -h tells the flags")
 		os.Exit(2)
 	}
 	fs := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
@@ -52,7 +59,7 @@ func main() {
 	fund := fs.String("fund", "", "coins of ecosystem 1 setup sends each account, in its smallest unit (default 90% of the founder's account split evenly); half go to its UTXO")
 	timeout := fs.Duration("timeout", 5*time.Minute, "time a step of setup waits for its transactions")
 
-	names := fs.String("workloads", "self,utxo,contract,write", "workloads run measures")
+	names := fs.String("workloads", "self,utxo,transfer,contract,write", "workloads run measures: self (TransferSelf), utxo (UTXO), transfer (@1TokensSend), contract (a mix of 4 @1ProfileEdit, 3 @1NotificationsSend and 3 @1TokensSend), write (5 DBInsert and 5 DBUpdate a transaction)")
 	rates := fs.String("rates", "100,200,500,1000,2000,3000,5000", "rates (transactions a second) run steps through")
 	duration := fs.Duration("duration", 30*time.Second, "time a step sends")
 	p99 := fs.Duration("p99", 2*time.Second, "P99 target of the latency to a block of every node")
@@ -61,6 +68,9 @@ func main() {
 	metrics := fs.String("metrics", "", "URLs of the /metrics of the nodes, comma-separated")
 	out := fs.String("out", "bench-results", "directory of the reports")
 	label := fs.String("label", "", "text the report starts with: the build, the machine, the network")
+
+	count := fs.Int("n", 0, "transactions send sends")
+	rate := fs.Int("rate", 100, "transactions a second send sends")
 	_ = fs.Parse(os.Args[2:])
 
 	if *keyFile == "" {
@@ -73,6 +83,13 @@ func main() {
 	}
 	log.Printf("network %d of %d nodes: node keys %s, hash %s", c.info.NetworkID, len(c.nodes), c.info.Cryptoer, c.info.Hasher)
 
+	if os.Args[1] == "send" {
+		if *count < 1 || *rate < 1 || fs.NArg() < 1 {
+			fmt.Fprintln(os.Stderr, "usage: bench send -node URL[,URL...] -key FILE -n N [-rate R] CONTRACT [NAME=VALUE...]")
+			os.Exit(2)
+		}
+		os.Exit(send(c, fs.Arg(0), fs.Args()[1:], *count, *rate, runConfig{batch: *batch, drain: *drain, poll: *poll, p99: *p99}))
+	}
 	if os.Args[1] == "setup" {
 		_, statErr := os.Stat(*file)
 		split := *fund == "" && statErr != nil
@@ -149,4 +166,38 @@ func splitList(s string) []string {
 		}
 	}
 	return out
+}
+
+// send runs the transactions of send and prints what came of them, as tools/cmd/load of dapps did;
+// it tells the exit status
+func send(c *chainClient, contract string, args []string, n, rate int, cfg runConfig) int {
+	call, err := newContractCall(c.nodes[0], contract, args)
+	if err != nil {
+		log.Print(err)
+		return 2
+	}
+	w := workload{name: contract, make: func(seq int) (*signedTx, error) {
+		values, err := call.values(seq + 1)
+		if err != nil {
+			return nil, err
+		}
+		return c.signer.contract(c.founder, call.id, values)
+	}}
+	seq := 0
+	s, err := runStep(c, w, rate, n, cfg, &seq)
+	if err != nil {
+		log.Print(err)
+		return 1
+	}
+	fmt.Printf("sent %d in_blocks %d refused %d seconds %.1f\n", s.Sent, s.InBlock-s.FailedInBlock, s.Refused+s.FailedInBlock+s.Unsent, s.Seconds)
+	if s.InBlock > 0 {
+		fmt.Printf("latency_ms p50 %.0f p95 %.0f max %.0f\n", s.Latency.P50, s.Latency.P95, s.Latency.Max)
+	}
+	for why, k := range s.Failures {
+		log.Printf("%d: %s", k, why)
+	}
+	if s.Lost > 0 {
+		return 1
+	}
+	return 0
 }

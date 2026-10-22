@@ -79,7 +79,7 @@ func quantilesOf(d []time.Duration) quantiles {
 func runWorkload(c *chainClient, w workload, cfg runConfig, seq *int) []step {
 	var out []step
 	for _, rate := range cfg.rates {
-		s, err := runStep(c, w, rate, cfg, seq)
+		s, err := runStep(c, w, rate, rate*int(cfg.duration/time.Second), cfg, seq)
 		if err != nil {
 			log.Printf("%s at %d/s: %v", w.name, rate, err)
 			break
@@ -94,10 +94,9 @@ func runWorkload(c *chainClient, w workload, cfg runConfig, seq *int) []step {
 	return out
 }
 
-// runStep sends rate transactions a second for the duration, open loop, pre-signed, to the nodes in
-// turn, and waits for them to reach blocks
-func runStep(c *chainClient, w workload, rate int, cfg runConfig, seq *int) (*step, error) {
-	total := rate * int(cfg.duration/time.Second)
+// runStep sends total transactions, rate a second, open loop, pre-signed, to the nodes in turn, and
+// waits for them to reach blocks
+func runStep(c *chainClient, w workload, rate, total int, cfg runConfig, seq *int) (*step, error) {
 	txs, err := presign(w, *seq, total)
 	if err != nil {
 		return nil, err
@@ -270,7 +269,7 @@ func runStep(c *chainClient, w workload, rate int, cfg runConfig, seq *int) (*st
 	}
 	s.Pass = s.Unsent == 0 && s.Refused == 0 && s.Lost == 0 && s.FailedInBlock == 0 && s.InAll == s.Sent &&
 		s.LatencyAll.P99 <= float64(cfg.p99.Milliseconds()) &&
-		sendEnd.Sub(start) <= cfg.duration+time.Second
+		sendEnd.Sub(start) <= time.Duration(total/rate+1)*time.Second
 	return s, nil
 }
 

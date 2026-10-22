@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 )
 
@@ -20,6 +21,8 @@ type workload struct {
 //
 //	self      TransferSelf, UTXO to account and back in turn
 //	utxo      UTXO transfers from each account to the next
+//	transfer  @1TokensSend of 1 from each account to the next: the transfer of a chain of the honor
+//	          nodes only, which takes no TransferSelf nor UTXO
 //	contract  the contract mix: ProfileEdit, NotificationsSend and TokensSend, 4:3:3
 //	write     BenchWrite: 5 DBInsert and 5 DBUpdate a transaction
 func workloads(c *chainClient, accounts []*account, names []string, run int) ([]workload, error) {
@@ -28,7 +31,19 @@ func workloads(c *chainClient, accounts []*account, names []string, run int) ([]
 	mark := func(seq int) string { return strconv.Itoa(run) + "-" + strconv.Itoa(seq) }
 	var out []workload
 	for _, name := range names {
+		if c.honorOnly && (name == "self" || name == "utxo") {
+			log.Printf("%s: skipped, a chain of the honor nodes only takes no TransferSelf nor UTXO", name)
+			continue
+		}
 		switch name {
+		case "transfer":
+			id, err := c.nodes[0].contractID("@1TokensSend")
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, workload{name, func(seq int) (*signedTx, error) {
+				return c.signer.contract(accounts[seq%n], id, map[string]any{"Recipient": accounts[(seq+1)%n].address(), "Amount": "1", "Comment": mark(seq)})
+			}})
 		case "self":
 			out = append(out, workload{name, func(seq int) (*signedTx, error) {
 				a := accounts[seq%n]
@@ -67,7 +82,7 @@ func workloads(c *chainClient, accounts []*account, names []string, run int) ([]
 				return c.signer.contract(accounts[seq%n], id, map[string]any{"N": int64(run)*1_000_000 + int64(seq)})
 			}})
 		default:
-			return nil, fmt.Errorf("no workload %q: self, utxo, contract or write", name)
+			return nil, fmt.Errorf("no workload %q: self, utxo, transfer, contract or write", name)
 		}
 	}
 	return out, nil

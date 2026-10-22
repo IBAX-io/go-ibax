@@ -6,6 +6,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -94,7 +95,9 @@ func setup(c *chainClient, cfg setupConfig) error {
 		return err
 	}
 	half := cfg.fund.Div(decimal.NewFromInt(2)).Floor().String()
-	if err := each("TransferSelf to UTXO", func(_ int, a *account) (*signedTx, error) {
+	if c.honorOnly {
+		log.Print("TransferSelf to UTXO: none, a chain of the honor nodes only has no UTXO")
+	} else if err := each("TransferSelf to UTXO", func(_ int, a *account) (*signedTx, error) {
 		return c.signer.transferSelf(a, half, "Account", "UTXO")
 	}); err != nil {
 		return err
@@ -149,6 +152,9 @@ type chainClient struct {
 	founder *account
 	signer  *signer
 	info    *chainInfo
+	// honorOnly is a chain of the honor nodes only (honor_nodes_only, every chain of the BFT
+	// consensus): it takes no TransferSelf nor UTXO transaction
+	honorOnly bool
 }
 
 func connect(urls []string, keyFile, keyAlgo string) (*chainClient, error) {
@@ -187,6 +193,21 @@ func connect(urls []string, keyFile, keyAlgo string) (*chainClient, error) {
 		c.info = info
 	}
 	c.signer = newSigner(c.info)
+	var params struct {
+		List []struct {
+			Name  string `json:"name"`
+			Value string `json:"value"`
+		} `json:"list"`
+	}
+	if err := c.nodes[0].get("systemparams?names=honor_nodes_only", &params); err != nil {
+		var apiErr *apiError
+		if !errors.As(err, &apiErr) {
+			return nil, err
+		}
+	}
+	for _, p := range params.List {
+		c.honorOnly = p.Name == "honor_nodes_only" && (p.Value == "1" || p.Value == "true")
+	}
 	return c, nil
 }
 
