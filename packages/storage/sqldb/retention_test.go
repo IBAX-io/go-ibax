@@ -65,7 +65,7 @@ func retentionDB(t *testing.T) *DbTransaction {
 	})
 	for _, table := range []string{"block_chain", "confirmations", "bft_certificates", "rollback_tx", "1_history",
 		"log_transactions", "spent_info", "retired_partitions", "log_transaction_ranges", "partition_id_floors",
-		"retention_state"} {
+		"retention_state", "log_transaction_counts", "stop_network_txs"} {
 		require.NoError(t, tx.Exec(`DELETE FROM "`+table+`"`).Error)
 	}
 	return NewDbTransaction(tx)
@@ -185,4 +185,40 @@ func TestRetainArchive(t *testing.T) {
 	first, err := FirstKeptBlock()
 	require.NoError(t, err)
 	require.EqualValues(t, 5, first)
+}
+
+func TestLogTxCount(t *testing.T) {
+	db := retentionDB(t)
+	conf.Config.Storage.Archive = false
+	T := int64(1) << 32
+	chainRows(t, db, T)
+	lts := []*LogTransaction{
+		{Hash: []byte{8}, Block: 9999, Timestamp: T, EcosystemID: 2},
+		{Hash: []byte{9}, Block: 9999, Timestamp: T, EcosystemID: 2},
+		{Hash: []byte{10}, Block: 9999, Timestamp: T, EcosystemID: 3, Status: 1},
+	}
+	for _, lt := range lts {
+		require.NoError(t, GetDB(db).Create(lt).Error)
+	}
+	require.NoError(t, CountLogTransactions(GetDB(db), lts))
+	count := func(eco int64) int64 {
+		n, err := GetLogTxCount(db, eco)
+		require.NoError(t, err)
+		return n
+	}
+	require.EqualValues(t, 2, count(2))
+	require.EqualValues(t, 0, count(3), "failed transactions are not counted")
+
+	// the rollback of a transaction takes it off the count
+	n, err := DeleteLogTransactionsByHash(db, []byte{9})
+	require.NoError(t, err)
+	require.EqualValues(t, 1, n)
+	require.EqualValues(t, 1, count(2))
+
+	// the count outlives the rows
+	require.NoError(t, Retain(db, 10000, T, testWindow))
+	addBlocks(t, db, T, 20000, 29999)
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxBack+1, testWindow))
+	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "log_transactions" WHERE "ecosystem_id" = 2`))
+	require.EqualValues(t, 1, count(2))
 }

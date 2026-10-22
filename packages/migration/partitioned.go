@@ -179,7 +179,8 @@ func HistoryTableSQL() string {
 }
 
 // retentionSQL creates the schemas of the partitions, the partitioned tables but 1_history and
-// the tables of the retention of rows
+// the tables of the retention of rows, and of what outlives it: the count of the successful
+// transactions of every ecosystem and the hashes of the StopNetwork transactions
 func retentionSQL() string {
 	var b strings.Builder
 	for _, s := range []string{PartsSchema, RetiredSchema, ArchiveSchema} {
@@ -212,6 +213,11 @@ func retentionSQL() string {
 	CREATE TABLE "retention_state" (
 		"name" varchar(255) NOT NULL PRIMARY KEY,
 		"value" bigint NOT NULL
+	);
+	DROP TABLE IF EXISTS "log_transaction_counts";
+	CREATE TABLE "log_transaction_counts" (
+		"ecosystem_id" bigint NOT NULL PRIMARY KEY,
+		"count" bigint NOT NULL
 	);
 	DROP TABLE IF EXISTS "stop_network_txs";
 	CREATE TABLE "stop_network_txs" (

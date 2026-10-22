@@ -80,9 +80,9 @@ func rollbackInsertedRow(tx map[string]string, where string, whereArgs []any, db
 	return nil
 }
 
-func rollbackTransaction(txHash []byte, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
+func rollbackTransaction(blockID int64, txHash []byte, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
 	rollbackTx := &sqldb.RollbackTx{}
-	txs, err := rollbackTx.GetRollbackTransactions(dbTx, txHash)
+	txs, err := rollbackTx.GetRollbackTransactions(dbTx, blockID, txHash)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting rollback transactions")
 		return err
@@ -170,7 +170,7 @@ func rollbackTransaction(txHash []byte, dbTx *sqldb.DbTransaction, logger *log.E
 			}
 		}
 	}
-	txForDelete := &sqldb.RollbackTx{TxHash: txHash}
+	txForDelete := &sqldb.RollbackTx{BlockID: blockID, TxHash: txHash}
 	err = txForDelete.DeleteByHash(dbTx)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting rollback transaction by hash")

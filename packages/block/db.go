@@ -293,6 +293,9 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 		if err := sqldb.CreateLogTransactionBatches(tx, playTx.Lts); err != nil {
 			return errors.Wrap(err, "batches insert log_transactions")
 		}
+		if err := sqldb.CountLogTransactions(tx, playTx.Lts); err != nil {
+			return errors.Wrap(err, "count log_transactions")
+		}
 		if err := sqldb.CreateStopNetworkTxs(tx, b.stopNetworkHashes(playTx.Lts), b.Header.BlockId); err != nil {
 			return errors.Wrap(err, "insert stop_network_txs")
 		}

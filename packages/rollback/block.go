@@ -114,7 +114,7 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 		switch t.Inner.(type) {
 		case *transaction.SmartTransactionParser:
 			t.Inner.(*transaction.SmartTransactionParser).DbTransaction = t.DbTransaction
-			if err = rollbackTransaction(t.Hash(), t.DbTransaction, logger); err != nil {
+			if err = rollbackTransaction(block.Header.BlockId, t.Hash(), t.DbTransaction, logger); err != nil {
 				return err
 			}
 		}
