@@ -125,6 +125,11 @@ func init() {
 	cmdFlags.StringVar(&conf.Config.Log.Syslog.Facility, "syslogFacility", "kern", "syslog facility")
 	cmdFlags.StringVar(&conf.Config.Log.Syslog.Tag, "syslogTag", "go-ibax", "syslog program tag")
 
+	// TxPool
+	cmdFlags.IntVar(&conf.Config.TxPool.MaxCount, "txPoolCount", 0, "Transactions the node keeps in memory for the blocks to come; 0 takes 100000")
+	cmdFlags.Int64Var(&conf.Config.TxPool.MaxBytes, "txPoolBytes", 0, "Bytes of the transactions the node keeps in memory; 0 takes 256 MiB")
+	cmdFlags.IntVar(&conf.Config.TxPool.BadMinutes, "txBadMinutes", 0, "Minutes the node answers the status of a transaction it refused; 0 takes 60")
+
 	// TokenMovement
 	cmdFlags.StringVar(&conf.Config.TokenMovement.Host, "tmovHost", "", "Token movement host")
 	cmdFlags.IntVar(&conf.Config.TokenMovement.Port, "tmovPort", 0, "Token movement port")

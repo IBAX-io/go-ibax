@@ -8,11 +8,14 @@ package crypto
 import (
 	"bytes"
 	stdcrypto "crypto"
+	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/common/gencache"
 	"github.com/IBAX-io/go-ibax/packages/metrics"
 )
 
@@ -121,12 +124,38 @@ func (k AccountKey) Address() int64 {
 	return Address(k.Raw)
 }
 
-// Verify checks a signature of data, hashed with the network hash, made with the key's algorithm
+// verifiedSignatures are the latest signatures Verify accepted, by verifiedID: a transaction
+// checked when it arrives, again in the block a node makes or receives, is verified once
+var verifiedSignatures = gencache.New[[sha256.Size]byte, struct{}](1 << 17)
+
+// verifiedID identifies a key, a hash and a signature of it
+func verifiedID(k AccountKey, hash, signature []byte) [sha256.Size]byte {
+	h := sha256.New()
+	var n [4]byte
+	for _, b := range [][]byte{{byte(k.Algo)}, k.Raw, hash, signature} {
+		binary.BigEndian.PutUint32(n[:], uint32(len(b)))
+		h.Write(n[:])
+		h.Write(b)
+	}
+	return [sha256.Size]byte(h.Sum(nil))
+}
+
+// Verify checks a signature of data, hashed with the network hash, made with the key's algorithm.
+// A signature it accepted before it accepts again without verifying it.
 func (k AccountKey) Verify(data, signature []byte) (bool, error) {
-	defer func(start time.Time) {
-		metrics.SignVerify.WithLabelValues(k.Algo.String()).Observe(metrics.Since(start))
-	}(time.Now())
-	return NewAsymAlgo(k.Algo).Verify(k.Raw, Hash(data), signature)
+	hash := Hash(data)
+	id := verifiedID(k, hash, signature)
+	if _, ok := verifiedSignatures.Get(id); ok {
+		metrics.SignVerifyCached.WithLabelValues(k.Algo.String()).Inc()
+		return true, nil
+	}
+	start := time.Now()
+	ok, err := NewAsymAlgo(k.Algo).Verify(k.Raw, hash, signature)
+	metrics.SignVerify.WithLabelValues(k.Algo.String()).Observe(metrics.Since(start))
+	if ok && err == nil {
+		verifiedSignatures.Put(id, struct{}{})
+	}
+	return ok, err
 }
 
 // GenAccountKey generates a private key and its account public key

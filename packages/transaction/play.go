@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
@@ -32,31 +33,52 @@ func (t *Transaction) Play() error {
 }
 
 func (t *Transaction) Check(checkTime int64) error {
+	return CheckBatch([]*Transaction{t}, checkTime)[0]
+}
+
+// checkTime refuses a transaction of no key, or of a time out of the window of checkTime
+func (t *Transaction) checkTime(checkTime int64) error {
 	if t.KeyID() == 0 {
 		return ErrEmptyKey
 	}
 	logger := log.WithFields(log.Fields{"tx_hash": hex.EncodeToString(t.Hash()), "tx_time": t.Timestamp(), "check_time": checkTime, "type": consts.ParameterExceeded})
 	if time.UnixMilli(t.Timestamp()).Unix() > checkTime {
-		//if time.UnixMilli(t.Timestamp()).Unix()-consts.MaxTxForw > checkTime {
-		//	logger.WithFields(log.Fields{"tx_max_forw": consts.MaxTxForw}).Errorf("time in the tx cannot be more than %d seconds of block time ", consts.MaxTxForw)
-		//	return ErrNotComeTime
-		//}
 		logger.Error("time in the tx cannot be more than of block time ")
 		return ErrEarlyTime
 	}
-
 	if t.Type() != types.StopNetworkTxType {
 		if time.UnixMilli(t.Timestamp()).Unix() < checkTime-consts.MaxTxBack {
 			logger.WithFields(log.Fields{"tx_max_back": consts.MaxTxBack, "tx_type": t.Type()}).Errorf("time in the tx cannot be less then %d seconds of block time", consts.MaxTxBack)
 			return ErrExpiredTime
 		}
 	}
-	err := CheckLogTx(t.Hash(), logger)
-	if err != nil {
-		return err
-	}
-
 	return nil
+}
+
+// CheckBatch checks each transaction as Check does, with one query of the transactions in blocks
+func CheckBatch(txs []*Transaction, checkTime int64) []error {
+	errs := make([]error, len(txs))
+	hashes := make([][]byte, 0, len(txs))
+	for i, t := range txs {
+		if errs[i] = t.checkTime(checkTime); errs[i] == nil {
+			hashes = append(hashes, t.Hash())
+		}
+	}
+	known, err := sqldb.KnownLogTransactions(nil, hashes)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting log transactions by hash")
+	}
+	for i, t := range txs {
+		switch {
+		case errs[i] != nil:
+		case err != nil:
+			errs[i] = err
+		case known[string(t.Hash())]:
+			log.WithFields(log.Fields{"tx_hash": t.Hash(), "type": consts.DuplicateObject}).Warning("double tx in log transactions")
+			errs[i] = ErrDuplicatedTx
+		}
+	}
+	return errs
 }
 
 // CallContract calls the contract functions according to the specified flags

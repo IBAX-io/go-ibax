@@ -85,7 +85,11 @@ func RollbackBlock(data []byte) error {
 		return err
 	}
 
-	return dbTx.Commit()
+	if err = dbTx.Commit(); err != nil {
+		return err
+	}
+	transaction.TxPool.Restore(bl.Transactions)
+	return nil
 }
 
 func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
@@ -96,27 +100,14 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 		t := block.Transactions[i]
 		t.DbTransaction = dbTx
 
-		_, err := sqldb.MarkTransactionUnusedAndUnverified(dbTx, t.Hash())
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting transaction")
-			return err
-		}
-		_, err = sqldb.DeleteLogTransactionsByHash(dbTx, t.Hash())
+		_, err := sqldb.DeleteLogTransactionsByHash(dbTx, t.Hash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting log transactions by hash")
 			return err
 		}
 
-		ts := &sqldb.TransactionStatus{}
-		err = ts.UpdateBlockID(dbTx, 0, t.Hash())
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating block id in transaction status")
-			return err
-		}
-
-		_, err = sqldb.DeleteQueueTxByHash(dbTx, t.Hash())
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transacion from queue by hash")
+		if err = sqldb.DeleteTransactionStatus(dbTx, t.Hash()); err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transaction status")
 			return err
 		}
 

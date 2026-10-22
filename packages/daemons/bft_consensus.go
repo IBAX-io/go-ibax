@@ -369,15 +369,10 @@ func (d *bftDriver) tick() {
 	}
 }
 
-// hasWork reports whether the height has a transaction to put in a block: an unused
-// transaction, or a delayed contract due at the height. A chain without one has no round.
+// hasWork reports whether the height has a transaction to put in a block: a transaction of the
+// pool, or a delayed contract due at the height. A chain without one has no round.
 func (d *bftDriver) hasWork() bool {
-	trs, err := sqldb.GetAllUnusedTransactions(nil, 1)
-	if err != nil {
-		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting unused transactions")
-		return false
-	}
-	if len(trs) > 0 {
+	if transaction.TxPool.Len() > 0 {
 		return true
 	}
 	delayed, err := sqldb.GetAllDelayedContractsForBlockID(int64(d.m.Height()))

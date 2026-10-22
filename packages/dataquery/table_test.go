@@ -39,7 +39,7 @@ func TestTheTableDefinitionsAreReadByEveryone(t *testing.T) {
 
 // Any other table without a row in 1_tables belongs to the node itself
 func TestTheNodesOwnTablesAreRefused(t *testing.T) {
-	for _, name := range []string{"info_block", "transactions", "confirmations"} {
+	for _, name := range []string{"info_block", "transactions_status", "confirmations"} {
 		table := &Table{Name: name, Ecosystem: 1}
 		assert.Equal(t, "E_ACCESS_DENIED", code(table.ownRecord()), name)
 	}

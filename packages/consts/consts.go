@@ -66,8 +66,6 @@ const AvailableBCGap = 4
 
 const DefaultNodesConnectDelay = 6
 
-const MaxTXAttempt = 10
-
 // ChainSize 1M = 1048576 byte
 const ChainSize = 1 << 20
 

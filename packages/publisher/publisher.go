@@ -125,6 +125,35 @@ func Write(account string, data string) error {
 	return call("publish", map[string]any{"channel": Channel(account), "data": json.RawMessage(data)}, nil)
 }
 
+// Configured reports whether the node publishes notifications: a Centrifugo server is set
+func Configured() bool { return config.URL != "" }
+
+// Message is data, a JSON value, for the channel of an account
+type Message struct {
+	Account string
+	Data    string
+}
+
+// batchSize is the most publications one batch request carries
+const batchSize = 500
+
+// WriteBatch publishes each message to the channel of its account with the batch method of the
+// server API: one request for up to batchSize messages
+func WriteBatch(msgs []Message) error {
+	for len(msgs) > 0 {
+		n := min(len(msgs), batchSize)
+		commands := make([]map[string]any, n)
+		for i, m := range msgs[:n] {
+			commands[i] = map[string]any{"publish": map[string]any{"channel": Channel(m.Account), "data": json.RawMessage(m.Data)}}
+		}
+		if err := call("batch", map[string]any{"commands": commands}, nil); err != nil {
+			return err
+		}
+		msgs = msgs[n:]
+	}
+	return nil
+}
+
 // Endpoint is where and how clients connect to Centrifugo
 type Endpoint struct {
 	// URL is the address of the server, with the WebSocket scheme

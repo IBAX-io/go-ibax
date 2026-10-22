@@ -9,8 +9,6 @@ import (
 	"errors"
 	"io"
 
-	"gorm.io/gorm/clause"
-
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -171,39 +169,14 @@ func getUnknownTransactions(buf *bytes.Buffer) ([]byte, error) {
 		return nil, err
 	}
 
+	known, err := sqldb.KnownLogTransactions(nil, hashes)
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting log transactions")
+		return nil, utils.ErrInfo(err)
+	}
 	var needTx []byte
-	// TODO: remove cycle, select miltiple txes throw in(?)
 	for _, hash := range hashes {
-		// check if we have such a transaction
-		// check log_transaction
-		exists, err := sqldb.GetLogTransactionsCount(hash)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "txHash": hash}).Error("Getting log tx count")
-			return nil, utils.ErrInfo(err)
-		}
-		if exists > 0 {
-			log.WithFields(log.Fields{"txHash": hash, "type": consts.DuplicateObject}).Warning("tx with this hash already exists in log_tx")
-			continue
-		}
-
-		exists, err = sqldb.GetTransactionsCount(hash)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "txHash": hash}).Error("Getting tx count")
-			return nil, utils.ErrInfo(err)
-		}
-		if exists > 0 {
-			log.WithFields(log.Fields{"txHash": hash, "type": consts.DuplicateObject}).Warning("tx with this hash already exists in tx")
-			continue
-		}
-
-		// check transaction queue
-		exists, err = sqldb.GetQueuedTransactionsCount(hash)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting queue_tx count")
-			return nil, utils.ErrInfo(err)
-		}
-		if exists > 0 {
-			log.WithFields(log.Fields{"txHash": hash, "type": consts.DuplicateObject}).Warning("tx with this hash already exists in queue_tx")
+		if known[string(hash)] || transaction.TxPool.Has(hash) {
 			continue
 		}
 		needTx = append(needTx, hash...)
@@ -229,7 +202,7 @@ func readHashes(buf *bytes.Buffer) ([][]byte, error) {
 }
 
 func saveNewTransactions(binaryTxs []byte) error {
-	var queueTxs []*sqldb.QueueTx
+	var datas [][]byte
 	log.WithFields(log.Fields{"binaryTxs": binaryTxs}).Debug("trying to save binary txs")
 
 	for len(binaryTxs) > 0 {
@@ -254,21 +227,7 @@ func saveNewTransactions(binaryTxs []byte) error {
 			return utils.ErrInfo("len(txBinData) > max_tx_size")
 		}
 
-		rtx := transaction.Transaction{}
-		if err = rtx.Unmarshall(bytes.NewBuffer(txBinData), true); err != nil {
-			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("unmarshalling transaction")
-			return err
-		}
-		if err = rtx.Verify(); err != nil {
-			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("verifying transaction")
-			return err
-		}
-		queueTxs = append(queueTxs, &sqldb.QueueTx{Hash: rtx.Hash(), Data: txBinData, Expedite: rtx.Expedite(), Time: rtx.Timestamp(), FromGate: 1})
+		datas = append(datas, txBinData)
 	}
-	if err := sqldb.GetDB(nil).Clauses(clause.OnConflict{DoNothing: true}).Create(&queueTxs).Error; err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("error creating QueueTx")
-		return err
-	}
-
-	return nil
+	return transaction.TxPool.Receive(datas)
 }

@@ -5,6 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+
+	dto "github.com/prometheus/client_model/go"
+
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 )
 
 func TestAccountKeyRoundTrip(t *testing.T) {
@@ -187,4 +191,54 @@ func TestNodeKeyHex(t *testing.T) {
 			t.Errorf("%q parsed as a node key", s)
 		}
 	}
+}
+
+// TestAccountKeyVerifiesOnce checks that a signature accepted before is accepted again without a
+// verification, and that the data, the signature and the key still decide
+func TestAccountKeyVerifiesOnce(t *testing.T) {
+	priv, key, err := GenAccountKey(AsymAlgo_ECC_Secp256k1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	data := []byte("verified once")
+	sig, err := AccountSign(key.Algo, priv, data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cached := metrics.SignVerifyCached.WithLabelValues(key.Algo.String())
+	before := counterValue(t, cached)
+	for range 3 {
+		if ok, err := key.Verify(data, sig); !ok || err != nil {
+			t.Fatalf("verify: %v %v", ok, err)
+		}
+	}
+	if n := counterValue(t, cached) - before; n != 2 {
+		t.Errorf("cached checks %v, want 2", n)
+	}
+
+	altered := bytes.Clone(sig)
+	altered[5] ^= 1
+	_, other, err := GenAccountKey(AsymAlgo_ECC_Secp256k1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, ok := range map[string]bool{
+		"other data": first(key.Verify([]byte("other data"), sig)),
+		"altered":    first(key.Verify(data, altered)),
+		"other key":  first(other.Verify(data, sig)),
+	} {
+		if ok {
+			t.Errorf("%s verified", name)
+		}
+	}
+}
+
+func first(ok bool, _ error) bool { return ok }
+
+func counterValue(t *testing.T, c interface{ Write(*dto.Metric) error }) float64 {
+	var m dto.Metric
+	if err := c.Write(&m); err != nil {
+		t.Fatal(err)
+	}
+	return m.GetCounter().GetValue()
 }

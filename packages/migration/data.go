@@ -87,14 +87,6 @@ var (
 		t.Column("block_id", "int", {"default": "0"})
 	{{footer "primary(hash)"}}
 
-	{{head "queue_tx"}}
-		t.Column("hash", "bytea", {"default": ""})
-		t.Column("data", "bytea", {"default": ""})
-		t.Column("from_gate", "int", {"default": "0"})
-		t.Column("expedite", "decimal(30)", {"default_raw": "'0' CHECK (expedite >= 0)"})
-		t.Column("time", "bigint", {"default": "0"})
-	{{footer "primary(hash)"}}
-
 	{{headseq "rollback_tx"}}
 		t.Column("id", "bigint", {"default_raw": "nextval('rollback_tx_id_seq')"})
 		t.Column("block_id", "bigint", {"default": "0"})
@@ -120,19 +112,6 @@ var (
 		t.Column("block_id", "bigint")
 		t.Column("type", "bigint")
 	{{footer "primary(output_tx_hash,output_key_id,output_index)" "index(block_id)" "index(input_tx_hash)" "index(output_key_id)" "index(output_tx_hash)" "index(ecosystem, output_key_id, block_id)"}}
-
-	{{head "transactions"}}
-		t.Column("hash", "bytea", {"default": ""})
-		t.Column("data", "bytea", {"default": ""})
-		t.Column("used", "smallint", {"default": "0"})
-		t.Column("high_rate", "smallint", {"default": "0"})
-		t.Column("expedite", "decimal(30)", {"default_raw": "'0' CHECK (expedite >= 0)"})
-		t.Column("time", "bigint", {"default": "0"})
-		t.Column("type", "smallint", {"default": "0"})
-		t.Column("key_id", "bigint", {"default": "0"})
-		t.Column("sent", "smallint", {"default": "0"})
-		t.Column("verified", "smallint", {"default": "1"})
-	{{footer "primary(hash)" "index(sent, used, verified, high_rate)"}}
 
 	{{head "transactions_status"}}
 		t.Column("hash", "bytea", {"default": ""})
@@ -171,11 +150,6 @@ var (
 		t.Column("hash", "bytea", {"default":""})
 		t.Column("attempts", "int", {"default":"0"})
 	{{footer "primary"}}
-
-	{{head "transactions_attempts"}}
-		t.Column("hash", "bytea", {"default": ""})
-		t.Column("attempt", "smallint", {"default": "0"})
-	{{footer "primary(hash)" "index(attempt)"}}
 
 	`
 )

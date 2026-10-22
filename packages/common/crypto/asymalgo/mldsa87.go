@@ -1,6 +1,10 @@
 package asymalgo
 
-import "crypto/mldsa"
+import (
+	"crypto/mldsa"
+
+	"github.com/IBAX-io/go-ibax/packages/common/gencache"
+)
 
 const (
 	// MLDSA87Context separates IBAX signatures from ML-DSA-87 signatures made for any other purpose
@@ -17,6 +21,7 @@ var mldsa87 = &mldsaLevel{
 	options:       &mldsa.Options{Context: MLDSA87Context},
 	publicKeySize: MLDSA87PublicKeySize,
 	signatureSize: MLDSA87SignatureSize,
+	keys:          gencache.New[string, *mldsa.PublicKey](mldsaKeysSize),
 }
 
 // MLDSA87 is ML-DSA-87 (FIPS 204, security category 5, the level CNSA 2.0 requires)

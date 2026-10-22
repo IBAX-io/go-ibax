@@ -88,14 +88,3 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer, fill bool) error {
 	rtx.Inner = inner
 	return nil
 }
-
-func (rtx *Transaction) SetRawTx() *sqldb.RawTx {
-	return &sqldb.RawTx{
-		Hash:     rtx.Hash(),
-		Time:     rtx.Timestamp(),
-		TxType:   rtx.Type(),
-		Data:     rtx.FullData,
-		Expedite: rtx.Expedite().String(),
-		WalletID: rtx.KeyID(),
-	}
-}

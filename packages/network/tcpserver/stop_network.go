@@ -5,6 +5,7 @@
 package tcpserver
 
 import (
+	"bytes"
 	"errors"
 	"time"
 
@@ -12,13 +13,11 @@ import (
 
 	"net"
 
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto/x509"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network"
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
@@ -76,19 +75,15 @@ func processStopNetwork(b []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	hash := crypto.DoubleHash(data)
-	tx := &sqldb.Transaction{
-		Hash:     hash,
-		Data:     data,
-		Type:     types.StopNetworkTxType,
-		KeyID:    conf.Config.KeyID,
-		HighRate: sqldb.TransactionRateStopNetwork,
-		Time:     snp.Timestamp,
-	}
-	if err = tx.Create(nil); err != nil {
-		log.WithFields(log.Fields{"error": err, "type": consts.DBError}).Error("inserting tx to database")
+	tx, err := transaction.UnmarshallTransaction(bytes.NewBuffer(data), true)
+	if err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.ParseError}).Error("parsing the stop network transaction")
 		return nil, err
 	}
-
+	if err = transaction.TxPool.Admit([]*transaction.Transaction{tx}, transaction.RateStopNetwork)[0]; err != nil {
+		log.WithFields(log.Fields{"error": err, "type": consts.InvalidObject}).Error("putting the stop network transaction in the pool")
+		return nil, err
+	}
+	hash := tx.Hash()
 	return hash, nil
 }

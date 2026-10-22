@@ -168,7 +168,7 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 	if err != nil {
 		return err
 	}
-	return transaction.CreateTransaction(txData, stp.Hash, conf.Config.KeyID, stp.Timestamp)
+	return transaction.CreateTransaction(txData)
 }
 
 func (nbs *NodesBanService) FilterHosts(hosts []string) ([]string, []string, error) {

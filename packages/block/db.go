@@ -305,9 +305,6 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 	playTx := b.GenAfterTxs()
 	return sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
-		if err := sqldb.DeleteTransactions(tx, playTx.UsedTx); err != nil {
-			return errors.Wrap(err, "batches delete used transactions")
-		}
 		if err := sqldb.CreateLogTransactionBatches(tx, playTx.Lts); err != nil {
 			return errors.Wrap(err, "batches insert log_transactions")
 		}

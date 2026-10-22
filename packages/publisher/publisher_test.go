@@ -36,6 +36,8 @@ func fakeCentrifugo(t *testing.T, requests *[]string) {
 			w.Write([]byte(`{"result":{"nodes":[{"uid":"1","version":"6.9.7 OSS"}]}}`))
 		case "/api/publish":
 			w.Write([]byte(`{"result":{}}`))
+		case "/api/batch":
+			w.Write([]byte(`{"replies":[{"publish":{}}]}`))
 		default:
 			w.Write([]byte(`{"error":{"code":104,"message":"method not found"}}`))
 		}
@@ -69,6 +71,29 @@ func TestWrite(t *testing.T) {
 	var body map[string]any
 	require.NoError(t, json.Unmarshal([]byte(requests[0][len("/api/publish "):]), &body))
 	assert.Equal(t, map[string]any{"channel": "client#" + account, "data": []any{map[string]any{"count": float64(1)}}}, body)
+}
+
+func TestWriteBatch(t *testing.T) {
+	var requests []string
+	fakeCentrifugo(t, &requests)
+
+	msgs := make([]Message, batchSize+1)
+	for i := range msgs {
+		msgs[i] = Message{Account: account, Data: `[{"count":1}]`}
+	}
+	require.True(t, Configured())
+	require.NoError(t, WriteBatch(msgs))
+	require.Len(t, requests, 2)
+	var body struct {
+		Commands []map[string]map[string]any `json:"commands"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(requests[0][len("/api/batch "):]), &body))
+	assert.Len(t, body.Commands, batchSize)
+	assert.Equal(t, "client#"+account, body.Commands[0]["publish"]["channel"])
+	require.NoError(t, json.Unmarshal([]byte(requests[1][len("/api/batch "):]), &body))
+	assert.Len(t, body.Commands, 1)
+	require.NoError(t, WriteBatch(nil))
+	assert.Len(t, requests, 2)
 }
 
 func TestGetEndpoint(t *testing.T) {

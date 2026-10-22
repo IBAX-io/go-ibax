@@ -17,25 +17,37 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
+// repeatMarshallBlock encodes the block this node generated, once it has run: the transactions of
+// the block are those that ran well, in the order they ran, so they are not parsed again
 func (b *Block) repeatMarshallBlock() error {
-	newBlockData, err := MarshallBlock(
+	ran := make(map[string]*transaction.Transaction, len(b.Transactions))
+	for _, t := range b.Transactions {
+		ran[string(t.FullData)] = t
+	}
+	txs := make([]*transaction.Transaction, 0, len(b.TxFullData))
+	for _, data := range b.TxFullData {
+		t, ok := ran[string(data)]
+		if !ok {
+			return errors.New("a transaction of the block is not one that ran")
+		}
+		txs = append(txs, t)
+	}
+	data := &types.BlockData{}
+	if err := data.Apply(
 		types.WithCurHeader(b.Header),
 		types.WithPrevHeader(b.PrevHeader),
 		types.WithAfterTxs(b.AfterTxs),
 		types.WithSysUpdate(b.SysUpdate),
-		types.WithTxFullData(b.TxFullData))
+		types.WithTxFullData(b.TxFullData)); err != nil {
+		return errors.Wrap(err, "marshalling repeat block")
+	}
+	newBlockData, err := data.MarshallBlock(syspar.GetNodePrivKey())
 	if err != nil {
 		return errors.Wrap(err, "marshalling repeat block")
 	}
-
-	var nb = new(Block)
-	nb, err = UnmarshallBlock(bytes.NewBuffer(newBlockData), true)
-	if err != nil {
-		return errors.Wrap(err, "parsing repeat block")
-	}
 	b.BinData = newBlockData
-	b.Transactions = nb.Transactions
-	b.MerkleRoot = nb.MerkleRoot
+	b.Transactions = txs
+	b.MerkleRoot = data.MerkleRoot
 	return nil
 }
 

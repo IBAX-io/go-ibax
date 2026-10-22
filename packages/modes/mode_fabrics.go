@@ -99,7 +99,6 @@ func (BCDaemonFactory) GetDaemonsList() []string {
 	return []string{
 		"BlocksCollection",
 		"BlockGenerator",
-		"QueueParserTx",
 		"QueueParserBlocks",
 		"Disseminator",
 		"Confirmations",

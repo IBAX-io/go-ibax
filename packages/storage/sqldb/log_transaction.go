@@ -26,6 +26,22 @@ func (lt *LogTransaction) GetByHash(dbTx *DbTransaction, hash []byte) (bool, err
 	return isFound(GetDB(dbTx).Where("hash = ?", hash).First(lt))
 }
 
+// KnownLogTransactions are the hashes of those in a block, in one query
+func KnownLogTransactions(dbTx *DbTransaction, hashes [][]byte) (map[string]bool, error) {
+	known := make(map[string]bool)
+	if len(hashes) == 0 {
+		return known, nil
+	}
+	var found [][]byte
+	if err := GetDB(dbTx).Model(&LogTransaction{}).Where("hash IN ?", hashes).Pluck("hash", &found).Error; err != nil {
+		return nil, err
+	}
+	for _, h := range found {
+		known[string(h)] = true
+	}
+	return known, nil
+}
+
 // Create is creating record of model
 func (lt *LogTransaction) Create(dbTx *DbTransaction) error {
 	return GetDB(dbTx).Create(lt).Error

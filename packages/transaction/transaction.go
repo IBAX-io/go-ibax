@@ -103,7 +103,7 @@ func UnmarshallTransaction(buffer *bytes.Buffer, fill bool) (*Transaction, error
 			if tx.Inner == nil {
 				return
 			}
-			_ = MarkTransactionBad(tx.Hash(), err.Error())
+			MarkTransactionBad(tx.Hash(), err.Error())
 		}
 	}()
 	err = tx.Unmarshall(buffer, fill)

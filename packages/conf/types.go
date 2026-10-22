@@ -35,6 +35,15 @@ type (
 		Listen string
 	}
 
+	// TxPoolConfig bounds the transactions a node keeps in memory for the blocks to come. Zero
+	// takes the defaults of the transaction package.
+	TxPoolConfig struct {
+		MaxCount int   // transactions
+		MaxBytes int64 // bytes of their data
+		// BadMinutes is how long the node answers the status of a transaction it refused
+		BadMinutes int
+	}
+
 	// CentrifugoConfig connection params
 	CentrifugoConfig struct {
 		Secret string
@@ -127,6 +136,7 @@ type (
 		DB             DBConfig
 		Redis          RedisConfig
 		Metrics        MetricsConfig
+		TxPool         TxPoolConfig
 		Centrifugo     CentrifugoConfig
 		Log            LogConfig
 		TokenMovement  TokenMovementConfig

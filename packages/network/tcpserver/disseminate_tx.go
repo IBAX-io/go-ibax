@@ -5,7 +5,6 @@
 package tcpserver
 
 import (
-	"bytes"
 	crand "crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -19,7 +18,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/network"
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
@@ -37,7 +35,7 @@ func DisseminateTxs(rw io.ReadWriter) error {
 	if err != nil {
 		return err
 	}
-	var rtxs []*sqldb.RawTx
+	datas := make([][]byte, 0, len(txs))
 	for _, tran := range txs {
 		if int64(len(tran)) > syspar.GetMaxTxSize() {
 			log.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_tx_size": syspar.GetMaxTxSize(), "current_size": len(tran)}).Error("transaction size exceeds max size")
@@ -49,68 +47,10 @@ func DisseminateTxs(rw io.ReadWriter) error {
 			continue
 		}
 
-		rtx := &transaction.Transaction{}
-		if err = rtx.Unmarshall(bytes.NewBuffer(tran), true); err != nil {
-			return err
-		}
-		if err = rtx.Verify(); err != nil {
-			return err
-		}
-		rtxs = append(rtxs, rtx.SetRawTx())
+		datas = append(datas, tran)
 	}
-
-	err = sqldb.SendTxBatches(rtxs)
-	if err != nil {
-		return err
-	}
-	return nil
+	return transaction.TxPool.Receive(datas)
 }
-
-//// Type2 serves requests from disseminator
-//func Type2(rw io.ReadWriter) (*network.DisTrResponse, error) {
-//	r := &network.DisRequest{}
-//	if err := r.Read(rw); err != nil {
-//		return nil, err
-//	}
-//
-//	binaryData := r.Data
-//	// take the transactions from usual users but not nodes.
-//	_, _, decryptedBinData, err := DecryptData(&binaryData)
-//	if err != nil {
-//		return nil, utils.ErrInfo(err)
-//	}
-//
-//	if int64(len(binaryData)) > syspar.GetMaxTxSize() {
-//		log.WithFields(log.Fields{"type": consts.ParameterExceeded, "max_size": syspar.GetMaxTxSize(), "size": len(binaryData)}).Error("transaction size exceeds max size")
-//		return nil, utils.ErrInfo("len(txBinData) > max_tx_size")
-//	}
-//
-//	if len(binaryData) < 5 {
-//		log.WithFields(log.Fields{"type": consts.ProtocolError, "len": len(binaryData), "should_be_equal": 5}).Error("binary data slice has incorrect length")
-//		return nil, utils.ErrInfo("len(binaryData) < 5")
-//	}
-//
-//	tx := transaction.Transaction{}
-//	if err = tx.Unmarshall(bytes.NewBuffer(decryptedBinData)); err != nil {
-//		log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("unmarshalling transaction")
-//		return nil, err
-//	}
-//
-//	_, err = sqldb.DeleteQueueTxByHash(nil, tx.Hash())
-//	if err != nil {
-//		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "hash": tx.Hash()}).Error("Deleting queue_tx with hash")
-//		return nil, utils.ErrInfo(err)
-//	}
-//
-//	queueTx := &sqldb.QueueTx{Hash: tx.Hash(), Data: decryptedBinData, FromGate: 0}
-//	err = queueTx.Create()
-//	if err != nil {
-//		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Creating queue_tx")
-//		return nil, utils.ErrInfo(err)
-//	}
-//
-//	return &network.DisTrResponse{}, nil
-//}
 
 // DecryptData is decrypting data
 func DecryptData(binaryTx *[]byte) ([]byte, []byte, []byte, error) {
