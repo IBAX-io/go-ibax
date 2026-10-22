@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 )
 
 type service struct {
@@ -129,6 +131,10 @@ func (s *serviceRegistry) run(ctx RequestContext, isBatch bool, reqs []*Request)
 		return nil, InvalidParamsError(err.Error())
 	}
 
+	// a method found labels the metric, so its values are bounded by the methods registered
+	defer func(start time.Time) {
+		metrics.APIRequest.WithLabelValues("jsonrpc", "POST", req.Method).Observe(metrics.Since(start))
+	}(time.Now())
 	return runMethod(ctx, s.mode, args, cb)
 }
 

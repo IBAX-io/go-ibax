@@ -52,7 +52,6 @@ func NewMiddlewares(srv http.Handler, m Mode) http.Handler {
 	handler = clientMiddleware(handler, m)
 	handler = tokenMiddleware(handler)
 	handler = nodeStateMiddleware(handler)
-	//handler = statsdMiddleware(handler)
 	handler = recoverMiddleware(handler)
 	return loggerMiddleware(handler)
 }

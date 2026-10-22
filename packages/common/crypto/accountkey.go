@@ -11,6 +11,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 )
 
 // AccountKeyMarker opens every account public key. It is neither an SEC1 point prefix (02, 03,
@@ -120,6 +123,9 @@ func (k AccountKey) Address() int64 {
 
 // Verify checks a signature of data, hashed with the network hash, made with the key's algorithm
 func (k AccountKey) Verify(data, signature []byte) (bool, error) {
+	defer func(start time.Time) {
+		metrics.SignVerify.WithLabelValues(k.Algo.String()).Observe(metrics.Since(start))
+	}(time.Now())
 	return NewAsymAlgo(k.Algo).Verify(k.Raw, Hash(data), signature)
 }
 

@@ -8,7 +8,6 @@ require (
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/btcsuite/btcd/btcutil v1.1.6
-	github.com/cactus/go-statsd-client/v5 v5.1.0
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0
 	github.com/didip/tollbooth v4.0.2+incompatible
 	github.com/go-redis/redis v6.15.9+incompatible
@@ -23,6 +22,7 @@ require (
 	github.com/ochinchina/supervisord/config v0.0.0-20230719054037-813956ff6a67
 	github.com/ochinchina/supervisord/process v0.0.0-20230719054037-813956ff6a67
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/client_golang v1.16.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shopspring/decimal v1.3.1
 	github.com/sirupsen/logrus v1.9.3
@@ -86,7 +86,6 @@ require (
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/pelletier/go-toml/v2 v2.0.9 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.16.0 // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.11.1 // indirect

@@ -43,6 +43,8 @@ type Block struct {
 	genStart time.Time
 	// genStopped is that the time left to the block stopped a transaction of it
 	genStopped bool
+	// prof is the profile of the execution running
+	prof *execProfile
 }
 
 // GetLogger is returns logger

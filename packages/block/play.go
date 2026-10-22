@@ -11,10 +11,12 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/notificator"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
@@ -33,6 +35,8 @@ func (b *Block) PlaySafe() error {
 // playSafe executes the block and inserts it, and runs also in the transaction of the block
 func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 	logger := b.GetLogger()
+	b.beginProfile()
+	defer func() { b.prof = nil }()
 	dbTx, err := sqldb.StartTransaction()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("starting db transaction")
@@ -50,6 +54,7 @@ func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 		return ErrEmptyBlock
 	}
 
+	start := time.Now()
 	if err := b.InsertIntoBlockchain(dbTx); err != nil {
 		dbTx.Rollback()
 		return err
@@ -66,13 +71,19 @@ func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 			return err
 		}
 	}
+	b.stage(metrics.StageInsert, start)
+	start = time.Now()
 	err = dbTx.Commit()
 	if err != nil {
 		return err
 	}
+	b.stage(metrics.StageCommit, start)
+	start = time.Now()
 	for _, q := range b.Notifications {
 		q.Send()
 	}
+	b.stage(metrics.StageNotify, start)
+	b.endProfile(dbTx)
 	return nil
 }
 
@@ -93,10 +104,13 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 
 	// a validator's trial of the block of another node bans no key and marks no transaction bad
 	mark := !b.trial || b.GenBlock
+	kind := b.execKind()
+	start := time.Now()
 	processBadTx := func() chan badTxStruct {
 		ch := make(chan badTxStruct)
 		go func() {
 			for badTxItem := range ch {
+				metrics.TxResults.WithLabelValues(kind, "bad").Inc()
 				if !mark {
 					continue
 				}
@@ -110,6 +124,10 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	txBadChan := processBadTx()
 	defer func() {
 		close(txBadChan)
+		metrics.TxResults.WithLabelValues(kind, "ok").Add(float64(len(processedTx)))
+		b.stage(metrics.StageExecute, start)
+		start = time.Now()
+		defer b.stage(metrics.StageAfter, start)
 		if b.IsGenesis() || b.GenBlock || b.AfterTxs != nil {
 			b.AfterTxs = afters
 		}
@@ -160,6 +178,8 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	if b.GenBlock {
 		b.size = newBlockSize(syspar.GetMaxBlockSize(), b.Header, b.PrevHeader)
 	}
+	b.stage(metrics.StagePrepare, start)
+	start = time.Now()
 	var wg sync.WaitGroup
 
 	// StopNetworkTxType
@@ -264,7 +284,9 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 	logger := b.GetLogger()
 	for curTx := 0; curTx < len(txs); curTx++ {
 		t := txs[curTx]
+		start := time.Now()
 		err := dbTx.Savepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())))
+		metrics.TxStage.WithLabelValues(metrics.TxSavepoint).Observe(metrics.Since(start))
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
@@ -274,7 +296,9 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 		if err != nil {
 			return err
 		}
+		start = time.Now()
 		err = t.Play()
+		metrics.TxStage.WithLabelValues(metrics.TxPlay).Observe(metrics.Since(start))
 		if err != nil {
 			if err == transaction.ErrNetworkStopping {
 				// Set the node in a pause state, when the block is not a trial
@@ -283,7 +307,9 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 				}
 				return err
 			}
+			start = time.Now()
 			errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())))
+			metrics.TxStage.WithLabelValues(metrics.TxRollback).Observe(metrics.Since(start))
 			if errRoll != nil {
 				return fmt.Errorf("%v; %w", err, errRoll)
 			}

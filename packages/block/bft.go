@@ -15,6 +15,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/language"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -62,22 +63,31 @@ func (b *Block) Trial() error {
 		return err
 	}
 	b.trial = true
+	b.beginProfile()
+	defer func() { b.prof = nil }()
 	err = b.ProcessTxs(dbTx)
 	if err == nil {
 		if b.GenBlock && len(b.TxFullData) == 0 {
 			err = ErrEmptyBlock
 		} else {
+			start := time.Now()
 			err = b.InsertIntoBlockchain(dbTx)
+			b.stage(metrics.StageInsert, start)
 		}
 	}
 	b.trial = false
 	b.Notifications = nil
 	b.SysUpdate = false
+	start := time.Now()
 	if errRoll := dbTx.Rollback(); errRoll != nil && err == nil {
 		err = errRoll
 	}
 	if errMem := mem.restore(); errMem != nil {
 		return errMem
+	}
+	b.stage(metrics.StageRollback, start)
+	if err == nil {
+		b.endProfile(dbTx)
 	}
 	return err
 }
