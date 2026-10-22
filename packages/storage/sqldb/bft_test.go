@@ -6,26 +6,18 @@
 package sqldb
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
-// TestBftTables runs on the database of a node the migrations made, named by IBAX_TEST_DSN, in a
-// transaction it rolls back; with no IBAX_TEST_DSN it skips
+// TestBftTables runs on the database of a node the migrations made, named by IBAX_TEST_DSN, with the
+// rows of the tables of F18 deleted in the transaction testDB rolls back
 func TestBftTables(t *testing.T) {
-	dsn := os.Getenv("IBAX_TEST_DSN")
-	if dsn == "" {
-		t.Skip("IBAX_TEST_DSN names no database of a node")
+	tx := testDB(t)
+	for _, table := range []string{"bft_certificates", "bft_validator_sets", "bft_sign_state", "1_bft_evidence", "1_bft_reviews"} {
+		require.NoError(t, tx.Exec(`DELETE FROM "`+table+`"`).Error)
 	}
-	conn, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	require.NoError(t, err)
-	tx := conn.Begin()
-	require.NoError(t, tx.Error)
-	defer tx.Rollback()
 	dbTx := NewDbTransaction(tx)
 
 	cert := &BftCertificate{Height: 5, Round: 1, Hash: []byte{5}, Data: []byte{1, 2}}
@@ -99,16 +91,8 @@ func TestBftTables(t *testing.T) {
 	require.ErrorContains(t, tx.Create(&BftReview{ID: 4, EvidenceID: 1, PublicKey: key}).Error, "duplicate key")
 	require.NoError(t, tx.RollbackTo("review").Error)
 
-	// the sign state is written outside the transaction of a block, and only of the last height
-	saved := DBConn
-	DBConn = conn
-	defer func() { DBConn = saved }()
-	var count int64
-	require.NoError(t, conn.Model(&BftSignState{}).Count(&count).Error)
-	if count > 0 {
-		t.Fatal("bft_sign_state is not empty")
-	}
-	defer conn.Where("height > 0").Delete(&BftSignState{})
+	// the sign state is written outside the transaction of a block, through DBConn, and only of the
+	// last height
 	for h := int64(1); h <= 3; h++ {
 		require.NoError(t, (&BftSignState{Height: h, Data: []byte{byte(h)}}).Save())
 	}
@@ -118,6 +102,7 @@ func TestBftTables(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, found)
 	require.Equal(t, &BftSignState{Height: 3, Data: []byte{33}}, last)
-	require.NoError(t, conn.Model(&BftSignState{}).Count(&count).Error)
+	var count int64
+	require.NoError(t, tx.Model(&BftSignState{}).Count(&count).Error)
 	require.Equal(t, int64(1), count)
 }

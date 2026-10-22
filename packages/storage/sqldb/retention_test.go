@@ -45,10 +45,9 @@ func TestOutOfWindow(t *testing.T) {
 	require.False(t, IsRetentionBoundary(0))
 }
 
-// retentionDB is a transaction it rolls back on the database of a node the migrations made, named
-// by IBAX_TEST_DSN, with the rows of the tables the retention reads deleted; DBConn is the
-// transaction meanwhile
-func retentionDB(t *testing.T) *DbTransaction {
+// testDB is a transaction it rolls back on the database of a node the migrations made, named by
+// IBAX_TEST_DSN; DBConn is the transaction meanwhile
+func testDB(t *testing.T) *gorm.DB {
 	dsn := os.Getenv("IBAX_TEST_DSN")
 	if dsn == "" {
 		t.Skip("IBAX_TEST_DSN names no database of a node")
@@ -63,6 +62,12 @@ func retentionDB(t *testing.T) *DbTransaction {
 		DBConn = saved
 		tx.Rollback()
 	})
+	return tx
+}
+
+// retentionDB is testDB with the rows of the tables the retention reads deleted
+func retentionDB(t *testing.T) *DbTransaction {
+	tx := testDB(t)
 	for _, table := range []string{"block_chain", "confirmations", "bft_certificates", "rollback_tx", "1_history",
 		"log_transactions", "spent_info", "retired_partitions", "log_transaction_ranges", "partition_id_floors",
 		"retention_state", "log_transaction_counts", "stop_network_txs"} {

@@ -65,6 +65,7 @@ var (
 		t.Column("type", "bigint")
 		t.Column("spent_block", "bigint", {"default": "0"})
 	{{footer "primary(output_tx_hash,output_key_id,output_index)" "index(block_id)" "index(spent_block)" "index(input_tx_hash)" "index(output_key_id)" "index(output_tx_hash)" "index(ecosystem, output_key_id, block_id)"}}
+	sql("CREATE INDEX \"spent_info_unspent\" ON \"spent_info\" (output_key_id, ecosystem) WHERE input_tx_hash IS NULL;")
 
 	{{head "transactions_status"}}
 		t.Column("hash", "bytea", {"default": ""})
