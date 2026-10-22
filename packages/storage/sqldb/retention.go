@@ -260,12 +260,13 @@ func CheckRollbackTo(dbTx *DbTransaction, blockID int64) error {
 	return nil
 }
 
-// idFloorKey keys, in the cache of a transaction, the highest id of the rows of a table that left
-const idFloorKey = "idfloor"
+// idFloorKey keys, in the cache of a transaction, the highest id of the rows of a table that left;
+// it depends on partition_id_floors only, so that the inserts into the table keep it
+const idFloorKey = "idfloor:"
 
 // idFloor is the highest id of the rows of a partitioned table that left the active table
 func (tr *DbTransaction) idFloor(table string) (int64, error) {
-	return cached(tr, table, idFloorKey, func() (int64, error) {
+	return cached(tr, "partition_id_floors", idFloorKey+table, func() (int64, error) {
 		var v []int64
 		if err := GetDB(tr).Raw(`SELECT "max_id" FROM "partition_id_floors" WHERE "table_name" = ?`, table).
 			Scan(&v).Error; err != nil {
