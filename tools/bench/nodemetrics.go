@@ -11,6 +11,7 @@ import (
 
 	dto "github.com/prometheus/client_model/go"
 	"github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 )
 
 // sample is the value of a metric series: a counter, or the count and the sum of a histogram
@@ -23,7 +24,7 @@ type samples map[string]sample
 
 // parseMetrics reads the series of the metrics of a node
 func parseMetrics(text string) (samples, error) {
-	var p expfmt.TextParser
+	p := expfmt.NewTextParser(model.UTF8Validation)
 	families, err := p.TextToMetricFamilies(strings.NewReader(text))
 	if err != nil {
 		return nil, err

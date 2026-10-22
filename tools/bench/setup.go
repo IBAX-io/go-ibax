@@ -25,11 +25,14 @@ const (
         N int
     }
     action {
-        var i int
+        var i id int
         while i < 5 {
-            var id int
-            id = DBInsert("@1bench_rows", {"n": $N, "k": i})
-            DBUpdate("@1bench_rows", id, {"v": $N + i})
+            var row update map
+            row["n"] = $N
+            row["k"] = i
+            id = DBInsert("@1bench_rows", row)
+            update["v"] = $N + i
+            DBUpdate("@1bench_rows", id, update)
             i = i + 1
         }
     }
@@ -52,7 +55,8 @@ type setupConfig struct {
 // write-heavy workload
 func setup(c *chainClient, cfg setupConfig) error {
 	if _, err := os.Stat(cfg.file); err == nil {
-		return fmt.Errorf("%s exists: setup makes new accounts, run uses those of the file", cfg.file)
+		log.Printf("%s exists: its accounts are set up", cfg.file)
+		return setupContract(c, cfg)
 	}
 	accounts, err := genAccounts(cfg.algo, cfg.accounts)
 	if err != nil {
@@ -63,7 +67,7 @@ func setup(c *chainClient, cfg setupConfig) error {
 	}
 	log.Printf("%d accounts of %s in %s", len(accounts), cfg.algo, cfg.file)
 
-	ids, err := c.contractIDs("@1NewUser", "@1TokensSend", "@1ProfileEdit", "@1NewTableJoint", "@1NewContract")
+	ids, err := c.contractIDs("@1NewUser", "@1TokensSend", "@1ProfileEdit")
 	if err != nil {
 		return err
 	}
@@ -101,20 +105,33 @@ func setup(c *chainClient, cfg setupConfig) error {
 		return err
 	}
 
+	return setupContract(c, cfg)
+}
+
+// setupContract makes the table and the contract of the write-heavy workload, those not there
+func setupContract(c *chainClient, cfg setupConfig) error {
 	if _, err := c.nodes[0].contractID("@1" + benchContract); err == nil {
 		log.Printf("%s exists", benchContract)
 		return nil
 	}
-	table, err := c.signer.contract(c.founder, ids["@1NewTableJoint"], map[string]any{
-		"ApplicationId": int64(1), "Name": benchTable,
-		"ColumnsArr": []any{"n", "k", "v"}, "TypesArr": []any{"number", "number", "number"},
-		"InsertPerm": "true", "UpdatePerm": "true", "ReadPerm": "true", "NewColumnPerm": "true",
-	})
+	ids, err := c.contractIDs("@1NewTableJoint", "@1NewContract")
 	if err != nil {
 		return err
 	}
-	if err := c.run("NewTableJoint "+benchTable, []*signedTx{table}, 1, cfg.timeout); err != nil {
-		return err
+	if err := c.nodes[0].get("table/"+benchTable, nil); err == nil {
+		log.Printf("%s exists", benchTable)
+	} else {
+		table, err := c.signer.contract(c.founder, ids["@1NewTableJoint"], map[string]any{
+			"ApplicationId": int64(1), "Name": benchTable,
+			"ColumnsArr": []any{"n", "k", "v"}, "TypesArr": []any{"number", "number", "number"},
+			"InsertPerm": "true", "UpdatePerm": "true", "ReadPerm": "true", "NewColumnPerm": "true",
+		})
+		if err != nil {
+			return err
+		}
+		if err := c.run("NewTableJoint "+benchTable, []*signedTx{table}, 1, cfg.timeout); err != nil {
+			return err
+		}
 	}
 	contract, err := c.signer.contract(c.founder, ids["@1NewContract"], map[string]any{
 		"ApplicationId": int64(1), "Value": benchSource, "Conditions": "true",
@@ -139,15 +156,19 @@ func connect(urls []string, keyFile, keyAlgo string) (*chainClient, error) {
 	for _, u := range urls {
 		c.nodes = append(c.nodes, newNode(u))
 	}
-	// The founder key is of the node keys' algorithm unless told otherwise, which the first node
-	// tells; the login needs the key
+	// The address of a key is of the network's hash, and the founder key is of the node keys'
+	// algorithm unless told otherwise: the first node tells both
+	var uid struct {
+		Cryptoer string `json:"cryptoer"`
+		Hasher   string `json:"hasher"`
+	}
+	if err := c.nodes[0].get("getuid", &uid); err != nil {
+		return nil, err
+	}
+	if err := useChain(&chainInfo{Cryptoer: uid.Cryptoer, Hasher: uid.Hasher}); err != nil {
+		return nil, err
+	}
 	if keyAlgo == "" {
-		var uid struct {
-			Cryptoer string `json:"cryptoer"`
-		}
-		if err := c.nodes[0].get("getuid", &uid); err != nil {
-			return nil, err
-		}
 		keyAlgo = uid.Cryptoer
 	}
 	founder, err := readKey(keyFile, keyAlgo)

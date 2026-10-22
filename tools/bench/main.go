@@ -14,11 +14,12 @@
 // the founder key (of the node keys' algorithm unless -key-algo tells another); it saves the keys
 // of the accounts in the file. run takes the accounts of the file and, for each workload, sends
 // transactions at each rate in turn for the duration, open loop and pre-signed, to the nodes in
-// turn, until a rate fails: a transaction refused or in no block of every node, or the P99 of the
-// latency to a block of every node over the target. The latency is from the send to the time the
-// bench saw the transaction in a block of the node, which it reads every -poll. It writes the
-// steps, with the metrics of the nodes of -metrics (the /metrics of --metricsListen), as JSON and
-// Markdown in -out, and exits 1 if no rate of a workload passed.
+// turn, while the network keeps up: every transaction in a block of every node and at least 80% of
+// the rate in TPS. A step passes when, besides, the P99 of the latency to a block of every node is
+// within the target. The latency is from the send to the time the bench saw the transaction in a
+// block of the node, which it reads every -poll. It writes the steps, with the metrics of the nodes
+// of -metrics (the /metrics of --metricsListen), as JSON and Markdown in -out, and exits 1 if no
+// rate of a workload passed. setup on a file that exists makes only the contract, if it is missing.
 package main
 
 import (
@@ -46,9 +47,9 @@ func main() {
 	file := fs.String("file", "bench-accounts.json", "file of the keys of the accounts")
 	batch := fs.Int("batch", 100, "transactions a request")
 
-	algo := fs.String("algo", "secp256k1", "account algorithm of the accounts setup makes")
+	algo := fs.String("algo", "ECC_Secp256k1", "account algorithm of the accounts setup makes: ECC_P256, ECC_Secp256k1, SM2, MLDSA65 or MLDSA87")
 	accounts := fs.Int("accounts", 1000, "accounts setup makes")
-	fund := fs.String("fund", "100000000000000000", "coins of ecosystem 1 setup sends each account, in its smallest unit; half go to its UTXO")
+	fund := fs.String("fund", "", "coins of ecosystem 1 setup sends each account, in its smallest unit (default 90% of the founder's account split evenly); half go to its UTXO")
 	timeout := fs.Duration("timeout", 5*time.Minute, "time a step of setup waits for its transactions")
 
 	names := fs.String("workloads", "self,utxo,contract,write", "workloads run measures")
@@ -66,16 +67,34 @@ func main() {
 		fmt.Fprintln(os.Stderr, "bench: -key is required")
 		os.Exit(2)
 	}
-	c, err := connect(split(*nodes), *keyFile, *keyAlgo)
+	c, err := connect(splitList(*nodes), *keyFile, *keyAlgo)
 	if err != nil {
 		log.Fatal(err)
 	}
 	log.Printf("network %d of %d nodes: node keys %s, hash %s", c.info.NetworkID, len(c.nodes), c.info.Cryptoer, c.info.Hasher)
 
 	if os.Args[1] == "setup" {
+		_, statErr := os.Stat(*file)
+		split := *fund == "" && statErr != nil
+		if split {
+			balance, _, err := c.nodes[0].balance(c.founder.address())
+			if err != nil {
+				log.Fatal(err)
+			}
+			*fund = balance
+		}
+		if *fund == "" {
+			*fund = "0"
+		}
 		amount, err := decimal.NewFromString(*fund)
 		if err != nil {
 			log.Fatalf("-fund: %v", err)
+		}
+		if split {
+			amount = amount.Mul(decimal.NewFromFloat(0.9)).Div(decimal.NewFromInt(int64(*accounts))).Floor()
+		}
+		if split {
+			log.Printf("each account gets %s", amount)
 		}
 		if err := setup(c, setupConfig{file: *file, algo: *algo, accounts: *accounts, fund: amount, batch: *batch, timeout: *timeout}); err != nil {
 			log.Fatal(err)
@@ -87,8 +106,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg := runConfig{duration: *duration, batch: *batch, drain: *drain, p99: *p99, metrics: split(*metrics), poll: *poll}
-	for _, r := range split(*rates) {
+	cfg := runConfig{duration: *duration, batch: *batch, drain: *drain, p99: *p99, metrics: splitList(*metrics), poll: *poll}
+	for _, r := range splitList(*rates) {
 		v, err := strconv.Atoi(r)
 		if err != nil || v < 1 {
 			log.Fatalf("-rates: %q", r)
@@ -97,12 +116,12 @@ func main() {
 	}
 	// The run number keeps the transactions of this run unlike those of the runs before
 	run := int(time.Now().Unix() % 1000)
-	ws, err := workloads(c, accs, split(*names), run)
+	ws, err := workloads(c, accs, splitList(*names), run)
 	if err != nil {
 		log.Fatal(err)
 	}
 	r := &report{
-		Time: time.Now(), Label: *label, Nodes: split(*nodes), NetworkID: c.info.NetworkID, Cryptoer: c.info.Cryptoer,
+		Time: time.Now(), Label: *label, Nodes: splitList(*nodes), NetworkID: c.info.NetworkID, Cryptoer: c.info.Cryptoer,
 		Hasher: c.info.Hasher, Algo: accs[0].algo.String(), Accounts: len(accs), P99Ms: p99.Milliseconds(),
 	}
 	seq := 0
@@ -122,7 +141,7 @@ func main() {
 	}
 }
 
-func split(s string) []string {
+func splitList(s string) []string {
 	var out []string
 	for _, p := range strings.Split(s, ",") {
 		if p = strings.TrimSpace(p); p != "" {

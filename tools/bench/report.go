@@ -27,13 +27,16 @@ type report struct {
 	Accounts  int       `json:"accounts"`
 	P99Ms     int64     `json:"p99_target_ms"`
 	Steps     []step    `json:"steps"`
-	// Max is the highest rate of each workload at which a step passed
-	Max map[string]int `json:"max_rate"`
+	// Max is the highest rate of each workload at which a step passed, and Peak the highest TPS of
+	// a step of each
+	Max  map[string]int     `json:"max_rate"`
+	Peak map[string]float64 `json:"peak_tps"`
 }
 
 func (r *report) finish() {
-	r.Max = map[string]int{}
+	r.Max, r.Peak = map[string]int{}, map[string]float64{}
 	for _, s := range r.Steps {
+		r.Peak[s.Workload] = max(r.Peak[s.Workload], s.TPS)
 		if s.Pass && s.Rate > r.Max[s.Workload] {
 			r.Max[s.Workload] = s.Rate
 		}
@@ -68,7 +71,7 @@ func (r *report) markdown() string {
 	fmt.Fprintf(&b, "| Accounts | %d of %s |\n", r.Accounts, r.Algo)
 	fmt.Fprintf(&b, "| P99 target | %d ms, to a block of every node |\n\n", r.P99Ms)
 
-	b.WriteString("## Highest passing rate\n\n| Workload | Rate (tx/s) |\n|---|---|\n")
+	b.WriteString("## Highest passing rate and peak TPS\n\n| Workload | Highest passing rate (tx/s) | Peak TPS |\n|---|---|---|\n")
 	names := []string{}
 	for _, s := range r.Steps {
 		if !slices.Contains(names, s.Workload) {
@@ -76,7 +79,7 @@ func (r *report) markdown() string {
 		}
 	}
 	for _, n := range names {
-		fmt.Fprintf(&b, "| %s | %d |\n", n, r.Max[n])
+		fmt.Fprintf(&b, "| %s | %d | %.0f |\n", n, r.Max[n], r.Peak[n])
 	}
 
 	b.WriteString("\n## Steps\n\n")

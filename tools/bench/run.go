@@ -73,7 +73,9 @@ func quantilesOf(d []time.Duration) quantiles {
 	return quantiles{P50: at(0.50), P95: at(0.95), P99: at(0.99), Max: at(1)}
 }
 
-// runWorkload steps up the rate of a workload until a step fails: it tells each step
+// runWorkload steps up the rate of a workload while the network keeps up with it: every
+// transaction in a block and at least 80% of the rate in TPS, whether the P99 passes or not; it
+// tells each step
 func runWorkload(c *chainClient, w workload, cfg runConfig, seq *int) []step {
 	var out []step
 	for _, rate := range cfg.rates {
@@ -85,7 +87,7 @@ func runWorkload(c *chainClient, w workload, cfg runConfig, seq *int) []step {
 		out = append(out, *s)
 		log.Printf("%s at %d/s: sent %d, in blocks %d (all nodes %d), failed %d, refused %d, lost %d, %.0f TPS, P99 %.0f ms (all nodes %.0f ms), pass %v",
 			w.name, rate, s.Sent, s.InBlock, s.InAll, s.FailedInBlock, s.Refused, s.Lost, s.TPS, s.Latency.P99, s.LatencyAll.P99, s.Pass)
-		if !s.Pass {
+		if s.Unsent+s.Refused+s.Lost > 0 || s.TPS < 0.8*float64(rate) {
 			break
 		}
 	}
