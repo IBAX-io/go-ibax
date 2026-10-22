@@ -55,7 +55,15 @@ func CreateLogTransactionBatches(dbTx *gorm.DB, lts []*LogTransaction) error {
 	if len(lts) == 0 {
 		return nil
 	}
-	return dbTx.Model(&LogTransaction{}).Create(&lts).Error
+	return dbTx.Exec(`INSERT INTO "log_transactions" ("hash", "block", "timestamp", "address", "ecosystem_id", "status", "contract_name")
+		SELECT * FROM unnest(?::bytea[], ?::bigint[], ?::bigint[], ?::bigint[], ?::bigint[], ?::bigint[], ?::varchar[])`,
+		column(lts, func(r *LogTransaction) []byte { return r.Hash }),
+		column(lts, func(r *LogTransaction) int64 { return r.Block }),
+		column(lts, func(r *LogTransaction) int64 { return r.Timestamp }),
+		column(lts, func(r *LogTransaction) int64 { return r.Address }),
+		column(lts, func(r *LogTransaction) int64 { return r.EcosystemID }),
+		column(lts, func(r *LogTransaction) int64 { return r.Status }),
+		column(lts, func(r *LogTransaction) string { return r.ContractName })).Error
 }
 
 // DeleteLogTransactionsByHash is deleting record by hash, with what outlives it

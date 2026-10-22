@@ -75,7 +75,15 @@ func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
 	for i := 1; i < len(rts)+1; i++ {
 		rts[i-1].ID = rollbackSys.ID + int64(i) - 1
 	}
-	return dbTx.Model(&RollbackTx{}).Create(&rts).Error
+	return dbTx.Exec(`INSERT INTO "rollback_tx" ("id", "block_id", "tx_hash", "table_name", "table_id", "data", "data_hash")
+		SELECT * FROM unnest(?::bigint[], ?::bigint[], ?::bytea[], ?::varchar[], ?::varchar[], ?::text[], ?::bytea[])`,
+		column(rts, func(r *RollbackTx) int64 { return r.ID }),
+		column(rts, func(r *RollbackTx) int64 { return r.BlockID }),
+		column(rts, func(r *RollbackTx) []byte { return r.TxHash }),
+		column(rts, func(r *RollbackTx) string { return r.NameTable }),
+		column(rts, func(r *RollbackTx) string { return r.TableID }),
+		column(rts, func(r *RollbackTx) string { return r.Data }),
+		column(rts, func(r *RollbackTx) []byte { return r.DataHash })).Error
 }
 
 // Get is retrieving model from database

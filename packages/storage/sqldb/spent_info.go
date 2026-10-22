@@ -15,7 +15,6 @@ import (
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // SpentInfo is model
@@ -49,21 +48,30 @@ func (si *SpentInfo) TableName() string {
 	return "spent_info"
 }
 
-// CreateSpentInfoBatches is creating record of model
+// CreateSpentInfoBatches records the outputs of a block and the spending of earlier ones: an
+// output it spends takes the input that spends it
 func CreateSpentInfoBatches(dbTx *gorm.DB, spentInfos []SpentInfo) error {
-	//for _, info := range spentInfos {
-	//	fmt.Println(hex.EncodeToString(info.InputTxHash), info.InputIndex, hex.EncodeToString(info.OutputTxHash), info.OutputIndex, info.OutputKeyId, info.OutputValue, info.BlockId)
-	//}
-
-	return dbTx.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "output_tx_hash"}, {Name: "output_key_id"}, {Name: "output_index"}},
-		DoUpdates: clause.AssignmentColumns([]string{"input_tx_hash", "input_index", "spent_block"}),
-		Where: clause.Where{Exprs: []clause.Expression{
-			clause.Eq{Column: "spent_info.output_tx_hash", Value: gorm.Expr(`"excluded"."output_tx_hash"`)},
-			clause.Eq{Column: "spent_info.output_key_id", Value: gorm.Expr(`"excluded"."output_key_id"`)},
-			clause.Eq{Column: "spent_info.output_index", Value: gorm.Expr(`"excluded"."output_index"`)},
-		}},
-	}).CreateInBatches(spentInfos, 1000).Error
+	if len(spentInfos) == 0 {
+		return nil
+	}
+	return dbTx.Exec(`INSERT INTO "spent_info" ("input_tx_hash", "input_index", "output_tx_hash", "output_index",
+			"output_key_id", "output_value", "ecosystem", "block_id", "type", "spent_block")
+		SELECT i, ii, o, oi, k, v::numeric, e, b, t, s
+		FROM unnest(?::bytea[], ?::integer[], ?::bytea[], ?::integer[], ?::bigint[], ?::text[], ?::bigint[], ?::bigint[],
+			?::bigint[], ?::bigint[]) AS u(i, ii, o, oi, k, v, e, b, t, s)
+		ON CONFLICT ("output_tx_hash", "output_key_id", "output_index") DO UPDATE SET
+			"input_tx_hash" = "excluded"."input_tx_hash", "input_index" = "excluded"."input_index",
+			"spent_block" = "excluded"."spent_block"`,
+		column(spentInfos, func(r SpentInfo) []byte { return r.InputTxHash }),
+		column(spentInfos, func(r SpentInfo) int32 { return r.InputIndex }),
+		column(spentInfos, func(r SpentInfo) []byte { return r.OutputTxHash }),
+		column(spentInfos, func(r SpentInfo) int32 { return r.OutputIndex }),
+		column(spentInfos, func(r SpentInfo) int64 { return r.OutputKeyId }),
+		column(spentInfos, func(r SpentInfo) string { return r.OutputValue }),
+		column(spentInfos, func(r SpentInfo) int64 { return r.Ecosystem }),
+		column(spentInfos, func(r SpentInfo) int64 { return r.BlockId }),
+		column(spentInfos, func(r SpentInfo) int64 { return int64(r.Type) }),
+		column(spentInfos, func(r SpentInfo) int64 { return r.SpentBlock })).Error
 }
 
 func GetTxOutputsEcosystem(db *DbTransaction, ecosystem int64, keyIds []int64) ([]SpentInfo, error) {

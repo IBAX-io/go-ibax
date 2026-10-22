@@ -7,7 +7,6 @@ package sqldb
 
 import (
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // TransactionStatus is model
@@ -50,13 +49,18 @@ func UpsertBlockStatusBatches(dbTx *gorm.DB, statuses []*TransactionStatus) erro
 	if len(rows) == 0 {
 		return nil
 	}
-	return dbTx.Clauses(upsertBlockStatusClause).Create(&rows).Error
-}
-
-// A transaction status the node has, as the one that took it through /sendTx has, takes the block's
-var upsertBlockStatusClause = clause.OnConflict{
-	Columns:   []clause.Column{{Name: "hash"}},
-	DoUpdates: clause.AssignmentColumns([]string{"block_id", "error", "penalty"}),
+	// a transaction status the node has, as the one that took it through /sendTx has, takes the block's
+	return dbTx.Exec(`INSERT INTO "transactions_status" ("hash", "time", "type", "wallet_id", "block_id", "error", "penalty")
+		SELECT * FROM unnest(?::bytea[], ?::bigint[], ?::integer[], ?::bigint[], ?::bigint[], ?::varchar[], ?::bigint[])
+		ON CONFLICT ("hash") DO UPDATE SET "block_id" = "excluded"."block_id", "error" = "excluded"."error",
+			"penalty" = "excluded"."penalty"`,
+		column(rows, func(r *TransactionStatus) []byte { return r.Hash }),
+		column(rows, func(r *TransactionStatus) int64 { return r.Time }),
+		column(rows, func(r *TransactionStatus) int32 { return int32(r.Type) }),
+		column(rows, func(r *TransactionStatus) int64 { return r.WalletID }),
+		column(rows, func(r *TransactionStatus) int64 { return r.BlockID }),
+		column(rows, func(r *TransactionStatus) string { return r.Error }),
+		column(rows, func(r *TransactionStatus) int64 { return r.Penalty })).Error
 }
 
 func presentStatuses(statuses []*TransactionStatus) []*TransactionStatus {
