@@ -69,7 +69,8 @@ func (t *Transaction) SmartContract() *SmartTransactionParser {
 // holds and the key it signs with is the one the header names. The transfer transactions run no
 // contract, so before this their signature was checked nowhere on the way in; this is where the
 // node first refuses a forged TransferSelf or UTXO. The check is off the chain and uses the key in
-// the header; the account's registered key decides at execution. Genesis and network-stop
+// the header, or the key the account registered when the header has none; the account's
+// registered key decides at execution. Genesis and network-stop
 // transactions are authorized by other means.
 func (t *Transaction) Verify() error {
 	sc, ok := t.Inner.(*SmartTransactionParser)

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/common/gencache"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -25,6 +26,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack/v5"
 )
+
+// errNoRegisteredKey refuses a transaction without a key in the header from an account that has
+// registered none: the first transaction of an account carries its key
+var errNoRegisteredKey = errors.New("the account has registered no key: send the key in the header")
 
 type SmartTransactionParser struct {
 	*smart.SmartContract
@@ -91,25 +96,80 @@ func (s *SmartTransactionParser) Validate() error {
 	if err := s.checkTransferModel(); err != nil {
 		return err
 	}
-	// The header carries the key that signs; whether the account may sign with it is checked
-	// when the transaction runs. Validate runs only when a transaction enters the queue, so a key
-	// of an algorithm the network takes no longer is refused here with the clock: the block time
-	// decides once it runs.
-	key, err := crypto.ParseAccountKey(s.TxSmart.PublicKey)
-	if err != nil {
-		return err
-	}
-	if err := syspar.GetAccountAlgorithms().CheckSign(key.Algo, time.Now().Unix()); err != nil {
-		return err
-	}
 	signature, err := utils.TxSignature(s.TxSignature)
 	if err != nil {
 		return err
 	}
-	if ok, err := key.Verify(s.Hash, signature); err != nil || !ok {
-		return fmt.Errorf("transaction signature does not verify with the key in the header: %v", err)
+	// The key that signs is the one in the header, or the key the account registered when the
+	// header has none. Whether the account may sign with it is checked when the transaction runs.
+	// Validate runs only when a transaction enters the queue, so a key of an algorithm the network
+	// takes no longer is refused here with the clock: the block time decides once it runs.
+	if len(s.TxSmart.PublicKey) > 0 {
+		key, err := crypto.ParseAccountKey(s.TxSmart.PublicKey)
+		if err != nil {
+			return err
+		}
+		if err := syspar.GetAccountAlgorithms().CheckSign(key.Algo, time.Now().Unix()); err != nil {
+			return err
+		}
+		if ok, err := key.Verify(s.Hash, signature); err != nil || !ok {
+			return fmt.Errorf("transaction signature does not verify with the key in the header: %v", err)
+		}
+		return nil
 	}
-	return nil
+	// A node signs with its key in the header: only an account signs with the key it registered
+	if s.TxSmart.SignedBy != 0 {
+		return errors.New("a transaction signed by another key carries that key in the header")
+	}
+	eco, keyID := s.TxSmart.EcosystemID, s.TxSmart.KeyID
+	for _, fresh := range []bool{false, true} {
+		pub, cached, err := registeredKey(eco, keyID, fresh)
+		if err != nil {
+			return err
+		}
+		key, err := crypto.ParseAccountKey(pub)
+		if err != nil {
+			return err
+		}
+		if err := syspar.GetAccountAlgorithms().CheckSign(key.Algo, time.Now().Unix()); err != nil {
+			return err
+		}
+		if ok, _ := key.Verify(s.Hash, signature); ok {
+			return nil
+		}
+		if !cached {
+			break
+		}
+	}
+	return fmt.Errorf("transaction signature does not verify with the key of account %s", converter.AddressToString(keyID))
+}
+
+// registeredKeys are the keys accounts registered in 1_keys, by ecosystem and key id: what the
+// transactions without a key in the header are checked with on their way in. A key of the cache
+// that does not verify is read again, for the account may have changed it.
+var registeredKeys = gencache.New[registeredKeyID, []byte](1 << 16)
+
+type registeredKeyID struct{ ecosystem, keyID int64 }
+
+// registeredKey is the key the account registered in the ecosystem, from the cache unless fresh,
+// and whether it came from the cache. An account without one sends its key in the header.
+func registeredKey(ecosystem, keyID int64, fresh bool) ([]byte, bool, error) {
+	id := registeredKeyID{ecosystem, keyID}
+	if !fresh {
+		if pub, ok := registeredKeys.Get(id); ok {
+			return pub, true, nil
+		}
+	}
+	key := &sqldb.Key{}
+	found, err := key.SetTablePrefix(ecosystem).Get(nil, keyID)
+	if err != nil {
+		return nil, false, err
+	}
+	if !found || len(key.PublicKey) == 0 {
+		return nil, false, fmt.Errorf("%w: account %s in ecosystem %d", errNoRegisteredKey, converter.AddressToString(keyID), ecosystem)
+	}
+	registeredKeys.Put(id, key.PublicKey)
+	return key.PublicKey, false, nil
 }
 
 func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
