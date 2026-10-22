@@ -189,24 +189,6 @@ var sqlFirstEcosystemCommon = `
 		t.Column("ecosystem", "bigint", {"default": "1"})
 	{{footer "primary" "unique(ecosystem, name)" "index(ecosystem, name)"}}
 
-	{{head "1_history"}}
-		t.Column("id", "bigint", {"default": "0"})
-		t.Column("sender_id", "bigint", {"default": "0"})
-		t.Column("recipient_id", "bigint", {"default": "0"})
-		t.Column("sender_balance", "decimal(30)", {"default": "0"})
-		t.Column("recipient_balance", "decimal(30)", {"default": "0"})
-		t.Column("amount", "decimal(30)", {"default": "0"})
-		t.Column("value_detail", "jsonb", {"null": true})
-		t.Column("comment", "text", {"default": ""})
-		t.Column("status", "bigint", {"default": "0"})
-		t.Column("block_id", "bigint", {"default": "0"})
-		t.Column("txhash", "bytea", {"default": ""})
-		t.Column("created_at", "bigint", {"default": "0"})
-		t.Column("ecosystem", "bigint", {"default": "1"})
-		t.Column("type", "bigint", {"default": "1"})
-	{{footer "primary" "index(ecosystem, sender_id)"}}
-	add_index("1_history", ["ecosystem", "recipient_id"], {})
-	add_index("1_history", ["block_id", "txhash"], {})
 
 	{{head "1_sections"}}
 		t.Column("id", "bigint", {"default": "0"})
@@ -254,6 +236,7 @@ var sqlFirstEcosystemCommon = `
 		t.Column("deleted", "bigint", {"default": "0"})
 		t.Column("ecosystem", "bigint", {"default": "1"})
 	{{footer "primary" "index(ecosystem)"}}
+	sql("CREATE INDEX \"1_roles_participants_account\" ON \"1_roles_participants\" ((member->>'account'));")
 
 	{{head "1_notifications"}}
 		t.Column("id", "bigint", {"default": "0"})
@@ -269,6 +252,8 @@ var sqlFirstEcosystemCommon = `
 		t.Column("closed", "bigint", {"default": "0"})
 		t.Column("ecosystem", "bigint", {"default": "1"})
 	{{footer "primary" "index(ecosystem)"}}
+	sql("CREATE INDEX \"1_notifications_account\" ON \"1_notifications\" (ecosystem, (recipient->>'account')) WHERE closed = 0 AND notification->>'type' = '1';")
+	sql("CREATE INDEX \"1_notifications_role\" ON \"1_notifications\" (ecosystem, (recipient->>'role_id')) WHERE closed = 0 AND notification->>'type' = '2';")
 
 	{{head "1_applications"}}
 		t.Column("id", "bigint", {"default": "0"})

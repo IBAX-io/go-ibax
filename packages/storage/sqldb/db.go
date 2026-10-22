@@ -17,6 +17,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/IBAX-io/go-ibax/packages/storage/kvdb/redis"
 
 	"gorm.io/driver/postgres"
@@ -284,8 +285,13 @@ func GetDB(tr *DbTransaction) *gorm.DB {
 	return DBConn
 }
 
-// DropTables is dropping all of the tables
+// DropTables is dropping all of the tables, with the schemas of the partitions
 func (dbTx *DbTransaction) DropTables() error {
+	for _, s := range []string{migration.PartsSchema, migration.RetiredSchema, migration.ArchiveSchema} {
+		if err := GetDB(dbTx).Exec(fmt.Sprintf(`DROP SCHEMA IF EXISTS "%s" CASCADE`, s)).Error; err != nil {
+			return err
+		}
+	}
 	return GetDB(dbTx).Exec(`
 	DO $$ DECLARE
 	    r RECORD;
@@ -337,7 +343,7 @@ func (dbTx *DbTransaction) Delete(tblname, where string, args ...any) error {
 // GetColumnCount is counting rows in table
 func (dbTx *DbTransaction) GetColumnCount(tableName string) (int64, error) {
 	var count int64
-	err := GetDB(dbTx).Raw("SELECT count(*) FROM information_schema.columns WHERE table_name=?", tableName).Row().Scan(&count)
+	err := GetDB(dbTx).Raw("SELECT count(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name=?", tableName).Row().Scan(&count)
 	if err == gorm.ErrRecordNotFound {
 		return 0, nil
 	}
@@ -366,7 +372,7 @@ func (dbTx *DbTransaction) CreateIndex(indexName, tableName, onColumn string) er
 // GetColumnDataTypeCharMaxLength is returns max length of table column
 func (dbTx *DbTransaction) GetColumnDataTypeCharMaxLength(tableName, columnName string) (map[string]string, error) {
 	return dbTx.GetOneRow(`select data_type,character_maximum_length from
-			 information_schema.columns where table_name = ? AND column_name = ?`,
+			 information_schema.columns where table_schema = current_schema() AND table_name = ? AND column_name = ?`,
 		tableName, columnName).String()
 }
 
@@ -374,7 +380,7 @@ func (dbTx *DbTransaction) GetColumnDataTypeCharMaxLength(tableName, columnName 
 func (dbTx *DbTransaction) GetAllColumnTypes(tblname string) ([]map[string]string, error) {
 	return dbTx.GetAllTransaction(`SELECT column_name, data_type
 		FROM information_schema.columns
-		WHERE table_name = ?
+		WHERE table_schema = current_schema() AND table_name = ?
 		ORDER BY ordinal_position ASC`, -1, tblname)
 }
 
@@ -424,7 +430,7 @@ func (dbTx *DbTransaction) NumIndexes(tblname string) (int, error) {
 	return cached(dbTx, schemaTable, "indexes:"+tblname, func() (int, error) {
 		err := GetDB(dbTx).Raw(fmt.Sprintf(`select count( i.relname) from pg_class t, pg_class i, pg_index ix, pg_attribute a
 	 where t.oid = ix.indrelid and i.oid = ix.indexrelid and a.attrelid = t.oid and a.attnum = ANY(ix.indkey)
-         and t.relkind = 'r'  and t.relname = '%s'`, tblname)).Row().Scan(&indexes)
+         and t.relkind = 'r' and t.relnamespace = current_schema()::regnamespace and t.relname = '%s'`, tblname)).Row().Scan(&indexes)
 		if err == gorm.ErrRecordNotFound {
 			return 0, nil
 		}
@@ -440,7 +446,7 @@ func (dbTx *DbTransaction) IsIndex(tblname, column string) (bool, error) {
 	row, err := dbTx.GetOneRow(`select t.relname as table_name, i.relname as index_name, a.attname as column_name
 	 from pg_class t, pg_class i, pg_index ix, pg_attribute a 
 	 where t.oid = ix.indrelid and i.oid = ix.indexrelid and a.attrelid = t.oid and a.attnum = ANY(ix.indkey)
-		 and t.relkind = 'r'  and t.relname = ?  and a.attname = ?`, tblname, column).String()
+		 and t.relkind = 'r' and t.relnamespace = current_schema()::regnamespace and t.relname = ?  and a.attname = ?`, tblname, column).String()
 	return len(row) > 0 && row[`column_name`] == column, err
 }
 
@@ -450,6 +456,13 @@ func (dbTx *DbTransaction) GetNextID(table string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+	if t, ok := migration.PartitionedTableOf(table); ok && t.ID {
+		floor, err := dbTx.idFloor(table)
+		if err != nil {
+			return 0, err
+		}
+		id = max(id, floor)
+	}
 	return id + 1, nil
 }
 
@@ -457,7 +470,7 @@ func (dbTx *DbTransaction) GetNextID(table string) (int64, error) {
 func (dbTx *DbTransaction) IsTable(tblname string) bool {
 	var name string
 	err := GetDB(dbTx).Table("information_schema.tables").
-		Where("table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name=?", tblname).
+		Where("table_type = 'BASE TABLE' AND table_schema = current_schema() AND table_name=?", tblname).
 		Select("table_name").Row().Scan(&name)
 	if err != nil {
 		return false
@@ -469,7 +482,7 @@ func (dbTx *DbTransaction) IsTable(tblname string) bool {
 func (dbTx *DbTransaction) HasTableOrView(names string) bool {
 	var name string
 	GetDB(dbTx).Table("information_schema.tables").
-		Where("table_type IN ('BASE TABLE', 'VIEW') AND table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name=?", names).
+		Where("table_type IN ('BASE TABLE', 'VIEW') AND table_schema = current_schema() AND table_name=?", names).
 		Select("table_name").Row().Scan(&name)
 
 	return name == names
@@ -567,7 +580,7 @@ func (v Namer) HasExists(tr *DbTransaction, names string) bool {
 	}
 	var name string
 	GetDB(tr).Table("information_schema.tables").
-		Where(fmt.Sprintf("table_type %s AND table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name='%s'", typs, names)).
+		Where(fmt.Sprintf("table_type %s AND table_schema = current_schema() AND table_name='%s'", typs, names)).
 		Select("table_name").Row().Scan(&name)
 	return name == names
 }

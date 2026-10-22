@@ -19,7 +19,7 @@ func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []any, err error
 	var (
 		rollbackTxs []RollbackTx
 	)
-	err = db.Table("rollback_tx").Where("tx_hash = ?", []byte(converter.HexToBin(hashStr))).Find(&rollbackTxs).Error
+	err = db.Table(ArchivedTable("rollback_tx")).Where("tx_hash = ?", []byte(converter.HexToBin(hashStr))).Find(&rollbackTxs).Error
 	if err != nil {
 		return
 	}

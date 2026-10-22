@@ -7,10 +7,10 @@ package transaction
 import (
 	"bytes"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/common/gencache"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -25,6 +25,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/vmihailenco/msgpack/v5"
 )
+
+// errNoRegisteredKey refuses a transaction without a key in the header from an account that has
+// registered none: the first transaction of an account carries its key
+var errNoRegisteredKey = errors.New("the account has registered no key: send the key in the header")
 
 type SmartTransactionParser struct {
 	*smart.SmartContract
@@ -91,25 +95,80 @@ func (s *SmartTransactionParser) Validate() error {
 	if err := s.checkTransferModel(); err != nil {
 		return err
 	}
-	// The header carries the key that signs; whether the account may sign with it is checked
-	// when the transaction runs. Validate runs only when a transaction enters the queue, so a key
-	// of an algorithm the network takes no longer is refused here with the clock: the block time
-	// decides once it runs.
-	key, err := crypto.ParseAccountKey(s.TxSmart.PublicKey)
-	if err != nil {
-		return err
-	}
-	if err := syspar.GetAccountAlgorithms().CheckSign(key.Algo, time.Now().Unix()); err != nil {
-		return err
-	}
 	signature, err := utils.TxSignature(s.TxSignature)
 	if err != nil {
 		return err
 	}
-	if ok, err := key.Verify(s.Hash, signature); err != nil || !ok {
-		return fmt.Errorf("transaction signature does not verify with the key in the header: %v", err)
+	// The key that signs is the one in the header, or the key the account registered when the
+	// header has none. Whether the account may sign with it is checked when the transaction runs.
+	// Validate runs only when a transaction enters the queue, so a key of an algorithm the network
+	// takes no longer is refused here with the clock: the block time decides once it runs.
+	if len(s.TxSmart.PublicKey) > 0 {
+		key, err := crypto.ParseAccountKey(s.TxSmart.PublicKey)
+		if err != nil {
+			return err
+		}
+		if err := syspar.GetAccountAlgorithms().CheckSign(key.Algo, time.Now().Unix()); err != nil {
+			return err
+		}
+		if ok, err := key.Verify(s.Hash, signature); err != nil || !ok {
+			return fmt.Errorf("transaction signature does not verify with the key in the header: %v", err)
+		}
+		return nil
 	}
-	return nil
+	// A node signs with its key in the header: only an account signs with the key it registered
+	if s.TxSmart.SignedBy != 0 {
+		return errors.New("a transaction signed by another key carries that key in the header")
+	}
+	eco, keyID := s.TxSmart.EcosystemID, s.TxSmart.KeyID
+	for _, fresh := range []bool{false, true} {
+		pub, cached, err := registeredKey(eco, keyID, fresh)
+		if err != nil {
+			return err
+		}
+		key, err := crypto.ParseAccountKey(pub)
+		if err != nil {
+			return err
+		}
+		if err := syspar.GetAccountAlgorithms().CheckSign(key.Algo, time.Now().Unix()); err != nil {
+			return err
+		}
+		if ok, _ := key.Verify(s.Hash, signature); ok {
+			return nil
+		}
+		if !cached {
+			break
+		}
+	}
+	return fmt.Errorf("transaction signature does not verify with the key of account %s", converter.AddressToString(keyID))
+}
+
+// registeredKeys are the keys accounts registered in 1_keys, by ecosystem and key id: what the
+// transactions without a key in the header are checked with on their way in. A key of the cache
+// that does not verify is read again, for the account may have changed it.
+var registeredKeys = gencache.New[registeredKeyID, []byte](1 << 16)
+
+type registeredKeyID struct{ ecosystem, keyID int64 }
+
+// registeredKey is the key the account registered in the ecosystem, from the cache unless fresh,
+// and whether it came from the cache. An account without one sends its key in the header.
+func registeredKey(ecosystem, keyID int64, fresh bool) ([]byte, bool, error) {
+	id := registeredKeyID{ecosystem, keyID}
+	if !fresh {
+		if pub, ok := registeredKeys.Get(id); ok {
+			return pub, true, nil
+		}
+	}
+	key := &sqldb.Key{}
+	found, err := key.SetTablePrefix(ecosystem).Get(nil, keyID)
+	if err != nil {
+		return nil, false, err
+	}
+	if !found || len(key.PublicKey) == 0 {
+		return nil, false, fmt.Errorf("%w: account %s in ecosystem %d", errNoRegisteredKey, converter.AddressToString(keyID), ecosystem)
+	}
+	registeredKeys.Put(id, key.PublicKey)
+	return key.PublicKey, false, nil
 }
 
 func (s *SmartTransactionParser) Action(in *InToCxt, out *OutCtx) (err error) {
@@ -201,12 +260,25 @@ func (s *SmartTransactionParser) TxRollback() error {
 	return syspar.SysUpdate(s.DbTransaction)
 }
 
+// storedTx is the form a block holds a transaction in and nodes pass on: the payload the client
+// signed, the signature and the time the node took the transaction. The hash and the body the node
+// runs are derived from the payload, so a stored transaction runs only what its signature covers.
+// errNotStoredForm is a transaction of a stored type in an encoding other than its stored form
+var errNotStoredForm = errors.New("the transaction is not in its stored form")
+
+type storedTx struct {
+	_msgpack    struct{} `msgpack:",as_array"`
+	Payload     []byte
+	TxSignature []byte
+	Timestamp   int64
+}
+
 func (s *SmartTransactionParser) Marshal() ([]byte, error) {
 	s.setTimestamp()
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}
-	buf, err := msgpack.Marshal(s)
+	buf, err := msgpack.Marshal(&storedTx{Payload: s.Payload, TxSignature: s.TxSignature, Timestamp: s.Timestamp})
 	if err != nil {
 		return nil, err
 	}
@@ -247,26 +319,30 @@ func (s *SmartTransactionParser) BinMarshalWithPrivate(smartTx *types.SmartTrans
 }
 
 func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer, fill bool) error {
-	buffer.UnreadByte()
-	if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
+	var stored storedTx
+	if err := msgpack.Unmarshal(buffer.Bytes(), &stored); err != nil {
 		return err
 	}
-	// A stored transaction carries the payload, the hash of that payload and the transaction the
-	// node runs as fields of their own, and nothing ties the three together. The signature covers
-	// the hash, so the payload is the part taken as given: a body its payload does not encode would
-	// otherwise run under a signature given for another transaction, and anyone who saw a signed
-	// transaction could put a body of their own under its hash and its signature. The client format
-	// derives the hash and the body from the payload; the stored format is held to the same relation
-	// here, before the queue and before a received block runs anything.
-	if len(s.Payload) == 0 || !bytes.Equal(s.Hash, crypto.DoubleHash(s.Payload)) {
-		return fmt.Errorf("the hash of a transaction is not the hash of its payload")
-	}
-	signed := new(types.SmartTransaction)
-	if err := msgpack.Unmarshal(s.Payload, &signed); err != nil {
+	// a transaction has one stored form: any other encoding of the same three fields, or one
+	// carrying more, is refused rather than read as the transaction it names
+	canonical, err := msgpack.Marshal(&stored)
+	if err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(s.TxSmart, signed) {
-		return fmt.Errorf("a transaction carries a body its payload does not encode")
+	if !bytes.Equal(canonical, buffer.Bytes()) {
+		return errNotStoredForm
+	}
+	if len(stored.Payload) == 0 {
+		return fmt.Errorf("a stored transaction carries no payload")
+	}
+	s.Payload, s.TxSignature, s.Timestamp = stored.Payload, stored.TxSignature, stored.Timestamp
+	s.Hash = crypto.DoubleHash(s.Payload)
+	s.TxSmart = new(types.SmartTransaction)
+	if err := msgpack.Unmarshal(s.Payload, s.TxSmart); err != nil {
+		return err
+	}
+	if s.TxSmart.Header == nil {
+		return fmt.Errorf("a transaction carries no header")
 	}
 	if s.SmartContract.TxSmart.UTXO != nil || s.SmartContract.TxSmart.TransferSelf != nil {
 		return nil

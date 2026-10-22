@@ -11,9 +11,12 @@ func TestUpdateTxInputsOrder(t *testing.T) {
 			outputs[k] = []SpentInfo{{OutputKeyId: k.KeyId, Ecosystem: k.Ecosystem}, {OutputKeyId: k.KeyId, Ecosystem: k.Ecosystem}}
 			inputs[k] = nil
 		}
-		UpdateTxInputs([]byte{1}, inputs, outputs)
+		UpdateTxInputs([]byte{1}, 7, inputs, outputs)
 		want := map[KeyUTXO]int32{keys[2]: 0, keys[1]: 2, keys[0]: 4, keys[3]: 6}
 		for k, first := range want {
+			if outputs[k][0].SpentBlock != 7 || outputs[k][1].SpentBlock != 7 {
+				t.Fatalf("run %d key %+v: spent_block %d, %d, want 7", run, k, outputs[k][0].SpentBlock, outputs[k][1].SpentBlock)
+			}
 			if outputs[k][0].InputIndex != first || outputs[k][1].InputIndex != first+1 {
 				t.Fatalf("run %d key %+v: input_index %d, %d, want %d, %d", run, k,
 					outputs[k][0].InputIndex, outputs[k][1].InputIndex, first, first+1)

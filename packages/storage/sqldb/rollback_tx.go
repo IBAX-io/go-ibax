@@ -6,9 +6,6 @@
 package sqldb
 
 import (
-	"bytes"
-	"encoding/json"
-
 	"gorm.io/gorm"
 )
 
@@ -28,9 +25,10 @@ func (*RollbackTx) TableName() string {
 	return "rollback_tx"
 }
 
-// GetRollbackTransactions is returns rollback transactions
-func (rt *RollbackTx) GetRollbackTransactions(dbTx *DbTransaction, transactionHash []byte) ([]map[string]string, error) {
-	return dbTx.GetAllTransaction("SELECT * from rollback_tx WHERE tx_hash = ? ORDER BY ID DESC", -1, transactionHash)
+// GetRollbackTransactions is returns rollback transactions of the transaction of the block
+func (rt *RollbackTx) GetRollbackTransactions(dbTx *DbTransaction, blockID int64, transactionHash []byte) ([]map[string]string, error) {
+	return dbTx.GetAllTransaction("SELECT * from rollback_tx WHERE block_id = ? AND tx_hash = ? ORDER BY ID DESC", -1,
+		blockID, transactionHash)
 }
 
 // GetBlockRollbackTransactions returns records of rollback by blockID
@@ -40,19 +38,24 @@ func (rt *RollbackTx) GetBlockRollbackTransactions(dbTx *DbTransaction, blockID 
 	return rollbackTransactions, err
 }
 
-// GetRollbackTxsByTableIDAndTableName returns records of rollback by table name and id
-func (rt *RollbackTx) GetRollbackTxsByTableIDAndTableName(tableID, tableName string, limit int) (*[]RollbackTx, error) {
+// GetRollbackTxsByTableIDAndTableName returns records of rollback by table name and id: those in
+// the window for a contract, wherever they are for the API (archive)
+func (rt *RollbackTx) GetRollbackTxsByTableIDAndTableName(tableID, tableName string, limit int, archive bool) (*[]RollbackTx, error) {
 	var rollbackTx []RollbackTx
-	if err := DBConn.Where("table_id = ? AND table_name = ?", tableID, tableName).
+	db := DBConn.Table(rt.TableName())
+	if archive {
+		db = archived(rt.TableName())
+	}
+	if err := db.Where("table_id = ? AND table_name = ?", tableID, tableName).
 		Order("id desc").Limit(limit).Find(&rollbackTx).Error; err != nil {
 		return nil, err
 	}
 	return &rollbackTx, nil
 }
 
-// DeleteByHash is deleting rollbackTx by hash
+// DeleteByHash is deleting rollbackTx by hash, in its block
 func (rt *RollbackTx) DeleteByHash(dbTx *DbTransaction) error {
-	return GetDB(dbTx).Exec("DELETE FROM rollback_tx WHERE tx_hash = ?", rt.TxHash).Error
+	return GetDB(dbTx).Exec("DELETE FROM rollback_tx WHERE block_id = ? AND tx_hash = ?", rt.BlockID, rt.TxHash).Error
 }
 
 // DeleteByHashAndTableName is deleting tx by hash and table name
@@ -72,26 +75,19 @@ func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
 	for i := 1; i < len(rts)+1; i++ {
 		rts[i-1].ID = rollbackSys.ID + int64(i) - 1
 	}
-	return dbTx.Model(&RollbackTx{}).Create(&rts).Error
+	return dbTx.Exec(`INSERT INTO "rollback_tx" ("id", "block_id", "tx_hash", "table_name", "table_id", "data", "data_hash")
+		SELECT * FROM unnest(?::bigint[], ?::bigint[], ?::bytea[], ?::varchar[], ?::varchar[], ?::text[], ?::bytea[])`,
+		column(rts, func(r *RollbackTx) int64 { return r.ID }),
+		column(rts, func(r *RollbackTx) int64 { return r.BlockID }),
+		column(rts, func(r *RollbackTx) []byte { return r.TxHash }),
+		column(rts, func(r *RollbackTx) string { return r.NameTable }),
+		column(rts, func(r *RollbackTx) string { return r.TableID }),
+		column(rts, func(r *RollbackTx) string { return r.Data }),
+		column(rts, func(r *RollbackTx) []byte { return r.DataHash })).Error
 }
 
 // Get is retrieving model from database
 func (rt *RollbackTx) Get(dbTx *DbTransaction, transactionHash []byte, tableName string) (bool, error) {
 	return isFound(GetDB(dbTx).Where("tx_hash = ? AND table_name = ?", transactionHash,
 		tableName).Order("id desc").First(rt))
-}
-
-func (rt *RollbackTx) GetRollbacksDiff(dbTx *DbTransaction, blockID int64) ([]byte, error) {
-	list, err := rt.GetBlockRollbackTransactions(dbTx, blockID)
-	if err != nil {
-		return nil, err
-	}
-	buf := new(bytes.Buffer)
-	enc := json.NewEncoder(buf)
-	for _, rtx := range list {
-		if err = enc.Encode(&rtx); err != nil {
-			return nil, err
-		}
-	}
-	return buf.Bytes(), nil
 }

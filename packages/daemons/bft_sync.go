@@ -7,6 +7,7 @@ package daemons
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -63,6 +64,10 @@ func updateChainBft(ctx context.Context, d *daemon) error {
 	d.logger.WithFields(log.Fields{"from": last + 1, "to": maxBlockID, "host": host}).Info("synchronizing by certificates")
 	for h := last + 1; h <= uint64(maxBlockID); {
 		n, err := syncBatch(ctx, host, h)
+		if errors.Is(err, tcpclient.ErrNotKept) {
+			// the blocks are out of the window of the host: a node that keeps them goes on
+			host, n, err = syncFromKeeper(ctx, append(hosts, conf.GetNodesAddr()...), host, h)
+		}
 		if err != nil {
 			d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": h + uint64(n), "host": host}).Error("synchronizing")
 			return err
@@ -72,6 +77,24 @@ func updateChainBft(ctx context.Context, d *daemon) error {
 	return nil
 }
 
+// syncFromKeeper commits the blocks from the height from by one of the hosts but skip that keeps
+// them, and returns it with how many it committed
+func syncFromKeeper(ctx context.Context, hosts []string, skip string, from uint64) (string, int, error) {
+	tried := map[string]bool{skip: true}
+	for _, host := range hosts {
+		if tried[host] {
+			continue
+		}
+		tried[host] = true
+		n, err := syncBatch(ctx, host, from)
+		if errors.Is(err, tcpclient.ErrNotKept) {
+			continue
+		}
+		return host, n, err
+	}
+	return skip, 0, fmt.Errorf("%w by any node: height %d", tcpclient.ErrNotKept, from)
+}
+
 // syncBatch commits up to bftnet.MaxCertificates blocks from the height from, and returns how many
 func syncBatch(ctx context.Context, host string, from uint64) (int, error) {
 	certs, err := bftnet.FetchCertificates(host, from, bftnet.MaxCertificates, bftFetchTimeout)
@@ -79,7 +102,8 @@ func syncBatch(ctx context.Context, host string, from uint64) (int, error) {
 		return 0, err
 	}
 	if len(certs) == 0 {
-		return 0, fmt.Errorf("%s has no certificate of height %d", host, from)
+		// the host has blocks after it: the height is out of its window
+		return 0, fmt.Errorf("%w: %s has no certificate of height %d", tcpclient.ErrNotKept, host, from)
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

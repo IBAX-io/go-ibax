@@ -15,7 +15,6 @@ import (
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 )
 
 // SpentInfo is model
@@ -29,6 +28,8 @@ type SpentInfo struct {
 	Ecosystem    int64
 	BlockId      int64
 	Type         int32
+	// SpentBlock is the block that spent the output, 0 while it is unspent
+	SpentBlock int64
 }
 
 type KeyUTXO struct {
@@ -47,29 +48,38 @@ func (si *SpentInfo) TableName() string {
 	return "spent_info"
 }
 
-// CreateSpentInfoBatches is creating record of model
+// CreateSpentInfoBatches records the outputs of a block and the spending of earlier ones: an
+// output it spends takes the input that spends it
 func CreateSpentInfoBatches(dbTx *gorm.DB, spentInfos []SpentInfo) error {
-	//for _, info := range spentInfos {
-	//	fmt.Println(hex.EncodeToString(info.InputTxHash), info.InputIndex, hex.EncodeToString(info.OutputTxHash), info.OutputIndex, info.OutputKeyId, info.OutputValue, info.BlockId)
-	//}
-
-	return dbTx.Clauses(clause.OnConflict{
-		Columns:   []clause.Column{{Name: "output_tx_hash"}, {Name: "output_key_id"}, {Name: "output_index"}},
-		DoUpdates: clause.AssignmentColumns([]string{"input_tx_hash", "input_index"}),
-		Where: clause.Where{Exprs: []clause.Expression{
-			clause.Eq{Column: "spent_info.output_tx_hash", Value: gorm.Expr(`"excluded"."output_tx_hash"`)},
-			clause.Eq{Column: "spent_info.output_key_id", Value: gorm.Expr(`"excluded"."output_key_id"`)},
-			clause.Eq{Column: "spent_info.output_index", Value: gorm.Expr(`"excluded"."output_index"`)},
-		}},
-	}).CreateInBatches(spentInfos, 1000).Error
+	if len(spentInfos) == 0 {
+		return nil
+	}
+	return dbTx.Exec(`INSERT INTO "spent_info" ("input_tx_hash", "input_index", "output_tx_hash", "output_index",
+			"output_key_id", "output_value", "ecosystem", "block_id", "type", "spent_block")
+		SELECT i, ii, o, oi, k, v::numeric, e, b, t, s
+		FROM unnest(?::bytea[], ?::integer[], ?::bytea[], ?::integer[], ?::bigint[], ?::text[], ?::bigint[], ?::bigint[],
+			?::bigint[], ?::bigint[]) AS u(i, ii, o, oi, k, v, e, b, t, s)
+		ON CONFLICT ("output_tx_hash", "output_key_id", "output_index") DO UPDATE SET
+			"input_tx_hash" = "excluded"."input_tx_hash", "input_index" = "excluded"."input_index",
+			"spent_block" = "excluded"."spent_block"`,
+		column(spentInfos, func(r SpentInfo) []byte { return r.InputTxHash }),
+		column(spentInfos, func(r SpentInfo) int32 { return r.InputIndex }),
+		column(spentInfos, func(r SpentInfo) []byte { return r.OutputTxHash }),
+		column(spentInfos, func(r SpentInfo) int32 { return r.OutputIndex }),
+		column(spentInfos, func(r SpentInfo) int64 { return r.OutputKeyId }),
+		column(spentInfos, func(r SpentInfo) string { return r.OutputValue }),
+		column(spentInfos, func(r SpentInfo) int64 { return r.Ecosystem }),
+		column(spentInfos, func(r SpentInfo) int64 { return r.BlockId }),
+		column(spentInfos, func(r SpentInfo) int64 { return int64(r.Type) }),
+		column(spentInfos, func(r SpentInfo) int64 { return r.SpentBlock })).Error
 }
 
 func GetTxOutputsEcosystem(db *DbTransaction, ecosystem int64, keyIds []int64) ([]SpentInfo, error) {
 	query :=
 		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.ecosystem, si.block_id
-		FROM spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
-		WHERE si.ecosystem = ? AND si.output_key_id IN ? AND  si.input_tx_hash IS NULL
-		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `
+		FROM spent_info si
+		WHERE si.ecosystem = ? AND si.output_key_id IN ? AND si.input_tx_hash IS NULL
+		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index `
 	var result []SpentInfo
 	err := GetDB(db).Raw(query, ecosystem, keyIds).Scan(&result).Error
 	if err != nil {
@@ -81,9 +91,9 @@ func GetTxOutputsEcosystem(db *DbTransaction, ecosystem int64, keyIds []int64) (
 func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	query :=
 		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.ecosystem, si.block_id
-		FROM spent_info si LEFT JOIN log_transactions AS tr ON si.output_tx_hash = tr.hash
+		FROM spent_info si
 		WHERE si.output_key_id IN ? AND si.input_tx_hash IS NULL
-		ORDER BY si.output_key_id, si.block_id ASC, tr.timestamp ASC `
+		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index `
 	var result []SpentInfo
 	err := GetDB(db).Raw(query, keyIds).Scan(&result).Error
 	if err != nil {
@@ -92,18 +102,13 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	return result, nil
 }
 
-func RollbackOutputs(blockID int64, db *DbTransaction, transferSelfHashes []string, logger *log.Entry) error {
-	err := GetDB(db).Exec(`UPDATE spent_info SET  input_tx_hash= null , input_index=0 WHERE input_tx_hash  in ( SELECT output_tx_hash FROM "spent_info"  WHERE block_id = ? )`, blockID).Error
+// RollbackOutputs undoes the outputs of the block: those it spent are unspent again, and those it
+// made are deleted
+func RollbackOutputs(blockID int64, db *DbTransaction, logger *log.Entry) error {
+	err := GetDB(db).Exec(`UPDATE spent_info SET input_tx_hash = null, input_index = 0, spent_block = 0 WHERE spent_block = ?`, blockID).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Errorf("updating input_tx_hash rollback outputs by blockID : %d", blockID)
 		return err
-	}
-	if len(transferSelfHashes) > 0 {
-		err = GetDB(db).Exec(`UPDATE spent_info SET  input_tx_hash= null , input_index=0 WHERE encode(input_tx_hash,'hex') in ?`, transferSelfHashes).Error
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Errorf("updating input_tx_hash of transfer self for rollback outputs by blockID : %d", blockID)
-			return err
-		}
 	}
 
 	err = GetDB(db).Exec(`DELETE FROM spent_info WHERE block_id = ? `, blockID).Error

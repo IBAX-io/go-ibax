@@ -45,6 +45,8 @@ type Block struct {
 	genStopped bool
 	// prof is the profile of the execution running
 	prof *execProfile
+	// rollbacksHash is the hash of the rollback records and the outputs the block wrote
+	rollbacksHash []byte
 }
 
 // GetLogger is returns logger

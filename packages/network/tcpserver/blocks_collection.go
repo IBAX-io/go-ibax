@@ -21,6 +21,17 @@ func BlockCollection(request *network.GetBodiesRequest, w net.Conn) error {
 
 	var blocks []sqldb.BlockChain
 	var err error
+	if !request.ReverseOrder && request.BlockID > 1 {
+		// the blocks out of the window of a validator are answered with -1: another node keeps them
+		first, err := sqldb.FirstKeptBlock()
+		if err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting the first kept block")
+			return err
+		}
+		if int64(request.BlockID) < first {
+			return network.WriteInt(network.BlocksNotKept, w)
+		}
+	}
 	if request.ReverseOrder {
 		blocks, err = block.GetReverseBlockchain(int64(request.BlockID), network.BlocksPerRequest)
 	} else {

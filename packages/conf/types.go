@@ -44,6 +44,12 @@ type (
 		BadMinutes int
 	}
 
+	// StorageConfig is what the node keeps of the rows out of the window of the chain
+	StorageConfig struct {
+		// Archive keeps them, in the archive schema, for the API and the synchronization
+		Archive bool
+	}
+
 	// CentrifugoConfig connection params
 	CentrifugoConfig struct {
 		Secret string
@@ -137,6 +143,7 @@ type (
 		Redis          RedisConfig
 		Metrics        MetricsConfig
 		TxPool         TxPoolConfig
+		Storage        StorageConfig
 		Centrifugo     CentrifugoConfig
 		Log            LogConfig
 		TokenMovement  TokenMovementConfig

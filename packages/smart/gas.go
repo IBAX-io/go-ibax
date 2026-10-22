@@ -226,7 +226,7 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	}
 	if f.PaymentType == PaymentType_ContractCaller &&
 		!bytes.Equal(sc.Key.PublicKey, f.PayWallet.PublicKey) &&
-		!bytes.Equal(sc.TxSmart.PublicKey, f.PayWallet.PublicKey) &&
+		!bytes.Equal(sc.SignerKey.Bytes(), f.PayWallet.PublicKey) &&
 		sc.TxSmart.SignedBy == 0 {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "error": errDiffKeys}).Error(errDiffKeys)
 		return errDiffKeys

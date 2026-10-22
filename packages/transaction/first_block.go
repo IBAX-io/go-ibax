@@ -207,12 +207,11 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	}
 
 	if data.HonorNodesOnly != 1 {
-		err = sqldb.GetDB(dbTx).Exec(`insert into "spent_info" (output_index,output_tx_hash,output_key_id,output_value,ecosystem,block_id,type) values(?,?,?,?,?,?,?)`,
-			0, f.TxHash, keyID, amount, 1, 1, consts.UTXO_Type_First_Block).Error
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting spent info")
-			return err
-		}
+		// the block writes the output with the outputs of its transactions
+		out.Apply(WithOutCtxTxOutputs(map[sqldb.KeyUTXO][]sqldb.SpentInfo{
+			{Ecosystem: 1, KeyId: keyID}: {{OutputKeyId: keyID, OutputValue: amount, Ecosystem: 1,
+				BlockId: 1, Type: consts.UTXO_Type_First_Block}},
+		}))
 	}
 
 	err = smart.LoadContract(dbTx, 1)

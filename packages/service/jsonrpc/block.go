@@ -66,7 +66,7 @@ type BlockInfoResult struct {
 
 func (b *blockChainApi) GetBlockInfo(blockID int64) (*BlockInfoResult, *Error) {
 	bk := sqldb.BlockChain{}
-	found, err := bk.Get(blockID)
+	found, err := bk.GetArchived(blockID)
 	if err != nil {
 		return nil, DefaultError(err.Error())
 	}
@@ -227,7 +227,7 @@ func (b *blockChainApi) History(ctx RequestContext, auth Auth, tableName string,
 
 	table := client.Prefix() + "_" + tableName
 	rollbackTx := &sqldb.RollbackTx{}
-	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(strconv.FormatUint(tableId, 10), table, rollbackHistoryLimit)
+	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(strconv.FormatUint(tableId, 10), table, rollbackHistoryLimit, true)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("rollback history")
 		return nil, DefaultError(err.Error())

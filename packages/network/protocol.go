@@ -75,6 +75,9 @@ func (resp *MaxBlockResponse) Write(w io.Writer) error {
 	return binary.Write(w, binary.LittleEndian, resp.BlockID)
 }
 
+// BlocksNotKept is the count of blocks a node answers for blocks out of its window
+const BlocksNotKept = -1
+
 // GetBodiesRequest contains BlockID
 type GetBodiesRequest struct {
 	BlockID      uint32
