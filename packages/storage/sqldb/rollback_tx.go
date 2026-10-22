@@ -37,10 +37,15 @@ func (rt *RollbackTx) GetBlockRollbackTransactions(dbTx *DbTransaction, blockID 
 	return rollbackTransactions, err
 }
 
-// GetRollbackTxsByTableIDAndTableName returns records of rollback by table name and id
-func (rt *RollbackTx) GetRollbackTxsByTableIDAndTableName(tableID, tableName string, limit int) (*[]RollbackTx, error) {
+// GetRollbackTxsByTableIDAndTableName returns records of rollback by table name and id: those in
+// the window for a contract, wherever they are for the API (archive)
+func (rt *RollbackTx) GetRollbackTxsByTableIDAndTableName(tableID, tableName string, limit int, archive bool) (*[]RollbackTx, error) {
 	var rollbackTx []RollbackTx
-	if err := DBConn.Where("table_id = ? AND table_name = ?", tableID, tableName).
+	db := DBConn.Table(rt.TableName())
+	if archive {
+		db = archived(rt.TableName())
+	}
+	if err := db.Where("table_id = ? AND table_name = ?", tableID, tableName).
 		Order("id desc").Limit(limit).Find(&rollbackTx).Error; err != nil {
 		return nil, err
 	}

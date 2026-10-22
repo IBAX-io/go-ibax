@@ -21,6 +21,9 @@ import (
 
 // ToBlockID rollbacks blocks till blockID
 func ToBlockID(blockID int64, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
+	if err := sqldb.CheckRollbackTo(dbTx, blockID); err != nil {
+		return err
+	}
 	// roll back our blocks
 	for {
 		block := &sqldb.BlockChain{}

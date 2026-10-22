@@ -126,8 +126,12 @@ func updatePlatformParam(sc *SmartContract, name, value, conditions string, chec
 		switch name {
 		case syspar.GapsBetweenBlocks:
 			ok = ival > 0 && ival < 86400
-		case syspar.RbBlocks1,
-			syspar.NumberNodes:
+		case syspar.RbBlocks1:
+			// a rollback stays within the window and within one range of partitions
+			ok = ival > 0 && ival < 1000 && ival < syspar.GetHistoryBlocks()
+		case syspar.HistoryBlocks:
+			ok = ival > syspar.GetRbBlocks1()
+		case syspar.NumberNodes:
 			ok = ival > 0 && ival < 1000
 		case syspar.TaxesSize,
 			syspar.PriceCreateRate,

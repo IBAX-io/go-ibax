@@ -144,5 +144,8 @@ func UpdateSchema() error {
 			return err
 		}
 	}
-	return migration.UpdateMigrate(&MigrationHistory{})
+	if err := migration.UpdateMigrate(&MigrationHistory{}); err != nil {
+		return err
+	}
+	return PrepareArchive()
 }

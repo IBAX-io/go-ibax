@@ -43,7 +43,7 @@ func getTxInfo(txHash string, getInfo bool) (*TxInfoResult, error) {
 		return nil, errors.New("hash is incorrect")
 	}
 	ltx := &sqldb.LogTransaction{Hash: hash}
-	found, err := ltx.GetByHash(nil, hash)
+	found, err := ltx.GetByHash(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func getTxInfo(txHash string, getInfo bool) (*TxInfoResult, error) {
 func transactionData(blockId int64, txHash string) (*smart.TxInfo, error) {
 	info := &smart.TxInfo{}
 	bk := &sqldb.BlockChain{}
-	f, err := bk.Get(blockId)
+	f, err := bk.GetArchived(blockId)
 	if err != nil {
 		return nil, err
 	}

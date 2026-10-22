@@ -173,6 +173,7 @@ func GetFirstEcosystemScript(data SqlData) (ret string, err error) {
 	if err != nil {
 		return
 	}
+	ret += HistoryTableSQL()
 	var out string
 	out, err = sqlTemplate([]string{
 		firstDelayedContractsDataSQL,

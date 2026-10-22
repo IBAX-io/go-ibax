@@ -18,6 +18,10 @@ import (
 )
 
 var ErrorEmptyBlockBody = errors.New("block is empty")
+
+// ErrNotKept is the answer of a node that no longer keeps the blocks asked: another node, an
+// archive one, keeps them
+var ErrNotKept = errors.New("the node does not keep the blocks")
 var ErrorWrongSizeBytes = errors.New("wrong size bytes")
 
 const hasVal = "has value"
@@ -55,6 +59,9 @@ func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrd
 		return nil, err
 	}
 
+	if blocksCount == network.BlocksNotKept {
+		return nil, fmt.Errorf("%w: %s, block %d", ErrNotKept, host, blockID)
+	}
 	if blocksCount == 0 {
 		return nil, fmt.Errorf("host: %s does'nt contains blocks", host)
 	}

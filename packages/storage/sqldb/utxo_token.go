@@ -22,7 +22,7 @@ func InsertTxOutputs(outputTxHash []byte, txOutputsMapCtx map[KeyUTXO][]SpentInf
 	}
 }
 
-func UpdateTxInputs(inputTxHash []byte, txInputsMapCtx map[KeyUTXO][]SpentInfo, outputsMap map[KeyUTXO][]SpentInfo) {
+func UpdateTxInputs(inputTxHash []byte, blockID int64, txInputsMapCtx map[KeyUTXO][]SpentInfo, outputsMap map[KeyUTXO][]SpentInfo) {
 	lock.Lock()
 	defer lock.Unlock()
 	// the inputs are numbered key by key in the order of ecosystem and key ID, not in the random
@@ -44,6 +44,7 @@ func UpdateTxInputs(inputTxHash []byte, txInputsMapCtx map[KeyUTXO][]SpentInfo, 
 			if len(info.InputTxHash) == 0 {
 				outputsMap[txKeyUTXO][i].InputTxHash = inputTxHash
 				outputsMap[txKeyUTXO][i].InputIndex = inputIndex
+				outputsMap[txKeyUTXO][i].SpentBlock = blockID
 				inputIndex++
 			}
 		}

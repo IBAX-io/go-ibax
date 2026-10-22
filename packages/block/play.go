@@ -407,7 +407,7 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
 		*processedTx = append(*processedTx, t.FullData)
 
-		sqldb.UpdateTxInputs(t.Hash(), t.TxInputsMap, b.OutputsMap)
+		sqldb.UpdateTxInputs(t.Hash(), b.Header.BlockId, t.TxInputsMap, b.OutputsMap)
 		sqldb.InsertTxOutputs(t.Hash(), t.TxOutputsMap, b.OutputsMap)
 	}
 

@@ -39,9 +39,26 @@ func (b *BlockChain) Get(blockID int64) (bool, error) {
 	return isFound(DBConn.Where("id = ?", blockID).First(b))
 }
 
-// GetByHash is retrieving model from database
+// GetArchived is Get for the API and the synchronization of other nodes: on an archive node it
+// finds the blocks out of the window too
+func (b *BlockChain) GetArchived(blockID int64) (bool, error) {
+	return isFound(archived(b.TableName()).Where("id = ?", blockID).First(b))
+}
+
+// GetByHash is retrieving model from database, archived blocks included
 func (b *BlockChain) GetByHash(BlockHash []byte) (bool, error) {
-	return isFound(DBConn.Where("hash = ?", BlockHash).First(b))
+	return isFound(archived(b.TableName()).Where("hash = ?", BlockHash).First(b))
+}
+
+// FirstKeptBlock is the lowest block after block 1 the node keeps: the blocks between are out of
+// the window of a validator
+func FirstKeptBlock() (int64, error) {
+	var id []int64
+	err := archived("block_chain").Where("id > 1").Order("id").Limit(1).Pluck("id", &id).Error
+	if err != nil || len(id) == 0 {
+		return 0, err
+	}
+	return id[0], nil
 }
 
 // GetMaxBlock returns last block existence
@@ -60,7 +77,7 @@ func GetBlockchain(startBlockID int64, endblockID int64, order ordering) ([]Bloc
 	blockchain := new([]BlockChain)
 
 	orderStr := "id " + string(order)
-	query := DBConn.Model(&BlockChain{}).Order(orderStr)
+	query := archived("block_chain").Order(orderStr)
 	if endblockID > 0 {
 		query = query.Where("id > ? AND id <= ?", startBlockID, endblockID).Find(&blockchain)
 	} else {
@@ -78,9 +95,9 @@ func (b *BlockChain) GetBlocks(startFromID int64, limit int) ([]BlockChain, erro
 	var err error
 	blockchain := new([]BlockChain)
 	if startFromID > 0 {
-		err = DBConn.Order("id desc").Limit(limit).Where("id > ?", startFromID).Find(&blockchain).Error
+		err = archived("block_chain").Order("id desc").Limit(limit).Where("id > ?", startFromID).Find(&blockchain).Error
 	} else {
-		err = DBConn.Order("id desc").Limit(limit).Find(&blockchain).Error
+		err = archived("block_chain").Order("id desc").Limit(limit).Find(&blockchain).Error
 	}
 	return *blockchain, err
 }
@@ -88,7 +105,7 @@ func (b *BlockChain) GetBlocks(startFromID int64, limit int) ([]BlockChain, erro
 // GetBlocksFrom is retrieving ordered chain of blocks from database
 func (b *BlockChain) GetBlocksFrom(startFromID int64, ordering string, limit int) ([]BlockChain, error) {
 	blockchain := new([]BlockChain)
-	q := DBConn.Model(&BlockChain{}).Order("id "+ordering).Where("id > ?", startFromID)
+	q := archived("block_chain").Order("id "+ordering).Where("id > ?", startFromID)
 	if limit > 0 {
 		q = q.Limit(limit)
 	}
@@ -100,7 +117,7 @@ func (b *BlockChain) GetBlocksFrom(startFromID int64, ordering string, limit int
 func (b *BlockChain) GetReverseBlockchain(endBlockID int64, limit int) ([]BlockChain, error) {
 	var err error
 	blockchain := new([]BlockChain)
-	err = DBConn.Model(&BlockChain{}).Order("id DESC").Where("id <= ?", endBlockID).Limit(limit).Find(&blockchain).Error
+	err = archived("block_chain").Order("id DESC").Where("id <= ?", endBlockID).Limit(limit).Find(&blockchain).Error
 	return *blockchain, err
 }
 
@@ -119,7 +136,7 @@ func (b *BlockChain) DeleteById(dbTx *DbTransaction, id int64) error {
 
 func GetTxCount() (int64, error) {
 	var txCount int64
-	row := DBConn.Raw("SELECT SUM(tx) tx_count FROM block_chain").Select("tx_count").Row()
+	row := DBConn.Raw("SELECT coalesce(SUM(tx), 0) tx_count FROM " + ArchivedTable("block_chain")).Row()
 	err := row.Scan(&txCount)
 
 	return txCount, err
@@ -127,8 +144,8 @@ func GetTxCount() (int64, error) {
 
 func GetBlockCountByNode(NodePosition int64, consensusMode int32) (int64, error) {
 	var BlockCount int64
-	row := DBConn.Raw("SELECT count(*) block_count FROM block_chain where node_Position = ? AND consensus_mode = ?",
-		NodePosition, consensusMode).Select("block_count").Row()
+	row := DBConn.Raw("SELECT count(*) block_count FROM "+ArchivedTable("block_chain")+" WHERE node_position = ? AND consensus_mode = ?",
+		NodePosition, consensusMode).Row()
 	err := row.Scan(&BlockCount)
 
 	return BlockCount, err

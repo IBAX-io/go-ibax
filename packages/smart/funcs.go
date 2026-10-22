@@ -1992,7 +1992,7 @@ func GetHistoryRaw(dbTx *sqldb.DbTransaction, ecosystem int64, tableName string,
 	var rollbackList []any
 	rollbackTx := &sqldb.RollbackTx{}
 	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(converter.Int64ToStr(id),
-		table, historyLimit)
+		table, historyLimit, false)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("rollback history")
 		return nil, err

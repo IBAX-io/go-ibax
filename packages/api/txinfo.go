@@ -45,7 +45,7 @@ func getTxInfo(r *http.Request, txHash string, getInfo bool) (*txinfoResult, err
 		return nil, errHashWrong
 	}
 	ltx := &sqldb.LogTransaction{Hash: hash}
-	found, err := ltx.GetByHash(nil, hash)
+	found, err := ltx.GetByHash(hash)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func getTxInfoMultiHandler(w http.ResponseWriter, r *http.Request) {
 func transactionData(blockId int64, txHash string) (*smart.TxInfo, error) {
 	info := &smart.TxInfo{}
 	bk := &sqldb.BlockChain{}
-	f, err := bk.Get(blockId)
+	f, err := bk.GetArchived(blockId)
 	if err != nil {
 		return nil, err
 	}

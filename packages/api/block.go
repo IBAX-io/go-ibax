@@ -60,7 +60,7 @@ func getBlockInfoHandler(w http.ResponseWriter, r *http.Request) {
 
 	blockID := converter.StrToInt64(params["id"])
 	block := sqldb.BlockChain{}
-	found, err := block.Get(blockID)
+	found, err := block.GetArchived(blockID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block")
 		errorResponse(w, err)

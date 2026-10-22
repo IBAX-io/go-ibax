@@ -35,6 +35,12 @@ func (c *BftCertificate) Get(dbTx *DbTransaction, height int64) (bool, error) {
 	return isFound(GetDB(dbTx).Where("height = ?", height).First(c))
 }
 
+// GetArchived reads the certificate of a height for the synchronization of other nodes: on an
+// archive node, out of the window too
+func (c *BftCertificate) GetArchived(height int64) (bool, error) {
+	return isFound(archived(c.TableName()).Where("height = ?", height).First(c))
+}
+
 // BftValidatorSet is the set of validators from a height on until the next row: Data is
 // bft.Validators.Marshal
 type BftValidatorSet struct {

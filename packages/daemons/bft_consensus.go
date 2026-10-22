@@ -533,7 +533,7 @@ func (d *bftDriver) Certificates(from uint64, count int) ([][]byte, error) {
 	var certs [][]byte
 	for h := from; len(certs) < count; h++ {
 		c := &sqldb.BftCertificate{}
-		found, err := c.Get(nil, int64(h))
+		found, err := c.GetArchived(int64(h))
 		if err != nil {
 			return nil, err
 		}

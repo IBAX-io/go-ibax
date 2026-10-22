@@ -289,9 +289,12 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 
 func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 	playTx := b.GenAfterTxs()
-	return sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
+	err := sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
 		if err := sqldb.CreateLogTransactionBatches(tx, playTx.Lts); err != nil {
 			return errors.Wrap(err, "batches insert log_transactions")
+		}
+		if err := sqldb.CreateStopNetworkTxs(tx, b.stopNetworkHashes(playTx.Lts), b.Header.BlockId); err != nil {
+			return errors.Wrap(err, "insert stop_network_txs")
 		}
 		spentInfos := sqldb.GetAllOutputs(b.OutputsMap)
 		rHash, err := rollbacksHash(b.Header.BlockId, playTx.Rts, spentInfos)
@@ -313,4 +316,24 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 		}
 		return nil
 	})
+	if err != nil || !sqldb.IsRetentionBoundary(b.Header.BlockId) {
+		return err
+	}
+	return errors.Wrap(sqldb.Retain(dbTx, b.Header.BlockId, b.Header.Timestamp, syspar.GetHistoryBlocks()), "retention")
+}
+
+// stopNetworkHashes are the hashes of the StopNetwork transactions of the block: they are not
+// bound by MaxTxBack, so that they stay known after their log_transactions leave
+func (b *Block) stopNetworkHashes(lts []*sqldb.LogTransaction) [][]byte {
+	logged := make(map[string]bool, len(lts))
+	for _, lt := range lts {
+		logged[string(lt.Hash)] = true
+	}
+	var hashes [][]byte
+	for _, t := range b.Transactions {
+		if t.Type() == types.StopNetworkTxType && logged[string(t.Hash())] {
+			hashes = append(hashes, t.Hash())
+		}
+	}
+	return hashes
 }

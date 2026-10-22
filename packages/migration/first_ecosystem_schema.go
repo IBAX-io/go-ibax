@@ -189,24 +189,6 @@ var sqlFirstEcosystemCommon = `
 		t.Column("ecosystem", "bigint", {"default": "1"})
 	{{footer "primary" "unique(ecosystem, name)" "index(ecosystem, name)"}}
 
-	{{head "1_history"}}
-		t.Column("id", "bigint", {"default": "0"})
-		t.Column("sender_id", "bigint", {"default": "0"})
-		t.Column("recipient_id", "bigint", {"default": "0"})
-		t.Column("sender_balance", "decimal(30)", {"default": "0"})
-		t.Column("recipient_balance", "decimal(30)", {"default": "0"})
-		t.Column("amount", "decimal(30)", {"default": "0"})
-		t.Column("value_detail", "jsonb", {"null": true})
-		t.Column("comment", "text", {"default": ""})
-		t.Column("status", "bigint", {"default": "0"})
-		t.Column("block_id", "bigint", {"default": "0"})
-		t.Column("txhash", "bytea", {"default": ""})
-		t.Column("created_at", "bigint", {"default": "0"})
-		t.Column("ecosystem", "bigint", {"default": "1"})
-		t.Column("type", "bigint", {"default": "1"})
-	{{footer "primary" "index(ecosystem, sender_id)"}}
-	add_index("1_history", ["ecosystem", "recipient_id"], {})
-	add_index("1_history", ["block_id", "txhash"], {})
 
 	{{head "1_sections"}}
 		t.Column("id", "bigint", {"default": "0"})

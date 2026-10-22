@@ -21,9 +21,9 @@ type LogTransaction struct {
 	ContractName string `gorm:"not null"`
 }
 
-// GetByHash returns LogTransactions existence by hash
-func (lt *LogTransaction) GetByHash(dbTx *DbTransaction, hash []byte) (bool, error) {
-	return isFound(GetDB(dbTx).Where("hash = ?", hash).First(lt))
+// GetByHash returns LogTransactions existence by hash, for the API: archived ones included
+func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
+	return isFound(archived("log_transactions").Where("hash = ?", hash).First(lt))
 }
 
 // KnownLogTransactions are the hashes of those in a block, in one query
@@ -33,7 +33,9 @@ func KnownLogTransactions(dbTx *DbTransaction, hashes [][]byte) (map[string]bool
 		return known, nil
 	}
 	var found [][]byte
-	if err := GetDB(dbTx).Model(&LogTransaction{}).Where("hash IN ?", hashes).Pluck("hash", &found).Error; err != nil {
+	if err := GetDB(dbTx).Raw(`SELECT "hash" FROM "log_transactions" WHERE "hash" IN ?
+		UNION ALL SELECT "hash" FROM "stop_network_txs" WHERE "hash" IN ?`, hashes, hashes).
+		Scan(&found).Error; err != nil {
 		return nil, err
 	}
 	for _, h := range found {
@@ -57,7 +59,23 @@ func CreateLogTransactionBatches(dbTx *gorm.DB, lts []*LogTransaction) error {
 // DeleteLogTransactionsByHash is deleting record by hash
 func DeleteLogTransactionsByHash(dbTx *DbTransaction, hash []byte) (int64, error) {
 	query := GetDB(dbTx).Exec("DELETE FROM log_transactions WHERE hash = ?", hash)
-	return query.RowsAffected, query.Error
+	if query.Error != nil {
+		return 0, query.Error
+	}
+	if err := GetDB(dbTx).Exec(`DELETE FROM "stop_network_txs" WHERE "hash" = ?`, hash).Error; err != nil {
+		return 0, err
+	}
+	return query.RowsAffected, nil
+}
+
+// CreateStopNetworkTxs keeps the hashes of the StopNetwork transactions of the block
+func CreateStopNetworkTxs(dbTx *gorm.DB, hashes [][]byte, blockID int64) error {
+	for _, h := range hashes {
+		if err := dbTx.Exec(`INSERT INTO "stop_network_txs" ("hash", "block") VALUES (?, ?)`, h, blockID).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // GetLogTransactionsCount count records by transaction hash

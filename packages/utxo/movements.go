@@ -90,15 +90,17 @@ type candidate struct {
 }
 
 // The transactions that made an output to the key or spent one of its, in the ecosystem; the
-// spender's block is the one log_transactions has, since spending all may leave it no output
-const candidates = `
+// spender's block is the spent_block of the output, since spending all may leave it no output
+func candidates() string {
+	return fmt.Sprintf(`
 SELECT hash, block FROM (
-	SELECT output_tx_hash AS hash, block_id AS block FROM spent_info
+	SELECT output_tx_hash AS hash, block_id AS block FROM %[1]s
 	WHERE ecosystem = @ecosystem AND output_key_id = @key
 	UNION
-	SELECT si.input_tx_hash, lt.block FROM spent_info si JOIN log_transactions lt ON lt.hash = si.input_tx_hash
-	WHERE si.ecosystem = @ecosystem AND si.output_key_id = @key AND si.input_tx_hash IS NOT NULL
-) movements `
+	SELECT input_tx_hash, spent_block FROM %[1]s
+	WHERE ecosystem = @ecosystem AND output_key_id = @key AND spent_block > 0
+) movements `, sqldb.ArchivedTable("spent_info"))
+}
 
 // Movements is the page of the key's movements in the ecosystem in blocks before the one given
 // (0 for none), at least limit of them unless no more are left, and never part of a block
@@ -112,7 +114,7 @@ func Movements(key, ecosystem, before int64, limit int) (*Page, error) {
 	db := sqldb.GetDB(nil)
 	params := map[string]any{"ecosystem": ecosystem, "key": key, "before": before}
 	var found []candidate
-	if err := db.Raw(candidates+`WHERE block < @before ORDER BY block DESC, hash LIMIT @limit`,
+	if err := db.Raw(candidates()+`WHERE block < @before ORDER BY block DESC, hash LIMIT @limit`,
 		withParam(params, "limit", limit)).Scan(&found).Error; err != nil {
 		return nil, err
 	}
@@ -120,7 +122,7 @@ func Movements(key, ecosystem, before int64, limit int) (*Page, error) {
 	if len(found) == limit {
 		last := found[len(found)-1].Block
 		var rest []candidate
-		if err := db.Raw(candidates+`WHERE block = @last ORDER BY hash`, withParam(params, "last", last)).
+		if err := db.Raw(candidates()+`WHERE block = @last ORDER BY hash`, withParam(params, "last", last)).
 			Scan(&rest).Error; err != nil {
 			return nil, err
 		}
@@ -129,7 +131,7 @@ func Movements(key, ecosystem, before int64, limit int) (*Page, error) {
 				found = append(found, c)
 			}
 		}
-		if err := db.Raw(`SELECT EXISTS (`+candidates+`WHERE block < @last)`, withParam(params, "last", last)).
+		if err := db.Raw(`SELECT EXISTS (`+candidates()+`WHERE block < @last)`, withParam(params, "last", last)).
 			Row().Scan(&page.More); err != nil {
 			return nil, err
 		}
@@ -203,7 +205,7 @@ func filter(rows []sqldb.SpentInfo, keep func(sqldb.SpentInfo) bool) []sqldb.Spe
 
 func readBlock(id int64) (*block.Block, error) {
 	record := &sqldb.BlockChain{}
-	found, err := record.Get(id)
+	found, err := record.GetArchived(id)
 	if err != nil {
 		return nil, err
 	}

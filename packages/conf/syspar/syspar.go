@@ -61,6 +61,9 @@ const (
 	TaxesWallet = `taxes_wallet`
 	// RbBlocks1 rollback from queue_bocks
 	RbBlocks1 = `rollback_blocks`
+	// HistoryBlocks is the window of blocks whose bodies, rollback records and history the active
+	// tables keep
+	HistoryBlocks = `history_blocks`
 	// BlockReward value of reward, which is chrged on block generation
 	BlockReward = "block_reward"
 	// IncorrectBlocksPerDay is value of incorrect blocks per day before global ban
@@ -599,6 +602,17 @@ func GetRbBlocks1() int64 {
 	return SysInt64(RbBlocks1)
 }
 
+// DefaultHistoryBlocks is the window of history_blocks of a chain that does not set it
+const DefaultHistoryBlocks = 10000
+
+// GetHistoryBlocks is the window of blocks the active tables keep
+func GetHistoryBlocks() int64 {
+	if v := SysInt64(HistoryBlocks); v > 0 {
+		return v
+	}
+	return DefaultHistoryBlocks
+}
+
 // HasSys returns boolean whether this system parameter exists
 func HasSys(name string) bool {
 	mutex.RLock()
@@ -707,7 +721,7 @@ func GetPriceCreateExec(s string) (price int64) {
 func SysTableColType(dbTx *sqldb.DbTransaction) error {
 	rows, err := dbTx.GetAllTransaction(`
 		SELECT table_name,column_name,data_type
-		FROM information_schema.columns Where table_schema NOT IN ('pg_catalog', 'information_schema') AND table_name ~ '[\d]'
+		FROM information_schema.columns Where table_schema = current_schema() AND table_name ~ '[\d]'
 		AND (data_type = 'bytea' OR data_type = 'date' OR data_type LIKE 'time%') ORDER BY ordinal_position ASC;`, -1)
 	if err != nil {
 		return err

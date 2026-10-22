@@ -125,6 +125,9 @@ func init() {
 	cmdFlags.StringVar(&conf.Config.Log.Syslog.Facility, "syslogFacility", "kern", "syslog facility")
 	cmdFlags.StringVar(&conf.Config.Log.Syslog.Tag, "syslogTag", "go-ibax", "syslog program tag")
 
+	// Storage
+	cmdFlags.BoolVar(&conf.Config.Storage.Archive, "archive", false, "Keep the rows out of the window of the chain, for the API and the synchronization (archive node)")
+
 	// TxPool
 	cmdFlags.IntVar(&conf.Config.TxPool.MaxCount, "txPoolCount", 0, "Transactions the node keeps in memory for the blocks to come; 0 takes 100000")
 	cmdFlags.Int64Var(&conf.Config.TxPool.MaxBytes, "txPoolBytes", 0, "Bytes of the transactions the node keeps in memory; 0 takes 256 MiB")

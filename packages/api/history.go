@@ -44,7 +44,7 @@ func getHistoryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rollbackTx := &sqldb.RollbackTx{}
-	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(params["id"], t.Physical(), rollbackHistoryLimit)
+	txs, err := rollbackTx.GetRollbackTxsByTableIDAndTableName(params["id"], t.Physical(), rollbackHistoryLimit, true)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("rollback history")
 		errorResponse(w, err)

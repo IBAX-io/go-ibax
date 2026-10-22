@@ -25,7 +25,7 @@ const (
 var migrations = []*migration{
 	// Initial schema
 	{"0.0.1", migrationInitialTables, true},
-	{"0.0.2", migrationInitialSchema, false},
+	{"0.0.2", migrationInitialSchema + retentionSQL(), false},
 }
 
 var updateMigrations = []*migration{
