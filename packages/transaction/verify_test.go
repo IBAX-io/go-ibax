@@ -105,6 +105,31 @@ func TestTransferSignatureIsCheckedOnEntry(t *testing.T) {
 			t.Errorf("%s: a damaged signature: %v", name, err)
 		}
 
+		// The same payload, signature and time in another encoding: a map that also carries a body
+		// and a hash of its own, as the stored form before held them, and the stored form with a
+		// byte after it. Each is refused as it is parsed, not read as the transaction it names.
+		var swindle types.SmartTransaction
+		if err := msgpack.Unmarshal(st.Payload, &swindle); err != nil {
+			t.Fatalf("%s: decoding the payload: %v", name, err)
+		}
+		swindle.KeyID++
+		asMap, err := msgpack.Marshal(map[string]any{
+			"TxSmart": &swindle, "Hash": crypto.DoubleHash(st.Payload),
+			"Payload": st.Payload, "TxSignature": st.TxSignature, "Timestamp": st.Timestamp,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for label, enc := range map[string][]byte{
+			"a map carrying a body": asMap,
+			"a byte after the form": append(bytes.Clone(stored[1:]), 0),
+		} {
+			err := (&Transaction{}).Unmarshall(bytes.NewBuffer(append([]byte{stored[0]}, enc...)), true)
+			if !errors.Is(err, errNotStoredForm) {
+				t.Errorf("%s: %s: got %v, want %v", name, label, err, errNotStoredForm)
+			}
+		}
+
 		// The header names another signer while the key it carries does the signing: consistent, its
 		// signature holds, and still not the key of the account it names. The parse cannot tell, the
 		// entry check must.

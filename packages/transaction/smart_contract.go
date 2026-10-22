@@ -263,6 +263,9 @@ func (s *SmartTransactionParser) TxRollback() error {
 // storedTx is the form a block holds a transaction in and nodes pass on: the payload the client
 // signed, the signature and the time the node took the transaction. The hash and the body the node
 // runs are derived from the payload, so a stored transaction runs only what its signature covers.
+// errNotStoredForm is a transaction of a stored type in an encoding other than its stored form
+var errNotStoredForm = errors.New("the transaction is not in its stored form")
+
 type storedTx struct {
 	_msgpack    struct{} `msgpack:",as_array"`
 	Payload     []byte
@@ -319,6 +322,15 @@ func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer, fill bool) erro
 	var stored storedTx
 	if err := msgpack.Unmarshal(buffer.Bytes(), &stored); err != nil {
 		return err
+	}
+	// a transaction has one stored form: any other encoding of the same three fields, or one
+	// carrying more, is refused rather than read as the transaction it names
+	canonical, err := msgpack.Marshal(&stored)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(canonical, buffer.Bytes()) {
+		return errNotStoredForm
 	}
 	if len(stored.Payload) == 0 {
 		return fmt.Errorf("a stored transaction carries no payload")
