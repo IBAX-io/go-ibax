@@ -3,6 +3,8 @@ package asymalgo
 import (
 	"crypto/mldsa"
 	"fmt"
+
+	"github.com/IBAX-io/go-ibax/packages/common/gencache"
 )
 
 // MLDSASeedSize is the private key of every ML-DSA level: the FIPS 204 seed the key pair is
@@ -18,7 +20,11 @@ type mldsaLevel struct {
 	options       *mldsa.Options
 	publicKeySize int
 	signatureSize int
+	keys          *gencache.Cache[string, *mldsa.PublicKey]
 }
+
+// mldsaKeysSize bounds the parsed keys of a level: a parsed ML-DSA-87 key is about 60 KB
+const mldsaKeysSize = 1024
 
 func (l *mldsaLevel) genKeyPair() ([]byte, []byte, error) {
 	sk, err := mldsa.GenerateKey(l.params())
@@ -53,7 +59,7 @@ func (l *mldsaLevel) verify(public, hash, signature []byte) (bool, error) {
 	if len(signature) != l.signatureSize {
 		return false, fmt.Errorf("invalid parameters len(signature) = %d", len(signature))
 	}
-	pk, err := mldsa.NewPublicKey(l.params(), public)
+	pk, err := l.publicKey(public)
 	if err != nil {
 		return false, err
 	}
@@ -61,6 +67,20 @@ func (l *mldsaLevel) verify(public, hash, signature []byte) (bool, error) {
 		return false, ErrIncorrectSign
 	}
 	return true, nil
+}
+
+// publicKey is the parsed public key, kept for the latest signers: a parsed key holds the matrix
+// expanded from its seed, the cost of a verification again
+func (l *mldsaLevel) publicKey(public []byte) (*mldsa.PublicKey, error) {
+	if pk, ok := l.keys.Get(string(public)); ok {
+		return pk, nil
+	}
+	pk, err := mldsa.NewPublicKey(l.params(), public)
+	if err != nil {
+		return nil, err
+	}
+	l.keys.Put(string(public), pk)
+	return pk, nil
 }
 
 func (l *mldsaLevel) checkPublicKey(public []byte) error {

@@ -6,7 +6,6 @@
 package daemons
 
 import (
-	"bytes"
 	"context"
 	"sync/atomic"
 	"time"
@@ -167,7 +166,7 @@ func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) 
 		types.WithTxFullData(trs))
 }
 
-func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time.Time) ([][]byte, map[int][]*transaction.Transaction, error) {
+func processTransactionsNew(logger *log.Entry, txs []*transaction.Pending, st time.Time) ([][]byte, map[int][]*transaction.Transaction, error) {
 	classifyTxsMap := make(map[int][]*transaction.Transaction)
 	var done = make(<-chan time.Time, 1)
 	limited := syspar.IsHonorNodeMode() || syspar.IsBftConsensus()
@@ -185,11 +184,7 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 		}
 		done = time.After(endTime.Sub(st))
 	}
-	trs, err := sqldb.GetAllUnusedTransactions(nil, syspar.GetMaxTxCount()-len(txs))
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unused transactions")
-		return nil, nil, err
-	}
+	trs := transaction.TxPool.Take(syspar.GetMaxTxCount() - len(txs))
 
 	limits := transaction.NewLimits(transaction.GetLetPreprocess())
 
@@ -205,7 +200,7 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 		go func() {
 			for badTxItem := range ch {
 				transaction.BadTxForBan(badTxItem.keyID)
-				_ = transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
+				transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
 			}
 		}()
 
@@ -231,6 +226,11 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 		contractNames = append(contractNames, contract.Contract)
 	}
 
+	parsed := make([]*transaction.Transaction, len(txs))
+	for i, txItem := range txs {
+		parsed[i] = txItem.Tx
+	}
+	checked := transaction.CheckBatch(parsed, st.Unix())
 	for i, txItem := range txs {
 		if limited {
 			select {
@@ -239,20 +239,12 @@ func processTransactionsNew(logger *log.Entry, txs []*sqldb.Transaction, st time
 			default:
 			}
 		}
-		bufTransaction := bytes.NewBuffer(txItem.Data)
-		tr, err := transaction.UnmarshallTransaction(bufTransaction, true)
-		if err != nil {
-			if tr != nil {
-				txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
-			}
-			continue
-		}
-
-		if err := tr.Check(st.Unix()); err != nil {
+		tr := txItem.Tx
+		if err := checked[i]; err != nil {
 			txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
 			continue
 		}
-		if txItem.GetTransactionRateStopNetwork() {
+		if txItem.Rate == transaction.RateStopNetwork {
 			classifyTxsMap[types.StopNetworkTxType] = append(classifyTxsMap[types.StopNetworkTxType], tr)
 			txList = append(txList[:0], txs[i].Data)
 			break

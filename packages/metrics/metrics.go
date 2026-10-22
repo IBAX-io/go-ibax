@@ -106,6 +106,18 @@ var (
 		Buckets: durationBuckets,
 	}, []string{"algo"})
 
+	// SignVerifyCached is the signature checks a signature verified before answers
+	SignVerifyCached = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "sign_verify_cached_total",
+		Help: "Signature checks answered by a signature verified before, by algorithm.",
+	}, []string{"algo"})
+
+	// TxPool is the transactions of the pool of the node and the bytes of their data
+	TxPool = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: namespace, Name: "tx_pool",
+		Help: "Transactions in the pool of the node (count) and the bytes of their data (bytes).",
+	}, []string{"of"})
+
 	// LockWait is the time a daemon waits for the lock of the daemons
 	LockWait = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Namespace: namespace, Name: "dblock_wait_seconds",
@@ -147,7 +159,7 @@ func init() {
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, DBStatements,
-		SignVerify, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
+		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
 	)
 }
 

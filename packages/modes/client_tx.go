@@ -13,7 +13,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
@@ -22,21 +21,31 @@ var ErrDiffKey = errors.New("Different keys")
 
 type blockchainTxPreprocessor struct{}
 
-func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key int64, le *log.Entry) (retTx []string, err error) {
-	var rtxs []*sqldb.RawTx
+// ProcessClientTxBatches verifies the transactions of a client in parallel and puts them in the
+// pool. A transaction that does not parse or verify refuses them all, as does a pool with no room;
+// one the pool finds bad otherwise, its status answers.
+func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key int64, le *log.Entry) ([]string, error) {
+	rtxs := make([]*transaction.Transaction, 0, len(txDatas))
 	for _, txData := range txDatas {
 		rtx := &transaction.Transaction{}
-		if err = rtx.Unmarshall(bytes.NewBuffer(txData), true); err != nil {
+		if err := rtx.Unmarshall(bytes.NewBuffer(txData), true); err != nil {
 			return nil, err
 		}
-		if err = rtx.Verify(); err != nil {
-			return nil, err
-		}
-		rtxs = append(rtxs, rtx.SetRawTx())
-		retTx = append(retTx, fmt.Sprintf("%x", rtx.Hash()))
+		rtxs = append(rtxs, rtx)
 	}
-	err = sqldb.SendTxBatches(rtxs)
-	return
+	for _, err := range transaction.VerifyAll(rtxs) {
+		if err != nil {
+			return nil, err
+		}
+	}
+	retTx := make([]string, 0, len(rtxs))
+	for i, err := range transaction.TxPool.Admit(rtxs, transaction.RateClient) {
+		if errors.Is(err, transaction.ErrPoolFull) {
+			return nil, err
+		}
+		retTx = append(retTx, fmt.Sprintf("%x", rtxs[i].Hash()))
+	}
+	return retTx, nil
 }
 
 type ClbTxPreprocessor struct{}
@@ -94,7 +103,7 @@ type BlockchainSCRunner struct{}
 
 // RunContract runs smart contract on blockchain mode
 func (runner BlockchainSCRunner) RunContract(data, hash []byte, keyID, tnow int64, le *log.Entry) error {
-	if err := transaction.CreateTransaction(data, hash, keyID, tnow); err != nil {
+	if err := transaction.CreateTransaction(data); err != nil {
 		le.WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("Executing contract")
 		return err
 	}

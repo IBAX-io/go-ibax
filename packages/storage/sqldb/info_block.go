@@ -51,7 +51,7 @@ func (ib *InfoBlock) Create(dbTx *DbTransaction) error {
 
 // MarkSent update model sent field
 func (ib *InfoBlock) MarkSent() error {
-	return DBConn.Model(ib).Update("sent", 1).Error
+	return DBConn.Model(&InfoBlock{}).Where("block_id = ?", ib.BlockID).Update("sent", 1).Error
 }
 
 // UpdRollbackHash update model rollbacks_hash field

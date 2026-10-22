@@ -233,15 +233,6 @@ func ReplaceBlocksFromHost(ctx context.Context, host string, blockID, replaceCou
 	if err != nil {
 		return err
 	}
-	// mark all transaction as unverified
-	_, err = sqldb.MarkVerifiedAndNotUsedTransactionsUnverified()
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-			"type":  consts.DBError,
-		}).Error("marking verified and not used transactions unverified")
-		return utils.ErrInfo(err)
-	}
 
 	// get starting blockID from slice of blocks
 	if len(blocks) > 0 {

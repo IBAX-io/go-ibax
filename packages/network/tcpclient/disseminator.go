@@ -46,7 +46,13 @@ func sendRawTransacitionsToHost(host string, packet []byte) error {
 	return nil
 }
 
-func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []sqldb.Transaction) error {
+// Tx is a transaction a node sends to the others
+type Tx struct {
+	Hash []byte
+	Data []byte
+}
+
+func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []Tx) error {
 	if len(hosts) == 0 || len(txes) == 0 {
 		return nil
 	}
@@ -83,7 +89,7 @@ func SendTransacitionsToAll(ctx context.Context, hosts []string, txes []sqldb.Tr
 	return nil
 }
 
-func SendFullBlockToAll(ctx context.Context, hosts []string, block *sqldb.InfoBlock, txes []sqldb.Transaction, nodeID int64) error {
+func SendFullBlockToAll(ctx context.Context, hosts []string, block *sqldb.InfoBlock, txes []Tx, nodeID int64) error {
 	if len(hosts) == 0 {
 		return nil
 	}
@@ -172,7 +178,7 @@ func sendFullBlockRequest(con net.Conn, data []byte) (response []byte, err error
 	return resieveRequiredTransactions(con)
 }
 
-func MarshalTxPacket(txes []sqldb.Transaction) ([]byte, error) {
+func MarshalTxPacket(txes []Tx) ([]byte, error) {
 	dat := make([][]byte, 0)
 	for _, tr := range txes {
 		dat = append(dat, tr.Data)
@@ -180,17 +186,7 @@ func MarshalTxPacket(txes []sqldb.Transaction) ([]byte, error) {
 	return json.Marshal(dat)
 }
 
-//func prepareTxPacket(txes []sqldb.Transaction) []byte {
-//	// form packet to send
-//	var buf bytes.Buffer
-//	for _, tr := range txes {
-//		buf.Write(tr.Data)
-//	}
-//
-//	return buf.Bytes()
-//}
-
-func prepareFullBlockRequest(block *sqldb.InfoBlock, trs []sqldb.Transaction, nodeID int64) []byte {
+func prepareFullBlockRequest(block *sqldb.InfoBlock, trs []Tx, nodeID int64) []byte {
 	var noBlockFlag byte
 	if block == nil {
 		noBlockFlag = 1

@@ -35,13 +35,13 @@ type DelayedTx struct {
 }
 
 // RunForDelayBlockID creates the transactions that need to be run for blockID
-func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*sqldb.Transaction, error) {
+func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*transaction.Pending, error) {
 	contracts, err := sqldb.GetAllDelayedContractsForBlockID(blockID)
 	if err != nil {
 		dtx.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting delayed contracts for block")
 		return nil, err
 	}
-	txList := make([]*sqldb.Transaction, 0, len(contracts))
+	txList := make([]*transaction.Pending, 0, len(contracts))
 	for _, c := range contracts {
 		tx, err := dtx.createDelayTxByItem(c.Contract, c.KeyID, c.HighRate)
 		if err != nil {
@@ -54,7 +54,7 @@ func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*sqldb.Transaction, e
 	return txList, nil
 }
 
-func (dtx *DelayedTx) createDelayTxByItem(name string, keyID, highRate int64) (*sqldb.Transaction, error) {
+func (dtx *DelayedTx) createDelayTxByItem(name string, keyID, highRate int64) (*transaction.Pending, error) {
 	privateKey, err := hex.DecodeString(dtx.privateKey)
 	if err != nil {
 		return nil, err
@@ -74,10 +74,9 @@ func (dtx *DelayedTx) createDelayTxByItem(name string, keyID, highRate int64) (*
 		Params: map[string]any{},
 	}
 
-	txData, txHash, err := transaction.NewInternalTransaction(smartTx, privateKey)
+	txData, _, err := transaction.NewInternalTransaction(smartTx, privateKey)
 	if err != nil {
 		return nil, err
 	}
-
-	return transaction.CreateDelayTransactionHighRate(txData, txHash, keyID, highRate), nil
+	return transaction.DelayedTransaction(txData, highRate)
 }

@@ -46,7 +46,6 @@ var daemonsList = map[string]func(context.Context, *daemon) error{
 	"BlocksCollection":    BlocksCollection,
 	"BlockGenerator":      BlockGenerator,
 	"Disseminator":        Disseminator,
-	"QueueParserTx":       QueueParserTx,
 	"QueueParserBlocks":   QueueParserBlocks,
 	"Confirmations":       Confirmations,
 	"Scheduler":           Scheduler,

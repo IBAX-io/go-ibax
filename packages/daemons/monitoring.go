@@ -14,6 +14,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -51,13 +52,7 @@ func Monitoring(w http.ResponseWriter, r *http.Request) {
 	addKey(&buf, "last_block_state", block)
 	addKey(&buf, "last_block_transactions", block.Tx)
 
-	trCount, err := sqldb.GetTransactionCountAll()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting transaction count all")
-		logError(w, fmt.Errorf("can't get transactions count: %s", err))
-		return
-	}
-	addKey(&buf, "transactions_count", trCount)
+	addKey(&buf, "transactions_count", transaction.TxPool.Len())
 
 	w.Write(buf.Bytes())
 }

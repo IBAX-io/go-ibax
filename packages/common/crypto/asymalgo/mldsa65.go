@@ -1,6 +1,10 @@
 package asymalgo
 
-import "crypto/mldsa"
+import (
+	"crypto/mldsa"
+
+	"github.com/IBAX-io/go-ibax/packages/common/gencache"
+)
 
 const (
 	// MLDSA65Context separates IBAX signatures from ML-DSA-65 signatures made for any other purpose
@@ -17,6 +21,7 @@ var mldsa65 = &mldsaLevel{
 	options:       &mldsa.Options{Context: MLDSA65Context},
 	publicKeySize: MLDSA65PublicKeySize,
 	signatureSize: MLDSA65SignatureSize,
+	keys:          gencache.New[string, *mldsa.PublicKey](mldsaKeysSize),
 }
 
 // MLDSA65 is ML-DSA-65 (FIPS 204, security category 3)

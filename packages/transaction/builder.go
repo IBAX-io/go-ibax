@@ -5,9 +5,10 @@
 package transaction
 
 import (
+	"bytes"
+
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
@@ -35,43 +36,27 @@ func NewTransactionInProc(smartTx types.SmartTransaction, privateKey []byte) (da
 }
 
 // CreateTransaction creates transaction
-func CreateTransaction(data, hash []byte, keyID, tnow int64) error {
-	tx := &sqldb.Transaction{
-		Hash:     hash,
-		Data:     data[:],
-		Type:     types.SmartContractTxType,
-		KeyID:    keyID,
-		HighRate: sqldb.TransactionRateOnBlock,
-		Time:     tnow,
-	}
-	if err := tx.Create(nil); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating new transaction")
+// CreateTransaction puts a transaction the node made in the pool, first for the next block
+func CreateTransaction(data []byte) error {
+	tx, err := UnmarshallTransaction(bytes.NewBuffer(data), true)
+	if err != nil {
 		return err
 	}
-	return nil
+	if err = TxPool.Admit([]*Transaction{tx}, RateOnBlock)[0]; err != nil {
+		log.WithFields(log.Fields{"type": consts.ParseError, "error": err}).Error("creating new transaction")
+	}
+	return err
 }
 
-// CreateDelayTransactionHighRate creates transaction
-func CreateDelayTransactionHighRate(data, hash []byte, keyID, highRate int64) *sqldb.Transaction {
-
-	t := int8(highRate)
-	tx := &sqldb.Transaction{
-		Hash:     hash,
-		Data:     data[:],
-		Type:     getTxTxType(t),
-		KeyID:    keyID,
-		HighRate: sqldb.GetTxRateByTxType(t),
+// DelayedTransaction is a delayed contract's transaction the node made for the block it makes
+func DelayedTransaction(data []byte, highRate int64) (*Pending, error) {
+	tx, err := UnmarshallTransaction(bytes.NewBuffer(data), true)
+	if err != nil {
+		return nil, err
 	}
-	return tx
-}
-
-func getTxTxType(rate int8) int8 {
-	ret := int8(1)
-	switch rate {
-	case types.SmartContractTxType, types.StopNetworkTxType:
-		ret = rate
-	default:
+	rate := RateClient
+	if highRate == int64(types.StopNetworkTxType) {
+		rate = RateStopNetwork
 	}
-
-	return ret
+	return &Pending{Tx: tx, Data: tx.FullData, Rate: rate}, nil
 }

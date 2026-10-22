@@ -15,6 +15,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -28,8 +29,6 @@ func Disseminator(ctx context.Context, d *daemon) error {
 	} else {
 		return nil
 	}
-	DBLock()
-	defer DBUnlock()
 
 	var (
 		isHonorNode = true
@@ -54,14 +53,8 @@ func Disseminator(ctx context.Context, d *daemon) error {
 }
 
 func sendTransactions(ctx context.Context, logger *log.Entry) error {
-	// get unsent transactions
-	trs, err := sqldb.GetAllUnsentTransactions(syspar.GetMaxTxCount())
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting all unsent transactions")
-		return err
-	}
-
-	if trs == nil || len(*trs) == 0 {
+	trs := unsentTransactions()
+	if len(trs) == 0 {
 		logger.Info("transactions not found")
 		return nil
 	}
@@ -79,23 +72,33 @@ func sendTransactions(ctx context.Context, logger *log.Entry) error {
 		}
 	}
 
-	if err := tcpclient.SendTransacitionsToAll(ctx, hosts, *trs); err != nil {
+	if err := tcpclient.SendTransacitionsToAll(ctx, hosts, trs); err != nil {
 		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on sending transactions")
 		return err
 	}
 
 	if len(hosts) > 0 {
-		// set all transactions as sent
-		var hashArr [][]byte
-		for _, tr := range *trs {
-			hashArr = append(hashArr, tr.Hash)
-		}
-		if err := sqldb.MarkTransactionSentBatches(hashArr); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marking transaction sent")
-			return err
-		}
+		markSent(trs)
 	}
 	return nil
+}
+
+// unsentTransactions are those of the pool not sent to the other nodes yet
+func unsentTransactions() []tcpclient.Tx {
+	data, hashes := transaction.TxPool.Unsent(syspar.GetMaxTxCount())
+	trs := make([]tcpclient.Tx, len(data))
+	for i := range data {
+		trs[i] = tcpclient.Tx{Hash: hashes[i], Data: data[i]}
+	}
+	return trs
+}
+
+func markSent(trs []tcpclient.Tx) {
+	hashes := make([][]byte, len(trs))
+	for i, tr := range trs {
+		hashes[i] = tr.Hash
+	}
+	transaction.TxPool.MarkSent(hashes)
 }
 
 // send block and transactions hashes
@@ -113,13 +116,8 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 		}
 	}
 
-	trs, err := sqldb.GetAllUnsentTransactions(syspar.GetMaxTxCount())
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting unsent transactions")
-		return err
-	}
-
-	if (trs == nil || len(*trs) == 0) && block == nil {
+	trs := unsentTransactions()
+	if len(trs) == 0 && block == nil {
 		// it's nothing to send
 		logger.Debug("nothing to send")
 		return nil
@@ -148,12 +146,12 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 		return err
 	}
 	if len(banHosts) > 0 {
-		if err := tcpclient.SendFullBlockToAll(ctx, banHosts, nil, *trs, honorNodeID); err != nil {
+		if err := tcpclient.SendFullBlockToAll(ctx, banHosts, nil, trs, honorNodeID); err != nil {
 			log.WithFields(log.Fields{"type": consts.TCPClientError, "error": err}).Warn("on sending block with hashes to ban hosts")
 			return err
 		}
 	}
-	if err := tcpclient.SendFullBlockToAll(ctx, hosts, block, *trs, honorNodeID); err != nil {
+	if err := tcpclient.SendFullBlockToAll(ctx, hosts, block, trs, honorNodeID); err != nil {
 		log.WithFields(log.Fields{"type": consts.TCPClientError, "error": err}).Warn("on sending block with hashes to all")
 		return err
 	}
@@ -167,16 +165,6 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 		}
 	}
 
-	if trs != nil {
-		var hashArr [][]byte
-		for _, tr := range *trs {
-			hashArr = append(hashArr, tr.Hash)
-		}
-		if err := sqldb.MarkTransactionSentBatches(hashArr); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marking transaction sent")
-			return err
-		}
-	}
-
+	markSent(trs)
 	return nil
 }

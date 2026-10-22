@@ -6,7 +6,6 @@
 package sqldb
 
 import (
-	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -37,9 +36,10 @@ func (ts *TransactionStatus) Get(transactionHash []byte) (bool, error) {
 	return isFound(DBConn.Where("hash = ?", transactionHash).First(ts))
 }
 
-// UpdateBlockID is updating block id
-func (ts *TransactionStatus) UpdateBlockID(dbTx *DbTransaction, newBlockID int64, transactionHash []byte) error {
-	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ?", transactionHash).Update("block_id", newBlockID).Error
+// DeleteTransactionStatus deletes the status of a transaction whose block is rolled back: the
+// transaction goes back to the pool, which answers for it
+func DeleteTransactionStatus(dbTx *DbTransaction, transactionHash []byte) error {
+	return GetDB(dbTx).Where("hash = ?", transactionHash).Delete(&TransactionStatus{}).Error
 }
 
 // UpsertBlockStatusBatches records the status of each transaction of a block, on every node that
@@ -67,15 +67,4 @@ func presentStatuses(statuses []*TransactionStatus) []*TransactionStatus {
 		}
 	}
 	return rows
-}
-
-// SetError is updating transaction status error. The status of a transaction in a block stays: a copy
-// sent again is refused as a duplicate, which says nothing of the one in the block
-func (ts *TransactionStatus) SetError(dbTx *DbTransaction, errorText string, transactionHash []byte) error {
-	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ? AND block_id = 0", transactionHash).Update("error", errorText).Error
-}
-
-// UpdatePenalty is updating penalty
-func (ts *TransactionStatus) UpdatePenalty(dbTx *DbTransaction, transactionHash []byte) error {
-	return GetDB(dbTx).Model(&TransactionStatus{}).Where("hash = ? AND penalty = 0", transactionHash).Update("penalty", int64(pbgo.TxInvokeStatusCode_PENALTY)).Error
 }

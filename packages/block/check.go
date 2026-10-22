@@ -77,6 +77,7 @@ func (b *Block) Check() error {
 	// check each transaction
 	txCounter := make(map[int64]int)
 	txHashes := make(map[string]struct{})
+	checked := transaction.CheckBatch(b.Transactions, b.Header.Timestamp)
 	for i, t := range b.Transactions {
 		hexHash := string(converter.BinToHex(t.Hash()))
 		// check for duplicate transactions
@@ -92,8 +93,7 @@ func (b *Block) Check() error {
 			return utils.WithBan(utils.ErrInfo(fmt.Errorf("max_block_user_transactions")))
 		}
 
-		err := t.Check(b.Header.Timestamp)
-		if err != nil {
+		if err := checked[i]; err != nil {
 			if !b.trial {
 				transaction.MarkTransactionBad(t.Hash(), err.Error())
 			}

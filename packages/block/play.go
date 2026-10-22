@@ -43,6 +43,11 @@ func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 		return err
 	}
 
+	if !b.GenBlock {
+		// The signatures of the transactions this node has not seen are verified in parallel
+		// here, so that their execution finds them verified; an error is the execution's to report
+		transaction.VerifyAll(b.Transactions)
+	}
 	err = b.ProcessTxs(dbTx)
 	if err != nil {
 		dbTx.Rollback()
@@ -78,6 +83,11 @@ func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 		return err
 	}
 	b.stage(metrics.StageCommit, start)
+	hashes := make([][]byte, len(b.Transactions))
+	for i, t := range b.Transactions {
+		hashes[i] = t.Hash()
+	}
+	transaction.TxPool.Remove(hashes)
 	start = time.Now()
 	for _, q := range b.Notifications {
 		q.Send()
@@ -115,7 +125,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 					continue
 				}
 				transaction.BadTxForBan(badTxItem.keyID)
-				_ = transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
+				transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
 			}
 		}()
 		return ch

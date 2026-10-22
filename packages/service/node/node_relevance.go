@@ -6,6 +6,7 @@ package node
 
 import (
 	"context"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"time"
 
 	"github.com/pkg/errors"
@@ -79,16 +80,7 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 		log.WithFields(log.Fields{"type": consts.DBError, "err": err}).Error("retrieving info block from db")
 		return false, errors.Wrapf(err, "retrieving info block from db")
 	}
-	var (
-		tx = &sqldb.Transaction{}
-		r  bool
-	)
-	r, err = tx.GetStopNetwork()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "err": err}).Info("retrieving transaction from db")
-		return false, nil
-	}
-	if r {
+	if transaction.TxPool.HasStopNetwork() {
 		return false, nil
 	}
 	var (

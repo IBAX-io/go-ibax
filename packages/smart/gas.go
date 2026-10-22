@@ -273,10 +273,6 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	if errNeedPay {
 		comment = "(error)" + comment
 		status = pbgo.TxInvokeStatusCode_PENALTY
-		ts := sqldb.TransactionStatus{}
-		if err := ts.UpdatePenalty(sc.DbTransaction, sc.Hash); err != nil {
-			return err
-		}
 	}
 	for i := 0; i < len(sc.multiPays); i++ {
 		pay := sc.multiPays[i]

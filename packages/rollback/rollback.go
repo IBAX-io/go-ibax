@@ -21,12 +21,6 @@ import (
 
 // ToBlockID rollbacks blocks till blockID
 func ToBlockID(blockID int64, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
-	_, err := sqldb.MarkVerifiedAndNotUsedTransactionsUnverified()
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("marking verified and not used transactions unverified")
-		return err
-	}
-
 	// roll back our blocks
 	for {
 		block := &sqldb.BlockChain{}
@@ -49,7 +43,7 @@ func ToBlockID(blockID int64, dbTx *sqldb.DbTransaction, logger *log.Entry) erro
 		blocks = blocks[:0]
 	}
 	block := &sqldb.BlockChain{}
-	_, err = block.Get(blockID)
+	_, err := block.Get(blockID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block")
 		return err

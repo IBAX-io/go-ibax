@@ -8,6 +8,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
+// Queue is the notifications of the accounts and roles a transaction changed
 type Queue struct {
 	Accounts []*Accounts
 	Roles    []*Roles
@@ -41,14 +42,10 @@ func (q *Queue) AddRoles(ecosystem int64, list ...int64) {
 	})
 }
 
+// Send hands the notifications to the pusher, which sends them after the block that made them,
+// off the lock of the blocks: it neither reads the database nor calls Centrifugo itself
 func (q *Queue) Send() {
-	for _, a := range q.Accounts {
-		UpdateNotifications(a.Ecosystem, a.List)
-	}
-
-	for _, r := range q.Roles {
-		UpdateRolesNotifications(r.Ecosystem, r.List)
-	}
+	pusher.add(q)
 }
 
 func NewQueue() types.Notifications {

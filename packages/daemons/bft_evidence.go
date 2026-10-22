@@ -159,5 +159,5 @@ func submitEvidenceTx(body []byte) error {
 	if err != nil {
 		return err
 	}
-	return transaction.CreateTransaction(txData, stp.Hash, sc.KeyID, stp.Timestamp)
+	return transaction.CreateTransaction(txData)
 }
