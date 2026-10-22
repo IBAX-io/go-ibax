@@ -49,7 +49,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		d.logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
 		return errors.New(`node public key is empty`)
 	}
-	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
+	candidateNodes, err := syspar.GetCandidateNodes()
 	if err != nil {
 		log.WithError(err).Error("getting candidate node list")
 		return err

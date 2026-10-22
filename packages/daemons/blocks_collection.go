@@ -171,7 +171,7 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 					// d.logger.WithFields(log.Fields{"error": err, "type": consts.BlockError}).Error("playing raw block")
 					return err
 				}
-				if candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes)); err == nil && len(candidateNodes) > 0 {
+				if candidateNodes, err := syspar.GetCandidateNodes(); err == nil && len(candidateNodes) > 0 {
 					syspar.SetRunModel(consts.CandidateNodeMode)
 				} else {
 					syspar.SetRunModel(consts.HonorNodeMode)

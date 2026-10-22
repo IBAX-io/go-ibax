@@ -40,17 +40,11 @@ func (ib *CandidateNode) TableName() string {
 	return "1_candidate_node_requests"
 }
 
-// GetCandidateNode returns last good block
+// GetCandidateNode returns the candidate nodes of the table that qualify, at most numberOfNodes.
+// The nodes take them by syspar.GetCandidateNodes, which a chain of honor nodes only answers
+// without the table.
 func GetCandidateNode(numberOfNodes int) (CandidateNodes, error) {
 	var candidateNodes CandidateNodes
-	// A chain of honor nodes only has no candidates, whatever its tables hold: every caller
-	// that finds none keeps the honor node mode
-	honorOnly := &PlatformParameter{}
-	if found, err := honorOnly.Get(nil, "honor_nodes_only"); err != nil {
-		return nil, err
-	} else if found && honorOnly.Value == "1" {
-		return candidateNodes, nil
-	}
 	pledgeAmount, err := GetPledgeAmount()
 	if err != nil {
 		return nil, err

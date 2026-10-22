@@ -39,7 +39,7 @@ func (candidateNodeMode *CandidateNodeMode) GetThisNodePosition() (int64, error)
 	return GetCandidateNodePositionByPublicKey()
 }
 func (candidateNodeMode *CandidateNodeMode) GetHostWithMaxID() ([]string, error) {
-	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
+	candidateNodes, err := syspar.GetCandidateNodes()
 	if err != nil {
 		log.WithError(err).Error("getting candidate node list")
 		return nil, err
@@ -90,7 +90,7 @@ func GetCandidateNodes() (sqldb.CandidateNodes, error) {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("node public key is empty")
 		return nil, errors.New(`node public key is empty`)
 	}
-	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
+	candidateNodes, err := syspar.GetCandidateNodes()
 	if err != nil {
 		log.WithError(err).Error("getting candidate node error")
 		return nil, err

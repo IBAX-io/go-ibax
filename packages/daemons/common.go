@@ -200,7 +200,7 @@ func GetRemoteGoodHosts() ([]string, error) {
 		return node.GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
 	}
 	hosts := make([]string, 0)
-	candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
+	candidateNodes, err := syspar.GetCandidateNodes()
 	if err != nil {
 		log.WithError(err).Error("getting candidate node list")
 		return nil, err

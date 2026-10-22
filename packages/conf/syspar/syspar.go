@@ -751,10 +751,24 @@ func SetRunModel(setVal uint8) {
 	runModel = setVal
 }
 
+// IsHonorNodeMode reports whether the honor nodes generate the blocks. A chain of honor nodes
+// only is in this mode whatever its tables hold: its first block fixes it.
 func IsHonorNodeMode() bool {
-	return runModel == consts.HonorNodeMode
+	return runModel == consts.HonorNodeMode || IsHonorNodesOnly()
 }
 
+// IsCandidateNodeMode reports whether the candidate nodes generate the blocks. A chain of honor
+// nodes only, as any chain of the BFT consensus, never is: its first block fixes it.
 func IsCandidateNodeMode() bool {
-	return runModel == consts.CandidateNodeMode
+	return runModel == consts.CandidateNodeMode && !IsHonorNodesOnly()
+}
+
+// GetCandidateNodes returns the candidate nodes that generate the blocks, none on a chain of
+// honor nodes only whatever its tables hold: its first block fixes it, not the platform
+// parameter, which only shows it.
+func GetCandidateNodes() (sqldb.CandidateNodes, error) {
+	if IsHonorNodesOnly() {
+		return nil, nil
+	}
+	return sqldb.GetCandidateNode(SysInt(NumberNodes))
 }

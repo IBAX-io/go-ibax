@@ -97,7 +97,7 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 	if syspar.IsHonorNodeMode() {
 		remoteHosts, err = GetNodesBanService().FilterBannedHosts(syspar.GetRemoteHosts())
 	} else {
-		candidateNodes, err := sqldb.GetCandidateNode(syspar.SysInt(syspar.NumberNodes))
+		candidateNodes, err := syspar.GetCandidateNodes()
 		if err == nil && len(candidateNodes) > 0 {
 			for _, node := range candidateNodes {
 				remoteHosts = append(remoteHosts, node.TcpAddress)
