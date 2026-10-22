@@ -49,42 +49,32 @@ func ProcessBlockByBinData(data []byte, checkSize bool) (*Block, error) {
 	return block, nil
 }
 
-func (b *Block) GetRollbacksHash(dbTx *sqldb.DbTransaction) ([]byte, error) {
-	r := &sqldb.RollbackTx{}
-	diff, err := r.GetRollbacksDiff(dbTx, b.Header.BlockId)
-	if err != nil {
-		return nil, err
-	}
-	return crypto.Hash(diff), nil
-}
-
-func GetRollbacksHashWithDiffArr(dbTx *sqldb.DbTransaction, bId int64) ([]byte, error) {
-	rollbackTx := sqldb.RollbackTx{}
-	rollbackTxs, err := rollbackTx.GetBlockRollbackTransactions(dbTx, bId)
-	if err != nil {
-		return nil, err
-	}
-	arr := make([]string, 0)
-	for _, row := range rollbackTxs {
+// rollbacksHash is the hash of the rollback records and the outputs a block writes, taken from
+// the records the block wrote rather than read back from the tables
+func rollbacksHash(blockID int64, rts []*sqldb.RollbackTx, outputs []sqldb.SpentInfo) ([]byte, error) {
+	arr := make([]string, 0, len(rts)+len(outputs))
+	for _, row := range rts {
 		data, err := json.Marshal(row)
 		if err != nil {
-			continue
+			return nil, err
 		}
 		arr = append(arr, crypto.HashHex(data))
 	}
-	spentInfos, err := sqldb.GetBlockOutputs(dbTx, bId)
-	if err != nil {
-		return nil, err
-	}
-	for _, row := range spentInfos {
+	for _, row := range outputs {
+		if row.BlockId != blockID {
+			continue
+		}
 		data, err := json.Marshal(row)
 		if err != nil {
-			continue
+			return nil, err
 		}
 		arr = append(arr, crypto.HashHex(data))
 	}
 	sort.Strings(arr)
-	marshal, _ := json.Marshal(arr)
+	marshal, err := json.Marshal(arr)
+	if err != nil {
+		return nil, err
+	}
 	return crypto.Hash(marshal), nil
 }
 
@@ -97,12 +87,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting block by id")
 		return err
 	}
-	var rHash []byte
-	rHash, err = GetRollbacksHashWithDiffArr(dbTx, blockID)
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("getting rollbacks hash")
-		return err
-	}
+	rHash := b.rollbacksHash
 	if b.GenBlock {
 		b.Header.RollbacksHash = rHash
 		if err = b.repeatMarshallBlock(); err != nil {
@@ -309,6 +294,11 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 			return errors.Wrap(err, "batches insert log_transactions")
 		}
 		spentInfos := sqldb.GetAllOutputs(b.OutputsMap)
+		rHash, err := rollbacksHash(b.Header.BlockId, playTx.Rts, spentInfos)
+		if err != nil {
+			return errors.Wrap(err, "rollbacks hash")
+		}
+		b.rollbacksHash = rHash
 		if len(spentInfos) > 0 {
 			if err := sqldb.CreateSpentInfoBatches(tx, spentInfos); err != nil {
 				return errors.Wrap(err, "batches insert spent_info")
