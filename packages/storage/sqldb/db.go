@@ -120,14 +120,13 @@ func GormInit(conf conf.DBConfig) error {
 	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable password=%s TimeZone=UTC", conf.Host, conf.Port, conf.User, conf.Name, conf.Password)
 open:
 	DBConn, err = gorm.Open(postgres.New(postgres.Config{
-		DSN:                  dsn,
-		PreferSimpleProtocol: true, // disables implicit prepared statement usage
+		// The extended protocol: pgx prepares a statement once on a connection and keeps it in
+		// its statement cache, so a statement a block repeats is planned once
+		DSN: dsn,
 	}), &gorm.Config{
-		AllowGlobalUpdate: true, //allow global update
-		//PrepareStmt:       true,
-		Logger: logger.Default.LogMode(logger.Silent), // start Logger, show detail log
+		AllowGlobalUpdate: true,                                  //allow global update
+		Logger:            logger.Default.LogMode(logger.Silent), // start Logger, show detail log
 	})
-	//DBConn, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		if strings.Contains(err.Error(), "SQLSTATE 3D000") {
 			err := createDatabase(fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable TimeZone=UTC", conf.Host, conf.Port, conf.User, conf.Password), conf.Name)
