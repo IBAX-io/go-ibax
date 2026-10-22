@@ -23,6 +23,9 @@ type account struct {
 	private []byte
 	public  crypto.AccountKey
 	keyID   int64
+	// unregistered is an account with no key in 1_keys yet: its transactions carry the key in the
+	// header, those of a registered account leave it out
+	unregistered bool
 }
 
 func (a *account) address() string { return converter.AddressToString(a.keyID) }

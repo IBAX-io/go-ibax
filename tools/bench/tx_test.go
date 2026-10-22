@@ -39,7 +39,9 @@ func TestSignedTransactionsPassTheNode(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		// New accounts: the header carries the key, which a node checks without its database
 		from, to := accounts[0], accounts[1]
+		from.unregistered = true
 		self, err := s.transferSelf(from, "1000", "UTXO", "Account")
 		if err != nil {
 			t.Fatal(err)

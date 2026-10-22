@@ -36,7 +36,8 @@ func newSigner(info *chainInfo) *signer {
 }
 
 // sign fills the header of tx with the account and signs it: the hash is the double hash of the
-// payload, and the signature is of the hash, as AccountKey.Verify checks it
+// payload, and the signature is of the hash, as AccountKey.Verify checks it. The header carries
+// the key of an account that has not registered it only.
 func (s *signer) sign(a *account, tx *types.SmartTransaction) (*signedTx, error) {
 	if tx.Header == nil {
 		tx.Header = &types.Header{}
@@ -45,7 +46,10 @@ func (s *signer) sign(a *account, tx *types.SmartTransaction) (*signedTx, error)
 	tx.KeyID = a.keyID
 	tx.Time = s.time
 	tx.NetworkID = s.networkID
-	tx.PublicKey = a.public.Bytes()
+	tx.PublicKey = nil
+	if a.unregistered {
+		tx.PublicKey = a.public.Bytes()
+	}
 	tx.Lang = "en"
 	payload, err := tx.Marshal()
 	if err != nil {

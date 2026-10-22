@@ -72,6 +72,9 @@ func setup(c *chainClient, cfg setupConfig) error {
 	if err != nil {
 		return err
 	}
+	for _, a := range accounts {
+		a.unregistered = true
+	}
 	each := func(step string, sign func(i int, a *account) (*signedTx, error)) error {
 		txs := make([]*signedTx, 0, len(accounts))
 		for i, a := range accounts {
@@ -88,6 +91,9 @@ func setup(c *chainClient, cfg setupConfig) error {
 		return c.signer.contract(a, ids["@1NewUser"], map[string]any{"NewPubkey": fmt.Sprintf("%x", a.public.Bytes())})
 	}); err != nil {
 		return err
+	}
+	for _, a := range accounts {
+		a.unregistered = false
 	}
 	if err := each("TokensSend from the founder", func(_ int, a *account) (*signedTx, error) {
 		return c.signer.contract(c.founder, ids["@1TokensSend"], map[string]any{"Recipient": a.address(), "Amount": cfg.fund.String(), "Comment": "bench " + a.address()})
