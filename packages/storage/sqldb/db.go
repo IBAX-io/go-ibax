@@ -144,6 +144,10 @@ open:
 		DBConn = nil
 		return err
 	}
+	if err = registerTxCache(DBConn); err != nil {
+		DBConn = nil
+		return err
+	}
 	sqlDB, err := DBConn.DB()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("cant get sql DB")
@@ -208,6 +212,7 @@ func GormClose() error {
 type DbTransaction struct {
 	conn       *gorm.DB
 	statements *atomic.Int64
+	cache      *txCache
 }
 
 func NewDbTransaction(conn *gorm.DB) *DbTransaction {
@@ -222,6 +227,7 @@ func (d *DbTransaction) Debug() *DbTransaction {
 // StartTransaction is beginning transaction
 func StartTransaction() (*DbTransaction, error) {
 	ctx, statements := withStatementCount()
+	ctx, cache := withTxCache(ctx)
 	conn := DBConn.WithContext(ctx).Begin()
 	if conn.Error != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": conn.Error}).Error("cannot start transaction because of connection error")
@@ -235,6 +241,7 @@ func StartTransaction() (*DbTransaction, error) {
 	return &DbTransaction{
 		conn:       conn,
 		statements: statements,
+		cache:      cache,
 	}, nil
 }
 
@@ -298,6 +305,9 @@ func (dbTx *DbTransaction) GetRecordsCountTx(tableName, where string) (count int
 		dbQuery = dbQuery.Where(where)
 	}
 	if !notAutoIncrement[tableName] {
+		if len(where) == 0 && !strings.ContainsAny(tableName, `" `) {
+			return dbTx.maxID(tableName)
+		}
 		err := dbQuery.Select("id").Order("id DESC").Limit(1).Scan(&count).Error
 		if err != nil {
 			return 0, err
@@ -412,16 +422,18 @@ func (dbTx *DbTransaction) DropTable(tableName string) error {
 // NumIndexes is counting table indexes
 func (dbTx *DbTransaction) NumIndexes(tblname string) (int, error) {
 	var indexes int64
-	err := GetDB(dbTx).Raw(fmt.Sprintf(`select count( i.relname) from pg_class t, pg_class i, pg_index ix, pg_attribute a
+	return cached(dbTx, schemaTable, "indexes:"+tblname, func() (int, error) {
+		err := GetDB(dbTx).Raw(fmt.Sprintf(`select count( i.relname) from pg_class t, pg_class i, pg_index ix, pg_attribute a
 	 where t.oid = ix.indrelid and i.oid = ix.indexrelid and a.attrelid = t.oid and a.attnum = ANY(ix.indkey)
          and t.relkind = 'r'  and t.relname = '%s'`, tblname)).Row().Scan(&indexes)
-	if err == gorm.ErrRecordNotFound {
-		return 0, nil
-	}
-	if err != nil {
-		return 0, err
-	}
-	return int(indexes - 1), nil
+		if err == gorm.ErrRecordNotFound {
+			return 0, nil
+		}
+		if err != nil {
+			return 0, err
+		}
+		return int(indexes - 1), nil
+	})
 }
 
 // IsIndex returns is table column is an index
@@ -435,16 +447,11 @@ func (dbTx *DbTransaction) IsIndex(tblname, column string) (bool, error) {
 
 // GetNextID returns next ID of table
 func (dbTx *DbTransaction) GetNextID(table string) (int64, error) {
-	var id int64
-	rows, err := GetDB(dbTx).Raw(`select id from "` + table + `" order by id desc limit 1`).Rows()
+	id, err := dbTx.maxID(table)
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("selecting next id from table")
 		return 0, err
 	}
-	rows.Next()
-	rows.Scan(&id)
-	rows.Close()
-	return id + 1, err
+	return id + 1, nil
 }
 
 // IsTable returns is table exists

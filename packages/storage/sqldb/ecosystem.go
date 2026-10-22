@@ -147,14 +147,16 @@ func IsFrozen(dbTx *DbTransaction, id int64) (bool, error) {
 // ControlMode is the control mode of the ecosystem: 1 its founder governs it, 2 the votings of its
 // members do (DAO mode). An ecosystem that does not exist has 0.
 func ControlMode(dbTx *DbTransaction, id int64) (int64, error) {
-	var mode []int64
-	if err := GetDB(dbTx).Model(&Ecosystem{}).Where("id = ?", id).Pluck("control_mode", &mode).Error; err != nil {
-		return 0, err
-	}
-	if len(mode) == 0 {
-		return 0, nil
-	}
-	return mode[0], nil
+	return cached(dbTx, ecosysTable, "controlmode:"+strconv.FormatInt(id, 10), func() (int64, error) {
+		var mode []int64
+		if err := GetDB(dbTx).Model(&Ecosystem{}).Where("id = ?", id).Pluck("control_mode", &mode).Error; err != nil {
+			return 0, err
+		}
+		if len(mode) == 0 {
+			return 0, nil
+		}
+		return mode[0], nil
+	})
 }
 
 // Delete is deleting record
