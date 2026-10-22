@@ -26,11 +26,11 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/daemons"
 	"github.com/IBAX-io/go-ibax/packages/faults"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/modes"
 	"github.com/IBAX-io/go-ibax/packages/network/httpserver"
 	"github.com/IBAX-io/go-ibax/packages/publisher"
 	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/statsd"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
@@ -48,7 +48,6 @@ func Start() {
 	exitErr := func(code int) {
 		system.RemovePidFile()
 		sqldb.GormClose()
-		statsd.Close()
 		os.Exit(code)
 	}
 	f := utils.LockOrDie(conf.Config.DirPathConf.LockFilePath)
@@ -91,7 +90,10 @@ func Start() {
 		exitErr(1)
 	}
 	publisher.InitCentrifugo(conf.Config.Centrifugo)
-	initStatsd()
+	if err := metrics.Serve(conf.Config.Metrics.Listen); err != nil {
+		log.WithFields(log.Fields{"type": consts.ConfigError, "error": err}).Error("serving the metrics")
+		exitErr(1)
+	}
 
 	rand.Seed(time.Now().UTC().UnixNano())
 	smart.InitVM()
@@ -136,12 +138,6 @@ func Start() {
 	initRoutes(conf.Config.HTTP.Str())
 
 	select {}
-}
-
-func initStatsd() {
-	if err := statsd.Init(conf.Config.StatsD); err != nil {
-		log.WithFields(log.Fields{"type": consts.StatsdError, "error": err}).Fatal("cannot initialize statsd")
-	}
 }
 
 func initLogs() error {

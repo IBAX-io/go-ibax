@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
-	"github.com/IBAX-io/go-ibax/packages/statsd"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
@@ -127,19 +127,18 @@ func (m Mode) clientMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func statsdMiddleware(next http.Handler) http.Handler {
-	const v = 1.0
+// metricsMiddleware times each request by the template of its route, so the routes and not the
+// paths requested label the metric
+func metricsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		route := mux.CurrentRoute(r)
-
-		counterName := statsd.APIRouteCounterName(r.Method, route.GetName())
-		statsd.Client.Inc(counterName+statsd.Count, 1, v)
 		startTime := time.Now()
-
-		defer func() {
-			statsd.Client.TimingDuration(counterName+statsd.Time, time.Since(startTime), v)
-		}()
-
 		next.ServeHTTP(w, r)
+		route := "unmatched"
+		if cur := mux.CurrentRoute(r); cur != nil {
+			if tpl, err := cur.GetPathTemplate(); err == nil {
+				route = tpl
+			}
+		}
+		metrics.APIRequest.WithLabelValues("rest", r.Method, route).Observe(metrics.Since(startTime))
 	})
 }

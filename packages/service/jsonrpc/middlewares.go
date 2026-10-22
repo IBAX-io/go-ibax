@@ -7,14 +7,11 @@ package jsonrpc
 import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
-	"github.com/IBAX-io/go-ibax/packages/statsd"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/didip/tollbooth"
-	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"runtime/debug"
-	"time"
 )
 
 func clientMiddleware(next http.Handler, m Mode) http.Handler {
@@ -100,24 +97,6 @@ func tokenMiddleware(next http.Handler) http.Handler {
 		if token != nil && token.Valid {
 			r = setToken(r, token)
 		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func statsdMiddleware(next http.Handler) http.Handler {
-	const v = 1.0
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//request url
-		route := mux.CurrentRoute(r)
-
-		counterName := statsd.APIRouteCounterName(r.Method, route.GetName())
-		statsd.Client.Inc(counterName+statsd.Count, 1, v)
-		startTime := time.Now()
-
-		defer func() {
-			statsd.Client.TimingDuration(counterName+statsd.Time, time.Since(startTime), v)
-		}()
-
 		next.ServeHTTP(w, r)
 	})
 }

@@ -7,7 +7,6 @@ package daemons
 
 import (
 	"github.com/IBAX-io/go-ibax/packages/chain/system"
-	"github.com/IBAX-io/go-ibax/packages/statsd"
 	"os"
 	"os/signal"
 	"syscall"
@@ -84,7 +83,6 @@ func WaitForSignals() {
 						"type": consts.IOError, "error": err, "path": conf.Config.GetPidPath(),
 					}).Error("removing file")
 				}
-				statsd.Close()
 				os.Exit(1)
 			}
 		}

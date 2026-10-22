@@ -23,7 +23,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
-	"github.com/IBAX-io/go-ibax/packages/statsd"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 
 	log "github.com/sirupsen/logrus"
@@ -90,9 +90,8 @@ func daemonLoop(ctx context.Context, goRoutineName string, handler func(context.
 		case <-idleDelay.C:
 			MonitorDaemonCh <- []string{d.goRoutineName, converter.Int64ToStr(time.Now().Unix())}
 			startTime := time.Now()
-			counterName := statsd.DaemonCounterName(goRoutineName)
 			handler(ctx, d)
-			statsd.Client.TimingDuration(counterName+statsd.Time, time.Now().Sub(startTime), 1.0)
+			metrics.DaemonRun.WithLabelValues(goRoutineName).Observe(metrics.Since(startTime))
 		}
 	}
 }
@@ -143,7 +142,7 @@ func getHostPort(h string) string {
 	return fmt.Sprintf("%s:%d", h, consts.DefaultTcpPort)
 }
 
-//ntp
+// ntp
 func Ntp_Work(ctx context.Context) {
 	var count = 0
 	for {

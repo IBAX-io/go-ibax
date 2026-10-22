@@ -16,6 +16,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -32,10 +33,12 @@ func ProcessBlockByBinData(data []byte, checkSize bool) (*Block, error) {
 		log.WithFields(log.Fields{"check_size": checkSize, "size": len(data), "max_size": syspar.GetMaxBlockSize(), "type": consts.ParameterExceeded}).Error("binary block size exceeds max block size")
 		return nil, types.ErrMaxBlockSize(syspar.GetMaxBlockSize(), len(data))
 	}
+	start := time.Now()
 	block, err := UnmarshallBlock(bytes.NewBuffer(data), true)
 	if err != nil {
 		return nil, errors.Wrap(types.ErrUnmarshallBlock, err.Error())
 	}
+	metrics.BlockStage.WithLabelValues(metrics.KindReceived, metrics.StageParse).Observe(metrics.Since(start))
 	block.PrevHeader, err = GetBlockHeaderFromBlockChain(block.Header.BlockId - 1)
 	if err != nil {
 		return nil, err

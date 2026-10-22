@@ -126,7 +126,7 @@ func (m Mode) SetSubNodeRoutes(r Router) {}
 func NewRouter(m Mode) Router {
 	r := mux.NewRouter()
 	r.StrictSlash(true)
-	r.Use(loggerMiddleware, recoverMiddleware, statsdMiddleware)
+	r.Use(loggerMiddleware, recoverMiddleware, metricsMiddleware)
 
 	api := Router{
 		main:        r,

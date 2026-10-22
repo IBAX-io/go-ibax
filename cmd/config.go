@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -111,10 +110,8 @@ func init() {
 	cmdFlags.IntVar(&conf.Config.Redis.DbName, "redisDb", 0, "redis db")
 	cmdFlags.StringVar(&conf.Config.Redis.Password, "redisPassword", "123456", "redis password")
 
-	// StatsD
-	cmdFlags.StringVar(&conf.Config.StatsD.Host, "statsdHost", "127.0.0.1", "StatsD host")
-	cmdFlags.IntVar(&conf.Config.StatsD.Port, "statsdPort", 8125, "StatsD port")
-	cmdFlags.StringVar(&conf.Config.StatsD.Name, "statsdName", "chain", "StatsD name")
+	// Metrics
+	cmdFlags.StringVar(&conf.Config.Metrics.Listen, "metricsListen", "", "loopback host:port serving the Prometheus metrics at /metrics and the Go profiler at /debug/pprof/; empty serves nothing")
 
 	// Centrifugo
 	cmdFlags.StringVar(&conf.Config.Centrifugo.Secret, "centSecret", "127.0.0.1", "Centrifugo secret")

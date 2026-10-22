@@ -11,12 +11,17 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
 
-var mutex = sync.Mutex{}
+var (
+	mutex = sync.Mutex{}
+	// lockedAt is when the lock was taken; only the holder of the lock reads and writes it
+	lockedAt time.Time
+)
 
 // WaitDB waits for the end of the installation
 func WaitDB(ctx context.Context) error {
@@ -59,10 +64,14 @@ func CheckDB() bool {
 
 // DBLock locks daemons
 func DBLock() {
+	start := time.Now()
 	mutex.Lock()
+	lockedAt = time.Now()
+	metrics.LockWait.Observe(lockedAt.Sub(start).Seconds())
 }
 
 // DBUnlock unlocks database
 func DBUnlock() {
+	metrics.LockHold.Observe(metrics.Since(lockedAt))
 	mutex.Unlock()
 }

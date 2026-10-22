@@ -29,11 +29,10 @@ type (
 		DbName   int
 	}
 
-	// StatsDConfig statd connection parameters
-	StatsDConfig struct {
-		Host string
-		Port int
-		Name string
+	// MetricsConfig is where the node serves its Prometheus metrics and the Go profiler
+	MetricsConfig struct {
+		// Listen is a loopback host and a port; empty serves nothing
+		Listen string
 	}
 
 	// CentrifugoConfig connection params
@@ -127,7 +126,7 @@ type (
 		}
 		DB             DBConfig
 		Redis          RedisConfig
-		StatsD         StatsDConfig
+		Metrics        MetricsConfig
 		Centrifugo     CentrifugoConfig
 		Log            LogConfig
 		TokenMovement  TokenMovementConfig

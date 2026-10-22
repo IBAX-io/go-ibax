@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -139,6 +140,10 @@ open:
 		DBConn = nil
 		return err
 	}
+	if err = registerStatementCount(DBConn); err != nil {
+		DBConn = nil
+		return err
+	}
 	sqlDB, err := DBConn.DB()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("cant get sql DB")
@@ -201,7 +206,8 @@ func GormClose() error {
 
 // DbTransaction is gorm.DB wrapper
 type DbTransaction struct {
-	conn *gorm.DB
+	conn       *gorm.DB
+	statements *atomic.Int64
 }
 
 func NewDbTransaction(conn *gorm.DB) *DbTransaction {
@@ -215,7 +221,8 @@ func (d *DbTransaction) Debug() *DbTransaction {
 
 // StartTransaction is beginning transaction
 func StartTransaction() (*DbTransaction, error) {
-	conn := DBConn.Begin()
+	ctx, statements := withStatementCount()
+	conn := DBConn.WithContext(ctx).Begin()
 	if conn.Error != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": conn.Error}).Error("cannot start transaction because of connection error")
 		return nil, conn.Error
@@ -226,7 +233,8 @@ func StartTransaction() (*DbTransaction, error) {
 	}
 
 	return &DbTransaction{
-		conn: conn,
+		conn:       conn,
+		statements: statements,
 	}, nil
 }
 
