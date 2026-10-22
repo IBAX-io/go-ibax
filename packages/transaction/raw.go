@@ -61,7 +61,7 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer, fill bool) error {
 		if err != nil {
 			return err
 		}
-		if err = itx.Unmarshal(bytes.NewBuffer(newbuf), fill); err != nil {
+		if err = itx.Unmarshal(bytes.NewBuffer(newbuf[1:]), fill); err != nil {
 			return err
 		}
 

@@ -7,7 +7,6 @@ package transaction
 import (
 	"bytes"
 	"fmt"
-	"reflect"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -261,12 +260,22 @@ func (s *SmartTransactionParser) TxRollback() error {
 	return syspar.SysUpdate(s.DbTransaction)
 }
 
+// storedTx is the form a block holds a transaction in and nodes pass on: the payload the client
+// signed, the signature and the time the node took the transaction. The hash and the body the node
+// runs are derived from the payload, so a stored transaction runs only what its signature covers.
+type storedTx struct {
+	_msgpack    struct{} `msgpack:",as_array"`
+	Payload     []byte
+	TxSignature []byte
+	Timestamp   int64
+}
+
 func (s *SmartTransactionParser) Marshal() ([]byte, error) {
 	s.setTimestamp()
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}
-	buf, err := msgpack.Marshal(s)
+	buf, err := msgpack.Marshal(&storedTx{Payload: s.Payload, TxSignature: s.TxSignature, Timestamp: s.Timestamp})
 	if err != nil {
 		return nil, err
 	}
@@ -307,26 +316,21 @@ func (s *SmartTransactionParser) BinMarshalWithPrivate(smartTx *types.SmartTrans
 }
 
 func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer, fill bool) error {
-	buffer.UnreadByte()
-	if err := msgpack.Unmarshal(buffer.Bytes()[1:], s); err != nil {
+	var stored storedTx
+	if err := msgpack.Unmarshal(buffer.Bytes(), &stored); err != nil {
 		return err
 	}
-	// A stored transaction carries the payload, the hash of that payload and the transaction the
-	// node runs as fields of their own, and nothing ties the three together. The signature covers
-	// the hash, so the payload is the part taken as given: a body its payload does not encode would
-	// otherwise run under a signature given for another transaction, and anyone who saw a signed
-	// transaction could put a body of their own under its hash and its signature. The client format
-	// derives the hash and the body from the payload; the stored format is held to the same relation
-	// here, before the queue and before a received block runs anything.
-	if len(s.Payload) == 0 || !bytes.Equal(s.Hash, crypto.DoubleHash(s.Payload)) {
-		return fmt.Errorf("the hash of a transaction is not the hash of its payload")
+	if len(stored.Payload) == 0 {
+		return fmt.Errorf("a stored transaction carries no payload")
 	}
-	signed := new(types.SmartTransaction)
-	if err := msgpack.Unmarshal(s.Payload, &signed); err != nil {
+	s.Payload, s.TxSignature, s.Timestamp = stored.Payload, stored.TxSignature, stored.Timestamp
+	s.Hash = crypto.DoubleHash(s.Payload)
+	s.TxSmart = new(types.SmartTransaction)
+	if err := msgpack.Unmarshal(s.Payload, s.TxSmart); err != nil {
 		return err
 	}
-	if !reflect.DeepEqual(s.TxSmart, signed) {
-		return fmt.Errorf("a transaction carries a body its payload does not encode")
+	if s.TxSmart.Header == nil {
+		return fmt.Errorf("a transaction carries no header")
 	}
 	if s.SmartContract.TxSmart.UTXO != nil || s.SmartContract.TxSmart.TransferSelf != nil {
 		return nil

@@ -8,8 +8,8 @@ package transaction
 import (
 	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -29,11 +29,10 @@ import (
 //     validating anything, so Verify is what a node calls on that half before the queue. It must
 //     refuse a stored transaction whose header key is not the key of the signer it names, and one
 //     whose signature does not hold;
-//   - the stored format carries the payload, the hash of that payload and the body the node runs as
-//     fields of their own. The signature covers the hash, so a body the payload does not encode, or
-//     a hash that is not the hash of the payload, is refused as the transaction is parsed: with the
-//     three unrelated, anyone who saw a signed transaction could put a body of their own under its
-//     hash and its signature, paying themselves with the coins of the account it names.
+//   - the stored format carries the payload the client signed, the signature and the time the node
+//     took the transaction, nothing else: the hash and the body the node runs are derived from the
+//     payload, so another body under a signature is another payload, which the signature does not
+//     cover.
 func TestTransferSignatureIsCheckedOnEntry(t *testing.T) {
 	var every syspar.AccountAlgorithmSet
 	for _, a := range []crypto.AsymAlgo{crypto.AsymAlgo_ECC_P256, crypto.AsymAlgo_ECC_Secp256k1, crypto.AsymAlgo_SM2, crypto.AsymAlgo_MLDSA65, crypto.AsymAlgo_MLDSA87} {
@@ -73,48 +72,37 @@ func TestTransferSignatureIsCheckedOnEntry(t *testing.T) {
 			t.Fatalf("%s: honest stored transaction refused by Verify: %v", name, err)
 		}
 
-		// Another body under the same payload, hash and signature. The body that arrives pays
-		// another account; the payload, the hash and the signature are the ones the honest
-		// transaction carries, so only the relation between the three can refuse it.
-		var p SmartTransactionParser
-		if err := msgpack.Unmarshal(stored[1:], &p); err != nil {
+		// The stored form holds what the client signed and nothing a node could run instead: the
+		// payload, the signature and the time the node took it.
+		var st storedTx
+		if err := msgpack.Unmarshal(stored[1:], &st); err != nil {
 			t.Fatalf("%s: decoding stored transaction: %v", name, err)
 		}
-		originalKey := p.TxSmart.KeyID
-		p.TxSmart.KeyID = originalKey + 1
-		if err := unmarshallRefused(name, stored[0], &p, fmt.Sprintf("a body its payload does not encode (KeyID %d -> %d)", originalKey, p.TxSmart.KeyID)); err != nil {
-			t.Error(err)
+		if !bytes.Equal(st.Payload, client.SmartContract().Payload) || !bytes.Equal(st.TxSignature, client.SmartContract().TxSignature) {
+			t.Fatalf("%s: the stored transaction is not the payload and the signature the client sent", name)
 		}
 
-		// Another hash over the same payload and signature.
-		var h SmartTransactionParser
-		if err := msgpack.Unmarshal(stored[1:], &h); err != nil {
-			t.Fatalf("%s: decoding stored transaction: %v", name, err)
+		// Another body under the same signature: the hash and the body the node runs follow the
+		// payload, so the signature no longer holds and the entry check refuses it.
+		var body types.SmartTransaction
+		if err := msgpack.Unmarshal(st.Payload, &body); err != nil {
+			t.Fatalf("%s: decoding the payload: %v", name, err)
 		}
-		h.Hash[0] ^= 0xff
-		if err := unmarshallRefused(name, stored[0], &h, "a hash that is not the hash of its payload"); err != nil {
-			t.Error(err)
-		}
-
-		// The signature itself is damaged, everything else is intact: the parse is not what refuses
-		// it, the entry check is.
-		if err := msgpack.Unmarshal(stored[1:], &p); err != nil {
-			t.Fatalf("%s: decoding stored transaction: %v", name, err)
-		}
-		if len(p.TxSignature) == 0 {
-			t.Fatalf("%s: stored transaction carries no signature", name)
-		}
-		p.TxSignature[len(p.TxSignature)-1] ^= 0xff
-		damaged, err := msgpack.Marshal(&p)
-		if err != nil {
+		body.KeyID++
+		other := st
+		if other.Payload, err = msgpack.Marshal(&body); err != nil {
 			t.Fatal(err)
 		}
-		bad := &Transaction{}
-		if err := bad.Unmarshall(bytes.NewBuffer(append([]byte{stored[0]}, damaged...)), true); err != nil {
-			t.Fatalf("%s: stored transaction with a damaged signature refused at parse: %v", name, err)
+		if err := parsedButRefused(stored[0], &other); err != nil {
+			t.Errorf("%s: another body under the signature: %v", name, err)
 		}
-		if err := bad.Verify(); err == nil {
-			t.Errorf("%s: stored transaction with a damaged signature passed Verify", name)
+
+		// The signature itself is damaged, everything else is intact.
+		damaged := st
+		damaged.TxSignature = bytes.Clone(st.TxSignature)
+		damaged.TxSignature[len(damaged.TxSignature)-1] ^= 0xff
+		if err := parsedButRefused(stored[0], &damaged); err != nil {
+			t.Errorf("%s: a damaged signature: %v", name, err)
 		}
 
 		// The header names another signer while the key it carries does the signing: consistent, its
@@ -161,15 +149,19 @@ func TestTransferSignatureIsCheckedOnEntry(t *testing.T) {
 	}
 }
 
-// unmarshallRefused encodes the parser as a stored transaction and reports an error unless the node
-// refuses it as it is parsed, which is what keeps a body apart from a payload that does not carry it.
-func unmarshallRefused(name string, txType byte, p *SmartTransactionParser, what string) error {
-	body, err := msgpack.Marshal(p)
+// parsedButRefused encodes a stored transaction and reports an error unless the node parses it and
+// its entry check refuses it
+func parsedButRefused(txType byte, st *storedTx) error {
+	body, err := msgpack.Marshal(st)
 	if err != nil {
-		return fmt.Errorf("%s: encoding the transaction with %s: %w", name, what, err)
+		return err
 	}
-	if err := (&Transaction{}).Unmarshall(bytes.NewBuffer(append([]byte{txType}, body...)), true); err == nil {
-		return fmt.Errorf("%s: stored transaction with %s was accepted", name, what)
+	tx := &Transaction{}
+	if err := tx.Unmarshall(bytes.NewBuffer(append([]byte{txType}, body...)), true); err != nil {
+		return fmt.Errorf("refused at parse: %w", err)
+	}
+	if err := tx.Verify(); err == nil {
+		return errors.New("passed Verify")
 	}
 	return nil
 }
@@ -184,86 +176,4 @@ func txTypeName(b byte) string {
 		return "SmartContract"
 	}
 	return "unknown"
-}
-
-// TestVerifyRefusesContractCallOfABodyItsPayloadDoesNotEncode covers the type-3 half of the stored
-// format. A contract call travels in the same fields as a transfer -- the payload, the hash of that
-// payload, the signature and the body the node runs -- and a signature covers only the hash, so a
-// call is held to the same relation: its body has to be the one the payload encodes. A party who saw
-// a call could otherwise keep its payload, hash and signature, put a body of their own under them,
-// and have the account the header names run a contract it never asked for. The vectors carry
-// transfers only, so a call is built from the key of each of them.
-//
-// The honest half of the relation is not asserted here, because the parse of a call goes on to
-// resolve the contract the header names, and a unit test has no chain to hold one. What is asserted
-// is what the binding is for: a body the payload does not encode is refused as the call is parsed,
-// and refused for that reason, before anything looks for the contract.
-func TestVerifyRefusesContractCallOfABodyItsPayloadDoesNotEncode(t *testing.T) {
-	var every syspar.AccountAlgorithmSet
-	for _, a := range []crypto.AsymAlgo{crypto.AsymAlgo_ECC_P256, crypto.AsymAlgo_ECC_Secp256k1, crypto.AsymAlgo_SM2, crypto.AsymAlgo_MLDSA65, crypto.AsymAlgo_MLDSA87} {
-		every = append(every, syspar.AccountAlgorithm{Algo: a})
-	}
-	syspar.SetAccountAlgorithms(every)
-	defer syspar.SetAccountAlgorithms(nil)
-
-	checked := 0
-	for _, c := range loadTransfers(t) {
-		crypto.InitAsymAlgo(c.Cryptoer)
-		crypto.InitHashAlgo(c.Hasher)
-		conf.Config.LocalConf.NetworkID = c.NetworkID
-
-		key, err := hex.DecodeString(c.PrivateKey)
-		if err != nil {
-			t.Fatalf("%s: decoding the key of the vector: %v", c.Cryptoer, err)
-		}
-		name := c.Cryptoer + "/call"
-		stored, _, err := NewTransactionInProc(types.SmartTransaction{
-			Header: &types.Header{
-				ID:          1,
-				EcosystemID: 1,
-				KeyID:       1,
-				Time:        time.Now().Unix(),
-				NetworkID:   c.NetworkID,
-			},
-			Params: map[string]any{"Name": "honest"},
-		}, key)
-		if err != nil {
-			t.Fatalf("%s: building the contract call: %v", name, err)
-		}
-		if stored[0] != types.SmartContractTxType {
-			t.Fatalf("%s: the transaction is of type %d, not a contract call", name, stored[0])
-		}
-		checked++
-
-		// The parameters the call runs with change; the payload, the hash and the signature stay
-		// the ones the key signed.
-		var p SmartTransactionParser
-		if err := msgpack.Unmarshal(stored[1:], &p); err != nil {
-			t.Fatalf("%s: decoding the stored transaction: %v", name, err)
-		}
-		if p.TxSmart == nil {
-			t.Fatalf("%s: the stored transaction carries no body", name)
-		}
-		params := p.TxSmart.Params
-		if params == nil {
-			params = map[string]any{}
-		}
-		params["Name"] = "another"
-		params["Amount"] = "1000000000000000000"
-		p.TxSmart.Params = params
-
-		body, err := msgpack.Marshal(&p)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = (&Transaction{}).Unmarshall(bytes.NewBuffer(append([]byte{stored[0]}, body...)), true)
-		if err == nil {
-			t.Errorf("%s: a contract call carrying a body its payload does not encode was accepted", name)
-		} else if !strings.Contains(err.Error(), "a body its payload does not encode") {
-			t.Errorf("%s: the call was refused for another reason than its body: %v", name, err)
-		}
-	}
-	if checked == 0 {
-		t.Fatal("the vectors had no key to build a contract call from")
-	}
 }

@@ -18,11 +18,12 @@ This document fixes how go-ibax chains use ML-DSA (FIPS 204). Every rule is pinn
 | Private key (seed ξ) | 32 | 32 |
 | Public key | 1,952 | 2,592 |
 | Signature | 3,309 | 4,627 |
-| Transfer transaction from the client (payload / signature section / total) | 2,112–2,131 / 3,312 / 5,428–5,447 | 2,752–2,771 / 4,630 / 7,386–7,405 |
-| The same transaction as a block stores it (rule 9) | 8,081–8,143 | 10,679–10,741 |
-| ECDSA transfer, for comparison | 224–243 / 65 / 292–311; stored 1,056–1,118 | |
+| Transfer transaction from the client, key in the header (payload / signature section / total) | 2,114–2,133 / 3,312 / 5,430–5,449 | 2,754–2,773 / 4,630 / 7,388–7,407 |
+| The same transfer without the key, from an account that registered it | 209–222 / 3,312 / 3,525–3,538 | 209–222 / 4,630 / 4,843–4,856 |
+| The transfer as a block stores it (rule 9), key in the header / without | 5,443–5,462 / 3,537–3,550 | 7,401–7,420 / 4,855–4,868 |
+| ECDSA transfer, for comparison | 225–244 / 65–73 / 293–320, without the key 277–298; stored 305–332, without the key 289–310 | |
 
-Measured on the transfers in `go-ibax-transfers.json`. Stored lengths grow with the hasher's digest: SHA384 adds 16 bytes and SHA512 32 bytes to those of a 32-byte hasher.
+Measured on the transfers in `go-ibax-transfers.json`; the lengths without the key are those transfers with `Header.PublicKey` left out. The stored length does not depend on the hasher: a block stores no hash of the transaction.
 
 ## Rules
 
@@ -83,11 +84,11 @@ Pinned by: `publicKey` in `go-ibax-vectors.json` for three seeds, including the 
 
 ### 7. Transaction format
 
-The transaction format is unchanged and has no version bump. The public key travels in the header (`Header.PublicKey`); the signature section uses the existing multi-byte length prefix (`converter.EncodeLength`, three bytes for 3,309 and 4,627). Clients and SDKs must implement multi-byte lengths; a one-byte length is not enough.
+The transaction format has no version bump. The public key of the account travels in the header (`Header.PublicKey`) only when the account has not registered one: its first transaction, which registers it (`@1NewUser`), carries it. A transaction of an account whose key is in `1_keys` of the transaction's ecosystem leaves the header key out, and the node checks the signature with the registered key, on entry and when the transaction runs. A transaction another key signs for the account (`SignedBy`, a node for a delayed contract) names that key in its header. The signature section uses the existing multi-byte length prefix (`converter.EncodeLength`, three bytes for 3,309 and 4,627). Clients and SDKs must implement multi-byte lengths; a one-byte length is not enough.
 
-Rationale: the length prefix already supports any size. A version bump would split clients with no change in meaning.
+Rationale: the length prefix already supports any size, and a version bump would split clients with no change in meaning. The ML-DSA public key is 36% of an ML-DSA-65 transfer from the client; the account registered it once, and sending it again with every transaction adds bytes to every block and gives the node nothing it does not hold.
 
-Pinned by: the ML-DSA transfers in `go-ibax-transfers.json` (3,309- and 4,627-byte signatures).
+Pinned by: the ML-DSA transfers in `go-ibax-transfers.json` (3,309- and 4,627-byte signatures); `TestValidateWithoutHeaderKey` (`packages/transaction`: a transaction without the header key verifies with the registered key, and a transaction another key signs is refused without that key in its header).
 
 ### 8. Storage
 
@@ -101,24 +102,23 @@ Pinned by: the Weaver chain e2e (`suites.chain`): on every ML-DSA suite a new ac
 
 ### 9. Size limits and fees
 
-A transaction's size is the length of the bytes a block stores for it (`Transaction.FullData`): the type byte and the msgpack encoding of the parsed transaction, which holds the payload, the signature section and the fields the node fills in. The node converts a client transaction (type `0x80`) to this form when it receives it. `max_tx_size` and the storage fee (`storageFeeBy`: `price_tx_size × size / 2^20` tokens) count this length, wherever a transaction is checked: on receipt, while generating a block and while checking one.
+A transaction's size is the length of the bytes a block stores for it (`Transaction.FullData`): the type byte and the msgpack array of the payload the client signed, the signature section and the time the node took the transaction (milliseconds). The hash of the transaction and the body the node runs are derived from the payload, so they are not stored. The node converts a client transaction (type `0x80`) to this form when it receives it. `max_tx_size` and the storage fee (`storageFeeBy`: `price_tx_size × size / 2^20` tokens) count this length, wherever a transaction is checked: on receipt, while generating a block and while checking one.
 
 `max_block_size` bounds the encoded block: the bytes a peer receives and checks in `ProcessBlockByBinData`. Besides the transactions, compressed with zlib, a block holds the header with the producer's signature, the previous header, the Merkle root, and `after_txs`: a log entry and a status per transaction, and the rollback rows of what each one changed. The node generating a block counts the exact contribution of every transaction as it runs it (`block.blockSize`): the compressed transaction, its `after_txs` entries and its rollback rows. The fields only known once every transaction ran (signature, block hash, rollbacks hash, Merkle root) are counted at their maximum length for the chain's cryptoer and hasher. A transaction that would take the block over the limit is rolled back and left for the next block; one that does not fit into an empty block is marked bad. The node checks the length of the encoded block once more before it stores and publishes it. A block it publishes is therefore never longer than the limit its peers apply.
 
 With the defaults (`max_tx_size` 32 MiB, `max_block_size` 64 MiB, `max_tx_block` 5,000, `price_tx_size` 15), no parameter has to change:
 
-| Transfer, 32-byte hasher | ECDSA | ML-DSA-65 | ML-DSA-87 |
+| Transfer of a registered account (no key in the header) | ECDSA | ML-DSA-65 | ML-DSA-87 |
 |---|---|---|---|
-| Stored (size limit and fee) | 1,056–1,086 | 8,081–8,111 | 10,679–10,709 |
-| Compressed in the block | about 740 | about 6,050 | about 8,030 |
-| Storage fee, tokens | 0.015 | 0.116 | 0.153 |
-| 5,000 transfers per block, with their `after_txs` entries | about 4.5 MB | about 31 MB | about 41 MB, under 64 MiB |
+| Stored (size limit and fee) | 289–310 | 3,537–3,550 | 4,855–4,868 |
+| Storage fee, tokens | 0.0044 | 0.051 | 0.070 |
+| 5,000 transfers per block, stored transactions before compression | about 1.6 MB | about 17.8 MB | about 24.3 MB, under 64 MiB |
 
 Signature verification is not charged as fuel for any algorithm. ML-DSA verification costs about as much CPU time as ECDSA verification, so it needs no charge either.
 
-Rationale: the stored transaction is what a block holds and the database keeps, 3.6 times the client's bytes for ECDSA and about 1.5 times for ML-DSA. Counting only the payload missed the signature (about 60% of an ML-DSA transaction) and the node's fields, and a sum of transaction sizes cannot bound a block that also holds compressed data, logs and rollback rows. Only a count of the encoded block keeps a node from publishing a block its peers refuse.
+Rationale: the stored transaction is what a block holds and the database keeps. Counting only the payload missed the signature (about 93% of an ML-DSA-65 transfer without the header key) and a sum of transaction sizes cannot bound a block that also holds compressed data, logs and rollback rows. Only a count of the encoded block keeps a node from publishing a block its peers refuse. The stored form holds only what the client signed and the node's time: a hash or a body stored beside the payload could differ from it, and anyone who saw a signed transaction could then run a body of their own under its signature.
 
-Pinned by: `TestTxSizeIsStoredLength` (`packages/transaction`: the size of every transfer in the vectors is its stored length, is not part of the encoding, and `max_tx_size` applies to it); `TestBlockSizeCountsEncodedBlock`, `TestBlockSizeFillsToLimit` and `TestBlockSizeRefusesOversizedTransaction` (`packages/block`: on six suites, the count never falls short of the encoded block; a block filled to the limit passes the peers' check, and the transaction one byte over is not added).
+Pinned by: `TestTxSizeIsStoredLength` (`packages/transaction`: the size of every transfer in the vectors is its stored length, is not part of the encoding, and `max_tx_size` applies to it); `TestTransferSignatureIsCheckedOnEntry` (the stored form is the client's payload and signature, and another body under the signature is refused on entry); `TestBlockSizeCountsEncodedBlock`, `TestBlockSizeFillsToLimit` and `TestBlockSizeRefusesOversizedTransaction` (`packages/block`: on six suites, the count never falls short of the encoded block; a block filled to the limit passes the peers' check, and the transaction one byte over is not added).
 
 ### 10. Implementations
 
