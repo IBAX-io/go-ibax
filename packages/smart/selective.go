@@ -6,6 +6,7 @@ package smart
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -159,10 +160,14 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	}
 	rollDataHashStr = qb.BoundStatement(insertQuery, insertArgs)
 	cost += insertCost
+	prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 	err = sc.DbTransaction.ExecSql(insertQuery, insertArgs...)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
 		return 0, "", err
+	}
+	if id, err := strconv.ParseInt(sqlBuilder.TableID(), 10, 64); maxIDCached && err == nil {
+		sc.DbTransaction.Inserted(sqlBuilder.Table, prevMaxID, id)
 	}
 
 	if generalRollback {

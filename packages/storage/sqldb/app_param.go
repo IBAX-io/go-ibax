@@ -5,6 +5,8 @@
 package sqldb
 
 import (
+	"fmt"
+
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
@@ -33,8 +35,10 @@ func (sp *AppParam) SetTablePrefix(tablePrefix string) {
 
 // Get is retrieving model from database
 func (sp *AppParam) Get(dbTx *DbTransaction, app int64, name string) (bool, error) {
-	return isFound(GetDB(dbTx).Where("ecosystem=? and app_id=? and name = ?",
-		sp.ecosystem, app, name).First(sp))
+	return cachedFirst(dbTx, `1_app_params`, fmt.Sprintf("appparam:%d:%d:%s", sp.ecosystem, app, name), sp, sp.ID != 0, func() (bool, error) {
+		return isFound(GetDB(dbTx).Where("ecosystem=? and app_id=? and name = ?",
+			sp.ecosystem, app, name).First(sp))
+	})
 }
 
 // GetAllAppParameters is returning all state parameters

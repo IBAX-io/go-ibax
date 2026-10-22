@@ -99,6 +99,12 @@ var (
 		Help: "Database statements by operation.",
 	}, []string{"op"})
 
+	// DBCache counts the reads of a block transaction its cache answers (hit) or not (miss)
+	DBCache = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "db_cache_total",
+		Help: "Reads of the database a block transaction repeats, answered by its cache (hit) or not (miss).",
+	}, []string{"result"})
+
 	// SignVerify is the time of a signature check
 	SignVerify = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: namespace, Name: "sign_verify_seconds",
@@ -158,7 +164,7 @@ func init() {
 	registry.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, DBStatements,
+		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, DBStatements, DBCache,
 		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
 	)
 }
