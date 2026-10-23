@@ -153,7 +153,7 @@ func sendEvidenceTx(t *testing.T, body []byte) {
 	connect := &api.Connect{
 		Root:       fmt.Sprintf("http://%s/api/v2/", net.JoinHostPort(host, strconv.Itoa(conf.Config.HTTP.Port))),
 		PrivateKey: syspar.GetNodePrivKey(),
-		PublicKey:  hex.EncodeToString(syspar.GetNodePubKey()),
+		PublicKey:  hex.EncodeToString(crypto.NodeAccountKey(syspar.GetNodePubKey()).Bytes()),
 	}
 	if err := connect.Login(); err != nil {
 		t.Fatal(err)

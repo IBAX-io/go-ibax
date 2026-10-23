@@ -1,6 +1,7 @@
 package syspar
 
 import (
+	"encoding/json"
 	"errors"
 	"slices"
 	"testing"
@@ -53,6 +54,31 @@ func TestParseAccountAlgorithms(t *testing.T) {
 }
 
 // The PIV algorithms are account algorithms; RSA only where the network hash has RSASSA-PSS
+func TestAccountAlgorithmsJSON(t *testing.T) {
+	value := `[{"algo":"ECC_P256","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"MLDSA65"}]`
+	set := mustParse(t, value)
+	var answer struct {
+		AccountAlgorithms AccountAlgorithmSet `json:"account_algorithms"`
+	}
+	answer.AccountAlgorithms = set
+	data, err := json.Marshal(answer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	answer.AccountAlgorithms = nil
+	if err := json.Unmarshal(data, &answer); err != nil {
+		t.Fatal(err)
+	}
+	if answer.AccountAlgorithms.String() != value {
+		t.Fatalf("read %s", answer.AccountAlgorithms)
+	}
+	for _, bad := range []string{`{"account_algorithms":[{"algo":"NONE_SUCH"}]}`, `{"account_algorithms":[{"algo":"MLDSA65","sign_until":"31.12.2031"}]}`} {
+		if err := json.Unmarshal([]byte(bad), &answer); err == nil {
+			t.Fatalf("%s: read", bad)
+		}
+	}
+}
+
 func TestParseAccountAlgorithmsPIV(t *testing.T) {
 	piv := `[{"algo":"ECC_P384","sign_until":"2031-12-31"},{"algo":"RSA2048","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"RSA3072","sign_until":"2031-12-31"}]`
 	if set := mustParse(t, piv); set.String() != piv {
