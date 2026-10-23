@@ -200,11 +200,19 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 			}
 			txs = append(txs, t)
 		}
-	} else if slices.ContainsFunc(txs, func(t *transaction.Transaction) bool { return t.Type() == types.StopNetworkTxType }) &&
-		len(txs) > 1 {
-		return errStopNetworkNotAlone
+	} else if err := checkStopNetworkAlone(txs); err != nil {
+		return err
 	}
 	return b.executeTxs(dbTx, txBadChan, afters, &processedTx, txs)
+}
+
+// checkStopNetworkAlone fails the transactions of a block if a StopNetwork transaction is among
+// others: it stops the network, so no transaction runs after it, and none before it
+func checkStopNetworkAlone(txs []*transaction.Transaction) error {
+	if len(txs) > 1 && slices.ContainsFunc(txs, func(t *transaction.Transaction) bool { return t.Type() == types.StopNetworkTxType }) {
+		return errStopNetworkNotAlone
+	}
+	return nil
 }
 
 // executeTxs runs the transactions in their order. A transaction that fails is left out of a block
