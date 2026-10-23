@@ -93,10 +93,9 @@ VALUES
 		if !$cur {
 			error Sprintf("Contract %d does not exist", $Id)
 		}
+		// Whoever may change the contract binds it to their own account, which pays the fees of
+		// its transactions from then on: the signature of the transaction is the payer''s consent
 		Eval($cur["conditions"])
-		if $key_id != Int($cur["wallet_id"]) {
-			error Sprintf("Wallet %d cannot activate the contract", $key_id)
-		}
 	}
 	action {
 		BndWallet($Id, $ecosystem_id)
@@ -1417,10 +1416,12 @@ contract DAODecisionCondition {
 		if !$cur {
 			error Sprintf("Contract %d does not exist", $Id)
 		}
-		
-		Eval($cur["conditions"])
+		if Int($cur["wallet_id"]) == 0 {
+			error Sprintf("Contract %d is bound to no wallet", $Id)
+		}
+		// The bound account leaves at any time; whoever may change the contract revokes the binding
 		if $key_id != Int($cur["wallet_id"]) {
-			error Sprintf("Wallet %d cannot deactivate the contract", $key_id)
+			Eval($cur["conditions"])
 		}
 	}
 	action {
