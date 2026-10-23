@@ -160,13 +160,13 @@ func (b *Block) checkContent() error {
 // it, leaves out the transactions that fail, do not fit, or do not end within
 // max_block_generation_time from start, and sets its rollbacks hash, its hash and BinData. A block
 // left without transactions is ErrEmptyBlock.
-func Propose(binData []byte, classifyTxsMap map[int][]*transaction.Transaction, start time.Time) (*Block, error) {
+func Propose(binData []byte, txs []*transaction.Transaction, start time.Time) (*Block, error) {
 	b, err := ProcessBlockByBinData(binData, false)
 	if err != nil {
 		return nil, err
 	}
 	b.GenBlock = true
-	b.ClassifyTxsMap = classifyTxsMap
+	b.Transactions = txs
 	b.genStart = start
 	if err := b.Trial(); err != nil {
 		return nil, err

@@ -8,8 +8,6 @@ package block
 import (
 	"bytes"
 
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
-	"github.com/IBAX-io/go-ibax/packages/utils"
 	"github.com/pkg/errors"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -60,54 +58,15 @@ func MarshallBlock(opts ...types.BlockDataOption) ([]byte, error) {
 }
 
 func UnmarshallBlock(blockBuffer *bytes.Buffer, fill bool) (*Block, error) {
-	var (
-		contractNames  []string
-		classifyTxsMap = make(map[int][]*transaction.Transaction)
-		block          = &types.BlockData{}
-	)
+	block := &types.BlockData{}
 	if err := block.UnmarshallBlock(blockBuffer.Bytes()); err != nil {
 		return nil, err
 	}
-
-	if block.Header.BlockId != 1 {
-		allDelayedContract, err := sqldb.GetAllDelayedContract()
-		if err != nil {
-			return nil, err
-		}
-
-		for _, contract := range allDelayedContract {
-			contractNames = append(contractNames, contract.Contract)
-		}
-	}
-
-	transactions := make([]*transaction.Transaction, 0)
+	transactions := make([]*transaction.Transaction, 0, len(block.TxFullData))
 	for i := 0; i < len(block.TxFullData); i++ {
 		tx, err := transaction.UnmarshallTransaction(bytes.NewBuffer(block.TxFullData[i]), fill)
 		if err != nil {
 			return nil, err
-		}
-		if tx.Type() == types.StopNetworkTxType {
-			classifyTxsMap[types.StopNetworkTxType] = append(classifyTxsMap[types.StopNetworkTxType], tx)
-			transactions = append(transactions, tx)
-			continue
-		}
-		if tx.IsSmartContract() {
-			if tx.Type() == types.TransferSelfTxType {
-				classifyTxsMap[types.TransferSelfTxType] = append(classifyTxsMap[types.TransferSelfTxType], tx)
-				transactions = append(transactions, tx)
-				continue
-			}
-			if tx.Type() == types.UtxoTxType {
-				classifyTxsMap[types.UtxoTxType] = append(classifyTxsMap[types.UtxoTxType], tx)
-				transactions = append(transactions, tx)
-				continue
-			}
-			if utils.StringInSlice(contractNames, tx.SmartContract().TxContract.Name) {
-				classifyTxsMap[types.DelayTxType] = append(classifyTxsMap[types.DelayTxType], tx)
-				transactions = append(transactions, tx)
-				continue
-			}
-			classifyTxsMap[types.SmartContractTxType] = append(classifyTxsMap[types.SmartContractTxType], tx)
 		}
 		transactions = append(transactions, tx)
 	}
@@ -115,7 +74,6 @@ func UnmarshallBlock(blockBuffer *bytes.Buffer, fill bool) (*Block, error) {
 	return &Block{
 		BlockData:         block,
 		PrevRollbacksHash: block.PrevHeader.RollbacksHash,
-		ClassifyTxsMap:    classifyTxsMap,
 		Transactions:      transactions,
 	}, nil
 }

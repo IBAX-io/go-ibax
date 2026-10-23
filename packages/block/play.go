@@ -9,8 +9,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"strconv"
-	"sync"
+	"slices"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
@@ -109,7 +108,6 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		Rts: make([]*types.RollbackTx, 0),
 		Txs: make([]*types.AfterTx, 0),
 	}
-	txsMap := b.ClassifyTxsMap
 	processedTx := make([][]byte, 0, len(b.Transactions))
 
 	// a validator's trial of the block of another node bans no key and marks no transaction bad
@@ -190,102 +188,28 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	}
 	b.stage(metrics.StagePrepare, start)
 	start = time.Now()
-	var wg sync.WaitGroup
-
-	// StopNetworkTxType
-	if len(txsMap[types.StopNetworkTxType]) > 0 {
-		transactions := txsMap[types.StopNetworkTxType]
-		err := b.serialExecuteTxs(dbTx, txBadChan, afters, &processedTx, transactions, lock)
-		delete(txsMap, types.StopNetworkTxType)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	// FirstBlockTxType
+	// the transactions run one after the other in the order of the block, which the node that
+	// generates it stores as it runs them: every node runs them in the same order
+	txs := b.Transactions
 	if b.IsGenesis() {
-		transactions := make([]*transaction.Transaction, 0)
+		txs = make([]*transaction.Transaction, 0, len(b.Transactions))
 		for _, tx := range b.Transactions {
 			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(tx.FullData), false)
 			if err != nil {
 				return err
 			}
-			transactions = append(transactions, t)
+			txs = append(txs, t)
 		}
-		err := b.serialExecuteTxs(dbTx, txBadChan, afters, &processedTx, transactions, lock)
-		transactions = make([]*transaction.Transaction, 0)
-		if err != nil {
-			return err
-		}
+	} else if slices.ContainsFunc(txs, func(t *transaction.Transaction) bool { return t.Type() == types.StopNetworkTxType }) &&
+		len(txs) > 1 {
+		return errStopNetworkNotAlone
 	}
-
-	// DelayTxType
-	if len(txsMap[types.DelayTxType]) > 0 {
-		transactions := txsMap[types.DelayTxType]
-		err := b.serialExecuteTxs(dbTx, txBadChan, afters, &processedTx, transactions, lock)
-		delete(txsMap, types.DelayTxType)
-		if err != nil {
-			return err
-		}
-	}
-
-	// TransferSelf
-	if len(txsMap[types.TransferSelfTxType]) > 0 {
-		transactions := txsMap[types.TransferSelfTxType]
-
-		walletAddress := make(map[int64]int64)
-		groupTransferSelfTxs(transactions, walletAddress)
-		for _, transactions := range transferSelfTxsGroupMap {
-			wg.Add(1)
-			go func(_dbTx *sqldb.DbTransaction, _txBadChan chan badTxStruct, _transactions []*transaction.Transaction, _afters *types.AfterTxs, _processedTx *[][]byte, _lock *sync.RWMutex) {
-				defer wg.Done()
-				err := b.serialExecuteTxs(_dbTx, _txBadChan, _afters, _processedTx, _transactions, _lock)
-				if err != nil {
-					return
-				}
-			}(dbTx, txBadChan, transactions, afters, &processedTx, lock)
-		}
-		wg.Wait()
-		transferSelfTxsGroupMap = make(map[string][]*transaction.Transaction, 0)
-		transferSelfGroupTxsList = make([]*transaction.Transaction, 0)
-		transferSelfGroupSerial = 1
-		delete(txsMap, types.TransferSelfTxType)
-	}
-
-	//Utxo && Smart contract
-	if len(txsMap[types.UtxoTxType]) > 0 || len(txsMap[types.SmartContractTxType]) > 0 {
-		transactions := txsMap[types.UtxoTxType]
-		// utxo group
-		walletAddress := make(map[int64]int64)
-		groupUtxoTxs(transactions, walletAddress)
-		if len(txsMap[types.SmartContractTxType]) > 0 {
-			utxoTxsGroupMap[strconv.Itoa(0)] = txsMap[types.SmartContractTxType]
-		}
-		for _, transactions := range utxoTxsGroupMap {
-			wg.Add(1)
-			go func(_dbTx *sqldb.DbTransaction, _txBadChan chan badTxStruct, _transactions []*transaction.Transaction, _afters *types.AfterTxs, _processedTx *[][]byte, _lock *sync.RWMutex) {
-				defer wg.Done()
-				err := b.serialExecuteTxs(_dbTx, _txBadChan, _afters, _processedTx, _transactions, _lock)
-				if err != nil {
-					return
-				}
-			}(dbTx, txBadChan, transactions, afters, &processedTx, lock)
-		}
-		wg.Wait()
-		utxoTxsGroupMap = make(map[string][]*transaction.Transaction, 0)
-		utxoGroupTxsList = make([]*transaction.Transaction, 0)
-		utxoGroupSerial = 1
-		delete(txsMap, types.UtxoTxType)
-		delete(txsMap, types.SmartContractTxType)
-	}
-
-	return nil
+	return b.executeTxs(dbTx, txBadChan, afters, &processedTx, txs)
 }
 
-func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct, afters *types.AfterTxs, processedTx *[][]byte, txs []*transaction.Transaction, _lock *sync.RWMutex) error {
-	_lock.Lock()
-	defer _lock.Unlock()
+// executeTxs runs the transactions in their order. A transaction that fails is left out of a block
+// the node generates, and fails a block of another node
+func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct, afters *types.AfterTxs, processedTx *[][]byte, txs []*transaction.Transaction) error {
 	limits := transaction.NewLimits(b.limitMode())
 	if !b.genStart.IsZero() {
 		limits.StartAt(b.genStart)
@@ -412,109 +336,4 @@ func (b *Block) serialExecuteTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTx
 	}
 
 	return nil
-}
-
-var (
-	utxoTxsGroupMap         = make(map[string][]*transaction.Transaction)
-	utxoGroupTxsList        = make([]*transaction.Transaction, 0)
-	utxoGroupSerial  uint16 = 1
-	lock                    = &sync.RWMutex{}
-)
-
-func groupUtxoTxs(txs []*transaction.Transaction, walletAddress map[int64]int64) map[string][]*transaction.Transaction {
-	if len(txs) == 0 {
-		return utxoTxsGroupMap
-	}
-	crrentGroupTxsSize := len(utxoGroupTxsList)
-	size := len(txs)
-	for i := 0; i < size; i++ {
-		if len(walletAddress) == 0 {
-			walletAddress[txs[i].KeyID()] = txs[i].KeyID()
-			walletAddress[txs[i].SmartContract().TxSmart.UTXO.ToID] = txs[i].SmartContract().TxSmart.UTXO.ToID
-
-			utxoGroupTxsList = append(utxoGroupTxsList, txs[i])
-			txs = txs[1:]
-			size = len(txs)
-			i--
-			continue
-		}
-		if walletAddress[txs[i].KeyID()] != 0 || walletAddress[txs[i].SmartContract().TxSmart.UTXO.ToID] != 0 {
-			walletAddress[txs[i].KeyID()] = txs[i].KeyID()
-			walletAddress[txs[i].SmartContract().TxSmart.UTXO.ToID] = txs[i].SmartContract().TxSmart.UTXO.ToID
-
-			utxoGroupTxsList = append(utxoGroupTxsList, txs[i])
-			txs = append(txs[:i], txs[i+1:]...)
-			size = len(txs)
-			i--
-		}
-	}
-
-	if crrentGroupTxsSize < len(utxoGroupTxsList) {
-		if len(txs) == 0 {
-			utxoTxsGroupMap[strconv.Itoa(int(utxoGroupSerial))] = utxoGroupTxsList
-			return utxoTxsGroupMap
-		}
-		return groupUtxoTxs(txs, walletAddress)
-	}
-
-	if len(utxoGroupTxsList) > 0 {
-		tempUtxoGroupTxsList := utxoGroupTxsList
-		utxoTxsGroupMap[strconv.Itoa(int(utxoGroupSerial))] = tempUtxoGroupTxsList
-		utxoGroupSerial++
-		utxoGroupTxsList = make([]*transaction.Transaction, 0)
-		walletAddress = make(map[int64]int64)
-	}
-
-	return groupUtxoTxs(txs, walletAddress)
-}
-
-var (
-	transferSelfTxsGroupMap         = make(map[string][]*transaction.Transaction)
-	transferSelfGroupTxsList        = make([]*transaction.Transaction, 0)
-	transferSelfGroupSerial  uint16 = 1
-)
-
-func groupTransferSelfTxs(txs []*transaction.Transaction, walletAddress map[int64]int64) map[string][]*transaction.Transaction {
-	if len(txs) == 0 {
-		return transferSelfTxsGroupMap
-	}
-	crrentGroupTxsSize := len(transferSelfGroupTxsList)
-	size := len(txs)
-	for i := 0; i < size; i++ {
-		if len(walletAddress) == 0 {
-			walletAddress[txs[i].KeyID()] = txs[i].KeyID()
-
-			transferSelfGroupTxsList = append(transferSelfGroupTxsList, txs[i])
-			txs = txs[1:]
-			size = len(txs)
-			i--
-			continue
-		}
-		if walletAddress[txs[i].KeyID()] != 0 {
-			walletAddress[txs[i].KeyID()] = txs[i].KeyID()
-
-			transferSelfGroupTxsList = append(transferSelfGroupTxsList, txs[i])
-			txs = append(txs[:i], txs[i+1:]...)
-			size = len(txs)
-			i--
-		}
-	}
-
-	if crrentGroupTxsSize < len(transferSelfGroupTxsList) {
-		if len(txs) == 0 {
-			transferSelfTxsGroupMap[strconv.Itoa(int(transferSelfGroupSerial))] = transferSelfGroupTxsList
-			return transferSelfTxsGroupMap
-		}
-		return groupTransferSelfTxs(txs, walletAddress)
-	}
-
-	if len(transferSelfGroupTxsList) > 0 {
-		tempTransferSelfGroupTxsList := transferSelfGroupTxsList
-		transferSelfTxsGroupMap[strconv.Itoa(int(transferSelfGroupSerial))] = tempTransferSelfGroupTxsList
-		transferSelfGroupSerial++
-		transferSelfGroupTxsList = make([]*transaction.Transaction, 0)
-		walletAddress = make(map[int64]int64)
-	}
-
-	return groupTransferSelfTxs(txs, walletAddress)
 }

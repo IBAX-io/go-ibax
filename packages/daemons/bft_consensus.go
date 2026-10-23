@@ -583,7 +583,7 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
-	trs, classifyTxsMap, err := processTransactionsNew(a.logger, txs, time.Unix(ts, 0))
+	trs, parsed, err := processTransactionsNew(a.logger, txs, time.Unix(ts, 0))
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
@@ -613,7 +613,7 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
-	b, err := block.Propose(bin, classifyTxsMap, start)
+	b, err := block.Propose(bin, parsed, start)
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
