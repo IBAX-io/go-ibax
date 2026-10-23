@@ -53,37 +53,39 @@ var (
 
 // SmartContract is storing smart contract data
 type SmartContract struct {
-	ChildChain      bool
-	Rollback        bool
-	FullAccess      bool
-	SysUpdate       bool
-	VM              *script.VM
-	TxSmart         *types.SmartTransaction
-	TxData          map[string]any
-	TxContract      *Contract
-	TxFuel          int64           // The fuel of executing contract
-	TxCost          int64           // Maximum cost of executing contract
-	TxUsedCost      decimal.Decimal // Used cost of CPU resources
-	TXBlockFuel     decimal.Decimal
-	BlockHeader     *types.BlockHeader
-	PreBlockHeader  *types.BlockHeader
-	Loop            map[string]bool
-	Hash            []byte
-	Payload         []byte
-	Timestamp       int64
-	TxSignature     []byte
-	TxSize          int64
-	Size            common.StorageSize
-	SignerKey       crypto.AccountKey // the key that signed the transaction
-	DbTransaction   *sqldb.DbTransaction
-	Rand            *rand.Rand
-	FlushRollback   []*FlushInfo
-	Notifications   types.Notifications
-	GenBlock        bool
-	TimeLimit       int64
-	Key             *sqldb.Key
-	RollBackTx      []*types.RollbackTx
-	multiPays       multiPays
+	ChildChain     bool
+	Rollback       bool
+	FullAccess     bool
+	SysUpdate      bool
+	VM             *script.VM
+	TxSmart        *types.SmartTransaction
+	TxData         map[string]any
+	TxContract     *Contract
+	TxFuel         int64           // The fuel of executing contract
+	TxCost         int64           // Maximum cost of executing contract
+	TxUsedCost     decimal.Decimal // Used cost of CPU resources
+	TXBlockFuel    decimal.Decimal
+	BlockHeader    *types.BlockHeader
+	PreBlockHeader *types.BlockHeader
+	Loop           map[string]bool
+	Hash           []byte
+	Payload        []byte
+	Timestamp      int64
+	TxSignature    []byte
+	TxSize         int64
+	Size           common.StorageSize
+	SignerKey      crypto.AccountKey // the key that signed the transaction
+	DbTransaction  *sqldb.DbTransaction
+	Rand           *rand.Rand
+	FlushRollback  []*FlushInfo
+	Notifications  types.Notifications
+	GenBlock       bool
+	TimeLimit      int64
+	Key            *sqldb.Key
+	RollBackTx     []*types.RollbackTx
+	multiPays      multiPays
+	// FeeCredits are the fees the transaction pays to accounts, which the block credits
+	FeeCredits      []FeeCredit
 	Penalty         bool
 	TokenEcosystems map[int64]any
 	OutputsMap      map[sqldb.KeyUTXO][]sqldb.SpentInfo
@@ -636,6 +638,7 @@ func (sc *SmartContract) CallContract(point string) (string, error) {
 	// The signer is checked before the transaction runs (CheckTxSign, called from
 	// SmartTransactionParser.Action for every transaction type); a contract body is never
 	// entered without it.
+	sc.FeeCredits = nil
 	needPayment := sc.needPayment()
 	if needPayment {
 		err = sc.prepareMultiPay()
@@ -696,6 +699,7 @@ lp:
 		if needPayment {
 			if errPay := sc.payContract(true); errPay != nil {
 				sc.RollBackTx = nil
+				sc.FeeCredits = nil
 				if errRollsp := sc.DbTransaction.RollbackSavepoint(point); errRollsp != nil {
 					return retError(errors.Wrap(err, errRollsp.Error()))
 				}

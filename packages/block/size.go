@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
@@ -48,11 +49,13 @@ func (s *blockSize) size() int64 {
 	return size
 }
 
-// add counts a transaction that ran, with the entries it adds to after_txs. If the block would
+// add counts a transaction that ran, with the entries it adds to after_txs and those the settlement
+// of the fees adds for the accounts it pays that no transaction before it paid. If the block would
 // exceed the limit, it counts nothing and returns false.
-func (s *blockSize) add(fullData []byte, after *types.AfterTx, rollbacks []*types.RollbackTx) bool {
+func (s *blockSize) add(fullData []byte, after *types.AfterTx, rollbacks []*types.RollbackTx, feeAccounts int) bool {
 	tx := fieldSize(int64(len(types.DoZlibCompress(fullData))))
 	afterTxs := s.afterTxs + fieldSize(int64(after.Size()))
+	afterTxs += int64(feeAccounts*smart.SettlementRows) * fieldSize(int64(smart.SettlementRowMax().Size()))
 	for _, r := range rollbacks {
 		afterTxs += fieldSize(int64(r.Size()))
 	}

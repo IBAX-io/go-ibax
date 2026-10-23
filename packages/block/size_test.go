@@ -14,6 +14,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
+	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
@@ -135,7 +136,7 @@ func TestBlockSizeCountsEncodedBlock(t *testing.T) {
 				var txs []testTx
 				for n := range 40 {
 					tx := newTestTx(r, cur.BlockId)
-					if !size.add(tx.fullData, tx.after, tx.rollbacks) {
+					if !size.add(tx.fullData, tx.after, tx.rollbacks, 0) {
 						t.Fatal("add refused a transaction under the limit")
 					}
 					txs = append(txs, tx)
@@ -173,7 +174,7 @@ func TestBlockSizeFillsToLimit(t *testing.T) {
 			// The limit at which exactly the 25 transactions fit
 			count := newBlockSize(1<<40, cur, prev)
 			for _, tx := range txs {
-				count.add(tx.fullData, tx.after, tx.rollbacks)
+				count.add(tx.fullData, tx.after, tx.rollbacks, 0)
 			}
 			limit := count.size()
 
@@ -185,7 +186,7 @@ func TestBlockSizeFillsToLimit(t *testing.T) {
 				var fit []testTx
 				for _, tx := range txs {
 					before := *size
-					if !size.add(tx.fullData, tx.after, tx.rollbacks) {
+					if !size.add(tx.fullData, tx.after, tx.rollbacks, 0) {
 						if *size != before {
 							t.Fatal("a refused transaction was counted")
 						}
@@ -215,7 +216,46 @@ func TestBlockSizeRefusesOversizedTransaction(t *testing.T) {
 	empty := newBlockSize(1<<40, cur, prev).size()
 	tx := newTestTx(r, cur.BlockId)
 	size := newBlockSize(empty+int64(len(tx.fullData))/2, cur, prev)
-	if size.add(tx.fullData, tx.after, tx.rollbacks) {
+	if size.add(tx.fullData, tx.after, tx.rollbacks, 0) {
 		t.Fatal("a transaction larger than the room in an empty block was added")
+	}
+}
+
+// The count of the accounts the fees of a transaction pay keeps room for the rows the settlement
+// of the block writes for them
+func TestBlockSizeCountsSettlement(t *testing.T) {
+	crypto.InitAsymAlgo("MLDSA87")
+	crypto.InitHashAlgo("SHA512")
+	key, _, err := crypto.GenNodeKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := mrand.New(mrand.NewPCG(7, 8))
+	cur, prev := testHeaders(r)
+	size := newBlockSize(1<<40, cur, prev)
+	var txs []testTx
+	accounts := 0
+	for n := range 10 {
+		tx := newTestTx(r, cur.BlockId)
+		// the first transaction pays three accounts, every fourth one a new account
+		fee := 0
+		if n == 0 {
+			fee = 3
+		} else if n%4 == 0 {
+			fee = 1
+		}
+		accounts += fee
+		if !size.add(tx.fullData, tx.after, tx.rollbacks, fee) {
+			t.Fatal("add refused a transaction under the limit")
+		}
+		txs = append(txs, tx)
+	}
+	last := &txs[len(txs)-1]
+	for range accounts * smart.SettlementRows {
+		last.rollbacks = append(last.rollbacks, smart.SettlementRowMax())
+	}
+	bin := marshalTestBlock(t, key, cur, prev, txs, true)
+	if got := int64(len(bin)); got > size.size() {
+		t.Fatalf("block with the settlement is %d bytes, counted %d", got, size.size())
 	}
 }

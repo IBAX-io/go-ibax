@@ -19,6 +19,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/notificator"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
+	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -203,7 +204,16 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 	} else if err := checkStopNetworkAlone(txs); err != nil {
 		return err
 	}
-	return b.executeTxs(dbTx, txBadChan, afters, &processedTx, txs)
+	fees := smart.NewFeeSettlement()
+	if err := b.executeTxs(dbTx, txBadChan, afters, &processedTx, txs, fees); err != nil {
+		return err
+	}
+	rts, err := fees.Settle(dbTx, b.Header)
+	if err != nil {
+		return fmt.Errorf("settling the fees: %w", err)
+	}
+	afters.Rts = append(afters.Rts, rts...)
+	return nil
 }
 
 // checkStopNetworkAlone fails the transactions of a block if a StopNetwork transaction is among
@@ -217,7 +227,8 @@ func checkStopNetworkAlone(txs []*transaction.Transaction) error {
 
 // executeTxs runs the transactions in their order. A transaction that fails is left out of a block
 // the node generates, and fails a block of another node
-func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct, afters *types.AfterTxs, processedTx *[][]byte, txs []*transaction.Transaction) error {
+func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct, afters *types.AfterTxs, processedTx *[][]byte, txs []*transaction.Transaction,
+	fees *smart.FeeSettlement) error {
 	limits := transaction.NewLimits(b.limitMode())
 	if !b.genStart.IsZero() {
 		limits.StartAt(b.genStart)
@@ -315,7 +326,11 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 
 		// A transaction that would make the block longer than max_block_size waits for the next
 		// block; one that does not fit even into an empty block never will.
-		if b.GenBlock && !b.size.add(t.FullData, after, t.RollBackTx) {
+		var credits []smart.FeeCredit
+		if t.IsSmartContract() {
+			credits = t.SmartContract().FeeCredits
+		}
+		if b.GenBlock && !b.size.add(t.FullData, after, t.RollBackTx, fees.NewAccounts(credits)) {
 			if errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash()))); errRoll != nil {
 				return errRoll
 			}
@@ -335,6 +350,7 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
 
+		fees.Add(credits)
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
 		*processedTx = append(*processedTx, t.FullData)
