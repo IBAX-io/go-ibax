@@ -22,12 +22,24 @@ import (
 // reads that the contracts repeat: the rows of 1_tables, the parameters, the control mode of an
 // ecosystem, the highest id of a table, the number of indexes of a table. A result depends on one
 // table, and goes when a statement writes that table; a statement the cache cannot tell the table
-// of, a change of the schema and a rollback to a savepoint empty it. A result is thus always what
-// the database would answer, and the execution of a block is the same with the cache or without.
+// of and a change of the schema empty it. A rollback to a savepoint takes out the tables written
+// since the savepoint. A result is thus always what the database would answer, and the execution
+// of a block is the same with the cache or without.
 type txCache struct {
 	mu      sync.Mutex
 	byTable map[string]map[string]any
+	// written journals, while savepoints are open, the tables the statements wrote: allTables for
+	// a statement that may have written any
+	written []string
+	marks   []cacheMark
 }
+
+type cacheMark struct {
+	name string
+	at   int
+}
+
+const allTables = "*"
 
 // schemaTable is the dependency of the results that only a change of the schema changes
 const schemaTable = ""
@@ -64,20 +76,80 @@ func (c *txCache) put(table, key string, v any) {
 func (c *txCache) forget(table string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	delete(c.byTable, cacheTable(table))
+	t := cacheTable(table)
+	delete(c.byTable, t)
+	if len(c.marks) > 0 {
+		c.written = append(c.written, t)
+	}
 }
 
 func (c *txCache) forgetAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	clear(c.byTable)
+	if len(c.marks) > 0 {
+		c.written = append(c.written, allTables)
+	}
+}
+
+func (c *txCache) savepoint(name string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.marks = append(c.marks, cacheMark{name: name, at: len(c.written)})
+}
+
+func (c *txCache) lastMark(name string) int {
+	for i := len(c.marks) - 1; i >= 0; i-- {
+		if c.marks[i].name == name {
+			return i
+		}
+	}
+	return -1
+}
+
+// rollbackTo takes out the tables written since the savepoint; all of them for a savepoint the
+// cache does not know
+func (c *txCache) rollbackTo(name string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	i := c.lastMark(name)
+	if i < 0 {
+		clear(c.byTable)
+		c.written, c.marks = c.written[:0], c.marks[:0]
+		return
+	}
+	at := c.marks[i].at
+	for _, t := range c.written[at:] {
+		if t == allTables {
+			clear(c.byTable)
+			break
+		}
+		delete(c.byTable, t)
+	}
+	c.written = c.written[:at]
+	c.marks = c.marks[:i+1]
+}
+
+func (c *txCache) release(name string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if i := c.lastMark(name); i >= 0 {
+		c.marks = c.marks[:i]
+	}
+	if len(c.marks) == 0 {
+		c.written = c.written[:0]
+	}
 }
 
 // cached is the result of load for the key, depending on table, from the cache of the transaction
 // if it has it. A transaction StartTransaction did not begin has no cache, and loads each time.
+// The result is a read of the table in the record of the statements of the transaction.
 func cached[T any](tr *DbTransaction, table, key string, load func() (T, error)) (T, error) {
 	if tr == nil || tr.cache == nil {
 		return load()
+	}
+	if a := tr.Access(); a != nil && table != schemaTable && key != maxIDKey {
+		a.read(Row{Table: a.catalog.canon(table, false)})
 	}
 	if v, ok := tr.cache.get(table, key); ok {
 		metrics.DBCache.WithLabelValues("hit").Inc()
@@ -112,6 +184,27 @@ func written(sql string) (table string, none, all bool) {
 	return "", false, true
 }
 
+// savepointStatement makes the cache follow a statement on savepoints, and tells it is one
+func savepointStatement(c *txCache, sql string) bool {
+	word := strings.ToLower(leadingWord.FindString(strings.TrimSpace(sql)))
+	if word != "savepoint" && word != "release" && word != "rollback" {
+		return false
+	}
+	toks := tokenize(sql)
+	switch word {
+	case "savepoint":
+		c.savepoint(savepointName(toks[1:]))
+	case "release":
+		c.release(savepointName(toks[1:]))
+	default:
+		if len(toks) < 2 || toks[1].keyword() != "to" {
+			return false
+		}
+		c.rollbackTo(savepointName(toks[2:]))
+	}
+	return true
+}
+
 // registerTxCache makes each statement of a transaction empty, in its cache, what it may change
 func registerTxCache(db *gorm.DB) error {
 	cacheOf := func(db *gorm.DB) *txCache {
@@ -135,7 +228,11 @@ func registerTxCache(db *gorm.DB) error {
 		if c == nil {
 			return
 		}
-		table, none, all := written(db.Statement.SQL.String())
+		sql := db.Statement.SQL.String()
+		if savepointStatement(c, sql) {
+			return
+		}
+		table, none, all := written(sql)
 		switch {
 		case none:
 		case all:
@@ -188,8 +285,25 @@ func cachedFirst[T any](tr *DbTransaction, table, key string, dest *T, hasID boo
 // maxIDKey keys the highest id of a table, 0 for a table without rows
 const maxIDKey = "maxid"
 
-// maxID is the highest id of the table
+// maxID is the highest id of the table. A speculative run sees it with the next ids that the
+// transactions of the block before it take.
 func (tr *DbTransaction) maxID(table string) (int64, error) {
+	a := tr.Access()
+	if a != nil {
+		a.quiet++
+	}
+	id, err := tr.MaxID(table)
+	if a != nil {
+		a.quiet--
+	}
+	if err != nil || a == nil || !a.speculative {
+		return id, err
+	}
+	return a.observeMaxID(table, id), nil
+}
+
+// MaxID is the highest id of the table in the transaction
+func (tr *DbTransaction) MaxID(table string) (int64, error) {
 	return cached(tr, table, maxIDKey, func() (int64, error) {
 		var id int64
 		rows, err := GetDB(tr).Raw(`select id from "` + table + `" order by id desc limit 1`).Rows()

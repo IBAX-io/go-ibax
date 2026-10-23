@@ -11,20 +11,10 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 )
 
-type Rand struct {
-	src *rand.Rand
-}
-
-func (r *Rand) BytesSeed(b []byte) *rand.Rand {
-	seed := crypto.CalcChecksum(b)
-	r.src.Seed(int64(seed))
-	return r.src
-}
-
-func NewRand(seed int64) *Rand {
-	return &Rand{
-		src: rand.New(rand.NewSource(seed)),
-	}
+// TxRand is the random source of a transaction: seeded with its hash, so every node draws the same
+// numbers for it, whatever runs before it in the block and wherever it runs
+func TxRand(hash []byte) *rand.Rand {
+	return rand.New(rand.NewSource(int64(crypto.CalcChecksum(hash))))
 }
 
 func RandInt(min, max int) int {
@@ -41,7 +31,6 @@ const (
 	KC_RAND_KIND_ALL   = 3 //
 )
 
-//
 func Krand(size int64, kind int) []byte {
 	ikind, kinds, result := kind, [][]int{{10, 48}, {26, 97}, {26, 65}}, make([]byte, size)
 	is_all := kind > 2 || kind < 0
@@ -56,7 +45,6 @@ func Krand(size int64, kind int) []byte {
 	return result
 }
 
-//
 func RandNumber(size int64) string {
 	result := Krand(size, KC_RAND_KIND_ALL)
 	return string(result[:])

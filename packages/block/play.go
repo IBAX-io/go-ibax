@@ -233,7 +233,6 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 	if !b.genStart.IsZero() {
 		limits.StartAt(b.genStart)
 	}
-	rand := random.NewRand(b.Header.Timestamp)
 	logger := b.GetLogger()
 	for curTx := 0; curTx < len(txs); curTx++ {
 		t := txs[curTx]
@@ -244,7 +243,7 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "tx_hash": t.Hash()}).Error("using savepoint")
 			return err
 		}
-		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, rand.BytesSeed(t.Hash()), limits,
+		err = t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, dbTx, random.TxRand(t.Hash()), limits,
 			consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash())), b.OutputsMap, b.PrevSysPar, b.EcoParams)
 		if err != nil {
 			return err

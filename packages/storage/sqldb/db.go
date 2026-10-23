@@ -148,6 +148,10 @@ open:
 		DBConn = nil
 		return err
 	}
+	if err = registerAccess(DBConn); err != nil {
+		DBConn = nil
+		return err
+	}
 	sqlDB, err := DBConn.DB()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("cant get sql DB")
@@ -213,6 +217,7 @@ type DbTransaction struct {
 	conn       *gorm.DB
 	statements *atomic.Int64
 	cache      *txCache
+	access     *accessSlot
 }
 
 func NewDbTransaction(conn *gorm.DB) *DbTransaction {
@@ -228,6 +233,7 @@ func (d *DbTransaction) Debug() *DbTransaction {
 func StartTransaction() (*DbTransaction, error) {
 	ctx, statements := withStatementCount()
 	ctx, cache := withTxCache(ctx)
+	ctx, access := withAccess(ctx)
 	conn := DBConn.WithContext(ctx).Begin()
 	if conn.Error != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": conn.Error}).Error("cannot start transaction because of connection error")
@@ -242,6 +248,7 @@ func StartTransaction() (*DbTransaction, error) {
 		conn:       conn,
 		statements: statements,
 		cache:      cache,
+		access:     access,
 	}, nil
 }
 
