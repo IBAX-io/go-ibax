@@ -619,6 +619,9 @@ func getColumns(columns string) (colsSQL string, colout []byte, err error) {
 
 // CreateView is creating smart contract view table
 func CreateView(sc *SmartContract, vname, columns, where string, applicationID int64) (err error) {
+	if err := sc.serialOnly("the schema"); err != nil {
+		return err
+	}
 	if err = validateAccess(sc, "CreateView"); err != nil {
 		return
 	}
@@ -826,6 +829,9 @@ func parseViewWhereSql(sc *SmartContract, columns string) (tabsSQL, whsSQL strin
 
 // CreateTable is creating smart contract table
 func CreateTable(sc *SmartContract, name, columns, permissions string, applicationID int64) (err error) {
+	if err := sc.serialOnly("the schema"); err != nil {
+		return err
+	}
 	if err := validateAccess(sc, "CreateTable"); err != nil {
 		return err
 	}
@@ -1151,6 +1157,9 @@ func CheckCondition(sc *SmartContract, condition string) (bool, error) {
 
 // FlushContract is flushing contract
 func FlushContract(sc *SmartContract, iroot any, id int64) error {
+	if err := sc.serialOnly("the contracts of the VM"); err != nil {
+		return err
+	}
 	if err := validateAccess(sc, "FlushContract"); err != nil {
 		return err
 	}
@@ -1502,6 +1511,9 @@ func checkTableNameRule(name string) error {
 
 // CreateColumn is creating column
 func CreateColumn(sc *SmartContract, tableName, name, colType, permissions string) (err error) {
+	if err := sc.serialOnly("the schema"); err != nil {
+		return err
+	}
 	if err := sc.denyBftTable(tableName); err != nil {
 		return err
 	}
@@ -2291,6 +2303,9 @@ func UpdateRolesNotifications(sc *SmartContract, ecosystemID int64, roles ...any
 	sc.Notifications.AddRoles(ecosystemID, rolesList...)
 }
 func DelColumn(sc *SmartContract, tableName, name string) (err error) {
+	if err := sc.serialOnly("the schema"); err != nil {
+		return err
+	}
 	if err := sc.denyBftTable(tableName); err != nil {
 		return err
 	}
@@ -2372,6 +2387,9 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 }
 
 func DelTable(sc *SmartContract, tableName string) (err error) {
+	if err := sc.serialOnly("the schema"); err != nil {
+		return err
+	}
 	if err := sc.denyBftTable(tableName); err != nil {
 		return err
 	}

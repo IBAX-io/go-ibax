@@ -191,6 +191,9 @@ func ActivateContract(tblid, state int64, active bool) {
 
 // SetContractWallet changes WalletID of the contract in script.GetVM()
 func SetContractWallet(sc *SmartContract, tblid, state int64, wallet int64) error {
+	if err := sc.serialOnly("the wallet of a contract"); err != nil {
+		return err
+	}
 	if err := validateAccess(sc, "SetContractWallet"); err != nil {
 		return err
 	}

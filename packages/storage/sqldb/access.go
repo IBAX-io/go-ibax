@@ -1291,3 +1291,8 @@ func (tr *DbTransaction) Replay(a *Access) error {
 	}
 	return nil
 }
+
+// UTXORow is the row of the outputs of an account, which the block keeps in memory
+func UTXORow(k KeyUTXO) Row {
+	return Row{Table: "#utxo", Key: strconv.FormatInt(k.Ecosystem, 10) + "," + strconv.FormatInt(k.KeyId, 10)}
+}

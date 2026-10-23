@@ -5,7 +5,9 @@
 package smart
 
 import (
+	"encoding/json"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -75,11 +77,25 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table, "query": selectQuery, "fields": fields, "values": ivalues, "where": inWhere}).Error("getting query total cost")
 			return 0, "", err
 		}
-		rows = sc.DbTransaction.GetOneRowTransaction(selectQuery, selectArgs...)
+		keyQuery, extra := withKeyColumns(selectQuery, sc.DbTransaction.UniqueColumns(sqlBuilder.Table), fields)
+		rows = sc.DbTransaction.GetOneRowTransaction(keyQuery, selectArgs...)
 		logData, err = rows.String()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": selectQuery}).Error("getting one row transaction")
 			return 0, "", err
+		}
+		if sc.DbTransaction.Access() != nil {
+			// the update of a table of the first ecosystem leaves the ecosystem of the rows as it is
+			set := slices.DeleteFunc(slices.Clone(fields), func(f string) bool { return sqlBuilder.KeyTable() != "" && f == "ecosystem" })
+			declareRows(sc.DbTransaction, sqlBuilder.Table, rows.List, setsUnique(set, sc.DbTransaction.UniqueColumns(sqlBuilder.Table)), !setsID(fields))
+		}
+		for _, r := range rows.List {
+			for _, c := range extra {
+				delete(r, c)
+			}
+		}
+		for _, c := range extra {
+			delete(logData, c)
 		}
 		cost += selectCost
 		if len(logData) == 0 {
@@ -164,6 +180,16 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	}
 	rollDataHashStr = qb.BoundStatement(insertQuery, insertArgs)
 	cost += insertCost
+	if sc.DbTransaction.Access() != nil {
+		_, explicit := sqlBuilder.FieldValue("id")
+		id, _ := strconv.ParseInt(sqlBuilder.TableID(), 10, 64)
+		sc.DbTransaction.DeclareWrite(sqlBuilder.Table, []func(string) (string, bool){func(col string) (string, bool) {
+			if col == "id" {
+				return sqlBuilder.TableID(), true
+			}
+			return sqlBuilder.FieldValue(col)
+		}}, id, !explicit, false)
+	}
 	prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 	err = sc.DbTransaction.ExecSql(insertQuery, insertArgs...)
 	if err != nil {
@@ -220,6 +246,20 @@ func (sc *SmartContract) deleteRow(table string, id int64, generalRollback bool)
 	if len(row) == 0 {
 		return 0, errDelNotExistRecord
 	}
+	if sc.DbTransaction.Access() != nil {
+		var cols map[string]any
+		d := json.NewDecoder(strings.NewReader(row))
+		d.UseNumber()
+		if err = d.Decode(&cols); err != nil {
+			return 0, logErrorDB(err, "reading the row to delete")
+		}
+		sc.DbTransaction.DeclareWrite(sqlBuilder.Table, []func(string) (string, bool){func(col string) (string, bool) {
+			if v, ok := cols[col]; ok && v != nil {
+				return fmt.Sprint(v), true
+			}
+			return "", false
+		}}, 0, false, false)
+	}
 	deleteQuery := `DELETE FROM "` + sqlBuilder.Table + `" ` + whereExpr
 	deleteCost, err := queryCoster.QueryCost(sc.DbTransaction, deleteQuery, whereArgs...)
 	if err != nil {
@@ -250,6 +290,58 @@ func (sc *SmartContract) update(fields []string, values []any,
 	table string, whereField string, whereValue any) (int64, string, error) {
 	return sc.updateWhere(fields, values, table, types.LoadMap(map[string]any{
 		whereField: fmt.Sprint(whereValue)}))
+}
+
+// withKeyColumns is the select of the rows an update writes with the columns of the unique keys of
+// the table that it does not select, and those columns
+func withKeyColumns(query string, unique, fields []string) (string, []string) {
+	selected := map[string]bool{"id": true}
+	for _, f := range fields {
+		selected[strings.Trim(toColumn(f), `"`)] = true
+	}
+	var extra, quoted []string
+	for _, c := range unique {
+		if !selected[c] {
+			extra = append(extra, c)
+			quoted = append(quoted, `"`+c+`"`)
+		}
+	}
+	if len(extra) == 0 || !strings.HasPrefix(query, "SELECT ") {
+		return query, nil
+	}
+	return "SELECT " + strings.Join(quoted, ",") + "," + query[len("SELECT "):], extra
+}
+
+// declareRows names the rows an update writes, by the values the select of the rows read: the
+// whole table for an update that changes a column of a unique key
+func declareRows(tx *sqldb.DbTransaction, table string, list []map[string]string, wholeTable, keepsMax bool) {
+	var rows []func(string) (string, bool)
+	if !wholeTable {
+		for _, r := range list {
+			rows = append(rows, func(col string) (string, bool) { v, ok := r[col]; return v, ok })
+		}
+	}
+	tx.DeclareWrite(table, rows, 0, false, keepsMax)
+}
+
+// toColumn is the column a field of an update or insert names
+func toColumn(field string) string {
+	field = strings.TrimPrefix(field, "timestamp ")
+	field = strings.TrimLeft(field, "+-")
+	if i := strings.Index(field, "->"); i >= 0 {
+		field = field[:i]
+	}
+	return strings.TrimSpace(field)
+}
+
+// setsUnique tells an update of the fields changes a column of the unique columns
+func setsUnique(fields, unique []string) bool {
+	for _, f := range fields {
+		if slices.Contains(unique, toColumn(f)) {
+			return true
+		}
+	}
+	return false
 }
 
 // setsID tells whether an update of the fields may change the id of a row: a field names a column,

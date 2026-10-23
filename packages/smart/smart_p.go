@@ -86,6 +86,9 @@ func UpdatePlatformParam(sc *SmartContract, name, value, conditions string) (int
 // updatePlatformParam updates the system parameter; checkConditions is false only for the
 // entries the fee payment adds itself.
 func updatePlatformParam(sc *SmartContract, name, value, conditions string, checkConditions bool) (int64, error) {
+	if err := sc.serialOnly("the platform parameters"); err != nil {
+		return 0, err
+	}
 	var (
 		fields []string
 		values []any
@@ -238,6 +241,9 @@ func (sc *SmartContract) checkBftHonorNodes(prev string, next []*syspar.HonorNod
 // setHonorNodes writes a value of honor_nodes the node made, not a contract: its checks are
 // those of a vote that changes the parameter on a chain of the BFT consensus
 func (sc *SmartContract) setHonorNodes(par *sqldb.PlatformParameter, value string) error {
+	if err := sc.serialOnly("the honor nodes"); err != nil {
+		return err
+	}
 	var next []*syspar.HonorNode
 	if err := json.Unmarshal([]byte(value), &next); err != nil {
 		return logError(err, consts.JSONUnmarshallError, "unmarshalling honor_nodes")
@@ -425,6 +431,9 @@ func LangRes(sc *SmartContract, idRes string) string {
 
 // NewLang creates new language
 func CreateLanguage(sc *SmartContract, name, trans string) (id int64, err error) {
+	if err := sc.serialOnly("the languages"); err != nil {
+		return 0, err
+	}
 	if err := validateAccess(sc, "CreateLanguage"); err != nil {
 		return 0, err
 	}
@@ -442,6 +451,9 @@ func CreateLanguage(sc *SmartContract, name, trans string) (id int64, err error)
 
 // EditLanguage edits language
 func EditLanguage(sc *SmartContract, id int64, name, trans string) error {
+	if err := sc.serialOnly("the languages"); err != nil {
+		return err
+	}
 	if err := validateAccess(sc, "EditLanguage"); err != nil {
 		return err
 	}
@@ -511,6 +523,9 @@ func Replace(s, old, new string) string {
 
 // CreateEcosystem creates a new ecosystem
 func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error) {
+	if err := sc.serialOnly("a new ecosystem"); err != nil {
+		return 0, err
+	}
 	if err := validateAccess(sc, "CreateEcosystem"); err != nil {
 		return 0, err
 	}
@@ -842,7 +857,7 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 	var balance decimal.Decimal
 	if strings.EqualFold("UTXO", source) && strings.EqualFold("Account", target) {
 
-		txInputs := sqldb.GetUnusedOutputsMap(keyUTXO, outputsMap)
+		txInputs := sc.unusedOutputs(keyUTXO, outputsMap)
 
 		if len(txInputs) == 0 {
 			return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
@@ -1001,7 +1016,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 	//dbTx := sc.DbTransaction
 	keyUTXO := sqldb.KeyUTXO{Ecosystem: ecosystem, KeyId: fromID}
 
-	txInputs := sqldb.GetUnusedOutputsMap(keyUTXO, outputsMap)
+	txInputs := sc.unusedOutputs(keyUTXO, outputsMap)
 	if len(txInputs) == 0 {
 		return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem)
 	}
@@ -1030,7 +1045,7 @@ func UtxoToken(sc *SmartContract, toID int64, value string) (flag bool, err erro
 			var txOutputs1 []sqldb.SpentInfo
 			ecosystem1 := int64(consts.DefaultTokenEcosystem)
 			keyUTXO1 := sqldb.KeyUTXO{Ecosystem: ecosystem1, KeyId: fromID}
-			txInputs1 := sqldb.GetUnusedOutputsMap(keyUTXO1, outputsMap)
+			txInputs1 := sc.unusedOutputs(keyUTXO1, outputsMap)
 			if len(txInputs1) == 0 {
 				return false, fmt.Errorf(eEcoCurrentBalance, converter.IDToAddress(fromID), ecosystem1)
 			}
