@@ -9,10 +9,9 @@ contract BindWallet {
 		if !$cur {
 			error Sprintf("Contract %d does not exist", $Id)
 		}
+		// Whoever may change the contract binds it to their own account, which pays the fees of
+		// its transactions from then on: the signature of the transaction is the payer's consent
 		Eval($cur["conditions"])
-		if $key_id != Int($cur["wallet_id"]) {
-			error Sprintf("Wallet %d cannot activate the contract", $key_id)
-		}
 	}
 	action {
 		BndWallet($Id, $ecosystem_id)

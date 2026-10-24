@@ -117,6 +117,32 @@ func (s AccountAlgorithmSet) MarshalJSON() ([]byte, error) {
 	return []byte(s.String()), nil
 }
 
+// UnmarshalJSON reads the set a node wrote, as getuid answers it: the algorithms by their names
+// and their days, which the node checked as it took the parameter
+func (s *AccountAlgorithmSet) UnmarshalJSON(data []byte) error {
+	var items []accountAlgorithmJSON
+	if err := json.Unmarshal(data, &items); err != nil {
+		return fmt.Errorf("%s: %w", AccountAlgorithms, err)
+	}
+	set := make(AccountAlgorithmSet, len(items))
+	for i, item := range items {
+		v, ok := crypto.AsymAlgo_value[item.Algo]
+		if !ok {
+			return fmt.Errorf("%s: unknown algorithm %q", AccountAlgorithms, item.Algo)
+		}
+		set[i].Algo = crypto.AsymAlgo(v)
+		var err error
+		if set[i].RegisterUntil, err = parseAccountAlgoDate(item.RegisterUntil); err != nil {
+			return fmt.Errorf("%s: %s register_until: %w", AccountAlgorithms, item.Algo, err)
+		}
+		if set[i].SignUntil, err = parseAccountAlgoDate(item.SignUntil); err != nil {
+			return fmt.Errorf("%s: %s sign_until: %w", AccountAlgorithms, item.Algo, err)
+		}
+	}
+	*s = set
+	return nil
+}
+
 func (s AccountAlgorithmSet) find(algo crypto.AsymAlgo) (AccountAlgorithm, bool) {
 	for _, a := range s {
 		if a.Algo == algo {

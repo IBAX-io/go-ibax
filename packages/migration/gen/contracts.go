@@ -32,8 +32,9 @@ var (
 			Ecosystem: "{{.Ecosystem}}",
 			Owner:     "{{.Owner}}",
 		},
+		// The contracts of the BFT consensus are of the platform chain, not of a CLB
 		{
-			Source:    []string{"./contracts/first_ecosystem"},
+			Source:    []string{"./contracts/first_ecosystem", "./contracts/bft"},
 			Dest:      "./first_ecosys_contracts_data.go",
 			Variable:  "firstEcosystemContractsSQL",
 			Ecosystem: "1",

@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/api"
 	"github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -99,9 +100,10 @@ func envHeight(t *testing.T, name string) uint64 {
 
 // TestLocalChainEvidence makes the evidence of two prevotes of the validator of the node keys of
 // the data directory BFT_EVIDENCE_SIGNER at the height BFT_EVIDENCE_HEIGHT, round 0, for two
-// different hashes, and prints it as EVIDENCE HEX; with BFT_EVIDENCE_SUBMIT=1 it submits the
-// evidence transaction signed by the node of BFT_LOCALCHAIN_CONFIG, as a validator does, and
-// prints SUBMITTED
+// different hashes, and prints it as EVIDENCE HEX; with BFT_EVIDENCE_SUBMIT=1 it sends the
+// evidence transaction signed by the node of BFT_LOCALCHAIN_CONFIG, as a validator makes it, to
+// the API of that node, which keeps its pool in its process, and prints SUBMITTED once a block
+// has it
 func TestLocalChainEvidence(t *testing.T) {
 	localChain(t)
 	priv, pub := nodeKeys(t, os.Getenv("BFT_EVIDENCE_SIGNER"))
@@ -132,10 +134,43 @@ func TestLocalChainEvidence(t *testing.T) {
 	body := e.Marshal()
 	fmt.Printf("EVIDENCE %x\n", body)
 	if os.Getenv("BFT_EVIDENCE_SUBMIT") == "1" {
-		if err := submitEvidenceTx(body); err != nil {
-			t.Fatal(err)
-		}
+		sendEvidenceTx(t, body)
 		fmt.Println("SUBMITTED")
+	}
+}
+
+// sendEvidenceTx sends the evidence transaction of the node of BFT_LOCALCHAIN_CONFIG to its API,
+// logged in with its node key, and waits for a block to have the transaction
+func sendEvidenceTx(t *testing.T, body []byte) {
+	txData, err := evidenceTx(body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	host := conf.Config.HTTP.Host
+	if host == "" || host == "0.0.0.0" {
+		host = "127.0.0.1"
+	}
+	connect := &api.Connect{
+		Root:       fmt.Sprintf("http://%s/api/v2/", net.JoinHostPort(host, strconv.Itoa(conf.Config.HTTP.Port))),
+		PrivateKey: syspar.GetNodePrivKey(),
+		PublicKey:  hex.EncodeToString(crypto.NodeAccountKey(syspar.GetNodePubKey()).Bytes()),
+	}
+	if err := connect.Login(); err != nil {
+		t.Fatal(err)
+	}
+	var sent struct {
+		Hashes map[string]string `json:"hashes"`
+	}
+	if err := connect.SendMultipart("sendTx", map[string][]byte{"evidence": txData}, &sent); err != nil {
+		t.Fatal(err)
+	}
+	if len(sent.Hashes) != 1 {
+		t.Fatalf("the node took %d transactions, not 1", len(sent.Hashes))
+	}
+	for hash := range sent.Hashes {
+		if blockID, err := connect.WaitTx(hash); blockID == 0 {
+			t.Fatalf("the evidence transaction %s: %v", hash, err)
+		}
 	}
 }
 

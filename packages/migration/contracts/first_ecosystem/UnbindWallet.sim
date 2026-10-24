@@ -9,10 +9,12 @@ contract UnbindWallet {
 		if !$cur {
 			error Sprintf("Contract %d does not exist", $Id)
 		}
-		
-		Eval($cur["conditions"])
+		if Int($cur["wallet_id"]) == 0 {
+			error Sprintf("Contract %d is bound to no wallet", $Id)
+		}
+		// The bound account leaves at any time; whoever may change the contract revokes the binding
 		if $key_id != Int($cur["wallet_id"]) {
-			error Sprintf("Wallet %d cannot deactivate the contract", $key_id)
+			Eval($cur["conditions"])
 		}
 	}
 	action {

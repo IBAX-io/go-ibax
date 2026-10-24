@@ -130,17 +130,26 @@ func (d *bftDriver) submitEvidence() {
 // errNotValidator is the error of a node out of honor_nodes, which signs no evidence transaction
 var errNotValidator = errors.New("the node is not in honor_nodes")
 
-// submitEvidenceTx submits an evidence in the transaction @1BftEvidence, signed with the key of
-// the node, whose account is the key and the signer of the transaction: a node of honor_nodes,
-// stopped or not, signs it, for no fee
+// submitEvidenceTx submits an evidence in the transaction @1BftEvidence to the pool of the node
 func submitEvidenceTx(body []byte) error {
+	txData, err := evidenceTx(body)
+	if err != nil {
+		return err
+	}
+	return transaction.CreateTransaction(txData)
+}
+
+// evidenceTx is the transaction @1BftEvidence of an evidence, signed with the key of the node,
+// whose account is the key and the signer of the transaction: a node of honor_nodes, stopped or
+// not, signs it, for no fee
+func evidenceTx(body []byte) ([]byte, error) {
 	pub := syspar.GetNodePubKey()
 	if !slices.ContainsFunc(syspar.GetNodes(), func(n syspar.HonorNode) bool { return bytes.Equal(n.PublicKey, pub) }) {
-		return errNotValidator
+		return nil, errNotValidator
 	}
 	contract := smart.VMGetContract(script.GetVM(), "BftEvidence", 1)
 	if contract == nil {
-		return fmt.Errorf("no contract %s", smart.BftEvidenceContract)
+		return nil, fmt.Errorf("no contract %s", smart.BftEvidenceContract)
 	}
 	sc := types.SmartTransaction{
 		Header: &types.Header{
@@ -155,9 +164,5 @@ func submitEvidenceTx(body []byte) error {
 	stp := &transaction.SmartTransactionParser{
 		SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 	}
-	txData, err := stp.BinMarshalWithPrivate(&sc, syspar.GetNodePrivKey(), true)
-	if err != nil {
-		return err
-	}
-	return transaction.CreateTransaction(txData)
+	return stp.BinMarshalWithPrivate(&sc, syspar.GetNodePrivKey(), true)
 }
