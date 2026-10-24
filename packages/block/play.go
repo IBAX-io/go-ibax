@@ -205,6 +205,9 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		return err
 	}
 	fees := smart.NewFeeSettlement()
+	if !b.IsGenesis() {
+		return b.executeState(dbTx, txBadChan, afters, &processedTx, txs, fees)
+	}
 	if err := b.executeTxs(dbTx, txBadChan, afters, &processedTx, txs, fees); err != nil {
 		return err
 	}
@@ -329,7 +332,7 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 		if t.IsSmartContract() {
 			credits = t.SmartContract().FeeCredits
 		}
-		if b.GenBlock && !b.size.add(t.FullData, after, t.RollBackTx, fees.NewAccounts(credits)) {
+		if b.GenBlock && !b.size.add(t.Compressed(), after, t.RollBackTx, fees.NewAccounts(credits)) {
 			if errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash()))); errRoll != nil {
 				return errRoll
 			}

@@ -8,6 +8,7 @@ package block
 import (
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
@@ -77,5 +78,10 @@ func (b *Block) endProfile(dbTx *sqldb.DbTransaction) {
 	p.fields["txs"] = txs
 	p.fields["db_statements"] = statements
 	p.fields["total_ms"] = float64(total.Microseconds()) / 1000
-	log.WithFields(p.fields).Info("block execution profile")
+	// an execution past the time a proposer has for its block is logged at warning level
+	level := log.InfoLevel
+	if total > time.Duration(syspar.GetMaxBlockGenerationTime())*time.Millisecond {
+		level = log.WarnLevel
+	}
+	log.WithFields(p.fields).Log(level, "block execution profile")
 }

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/api"
@@ -90,6 +91,7 @@ func Start() {
 		exitErr(1)
 	}
 	publisher.InitCentrifugo(conf.Config.Centrifugo)
+	tuneGC(conf.Config.Exec)
 	if err := metrics.Serve(conf.Config.Metrics.Listen); err != nil {
 		log.WithFields(log.Fields{"type": consts.ConfigError, "error": err}).Error("serving the metrics")
 		exitErr(1)
@@ -229,4 +231,18 @@ func initRoutes(listenHost string) {
 	}
 
 	httpListener(listenHost, handler)
+}
+
+// tuneGC sets the collector of the node of its configuration, unless the environment sets it
+func tuneGC(c conf.ExecConfig) {
+	if _, ok := os.LookupEnv("GOGC"); !ok {
+		percent := c.GCPercent
+		if percent == 0 {
+			percent = 400
+		}
+		debug.SetGCPercent(percent)
+	}
+	if _, ok := os.LookupEnv("GOMEMLIMIT"); !ok && c.MemoryLimitMiB > 0 {
+		debug.SetMemoryLimit(c.MemoryLimitMiB << 20)
+	}
 }

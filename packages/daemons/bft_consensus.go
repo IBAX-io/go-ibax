@@ -20,6 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/faults"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/network/bftnet"
 	"github.com/IBAX-io/go-ibax/packages/service/bftmon"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
@@ -576,7 +577,10 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 	if wait := time.Unix(prev.Time+1, 0).Sub(faults.Now()); wait > 0 {
 		time.Sleep(min(wait, maxTimeWait))
 	}
+	waited := time.Since(start)
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageWait).Observe(waited.Seconds())
 	ts := max(faults.Now().Unix(), prev.Time+1)
+	collect := time.Now()
 	privateKey, publicKey := utils.GetNodeKeys()
 	dtx := DelayedTx{privateKey: privateKey, publicKey: publicKey, logger: a.logger, time: ts}
 	txs, err := dtx.RunForDelayBlockID(int64(height))
@@ -590,6 +594,8 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 	if len(trs) == 0 {
 		return nil, bft.Hash{}, block.ErrEmptyBlock
 	}
+	collected := time.Since(collect)
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageCollect).Observe(collected.Seconds())
 	position, err := syspar.GetThisNodePosition()
 	if err != nil {
 		return nil, bft.Hash{}, err
@@ -613,13 +619,23 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
+	trial := time.Now()
 	b, err := block.Propose(bin, parsed, start)
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
+	tried := time.Since(trial)
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageTrial).Observe(tried.Seconds())
 	hash, err := bft.HashOf(b.Header.BlockHash)
 	if err != nil {
 		return nil, bft.Hash{}, err
+	}
+	total, behind := time.Since(start), time.Since(time.Unix(ts, 0))
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageTotal).Observe(total.Seconds())
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageBehind).Observe(behind.Seconds())
+	if limit := time.Duration(syspar.GetMaxBlockGenerationTime()) * time.Millisecond; total > limit {
+		a.logger.WithFields(log.Fields{"type": consts.BlockError, "height": height, "round": round, "txs": len(b.TxFullData),
+			"wait": waited, "collect": collected, "trial": tried, "total": total, "behind": behind}).Warn("a proposal past max_block_generation_time")
 	}
 	a.logger.WithFields(log.Fields{"height": height, "round": round, "txs": len(b.TxFullData)}).Debug("proposing")
 	return b.BinData, hash, nil

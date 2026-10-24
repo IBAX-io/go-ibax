@@ -5,9 +5,7 @@
 package smart
 
 import (
-	"encoding/json"
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -74,28 +72,14 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 
 		selectCost, err := queryCoster.QueryCost(sc.DbTransaction, selectQuery, selectArgs...)
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table, "query": selectQuery, "fields": fields, "values": ivalues, "where": inWhere}).Error("getting query total cost")
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table, "query": selectQuery, "fields": fields, "values": ivalues, "where": inWhere}).Log(dbLevel(err), "getting query total cost")
 			return 0, "", err
 		}
-		keyQuery, extra := withKeyColumns(selectQuery, sc.DbTransaction.UniqueColumns(sqlBuilder.Table), fields)
-		rows = sc.DbTransaction.GetOneRowTransaction(keyQuery, selectArgs...)
+		rows = sc.DbTransaction.GetOneRowTransaction(selectQuery, selectArgs...)
 		logData, err = rows.String()
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": selectQuery}).Error("getting one row transaction")
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": selectQuery}).Log(dbLevel(err), "getting one row transaction")
 			return 0, "", err
-		}
-		if sc.DbTransaction.Access() != nil {
-			// the update of a table of the first ecosystem leaves the ecosystem of the rows as it is
-			set := slices.DeleteFunc(slices.Clone(fields), func(f string) bool { return sqlBuilder.KeyTable() != "" && f == "ecosystem" })
-			declareRows(sc.DbTransaction, sqlBuilder.Table, rows.List, setsUnique(set, sc.DbTransaction.UniqueColumns(sqlBuilder.Table)), !setsID(fields))
-		}
-		for _, r := range rows.List {
-			for _, c := range extra {
-				delete(r, c)
-			}
-		}
-		for _, c := range extra {
-			delete(logData, c)
 		}
 		cost += selectCost
 		if len(logData) == 0 {
@@ -127,7 +111,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			updateQuery := `UPDATE "` + sqlBuilder.Table + `" SET ` + updateExpr + " " + whereExpr
 			updateCost, err := queryCoster.QueryCost(sc.DbTransaction, updateQuery, args...)
 			if err != nil {
-				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": updateQuery}).Error("getting query total cost for update query")
+				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": updateQuery}).Log(dbLevel(err), "getting query total cost for update query")
 				return 0, "", err
 			}
 			cost += updateCost
@@ -136,7 +120,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 		err = sc.DbTransaction.Update(sqlBuilder.Table, updateExpr, whereExpr, args...)
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Error("getting update query")
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Log(dbLevel(err), "getting update query")
 			return 0, "", err
 		}
 		if maxIDCached && !setsID(fields) {
@@ -175,25 +159,15 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 
 	insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery, insertArgs...)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Log(dbLevel(err), "getting total query cost for insert query")
 		return 0, "", err
 	}
 	rollDataHashStr = qb.BoundStatement(insertQuery, insertArgs)
 	cost += insertCost
-	if sc.DbTransaction.Access() != nil {
-		_, explicit := sqlBuilder.FieldValue("id")
-		id, _ := strconv.ParseInt(sqlBuilder.TableID(), 10, 64)
-		sc.DbTransaction.DeclareWrite(sqlBuilder.Table, []func(string) (string, bool){func(col string) (string, bool) {
-			if col == "id" {
-				return sqlBuilder.TableID(), true
-			}
-			return sqlBuilder.FieldValue(col)
-		}}, id, !explicit, false)
-	}
 	prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 	err = sc.DbTransaction.ExecSql(insertQuery, insertArgs...)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Log(dbLevel(err), "executing insert query")
 		return 0, "", err
 	}
 	if id, err := strconv.ParseInt(sqlBuilder.TableID(), 10, 64); maxIDCached && err == nil {
@@ -246,20 +220,6 @@ func (sc *SmartContract) deleteRow(table string, id int64, generalRollback bool)
 	if len(row) == 0 {
 		return 0, errDelNotExistRecord
 	}
-	if sc.DbTransaction.Access() != nil {
-		var cols map[string]any
-		d := json.NewDecoder(strings.NewReader(row))
-		d.UseNumber()
-		if err = d.Decode(&cols); err != nil {
-			return 0, logErrorDB(err, "reading the row to delete")
-		}
-		sc.DbTransaction.DeclareWrite(sqlBuilder.Table, []func(string) (string, bool){func(col string) (string, bool) {
-			if v, ok := cols[col]; ok && v != nil {
-				return fmt.Sprint(v), true
-			}
-			return "", false
-		}}, 0, false, false)
-	}
 	deleteQuery := `DELETE FROM "` + sqlBuilder.Table + `" ` + whereExpr
 	deleteCost, err := queryCoster.QueryCost(sc.DbTransaction, deleteQuery, whereArgs...)
 	if err != nil {
@@ -292,58 +252,6 @@ func (sc *SmartContract) update(fields []string, values []any,
 		whereField: fmt.Sprint(whereValue)}))
 }
 
-// withKeyColumns is the select of the rows an update writes with the columns of the unique keys of
-// the table that it does not select, and those columns
-func withKeyColumns(query string, unique, fields []string) (string, []string) {
-	selected := map[string]bool{"id": true}
-	for _, f := range fields {
-		selected[strings.Trim(toColumn(f), `"`)] = true
-	}
-	var extra, quoted []string
-	for _, c := range unique {
-		if !selected[c] {
-			extra = append(extra, c)
-			quoted = append(quoted, `"`+c+`"`)
-		}
-	}
-	if len(extra) == 0 || !strings.HasPrefix(query, "SELECT ") {
-		return query, nil
-	}
-	return "SELECT " + strings.Join(quoted, ",") + "," + query[len("SELECT "):], extra
-}
-
-// declareRows names the rows an update writes, by the values the select of the rows read: the
-// whole table for an update that changes a column of a unique key
-func declareRows(tx *sqldb.DbTransaction, table string, list []map[string]string, wholeTable, keepsMax bool) {
-	var rows []func(string) (string, bool)
-	if !wholeTable {
-		for _, r := range list {
-			rows = append(rows, func(col string) (string, bool) { v, ok := r[col]; return v, ok })
-		}
-	}
-	tx.DeclareWrite(table, rows, 0, false, keepsMax)
-}
-
-// toColumn is the column a field of an update or insert names
-func toColumn(field string) string {
-	field = strings.TrimPrefix(field, "timestamp ")
-	field = strings.TrimLeft(field, "+-")
-	if i := strings.Index(field, "->"); i >= 0 {
-		field = field[:i]
-	}
-	return strings.TrimSpace(field)
-}
-
-// setsUnique tells an update of the fields changes a column of the unique columns
-func setsUnique(fields, unique []string) bool {
-	for _, f := range fields {
-		if slices.Contains(unique, toColumn(f)) {
-			return true
-		}
-	}
-	return false
-}
-
 // setsID tells whether an update of the fields may change the id of a row: a field names a column,
 // with the sign of an increment or the prefix of a timestamp
 func setsID(fields []string) bool {
@@ -363,4 +271,13 @@ func shortString(raw string, length int) string {
 	}
 
 	return raw
+}
+
+// dbLevel is the level of the log of the error of a statement: the statement after which the
+// transaction runs again is the flow of the block, not a fault
+func dbLevel(err error) log.Level {
+	if sqldb.IsRerun(err) {
+		return log.DebugLevel
+	}
+	return log.ErrorLevel
 }

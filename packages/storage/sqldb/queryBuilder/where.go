@@ -18,12 +18,13 @@ import (
 
 var (
 	errWhereFalse = errors.New(`false result`)
+	whereColRE    = regexp.MustCompile(`;([\w\-]+)`)
 )
 
 func PrepareWhere(where string) string {
 	whereStr := where
 	where = strings.Replace(where, "->", ";", -1)
-	whereSlice := regexp.MustCompile(`;([\w\-]+)`).FindAllStringSubmatchIndex(where, -1)
+	whereSlice := whereColRE.FindAllStringSubmatchIndex(where, -1)
 	startWhere := 0
 	out := ``
 	for i := 0; i < len(whereSlice); i++ {

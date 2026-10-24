@@ -14,8 +14,28 @@ import (
 // TxRand is the random source of a transaction: seeded with its hash, so every node draws the same
 // numbers for it, whatever runs before it in the block and wherever it runs
 func TxRand(hash []byte) *rand.Rand {
-	return rand.New(rand.NewSource(int64(crypto.CalcChecksum(hash))))
+	return rand.New(&lazySource{seed: int64(crypto.CalcChecksum(hash))})
 }
+
+// lazySource is the source rand.NewSource makes of its seed, made when a number is first drawn:
+// the source is kilobytes seeded in hundreds of steps, and most transactions draw none
+type lazySource struct {
+	seed int64
+	src  rand.Source64
+}
+
+func (s *lazySource) source() rand.Source64 {
+	if s.src == nil {
+		s.src = rand.NewSource(s.seed).(rand.Source64)
+	}
+	return s.src
+}
+
+func (s *lazySource) Int63() int64 { return s.source().Int63() }
+
+func (s *lazySource) Uint64() uint64 { return s.source().Uint64() }
+
+func (s *lazySource) Seed(seed int64) { s.seed, s.src = seed, nil }
 
 func RandInt(min, max int) int {
 	if min >= max || min == 0 || max == 0 {

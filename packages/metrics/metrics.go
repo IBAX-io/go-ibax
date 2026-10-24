@@ -31,10 +31,12 @@ const (
 	KindTrial    = "trial"    // a BFT trial, rolled back
 	KindApply    = "apply"    // the node applies a block another node made
 	KindReceived = "received" // a block the node got from another node, parsed before it runs
+	KindPropose  = "propose"  // a proposer of the BFT consensus makes its proposal
 )
 
 // The stages of a block execution
 const (
+	StageBegin    = "begin"    // taking the snapshot of the memory and the database transaction of a trial
 	StagePrepare  = "prepare"  // reading the outputs and the parameters the transactions need
 	StageExecute  = "execute"  // running the transactions
 	StageAfter    = "after"    // writing the logs, the statuses and the rollbacks of the transactions
@@ -44,6 +46,10 @@ const (
 	StageTotal    = "total"    // the whole execution
 	StageParse    = "parse"    // parsing the block from its bytes
 	StageRollback = "rollback" // rolling back a trial
+	StageWait     = "wait"     // the proposer waits for its clock to pass the time of the last block
+	StageCollect  = "collect"  // the proposer takes the transactions of its block from the queue
+	StageTrial    = "trial"    // the proposer runs its block
+	StageBehind   = "behind"   // from the time of the proposed block to the end of the proposal
 )
 
 // The stages of a transaction execution
@@ -92,6 +98,35 @@ var (
 		Namespace: namespace, Name: "tx_results_total",
 		Help: "Executed transactions by result.",
 	}, []string{"kind", "result"})
+
+	// TxRuns counts the runs of the transactions of the blocks the state of the block commits, by
+	// how they ran: in parallel; again after the transactions before them committed, as their run
+	// in parallel read what those wrote; in order, as the state runs them only in order
+	TxRuns = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "tx_runs_total",
+		Help: "Committed runs of transactions by how they ran: parallel, again, ordered.",
+	}, []string{"run"})
+
+	// StateFallbacks counts what the state of the block ran in PostgreSQL or only in order, by
+	// reason
+	StateFallbacks = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "state_fallbacks_total",
+		Help: "Statements the state of the block ran in PostgreSQL or only in order, by reason.",
+	}, []string{"reason"})
+
+	// StateFlush is the time the state of a block takes to write the rows it changed to
+	// PostgreSQL at the end of the block
+	StateFlush = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: namespace, Name: "state_flush_seconds",
+		Help:    "Time to write the rows the state of a block changed to PostgreSQL.",
+		Buckets: prometheus.ExponentialBuckets(0.001, 2, 14),
+	})
+
+	// StateFlushRows counts the rows the state of the blocks wrote to PostgreSQL, by operation
+	StateFlushRows = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "state_flush_rows_total",
+		Help: "Rows the state of the blocks wrote to PostgreSQL by operation: insert, update, delete.",
+	}, []string{"op"})
 
 	// DBStatements counts the database statements by their operation
 	DBStatements = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -164,7 +199,7 @@ func init() {
 	registry.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, DBStatements, DBCache,
+		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
 		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
 	)
 }

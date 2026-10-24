@@ -8,6 +8,7 @@ package sqldb
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -119,16 +120,26 @@ func InitDB(cfg conf.DBConfig) error {
 func GormInit(conf conf.DBConfig) error {
 	var err error
 	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable password=%s TimeZone=UTC", conf.Host, conf.Port, conf.User, conf.Name, conf.Password)
+	// every connection takes the settings of the node as it opens, so no transaction sets them
+	params := map[string]string{
+		"lock_timeout":                        strconv.Itoa(conf.LockTimeout),
+		"idle_in_transaction_session_timeout": strconv.Itoa(conf.IdleInTxTimeout),
+	}
 open:
+	db, err := openDB(dsn, params)
+	if err != nil {
+		return err
+	}
 	DBConn, err = gorm.Open(postgres.New(postgres.Config{
 		// The extended protocol: pgx prepares a statement once on a connection and keeps it in
 		// its statement cache, so a statement a block repeats is planned once
-		DSN: dsn,
+		Conn: db,
 	}), &gorm.Config{
 		AllowGlobalUpdate: true,                                  //allow global update
 		Logger:            logger.Default.LogMode(logger.Silent), // start Logger, show detail log
 	})
 	if err != nil {
+		db.Close()
 		if strings.Contains(err.Error(), "SQLSTATE 3D000") {
 			err := createDatabase(fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable TimeZone=UTC", conf.Host, conf.Port, conf.User, conf.Password), conf.Name)
 			if err != nil {
@@ -148,10 +159,6 @@ open:
 		DBConn = nil
 		return err
 	}
-	if err = registerAccess(DBConn); err != nil {
-		DBConn = nil
-		return err
-	}
 	sqlDB, err := DBConn.DB()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("cant get sql DB")
@@ -162,10 +169,6 @@ open:
 	sqlDB.SetConnMaxLifetime(time.Minute * 10)
 	sqlDB.SetMaxIdleConns(conf.MaxIdleConns)
 	sqlDB.SetMaxOpenConns(conf.MaxOpenConns)
-
-	if err = setupConnOptions(DBConn); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -182,19 +185,6 @@ func createDatabase(dsn string, dbName string) error {
 		d.Close()
 	}()
 	return result.Error
-}
-
-func setupConnOptions(conr *gorm.DB) error {
-	if err := conr.Exec(fmt.Sprintf(`set lock_timeout = %d;`, conf.Config.DB.LockTimeout)).Error; err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("can't set lock timeout")
-		return err
-	}
-
-	if err := conr.Exec(fmt.Sprintf(`set idle_in_transaction_session_timeout = %d;`, conf.Config.DB.IdleInTxTimeout)).Error; err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("can't set idle_in_transaction_session_timeout")
-		return err
-	}
-	return conr.Exec("SET TIME ZONE 'UTC'").Error
 }
 
 // GormClose is closing Gorm connection
@@ -217,7 +207,23 @@ type DbTransaction struct {
 	conn       *gorm.DB
 	statements *atomic.Int64
 	cache      *txCache
-	access     *accessSlot
+	// view is the view on the state of the block the statements of a transaction run in
+	view *TxView
+}
+
+// View is the view on the state of the block the transaction runs in; nil outside one
+func (tr *DbTransaction) View() *TxView {
+	if tr == nil {
+		return nil
+	}
+	return tr.view
+}
+
+// ForgetCache empties the cache of the transaction
+func (tr *DbTransaction) ForgetCache() {
+	if tr != nil && tr.cache != nil {
+		tr.cache.forgetAll()
+	}
 }
 
 func NewDbTransaction(conn *gorm.DB) *DbTransaction {
@@ -233,22 +239,16 @@ func (d *DbTransaction) Debug() *DbTransaction {
 func StartTransaction() (*DbTransaction, error) {
 	ctx, statements := withStatementCount()
 	ctx, cache := withTxCache(ctx)
-	ctx, access := withAccess(ctx)
 	conn := DBConn.WithContext(ctx).Begin()
 	if conn.Error != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": conn.Error}).Error("cannot start transaction because of connection error")
 		return nil, conn.Error
 	}
 
-	if err := setupConnOptions(conn); err != nil {
-		return nil, err
-	}
-
 	return &DbTransaction{
 		conn:       conn,
 		statements: statements,
 		cache:      cache,
-		access:     access,
 	}, nil
 }
 
@@ -267,14 +267,20 @@ func (tr *DbTransaction) Connection() *gorm.DB {
 	return tr.conn
 }
 
-// Savepoint creates PostgreSQL Savepoint
+// Savepoint creates PostgreSQL Savepoint. It runs the statement itself: the savepoints of gorm
+// drop its error.
 func (tr *DbTransaction) Savepoint(mark string) error {
-	return tr.Connection().SavePoint(mark).Error
+	return tr.Connection().Exec("SAVEPOINT " + mark).Error
 }
 
-// RollbackSavepoint rollbacks PostgreSQL Savepoint
+// RollbackSavepoint rollbacks PostgreSQL Savepoint, with the error of the statement
 func (tr *DbTransaction) RollbackSavepoint(mark string) error {
-	return tr.Connection().RollbackTo(mark).Error
+	return tr.Connection().Exec("ROLLBACK TO SAVEPOINT " + mark).Error
+}
+
+// ReleaseSavepoint releases PostgreSQL Savepoint
+func (tr *DbTransaction) ReleaseSavepoint(mark string) error {
+	return tr.Connection().Exec("RELEASE SAVEPOINT " + mark).Error
 }
 
 func (tr *DbTransaction) ResetSavepoint(mark string) error {
@@ -312,13 +318,13 @@ func (dbTx *DbTransaction) DropTables() error {
 
 // GetRecordsCountTx is counting all records of table in transaction
 func (dbTx *DbTransaction) GetRecordsCountTx(tableName, where string) (count int64, err error) {
-	dbQuery := GetDB(dbTx).Table(tableName)
-	if len(where) > 0 {
-		dbQuery = dbQuery.Where(where)
-	}
 	if !notAutoIncrement[tableName] {
 		if len(where) == 0 && !strings.ContainsAny(tableName, `" `) {
 			return dbTx.maxID(tableName)
+		}
+		dbQuery := GetDB(dbTx).Table(tableName)
+		if len(where) > 0 {
+			dbQuery = dbQuery.Where(where)
 		}
 		err := dbQuery.Select("id").Order("id DESC").Limit(1).Scan(&count).Error
 		if err != nil {
@@ -339,7 +345,7 @@ func (dbTx *DbTransaction) Update(tblname, set, where string, args ...any) error
 
 // ExecSql executes the statement with args bound to its placeholders
 func (dbTx *DbTransaction) ExecSql(sql string, args ...any) error {
-	return GetDB(dbTx).Exec(sql, args...).Error
+	return dbTx.exec(sql, args...)
 }
 
 // Delete is deleting table rows. args are the values bound to the placeholders of where.

@@ -148,17 +148,25 @@ func cached[T any](tr *DbTransaction, table, key string, load func() (T, error))
 	if tr == nil || tr.cache == nil {
 		return load()
 	}
-	if a := tr.Access(); a != nil && table != schemaTable && key != maxIDKey {
-		a.read(Row{Table: a.catalog.canon(table, false)})
-	}
 	if v, ok := tr.cache.get(table, key); ok {
 		metrics.DBCache.WithLabelValues("hit").Inc()
 		return v.(T), nil
+	}
+	name := cacheTable(table)
+	if tr.view != nil {
+		if v, ok := tr.view.shared(name, key); ok {
+			metrics.DBCache.WithLabelValues("shared").Inc()
+			tr.cache.put(table, key, v)
+			return v.(T), nil
+		}
 	}
 	metrics.DBCache.WithLabelValues("miss").Inc()
 	v, err := load()
 	if err == nil {
 		tr.cache.put(table, key, v)
+		if tr.view != nil {
+			tr.view.share(name, key, v)
+		}
 	}
 	return v, err
 }
@@ -285,28 +293,16 @@ func cachedFirst[T any](tr *DbTransaction, table, key string, dest *T, hasID boo
 // maxIDKey keys the highest id of a table, 0 for a table without rows
 const maxIDKey = "maxid"
 
-// maxID is the highest id of the table. A speculative run sees it with the next ids that the
-// transactions of the block before it take.
+// maxID is the highest id of the table
 func (tr *DbTransaction) maxID(table string) (int64, error) {
-	a := tr.Access()
-	if a != nil {
-		a.quiet++
-	}
-	id, err := tr.MaxID(table)
-	if a != nil {
-		a.quiet--
-	}
-	if err != nil || a == nil || !a.speculative {
-		return id, err
-	}
-	return a.observeMaxID(table, id), nil
+	return tr.MaxID(table)
 }
 
 // MaxID is the highest id of the table in the transaction
 func (tr *DbTransaction) MaxID(table string) (int64, error) {
 	return cached(tr, table, maxIDKey, func() (int64, error) {
 		var id int64
-		rows, err := GetDB(tr).Raw(`select id from "` + table + `" order by id desc limit 1`).Rows()
+		rows, err := tr.queryRaw(`select id from "` + table + `" order by id desc limit 1`)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("selecting next id from table")
 			return 0, err

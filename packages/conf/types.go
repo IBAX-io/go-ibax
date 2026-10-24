@@ -44,6 +44,21 @@ type (
 		BadMinutes int
 	}
 
+	// ExecConfig is how the node runs the transactions of a block
+	ExecConfig struct {
+		// Workers run the transactions of a block in parallel; 0 takes the CPUs, 1 runs them in
+		// order
+		Workers int
+		// GCPercent is the GOGC of the node, 0 takes 400: a block allocates hundreds of kilobytes
+		// a transaction, and the collector at 100 spends a fifth of the CPU of the node. The
+		// variable GOGC of the environment, when set, wins.
+		GCPercent int
+		// MemoryLimitMiB is the soft limit of the memory of the node, at which the collector runs
+		// whatever GCPercent; 0 sets none. The variable GOMEMLIMIT of the environment, when set,
+		// wins.
+		MemoryLimitMiB int64
+	}
+
 	// StorageConfig is what the node keeps of the rows out of the window of the chain
 	StorageConfig struct {
 		// Archive keeps them, in the archive schema, for the API and the synchronization
@@ -143,6 +158,7 @@ type (
 		Redis          RedisConfig
 		Metrics        MetricsConfig
 		TxPool         TxPoolConfig
+		Exec           ExecConfig
 		Storage        StorageConfig
 		Centrifugo     CentrifugoConfig
 		Log            LogConfig

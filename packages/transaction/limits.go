@@ -41,6 +41,15 @@ func GetLetParsing() LimitMode {
 type Limits struct {
 	Mode     LimitMode
 	Limiters []Limiter // the list of limiters
+	// of is, for the limits of a run in parallel, the limits of the block: the run checks none,
+	// the block checks them in its order once the run commits
+	of *Limits
+}
+
+// Deferred are the limits of a run in parallel: they check nothing, and tell the time left to the
+// block
+func (limits *Limits) Deferred() *Limits {
+	return &Limits{Mode: limits.Mode, of: limits}
 }
 
 // Limiter describes interface functions for limits
@@ -89,6 +98,9 @@ func NewLimits(b LimitMode) (limits *Limits) {
 
 // CheckLimit calls each limiter
 func (limits *Limits) CheckLimit(t TransactionCaller) error {
+	if limits.of != nil {
+		return nil
+	}
 	for _, limiter := range limits.Limiters {
 		if err := limiter.check(t, limits.Mode); err != nil {
 			return err
@@ -159,6 +171,9 @@ func (limits *Limits) StartAt(start time.Time) {
 // TimeLeft is the time left to the block being generated, in ms, at most
 // max_block_generation_time
 func (limits *Limits) TimeLeft() int64 {
+	if limits.of != nil {
+		return limits.of.TimeLeft()
+	}
 	for _, l := range limits.Limiters {
 		if bl, ok := l.(*timeBlockLimit); ok {
 			return max(0, min(bl.Limit, bl.Limit-time.Since(bl.Start)).Milliseconds())

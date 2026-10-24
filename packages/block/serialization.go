@@ -23,12 +23,14 @@ func (b *Block) repeatMarshallBlock() error {
 		ran[string(t.FullData)] = t
 	}
 	txs := make([]*transaction.Transaction, 0, len(b.TxFullData))
+	compressed := make([][]byte, 0, len(b.TxFullData))
 	for _, data := range b.TxFullData {
 		t, ok := ran[string(data)]
 		if !ok {
 			return errors.New("a transaction of the block is not one that ran")
 		}
 		txs = append(txs, t)
+		compressed = append(compressed, t.Compressed())
 	}
 	data := &types.BlockData{}
 	if err := data.Apply(
@@ -36,10 +38,10 @@ func (b *Block) repeatMarshallBlock() error {
 		types.WithPrevHeader(b.PrevHeader),
 		types.WithAfterTxs(b.AfterTxs),
 		types.WithSysUpdate(b.SysUpdate),
-		types.WithTxFullData(b.TxFullData)); err != nil {
+		types.WithTxFullData(compressed)); err != nil {
 		return errors.Wrap(err, "marshalling repeat block")
 	}
-	newBlockData, err := data.MarshallBlock(syspar.GetNodePrivKey())
+	newBlockData, err := data.MarshallCompressed(syspar.GetNodePrivKey())
 	if err != nil {
 		return errors.Wrap(err, "marshalling repeat block")
 	}

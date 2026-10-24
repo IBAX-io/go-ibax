@@ -12,7 +12,10 @@ import (
 	"math/rand"
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/IBAX-io/go-ibax/packages/common"
@@ -95,6 +98,17 @@ type SmartContract struct {
 	EcoParams       []sqldb.EcoParam
 	// callAs is the account that CallContractAs runs a contract as, 0 outside it
 	callAs int64
+	// logger is the entry of GetLogger, for the fields loggerKey
+	logger    *log.Entry
+	loggerKey loggerKey
+}
+
+// loggerKey are the fields of the entry of GetLogger
+type loggerKey struct {
+	hash  string
+	clb   bool
+	name  string
+	txEco int64
 }
 
 // AppendStack adds an element to the stack of contract call or removes the top element when name is empty
@@ -162,7 +176,15 @@ func (sc *SmartContract) GetLogger() *log.Entry {
 	if sc.TxContract != nil {
 		name = sc.TxContract.Name
 	}
-	return log.WithFields(log.Fields{"tx": fmt.Sprintf("%x", sc.Hash), "clb": sc.ChildChain, "name": name, "tx_eco": sc.TxSmart.EcosystemID})
+	// the callers take it whether they log or not: it is made once a contract
+	key := loggerKey{clb: sc.ChildChain, name: name, txEco: sc.TxSmart.EcosystemID}
+	if sc.logger == nil || sc.loggerKey.hash != string(sc.Hash) || sc.loggerKey.clb != key.clb ||
+		sc.loggerKey.name != name || sc.loggerKey.txEco != key.txEco {
+		key.hash = string(sc.Hash)
+		sc.logger = log.WithFields(log.Fields{"tx": fmt.Sprintf("%x", sc.Hash), "clb": key.clb, "name": name, "tx_eco": key.txEco})
+		sc.loggerKey = key
+	}
+	return sc.logger
 }
 
 func GetAllContracts() (string, error) {
@@ -221,34 +243,34 @@ func (sc *SmartContract) getExtend() map[string]any {
 		perBlockHash = hex.EncodeToString(sc.PreBlockHeader.BlockHash)
 	}
 	head := sc.TxSmart
-	extend := map[string]any{
-		script.Extend_type:          head.ID,
-		script.Extend_time:          sc.Timestamp,
-		script.Extend_ecosystem_id:  head.EcosystemID,
-		script.Extend_node_position: blockNodePosition,
-		script.Extend_block:         block,
-		script.Extend_key_id:        sc.Key.ID,
-		script.Extend_account_id:    sc.Key.AccountID,
-		script.Extend_block_key_id:  blockKeyID,
-		script.Extend_parent:        ``,
-		script.Extend_txcost:        sc.GetContractLimit(),
-		script.Extend_txhash:        sc.Hash,
-		//script.Extend_result:              ``,
-		script.Extend_sc:                  sc,
-		script.Extend_contract:            sc.TxContract,
-		script.Extend_block_time:          blockTime,
-		script.Extend_original_contract:   ``,
-		script.Extend_this_contract:       ``,
-		script.Extend_guest_key:           consts.GuestKey,
-		script.Extend_guest_account:       consts.GuestAddress,
-		script.Extend_black_hole_key:      converter.HoleAddrMap[converter.BlackHoleAddr].K,
-		script.Extend_black_hole_account:  converter.HoleAddrMap[converter.BlackHoleAddr].S,
-		script.Extend_white_hole_key:      converter.HoleAddrMap[converter.WhiteHoleAddr].K,
-		script.Extend_white_hole_account:  converter.HoleAddrMap[converter.WhiteHoleAddr].S,
-		script.Extend_pre_block_data_hash: perBlockHash,
-		script.Extend_gen_block:           sc.GenBlock,
-		script.Extend_time_limit:          sc.TimeLimit,
-	}
+	// sized for all the values at once: the map grows past its literal with the data of the
+	// transaction otherwise
+	extend := make(map[string]any, 24+len(sc.TxData))
+	extend[script.Extend_type] = head.ID
+	extend[script.Extend_time] = sc.Timestamp
+	extend[script.Extend_ecosystem_id] = head.EcosystemID
+	extend[script.Extend_node_position] = blockNodePosition
+	extend[script.Extend_block] = block
+	extend[script.Extend_key_id] = sc.Key.ID
+	extend[script.Extend_account_id] = sc.Key.AccountID
+	extend[script.Extend_block_key_id] = blockKeyID
+	extend[script.Extend_parent] = ``
+	extend[script.Extend_txcost] = sc.GetContractLimit()
+	extend[script.Extend_txhash] = sc.Hash
+	extend[script.Extend_sc] = sc
+	extend[script.Extend_contract] = sc.TxContract
+	extend[script.Extend_block_time] = blockTime
+	extend[script.Extend_original_contract] = ``
+	extend[script.Extend_this_contract] = ``
+	extend[script.Extend_guest_key] = consts.GuestKey
+	extend[script.Extend_guest_account] = consts.GuestAddress
+	extend[script.Extend_black_hole_key] = converter.HoleAddrMap[converter.BlackHoleAddr].K
+	extend[script.Extend_black_hole_account] = converter.HoleAddrMap[converter.BlackHoleAddr].S
+	extend[script.Extend_white_hole_key] = converter.HoleAddrMap[converter.WhiteHoleAddr].K
+	extend[script.Extend_white_hole_account] = converter.HoleAddrMap[converter.WhiteHoleAddr].S
+	extend[script.Extend_pre_block_data_hash] = perBlockHash
+	extend[script.Extend_gen_block] = sc.GenBlock
+	extend[script.Extend_time_limit] = sc.TimeLimit
 	// The contracts called so far, so that code run apart from the transaction's contract
 	// (ContractConditions, the conditions of rows and tables) sees the same $stack. A copy: the
 	// stack grows and shrinks in place
@@ -365,7 +387,7 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 	}
 
 	if isCustom, err := sc.IsCustomTable(table); err != nil {
-		logger.WithFields(log.Fields{"table": table, "error": err, "type": consts.DBError}).Error("checking custom table")
+		logger.WithFields(log.Fields{"table": table, "error": err, "type": consts.DBError}).Log(dbLevel(err), "checking custom table")
 		return tablePermission, err
 	} else if !isCustom {
 		if isRead {
@@ -379,7 +401,7 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 	tables.SetTablePrefix(prefix)
 	tablePermission, err = tables.GetPermissions(sc.DbTransaction, name, "")
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting table permissions")
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting table permissions")
 		return tablePermission, err
 	}
 	if len(tablePermission[action]) > 0 {
@@ -444,7 +466,7 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 	tables.SetTablePrefix(prefix)
 	found, err := tables.Get(sc.DbTransaction, name)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting table columns")
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting table columns")
 		return err
 	}
 	if !found {
@@ -453,8 +475,7 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 		}
 		return fmt.Errorf(eTableNotFound, table)
 	}
-	var cols map[string]string
-	err = json.Unmarshal([]byte(tables.Columns), &cols)
+	cols, err := parseColumns(tables.Columns)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("getting table columns")
 		return err
@@ -533,6 +554,38 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 	return nil
 }
 
+// parsedColumns are the columns of tables parsed, by their JSON: the permissions of the columns
+// by column, or the error of parsing them. The maps are read only.
+var (
+	parsedColumns     sync.Map
+	parsedColumnCount atomic.Int64
+)
+
+// maxParsedColumns bounds parsedColumns
+const maxParsedColumns = 4096
+
+type columnsParse struct {
+	cols map[string]string
+	err  error
+}
+
+// parseColumns are the permissions of the columns of a table by column, which the caller does
+// not change
+func parseColumns(columns string) (map[string]string, error) {
+	if v, ok := parsedColumns.Load(columns); ok {
+		p := v.(columnsParse)
+		return p.cols, p.err
+	}
+	var p columnsParse
+	p.err = json.Unmarshal([]byte(columns), &p.cols)
+	if parsedColumnCount.Load() < maxParsedColumns {
+		if _, loaded := parsedColumns.LoadOrStore(columns, p); !loaded {
+			parsedColumnCount.Add(1)
+		}
+	}
+	return p.cols, p.err
+}
+
 // AccessRights checks the access right by executing the condition value
 func (sc *SmartContract) AccessRights(condition string, iscondition bool) error {
 	sp := &sqldb.StateParameter{}
@@ -563,7 +616,71 @@ func (sc *SmartContract) AccessRights(condition string, iscondition bool) error 
 
 // EvalIf counts and returns the logical value of the specified expression
 func (sc *SmartContract) EvalIf(conditions string) (bool, error) {
+	// the constants, which most permissions are, need no run of the virtual machine
+	switch strings.TrimSpace(conditions) {
+	case `true`:
+		return true, nil
+	case `false`:
+		return false, nil
+	}
+	if names := contractAccessNames(conditions); names != nil {
+		return ContractAccess(sc, names...), nil
+	}
 	return sc.VM.EvalIf(conditions, uint32(sc.TxSmart.EcosystemID), sc.getExtend())
+}
+
+// accessConds are the conditions parsed by contractAccessNames, by their text: the names of the
+// contracts of a ContractAccess, nil for a condition of another form
+var (
+	accessConds     sync.Map
+	accessCondCount atomic.Int64
+)
+
+// maxAccessConds bounds accessConds
+const maxAccessConds = 4096
+
+// contractAccessNames are the names of a condition that is ContractAccess of literal names alone,
+// which the permissions of the tables and the columns the contracts write mostly are, nil for any
+// other condition. Such a condition needs no run of the virtual machine: ContractAccess is a
+// function of the virtual machine no contract hides, it reads nothing but the contracts called,
+// and a condition does not charge its cost to the transaction.
+func contractAccessNames(conditions string) []any {
+	if v, ok := accessConds.Load(conditions); ok {
+		return v.([]any)
+	}
+	names := parseContractAccess(conditions)
+	if accessCondCount.Load() < maxAccessConds {
+		if _, loaded := accessConds.LoadOrStore(conditions, names); !loaded {
+			accessCondCount.Add(1)
+		}
+	}
+	return names
+}
+
+// parseContractAccess parses ContractAccess("name", ...), each name of letters, digits, _ and @
+func parseContractAccess(cond string) []any {
+	args, ok := strings.CutPrefix(strings.TrimSpace(cond), `ContractAccess(`)
+	if !ok {
+		return nil
+	}
+	if args, ok = strings.CutSuffix(args, `)`); !ok {
+		return nil
+	}
+	var names []any
+	for arg := range strings.SplitSeq(args, `,`) {
+		arg = strings.TrimSpace(arg)
+		if len(arg) < 3 || arg[0] != '"' || arg[len(arg)-1] != '"' {
+			return nil
+		}
+		name := arg[1 : len(arg)-1]
+		for _, c := range name {
+			if c != '@' && c != '_' && !unicode.IsLetter(c) && !unicode.IsDigit(c) {
+				return nil
+			}
+		}
+		names = append(names, name)
+	}
+	return names
 }
 
 // GetContractLimit returns the default maximal cost of contract
@@ -741,7 +858,7 @@ func (sc *SmartContract) CheckTxSign() error {
 	// 1 resumes it
 	frozen, err := sqldb.IsFrozen(sc.DbTransaction, sc.TxSmart.EcosystemID)
 	if err != nil {
-		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting ecosystem")
+		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting ecosystem")
 		return err
 	}
 	if frozen {
@@ -751,7 +868,7 @@ func (sc *SmartContract) CheckTxSign() error {
 	}
 	isFound, err := sc.Key.SetTablePrefix(sc.TxSmart.EcosystemID).Get(sc.DbTransaction, signedBy)
 	if err != nil {
-		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting wallet")
+		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting wallet")
 		return err
 	}
 

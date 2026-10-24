@@ -117,10 +117,10 @@ func (b BlockData) ForSign() string {
 }
 
 func (b *BlockData) GenMerkleRoot() []byte {
-	var mrklArray [][]byte
-	for _, tr := range b.TxFullData {
-		mrklArray = append(mrklArray, converter.BinToHex(crypto.DoubleHash(tr)))
-	}
+	mrklArray := make([][]byte, len(b.TxFullData))
+	eachParallel(len(b.TxFullData), func(i int) {
+		mrklArray[i] = converter.BinToHex(crypto.DoubleHash(b.TxFullData[i]))
+	})
 	if len(mrklArray) == 0 {
 		mrklArray = append(mrklArray, []byte("0"))
 	}
@@ -138,9 +138,14 @@ func (b *BlockData) GetSign(key []byte) ([]byte, error) {
 
 // MarshallBlock is marshalling block
 func (b *BlockData) MarshallBlock(key []byte) ([]byte, error) {
-	for i := 0; i < len(b.TxFullData); i++ {
+	eachParallel(len(b.TxFullData), func(i int) {
 		b.TxFullData[i] = DoZlibCompress(b.TxFullData[i])
-	}
+	})
+	return b.MarshallCompressed(key)
+}
+
+// MarshallCompressed signs and marshals the block whose TxFullData are compressed already
+func (b *BlockData) MarshallCompressed(key []byte) ([]byte, error) {
 	b.MerkleRoot = b.GenMerkleRoot()
 	signed, err := b.GetSign(key)
 	if err != nil {
@@ -161,9 +166,9 @@ func (b *BlockData) UnmarshallBlock(data []byte) error {
 	if err := proto.Unmarshal(data, b); err != nil {
 		return errors.Wrap(err, "unmarshalling block")
 	}
-	for i := 0; i < len(b.TxFullData); i++ {
+	eachParallel(len(b.TxFullData), func(i int) {
 		b.TxFullData[i] = DoZlibUnCompress(b.TxFullData[i])
-	}
+	})
 	b.BinData = data
 	return nil
 }

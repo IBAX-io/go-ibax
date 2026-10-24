@@ -136,7 +136,7 @@ func TestBlockSizeCountsEncodedBlock(t *testing.T) {
 				var txs []testTx
 				for n := range 40 {
 					tx := newTestTx(r, cur.BlockId)
-					if !size.add(tx.fullData, tx.after, tx.rollbacks, 0) {
+					if !size.add(types.DoZlibCompress(tx.fullData), tx.after, tx.rollbacks, 0) {
 						t.Fatal("add refused a transaction under the limit")
 					}
 					txs = append(txs, tx)
@@ -174,7 +174,7 @@ func TestBlockSizeFillsToLimit(t *testing.T) {
 			// The limit at which exactly the 25 transactions fit
 			count := newBlockSize(1<<40, cur, prev)
 			for _, tx := range txs {
-				count.add(tx.fullData, tx.after, tx.rollbacks, 0)
+				count.add(types.DoZlibCompress(tx.fullData), tx.after, tx.rollbacks, 0)
 			}
 			limit := count.size()
 
@@ -186,7 +186,7 @@ func TestBlockSizeFillsToLimit(t *testing.T) {
 				var fit []testTx
 				for _, tx := range txs {
 					before := *size
-					if !size.add(tx.fullData, tx.after, tx.rollbacks, 0) {
+					if !size.add(types.DoZlibCompress(tx.fullData), tx.after, tx.rollbacks, 0) {
 						if *size != before {
 							t.Fatal("a refused transaction was counted")
 						}
@@ -216,7 +216,7 @@ func TestBlockSizeRefusesOversizedTransaction(t *testing.T) {
 	empty := newBlockSize(1<<40, cur, prev).size()
 	tx := newTestTx(r, cur.BlockId)
 	size := newBlockSize(empty+int64(len(tx.fullData))/2, cur, prev)
-	if size.add(tx.fullData, tx.after, tx.rollbacks, 0) {
+	if size.add(types.DoZlibCompress(tx.fullData), tx.after, tx.rollbacks, 0) {
 		t.Fatal("a transaction larger than the room in an empty block was added")
 	}
 }
@@ -245,7 +245,7 @@ func TestBlockSizeCountsSettlement(t *testing.T) {
 			fee = 1
 		}
 		accounts += fee
-		if !size.add(tx.fullData, tx.after, tx.rollbacks, fee) {
+		if !size.add(types.DoZlibCompress(tx.fullData), tx.after, tx.rollbacks, fee) {
 			t.Fatal("add refused a transaction under the limit")
 		}
 		txs = append(txs, tx)

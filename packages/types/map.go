@@ -184,21 +184,20 @@ func (m *Map) String() string {
 }
 
 func (m *Map) MarshalJSON() ([]byte, error) {
-	s := "{"
+	buf := make([]byte, 0, 64)
+	buf = append(buf, '{')
 	for current := m.head; current != nil; current = current.next {
-		k := current.key
-		escaped := strings.Replace(k, `"`, `\"`, -1)
-		s = s + `"` + escaped + `":`
-		v := current.value
-		vBytes, err := json.Marshal(v)
+		if current != m.head {
+			buf = append(buf, ',')
+		}
+		buf = append(buf, '"')
+		buf = append(buf, strings.ReplaceAll(current.key, `"`, `\"`)...)
+		buf = append(buf, '"', ':')
+		vBytes, err := json.Marshal(current.value)
 		if err != nil {
 			return []byte{}, err
 		}
-		s = s + string(vBytes) + ","
+		buf = append(buf, vBytes...)
 	}
-	if len(s) > 1 {
-		s = s[0 : len(s)-1]
-	}
-	s = s + "}"
-	return []byte(s), nil
+	return append(buf, '}'), nil
 }

@@ -57,6 +57,7 @@ func (m memState) restore() error {
 // bad for the block of another node, the proposer marks the transactions it leaves out as it does
 // when it generates a block.
 func (b *Block) Trial() error {
+	begin := time.Now()
 	mem := takeMemState()
 	dbTx, err := sqldb.StartTransaction()
 	if err != nil {
@@ -64,6 +65,8 @@ func (b *Block) Trial() error {
 	}
 	b.trial = true
 	b.beginProfile()
+	b.prof.start = begin
+	b.stage(metrics.StageBegin, begin)
 	defer func() { b.prof = nil }()
 	err = b.ProcessTxs(dbTx)
 	if err == nil {

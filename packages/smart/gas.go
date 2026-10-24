@@ -92,6 +92,8 @@ func (f *FuelCategory) Detail() (string, any) {
 	return f.FuelType.String(), f.FeesInfo()
 }
 
+// FeesInfo is the detail of the fees of the category. It is a part of PaymentInfo.Detail, which
+// takes the whole detail through JSON once.
 func (f *FuelCategory) FeesInfo() any {
 	detail := types.NewMap()
 	detail.Set("decimal", f.Decimal)
@@ -99,9 +101,7 @@ func (f *FuelCategory) FeesInfo() any {
 	detail.Set("conversion_rate", f.ConversionRate)
 	detail.Set("flag", f.Flag)
 	detail.Set("arithmetic", f.Arithmetic.String())
-	b, _ := JSONEncode(detail)
-	s, _ := JSONDecode(b)
-	return s
+	return detail
 }
 
 func (f *FuelCategory) Fees() decimal.Decimal {
@@ -123,6 +123,8 @@ func (c Combustion) Fees(sum decimal.Decimal) decimal.Decimal {
 	return sum.Mul(decimal.NewFromInt(c.Percent)).Div(decimal.New(100, 0)).Floor()
 }
 
+// Detail is the detail of the combustion of sum. It is a part of PaymentInfo.DetailCombustion,
+// which takes the whole detail through JSON once.
 func (c Combustion) Detail(sum decimal.Decimal) any {
 	detail := types.NewMap()
 	combustion := c.Fees(sum)
@@ -131,9 +133,7 @@ func (c Combustion) Detail(sum decimal.Decimal) any {
 	detail.Set("before", sum)
 	detail.Set("value", combustion)
 	detail.Set("after", sum.Sub(combustion))
-	b, _ := JSONEncode(detail)
-	s, _ := JSONDecode(b)
-	return s
+	return detail
 }
 
 func (pay *PaymentInfo) PushFuelCategories(fes ...FuelCategory) {
@@ -170,6 +170,9 @@ func (pay *PaymentInfo) GetEstimate() decimal.Decimal {
 	return money
 }
 
+// Detail is the detail of the payment as the history keeps it: its JSON, decoded, so its maps have
+// their keys in order and its numbers are those JSON gives. Taking a value through JSON twice gives
+// what taking it once does, so the parts of the detail go through it with the whole.
 func (pay *PaymentInfo) Detail() any {
 	detail := types.NewMap()
 	for i := 0; i < len(pay.FuelCategories); i++ {
@@ -211,7 +214,7 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	}
 	if found, err := f.PayWallet.SetTablePrefix(eco).Get(sc.DbTransaction, f.FromID); err != nil || !found {
 		if err != nil {
-			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting wallet")
+			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting wallet")
 			return err
 		}
 		err = fmt.Errorf(eEcoKeyNotFound, converter.AddressToString(f.FromID), eco)
@@ -231,7 +234,7 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 		sp := &sqldb.Ecosystem{}
 		_, err := sp.Get(sc.DbTransaction, eco)
 		if err != nil {
-			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting ecosystem")
+			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting ecosystem")
 			return err
 		}
 		difference, _ := converter.FormatMoney(estimate.Sub(amount).String(), int32(sp.Digits))

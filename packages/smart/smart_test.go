@@ -136,3 +136,44 @@ func TestParamsFounderGate(t *testing.T) {
 		require.Equal(t, c.allowed, allowed, "mode %d key %d", c.mode, c.key)
 	}
 }
+
+// A condition that is ContractAccess of names is, for any stack, what the virtual machine makes
+// of it; any other condition is left to the virtual machine
+func TestContractAccessCondition(t *testing.T) {
+	InitVM()
+	for cond, names := range map[string][]any{
+		`ContractAccess("@1TokensTransfer")`:               {"@1TokensTransfer"},
+		` ContractAccess("@1A", "B" ,"@2C_d")  `:           {"@1A", "B", "@2C_d"},
+		`ContractAccess("@1A") && ContractAccess("@1B")`:   nil,
+		`ContractAccess("@1A") || true`:                    nil,
+		`ContractAccess("@1A","@1B\")`:                     nil,
+		`ContractAccess($name)`:                            nil,
+		`ContractAccess()`:                                 nil,
+		`ContractAccess("")`:                               nil,
+		`ContractConditions("@1MainCondition")`:            nil,
+		`ContractAccess("@1A"),ContractAccess("@1B")`:      nil,
+		"ContractAccess(\"@1A\")\n":                        {"@1A"},
+		`ContractAccess("a b")`:                            nil,
+		`ContractAccess("@1A") ContractAccess("@1B")`:      nil,
+		`ContractAccess("@1A", "@1B", "@1TokensTransfer")`: {"@1A", "@1B", "@1TokensTransfer"},
+	} {
+		require.Equal(t, names, parseContractAccess(cond), cond)
+		if names == nil {
+			continue
+		}
+		for _, stack := range [][]any{nil, {"@1TokensTransfer"}, {"@1B"}, {"@1Other", "@1A"},
+			{"@1A", "@1Other"}, {"@2C_d"}, {"@1B", "NotAt"}, {"@3B"}} {
+			sc := &SmartContract{
+				VM:         script.GetVM(),
+				TxSmart:    &types.SmartTransaction{Header: &types.Header{EcosystemID: 1}, MaxSum: "100000"},
+				TxContract: &Contract{Name: "@1Tx", Extend: map[string]any{}, StackCont: stack},
+				Key:        &sqldb.Key{},
+			}
+			want, err := sc.VM.EvalIf(cond, 1, sc.getExtend())
+			require.NoError(t, err, cond)
+			got, err := sc.EvalIf(cond)
+			require.NoError(t, err, cond)
+			require.Equal(t, want, got, "%s %v", cond, stack)
+		}
+	}
+}

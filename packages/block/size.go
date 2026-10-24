@@ -52,8 +52,8 @@ func (s *blockSize) size() int64 {
 // add counts a transaction that ran, with the entries it adds to after_txs and those the settlement
 // of the fees adds for the accounts it pays that no transaction before it paid. If the block would
 // exceed the limit, it counts nothing and returns false.
-func (s *blockSize) add(fullData []byte, after *types.AfterTx, rollbacks []*types.RollbackTx, feeAccounts int) bool {
-	tx := fieldSize(int64(len(types.DoZlibCompress(fullData))))
+func (s *blockSize) add(compressed []byte, after *types.AfterTx, rollbacks []*types.RollbackTx, feeAccounts int) bool {
+	tx := fieldSize(int64(len(compressed)))
 	afterTxs := s.afterTxs + fieldSize(int64(after.Size()))
 	afterTxs += int64(feeAccounts*smart.SettlementRows) * fieldSize(int64(smart.SettlementRowMax().Size()))
 	for _, r := range rollbacks {
