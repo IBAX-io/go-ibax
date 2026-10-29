@@ -165,7 +165,7 @@ func (pay *PaymentInfo) GetEstimate() decimal.Decimal {
 		if f.FuelType == FuelType_vmCost_fee {
 			continue
 		}
-		money.Add(f.Fees())
+		money = money.Add(f.Fees())
 	}
 	return money
 }
