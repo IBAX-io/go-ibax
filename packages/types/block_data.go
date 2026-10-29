@@ -99,12 +99,6 @@ func WithTxFullData(data [][]byte) BlockDataOption {
 	}
 }
 
-func WithAfterTxs(a *AfterTxs) BlockDataOption {
-	return func(b *BlockData) error {
-		b.AfterTxs = a
-		return nil
-	}
-}
 func WithSysUpdate(a bool) BlockDataOption {
 	return func(b *BlockData) error {
 		b.SysUpdate = a

@@ -8,9 +8,7 @@ package smart
 import (
 	"cmp"
 	"fmt"
-	"math"
 	"slices"
-	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -21,23 +19,6 @@ import (
 // SettlementHash is the transaction hash of the rows the settlement of the fees of a block writes:
 // the rollback of the block takes them back before the rollback of its transactions
 var SettlementHash = make([]byte, 32)
-
-// SettlementRows is the number of rollback rows that the settlement writes at the most for an
-// account: the keys of the account in its ecosystem and in ecosystem 1, the credit and the history row
-const SettlementRows = 4
-
-// SettlementRowMax is a rollback row at least as long as every row the settlement writes: the
-// longest table name, ids and data of the rows of 1_keys and 1_history it writes
-func SettlementRowMax() *types.RollbackTx {
-	return &types.RollbackTx{
-		BlockId:   math.MaxInt64,
-		TxHash:    SettlementHash,
-		NameTable: "1_history",
-		TableId:   strings.Repeat("9", 41),  // id,ecosystem
-		Data:      strings.Repeat("9", 160), // id, ecosystem and amount of decimal(30) as json
-		DataHash:  make([]byte, 64),
-	}
-}
 
 // FeeCredit is a fee that a transaction pays to an account of an ecosystem
 type FeeCredit struct {
@@ -57,20 +38,6 @@ type FeeSettlement struct {
 
 func NewFeeSettlement() *FeeSettlement {
 	return &FeeSettlement{sums: make(map[feeAccount]decimal.Decimal)}
-}
-
-// NewAccounts is the number of the accounts of the credits that the settlement has none for
-func (s *FeeSettlement) NewAccounts(credits []FeeCredit) int {
-	seen := make(map[feeAccount]bool, len(credits))
-	n := 0
-	for _, c := range credits {
-		a := feeAccount{c.Ecosystem, c.Recipient}
-		if _, ok := s.sums[a]; !ok && !seen[a] {
-			seen[a] = true
-			n++
-		}
-	}
-	return n
 }
 
 // Add adds the credits of a transaction that the block keeps

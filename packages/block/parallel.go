@@ -433,11 +433,7 @@ func (b *Block) commitState(e *stateExec, runs []txRun, window chan struct{}, tx
 
 		// A transaction that would make the block longer than max_block_size waits for the next
 		// block; one that does not fit even into an empty block never will.
-		var credits []smart.FeeCredit
-		if t.IsSmartContract() {
-			credits = t.SmartContract().FeeCredits
-		}
-		if b.GenBlock && !b.size.add(t.Compressed(), after, t.RollBackTx, fees.NewAccounts(credits)) {
+		if b.GenBlock && !b.size.add(t.Compressed()) {
 			if errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash()))); errRoll != nil {
 				return errRoll
 			}
@@ -471,7 +467,9 @@ func (b *Block) commitState(e *stateExec, runs []txRun, window chan struct{}, tx
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
 
-		fees.Add(credits)
+		if t.IsSmartContract() {
+			fees.Add(t.SmartContract().FeeCredits)
+		}
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
 		*processedTx = append(*processedTx, t.FullData)

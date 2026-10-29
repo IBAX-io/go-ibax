@@ -38,7 +38,7 @@ type Block struct {
 	PrevSysPar        map[string]string
 	EcoParams         []sqldb.EcoParam // combustion percent,digits for each ecosystem
 	size              *blockSize       // the encoded length of the block being generated
-	trial             bool             // the block is executed by Trial and rolled back
+	trial             bool             // the block is executed by Trial and held for the decision
 	// genStart is when the proposer of a chain of the BFT consensus read the clock for the block:
 	// the block is made within max_block_generation_time from then (syspar.GetBftTimeliness), its
 	// transactions leaving the time the block takes after them

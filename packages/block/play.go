@@ -32,6 +32,22 @@ func (b *Block) PlaySafe() error {
 	return b.playSafe(nil)
 }
 
+// verifySignatures verifies in parallel the signatures of the transactions of a block another
+// node made, so that their execution finds them verified (plan 5.9): those this node verified when
+// they arrived are in the cache of accepted signatures, and only those it has not seen are
+// verified here. An error is the execution's to report, which checks the signature against the
+// key the account registered. The transactions of a block the node generates were verified when
+// they entered its queue. What it reads of the chain, the key an account registered, only fills
+// the cache, the execution decides: Validate runs it before it locks the writes.
+func (b *Block) verifySignatures() {
+	if b.GenBlock || len(b.Transactions) == 0 {
+		return
+	}
+	start := time.Now()
+	transaction.VerifyAll(b.Transactions)
+	b.stage(metrics.StageVerify, start)
+}
+
 // playSafe executes the block and inserts it, and runs also in the transaction of the block
 func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 	logger := b.GetLogger()
@@ -43,11 +59,7 @@ func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 		return err
 	}
 
-	if !b.GenBlock {
-		// The signatures of the transactions this node has not seen are verified in parallel
-		// here, so that their execution finds them verified; an error is the execution's to report
-		transaction.VerifyAll(b.Transactions)
-	}
+	b.verifySignatures()
 	err = b.ProcessTxs(dbTx)
 	if err != nil {
 		dbTx.Rollback()
@@ -137,9 +149,7 @@ func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
 		b.stage(metrics.StageExecute, start)
 		start = time.Now()
 		defer b.stage(metrics.StageAfter, start)
-		if b.IsGenesis() || b.GenBlock || b.AfterTxs != nil {
-			b.AfterTxs = afters
-		}
+		b.AfterTxs = afters
 		if b.GenBlock {
 			b.TxFullData = processedTx
 		}
@@ -328,11 +338,7 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 
 		// A transaction that would make the block longer than max_block_size waits for the next
 		// block; one that does not fit even into an empty block never will.
-		var credits []smart.FeeCredit
-		if t.IsSmartContract() {
-			credits = t.SmartContract().FeeCredits
-		}
-		if b.GenBlock && !b.size.add(t.Compressed(), after, t.RollBackTx, fees.NewAccounts(credits)) {
+		if b.GenBlock && !b.size.add(t.Compressed()) {
 			if errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash()))); errRoll != nil {
 				return errRoll
 			}
@@ -352,7 +358,9 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 			b.Notifications = append(b.Notifications, t.Notifications)
 		}
 
-		fees.Add(credits)
+		if t.IsSmartContract() {
+			fees.Add(t.SmartContract().FeeCredits)
+		}
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
 		*processedTx = append(*processedTx, t.FullData)

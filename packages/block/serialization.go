@@ -36,7 +36,6 @@ func (b *Block) repeatMarshallBlock() error {
 	if err := data.Apply(
 		types.WithCurHeader(b.Header),
 		types.WithPrevHeader(b.PrevHeader),
-		types.WithAfterTxs(b.AfterTxs),
 		types.WithSysUpdate(b.SysUpdate),
 		types.WithTxFullData(compressed)); err != nil {
 		return errors.Wrap(err, "marshalling repeat block")

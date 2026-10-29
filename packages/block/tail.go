@@ -19,7 +19,7 @@ const (
 )
 
 // txTail is what a transaction adds to a trial after the transactions of the block run: writing
-// its state, the rows after it and the block, and rolling the trial back. A proposer keeps that
+// its state, the rows after it and the block, and holding the trial. A proposer keeps that
 // much of max_block_generation_time for each transaction its block takes.
 var txTail struct {
 	sync.Mutex

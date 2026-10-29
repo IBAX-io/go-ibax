@@ -64,10 +64,8 @@ func TestFeeSettlement(t *testing.T) {
 		{Ecosystem: 1, Recipient: producer, Amount: decimal.NewFromInt(10)},
 		{Ecosystem: 1, Recipient: taxes, Amount: decimal.NewFromInt(3)},
 	}
-	require.Equal(t, 3, fees.NewAccounts(first))
 	fees.Add(first)
 	second := []smart.FeeCredit{{Ecosystem: 1, Recipient: producer, Amount: decimal.NewFromInt(5)}}
-	require.Equal(t, 0, fees.NewAccounts(second))
 	fees.Add(second)
 
 	rts, err := fees.Settle(dbTx, &types.BlockHeader{BlockId: blockID, Timestamp: 1700000000})
@@ -75,10 +73,8 @@ func TestFeeSettlement(t *testing.T) {
 
 	// (1, taxes) and (2, producer) make the key; every account has its credit and history row
 	require.Len(t, rts, 8)
-	max := smart.SettlementRowMax().Size()
 	for _, r := range rts {
 		require.Equal(t, smart.SettlementHash, r.TxHash)
-		require.LessOrEqual(t, r.Size(), max, "%+v", r)
 	}
 	for _, c := range []struct {
 		eco, id int64

@@ -140,33 +140,49 @@ func (p *Pool) window(height uint64, round uint32) *poolHeight {
 
 // AddProposal admits a proposal or drops it
 func (p *Pool) AddProposal(m *Proposal) Admission {
-	h := p.window(m.Height, m.Round)
-	if h == nil || m.Validator != h.set.Proposer(m.Height, m.Round) {
-		return Dropped
+	a, _ := p.Admissible(m)
+	if !a.Kept() {
+		return a
 	}
-	key, ok := h.set.Key(m.Validator)
-	if !ok {
-		return Dropped
-	}
+	h := p.heights[m.Height]
 	k := poolKey{m.Round, TypeProposal, m.Validator}
 	kept := h.proposals[k]
-	for _, o := range kept {
-		if o.Hash == m.Hash {
-			return Duplicate
-		}
-	}
-	if len(kept) >= 2 {
-		return Dropped
-	}
-	if m.Verify(key, p.networkID) != nil {
-		return Dropped
-	}
 	h.proposals[k] = append(kept, m)
 	h.order = append(h.order, m)
 	if len(kept) == 0 {
 		return Admitted
 	}
 	return Conflicting
+}
+
+// Admissible is how AddProposal would take a proposal, which it leaves out of the pool, and the
+// public key of its proposer: a node fills in the block of a proposal it would admit before it
+// admits it
+func (p *Pool) Admissible(m *Proposal) (Admission, []byte) {
+	h := p.window(m.Height, m.Round)
+	if h == nil || m.Validator != h.set.Proposer(m.Height, m.Round) {
+		return Dropped, nil
+	}
+	key, ok := h.set.Key(m.Validator)
+	if !ok {
+		return Dropped, nil
+	}
+	kept := h.proposals[poolKey{m.Round, TypeProposal, m.Validator}]
+	for _, o := range kept {
+		if o.Hash == m.Hash {
+			return Duplicate, key
+		}
+	}
+	if len(kept) >= 2 {
+		return Dropped, key
+	}
+	if m.Verify(key, p.networkID) != nil {
+		return Dropped, key
+	}
+	if len(kept) == 0 {
+		return Admitted, key
+	}
+	return Conflicting, key
 }
 
 // AddVote admits a prevote or a precommit or drops it

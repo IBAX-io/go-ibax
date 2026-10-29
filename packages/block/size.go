@@ -9,21 +9,19 @@ import (
 	"encoding/binary"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
-	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
 // blockSize tracks the length of the block a node is generating while its transactions run, so
 // that the block it publishes is never longer than max_block_size, the limit its peers check on
 // the bytes they receive (ProcessBlockByBinData). It counts what each transaction adds to the
-// encoded block: its compressed data and its after_txs entries, which include its rollback rows.
-// The fields only known once every transaction ran (signature, block hash, rollbacks hash, Merkle
-// root) are counted at their maximum length, so the count never falls short of the block.
+// encoded block, its compressed data. The fields only known once every transaction ran
+// (signature, block hash, rollbacks hash, Merkle root) are counted at their maximum length, so
+// the count never falls short of the block.
 type blockSize struct {
-	limit    int64
-	fixed    int64 // headers, Merkle root and sys_update
-	txs      int64 // tx_full_data entries
-	afterTxs int64 // content of after_txs
+	limit int64
+	fixed int64 // headers, Merkle root and sys_update
+	txs   int64 // tx_full_data entries
 }
 
 func newBlockSize(limit int64, header, prev *types.BlockHeader) *blockSize {
@@ -42,28 +40,17 @@ func newBlockSize(limit int64, header, prev *types.BlockHeader) *blockSize {
 
 // size is the length of the encoded block counted so far
 func (s *blockSize) size() int64 {
-	size := s.fixed + s.txs
-	if s.afterTxs > 0 {
-		size += fieldSize(s.afterTxs)
-	}
-	return size
+	return s.fixed + s.txs
 }
 
-// add counts a transaction that ran, with the entries it adds to after_txs and those the settlement
-// of the fees adds for the accounts it pays that no transaction before it paid. If the block would
-// exceed the limit, it counts nothing and returns false.
-func (s *blockSize) add(compressed []byte, after *types.AfterTx, rollbacks []*types.RollbackTx, feeAccounts int) bool {
-	tx := fieldSize(int64(len(compressed)))
-	afterTxs := s.afterTxs + fieldSize(int64(after.Size()))
-	afterTxs += int64(feeAccounts*smart.SettlementRows) * fieldSize(int64(smart.SettlementRowMax().Size()))
-	for _, r := range rollbacks {
-		afterTxs += fieldSize(int64(r.Size()))
-	}
-	next := blockSize{limit: s.limit, fixed: s.fixed, txs: s.txs + tx, afterTxs: afterTxs}
-	if next.size() > s.limit {
+// add counts a transaction that ran. If the block would exceed the limit, it counts nothing and
+// returns false.
+func (s *blockSize) add(compressed []byte) bool {
+	txs := s.txs + fieldSize(int64(len(compressed)))
+	if s.fixed+txs > s.limit {
 		return false
 	}
-	*s = next
+	s.txs = txs
 	return true
 }
 

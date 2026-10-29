@@ -28,7 +28,8 @@ const namespace = "ibax"
 // The kinds of a block execution
 const (
 	KindGenerate = "generate" // the node makes the block
-	KindTrial    = "trial"    // a BFT trial, rolled back
+	KindTrial    = "trial"    // a BFT trial, held for the decision of its height
+	KindHeld     = "held"     // the node commits the trial it held of the block its height decided
 	KindApply    = "apply"    // the node applies a block another node made
 	KindReceived = "received" // a block the node got from another node, parsed before it runs
 	KindPropose  = "propose"  // a proposer of the BFT consensus makes its proposal
@@ -37,6 +38,8 @@ const (
 // The stages of a block execution
 const (
 	StageBegin    = "begin"    // taking the snapshot of the memory and the database transaction of a trial
+	StageExpand   = "expand"   // filling in the block of a compact proposal from the queue and the proposer
+	StageVerify   = "verify"   // verifying in parallel the signatures of the transactions of another node's block
 	StagePrepare  = "prepare"  // reading the outputs and the parameters the transactions need
 	StageExecute  = "execute"  // running the transactions
 	StageAfter    = "after"    // writing the logs, the statuses and the rollbacks of the transactions
@@ -45,7 +48,8 @@ const (
 	StageNotify   = "notify"   // sending the notifications
 	StageTotal    = "total"    // the whole execution
 	StageParse    = "parse"    // parsing the block from its bytes
-	StageRollback = "rollback" // rolling back a trial
+	StageRollback = "rollback" // rolling back a trial that failed, or one held of a block not decided
+	StageHold     = "hold"     // holding a trial: the snapshot of the memory it changed, and the memory set back
 	StageWait     = "wait"     // the proposer waits for its clock to pass the time of the last block
 	StageCollect  = "collect"  // the proposer takes the transactions of its block from the queue
 	StageTrial    = "trial"    // the proposer runs its block
