@@ -22,7 +22,8 @@ type bftBlock struct {
 	bodies  map[string][]byte
 }
 
-// bftBodies is the blocks of the proposals of the heights the node is at or above, by their hashes
+// bftBodies is the blocks of the proposals of the height before the node's and above, by their
+// hashes: a validator a height behind fills in a proposal of its height from the others
 type bftBodies struct {
 	mu       sync.Mutex
 	blocks   map[bft.Hash]*bftBlock
@@ -58,7 +59,7 @@ func (s *bftBodies) get(hash bft.Hash) *bftBlock {
 	return s.blocks[hash]
 }
 
-// prune drops the blocks below the height
+// prune drops the blocks below the height and the proposals being filled in below it
 func (s *bftBodies) prune(height uint64) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -92,12 +93,18 @@ func (s *bftBodies) done(k bftProposalKey) {
 	s.mu.Unlock()
 }
 
-// compact is the compact form of the block of the hash
-func (s *bftBodies) compact(hash bft.Hash, bin []byte) ([]byte, error) {
+// compact is the compact form of the block of the hash at the height: a block the node neither
+// made nor filled in, one it restored, it keeps from then on
+func (s *bftBodies) compact(height uint64, hash bft.Hash, bin []byte) ([]byte, error) {
 	if b := s.get(hash); b != nil {
 		return b.compact, nil
 	}
-	return block.CompactBlock(bin)
+	compact, hashes, bodies, err := block.CompactBlock(bin)
+	if err != nil {
+		return nil, err
+	}
+	s.put(height, hash, bin, compact, hashes, bodies)
+	return compact, nil
 }
 
 // transactions is the bodies of the hashes in the block of the hash, those it does not have

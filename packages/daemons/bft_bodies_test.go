@@ -13,7 +13,7 @@ import (
 )
 
 // The node gives the bodies of the blocks it made or filled in, those of its queue for the rest,
-// keeps the blocks of the heights it is at or above, and fills in a proposal once at a time
+// keeps the blocks of the heights it is told, and fills in a proposal once at a time
 func TestBftBodies(t *testing.T) {
 	s := newBftBodies()
 	s.put(5, bft.Hash{1}, []byte("block"), []byte("compact"), [][]byte{[]byte("a"), []byte("b")},
@@ -30,9 +30,12 @@ func TestBftBodies(t *testing.T) {
 	require.Equal(t, [][]byte{[]byte("B"), []byte("Q"), nil, []byte("A")},
 		s.transactions(bft.Hash{1}, [][]byte{[]byte("b"), []byte("q"), []byte("x"), []byte("a")}, queue))
 	require.Equal(t, [][]byte{nil, []byte("Q")}, s.transactions(bft.Hash{2}, [][]byte{[]byte("a"), []byte("q")}, queue))
-	compact, err := s.compact(bft.Hash{1}, nil)
+	compact, err := s.compact(5, bft.Hash{1}, nil)
 	require.NoError(t, err)
 	require.Equal(t, []byte("compact"), compact)
+	_, err = s.compact(6, bft.Hash{3}, []byte("not a block"))
+	require.Error(t, err)
+	require.Nil(t, s.get(bft.Hash{3}), "a block that does not parse is not kept")
 
 	k := bftProposalKey{height: 5, round: 1, validator: 2, hash: bft.Hash{1}}
 	require.True(t, s.start(k))

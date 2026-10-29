@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/gogo/protobuf/proto"
 )
@@ -156,5 +157,45 @@ func TestCompactMalformed(t *testing.T) {
 	whole = append(whole, 0, 0, 0, 0)
 	if _, _, err := parseCompact(whole); !errors.Is(err, ErrCompact) {
 		t.Fatalf("a shell with transactions: %v", err)
+	}
+}
+
+// TestCompactBlock: a node that neither made nor filled in a block parses it for its compact form,
+// the form the proposer sends, and the hashes and the bodies of its transactions
+func TestCompactBlock(t *testing.T) {
+	crypto.InitAsymAlgo("MLDSA65")
+	crypto.InitHashAlgo("SHA3_256")
+	key, _, err := crypto.GenNodeKeyPair()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cur, prev := testHeaders(mrand.New(mrand.NewPCG(11, 12)))
+	var txs []testTx
+	var hashes [][]byte
+	for i := range 3 {
+		p := &transaction.FirstBlockParser{}
+		fullData, err := p.BinMarshal(&types.FirstBlock{KeyID: int64(i + 1)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		txs = append(txs, testTx{fullData: fullData})
+		hashes = append(hashes, p.TxHash)
+	}
+	bin := marshalTestBlock(t, key, cur, prev, txs, false)
+	compact, got, bodies, err := CompactBlock(bin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want, err := compactOf(bin, hashes)
+	if err != nil || !bytes.Equal(compact, want) || len(got) != 3 || len(bodies) != 3 {
+		t.Fatalf("the compact form: %v", err)
+	}
+	for i, h := range hashes {
+		if !bytes.Equal(got[i], h) || !bytes.Equal(types.DoZlibUnCompress(bodies[i]), txs[i].fullData) {
+			t.Fatalf("transaction %d", i)
+		}
+	}
+	if _, _, _, err := CompactBlock([]byte("not a block")); err == nil {
+		t.Fatal("a malformed block")
 	}
 }

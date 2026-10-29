@@ -296,7 +296,7 @@ func (d *bftDriver) syncHeight() error {
 		d.pool = bft.NewPool(d.networkID, syspar.GetBftMaxFutureRounds(), last+1, set)
 	}
 	d.mu.Unlock()
-	d.bodies.prune(last + 1)
+	d.bodies.prune(last)
 	d.newMachine(last+1, set)
 	d.logger.WithFields(log.Fields{"height": last + 1, "validators": set.N()}).Debug("moved to the height")
 	d.onHeight(from, last+1, set, now)
@@ -581,7 +581,7 @@ func (d *bftDriver) expand(p *bft.Proposal, key []byte, k bftProposalKey) {
 
 // Compact is bftnet.Handler.Compact
 func (d *bftDriver) Compact(p *bft.Proposal) ([]byte, error) {
-	return d.bodies.compact(p.Hash, p.Block)
+	return d.bodies.compact(p.Height, p.Hash, p.Block)
 }
 
 // Transactions is bftnet.Handler.Transactions: the bodies of the blocks the node made or filled

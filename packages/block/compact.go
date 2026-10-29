@@ -38,13 +38,26 @@ func Compact(bin []byte, txs []*transaction.Transaction) ([]byte, error) {
 	return compactOf(bin, hashes)
 }
 
-// CompactBlock is the compact form of the block bin, its transactions parsed for their hashes
-func CompactBlock(bin []byte) ([]byte, error) {
+// CompactBlock is the compact form of the block bin and the hashes and the bodies of its
+// transactions, the block parsed for them
+func CompactBlock(bin []byte) ([]byte, [][]byte, [][]byte, error) {
 	b, err := UnmarshallBlock(bytes.NewBuffer(bin), false)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	return Compact(bin, b.Transactions)
+	raw := &types.BlockData{}
+	if err := proto.Unmarshal(bin, raw); err != nil {
+		return nil, nil, nil, err
+	}
+	hashes := make([][]byte, len(b.Transactions))
+	for i, t := range b.Transactions {
+		hashes[i] = t.Hash()
+	}
+	compact, err := compactOf(bin, hashes)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return compact, hashes, raw.TxFullData, nil
 }
 
 func compactOf(bin []byte, hashes [][]byte) ([]byte, error) {
