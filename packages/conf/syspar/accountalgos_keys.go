@@ -18,6 +18,8 @@ type AccountAlgorithmKeys struct {
 	Algo          string `json:"algo"`
 	RegisterUntil string `json:"register_until,omitempty"`
 	SignUntil     string `json:"sign_until,omitempty"`
+	VerifyUntil   string `json:"verify_until,omitempty"`
+	VerifyBy      string `json:"verify_by,omitempty"`
 	Keys          int64  `json:"keys"`
 }
 
@@ -33,6 +35,10 @@ func AccountAlgorithmsWithKeys() ([]AccountAlgorithmKeys, error) {
 		if !a.SignUntil.IsZero() {
 			list[i].SignUntil = a.SignUntil.Format(accountAlgoDate)
 		}
+		if a.VerifyOnly() {
+			list[i].VerifyUntil = a.VerifyUntil.Format(accountAlgoDate)
+		}
+		list[i].VerifyBy = a.VerifyBy
 		n, err := sqldb.CountKeysOfAlgo(nil, a.Algo)
 		if err != nil {
 			return nil, err

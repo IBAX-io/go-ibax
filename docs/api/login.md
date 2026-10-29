@@ -39,7 +39,8 @@ Without a session token, `getuid` answers:
 - `cryptoer` is the algorithm of the node keys. An account signs with the algorithm of its own key,
   one of `account_algorithms` (the platform parameter): a key of an algorithm registers until
   `register_until` and signs until `sign_until`, both whole UTC days compared with the block time
-  (with the clock of the node at login), no limit when missing. See
+  (with the clock of the node at login), no limit when missing. An algorithm with `verify_until`
+  never logs in: its keys only verify, in the contract `verify_by`. See
   [account algorithms](account-algorithms.md).
 - `token` carries the `uid` and a random `jti`. It expires with the challenge.
 - A challenge lives 30 seconds (`login.ChallengeLifetime`) in the memory of the node that issued
