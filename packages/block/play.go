@@ -234,7 +234,7 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 	fees *smart.FeeSettlement) error {
 	limits := transaction.NewLimits(b.limitMode())
 	if !b.genStart.IsZero() {
-		limits.StartAt(b.genStart)
+		limits.StartAt(b.genStart, tail())
 	}
 	logger := b.GetLogger()
 	for curTx := 0; curTx < len(txs); curTx++ {
@@ -360,6 +360,6 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 		sqldb.UpdateTxInputs(t.Hash(), b.Header.BlockId, t.TxInputsMap, b.OutputsMap)
 		sqldb.InsertTxOutputs(t.Hash(), t.TxOutputsMap, b.OutputsMap)
 	}
-
+	b.execEnd = time.Now()
 	return nil
 }

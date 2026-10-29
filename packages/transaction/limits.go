@@ -136,10 +136,16 @@ func (bl *txMaxLimit) check(t TransactionCaller, mode LimitMode) error {
 	return nil
 }
 
-// Checking the time of the start of generating block
+// Checking the time of the start of generating block: a transaction ends within the time of the
+// block less what the block takes after its transactions run, Tail for each transaction it took
+// and for the transaction, so the whole block is made within the time of the block
 type timeBlockLimit struct {
 	Start time.Time     // the time of the start of generating block
 	Limit time.Duration // the maximum time
+	// Tail is what a transaction the block took adds to the block after the transactions run:
+	// writing its state, its rows and the block, and rolling the trial back
+	Tail  time.Duration
+	Count int // the transactions the block took
 }
 
 func (bl *timeBlockLimit) init() {
@@ -147,8 +153,19 @@ func (bl *timeBlockLimit) init() {
 	bl.Limit = time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
 }
 
+// reserve is the time the block keeps for the tail of n transactions, at most half its time
+func (bl *timeBlockLimit) reserve(n int) time.Duration {
+	return min(bl.Tail*time.Duration(n), bl.Limit/2)
+}
+
+// left is the time left to the next transaction of the block
+func (bl *timeBlockLimit) left() time.Duration {
+	return max(0, bl.Limit-bl.reserve(bl.Count+1)-max(0, time.Since(bl.Start)))
+}
+
 func (bl *timeBlockLimit) check(t TransactionCaller, mode LimitMode) error {
-	if time.Since(bl.Start) < bl.Limit {
+	if bl.left() > 0 {
+		bl.Count++
 		return nil
 	}
 
@@ -159,16 +176,17 @@ func (bl *timeBlockLimit) check(t TransactionCaller, mode LimitMode) error {
 	return limitError("txBlockTimeLimit", "Block generation time exceeded")
 }
 
-// StartAt starts the time of the block being generated at start
-func (limits *Limits) StartAt(start time.Time) {
+// StartAt starts the time of the block being generated at start, and keeps tail of it for each
+// transaction the block takes
+func (limits *Limits) StartAt(start time.Time, tail time.Duration) {
 	for _, l := range limits.Limiters {
 		if bl, ok := l.(*timeBlockLimit); ok {
-			bl.Start = start
+			bl.Start, bl.Tail = start, tail
 		}
 	}
 }
 
-// TimeLeft is the time left to the block being generated, in ms, at most
+// TimeLeft is the time left to the next transaction of the block being generated, in ms, at most
 // max_block_generation_time
 func (limits *Limits) TimeLeft() int64 {
 	if limits.of != nil {
@@ -176,7 +194,7 @@ func (limits *Limits) TimeLeft() int64 {
 	}
 	for _, l := range limits.Limiters {
 		if bl, ok := l.(*timeBlockLimit); ok {
-			return max(0, min(bl.Limit, bl.Limit-time.Since(bl.Start)).Milliseconds())
+			return bl.left().Milliseconds()
 		}
 	}
 	return syspar.GetMaxBlockGenerationTime()

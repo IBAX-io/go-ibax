@@ -550,9 +550,8 @@ func (d *bftDriver) Certificates(from uint64, count int) ([][]byte, error) {
 func (d *bftDriver) MaxBlockSize() int64 { return syspar.GetMaxBlockSize() }
 
 // maxTimeWait is how long a proposer waits at most for its clock to pass the time of the last
-// block: the time of a block of an honest proposer is not ahead of its clock, so the clock of the
-// next is past it within a second but for the drift of the clocks
-const maxTimeWait = time.Second
+// block
+const maxTimeWait = syspar.BftProposerWait
 
 // bftApp is the node the machine asks for a block and for its validity
 type bftApp struct {
@@ -561,10 +560,10 @@ type bftApp struct {
 
 // Value generates the block of the proposer: its time is the clock in seconds and above the time
 // of the last block, so a chain has at most one block a second, and the proposer makes it within
-// max_block_generation_time from when it began (syspar.GetBftTimeliness). A proposer whose clock
-// is not yet past the time of the last block waits for it, up to maxTimeWait, out of that time:
-// else a chain that commits faster than a block a second takes its blocks ever further ahead of
-// the clocks, until the validators refuse them as untimely (design 4.4)
+// max_block_generation_time from when it reads its clock (syspar.GetBftTimeliness). A proposer
+// whose clock is not yet past the time of the last block waits for it, up to maxTimeWait, before
+// it reads its clock: else a chain that commits faster than a block a second takes its blocks ever
+// further ahead of the clocks, until the validators refuse them as untimely (design 4.4)
 func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 	prev := &sqldb.InfoBlock{}
 	if _, err := prev.Get(); err != nil {
@@ -620,7 +619,7 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 		return nil, bft.Hash{}, err
 	}
 	trial := time.Now()
-	b, err := block.Propose(bin, parsed, start)
+	b, err := block.Propose(bin, parsed, collect)
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
@@ -630,7 +629,7 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
-	total, behind := time.Since(start), time.Since(time.Unix(ts, 0))
+	total, behind := time.Since(collect), time.Since(time.Unix(ts, 0))
 	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageTotal).Observe(total.Seconds())
 	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageBehind).Observe(behind.Seconds())
 	if limit := time.Duration(syspar.GetMaxBlockGenerationTime()) * time.Millisecond; total > limit {
@@ -652,7 +651,7 @@ func (a bftApp) Valid(height uint64, hash bft.Hash, bin []byte) bool {
 
 // Timely is block.Timely at the time the node took the proposal
 func (a bftApp) Timely(p *bft.Proposal) bool {
-	ahead, behind := syspar.GetBftTimeliness()
+	ahead, behind := syspar.GetBftTimeliness(p.Round)
 	err := block.Timely(p.Block, p.Received, ahead, behind)
 	if err != nil {
 		a.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": p.Height, "round": p.Round}).Warn("an untimely proposal")

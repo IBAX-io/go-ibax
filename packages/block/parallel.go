@@ -273,7 +273,7 @@ func (b *Block) executeState(dbTx *sqldb.DbTransaction, txBadChan chan badTxStru
 	txs []*transaction.Transaction, fees *smart.FeeSettlement) error {
 	limits := transaction.NewLimits(b.limitMode())
 	if !b.genStart.IsZero() {
-		limits.StartAt(b.genStart)
+		limits.StartAt(b.genStart, tail())
 	}
 	contracts := make([]string, len(txs))
 	for i, t := range txs {
@@ -302,6 +302,7 @@ func (b *Block) executeState(dbTx *sqldb.DbTransaction, txBadChan chan badTxStru
 	err = b.commitState(e, runs, window, txBadChan, afters, processedTx, txs, fees)
 	// no worker runs once the block committed its transactions
 	stop()
+	b.execEnd = time.Now()
 	if e.again != nil {
 		e.again.Close()
 	}

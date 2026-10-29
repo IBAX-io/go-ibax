@@ -90,6 +90,7 @@ func (b *Block) Trial() error {
 	}
 	b.stage(metrics.StageRollback, start)
 	if err == nil {
+		observeTail(b.execEnd, b.txCount())
 		b.endProfile(dbTx)
 	}
 	return err
@@ -159,10 +160,10 @@ func (b *Block) checkContent() error {
 	return nil
 }
 
-// Propose makes the proposal of the proposer from a block it began at start: the trial executes
-// it, leaves out the transactions that fail, do not fit, or do not end within
-// max_block_generation_time from start, and sets its rollbacks hash, its hash and BinData. A block
-// left without transactions is ErrEmptyBlock.
+// Propose makes the proposal of the proposer from a block whose time it read at start: the trial
+// executes it, leaves out the transactions that fail, do not fit, or leave the block no time to
+// end within max_block_generation_time from start, and sets its rollbacks hash, its hash and
+// BinData. A block left without transactions is ErrEmptyBlock.
 func Propose(binData []byte, txs []*transaction.Transaction, start time.Time) (*Block, error) {
 	b, err := ProcessBlockByBinData(binData, false)
 	if err != nil {

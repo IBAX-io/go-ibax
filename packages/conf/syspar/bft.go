@@ -7,6 +7,7 @@ package syspar
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 )
@@ -38,11 +39,21 @@ const (
 
 	// BftTimeoutDelta is what each round adds to the timeouts of round 0
 	BftTimeoutDelta = 500 * time.Millisecond
+	// BftProposerWait is how long a proposer waits at most for its clock to pass the time of the
+	// last block, before it reads its clock and makes the block in max_block_generation_time: the
+	// time of a block of an honest proposer is not ahead of its clock, so the clock of the next is
+	// past it within a second but for the drift of the clocks
+	BftProposerWait = time.Second
+	// bftTimelinessGrowth is how much the bound behind of the timeliness grows each round, up to
+	// round bftTimelinessRounds, so that a round whose messages take longer than the bound
+	// assumes still takes a proposal in a later round
+	bftTimelinessGrowth = 1.1
+	bftTimelinessRounds = 100
 )
 
 // BftParameters is the starting values of the parameters, in the order the first block writes them
 var BftParameters = [][2]string{
-	{BftTimeoutPropose, "3000"},
+	{BftTimeoutPropose, "4000"},
 	{BftTimeoutPrevote, "1000"},
 	{BftTimeoutPrecommit, "1000"},
 	{BftMaxFutureRounds, "10"},
@@ -92,27 +103,33 @@ func GetBftMaxClockDrift() time.Duration {
 	return bftMs(BftMaxClockDrift)
 }
 
-// GetBftTimeliness is how far the time of the block of a new proposal may be from the time a
-// validator takes the proposal (design 4.4): ahead of it by at most bft_max_clock_drift_ms, and
-// behind it by at most that, the second the proposer rounds its clock down to, and
+// GetBftTimeliness is how far the time of the block of a new proposal of a round may be from the
+// time a validator takes the proposal (design 4.4): ahead of it by at most bft_max_clock_drift_ms,
+// and behind it by at most that, the second the proposer rounds its clock down to, and
 // max_block_generation_time, in which the proposer makes the block after it reads its clock, so
-// that only puts the time of the block behind
-func GetBftTimeliness() (ahead, behind time.Duration) {
+// that only puts the time of the block behind. The bound behind grows by bftTimelinessGrowth each
+// round, up to round bftTimelinessRounds.
+func GetBftTimeliness(round uint32) (ahead, behind time.Duration) {
 	drift := GetBftMaxClockDrift()
-	return drift, drift + time.Second + time.Duration(GetMaxBlockGenerationTime())*time.Millisecond
+	behind = drift + time.Second + time.Duration(GetMaxBlockGenerationTime())*time.Millisecond
+	growth := math.Pow(bftTimelinessGrowth, float64(min(round, bftTimelinessRounds)))
+	return drift, time.Duration(float64(behind) * growth)
 }
 
 // bftPairs are the parameters of a chain of the BFT consensus that a vote changes only with the
-// parameter they pair with, the longer one above the shorter: a proposer makes its block within
-// max_block_generation_time, so a validator waits longer for the proposal, bft_timeout_propose_ms;
+// parameter they pair with, the longer one above the shorter and its margin: a proposer waits up
+// to BftProposerWait for its clock and makes its block within max_block_generation_time, so a
+// validator waits longer for the proposal, bft_timeout_propose_ms;
 // the vote of a review lasts bft_review_voting_days, so a review has longer to reach its
 // conclusion, bft_stop_review_days (design 4.5)
 var bftPairs = []struct {
 	longer, shorter string
+	margin          int64
 	reason          string
 }{
-	{BftTimeoutPropose, MaxBlockGenerationTime, "the validators would time out before the proposal of a proposer that takes its time"},
-	{BftStopReviewDays, BftReviewVotingDays, "a review would be overdue before the vote of its conclusion ends"},
+	{BftTimeoutPropose, MaxBlockGenerationTime, BftProposerWait.Milliseconds(),
+		"the validators would time out before the proposal of a proposer that takes its time"},
+	{BftStopReviewDays, BftReviewVotingDays, 0, "a review would be overdue before the vote of its conclusion ends"},
 }
 
 // pairValue is the value a node reads of a parameter of bftPairs
@@ -140,8 +157,8 @@ func CheckBftParameter(name, value string) error {
 		} else {
 			shorter = v
 		}
-		if longer <= shorter {
-			return fmt.Errorf("%s %d is not above %s %d: %s", p.longer, longer, p.shorter, shorter, p.reason)
+		if longer <= shorter+p.margin {
+			return fmt.Errorf("%s %d is not above %s %d and %d: %s", p.longer, longer, p.shorter, shorter, p.margin, p.reason)
 		}
 	}
 	return nil
