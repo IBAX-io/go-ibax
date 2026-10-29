@@ -23,8 +23,12 @@ const BlockVersion = BvIncludeRollbackHash
 // DefaultTcpPort used when port number missed in host addr
 const DefaultTcpPort = 7078
 
-// FounderAmount is the starting amount of founder
+// FounderAmount is the starting amount of founder, when the first block allocates no other
 const FounderAmount = 5250000
+
+// TotalSupply is the amount of the coin of ecosystem 1 that may ever exist, when the first block
+// names no other
+const TotalSupply = 2100000000
 
 // MoneyDigits is numbers of digits for tokens 1000000000000
 const MoneyDigits = 12

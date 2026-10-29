@@ -99,7 +99,11 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		return err
 	}
 
-	amount := decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()
+	_, allocs, err := FirstBlockSupply(data)
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.InvalidObject, "error": err}).Error("checking the supply of the first block")
+		return err
+	}
 
 	taxes := &sqldb.PlatformParameter{Name: `taxes_wallet`}
 	if err = taxes.SaveArray(dbTx, [][]string{{"1", converter.Int64ToStr(keyID)}}); err != nil {
@@ -158,16 +162,22 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		return err
 	}
 
-	// The founder's coins are an output of the first block, which TransferSelf moves to his account;
-	// a chain of the honor nodes only takes no TransferSelf, so there they are his account's balance
-	founderBalance := "0"
-	if data.HonorNodesOnly == 1 {
-		founderBalance = amount
-	}
 	err = sqldb.GetDB(dbTx).Exec(`insert into "1_keys" (id,account,pub,amount) values(?,?,?,?),(?,?,?,?)`,
-		keyID, converter.AddressToString(keyID), founder.Bytes(), founderBalance, nodeKeyID, converter.AddressToString(nodeKeyID), nodeKey.Bytes(), 0).Error
+		keyID, converter.AddressToString(keyID), founder.Bytes(), 0, nodeKeyID, converter.AddressToString(nodeKeyID), nodeKey.Bytes(), 0).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("inserting key")
+		return err
+	}
+	created := map[int64]bool{keyID: true, nodeKeyID: true}
+	insert := func(id int64, pub []byte) error {
+		if created[id] {
+			return nil
+		}
+		created[id] = true
+		err := sqldb.GetDB(dbTx).Exec(`insert into "1_keys" (id,account,pub) values(?,?,?)`, id, converter.AddressToString(id), pub).Error
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "key_id": id}).Error("inserting an account of the first block")
+		}
 		return err
 	}
 
@@ -183,18 +193,6 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		if err := json.Unmarshal([]byte(data.HonorNodes), &nodes); err != nil {
 			return err
 		}
-		created := map[int64]bool{keyID: true, nodeKeyID: true}
-		insert := func(id int64, pub []byte) error {
-			if created[id] {
-				return nil
-			}
-			created[id] = true
-			err := sqldb.GetDB(dbTx).Exec(`insert into "1_keys" (id,account,pub) values(?,?,?)`, id, converter.AddressToString(id), pub).Error
-			if err != nil {
-				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "key_id": id}).Error("inserting an account of a validator")
-			}
-			return err
-		}
 		for i, n := range nodes {
 			key := crypto.NodeAccountKey(n.PublicKey)
 			if err := insert(key.Address(), key.Bytes()); err != nil {
@@ -206,12 +204,30 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		}
 	}
 
-	if data.HonorNodesOnly != 1 {
-		// the block writes the output with the outputs of its transactions
-		out.Apply(WithOutCtxTxOutputs(map[sqldb.KeyUTXO][]sqldb.SpentInfo{
-			{Ecosystem: 1, KeyId: keyID}: {{OutputKeyId: keyID, OutputValue: amount, Ecosystem: 1,
-				BlockId: 1, Type: consts.UTXO_Type_First_Block}},
-		}))
+	// Each allocation credits its account, which the first block creates without a key if it is
+	// not that of the founder, a node or an operator: the account of a part of the supply that
+	// only contracts move. The coins are an output of the first block, which TransferSelf moves to
+	// the account; a chain of the honor nodes only takes no TransferSelf, so there they are the
+	// balance of the account.
+	outputs := map[sqldb.KeyUTXO][]sqldb.SpentInfo{}
+	for i, a := range allocs {
+		if err := insert(a.KeyID, []byte{}); err != nil {
+			return err
+		}
+		if data.HonorNodesOnly != 1 {
+			// the block writes the outputs with the outputs of its transactions
+			outputs[sqldb.KeyUTXO{Ecosystem: 1, KeyId: a.KeyID}] = []sqldb.SpentInfo{{OutputIndex: int32(i),
+				OutputKeyId: a.KeyID, OutputValue: a.Amount, Ecosystem: 1, BlockId: 1, Type: consts.UTXO_Type_First_Block}}
+			continue
+		}
+		err := sqldb.GetDB(dbTx).Exec(`update "1_keys" set amount = ? where id = ? and ecosystem = 1`, a.Amount, a.KeyID).Error
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "allocation": a.Name}).Error("crediting an allocation of the first block")
+			return err
+		}
+	}
+	if len(outputs) > 0 {
+		out.Apply(WithOutCtxTxOutputs(outputs))
 	}
 
 	err = smart.LoadContract(dbTx, 1)
@@ -228,7 +244,8 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 
 // CheckFirstBlockAccounts checks the accounts of the first block: account_algorithms is a valid
 // set the node can verify; the node algorithm is in it, since the node account signs with the
-// node key; and the founder key is an account key that may be registered at genesis.
+// node key; the founder key is an account key that may be registered at genesis; and the supply
+// and the allocations are those of FirstBlockSupply.
 func CheckFirstBlockAccounts(data *types.FirstBlock) (syspar.AccountAlgorithmSet, crypto.AccountKey, error) {
 	algos, err := syspar.ParseAccountAlgorithms(data.AccountAlgorithms)
 	if err != nil {
@@ -254,6 +271,9 @@ func CheckFirstBlockAccounts(data *types.FirstBlock) (syspar.AccountAlgorithmSet
 		return nil, crypto.AccountKey{}, fmt.Errorf("the founder key is not that of key %d", data.KeyID)
 	}
 	if err := CheckFirstBlockConsensus(data); err != nil {
+		return nil, crypto.AccountKey{}, err
+	}
+	if _, _, err := FirstBlockSupply(data); err != nil {
 		return nil, crypto.AccountKey{}, err
 	}
 	return algos, founder, nil

@@ -48,6 +48,21 @@ type FirstBlock struct {
 	// HonorNodes is the initial value of the platform parameter honor_nodes: the validators of a
 	// chain of the BFT consensus, which its first block names
 	HonorNodes string
+	// Supply is the amount of the coin of ecosystem 1 that may ever exist, in its smallest unit:
+	// the allocations of the first block and the rest, which is not issued. Empty, it is
+	// consts.TotalSupply.
+	Supply string
+	// Allocations are the amounts the first block credits to the accounts of ecosystem 1. None,
+	// the founder takes consts.FounderAmount.
+	Allocations []Allocation
+}
+
+// Allocation is an amount the first block credits to an account of ecosystem 1: a part of the
+// supply, named, in its smallest unit
+type Allocation struct {
+	Name   string
+	KeyID  int64
+	Amount string
 }
 
 func (t *FirstBlock) TxType() byte { return FirstBlockTxType }
