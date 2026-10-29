@@ -106,6 +106,12 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 	}
 
 	_, maxBlockID, err := tcpclient.HostWithMaxBlock(ctx, remoteHosts)
+	return n.relevanceOf(curBlock.BlockID, maxBlockID, err, remoteHosts)
+}
+
+// relevanceOf decides the relevance of a node at the block curBlockID from the answer of the
+// others: the highest block they have, maxBlockID, or the error of asking them
+func (n *NodeRelevanceService) relevanceOf(curBlockID, maxBlockID int64, err error, remoteHosts []string) (bool, error) {
 	if err != nil {
 		if err == tcpclient.ErrNodesUnavailable {
 			return unreachableRelevant(), nil
@@ -123,8 +129,8 @@ func (n *NodeRelevanceService) checkNodeRelevance(ctx context.Context) (relevant
 	}
 
 	// Node blockchain is stale
-	if curBlock.BlockID+n.availableBlockchainGap < maxBlockID {
-		log.WithFields(log.Fields{"maxBlockID": maxBlockID, "curBlockID": curBlock.BlockID, "Gap": n.availableBlockchainGap}).Info("blockchain is stale, stopping node relevance")
+	if curBlockID+n.availableBlockchainGap < maxBlockID {
+		log.WithFields(log.Fields{"maxBlockID": maxBlockID, "curBlockID": curBlockID, "Gap": n.availableBlockchainGap}).Info("blockchain is stale, stopping node relevance")
 		return false, nil
 	}
 
