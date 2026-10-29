@@ -64,8 +64,10 @@ var (
 		t.Column("block_id", "bigint")
 		t.Column("type", "bigint")
 		t.Column("spent_block", "bigint", {"default": "0"})
-	{{footer "primary(output_tx_hash,output_key_id,output_index)" "index(block_id)" "index(spent_block)" "index(input_tx_hash)" "index(output_key_id)" "index(output_tx_hash)" "index(ecosystem, output_key_id, block_id)"}}
+	{{footer "primary(block_id,output_tx_hash,output_key_id,output_index)" "index(ecosystem, output_key_id, block_id)"}}
+	sql("ALTER TABLE \"spent_info\" ADD CONSTRAINT \"spent_info_spent\" CHECK ((input_tx_hash IS NULL) = (spent_block = 0));")
 	sql("CREATE INDEX \"spent_info_unspent\" ON \"spent_info\" (output_key_id, ecosystem) WHERE input_tx_hash IS NULL;")
+	sql("CREATE INDEX \"spent_info_spent_block\" ON \"spent_info\" (spent_block, input_tx_hash) WHERE spent_block > 0;")
 
 	{{head "transactions_status"}}
 		t.Column("hash", "bytea", {"default": ""})

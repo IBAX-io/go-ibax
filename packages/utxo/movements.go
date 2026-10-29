@@ -145,16 +145,19 @@ func Movements(key, ecosystem, before int64, limit int) (*Page, error) {
 		}
 		return bytes.Compare(a.Hash, b.Hash)
 	})
-	hashes := make([][]byte, len(found))
+	// a transaction makes its outputs and spends its inputs in its block: the outputs are read by
+	// the primary key, which begins with the block and the transaction, and the inputs by the
+	// partial index of the spent outputs, which begins with the block and the spender
+	pairs := make([][]any, len(found))
 	for i, c := range found {
-		hashes[i] = c.Hash
+		pairs[i] = []any{c.Block, c.Hash}
 	}
 	var outputs, inputs []sqldb.SpentInfo
-	if err := db.Where("ecosystem = ? AND output_tx_hash IN ?", ecosystem, hashes).Find(&outputs).Error; err != nil {
+	if err := db.Where("(block_id, output_tx_hash) IN ? AND ecosystem = ?", pairs, ecosystem).Find(&outputs).Error; err != nil {
 		return nil, err
 	}
-	if err := db.Where("ecosystem = ? AND output_key_id = ? AND input_tx_hash IN ?", ecosystem, key, hashes).
-		Find(&inputs).Error; err != nil {
+	if err := db.Where("(spent_block, input_tx_hash) IN ? AND spent_block > 0 AND ecosystem = ? AND output_key_id = ?",
+		pairs, ecosystem, key).Find(&inputs).Error; err != nil {
 		return nil, err
 	}
 	blocks := map[int64]*block.Block{}
