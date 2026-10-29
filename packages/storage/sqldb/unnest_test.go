@@ -7,8 +7,11 @@ package sqldb
 
 import (
 	"encoding/binary"
+	"fmt"
 	"testing"
 
+	"github.com/IBAX-io/go-ibax/packages/migration"
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -80,6 +83,11 @@ func TestBlockWrites(t *testing.T) {
 	var after string
 	require.NoError(t, tx.Raw(`SELECT ctid::text FROM "spent_info" WHERE "output_tx_hash" = '\x02'`).Row().Scan(&after))
 	require.Equal(t, kept, after, "the output block 5 left unspent is written again")
+	// the unspent outputs are in the unspent partition, the spent ones in the range of block 5
+	unspentPart := fmt.Sprintf(`SELECT count(*) FROM "%s"."%s"`, migration.PartsSchema, migration.UnspentPartition)
+	spentPart := fmt.Sprintf(`SELECT count(*) FROM "%s"."spent_info_p0"`, migration.PartsSchema)
+	require.EqualValues(t, 2, countRows(t, db, unspentPart))
+	require.EqualValues(t, 2, countRows(t, db, spentPart))
 	// an output spent before, or one spent_info does not have, cannot be spent
 	require.ErrorContains(t, WriteBlockOutputs(tx, 6, []SpentInfo{
 		{InputTxHash: []byte{5}, OutputTxHash: []byte{1}, OutputIndex: 0, OutputKeyId: 9, OutputValue: "1",
@@ -106,6 +114,13 @@ func TestBlockWrites(t *testing.T) {
 		{Hash: []byte{2}, Time: 11, Type: 4, WalletID: 6, BlockID: 7, Error: `{"type":"panic"}`},
 	}, statuses)
 	require.NoError(t, UpsertBlockStatusBatches(tx, []*TransactionStatus{nil}))
+
+	// the rollback of block 5 moves the output it spent back to the unspent partition and deletes
+	// those it made
+	require.NoError(t, RollbackOutputs(5, db, log.NewEntry(log.StandardLogger())))
+	require.EqualValues(t, 1, countRows(t, db, unspentPart+` WHERE "output_tx_hash" = '\x01'`))
+	require.EqualValues(t, 0, countRows(t, db, spentPart+` WHERE "spent_block" = 5`))
+	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "spent_info" WHERE "block_id" = 5`))
 }
 
 // TestBlockOutputWrites: a block inserts the outputs it made, spent or not, in the order of the

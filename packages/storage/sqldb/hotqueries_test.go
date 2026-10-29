@@ -36,24 +36,24 @@ var hotQueries = []struct {
 	{`SELECT "hash" FROM "log_transactions" WHERE "hash" IN ('\x01') UNION ALL SELECT "hash" FROM "stop_network_txs" WHERE "hash" IN ('\x01')`,
 		[]string{`log_transactions_p\d+_hash_idx`, `stop_network_txs_pkey`}},
 	{`SELECT "count" FROM "log_transaction_counts" WHERE "ecosystem_id" = 1`, []string{`log_transaction_counts_pkey`}},
-	{`SELECT si.output_tx_hash FROM spent_info si WHERE si.output_key_id IN (1, 2) AND si.input_tx_hash IS NULL
-		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index`, []string{`spent_info_unspent`}},
-	{`SELECT si.output_tx_hash FROM spent_info si WHERE si.ecosystem = 1 AND si.output_key_id IN (1, 2) AND si.input_tx_hash IS NULL
-		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index`, []string{`spent_info_unspent`}},
-	{`SELECT coalesce(sum(output_value), '0') FROM spent_info WHERE input_tx_hash is NULL AND output_key_id = 1 AND ecosystem = 1`,
-		[]string{`spent_info_unspent`}},
+	{`SELECT si.output_tx_hash FROM spent_info si WHERE si.output_key_id IN (1, 2) AND si.spent_block = 0
+		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index`, []string{`spent_info_unspent_output_key_id_ecosystem_idx`}},
+	{`SELECT si.output_tx_hash FROM spent_info si WHERE si.ecosystem = 1 AND si.output_key_id IN (1, 2) AND si.spent_block = 0
+		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index`, []string{`spent_info_unspent_output_key_id_ecosystem_idx`}},
+	{`SELECT coalesce(sum(output_value), '0') FROM spent_info WHERE spent_block = 0 AND output_key_id = 1 AND ecosystem = 1`,
+		[]string{`spent_info_unspent_output_key_id_ecosystem_idx`}},
 	{`UPDATE "spent_info" SET "input_tx_hash" = u.i, "input_index" = u.ii, "spent_block" = u.s
 		FROM unnest('{1}'::bigint[], '{"\\x01"}'::bytea[], '{1}'::bigint[], '{0}'::integer[], '{"\\x02"}'::bytea[],
 			'{0}'::integer[], '{2}'::bigint[]) AS u(b, o, k, oi, i, ii, s)
 		WHERE "block_id" = u.b AND "output_tx_hash" = u.o AND "output_key_id" = u.k AND "output_index" = u.oi
-			AND "spent_block" = 0`, []string{`spent_info_pkey`}},
+			AND "spent_block" = 0`, []string{`spent_info_unspent_pkey`}},
 	{`UPDATE spent_info SET input_tx_hash = null, input_index = 0, spent_block = 0 WHERE spent_block = 1 AND spent_block > 0`,
-		[]string{`spent_info_spent_block`}},
-	{`DELETE FROM spent_info WHERE block_id = 1`, []string{`spent_info_pkey`}},
+		[]string{`spent_info_p0_spent_block_input_tx_hash_idx`}},
+	{`DELETE FROM spent_info WHERE block_id = 1`, []string{`spent_info_unspent_pkey`, `spent_info_p\d+_pkey`}},
 	{`SELECT * FROM spent_info WHERE (block_id, output_tx_hash) IN ((1, '\x01'), (2, '\x02')) AND ecosystem = 1`,
-		[]string{`spent_info_pkey`}},
+		[]string{`spent_info_unspent_pkey`, `spent_info_p\d+_pkey`}},
 	{`SELECT * FROM spent_info WHERE (spent_block, input_tx_hash) IN ((1, '\x01'), (2, '\x02')) AND spent_block > 0
-		AND ecosystem = 1 AND output_key_id = 1`, []string{`spent_info_spent_block`}},
+		AND ecosystem = 1 AND output_key_id = 1`, []string{`spent_info_p0_spent_block_input_tx_hash_idx`}},
 	{`SELECT * FROM "block_chain" ORDER BY "block_chain"."id" DESC LIMIT 1`, []string{`block_chain_p\d+_pkey`}},
 	{`SELECT * FROM "block_chain" WHERE id = 1`, []string{`block_chain_genesis_pkey`}},
 	{`SELECT * FROM "block_chain" WHERE node_position = 0 AND time BETWEEN 1 AND 2`,

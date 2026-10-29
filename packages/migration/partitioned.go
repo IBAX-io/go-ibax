@@ -28,6 +28,10 @@ const (
 // GenesisPartition is the partition of block_chain that holds block 1, which never leaves it
 const GenesisPartition = "block_chain_genesis"
 
+// UnspentPartition is the partition of spent_info that holds the unspent outputs, of spent_block 0,
+// which never leaves it
+const UnspentPartition = "spent_info_unspent"
+
 // PartitionedTable is a table partitioned by ranges of PartitionBlocks blocks of its Key column
 type PartitionedTable struct {
 	Name string
@@ -40,6 +44,10 @@ type PartitionedTable struct {
 	// columns and constraints, and the indexes on the partitioned table
 	columns string
 	indexes []string
+	// fixed is the CREATE TABLE of the partition that never leaves, if any, and more the statements
+	// after the partitions are made
+	fixed string
+	more  []string
 }
 
 // PartitionedTables are the tables whose rows leave the active tables by ranges of blocks
@@ -59,6 +67,8 @@ var PartitionedTables = []PartitionedTable{
 		"candidate_nodes" bytea NOT NULL DEFAULT '',
 		PRIMARY KEY ("id")`,
 		indexes: []string{`"hash"`, `"node_position", "time"`},
+		fixed: fmt.Sprintf(`CREATE TABLE "%s"."%s" PARTITION OF "block_chain" FOR VALUES FROM (MINVALUE) TO (2);`,
+			PartsSchema, GenesisPartition),
 	},
 	{
 		Name: "confirmations", Key: "block_id",
@@ -119,6 +129,30 @@ var PartitionedTables = []PartitionedTable{
 		PRIMARY KEY ("block", "hash")`,
 		indexes: []string{`"hash"`},
 	},
+	// an output stays in the unspent partition until a block spends it, and moves then to the range
+	// of that block, which leaves with the ranges of the other tables of its blocks
+	{
+		Name: "spent_info", Key: "spent_block",
+		columns: `"input_tx_hash" bytea,
+		"input_index" integer,
+		"output_tx_hash" bytea NOT NULL,
+		"output_index" integer NOT NULL,
+		"output_key_id" bigint NOT NULL,
+		"output_value" decimal(30) NOT NULL DEFAULT '0' CHECK ("output_value" >= 0),
+		"ecosystem" bigint NOT NULL DEFAULT '1',
+		"block_id" bigint NOT NULL,
+		"type" bigint NOT NULL,
+		"spent_block" bigint NOT NULL DEFAULT '0',
+		CONSTRAINT "spent_info_spent" CHECK (("input_tx_hash" IS NULL) = ("spent_block" = 0)),
+		PRIMARY KEY ("block_id", "output_tx_hash", "output_key_id", "output_index", "spent_block")`,
+		indexes: []string{`"ecosystem", "output_key_id", "block_id"`},
+		fixed: fmt.Sprintf(`CREATE TABLE "%s"."%s" PARTITION OF "spent_info" FOR VALUES FROM (0) TO (1);`,
+			PartsSchema, UnspentPartition),
+		more: []string{
+			fmt.Sprintf(`CREATE INDEX ON "%s"."%s" ("output_key_id", "ecosystem");`, PartsSchema, UnspentPartition),
+			`CREATE INDEX ON "spent_info" ("spent_block", "input_tx_hash") WHERE "spent_block" > 0;`,
+		},
+	},
 }
 
 // PartitionedTableOf is the partitioned table of the name
@@ -137,13 +171,18 @@ func PartitionName(table string, k int64) string {
 }
 
 // PartitionBounds is the FOR VALUES clause of range k of the table: range 0 of block_chain starts
-// after block 1, which GenesisPartition holds
+// after block 1, which GenesisPartition holds, and range 0 of spent_info after spent_block 0, which
+// UnspentPartition holds
 func PartitionBounds(table string, k int64) string {
 	from := fmt.Sprint(k * PartitionBlocks)
 	if k == 0 {
-		from = "MINVALUE"
-		if table == "block_chain" {
+		switch table {
+		case "block_chain":
 			from = "2"
+		case "spent_info":
+			from = "1"
+		default:
+			from = "MINVALUE"
 		}
 	}
 	return fmt.Sprintf("FROM (%s) TO (%d)", from, (k+1)*PartitionBlocks)
@@ -155,7 +194,8 @@ func CreatePartitionSQL(table string, k int64) string {
 		PartsSchema, PartitionName(table, k), table, PartitionBounds(table, k))
 }
 
-// sql drops and creates the table, its indexes and its partitions of ranges 0 and 1
+// sql drops and creates the table, its indexes, the partition that never leaves and the partitions
+// of ranges 0 and 1
 func (t PartitionedTable) sql() string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "DROP TABLE IF EXISTS \"%[1]s\" CASCADE;\nCREATE TABLE \"%[1]s\" (\n\t\t%[2]s\n\t) PARTITION BY RANGE (\"%[3]s\");\n",
@@ -163,12 +203,14 @@ func (t PartitionedTable) sql() string {
 	for _, cols := range t.indexes {
 		fmt.Fprintf(&b, "CREATE INDEX ON \"%s\" (%s);\n", t.Name, cols)
 	}
-	if t.Name == "block_chain" {
-		fmt.Fprintf(&b, "CREATE TABLE \"%s\".\"%s\" PARTITION OF \"block_chain\" FOR VALUES FROM (MINVALUE) TO (2);\n",
-			PartsSchema, GenesisPartition)
+	if t.fixed != "" {
+		b.WriteString(t.fixed + "\n")
 	}
 	b.WriteString(CreatePartitionSQL(t.Name, 0) + "\n")
 	b.WriteString(CreatePartitionSQL(t.Name, 1) + "\n")
+	for _, sql := range t.more {
+		b.WriteString(sql + "\n")
+	}
 	return b.String()
 }
 

@@ -86,7 +86,8 @@ func blockOutputWrites(blockID int64, outputs []SpentInfo) (made, spent []SpentI
 
 // WriteBlockOutputs records the outputs the block made and the spending of earlier ones: an output
 // it spends takes the input that spends it. An output is unspent while its spent_block is 0 (the
-// check spent_info_spent), so the update reads each output it spends by the primary key alone.
+// check spent_info_spent), so the update reads each output it spends by the primary key of the
+// unspent partition alone, and moves it to the partition of the range of the block.
 func WriteBlockOutputs(dbTx *gorm.DB, blockID int64, outputs []SpentInfo) error {
 	made, spent := blockOutputWrites(blockID, outputs)
 	if len(made) > 0 {
@@ -137,7 +138,7 @@ func GetTxOutputsEcosystem(db *DbTransaction, ecosystem int64, keyIds []int64) (
 	query :=
 		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.ecosystem, si.block_id
 		FROM spent_info si
-		WHERE si.ecosystem = ? AND si.output_key_id IN ? AND si.input_tx_hash IS NULL
+		WHERE si.ecosystem = ? AND si.output_key_id IN ? AND si.spent_block = 0
 		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index `
 	var result []SpentInfo
 	err := GetDB(db).Raw(query, ecosystem, keyIds).Scan(&result).Error
@@ -151,7 +152,7 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	query :=
 		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.ecosystem, si.block_id
 		FROM spent_info si
-		WHERE si.output_key_id IN ? AND si.input_tx_hash IS NULL
+		WHERE si.output_key_id IN ? AND si.spent_block = 0
 		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index `
 	var result []SpentInfo
 	err := GetDB(db).Raw(query, keyIds).Scan(&result).Error
@@ -161,9 +162,9 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	return result, nil
 }
 
-// RollbackOutputs undoes the outputs of the block: those it spent are unspent again, and those it
-// made are deleted. spent_block > 0 lets the generic plan of the statement read the spent outputs
-// by their partial index.
+// RollbackOutputs undoes the outputs of the block: those it spent are unspent again, moving back to
+// the unspent partition, and those it made are deleted. spent_block > 0 lets the generic plan of
+// the statement read the spent outputs by their partial index.
 func RollbackOutputs(blockID int64, db *DbTransaction, logger *log.Entry) error {
 	err := GetDB(db).Exec(`UPDATE spent_info SET input_tx_hash = null, input_index = 0, spent_block = 0 WHERE spent_block = ? AND spent_block > 0`, blockID).Error
 	if err != nil {
@@ -189,7 +190,7 @@ func GetBlockOutputs(dbTx *DbTransaction, blockID int64) ([]SpentInfo, error) {
 func (si *SpentInfo) GetBalance(db *DbTransaction, keyId, ecosystem int64) (decimal.Decimal, error) {
 	var amount decimal.Decimal
 	f, err := isFound(GetDB(db).Table(si.TableName()).Select("coalesce(sum(output_value),'0') amount").
-		Where("input_tx_hash is NULL AND output_key_id = ? AND ecosystem = ?", keyId, ecosystem).Take(&amount))
+		Where("spent_block = 0 AND output_key_id = ? AND ecosystem = ?", keyId, ecosystem).Take(&amount))
 	if err != nil {
 		return decimal.Zero, err
 	}
@@ -217,7 +218,7 @@ SELECT * FROM
         LEFT JOIN "1_keys"
           ON spent_info.ecosystem = "1_keys".ecosystem
             AND id = spent_info.output_key_id
-        WHERE input_tx_hash is null
+        WHERE spent_block = 0
             AND "spent_info".ecosystem = ?
             AND blocked = 0
             AND deleted = 0
