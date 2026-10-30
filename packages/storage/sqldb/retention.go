@@ -139,17 +139,25 @@ func attachedRanges(dbTx *DbTransaction, table string) ([]int64, error) {
 	return ranges, nil
 }
 
-// retire takes the range r of the table t out of the active table at the boundary blockID
+// retire takes the range r of the table t out of the active table at the boundary blockID: into
+// the retired schema, or on an archive node into the archive at once, so that the views of the
+// archive read every row as it leaves (ArchivedTable)
 func retire(dbTx *DbTransaction, t migration.PartitionedTable, r, blockID int64) error {
 	db := GetDB(dbTx)
 	part := migration.PartitionName(t.Name, r)
-	for _, sql := range []string{
-		fmt.Sprintf(`ALTER TABLE "%s" DETACH PARTITION "%s"."%s"`, t.Name, migration.PartsSchema, part),
-		fmt.Sprintf(`ALTER TABLE "%s"."%s" SET SCHEMA "%s"`, migration.PartsSchema, part, migration.RetiredSchema),
-	} {
-		if err := db.Exec(sql).Error; err != nil {
-			return fmt.Errorf("retiring %s: %w", part, err)
-		}
+	if err := db.Exec(fmt.Sprintf(`ALTER TABLE "%s" DETACH PARTITION "%s"."%s"`, t.Name, migration.PartsSchema, part)).Error; err != nil {
+		return fmt.Errorf("retiring %s: %w", part, err)
+	}
+	var err error
+	to := migration.RetiredSchema
+	if conf.Config.Storage.Archive {
+		to = migration.ArchiveSchema
+		err = archivePartition(dbTx, migration.PartsSchema, t.Name, r)
+	} else {
+		err = db.Exec(fmt.Sprintf(`ALTER TABLE "%s"."%s" SET SCHEMA "%s"`, migration.PartsSchema, part, to)).Error
+	}
+	if err != nil {
+		return fmt.Errorf("retiring %s: %w", part, err)
 	}
 	if err := db.Exec(`INSERT INTO "retired_partitions" ("boundary", "table_name", "k") VALUES (?, ?, ?)`,
 		blockID, t.Name, r).Error; err != nil {
@@ -162,7 +170,7 @@ func retire(dbTx *DbTransaction, t migration.PartitionedTable, r, blockID int64)
 	return db.Exec(fmt.Sprintf(`INSERT INTO "partition_id_floors" ("table_name", "max_id")
 		SELECT ?, coalesce(max("id"), 0) FROM "%s"."%s"
 		ON CONFLICT ("table_name") DO UPDATE
-		SET "max_id" = GREATEST("partition_id_floors"."max_id", EXCLUDED."max_id")`, migration.RetiredSchema, part),
+		SET "max_id" = GREATEST("partition_id_floors"."max_id", EXCLUDED."max_id")`, to, part),
 		t.Name).Error
 }
 
@@ -179,8 +187,8 @@ func retiredBefore(dbTx *DbTransaction, cond string, blockID int64) ([]retiredPa
 	return rs, err
 }
 
-// finishRetired drops, or on an archive node archives, the partitions retired before the boundary
-// blockID
+// finishRetired drops the partitions retired before the boundary blockID; an archive node keeps
+// them in the archive, where they went as they left, and archives those the retired schema holds
 func finishRetired(dbTx *DbTransaction, blockID int64) error {
 	rs, err := retiredBefore(dbTx, "<", blockID)
 	if err != nil || len(rs) == 0 {
@@ -190,9 +198,12 @@ func finishRetired(dbTx *DbTransaction, blockID int64) error {
 	var floor int64
 	for _, r := range rs {
 		part := migration.PartitionName(r.TableName, r.K)
-		if conf.Config.Storage.Archive {
-			err = archivePartition(dbTx, r.TableName, r.K)
-		} else {
+		schema, err := partitionSchema(dbTx, part)
+		switch {
+		case err != nil || schema != migration.RetiredSchema:
+		case conf.Config.Storage.Archive:
+			err = archivePartition(dbTx, migration.RetiredSchema, r.TableName, r.K)
+		default:
 			err = db.Exec(fmt.Sprintf(`DROP TABLE "%s"."%s"`, migration.RetiredSchema, part)).Error
 		}
 		if err != nil {
@@ -216,8 +227,18 @@ func RestoreRetired(dbTx *DbTransaction, blockID int64) error {
 	db := GetDB(dbTx)
 	for _, r := range rs {
 		part := migration.PartitionName(r.TableName, r.K)
+		schema, err := partitionSchema(dbTx, part)
+		if err != nil {
+			return err
+		}
+		if schema == migration.ArchiveSchema {
+			if err := db.Exec(fmt.Sprintf(`ALTER TABLE "%[1]s"."%[2]s" DETACH PARTITION "%[1]s"."%[3]s"`,
+				migration.ArchiveSchema, r.TableName, part)).Error; err != nil {
+				return fmt.Errorf("restoring %s: %w", part, err)
+			}
+		}
 		for _, sql := range []string{
-			fmt.Sprintf(`ALTER TABLE "%s"."%s" SET SCHEMA "%s"`, migration.RetiredSchema, part, migration.PartsSchema),
+			fmt.Sprintf(`ALTER TABLE "%s"."%s" SET SCHEMA "%s"`, schema, part, migration.PartsSchema),
 			fmt.Sprintf(`ALTER TABLE "%s" ATTACH PARTITION "%s"."%s" FOR VALUES %s`, r.TableName,
 				migration.PartsSchema, part, migration.PartitionBounds(r.TableName, r.K)),
 		} {
@@ -292,14 +313,29 @@ func archiveTable(t migration.PartitionedTable) string {
 		migration.ArchiveSchema, t.Name, t.Key)
 }
 
-// archivePartition attaches the retired range k of the table to its table in the archive schema
-func archivePartition(dbTx *DbTransaction, table string, k int64) error {
+// partitionSchema is the schema of the retired or archive partition part, the one it left to
+func partitionSchema(dbTx *DbTransaction, part string) (string, error) {
+	var schemas []string
+	if err := GetDB(dbTx).Raw(`SELECT "schemaname" FROM "pg_tables" WHERE "tablename" = ? AND "schemaname" IN (?, ?)`,
+		part, migration.RetiredSchema, migration.ArchiveSchema).Scan(&schemas).Error; err != nil {
+		return "", err
+	}
+	if len(schemas) != 1 {
+		return "", fmt.Errorf("the partition %s is in %d of the schemas %s and %s", part, len(schemas),
+			migration.RetiredSchema, migration.ArchiveSchema)
+	}
+	return schemas[0], nil
+}
+
+// archivePartition attaches the range k of the table, a table of the schema from out of its
+// table, to its table in the archive schema
+func archivePartition(dbTx *DbTransaction, from, table string, k int64) error {
 	t, _ := migration.PartitionedTableOf(table)
 	part := migration.PartitionName(table, k)
 	db := GetDB(dbTx)
 	for _, sql := range []string{
 		archiveTable(t),
-		fmt.Sprintf(`ALTER TABLE "%s"."%s" SET SCHEMA "%s"`, migration.RetiredSchema, part, migration.ArchiveSchema),
+		fmt.Sprintf(`ALTER TABLE "%s"."%s" SET SCHEMA "%s"`, from, part, migration.ArchiveSchema),
 		fmt.Sprintf(`ALTER TABLE "%[1]s"."%[2]s" ATTACH PARTITION "%[1]s"."%[3]s" FOR VALUES %[4]s`,
 			migration.ArchiveSchema, table, part, migration.PartitionBounds(table, k)),
 	} {

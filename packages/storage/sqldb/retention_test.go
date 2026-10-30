@@ -247,3 +247,43 @@ func TestRetainLogTransactionsSigned(t *testing.T) {
 	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
 	require.EqualValues(t, 0, countRows(t, db, logged, []byte{8}))
 }
+
+// On an archive node a range that leaves at a boundary is read at once, out of the window, by
+// the synchronization of other nodes: the blocks and the certificates of no range are out of
+// reach; a rollback of the boundary puts the range back in the active tables
+func TestRetainArchiveAtOnce(t *testing.T) {
+	db := retentionDB(t)
+	conf.Config.Storage.Archive = true
+	t.Cleanup(func() { conf.Config.Storage.Archive = false })
+	require.NoError(t, PrepareArchive())
+	T := int64(1) << 32
+	chainRows(t, db, T)
+	require.NoError(t, (&BftCertificate{Height: 9999, Hash: []byte{1}, Data: []byte{1}}).Create(db))
+	require.NoError(t, Retain(db, 10000, T, testWindow))
+	addBlocks(t, db, T, 20000, 29999)
+	readable := func(when string) {
+		found, err := (&BlockChain{}).GetArchived(9999)
+		require.NoError(t, err)
+		require.True(t, found, "block 9999 %s", when)
+		found, err = (&BftCertificate{}).GetArchived(9999)
+		require.NoError(t, err)
+		require.True(t, found, "the certificate of 9999 %s", when)
+	}
+
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
+	found, err := (&BlockChain{}).Get(9999)
+	require.NoError(t, err)
+	require.False(t, found, "range 0 left the active table")
+	readable("as range 0 leaves")
+	require.NoError(t, RestoreRetired(db, 20000))
+	found, err = (&BlockChain{}).Get(9999)
+	require.NoError(t, err)
+	require.True(t, found, "the rollback of 20000 puts range 0 back")
+	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "archive"."block_chain"`))
+
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
+	require.NoError(t, Retain(db, 30000, T+consts.MaxTxForw+consts.MaxTxBack+2, testWindow))
+	readable("at the next boundary")
+	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM pg_tables WHERE schemaname = ?`, migration.RetiredSchema))
+	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "retired_partitions" WHERE "boundary" = 20000`))
+}
