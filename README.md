@@ -15,6 +15,12 @@ A binary of the `develop` branch runs **newly created chains only**: chains whos
 production nodes that run the `main` release line (v1.4.x) on mainnet and testnet: those nodes
 keep the binaries of `main`.
 
+Nor does a chain of `develop` take, in place, a later `develop` binary whose consensus rules or
+first-block parameters differ from those of the binary that generated its first block. The merge
+of `feat/tps` is such a change: it raises the starting `bft_timeout_propose_ms` from 3000 to 4000
+and bounds the timeouts by margins. A chain created before that merge keeps its binaries; a chain
+on the merged code is created anew by a binary of the merged code.
+
 ### Build from Source
 
 #### Install Go
