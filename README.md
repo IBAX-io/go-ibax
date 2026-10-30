@@ -8,6 +8,13 @@
 A powerful blockchain system platform with a new system framework and a simplified programming language, it is including
 smart contract, database table and interface.
 
+### Branches and chains
+
+A binary of the `develop` branch runs **newly created chains only**: chains whose first block a
+`develop` binary generated. It must not upgrade any existing chain in place, including the
+production nodes that run the `main` release line (v1.4.x) on mainnet and testnet: those nodes
+keep the binaries of `main`.
+
 ### Build from Source
 
 #### Install Go

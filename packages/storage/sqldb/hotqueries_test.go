@@ -15,14 +15,15 @@ import (
 
 // hotQueries are the queries a node runs per transaction or per block, as the bench profiles them
 // (pg_stat_statements), with values in place of the parameters, and the indexes each must read by:
-// an index of a partition is matched by its name with the range as p\d+
+// an index of a partition is matched by its name with the range as p\d+. An account is in a few
+// ecosystems, so reading it by its account alone is as good as by both
 var hotQueries = []struct {
 	sql     string
 	indexes []string
 }{
 	{`SELECT * FROM "1_keys" WHERE id = 1 and ecosystem = 1 ORDER BY "1_keys"."id" LIMIT 1`, []string{`1_keys_pkey`}},
 	{`SELECT id, amount, "ecosystem" FROM "1_keys" WHERE "ecosystem" = 1 and "account" = '0000-0000-0000-0000-0000' and "deleted" = 0`,
-		[]string{`1_keys_ecosystem_account`}},
+		[]string{`1_keys_(ecosystem_account|account_idx)$`}},
 	{`UPDATE "1_keys" SET amount = amount + 1 WHERE "ecosystem" = 1 and "id" = 1`, []string{`1_keys_pkey`}},
 	{`SELECT * FROM "1_ecosystems" WHERE id = 1`, []string{`1_ecosystems_pkey`}},
 	// 1_parameters and 1_app_params have a unique index and a plain one on the same columns: either serves
