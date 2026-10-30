@@ -18,7 +18,20 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
+// Unmarshall reads a transaction in its stored form, as a block holds it and nodes pass it on
 func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer, fill bool) error {
+	return rtx.unmarshall(buffer, fill, false)
+}
+
+// UnmarshallClient reads a transaction a client sends: a frame of the client (ClientTxType), which
+// it turns into the stored form with the time of the node, or a transaction in its stored form.
+// Only the node a client sends to reads a frame of the client: in a block, every node would store
+// it with a time of its own, and they would disagree on the block.
+func (rtx *Transaction) UnmarshallClient(buffer *bytes.Buffer, fill bool) error {
+	return rtx.unmarshall(buffer, fill, true)
+}
+
+func (rtx *Transaction) unmarshall(buffer *bytes.Buffer, fill, client bool) error {
 	if buffer.Len() == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("empty transaction buffer")
 		return fmt.Errorf("empty transaction buffer")
@@ -42,7 +55,10 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer, fill bool) error {
 		if err = itx.Unmarshal(buffer, fill); err != nil {
 			return err
 		}
-	case byte(128): //reset unmarshal client buf
+	case types.ClientTxType:
+		if !client {
+			return fmt.Errorf("a frame of a client is no stored transaction")
+		}
 		itx := &SmartTransactionParser{
 			SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 		}

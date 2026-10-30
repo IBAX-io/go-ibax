@@ -28,7 +28,7 @@ func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key i
 	rtxs := make([]*transaction.Transaction, 0, len(txDatas))
 	for _, txData := range txDatas {
 		rtx := &transaction.Transaction{}
-		if err := rtx.Unmarshall(bytes.NewBuffer(txData), true); err != nil {
+		if err := rtx.UnmarshallClient(bytes.NewBuffer(txData), true); err != nil {
 			return nil, err
 		}
 		rtxs = append(rtxs, rtx)

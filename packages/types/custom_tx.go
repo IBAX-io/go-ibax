@@ -30,6 +30,11 @@ const (
 	TransferSelfTxType
 )
 
+// ClientTxType is the frame a client sends a transaction in: the payload it signed and the
+// signature. The node it sends to stores the transaction, with the time it takes it, in the form
+// of its type; blocks and other nodes carry only that stored form.
+const ClientTxType = 0x80
+
 // FirstBlock is the header of first block transaction
 type FirstBlock struct {
 	KeyID                 int64

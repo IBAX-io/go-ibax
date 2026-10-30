@@ -72,7 +72,7 @@ func TestTxSizeIsStoredLength(t *testing.T) {
 			t.Fatal(err)
 		}
 		client := &Transaction{}
-		if err := client.Unmarshall(bytes.NewBuffer(data), true); err != nil {
+		if err := client.UnmarshallClient(bytes.NewBuffer(data), true); err != nil {
 			t.Fatalf("%s/%s: %v", c.Cryptoer, c.Hasher, err)
 		}
 		if len(client.FullData) <= len(data) {
@@ -134,7 +134,7 @@ func TestQueueRefusesAccountAlgorithm(t *testing.T) {
 			{{Algo: algo, SignUntil: time.Unix(0, 0).UTC()}},
 		} {
 			syspar.SetAccountAlgorithms(set)
-			if err := (&Transaction{}).Unmarshall(bytes.NewBuffer(bytes.Clone(data)), true); !errors.Is(err, syspar.ErrAccountAlgorithm) {
+			if err := (&Transaction{}).UnmarshallClient(bytes.NewBuffer(bytes.Clone(data)), true); !errors.Is(err, syspar.ErrAccountAlgorithm) {
 				t.Errorf("%s/%s with %s: %v", c.Cryptoer, c.Hasher, set, err)
 			}
 		}
