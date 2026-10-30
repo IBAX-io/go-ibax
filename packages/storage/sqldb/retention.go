@@ -103,14 +103,15 @@ func outOfWindow(dbTx *DbTransaction, t migration.PartitionedTable, r, blockID, 
 	if end > blockID {
 		return false, nil
 	}
-	// a transaction older than MaxTxBack is refused anyway: the range of transactions all older
-	// than that leaves without letting one in twice
+	// a transaction is refused whose signed time is earlier than MaxTxBack before the block time;
+	// a block takes it signed at most MaxTxForw after its time (transaction.checkTime), so the
+	// range leaves once its last block is so old that none of its transactions passes the check
 	var last []int64
 	if err := GetDB(dbTx).Raw(`SELECT "last_time" FROM "log_transaction_ranges" WHERE "k" = ?`, r).
 		Scan(&last).Error; err != nil {
 		return false, err
 	}
-	return len(last) == 1 && last[0] < blockTime-consts.MaxTxBack, nil
+	return len(last) == 1 && last[0]+consts.MaxTxForw < blockTime-consts.MaxTxBack, nil
 }
 
 // attachedRanges are, in order, the ranges of the partitions of the table in the active table

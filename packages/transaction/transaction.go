@@ -34,6 +34,8 @@ type TransactionCaller interface {
 	txHash() []byte
 	txPayload() []byte
 	txTime() int64
+	// txSignedTime is the time, in seconds, that the signature of the transaction covers
+	txSignedTime() int64
 	txKeyID() int64
 	txExpedite() decimal.Decimal
 	// txSize is the length of the transaction as a block stores it (Transaction.FullData).
@@ -53,6 +55,7 @@ func (t *Transaction) Type() byte                { return t.Inner.txType() }
 func (t *Transaction) Hash() []byte              { return t.Inner.txHash() }
 func (t *Transaction) Payload() []byte           { return t.Inner.txPayload() }
 func (t *Transaction) Timestamp() int64          { return t.Inner.txTime() }
+func (t *Transaction) SignedTime() int64         { return t.Inner.txSignedTime() }
 func (t *Transaction) KeyID() int64              { return t.Inner.txKeyID() }
 func (t *Transaction) Expedite() decimal.Decimal { return t.Inner.txExpedite() }
 

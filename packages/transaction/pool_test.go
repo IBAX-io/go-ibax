@@ -26,6 +26,7 @@ type poolCaller struct {
 func (c *poolCaller) txType() byte                { return c.typ }
 func (c *poolCaller) txHash() []byte              { return c.hash }
 func (c *poolCaller) txTime() int64               { return c.time }
+func (c *poolCaller) txSignedTime() int64         { return c.time / 1000 }
 func (c *poolCaller) txExpedite() decimal.Decimal { return decimal.NewFromInt(c.expedite) }
 
 func poolTx(hash string, typ byte, time, expedite int64) *Transaction {

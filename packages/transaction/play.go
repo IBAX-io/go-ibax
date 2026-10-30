@@ -2,7 +2,6 @@ package transaction
 
 import (
 	"encoding/hex"
-	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -36,18 +35,23 @@ func (t *Transaction) Check(checkTime int64) error {
 	return CheckBatch([]*Transaction{t}, checkTime)[0]
 }
 
-// checkTime refuses a transaction of no key, or of a time out of the window of checkTime
+// checkTime refuses a transaction of no key, or whose signed time is out of the window of
+// checkTime: later than MaxTxForw after it, or, but for StopNetwork, earlier than MaxTxBack before
+// it. The window is of the time the signature covers, not of the time a node received the
+// transaction at, so that a transaction sent again past MaxTxBack is refused once its hash has
+// left log_transactions (sqldb.Retain)
 func (t *Transaction) checkTime(checkTime int64) error {
 	if t.KeyID() == 0 {
 		return ErrEmptyKey
 	}
-	logger := log.WithFields(log.Fields{"tx_hash": hex.EncodeToString(t.Hash()), "tx_time": t.Timestamp(), "check_time": checkTime, "type": consts.ParameterExceeded})
-	if time.UnixMilli(t.Timestamp()).Unix() > checkTime {
-		logger.Error("time in the tx cannot be more than of block time ")
+	signed := t.SignedTime()
+	logger := log.WithFields(log.Fields{"tx_hash": hex.EncodeToString(t.Hash()), "tx_time": signed, "check_time": checkTime, "type": consts.ParameterExceeded})
+	if signed > checkTime+consts.MaxTxForw {
+		logger.Errorf("time in the tx cannot be more than %d seconds after the block time", consts.MaxTxForw)
 		return ErrEarlyTime
 	}
 	if t.Type() != types.StopNetworkTxType {
-		if time.UnixMilli(t.Timestamp()).Unix() < checkTime-consts.MaxTxBack {
+		if signed < checkTime-consts.MaxTxBack {
 			logger.WithFields(log.Fields{"tx_max_back": consts.MaxTxBack, "tx_type": t.Type()}).Errorf("time in the tx cannot be less then %d seconds of block time", consts.MaxTxBack)
 			return ErrExpiredTime
 		}

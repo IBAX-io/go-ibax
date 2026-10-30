@@ -35,11 +35,12 @@ type SmartTransactionParser struct {
 	storedSize
 }
 
-func (s *SmartTransactionParser) txType() byte      { return s.TxSmart.TxType() }
-func (s *SmartTransactionParser) txHash() []byte    { return s.Hash }
-func (s *SmartTransactionParser) txPayload() []byte { return s.Payload }
-func (s *SmartTransactionParser) txTime() int64     { return s.Timestamp }
-func (s *SmartTransactionParser) txKeyID() int64    { return s.TxSmart.KeyID }
+func (s *SmartTransactionParser) txType() byte        { return s.TxSmart.TxType() }
+func (s *SmartTransactionParser) txHash() []byte      { return s.Hash }
+func (s *SmartTransactionParser) txPayload() []byte   { return s.Payload }
+func (s *SmartTransactionParser) txTime() int64       { return s.Timestamp }
+func (s *SmartTransactionParser) txSignedTime() int64 { return s.TxSmart.Time }
+func (s *SmartTransactionParser) txKeyID() int64      { return s.TxSmart.KeyID }
 func (s *SmartTransactionParser) txExpedite() decimal.Decimal {
 	dec, _ := decimal.NewFromString(s.TxSmart.Expedite)
 	return dec
