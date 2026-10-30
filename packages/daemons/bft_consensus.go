@@ -145,12 +145,14 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 
 func (d *bftDriver) run() {
 	syspar.SetRunModel(consts.HonorNodeMode)
+	// the machine starts at the height after the last block under DBLock; the restored sign state
+	// runs without it, as the machine does, since it may try a block (Value, Valid), which takes it
 	lockWrites()
 	err := d.reset()
+	DBUnlock()
 	if err == nil {
 		err = d.restore()
 	}
-	DBUnlock()
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Fatal("starting the consensus")
 	}
@@ -635,7 +637,15 @@ func fetchStreamed(b *bft.Batch, key []byte, hashes [][]byte) ([][]byte, error) 
 	if !ok {
 		return nil, errNoProposer
 	}
-	return bftnet.FetchTransactions(addr, b.Height, b.Round, bft.Hash{}, hashes, syspar.GetMaxBlockSize(), bftnet.DefaultConfig.Dial)
+	bodies, err := bftnet.FetchTransactions(addr, b.Height, b.Round, bft.Hash{}, hashes, syspar.GetMaxBlockSize(), bftnet.DefaultConfig.Dial)
+	if err != nil {
+		return nil, err
+	}
+	// the proposer sends the bodies as a block stores them, compressed
+	for i, body := range bodies {
+		bodies[i] = types.DoZlibUnCompress(body)
+	}
+	return bodies, nil
 }
 
 // Vote is bftnet.Handler.Vote

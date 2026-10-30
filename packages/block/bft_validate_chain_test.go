@@ -231,8 +231,13 @@ func speculate(t *testing.T, binData []byte, height int64, hash bft.Hash, first 
 	require.NoError(t, err)
 	raw := &types.BlockData{}
 	require.NoError(t, proto.Unmarshal(binData, raw))
+	// the batches carry the bodies of the queue, uncompressed; the block stores them compressed
+	bodies := make([][]byte, len(raw.TxFullData))
+	for i, body := range raw.TxFullData {
+		bodies[i] = types.DoZlibUnCompress(body)
+	}
 	parse := func() []*transaction.Transaction {
-		txs, err := block.ParseTransactions(raw.TxFullData)
+		txs, err := block.ParseTransactions(bodies)
 		require.NoError(t, err)
 		return txs
 	}

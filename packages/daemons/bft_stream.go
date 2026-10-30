@@ -130,7 +130,8 @@ type bftSpeculator struct {
 	begin func(shell []byte, height int64) (bftSpeculation, error)
 	parse func(bodies [][]byte) ([]*transaction.Transaction, error)
 	// raw is the bodies of the transactions of the queue, fetch takes those it misses from the
-	// proposer of a batch, and idle is how long a speculation waits for a batch or the proposal
+	// proposer of a batch, both uncompressed, and idle is how long a speculation waits for a batch
+	// or the proposal
 	raw   func(hashes [][]byte) [][]byte
 	fetch func(b *bft.Batch, key []byte, hashes [][]byte) ([][]byte, error)
 	idle  func() time.Duration
