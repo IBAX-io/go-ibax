@@ -26,7 +26,7 @@ type transferCase struct {
 }
 
 // The signed client transactions of the cross-implementation vectors, on every suite
-func loadTransfers(t *testing.T) []transferCase {
+func loadTransfers(t testing.TB) []transferCase {
 	t.Helper()
 	raw, err := os.ReadFile("../../tools/cryptovectors/testdata/go-ibax-transfers.json")
 	if err != nil {
