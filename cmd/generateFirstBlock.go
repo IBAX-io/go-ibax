@@ -150,6 +150,7 @@ func genesisBlock() ([]byte, error) {
 		NodePublicKey:         nodeKey,
 		StopNetworkCertBundle: stopNetworkCert,
 		Test:                  test,
+		ChainFormat:           consts.ChainFormat,
 		PrivateBlockchain:     pb,
 		HonorNodesOnly:        honorOnly,
 		AccountAlgorithms:     algos,

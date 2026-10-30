@@ -60,6 +60,9 @@ type FirstBlock struct {
 	// Allocations are the amounts the first block credits to the accounts of ecosystem 1. None,
 	// the founder takes consts.FounderAmount.
 	Allocations []Allocation
+	// ChainFormat is consts.ChainFormat of the binary that made the first block; a first block of
+	// an earlier binary has none, 0
+	ChainFormat uint64
 }
 
 // Allocation is an amount the first block credits to an account of ecosystem 1: a part of the

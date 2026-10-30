@@ -76,6 +76,10 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	logger := f.Logger
 	data := f.Data
 	dbTx := in.DbTransaction
+	if err := CheckChainFormat(data); err != nil {
+		logger.WithFields(log.Fields{"type": consts.InvalidObject, "error": err}).Error("checking the chain format of the first block")
+		return err
+	}
 	algos, founder, err := CheckFirstBlockAccounts(data)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("checking the account keys of the first block")
@@ -249,6 +253,16 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	}
 	syspar.SetFirstBlockData(data)
 	syspar.SetFirstBlockTimestamp(time.UnixMilli(f.Timestamp).Unix())
+	return nil
+}
+
+// CheckChainFormat checks that the first block makes a chain of the format the node runs,
+// consts.ChainFormat
+func CheckChainFormat(data *types.FirstBlock) error {
+	if data.ChainFormat != consts.ChainFormat {
+		return fmt.Errorf("the first block is of chain format %d, the node runs chains of format %d only: "+
+			"a chain is not upgraded in place, a new one starts from a new first block", data.ChainFormat, consts.ChainFormat)
+	}
 	return nil
 }
 

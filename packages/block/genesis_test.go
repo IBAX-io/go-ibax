@@ -48,6 +48,7 @@ func testGenesis(t *testing.T, edit ...func(*types.FirstBlock)) []byte {
 	}
 	first := &types.FirstBlock{
 		KeyID: founder.Address(), Time: genesisTime, PublicKey: founder.Bytes(), NodePublicKey: pub,
+		ChainFormat:       consts.ChainFormat,
 		AccountAlgorithms: syspar.DefaultAccountAlgorithms(crypto.NodeAlgo(), crypto.FIPSMode()).String(),
 	}
 	for _, e := range edit {
@@ -140,6 +141,19 @@ func TestCheckGenesisRefusesAlteredBlock(t *testing.T) {
 
 // The genesis block must hold a valid account_algorithms the node algorithm is in, a founder
 // account key that may be registered at the genesis time, and allocations within the supply
+// A genesis block of another chain format, as an earlier binary made with none, is refused: a
+// chain is not upgraded in place
+func TestCheckGenesisRefusesAnotherChainFormat(t *testing.T) {
+	defer useSuite("ECC_P256", "SHA256")
+	useSuite("ECC_P256", "SHA256")
+	for _, format := range []uint64{0, consts.ChainFormat + 1} {
+		genesis := testGenesis(t, func(f *types.FirstBlock) { f.ChainFormat = format })
+		if err := CheckGenesis(genesis); err == nil || !strings.Contains(err.Error(), "chain format") {
+			t.Errorf("a genesis block of chain format %d: %v", format, err)
+		}
+	}
+}
+
 func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
 	defer useSuite("ECC_P256", "SHA256")
 	useSuite("ECC_P256", "SHA256")

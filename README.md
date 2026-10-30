@@ -8,6 +8,15 @@
 A powerful blockchain system platform with a new system framework and a simplified programming language, it is including
 smart contract, database table and interface.
 
+### Branches and chains
+
+The `develop` branch runs **new chains only**: a chain whose first block a `develop` binary
+generated. It is not an in-place upgrade of an existing network, mainnet or testnet, whose
+nodes keep the binaries of their own release line. The first block names its chain format
+(`ChainFormat`, `consts.ChainFormat`); a node refuses to load, sync or start on a chain whose
+first block names another format, and a first block of an earlier binary names none. A change
+of the format starts a new chain from a new first block.
+
 ### Build from Source
 
 #### Install Go

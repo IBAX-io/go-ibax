@@ -17,6 +17,11 @@ const VERSION = "1.4.3"
 const BvRollbackHash = 2
 const BvIncludeRollbackHash = 3
 
+// ChainFormat is the format of the chains the node runs, which their first block names. A chain
+// of another format, as one an earlier binary made, which names none, is not upgraded in place:
+// the node refuses its first block, and a new chain starts from a new first block.
+const ChainFormat = 1
+
 // BlockVersion is block version
 const BlockVersion = BvIncludeRollbackHash
 
