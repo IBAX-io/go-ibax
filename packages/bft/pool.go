@@ -185,6 +185,21 @@ func (p *Pool) Admissible(m *Proposal) (Admission, []byte) {
 	return Conflicting, key
 }
 
+// AdmissibleBatch is the public key of the proposer of a batch a node runs ahead of the proposal:
+// a batch of the current height, of a round in the window and not below the round of the node,
+// of the proposer of its round and signed by it. The pool keeps no batch.
+func (p *Pool) AdmissibleBatch(b *Batch) ([]byte, bool) {
+	h := p.window(b.Height, b.Round)
+	if h == nil || b.Height != p.height || b.Round < h.base || b.Validator != h.set.Proposer(b.Height, b.Round) {
+		return nil, false
+	}
+	key, ok := h.set.Key(b.Validator)
+	if !ok || b.Verify(key, p.networkID) != nil {
+		return nil, false
+	}
+	return key, true
+}
+
 // AddVote admits a prevote or a precommit or drops it
 func (p *Pool) AddVote(m *Vote) Admission {
 	if m.Type != TypePrevote && m.Type != TypePrecommit {

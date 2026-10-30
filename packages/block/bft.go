@@ -100,19 +100,34 @@ func dropHeld() {
 // bad for the block of another node, the proposer marks the transactions it leaves out as it does
 // when it generates a block.
 func (b *Block) Trial() error {
+	dbTx, mem, err := b.beginTrial()
+	if err != nil {
+		return err
+	}
+	return b.endTrial(dbTx, mem, b.ProcessTxs(dbTx))
+}
+
+// beginTrial drops the trial the node holds and begins the trial of the block: the state outside
+// the database as it is, and the database transaction of the trial
+func (b *Block) beginTrial() (*sqldb.DbTransaction, memState, error) {
 	dropHeld()
 	begin := time.Now()
 	mem := takeMemState()
 	dbTx, err := sqldb.StartTransaction()
 	if err != nil {
-		return err
+		return nil, mem, err
 	}
 	b.trial = true
 	b.beginProfile()
 	b.prof.start = begin
 	b.stage(metrics.StageBegin, begin)
+	return dbTx, mem, nil
+}
+
+// endTrial ends the trial of the block whose transactions ran with the error err: it inserts the
+// block and holds the trial, or rolls it back
+func (b *Block) endTrial(dbTx *sqldb.DbTransaction, mem memState, err error) error {
 	defer func() { b.prof = nil }()
-	err = b.ProcessTxs(dbTx)
 	if err == nil {
 		if b.GenBlock && len(b.TxFullData) == 0 {
 			err = ErrEmptyBlock
@@ -276,7 +291,10 @@ func (b *Block) checkContent() error {
 // executes it, leaves out the transactions that fail, do not fit, or leave the block no time to
 // end within max_block_generation_time from start, and sets its rollbacks hash, its hash and
 // BinData. A block left without transactions is ErrEmptyBlock.
-func Propose(binData []byte, txs []*transaction.Transaction, start time.Time) (*Block, error) {
+//
+// A stream, if not nil, takes the header of the block before the trial and the transactions the
+// trial puts in the block as it puts them, in their order (design 4.2 "streaming proposals").
+func Propose(binData []byte, txs []*transaction.Transaction, start time.Time, stream Stream) (*Block, error) {
 	b, err := ProcessBlockByBinData(binData, false)
 	if err != nil {
 		return nil, err
@@ -284,6 +302,15 @@ func Propose(binData []byte, txs []*transaction.Transaction, start time.Time) (*
 	b.GenBlock = true
 	b.Transactions = txs
 	b.genStart = start
+	if stream != nil {
+		shell, err := b.shell()
+		if err != nil {
+			return nil, err
+		}
+		stream.Header(shell)
+		b.onCommit = stream.Commit
+		defer func() { b.onCommit = nil }()
+	}
 	if err := b.Trial(); err != nil {
 		return nil, err
 	}
@@ -297,25 +324,9 @@ func Propose(binData []byte, txs []*transaction.Transaction, start time.Time) (*
 // block, its signatures verified in parallel included, runs before writes is locked; the checks
 // against the chain and the trial run under it (plan 5.9).
 func Validate(binData []byte, height int64, hash bft.Hash, writes sync.Locker) error {
-	b, err := ProcessBlockByBinData(binData, true)
+	b, err := parseProposal(binData, height, hash)
 	if err != nil {
 		return err
-	}
-	if b.Header.BlockId != height {
-		return fmt.Errorf("a block %d proposed at height %d", b.Header.BlockId, height)
-	}
-	got, err := bft.HashOf(b.Header.BlockHash)
-	if err != nil {
-		return err
-	}
-	if got != hash {
-		return fmt.Errorf("block %d: the hash %x is not the hash proposed", height, b.Header.BlockHash)
-	}
-	if err := b.checkContent(); err != nil {
-		return err
-	}
-	if b.Header.NetworkId != conf.Config.LocalConf.NetworkID || b.Header.Version != consts.BlockVersion {
-		return fmt.Errorf("block %d: network %d, version %d", height, b.Header.NetworkId, b.Header.Version)
 	}
 	b.trial = true
 	b.verifySignatures()
@@ -327,6 +338,40 @@ func Validate(binData []byte, height int64, hash bft.Hash, writes sync.Locker) e
 		return err
 	}
 	return b.Trial()
+}
+
+// parseProposal parses the block of a proposal, and checks it is of the height, its hash is the
+// hash and the hash of its content, and it is of the network and of the version
+func parseProposal(binData []byte, height int64, hash bft.Hash) (*Block, error) {
+	b, err := ProcessBlockByBinData(binData, true)
+	if err != nil {
+		return nil, err
+	}
+	if b.Header.BlockId != height {
+		return nil, fmt.Errorf("a block %d proposed at height %d", b.Header.BlockId, height)
+	}
+	got, err := bft.HashOf(b.Header.BlockHash)
+	if err != nil {
+		return nil, err
+	}
+	if got != hash {
+		return nil, fmt.Errorf("block %d: the hash %x is not the hash proposed", height, b.Header.BlockHash)
+	}
+	if err := b.checkContent(); err != nil {
+		return nil, err
+	}
+	if err := checkNetwork(b.Header); err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+// checkNetwork checks the block is of the network of the node and of the version
+func checkNetwork(h *types.BlockHeader) error {
+	if h.NetworkId != conf.Config.LocalConf.NetworkID || h.Version != consts.BlockVersion {
+		return fmt.Errorf("block %d: network %d, version %d", h.BlockId, h.NetworkId, h.Version)
+	}
+	return nil
 }
 
 // Timely checks the time of the block of a new proposal against the time a validator took the

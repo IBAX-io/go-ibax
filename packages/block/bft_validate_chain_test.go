@@ -22,6 +22,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/rollback"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/gogo/protobuf/proto"
 	dto "github.com/prometheus/client_model/go"
@@ -155,7 +156,7 @@ func TestValidateAndCommitOnBftChain(t *testing.T) {
 
 	network := uint64(conf.Config.LocalConf.NetworkID)
 	var txs int32
-	for _, want := range blocks {
+	for i, want := range blocks {
 		txs += want.Tx
 		cert, err := bft.UnmarshalCertificate(certs[want.ID].Data)
 		require.NoError(t, err)
@@ -197,6 +198,12 @@ func TestValidateAndCommitOnBftChain(t *testing.T) {
 			require.Equalf(t, verified+1, verifyCount(t), what("its signatures verified in parallel"))
 		}
 
+		if i%2 == 0 {
+			// the commit goes on from the trial of the speculation, which runs the block as
+			// Validate does: all its batches, or the first and the proposal the rest
+			speculate(t, want.Data, want.ID, hash, i%4 == 2, what)
+		}
+
 		_, err = block.Commit(want.Data, cert)
 		require.NoErrorf(t, err, "the commit of block %d", want.ID)
 		got := &sqldb.BlockChain{}
@@ -211,5 +218,71 @@ func TestValidateAndCommitOnBftChain(t *testing.T) {
 		require.True(t, found)
 		require.Equalf(t, sets[want.ID+1], next.Data, "the validators set of height %d", want.ID+1)
 	}
-	t.Logf("blocks %d-%d, %d transactions: each certificate verifies, Validate takes each block and refuses each change of it, each commit has the hash, the rollbacks hash and the next validators set of the chain", from, last.ID, txs)
+	t.Logf("blocks %d-%d, %d transactions: each certificate verifies, Validate takes each block and refuses each change of it, a speculation of every other block takes it from its batches and refuses another order, each commit has the hash, the rollbacks hash and the next validators set of the chain", from, last.ID, txs)
+}
+
+// speculate runs the block in speculations of its streaming proposal: one of another height does
+// not begin, an aborted one and those whose batches are not the start of the block in its order
+// leave the writes and decide nothing, and the last one, of the batches of the block or of the
+// first only, takes the block and holds its trial
+func speculate(t *testing.T, binData []byte, height int64, hash bft.Hash, first bool, what func(string) string) {
+	t.Helper()
+	shell, err := block.ShellOf(binData, height, hash)
+	require.NoError(t, err)
+	raw := &types.BlockData{}
+	require.NoError(t, proto.Unmarshal(binData, raw))
+	parse := func() []*transaction.Transaction {
+		txs, err := block.ParseTransactions(raw.TxFullData)
+		require.NoError(t, err)
+		return txs
+	}
+	free := func(writes *countedLock, s string) {
+		require.Truef(t, writes.TryLock(), what(s+": the lock of the writes is free"))
+		writes.Unlock()
+	}
+	writes := &countedLock{}
+	_, err = block.Speculate(shell, height+1, writes)
+	require.Errorf(t, err, what("a speculation at another height"))
+	free(writes, "a speculation at another height")
+
+	n := len(raw.TxFullData)
+	s, err := block.Speculate(shell, height, writes)
+	require.NoError(t, err)
+	s.Add(parse()[:n/2])
+	s.Abort()
+	free(writes, "aborted")
+	require.ErrorIsf(t, s.Finish(binData, height, hash), block.ErrSpeculation, what("finished after its abort"))
+
+	if n >= 2 {
+		txs := parse()
+		txs[0], txs[1] = txs[1], txs[0]
+		s, err = block.Speculate(shell, height, writes)
+		require.NoError(t, err)
+		s.Add(txs)
+		require.ErrorIsf(t, s.Finish(binData, height, hash), block.ErrSpeculation, what("in another order"))
+		free(writes, "in another order")
+	}
+	if n >= 1 {
+		s, err = block.Speculate(shell, height, writes)
+		require.NoError(t, err)
+		s.Add(parse()[:1])
+		s.Add(parse()[:1])
+		require.ErrorIsf(t, s.Finish(binData, height, hash), block.ErrSpeculation, what("with a transaction twice"))
+		free(writes, "with a transaction twice")
+	}
+
+	taken := writes.taken
+	s, err = block.Speculate(shell, height, writes)
+	require.NoError(t, err)
+	txs := parse()
+	if first {
+		s.Add(txs[:n/3])
+	} else {
+		s.Add(txs[:n/3])
+		s.Add(txs[n/3 : 2*n/3])
+		s.Add(txs[2*n/3:])
+	}
+	require.NoErrorf(t, s.Finish(binData, height, hash), what("from its batches"))
+	require.Equalf(t, taken+1, writes.taken, what("speculated under the lock of the writes"))
+	free(writes, "speculated")
 }

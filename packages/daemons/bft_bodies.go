@@ -10,6 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/block"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 )
 
 // bftBlock is a block of a proposal the node made or filled in: its compact form, the form the
@@ -28,6 +29,14 @@ type bftBodies struct {
 	mu       sync.Mutex
 	blocks   map[bft.Hash]*bftBlock
 	inflight map[bftProposalKey]bool // the proposals whose blocks the node is filling in
+	// streamed is the transactions the node streamed as the proposer of a height and a round
+	streamed map[bftRound]*bftStreamed
+}
+
+// bftRound is a round of a height
+type bftRound struct {
+	height uint64
+	round  uint32
 }
 
 // bftProposalKey is a proposal the pool tells apart from the others
@@ -39,7 +48,7 @@ type bftProposalKey struct {
 }
 
 func newBftBodies() *bftBodies {
-	return &bftBodies{blocks: map[bft.Hash]*bftBlock{}, inflight: map[bftProposalKey]bool{}}
+	return &bftBodies{blocks: map[bft.Hash]*bftBlock{}, inflight: map[bftProposalKey]bool{}, streamed: map[bftRound]*bftStreamed{}}
 }
 
 // put keeps a block whose transactions have the hashes and the bodies, in their order
@@ -73,6 +82,32 @@ func (s *bftBodies) prune(height uint64) {
 			delete(s.inflight, k)
 		}
 	}
+	for k := range s.streamed {
+		if k.height < height {
+			delete(s.streamed, k)
+		}
+	}
+}
+
+// stream is the transactions the node streams as the proposer of the height and the round
+func (s *bftBodies) stream(height uint64, round uint32) *bftStreamed {
+	t := &bftStreamed{txs: map[string]*transaction.Transaction{}}
+	s.mu.Lock()
+	s.streamed[bftRound{height, round}] = t
+	s.mu.Unlock()
+	return t
+}
+
+// streamedBodies is the bodies of the hashes the node streamed at the height and the round,
+// those it does not have taken from stored
+func (s *bftBodies) streamedBodies(height uint64, round uint32, hashes [][]byte, stored func([][]byte) [][]byte) [][]byte {
+	s.mu.Lock()
+	t := s.streamed[bftRound{height, round}]
+	s.mu.Unlock()
+	if t == nil {
+		return stored(hashes)
+	}
+	return fillBodies(hashes, t.body, stored)
 }
 
 // start reports whether the node starts filling in the block of the proposal: false if it is
@@ -114,10 +149,15 @@ func (s *bftBodies) transactions(hash bft.Hash, hashes [][]byte, stored func([][
 	if b == nil {
 		return stored(hashes)
 	}
+	return fillBodies(hashes, func(h []byte) []byte { return b.bodies[string(h)] }, stored)
+}
+
+// fillBodies is the bodies of the hashes by body, those it does not have taken from stored
+func fillBodies(hashes [][]byte, body func([]byte) []byte, stored func([][]byte) [][]byte) [][]byte {
 	bodies := make([][]byte, len(hashes))
 	var missing []int
 	for i, h := range hashes {
-		if bodies[i] = b.bodies[string(h)]; bodies[i] == nil {
+		if bodies[i] = body(h); bodies[i] == nil {
 			missing = append(missing, i)
 		}
 	}

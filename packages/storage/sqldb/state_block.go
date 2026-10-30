@@ -237,10 +237,7 @@ type stateEvent struct {
 // the transaction wrote before go to PostgreSQL.
 func NewBlockState(block *DbTransaction, contracts []string) (*BlockState, error) {
 	st := &BlockState{tables: make(map[string]*tableState), block: block, contracts: make(map[string]map[string]int)}
-	st.txs = make([]txSlot, len(contracts))
-	for i, c := range contracts {
-		st.txs[i].contract = c
-	}
+	st.Extend(contracts)
 	err := st.onBlockConn(func(ctx context.Context, c *stateConn) error {
 		st.dirty = make(map[string]bool, len(c.dirty))
 		for t := range c.dirty {
@@ -302,9 +299,20 @@ func (st *BlockState) SysGen() uint64 { return st.sysGen.Load() }
 // views that began before do not commit
 func (st *BlockState) SysUpdate() { st.sysGen.Add(1) }
 
+// Extend appends the transactions of the contracts to those of the block
+func (st *BlockState) Extend(contracts []string) {
+	st.idMu.Lock()
+	defer st.idMu.Unlock()
+	for _, c := range contracts {
+		st.txs = append(st.txs, txSlot{contract: c})
+	}
+}
+
 // SetRunIDs keeps the ids by table the last run of the transaction i took
 func (st *BlockState) SetRunIDs(i int, ids map[string]int) {
+	st.idMu.Lock()
 	st.txs[i].ids.Store(&ids)
+	st.idMu.Unlock()
 }
 
 // predicted is the count of the ids of the table the transactions before i the state has not

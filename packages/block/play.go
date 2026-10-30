@@ -6,7 +6,6 @@
 package block
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"slices"
@@ -116,117 +115,10 @@ type badTxStruct struct {
 	keyID int64
 }
 
-func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) (err error) {
-	afters := &types.AfterTxs{
-		Rts: make([]*types.RollbackTx, 0),
-		Txs: make([]*types.AfterTx, 0),
-	}
-	processedTx := make([][]byte, 0, len(b.Transactions))
-
-	// a validator's trial of the block of another node bans no key and marks no transaction bad
-	mark := !b.trial || b.GenBlock
-	kind := b.execKind()
-	start := time.Now()
-	processBadTx := func() chan badTxStruct {
-		ch := make(chan badTxStruct)
-		go func() {
-			for badTxItem := range ch {
-				metrics.TxResults.WithLabelValues(kind, "bad").Inc()
-				if !mark {
-					continue
-				}
-				transaction.BadTxForBan(badTxItem.keyID)
-				transaction.MarkTransactionBad(badTxItem.hash, badTxItem.msg)
-			}
-		}()
-		return ch
-	}
-
-	txBadChan := processBadTx()
-	defer func() {
-		close(txBadChan)
-		metrics.TxResults.WithLabelValues(kind, "ok").Add(float64(len(processedTx)))
-		b.stage(metrics.StageExecute, start)
-		start = time.Now()
-		defer b.stage(metrics.StageAfter, start)
-		b.AfterTxs = afters
-		if b.GenBlock {
-			b.TxFullData = processedTx
-		}
-
-		if errA := b.AfterPlayTxs(dbTx); errA != nil {
-			if err == nil {
-				err = errA
-			} else if err != nil {
-				err = fmt.Errorf("%v; %w", err, errA)
-			}
-			return
-		}
-	}()
-
-	var keyIds []int64
-	var keyIdsMap = make(map[int64]bool)
-	var ecosystemIds []int64
-	var ecosystemIdsMap = make(map[int64]bool)
-	for indexTx := 0; indexTx < len(b.Transactions); indexTx++ {
-		t := b.Transactions[indexTx]
-		if !keyIdsMap[t.KeyID()] {
-			keyIdsMap[t.KeyID()] = true
-			keyIds = append(keyIds, t.KeyID())
-		}
-		if t.IsSmartContract() && !ecosystemIdsMap[t.SmartContract().TxSmart.EcosystemID] {
-			ecosystemIdsMap[t.SmartContract().TxSmart.EcosystemID] = true
-			ecosystemIds = append(ecosystemIds, t.SmartContract().TxSmart.EcosystemID)
-		}
-	}
-	// query all keys utxo
-	outputs, err := sqldb.GetTxOutputs(dbTx, keyIds)
-	if err != nil {
-		return err
-	}
-	b.OutputsMap = make(map[sqldb.KeyUTXO][]sqldb.SpentInfo)
-	sqldb.PutAllOutputsMap(outputs, b.OutputsMap)
-	// query all ecosystems combination percent
-	ecoParams, err := sqldb.GetEcoParam(dbTx, ecosystemIds)
-	if err != nil {
-		return err
-	}
-	b.EcoParams = ecoParams
-	// UTXO multiple ecosystem fuelRate
-	b.PrevSysPar = syspar.GetSysParCache()
-	if b.GenBlock {
-		b.size = newBlockSize(syspar.GetMaxBlockSize(), b.Header, b.PrevHeader)
-	}
-	b.stage(metrics.StagePrepare, start)
-	start = time.Now()
-	// the transactions run one after the other in the order of the block, which the node that
-	// generates it stores as it runs them: every node runs them in the same order
-	txs := b.Transactions
-	if b.IsGenesis() {
-		txs = make([]*transaction.Transaction, 0, len(b.Transactions))
-		for _, tx := range b.Transactions {
-			t, err := transaction.UnmarshallTransaction(bytes.NewBuffer(tx.FullData), false)
-			if err != nil {
-				return err
-			}
-			txs = append(txs, t)
-		}
-	} else if err := checkStopNetworkAlone(txs); err != nil {
-		return err
-	}
-	fees := smart.NewFeeSettlement()
-	if !b.IsGenesis() {
-		return b.executeState(dbTx, txBadChan, afters, &processedTx, txs, fees)
-	}
-	if err := b.executeTxs(dbTx, txBadChan, afters, &processedTx, txs, fees); err != nil {
-		return err
-	}
-	rts, err := fees.Settle(dbTx, b.Header)
-	if err != nil {
-		return fmt.Errorf("settling the fees: %w", err)
-	}
-	afters.Rts = append(afters.Rts, rts...)
-	return nil
+// ProcessTxs runs the transactions of the block in the transaction of the block
+func (b *Block) ProcessTxs(dbTx *sqldb.DbTransaction) error {
+	r := b.beginRun(dbTx)
+	return r.end(r.execute())
 }
 
 // checkStopNetworkAlone fails the transactions of a block if a StopNetwork transaction is among

@@ -111,6 +111,15 @@ var (
 		Help: "Committed runs of transactions by how they ran: parallel, again, ordered.",
 	}, []string{"run"})
 
+	// Speculations counts how the speculations of streaming proposals ended: finished, as the
+	// proposal went on from them; refused, as they decided a proposal is not valid; validated, as
+	// they did not decide the proposal and the node tried it from the start; aborted, with no
+	// proposal of theirs
+	Speculations = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "speculations_total",
+		Help: "Speculations of streaming proposals by how they ended: finished, refused, validated, aborted.",
+	}, []string{"result"})
+
 	// StateFallbacks counts what the state of the block ran in PostgreSQL or only in order, by
 	// reason
 	StateFallbacks = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -203,7 +212,7 @@ func init() {
 	registry.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
+		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, Speculations, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
 		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
 	)
 }

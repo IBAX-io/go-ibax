@@ -52,6 +52,8 @@ type Block struct {
 	prof *execProfile
 	// rollbacksHash is the hash of the rollback records and the outputs the block wrote
 	rollbacksHash []byte
+	// onCommit takes each transaction the block the node generates commits, in their order
+	onCommit func(t *transaction.Transaction)
 }
 
 // GetLogger is returns logger

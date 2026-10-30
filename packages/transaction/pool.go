@@ -162,6 +162,20 @@ func (p *Pool) Stored(hashes [][]byte) [][]byte {
 	return stored
 }
 
+// Raw is the bodies of the transactions of the hashes the pool holds, as they were sent, nil for
+// those it does not hold
+func (p *Pool) Raw(hashes [][]byte) [][]byte {
+	data := make([][]byte, len(hashes))
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i, h := range hashes {
+		if e, ok := p.entries[string(h)]; ok {
+			data[i] = e.data
+		}
+	}
+	return data
+}
+
 // Admit puts the transactions in the pool once Check takes them, each error at the index of its
 // transaction. A transaction the pool holds is taken again as it is. A transaction Check refuses
 // is bad; one the pool has no room for is refused with ErrPoolFull.

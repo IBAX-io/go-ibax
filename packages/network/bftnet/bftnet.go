@@ -8,21 +8,21 @@
 //
 // A node keeps one stream to each other validator: a connection that opens with the request type
 // RequestTypeBftMessages and then carries frames, kind u8 ‖ len u32 ‖ payload, the payload being
-// the wire form of a proposal, a vote or an evidence. A stream carries at most Config.Rate frames
+// the wire form of a proposal, a vote, an evidence or a batch of a proposal. A stream carries at most Config.Rate frames
 // a second; past that the receiver closes it and refuses the address of the sender for
 // Config.Block. A frame longer than its kind allows closes the stream before it is read.
 //
 // A proposal carries its block in the compact form of package block, the hashes of its
 // transactions in the place of their bodies. A node asks the proposer for the bodies it does not
-// have by the request RequestTypeBftTransactions: height u64 ‖ hash 32 ‖ count u32 ‖ count × hash,
-// answered by count u32 ‖ count × (len u32 ‖ body), a body of no bytes one the proposer does not
-// have. A node fetches the certificates of a range of heights by the request
+// have by the request RequestTypeBftTransactions: height u64 ‖ round u32 ‖ hash 32 ‖ count u32 ‖
+// count × hash, answered by count u32 ‖ count × (len u32 ‖ body), a body of no bytes one the
+// proposer does not have; the nil hash asks for the transactions of the batches of the round. A node fetches the certificates of a range of heights by the request
 // RequestTypeBftCertificates: from u64 ‖ count u16, answered by count u16 ‖ count × (len u32 ‖
 // certificate).
 //
 // The handler, the node, admits the messages (bft.Pool) and tells whether a message is new; the
 // service relays a new message to the other validators, so that a message reaches every honest
-// validator once one has it.
+// validator once one has it. A batch is the proposer's alone: the service relays none.
 package bftnet
 
 import (
@@ -48,6 +48,7 @@ const (
 	FrameProposal uint8 = 1
 	FrameVote     uint8 = 2
 	FrameEvidence uint8 = 3
+	FrameBatch    uint8 = 4
 )
 
 // MaxCertificates is the most certificates one request fetches
@@ -74,17 +75,22 @@ type Handler interface {
 	// Compact is the compact form of the block of a proposal of the node
 	Compact(p *bft.Proposal) ([]byte, error)
 	// Transactions is the bodies of the transactions of the hashes in the block of the hash at
-	// the height, as the block holds them, nil for one the node does not have
-	Transactions(height uint64, hash bft.Hash, hashes [][]byte) [][]byte
+	// the height, or in the batches of the round if the hash is nil, as the block holds them, nil
+	// for one the node does not have
+	Transactions(height uint64, round uint32, hash bft.Hash, hashes [][]byte) [][]byte
 	// Vote takes a decoded vote, and reports whether it is new
 	Vote(v *bft.Vote) bool
 	// Evidence takes the body of an evidence transaction, and reports whether it is new
 	Evidence(body []byte) bool
+	// Batch takes a decoded batch of a proposal
+	Batch(b *bft.Batch)
 	// Certificates is the stored certificates of the heights from, from+1, … up to count of
 	// them, stopping at the first height without one
 	Certificates(from uint64, count int) ([][]byte, error)
 	// MaxBlockSize is max_block_size
 	MaxBlockSize() int64
+	// MaxBlockTxs is max_tx_block
+	MaxBlockTxs() int
 }
 
 // Config is the limits of the service
@@ -147,6 +153,9 @@ func maxPayload(kind uint8, maxBlock int64) int64 {
 		return 1 + 8 + 4 + 4 + bft.HashSize + 2 + sig
 	case FrameEvidence:
 		return int64(len(bft.EvidencePrefix)) + 1 + 8 + 8 + 4 + 4 + 2*bft.HashSize + 4 + 4 + 2*(2+sig)
+	case FrameBatch:
+		// the hashes of a batch are bounded by the block; UnmarshalBatch counts them by max_tx_block
+		return 8 + 4 + 4 + 4 + 4 + bft.MaxBatchHeader + 4 + maxBlock + 2 + sig
 	}
 	return -1
 }
@@ -272,6 +281,11 @@ func (s *Service) take(kind uint8, payload []byte) bool {
 		}
 	case FrameEvidence:
 		return s.handler.Evidence(payload)
+	case FrameBatch:
+		if b, err := bft.UnmarshalBatch(payload, s.handler.MaxBlockTxs()); err == nil {
+			s.handler.Batch(b)
+			return false
+		}
 	}
 	bftmon.Count(bftmon.MessagesUndecoded)
 	return false
@@ -350,13 +364,14 @@ func FetchCertificates(addr string, from uint64, count int, timeout time.Duratio
 
 // ServeTransactions answers a request RequestTypeBftTransactions
 func (s *Service) ServeTransactions(rw io.ReadWriter) error {
-	var req [8 + bft.HashSize + 4]byte
+	var req [8 + 4 + bft.HashSize + 4]byte
 	if _, err := io.ReadFull(rw, req[:]); err != nil {
 		return err
 	}
-	height, count := binary.BigEndian.Uint64(req[:8]), int64(binary.BigEndian.Uint32(req[8+bft.HashSize:]))
+	height, round := binary.BigEndian.Uint64(req[:8]), binary.BigEndian.Uint32(req[8:])
+	count := int64(binary.BigEndian.Uint32(req[12+bft.HashSize:]))
 	var hash bft.Hash
-	copy(hash[:], req[8:])
+	copy(hash[:], req[12:])
 	maxBlock := s.handler.MaxBlockSize()
 	if count*bft.HashSize > maxBlock {
 		return fmt.Errorf("bftnet: %d transactions asked", count)
@@ -369,7 +384,7 @@ func (s *Service) ServeTransactions(rw io.ReadWriter) error {
 	for i := range hashes {
 		hashes[i] = all[i*bft.HashSize : (i+1)*bft.HashSize]
 	}
-	bodies := s.handler.Transactions(height, hash, hashes)
+	bodies := s.handler.Transactions(height, round, hash, hashes)
 	b := binary.BigEndian.AppendUint32(nil, uint32(len(hashes)))
 	for i := range hashes {
 		var body []byte
@@ -384,9 +399,9 @@ func (s *Service) ServeTransactions(rw io.ReadWriter) error {
 }
 
 // FetchTransactions fetches from the node at addr the bodies of the transactions of the hashes in
-// the block of the hash at the height, nil for one it does not have; together they are at most
-// maxBlock bytes
-func FetchTransactions(addr string, height uint64, hash bft.Hash, hashes [][]byte, maxBlock int64,
+// the block of the hash at the height, or in the batches of the round if the hash is nil, nil for
+// one it does not have; together they are at most maxBlock bytes
+func FetchTransactions(addr string, height uint64, round uint32, hash bft.Hash, hashes [][]byte, maxBlock int64,
 	timeout time.Duration) ([][]byte, error) {
 	conn, err := faults.Dial(addr, timeout)
 	if err != nil {
@@ -399,8 +414,9 @@ func FetchTransactions(addr string, height uint64, hash bft.Hash, hashes [][]byt
 	if err := (&network.RequestType{Type: network.RequestTypeBftTransactions}).Write(conn); err != nil {
 		return nil, err
 	}
-	req := make([]byte, 0, 8+bft.HashSize+4+len(hashes)*bft.HashSize)
+	req := make([]byte, 0, 8+4+bft.HashSize+4+len(hashes)*bft.HashSize)
 	req = binary.BigEndian.AppendUint64(req, height)
+	req = binary.BigEndian.AppendUint32(req, round)
 	req = append(req, hash[:]...)
 	req = binary.BigEndian.AppendUint32(req, uint32(len(hashes)))
 	for _, h := range hashes {
@@ -489,6 +505,9 @@ func (s *Service) SendVote(v *bft.Vote) { s.Broadcast(FrameVote, v.Marshal()) }
 
 // SendEvidence broadcasts the body of an evidence transaction
 func (s *Service) SendEvidence(body []byte) { s.Broadcast(FrameEvidence, body) }
+
+// SendBatch broadcasts a batch of a proposal of the node
+func (s *Service) SendBatch(b *bft.Batch) { s.Broadcast(FrameBatch, b.Marshal()) }
 
 // peer is the stream to another validator: it connects, and connects again after a failure
 type peer struct {

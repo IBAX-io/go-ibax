@@ -25,6 +25,28 @@ func (st *BlockState) SetOutputs(outputs map[KeyUTXO][]SpentInfo) {
 	st.mu.Unlock()
 }
 
+// AddOutputs puts the outputs of accounts the state did not read at its start before those the
+// block added to them, as if it had read them at its start
+func (st *BlockState) AddOutputs(outputs []SpentInfo) {
+	if len(outputs) == 0 {
+		return
+	}
+	read := make(map[KeyUTXO][]SpentInfo)
+	PutAllOutputsMap(outputs, read)
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	st.utxoMu.Lock()
+	for key, list := range read {
+		st.outputs[key] = append(list, st.outputs[key]...)
+	}
+	st.utxoMu.Unlock()
+	st.seq++
+	for key := range read {
+		st.utxoSeq[key] = st.seq
+	}
+	st.pub.Store(st.seq)
+}
+
 // UnusedOutputs are the outputs of the account the block has not spent
 func (v *TxView) UnusedOutputs(key KeyUTXO) []SpentInfo {
 	st := v.st

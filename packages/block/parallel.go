@@ -68,13 +68,33 @@ type txRun struct {
 	done  chan struct{}
 }
 
-// stateExec runs the transactions of a block in its state
+// runJob is a transaction a worker runs
+type runJob struct {
+	i   int
+	t   *transaction.Transaction
+	run *txRun
+}
+
+// stateExec runs the transactions of a block in its state. The block gives it its transactions
+// in parts, which the workers run ahead as they come.
 type stateExec struct {
 	b      *Block
 	dbTx   *sqldb.DbTransaction
 	st     *sqldb.BlockState
-	txs    []*transaction.Transaction
 	limits *transaction.Limits
+	// txs are the transactions of the block and runs their runs ahead, which the block reads
+	// alone; the workers have their transactions and runs by their jobs
+	txs  []*transaction.Transaction
+	runs []*txRun
+	// ecoMu guards ecoParams, the parameters of the ecosystems of the transactions, which grow
+	// with the transactions while the workers run
+	ecoMu     sync.RWMutex
+	ecoParams []sqldb.EcoParam
+	// the workers, which start with the first part of more than one transaction: they take the
+	// parts from jobs, and run at most window ahead of the block
+	jobs    chan []runJob
+	window  chan struct{}
+	stopRun func()
 	// node is held to read, by the runs in parallel, and to write, by the runs in order, what
 	// the node keeps out of the database: the contracts of the VM and the parameters
 	node sync.RWMutex
@@ -91,17 +111,30 @@ func contractOf(t *transaction.Transaction) string {
 	return ""
 }
 
-// play runs the transaction i on a clone in the view, with the limits
-func (e *stateExec) play(i int, v *sqldb.TxView, limits *transaction.Limits) (r txRun) {
+// addEcoParams adds the parameters of ecosystems the transactions before did not have
+func (e *stateExec) addEcoParams(params []sqldb.EcoParam) {
+	e.ecoMu.Lock()
+	e.ecoParams = append(slices.Clip(e.ecoParams), params...)
+	e.ecoMu.Unlock()
+}
+
+func (e *stateExec) ecosystems() []sqldb.EcoParam {
+	e.ecoMu.RLock()
+	defer e.ecoMu.RUnlock()
+	return e.ecoParams
+}
+
+// play runs the transaction t, the i-th of the block, on a clone in the view, with the limits
+func (e *stateExec) play(t *transaction.Transaction, v *sqldb.TxView, limits *transaction.Limits) (r txRun) {
 	b := e.b
-	r.t, r.v = e.txs[i].Clone(), v
+	r.t, r.v = t.Clone(), v
 	vtx := v.Transaction()
 	mark := consts.SetSavePointMarkBlock(hex.EncodeToString(r.t.Hash()))
 	if r.fatal = vtx.Savepoint(mark); r.fatal != nil {
 		return
 	}
 	r.fatal = r.t.WithOption(notificator.NewQueue(), b.GenBlock, b.Header, b.PrevHeader, vtx, random.TxRand(r.t.Hash()), limits,
-		mark, b.OutputsMap, b.PrevSysPar, b.EcoParams)
+		mark, b.OutputsMap, b.PrevSysPar, e.ecosystems())
 	if r.fatal != nil {
 		return
 	}
@@ -126,10 +159,10 @@ func (e *stateExec) play(i int, v *sqldb.TxView, limits *transaction.Limits) (r 
 	return
 }
 
-// parallel runs the transaction i in parallel on the connection conn, with limits that check
-// nothing: the block checks them in its order
-func (e *stateExec) parallel(i int, conn *sql.Conn) txRun {
-	r := e.play(i, e.st.NewParallelView(i, contractOf(e.txs[i]), conn), e.limits.Deferred())
+// parallel runs the transaction t, the i-th of the block, in parallel on the connection conn,
+// with limits that check nothing: the block checks them in its order
+func (e *stateExec) parallel(i int, t *transaction.Transaction, conn *sql.Conn) txRun {
+	r := e.play(t, e.st.NewParallelView(i, contractOf(t), conn), e.limits.Deferred())
 	e.st.SetRunIDs(i, r.v.IDCounts())
 	return r
 }
@@ -148,7 +181,7 @@ func (e *stateExec) ordered(i int) txRun {
 	e.node.Lock()
 	defer e.node.Unlock()
 	for range maxRestarts {
-		r := e.play(i, e.st.NewOrderedView(i, contractOf(e.txs[i])), e.limits)
+		r := e.play(e.txs[i], e.st.NewOrderedView(i, contractOf(e.txs[i])), e.limits)
 		if r.v.Barrier() {
 			e.st.SysUpdate()
 		}
@@ -207,14 +240,14 @@ func (e *stateExec) runAgain(i int) txRun {
 		}
 		e.again = conn
 	}
-	return e.parallel(i, e.again)
+	return e.parallel(i, e.txs[i], e.again)
 }
 
-// start starts the workers on the transactions in their order, at most window ahead of the block,
-// each on a connection it holds through the block. The block takes a run of each transaction
-// once it is done, and frees its room in the window. stop stops them and gives the connections
-// back.
-func (e *stateExec) start(workers int, runs []txRun, window chan struct{}) (stop func(), err error) {
+// startWorkers starts the workers on the transactions of the parts of jobs in their order, at
+// most window ahead of the block, each on a connection it holds through the block. The block
+// takes a run of each transaction once it is done, and frees its room in the window. stopRun
+// stops them and gives the connections back.
+func (e *stateExec) startWorkers(workers int) error {
 	conns := make([]*sql.Conn, 0, workers)
 	release := func() {
 		for _, c := range conns {
@@ -225,115 +258,142 @@ func (e *stateExec) start(workers int, runs []txRun, window chan struct{}) (stop
 		c, err := sqldb.PinConn(context.Background())
 		if err != nil {
 			release()
-			return nil, err
+			return err
 		}
 		conns = append(conns, c)
 	}
+	e.jobs = make(chan []runJob, 1024)
+	e.window = make(chan struct{}, 4*workers)
 	quit := make(chan struct{})
-	next := make(chan int)
+	next := make(chan runJob)
 	go func() {
 		defer close(next)
-		for i := range runs {
+		for {
+			var part []runJob
 			select {
-			case window <- struct{}{}:
+			case part = <-e.jobs:
 			case <-quit:
 				return
 			}
-			select {
-			case next <- i:
-			case <-quit:
-				return
+			for _, j := range part {
+				select {
+				case e.window <- struct{}{}:
+				case <-quit:
+					return
+				}
+				select {
+				case next <- j:
+				case <-quit:
+					return
+				}
 			}
 		}
 	}()
 	var wg sync.WaitGroup
 	for _, conn := range conns {
 		wg.Go(func() {
-			for i := range next {
+			for j := range next {
 				e.node.RLock()
-				r := e.parallel(i, conn)
+				r := e.parallel(j.i, j.t, conn)
 				e.node.RUnlock()
-				r.done = runs[i].done
-				runs[i] = r
+				r.done = j.run.done
+				*j.run = r
 				close(r.done)
 			}
 		})
 	}
-	return func() {
+	e.stopRun = func() {
 		close(quit)
 		wg.Wait()
 		release()
-	}, nil
+	}
+	return nil
 }
 
-// executeState runs the transactions of a block that is not the first in the state of the block,
-// in parallel, and commits them in their order, as executeTxs runs them. It credits the fees of
-// the block and writes the state to PostgreSQL.
-func (b *Block) executeState(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct, afters *types.AfterTxs, processedTx *[][]byte,
-	txs []*transaction.Transaction, fees *smart.FeeSettlement) error {
+// beginState begins the state of a block that is not the first
+func (b *Block) beginState(dbTx *sqldb.DbTransaction) (*stateExec, error) {
 	limits := transaction.NewLimits(b.limitMode())
 	if !b.genStart.IsZero() {
 		limits.StartAt(b.genStart, tail())
 	}
-	contracts := make([]string, len(txs))
-	for i, t := range txs {
-		contracts[i] = contractOf(t)
-	}
-	st, err := sqldb.NewBlockState(dbTx, contracts)
+	st, err := sqldb.NewBlockState(dbTx, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	st.SetOutputs(b.OutputsMap)
-	e := &stateExec{b: b, dbTx: dbTx, st: st, txs: slices.Clone(txs), limits: limits}
+	return &stateExec{b: b, dbTx: dbTx, st: st, limits: limits, ecoParams: b.EcoParams}, nil
+}
 
-	runs := make([]txRun, len(txs))
-	for i := range runs {
-		runs[i].done = make(chan struct{})
+// run runs the transactions from to to of the block in its state, in parallel, and commits them
+// in their order, as executeTxs runs them
+func (e *stateExec) run(r *blockRun, from, to int) error {
+	b := e.b
+	txs := b.Transactions[from:to]
+	contracts := make([]string, len(txs))
+	part := make([]runJob, len(txs))
+	for k, t := range txs {
+		contracts[k] = contractOf(t)
+		run := &txRun{done: make(chan struct{})}
+		e.runs = append(e.runs, run)
+		part[k] = runJob{i: from + k, t: t, run: run}
 	}
-	workers := min(execWorkers(), len(txs))
-	var window chan struct{}
-	stop := func() {}
-	if workers > 1 {
-		window = make(chan struct{}, 4*workers)
-		if stop, err = e.start(workers, runs, window); err != nil {
-			return err
+	e.st.Extend(contracts)
+	e.txs = append(e.txs, txs...)
+	if e.jobs == nil {
+		if workers := min(execWorkers(), len(txs)); workers > 1 {
+			if err := e.startWorkers(workers); err != nil {
+				return err
+			}
 		}
 	}
-	err = b.commitState(e, runs, window, txBadChan, afters, processedTx, txs, fees)
-	// no worker runs once the block committed its transactions
-	stop()
+	queued := e.jobs != nil
+	if queued {
+		e.jobs <- part
+	}
+	err := b.commitState(e, r, from, to, queued)
 	b.execEnd = time.Now()
+	return err
+}
+
+// stop stops the workers
+func (e *stateExec) stop() {
+	if e.stopRun != nil {
+		e.stopRun()
+		e.stopRun = nil
+	}
 	if e.again != nil {
 		e.again.Close()
+		e.again = nil
 	}
+}
+
+// finish credits the fees of the block and writes its state to PostgreSQL
+func (e *stateExec) finish(r *blockRun) error {
+	rts, err := e.settle(r.fees)
 	if err != nil {
 		return err
 	}
-	rts, err := e.settle(fees)
-	if err != nil {
-		return err
-	}
-	afters.Rts = append(afters.Rts, rts...)
-	if err := st.Flush(); err != nil {
+	r.afters.Rts = append(r.afters.Rts, rts...)
+	if err := e.st.Flush(); err != nil {
 		return fmt.Errorf("writing the state of the block: %w", err)
 	}
-	st.End()
-	dbTx.ForgetCache()
+	e.st.End()
+	e.dbTx.ForgetCache()
 	return nil
 }
 
-// commitState takes the runs of the transactions in their order, runs again those that do not
-// hold, and commits them. A transaction that fails is left out of a block the node generates,
-// and fails a block of another node. txs takes the runs it commits.
-func (b *Block) commitState(e *stateExec, runs []txRun, window chan struct{}, txBadChan chan badTxStruct, afters *types.AfterTxs,
-	processedTx *[][]byte, txs []*transaction.Transaction, fees *smart.FeeSettlement) error {
+// commitState takes the runs of the transactions from to to in their order, runs again those
+// that do not hold, and commits them. A transaction that fails is left out of a block the node
+// generates, and fails a block of another node. b.Transactions takes the runs it commits.
+func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued bool) error {
 	st := e.st
-	for curTx := range txs {
+	txs, txBadChan, afters, processedTx, fees := b.Transactions, br.bad, br.afters, &br.processed, br.fees
+	for curTx := from; curTx < to; curTx++ {
 		var r txRun
-		if window != nil {
-			<-runs[curTx].done
-			r = runs[curTx]
-			<-window
+		if queued {
+			<-e.runs[curTx].done
+			r = *e.runs[curTx]
+			<-e.window
 		}
 		if r.fatal != nil {
 			return r.fatal
@@ -364,6 +424,9 @@ func (b *Block) commitState(e *stateExec, runs []txRun, window chan struct{}, tx
 
 		if err != nil {
 			st.Skip(curTx)
+			if !b.GenBlock {
+				br.failedAt = curTx + 1
+			}
 			if err == transaction.ErrNetworkStopping {
 				// Set the node in a pause state, when the block is not a trial
 				if !b.trial {
@@ -380,6 +443,7 @@ func (b *Block) commitState(e *stateExec, runs []txRun, window chan struct{}, tx
 						txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: errTxTooLong.Error(), keyID: t.KeyID()}
 					}
 					b.genStopped = true
+					br.stopped = true
 					break
 				}
 				if pkgerrors.Cause(err) == transaction.ErrLimitStop {
@@ -387,6 +451,7 @@ func (b *Block) commitState(e *stateExec, runs []txRun, window chan struct{}, tx
 						txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: err.Error(), keyID: t.KeyID()}
 						return err
 					}
+					br.stopped = true
 					break
 				}
 			}
@@ -451,6 +516,7 @@ func (b *Block) commitState(e *stateExec, runs []txRun, window chan struct{}, tx
 				txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: "transaction is larger than an empty block", keyID: t.KeyID()}
 				continue
 			}
+			br.stopped = true
 			break
 		}
 
@@ -473,6 +539,9 @@ func (b *Block) commitState(e *stateExec, runs []txRun, window chan struct{}, tx
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
 		*processedTx = append(*processedTx, t.FullData)
+		if b.onCommit != nil {
+			b.onCommit(t)
+		}
 	}
 	if fb := st.Fallbacks(); len(fb) > 0 {
 		b.GetLogger().WithFields(log.Fields{"fallbacks": fb}).Debug("state of the block")
