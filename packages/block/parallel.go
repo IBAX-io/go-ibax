@@ -435,7 +435,7 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 				return err
 			}
 			if b.GenBlock {
-				if err == transaction.ErrTimeLeft {
+				if errors.Is(err, transaction.ErrTimeLeft) {
 					// the time left to the block stopped the transaction: it waits for the next
 					// block, unless no transaction is in the block and none stopped before it,
 					// so it had the most time a block leaves a transaction, and never fits

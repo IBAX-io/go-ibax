@@ -158,9 +158,15 @@ func (bl *timeBlockLimit) reserve(n int) time.Duration {
 	return min(bl.Tail*time.Duration(n), bl.Limit/2)
 }
 
-// left is the time left to the next transaction of the block
+// left is the time left to the next transaction of the block. The first transaction has the whole
+// time of the block, none kept for its tail: a transaction the time stops as the first of its block
+// had the most time a block leaves a transaction, and the block takes it as one that never fits.
 func (bl *timeBlockLimit) left() time.Duration {
-	return max(0, bl.Limit-bl.reserve(bl.Count+1)-max(0, time.Since(bl.Start)))
+	var reserve time.Duration
+	if bl.Count > 0 {
+		reserve = bl.reserve(bl.Count + 1)
+	}
+	return max(0, bl.Limit-reserve-max(0, time.Since(bl.Start)))
 }
 
 func (bl *timeBlockLimit) check(t TransactionCaller, mode LimitMode) error {
@@ -170,7 +176,7 @@ func (bl *timeBlockLimit) check(t TransactionCaller, mode LimitMode) error {
 	}
 
 	if mode == letGenBlock {
-		return errors.WithMessage(ErrLimitStop, "timeBlockLimit")
+		return ErrTimeLeft
 	}
 
 	return limitError("txBlockTimeLimit", "Block generation time exceeded")
