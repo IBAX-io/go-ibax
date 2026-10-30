@@ -48,7 +48,7 @@ const (
 	// round bftTimelinessRounds, so that a round whose messages take longer than the bound
 	// assumes still takes a proposal in a later round
 	bftTimelinessGrowth = 1.1
-	bftTimelinessRounds = 100
+	bftTimelinessRounds = 25
 )
 
 // BftParameters is the starting values of the parameters, in the order the first block writes them

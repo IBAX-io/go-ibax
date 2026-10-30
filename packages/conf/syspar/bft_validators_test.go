@@ -102,13 +102,13 @@ func TestCheckBftParameter(t *testing.T) {
 	for _, tc := range []struct {
 		round  uint32
 		behind time.Duration
-	}{{0, 5 * time.Second}, {1, 5500 * time.Millisecond}, {2, 6050 * time.Millisecond}, {100, 5 * time.Second * 13780}} {
+	}{{0, 5 * time.Second}, {1, 5500 * time.Millisecond}, {2, 6050 * time.Millisecond}, {25, 54173 * time.Millisecond}} {
 		ahead, behind := GetBftTimeliness(tc.round)
 		if ahead != 2*time.Second || behind < tc.behind || behind > tc.behind+tc.behind/1000 {
 			t.Errorf("round %d: the bounds %v ahead and %v behind, want 2s and %v", tc.round, ahead, behind, tc.behind)
 		}
 	}
-	if _, behind := GetBftTimeliness(1000); behind != func() time.Duration { _, b := GetBftTimeliness(100); return b }() {
+	if _, behind := GetBftTimeliness(1000); behind != func() time.Duration { _, b := GetBftTimeliness(25); return b }() {
 		t.Errorf("the bound behind grows past round %d", bftTimelinessRounds)
 	}
 }
