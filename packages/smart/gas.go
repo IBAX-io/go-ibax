@@ -405,6 +405,25 @@ func (sc *SmartContract) needPayment() bool {
 	return sc.TxSmart.EcosystemID > 0 && !sc.ChildChain && !syspar.IsPrivateBlockchain() && sc.payFreeContract()
 }
 
+// PoolFee is the least a contract transaction of txSize bytes pays in ecosystem 1, of its digits,
+// and the account that pays it: the account the contract binds, or the signer. A block runs the
+// transaction only when that account has as much (checkVerify), so the pool of a node refuses a
+// transaction of an account that has less. It reports false for a transaction that pays nothing.
+func (sc *SmartContract) PoolFee(txSize int64, digits int32) (payer int64, fee decimal.Decimal, pays bool, err error) {
+	if sc.TxContract == nil || sc.TxSmart.EcosystemID <= 0 || syspar.IsPrivateBlockchain() || !sc.payFreeContract() {
+		return 0, decimal.Zero, false, nil
+	}
+	expedite, err := expediteFeeBy(sc.TxSmart.Expedite, digits)
+	if err != nil {
+		return 0, decimal.Zero, false, err
+	}
+	payer = sc.TxSmart.KeyID
+	if info := sc.TxContract.Info(); info != nil && info.Owner != nil && info.Owner.WalletID != 0 {
+		payer = info.Owner.WalletID
+	}
+	return payer, storageFeeBy(txSize, digits).Floor().Add(expedite.Floor()), true, nil
+}
+
 // hasExistKeyID adds the account of the id to the ecosystem and to ecosystem 1 where it has none.
 // The rows are the fee payment's own entries, not writes of the contract, so the permissions of
 // the keys table do not apply to them

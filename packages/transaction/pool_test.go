@@ -72,12 +72,12 @@ func equalStrings(a, b []string) bool {
 
 func TestPoolOrder(t *testing.T) {
 	p := NewPool()
-	p.put(poolTx("late", types.SmartContractTxType, 20, 0), RateClient, false)
-	p.put(poolTx("early", types.SmartContractTxType, 10, 0), RateClient, false)
-	p.put(poolTx("same-time", types.SmartContractTxType, 10, 0), RateClient, false)
-	p.put(poolTx("expedite", types.SmartContractTxType, 30, 5), RateClient, false)
-	p.put(poolTx("on-block", types.SmartContractTxType, 40, 0), RateOnBlock, false)
-	p.put(poolTx("stop", types.StopNetworkTxType, 1, 9), RateClient, false)
+	p.put(poolTx("late", types.SmartContractTxType, 20, 0), RateClient, false, nil)
+	p.put(poolTx("early", types.SmartContractTxType, 10, 0), RateClient, false, nil)
+	p.put(poolTx("same-time", types.SmartContractTxType, 10, 0), RateClient, false, nil)
+	p.put(poolTx("expedite", types.SmartContractTxType, 30, 5), RateClient, false, nil)
+	p.put(poolTx("on-block", types.SmartContractTxType, 40, 0), RateOnBlock, false, nil)
+	p.put(poolTx("stop", types.StopNetworkTxType, 1, 9), RateClient, false, nil)
 
 	got := hashesOf(p.Take(0))
 	want := []string{"on-block", "expedite", "early", "same-time", "late", "stop"}
@@ -92,7 +92,7 @@ func TestPoolOrder(t *testing.T) {
 func TestPoolTakeHandsOutParsedOnce(t *testing.T) {
 	p := NewPool()
 	tx := poolTx("a", types.SmartContractTxType, 1, 0)
-	p.put(tx, RateClient, false)
+	p.put(tx, RateClient, false, nil)
 	first := p.Take(1)
 	if len(first) != 1 || first[0].Tx != tx {
 		t.Fatalf("first take %v", first)
@@ -107,9 +107,9 @@ func TestPoolTakeHandsOutParsedOnce(t *testing.T) {
 
 func TestPoolSentRemoveBad(t *testing.T) {
 	p := NewPool()
-	p.put(poolTx("a", types.SmartContractTxType, 1, 0), RateClient, false)
-	p.put(poolTx("b", types.SmartContractTxType, 2, 0), RateClient, false)
-	p.put(poolTx("c", types.SmartContractTxType, 3, 0), RateClient, true)
+	p.put(poolTx("a", types.SmartContractTxType, 1, 0), RateClient, false, nil)
+	p.put(poolTx("b", types.SmartContractTxType, 2, 0), RateClient, false, nil)
+	p.put(poolTx("c", types.SmartContractTxType, 3, 0), RateClient, true, nil)
 
 	data, hashes := p.Unsent(0)
 	if len(data) != 2 || string(hashes[0]) != "a" || string(hashes[1]) != "b" {
@@ -140,7 +140,7 @@ func TestPoolSentRemoveBad(t *testing.T) {
 		t.Fatalf("len %d", p.Len())
 	}
 
-	p.put(poolTx("b", types.SmartContractTxType, 2, 0), RateClient, false)
+	p.put(poolTx("b", types.SmartContractTxType, 2, 0), RateClient, false, nil)
 	if pending, _, _ := p.Status([]byte("b")); !pending {
 		t.Fatal("a transaction put again is pending, not bad")
 	}
@@ -168,8 +168,8 @@ func TestPoolBounds(t *testing.T) {
 	if !p.fits(100) || p.fits(101) {
 		t.Fatal("bytes bound")
 	}
-	p.put(poolTx("a", types.SmartContractTxType, 1, 0), RateClient, false)
-	p.put(poolTx("b", types.SmartContractTxType, 2, 0), RateClient, false)
+	p.put(poolTx("a", types.SmartContractTxType, 1, 0), RateClient, false, nil)
+	p.put(poolTx("b", types.SmartContractTxType, 2, 0), RateClient, false, nil)
 	if p.fits(1) {
 		t.Fatal("count bound")
 	}
@@ -191,7 +191,7 @@ func poolLimits(t *testing.T, count int, bytes int64, perKey, reserve int) {
 
 func requirePlaced(t *testing.T, p *Pool, tx *Transaction, rate Rate, now int64, want error) {
 	t.Helper()
-	if err := p.place(tx, rate, now); err != want {
+	if err := p.place(tx, rate, now, nil); err != want {
 		t.Fatalf("%s: %v, want %v", tx.Hash(), err, want)
 	}
 }

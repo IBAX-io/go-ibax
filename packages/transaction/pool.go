@@ -79,7 +79,8 @@ type poolEntry struct {
 	sent     bool
 	key      int64
 	signed   int64
-	reserved bool // a transaction of the node or an evidence of a validator, in the reserve
+	reserved bool   // a transaction of the node or an evidence of a validator, in the reserve
+	funds    *funds // what it holds of a balance, nil if none
 }
 
 type badStatus struct {
@@ -94,7 +95,8 @@ type badStatus struct {
 // is empty: the clients send again what no block took.
 //
 // The transactions of clients and other nodes fill conf TxPool.MaxCount and MaxBytes, MaxPerKey of
-// an account at most. The transactions the node makes and the evidences validators sign go into a
+// an account at most, each with the funds a block takes of it beyond those the others of its
+// account hold. The transactions the node makes and the evidences validators sign go into a
 // reserve beyond, ReserveCount and ReserveBytes, which no transaction of a client takes.
 type Pool struct {
 	mu      sync.Mutex
@@ -109,6 +111,8 @@ type Pool struct {
 	perKey        map[int64]int // the transactions of clients and other nodes of each account
 	worst         *poolEntry    // the last of them in the order of the blocks, nil if unknown
 	expired       int64         // the second the pool last took out the transactions too old
+	// what the transactions hold of each balance
+	held map[fundsBucket]decimal.Decimal
 }
 
 // TxPool is the pool of the node
@@ -116,7 +120,7 @@ var TxPool = NewPool()
 
 // NewPool is an empty pool
 func NewPool() *Pool {
-	return &Pool{entries: make(map[string]*poolEntry), bad: make(map[string]badStatus), perKey: make(map[int64]int)}
+	return &Pool{entries: make(map[string]*poolEntry), bad: make(map[string]badStatus), perKey: make(map[int64]int), held: make(map[fundsBucket]decimal.Decimal)}
 }
 
 func maxPoolCount() int {
@@ -184,7 +188,7 @@ func VerifyAll(txs []*Transaction) []error {
 
 // Admit puts the transactions in the pool once Check takes them, each error at the index of its
 // transaction. A transaction the pool holds is taken again as it is. A transaction Check refuses
-// is bad; place refuses the others it has no room for.
+// is bad; place refuses the others it has no room or no funds for.
 func (p *Pool) Admit(txs []*Transaction, rate Rate) []error {
 	errs := make([]error, len(txs))
 	fresh := make([]*Transaction, 0, len(txs))
@@ -199,6 +203,12 @@ func (p *Pool) Admit(txs []*Transaction, rate Rate) []error {
 	p.mu.Unlock()
 	now := time.Now().Unix()
 	checked := CheckBatch(fresh, now)
+	fund, l := make([]*funds, len(fresh)), newBatchLedger()
+	for j, t := range fresh {
+		if checked[j] == nil && !p.reservedTx(t, rate) {
+			fund[j], checked[j] = fundsOf(t, l)
+		}
+	}
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -206,14 +216,19 @@ func (p *Pool) Admit(txs []*Transaction, rate Rate) []error {
 		i, h := index[j], string(t.Hash())
 		if err := checked[j]; err != nil {
 			errs[i] = err
-			BadTxForBan(t.KeyID())
-			p.setBad(h, err.Error())
+			bad, ban := refusal(err)
+			if ban {
+				BadTxForBan(t.KeyID())
+			}
+			if bad {
+				p.setBad(h, err.Error())
+			}
 			continue
 		}
 		if _, ok := p.entries[h]; ok {
 			continue
 		}
-		errs[i] = p.place(t, rate, now)
+		errs[i] = p.place(t, rate, now, fund[j])
 	}
 	p.gauge()
 	return errs
@@ -221,17 +236,18 @@ func (p *Pool) Admit(txs []*Transaction, rate Rate) []error {
 
 // place puts a transaction in the pool, or refuses it. A transaction of the node or an evidence of
 // a validator goes into the reserve. One of a client or another node is refused when the node
-// banned its account or the account has MaxPerKey in the pool. When the pool is full, the
+// banned its account, the account has MaxPerKey in the pool, or the balance it draws on has not
+// its funds beyond those the transactions in the pool hold. When the pool is full, the
 // transactions too old for a block leave it, then the last in the order of the blocks, if the
 // transaction comes before them: a flood of transactions takes out none that come before it, as
 // a higher expedite does.
-func (p *Pool) place(t *Transaction, rate Rate, now int64) error {
+func (p *Pool) place(t *Transaction, rate Rate, now int64, f *funds) error {
 	size := len(t.FullData)
 	if p.reservedTx(t, rate) {
 		if p.reserved >= reserveCount() || p.reservedBytes+int64(size) > reserveBytes() {
 			return ErrPoolFull
 		}
-		p.put(t, rate, false)
+		p.put(t, rate, false, nil)
 		return nil
 	}
 	key := t.KeyID()
@@ -241,13 +257,16 @@ func (p *Pool) place(t *Transaction, rate Rate, now int64) error {
 	if p.perKey[key] >= maxPerKey() {
 		return ErrPoolKeyFull
 	}
+	if !p.hold(f) {
+		return ErrPoolNoFunds
+	}
 	if !p.fits(size) {
 		p.expire(now)
 	}
 	if !p.fits(size) && !p.evict(t, size) {
 		return ErrPoolFull
 	}
-	p.put(t, rate, false)
+	p.put(t, rate, false, f)
 	return nil
 }
 
@@ -339,7 +358,7 @@ func (p *Pool) Restore(txs []*Transaction) {
 	defer p.mu.Unlock()
 	for _, t := range txs {
 		if _, ok := p.entries[string(t.Hash())]; !ok {
-			p.put(t, RateClient, true)
+			p.put(t, RateClient, true, nil)
 			p.entries[string(t.Hash())].tx = nil
 		}
 	}
@@ -352,7 +371,7 @@ func (p *Pool) fits(size int) bool {
 	return len(p.entries)-p.reserved < maxPoolCount() && p.bytes-p.reservedBytes+int64(size) <= maxPoolBytes()
 }
 
-func (p *Pool) put(t *Transaction, rate Rate, sent bool) {
+func (p *Pool) put(t *Transaction, rate Rate, sent bool, f *funds) {
 	reserved := p.reservedTx(t, rate)
 	if t.Type() == types.StopNetworkTxType {
 		rate = RateStopNetwork
@@ -362,6 +381,10 @@ func (p *Pool) put(t *Transaction, rate Rate, sent bool) {
 	e := &poolEntry{
 		hash: t.Hash(), data: t.FullData, tx: t, rate: rate, expedite: t.Expedite(), time: t.Timestamp(), seq: p.seq, sent: sent,
 		key: t.KeyID(), signed: t.SignedTime(), reserved: reserved,
+	}
+	if !reserved && f != nil {
+		e.funds = f
+		p.held[f.bucket] = p.held[f.bucket].Add(f.amount)
 	}
 	p.entries[h] = e
 	p.bytes += int64(len(t.FullData))
@@ -391,6 +414,11 @@ func (p *Pool) remove(h string) {
 	}
 	if p.perKey[e.key]--; p.perKey[e.key] <= 0 {
 		delete(p.perKey, e.key)
+	}
+	if f := e.funds; f != nil {
+		if p.held[f.bucket] = p.held[f.bucket].Sub(f.amount); !p.held[f.bucket].IsPositive() {
+			delete(p.held, f.bucket)
+		}
 	}
 	if p.worst == e {
 		p.worst = nil
