@@ -38,8 +38,15 @@ type (
 	// TxPoolConfig bounds the transactions a node keeps in memory for the blocks to come. Zero
 	// takes the defaults of the transaction package.
 	TxPoolConfig struct {
-		MaxCount int   // transactions
+		MaxCount int   // transactions of clients and other nodes
 		MaxBytes int64 // bytes of their data
+		// MaxPerKey is the transactions of clients and other nodes an account has in the pool
+		MaxPerKey int
+		// ReserveCount and ReserveBytes bound, beyond MaxCount and MaxBytes, the transactions the
+		// node makes and the evidences validators sign: a pool full of transactions of clients
+		// still takes them
+		ReserveCount int
+		ReserveBytes int64
 		// BadMinutes is how long the node answers the status of a transaction it refused
 		BadMinutes int
 	}
