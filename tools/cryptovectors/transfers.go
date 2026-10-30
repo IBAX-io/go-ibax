@@ -17,7 +17,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 )
 
-const transfersSource = "go-ibax transaction.(*Transaction).Unmarshall (client tx type 0x80) then " +
+const transfersSource = "go-ibax transaction.(*Transaction).UnmarshallClient (client tx type 0x80) then " +
 	"SmartTransactionParser.Validate (SmartTransaction.Validate, the account key in the header verifies the " +
 	"signature) via tools/cryptovectors; " +
 	"data is written by the client. Test keys only."
@@ -99,7 +99,7 @@ func nodeAcceptsTransfer(networkID int64, data []byte) (verdict transferVerdict)
 	}()
 
 	tx := &transaction.Transaction{}
-	if err := tx.Unmarshall(bytes.NewBuffer(data), true); err != nil {
+	if err := tx.UnmarshallClient(bytes.NewBuffer(data), true); err != nil {
 		return transferVerdict{Error: err.Error()}
 	}
 	if !tx.IsSmartContract() {
