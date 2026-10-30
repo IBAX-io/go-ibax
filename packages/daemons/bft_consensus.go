@@ -822,6 +822,10 @@ func (dbWrites) Unlock() { DBUnlock() }
 // Valid is valid(v): the speculation of the streaming proposal goes on with the block, or else
 // block.Validate tries it under DBLock
 func (a bftApp) Valid(height uint64, hash bft.Hash, bin []byte) bool {
+	start := time.Now()
+	defer func() {
+		metrics.BlockStage.WithLabelValues(metrics.KindTrial, metrics.StageValid).Observe(time.Since(start).Seconds())
+	}()
 	err := a.spec.finish(height, hash, bin)
 	if errors.Is(err, block.ErrSpeculation) {
 		err = block.Validate(bin, int64(height), hash, dbWrites{})

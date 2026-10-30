@@ -54,6 +54,7 @@ const (
 	StageCollect  = "collect"  // the proposer takes the transactions of its block from the queue
 	StageTrial    = "trial"    // the proposer runs its block
 	StageBehind   = "behind"   // from the time of the proposed block to the end of the proposal
+	StageValid    = "valid"    // valid(v) of a proposal from its arrival, by the speculation or by Validate
 )
 
 // The stages of a transaction execution
