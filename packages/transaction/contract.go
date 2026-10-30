@@ -20,6 +20,7 @@ const (
 	errUnknownContract = `Cannot find %s contract`
 )
 
+// CreateContract puts in the pool a transaction the node signs, which goes into its reserve
 func CreateContract(contractName string, keyID int64, params map[string]any,
 	privateKey []byte) error {
 	ecosysID, _ := converter.ParseName(contractName)
@@ -48,5 +49,5 @@ func CreateContract(contractName string, keyID int64, params map[string]any,
 	if err = rtx.Unmarshall(bytes.NewBuffer(txData), true); err != nil {
 		return err
 	}
-	return TxPool.Admit([]*Transaction{rtx}, RateClient)[0]
+	return TxPool.Admit([]*Transaction{rtx}, RateOnBlock)[0]
 }

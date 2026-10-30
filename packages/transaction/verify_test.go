@@ -52,7 +52,7 @@ func TestTransferSignatureIsCheckedOnEntry(t *testing.T) {
 			t.Fatal(err)
 		}
 		client := &Transaction{}
-		if err := client.Unmarshall(bytes.NewBuffer(bytes.Clone(data)), true); err != nil {
+		if err := client.UnmarshallClient(bytes.NewBuffer(bytes.Clone(data)), true); err != nil {
 			t.Fatalf("%s: honest client transaction refused: %v", c.Cryptoer, err)
 		}
 		txType := client.Type()
@@ -162,7 +162,7 @@ func TestTransferSignatureIsCheckedOnEntry(t *testing.T) {
 		for i := len(garbled) - 1; i >= 0 && i > len(garbled)-8; i-- {
 			garbled[i] ^= 0xff
 		}
-		if err := (&Transaction{}).Unmarshall(bytes.NewBuffer(garbled), true); err == nil {
+		if err := (&Transaction{}).UnmarshallClient(bytes.NewBuffer(garbled), true); err == nil {
 			t.Errorf("%s: client frame with a damaged signature was accepted", name)
 		}
 	}

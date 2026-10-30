@@ -19,6 +19,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/dataquery"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
@@ -732,7 +733,15 @@ type EcosystemInfo struct {
 	Creator      string `json:"creator"`
 }
 
-var totalSupplyToken = decimal.New(2100000000, int32(consts.MoneyDigits))
+// firstEcosystemSupply is the supply of the coin of ecosystem 1 that the first block fixes
+func firstEcosystemSupply() (decimal.Decimal, error) {
+	fb, err := syspar.GetFirstBlockData()
+	if err != nil {
+		return decimal.Decimal{}, err
+	}
+	supply, _, err := transaction.FirstBlockSupply(fb)
+	return supply, err
+}
 
 func (b *blockChainApi) EcosystemInfo(ctx RequestContext, ecosystemId int64) (*EcosystemInfo, *Error) {
 	r := ctx.HTTPRequest()
@@ -828,7 +837,12 @@ func (b *blockChainApi) EcosystemInfo(ctx RequestContext, ecosystemId int64) (*E
 	info.Withdraw = withdraw.String()
 	info.Emission = emission.String()
 	if info.Id == 1 {
-		info.TotalAmount = totalSupplyToken.String()
+		supply, err := firstEcosystemSupply()
+		if err != nil {
+			logger.WithFields(log.Fields{"type": consts.InvalidObject, "error": err}).Error("on getting the supply of ecosystem 1")
+			return nil, DefaultError(err.Error())
+		}
+		info.TotalAmount = supply.String()
 		return info, nil
 	}
 	info.TotalAmount = total.String()

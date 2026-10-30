@@ -41,7 +41,26 @@ The platform parameter lists the algorithms account keys may have:
 - A node refuses a transaction it is sent (`sendTx`) whose header key may not sign by its clock;
   once in a block, the block time decides.
 - A new value may move a day earlier or add one, never later or away; an algorithm is removed
-  only when no key, not deleted, has it.
+  only when it signs and no key, not deleted, has it.
+
+### Algorithms that only verify
+
+An entry with `verify_until` and `verify_by` only verifies:
+
+```json
+{ "algo": "ECC_Secp256k1", "verify_until": "2027-12-31", "verify_by": "@1MigrationClaim" }
+```
+
+- No key of it registers or signs: no account, transaction or login has one.
+- `CheckSign` with a key of it verifies on or before `verify_until` in the contract `verify_by`
+  alone, when that contract itself calls it; anywhere else, a contract it calls included, it
+  refuses the key. The migration contract of a new chain checks this way the claims signed with
+  the keys of the old chain, whose addresses `PubToID` gives as the old chain has them.
+- It has no `register_until` or `sign_until`, and at least one other algorithm of the list signs.
+- A new value may move `verify_until` earlier; it keeps the entry and `verify_by`, and an
+  algorithm neither starts nor stops verifying only. The entry stays once its day has passed, so
+  that no later value brings the algorithm back signing, with a later day or in another contract.
+- A FIPS node takes `verify_until` as a last day of signing.
 
 ## Contract and template functions
 
@@ -50,7 +69,7 @@ The platform parameter lists the algorithms account keys may have:
 | `PubToID(hex)`          | an account key                                | its address, 0 for what is no account key   |
 | `HexToPub(hex)`         | an account key that may still register        | the bytes for `1_keys.pub`; an error otherwise |
 | `PubToHex(bytes)`       | bytes                                          | their hex                                   |
-| `CheckSign(pub, data, sign)` | an account key that may still sign, hex  | whether the signature verifies              |
+| `CheckSign(pub, data, sign)` | an account key that may still sign, or that only verifies in the contract calling, hex | whether the signature verifies |
 | `NodePubToID(hex)`      | a node key as `honor_nodes` holds it          | the address of the node, 0 for what is no node key |
 | `NodePubKey(bytes)`     | the `1_keys.pub` of a node account            | its node key as `honor_nodes` holds it; an error for a key of another algorithm |
 

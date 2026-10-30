@@ -262,7 +262,7 @@ func (sc *SmartContract) setHonorNodes(par *sqldb.PlatformParameter, value strin
 }
 
 // checkAccountAlgorithms refuses a new value of account_algorithms that is malformed, moves a
-// day later, or removes an algorithm some keys still have
+// day later, removes an algorithm that only verifies, or removes one some keys still have
 func checkAccountAlgorithms(dbTx *sqldb.DbTransaction, value string) error {
 	next, err := syspar.ParseAccountAlgorithms(value)
 	if err != nil {
@@ -388,14 +388,25 @@ func HexToPub(sc *SmartContract, hexkey string) ([]byte, error) {
 	return key.Bytes(), nil
 }
 
+// runningContract is the name of the contract running, the top of the stack of the contracts
+// called, or empty out of a contract
+func (sc *SmartContract) runningContract() string {
+	if sc.TxContract == nil || len(sc.TxContract.StackCont) == 0 {
+		return ""
+	}
+	name, _ := sc.TxContract.StackCont[len(sc.TxContract.StackCont)-1].(string)
+	return name
+}
+
 // CheckSign checks a signature, in hex, of data made with an account public key, in hex, of an
-// algorithm that may still sign at the block time
+// algorithm that may still sign at the block time, or that only verifies, in the contract that
+// calls CheckSign, the one account_algorithms names
 func CheckSign(sc *SmartContract, pub, data, sign string) (bool, error) {
 	key, err := crypto.ParseAccountKeyHex(pub)
 	if err != nil {
 		return false, err
 	}
-	if err = syspar.GetAccountAlgorithms().CheckSign(key.Algo, sc.blockTime()); err != nil {
+	if err = syspar.GetAccountAlgorithms().CheckVerify(key.Algo, sc.blockTime(), sc.runningContract()); err != nil {
 		return false, err
 	}
 	s, err := hex.DecodeString(sign)

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -32,26 +33,44 @@ var (
 // AccountAlgorithm is an algorithm account keys may have, with the last day keys of it may be
 // registered and the last day they may sign. A zero day is no limit. The days are UTC and
 // include the whole day; they are compared with the block time, never the clock of the node.
+//
+// An algorithm with VerifyUntil only verifies: no account registers or signs with a key of it, and
+// until that day the contract VerifyBy alone checks signatures of its keys (CheckSign), as the
+// migration contract of a new chain checks the claims signed with the keys of the old one.
 type AccountAlgorithm struct {
 	Algo          crypto.AsymAlgo
 	RegisterUntil time.Time
 	SignUntil     time.Time
+	VerifyUntil   time.Time
+	VerifyBy      string
 }
+
+// VerifyOnly reports whether keys of the algorithm only verify, in the contract VerifyBy
+func (a AccountAlgorithm) VerifyOnly() bool {
+	return !a.VerifyUntil.IsZero()
+}
+
+// contractName is the name of a contract with its ecosystem, as @1MigrationClaim
+var contractName = regexp.MustCompile(`^@[1-9][0-9]*[A-Za-z_][A-Za-z0-9_]*$`)
 
 // AccountAlgorithmSet is the value of account_algorithms. Its JSON is
 //
-//	[{"algo":"ECC_P256","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"MLDSA65"}]
+//	[{"algo":"ECC_P256","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"MLDSA65"},
+//	 {"algo":"ECC_Secp256k1","verify_until":"2027-12-31","verify_by":"@1MigrationClaim"}]
 type AccountAlgorithmSet []AccountAlgorithm
 
 type accountAlgorithmJSON struct {
 	Algo          string `json:"algo"`
 	RegisterUntil string `json:"register_until,omitempty"`
 	SignUntil     string `json:"sign_until,omitempty"`
+	VerifyUntil   string `json:"verify_until,omitempty"`
+	VerifyBy      string `json:"verify_by,omitempty"`
 }
 
-// ParseAccountAlgorithms reads and checks a value of account_algorithms: at least one algorithm,
-// each implemented, usable with the network hash and listed once, with valid days and
-// registration ending no later than signing
+// ParseAccountAlgorithms reads and checks a value of account_algorithms: at least one algorithm
+// that signs, each implemented, usable with the network hash and listed once, with valid days and
+// registration ending no later than signing. An algorithm that only verifies has its last day and
+// the contract that verifies, and no day of registering or signing.
 func ParseAccountAlgorithms(value string) (AccountAlgorithmSet, error) {
 	var items []accountAlgorithmJSON
 	if err := json.Unmarshal([]byte(value), &items); err != nil {
@@ -84,9 +103,34 @@ func ParseAccountAlgorithms(value string) (AccountAlgorithmSet, error) {
 		if !a.SignUntil.IsZero() && a.RegisterUntil.After(a.SignUntil) {
 			return nil, fmt.Errorf("%s: %s registration must end no later than signing", AccountAlgorithms, algo)
 		}
+		if a.VerifyUntil, err = parseAccountAlgoDate(item.VerifyUntil); err != nil {
+			return nil, fmt.Errorf("%s: %s verify_until: %w", AccountAlgorithms, algo, err)
+		}
+		a.VerifyBy = item.VerifyBy
+		if a.VerifyOnly() || a.VerifyBy != "" {
+			if a.VerifyUntil.IsZero() || !contractName.MatchString(a.VerifyBy) {
+				return nil, fmt.Errorf("%s: %s verifies only with verify_until and verify_by, the contract that verifies, as @1MigrationClaim", AccountAlgorithms, algo)
+			}
+			if !a.RegisterUntil.IsZero() || !a.SignUntil.IsZero() {
+				return nil, fmt.Errorf("%s: %s verifies only: it has no register_until or sign_until", AccountAlgorithms, algo)
+			}
+		}
 		set = append(set, a)
 	}
+	if !set.signs() {
+		return nil, fmt.Errorf("%s: no algorithm signs", AccountAlgorithms)
+	}
 	return set, nil
+}
+
+// signs reports whether keys of an algorithm of the set sign
+func (s AccountAlgorithmSet) signs() bool {
+	for _, a := range s {
+		if !a.VerifyOnly() {
+			return true
+		}
+	}
+	return false
 }
 
 func parseAccountAlgoDate(s string) (time.Time, error) {
@@ -107,6 +151,10 @@ func (s AccountAlgorithmSet) String() string {
 		if !a.SignUntil.IsZero() {
 			items[i].SignUntil = a.SignUntil.Format(accountAlgoDate)
 		}
+		if a.VerifyOnly() {
+			items[i].VerifyUntil = a.VerifyUntil.Format(accountAlgoDate)
+		}
+		items[i].VerifyBy = a.VerifyBy
 	}
 	out, _ := json.Marshal(items)
 	return string(out)
@@ -138,6 +186,10 @@ func (s *AccountAlgorithmSet) UnmarshalJSON(data []byte) error {
 		if set[i].SignUntil, err = parseAccountAlgoDate(item.SignUntil); err != nil {
 			return fmt.Errorf("%s: %s sign_until: %w", AccountAlgorithms, item.Algo, err)
 		}
+		if set[i].VerifyUntil, err = parseAccountAlgoDate(item.VerifyUntil); err != nil {
+			return fmt.Errorf("%s: %s verify_until: %w", AccountAlgorithms, item.Algo, err)
+		}
+		set[i].VerifyBy = item.VerifyBy
 	}
 	*s = set
 	return nil
@@ -152,7 +204,7 @@ func (s AccountAlgorithmSet) find(algo crypto.AsymAlgo) (AccountAlgorithm, bool)
 	return AccountAlgorithm{}, false
 }
 
-// Has reports whether account keys may have the algorithm, whatever the days
+// Has reports whether the set lists the algorithm, whatever the days, signing or verifying only
 func (s AccountAlgorithmSet) Has(algo crypto.AsymAlgo) bool {
 	_, ok := s.find(algo)
 	return ok
@@ -164,14 +216,34 @@ func within(day time.Time, blockTime int64) bool {
 }
 
 // CheckSign refuses a key of the algorithm signing at the block time, in Unix seconds: the
-// algorithm is not in the set, or its last signing day has passed
+// algorithm is not in the set, only verifies, or its last signing day has passed
 func (s AccountAlgorithmSet) CheckSign(algo crypto.AsymAlgo, blockTime int64) error {
 	a, ok := s.find(algo)
 	if !ok {
 		return fmt.Errorf("%w: %s is not in %s", ErrAccountAlgorithm, algo, AccountAlgorithms)
 	}
+	if a.VerifyOnly() {
+		return fmt.Errorf("%w: %s keys only verify, in %s", ErrAccountAlgorithm, algo, a.VerifyBy)
+	}
 	if !within(a.SignUntil, blockTime) {
 		return fmt.Errorf("%w: %s keys sign until %s", ErrAccountAlgorithm, algo, a.SignUntil.Format(accountAlgoDate))
+	}
+	return nil
+}
+
+// CheckVerify refuses checking, in the contract running, a signature made with a key of the
+// algorithm at the block time: the algorithm may not sign then (CheckSign), or it only verifies
+// and the contract is not the one that verifies or its last day has passed
+func (s AccountAlgorithmSet) CheckVerify(algo crypto.AsymAlgo, blockTime int64, contract string) error {
+	a, ok := s.find(algo)
+	if !ok || !a.VerifyOnly() {
+		return s.CheckSign(algo, blockTime)
+	}
+	if contract != a.VerifyBy {
+		return fmt.Errorf("%w: %s keys verify only in %s", ErrAccountAlgorithm, algo, a.VerifyBy)
+	}
+	if !within(a.VerifyUntil, blockTime) {
+		return fmt.Errorf("%w: %s keys verify until %s", ErrAccountAlgorithm, algo, a.VerifyUntil.Format(accountAlgoDate))
 	}
 	return nil
 }
@@ -216,8 +288,11 @@ func (s AccountAlgorithmSet) Signer(registered, sent []byte, keyID, blockTime in
 }
 
 // CheckChange refuses a new value that moves a day of an algorithm kept in the set later or
-// removes it: the days set at genesis follow the regulations, and may only come earlier. It
-// returns the algorithms the new value removes, which must have no keys left.
+// removes it: the days set at genesis follow the regulations, and may only come earlier. An
+// algorithm kept neither starts nor stops verifying only, and keeps the contract that verifies.
+// An algorithm that only verifies is never removed: its entry stays, inert once its last day has
+// passed, so that no later value brings it back signing, with a later day or in another contract.
+// It returns the algorithms the new value removes, which must have no keys left.
 func (s AccountAlgorithmSet) CheckChange(next AccountAlgorithmSet) ([]crypto.AsymAlgo, error) {
 	later := func(prev, day time.Time) bool {
 		return !prev.IsZero() && (day.IsZero() || day.After(prev))
@@ -226,10 +301,16 @@ func (s AccountAlgorithmSet) CheckChange(next AccountAlgorithmSet) ([]crypto.Asy
 	for _, prev := range s {
 		a, kept := next.find(prev.Algo)
 		if !kept {
+			if prev.VerifyOnly() {
+				return nil, fmt.Errorf("%s: %s only verifies, and stays listed; its last day may come earlier", AccountAlgorithms, prev.Algo)
+			}
 			removed = append(removed, prev.Algo)
 			continue
 		}
-		if later(prev.RegisterUntil, a.RegisterUntil) || later(prev.SignUntil, a.SignUntil) {
+		if prev.VerifyOnly() != a.VerifyOnly() || prev.VerifyBy != a.VerifyBy {
+			return nil, fmt.Errorf("%s: %s keeps verifying only, in the same contract, or signing", AccountAlgorithms, prev.Algo)
+		}
+		if later(prev.RegisterUntil, a.RegisterUntil) || later(prev.SignUntil, a.SignUntil) || later(prev.VerifyUntil, a.VerifyUntil) {
 			return nil, fmt.Errorf("%s: the days of %s may only come earlier", AccountAlgorithms, prev.Algo)
 		}
 	}
@@ -279,6 +360,12 @@ func (s AccountAlgorithmSet) checkFIPSDays() error {
 	}
 	for _, a := range s {
 		last := FIPSLastDays(a.Algo)
+		if a.VerifyOnly() {
+			if beyond(a.VerifyUntil, last.SignUntil) {
+				return fmt.Errorf("%s: in FIPS 140-3 mode %s keys verify until %s at the latest", AccountAlgorithms, a.Algo, last.SignUntil.Format(accountAlgoDate))
+			}
+			continue
+		}
 		// Without a registration day, registration ends with signing
 		register := a.RegisterUntil
 		if register.IsZero() {

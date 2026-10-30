@@ -138,8 +138,8 @@ func TestCheckGenesisRefusesAlteredBlock(t *testing.T) {
 	}
 }
 
-// The genesis block must hold a valid account_algorithms the node algorithm is in, and a founder
-// account key that may be registered at the genesis time
+// The genesis block must hold a valid account_algorithms the node algorithm is in, a founder
+// account key that may be registered at the genesis time, and allocations within the supply
 func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
 	defer useSuite("ECC_P256", "SHA256")
 	useSuite("ECC_P256", "SHA256")
@@ -169,6 +169,10 @@ func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
 		},
 		"bare founder key":               func(f *types.FirstBlock) { f.PublicKey = f.PublicKey[2:] },
 		"founder key of another account": func(f *types.FirstBlock) { f.KeyID++ },
+		"allocations over the supply": func(f *types.FirstBlock) {
+			f.Supply = "1000"
+			f.Allocations = []types.Allocation{{Name: "reserve", KeyID: f.KeyID, Amount: "1001"}}
+		},
 	}
 	for name, edit := range cases {
 		if err := CheckGenesis(testGenesis(t, edit)); err == nil || !strings.Contains(err.Error(), "the accounts of the genesis block") {
@@ -180,6 +184,10 @@ func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
 	accepted := map[string]func(*types.FirstBlock){
 		"days on the genesis day": func(f *types.FirstBlock) {
 			f.AccountAlgorithms = `[{"algo":"ECC_P256","register_until":"2030-06-15","sign_until":"2030-06-15"}]`
+		},
+		"allocations of the whole supply": func(f *types.FirstBlock) {
+			f.Supply = "1000"
+			f.Allocations = []types.Allocation{{Name: "reserve", KeyID: f.KeyID, Amount: "1000"}}
 		},
 	}
 	if withMLDSA {

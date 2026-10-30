@@ -128,7 +128,7 @@ func TestRetain(t *testing.T) {
 
 	// at 20000 range 0 leaves, block 1 stays, and the spent output of block 5 leaves with range 0 of
 	// spent_info, not by a deletion of its rows; the unspent output stays
-	require.NoError(t, Retain(db, 20000, T+consts.MaxTxBack+1, testWindow))
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
 	require.EqualValues(t, 5, countRows(t, db, blocks))
 	found, err := (&BlockChain{}).Get(1)
 	require.NoError(t, err)
@@ -154,8 +154,8 @@ func TestRetain(t *testing.T) {
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "retired_partitions"`))
 
 	// at 30000 the ranges that left at 20000 are dropped, and the chain is not rolled back before
-	require.NoError(t, Retain(db, 20000, T+consts.MaxTxBack+1, testWindow))
-	require.NoError(t, Retain(db, 30000, T+consts.MaxTxBack+2, testWindow))
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
+	require.NoError(t, Retain(db, 30000, T+consts.MaxTxForw+consts.MaxTxBack+2, testWindow))
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM pg_tables WHERE schemaname = ? AND tablename = ?`,
 		migration.RetiredSchema, "rollback_tx_p0"))
 	require.EqualValues(t, 1, countRows(t, db, `SELECT count(*) FROM pg_tables WHERE schemaname = ? AND tablename = ?`,
@@ -210,8 +210,8 @@ func TestRetainArchive(t *testing.T) {
 	chainRows(t, db, T)
 	require.NoError(t, Retain(db, 10000, T, testWindow))
 	addBlocks(t, db, T, 20000, 29999)
-	require.NoError(t, Retain(db, 20000, T+consts.MaxTxBack+1, testWindow))
-	require.NoError(t, Retain(db, 30000, T+consts.MaxTxBack+2, testWindow))
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
+	require.NoError(t, Retain(db, 30000, T+consts.MaxTxForw+consts.MaxTxBack+2, testWindow))
 
 	// the active tables hold the window, and the reads of the API find the rest in the archive
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "rollback_tx"`))
@@ -264,7 +264,67 @@ func TestLogTxCount(t *testing.T) {
 	// the count outlives the rows
 	require.NoError(t, Retain(db, 10000, T, testWindow))
 	addBlocks(t, db, T, 20000, 29999)
-	require.NoError(t, Retain(db, 20000, T+consts.MaxTxBack+1, testWindow))
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "log_transactions" WHERE "ecosystem_id" = 2`))
 	require.EqualValues(t, 1, count(2))
+}
+
+// A range of log_transactions leaves once its last block, plus MaxTxForw, is earlier than
+// MaxTxBack before the block time: until then a transaction of it, signed at most MaxTxForw after
+// its block, passes the check of its time, and its hash refuses it
+func TestRetainLogTransactionsSigned(t *testing.T) {
+	db := retentionDB(t)
+	conf.Config.Storage.Archive = false
+	T := int64(1) << 32
+	chainRows(t, db, T)
+	require.NoError(t, GetDB(db).Create(&LogTransaction{Hash: []byte{8}, Block: 9999, Timestamp: T}).Error)
+	require.NoError(t, Retain(db, 10000, T, testWindow))
+	addBlocks(t, db, T, 20000, 29999)
+	logged := `SELECT count(*) FROM "log_transactions" WHERE "hash" = ?`
+
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack, testWindow))
+	require.EqualValues(t, 1, countRows(t, db, logged, []byte{8}), "range 0 stays while a transaction of it is in the window")
+	require.NoError(t, RestoreRetired(db, 20000))
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
+	require.EqualValues(t, 0, countRows(t, db, logged, []byte{8}))
+}
+
+// On an archive node a range that leaves at a boundary is read at once, out of the window, by
+// the synchronization of other nodes: the blocks and the certificates of no range are out of
+// reach; a rollback of the boundary puts the range back in the active tables
+func TestRetainArchiveAtOnce(t *testing.T) {
+	db := retentionDB(t)
+	conf.Config.Storage.Archive = true
+	t.Cleanup(func() { conf.Config.Storage.Archive = false })
+	require.NoError(t, PrepareArchive())
+	T := int64(1) << 32
+	chainRows(t, db, T)
+	require.NoError(t, (&BftCertificate{Height: 9999, Hash: []byte{1}, Data: []byte{1}}).Create(db))
+	require.NoError(t, Retain(db, 10000, T, testWindow))
+	addBlocks(t, db, T, 20000, 29999)
+	readable := func(when string) {
+		found, err := (&BlockChain{}).GetArchived(9999)
+		require.NoError(t, err)
+		require.True(t, found, "block 9999 %s", when)
+		found, err = (&BftCertificate{}).GetArchived(9999)
+		require.NoError(t, err)
+		require.True(t, found, "the certificate of 9999 %s", when)
+	}
+
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
+	found, err := (&BlockChain{}).Get(9999)
+	require.NoError(t, err)
+	require.False(t, found, "range 0 left the active table")
+	readable("as range 0 leaves")
+	require.NoError(t, RestoreRetired(db, 20000))
+	found, err = (&BlockChain{}).Get(9999)
+	require.NoError(t, err)
+	require.True(t, found, "the rollback of 20000 puts range 0 back")
+	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "archive"."block_chain"`))
+
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
+	require.NoError(t, Retain(db, 30000, T+consts.MaxTxForw+consts.MaxTxBack+2, testWindow))
+	readable("at the next boundary")
+	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM pg_tables WHERE schemaname = ?`, migration.RetiredSchema))
+	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "retired_partitions" WHERE "boundary" = 20000`))
 }

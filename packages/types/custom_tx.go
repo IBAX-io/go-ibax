@@ -33,6 +33,11 @@ const (
 	TransferSelfTxType
 )
 
+// ClientTxType is the frame a client sends a transaction in: the payload it signed and the
+// signature. The node it sends to stores the transaction, with the time it takes it, in the form
+// of its type; blocks and other nodes carry only that stored form.
+const ClientTxType = 0x80
+
 // FirstBlock is the header of first block transaction
 type FirstBlock struct {
 	KeyID                 int64
@@ -51,6 +56,24 @@ type FirstBlock struct {
 	// HonorNodes is the initial value of the platform parameter honor_nodes: the validators of a
 	// chain of the BFT consensus, which its first block names
 	HonorNodes string
+	// Supply is the amount of the coin of ecosystem 1 that may ever exist, in its smallest unit:
+	// the allocations of the first block and the rest, which is not issued. Empty, it is
+	// consts.TotalSupply.
+	Supply string
+	// Allocations are the amounts the first block credits to the accounts of ecosystem 1. None,
+	// the founder takes consts.FounderAmount.
+	Allocations []Allocation
+}
+
+// Allocation is an amount the first block credits to an account of ecosystem 1: a part of the
+// supply, named, in its smallest unit. An allocation to the founder has no Conditions; any other
+// credits an account the first block creates without a key, which only the contracts of its
+// Conditions move (CallContractAs), as the conditions of 1_keys name them.
+type Allocation struct {
+	Name       string
+	KeyID      int64
+	Amount     string
+	Conditions string
 }
 
 func (t *FirstBlock) TxType() byte { return FirstBlockTxType }

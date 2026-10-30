@@ -69,6 +69,7 @@ func main() {
 	out := fs.String("out", "bench-results", "directory of the reports")
 	label := fs.String("label", "", "text the report starts with: the build, the machine, the network")
 
+	signerFile := fs.String("signer", "", "file of the private key, of the algorithm of -key-algo, that signs the transactions send sends, which carry its key in the header, as a key not registered yet signs (default the founder key, which logs in)")
 	count := fs.Int("n", 0, "transactions send sends")
 	rate := fs.Int("rate", 100, "transactions a second send sends")
 	_ = fs.Parse(os.Args[2:])
@@ -85,10 +86,17 @@ func main() {
 
 	if os.Args[1] == "send" {
 		if *count < 1 || *rate < 1 || fs.NArg() < 1 {
-			fmt.Fprintln(os.Stderr, "usage: bench send -node URL[,URL...] -key FILE -n N [-rate R] CONTRACT [NAME=VALUE...]")
+			fmt.Fprintln(os.Stderr, "usage: bench send -node URL[,URL...] -key FILE [-signer FILE] -n N [-rate R] CONTRACT [NAME=VALUE...]")
 			os.Exit(2)
 		}
-		os.Exit(send(c, fs.Arg(0), fs.Args()[1:], *count, *rate, runConfig{batch: *batch, drain: *drain, poll: *poll, p99: *p99}))
+		by := c.founder
+		if *signerFile != "" {
+			if by, err = readKey(*signerFile, c.founder.algo.String()); err != nil {
+				log.Fatal(err)
+			}
+			by.unregistered = true
+		}
+		os.Exit(send(c, by, fs.Arg(0), fs.Args()[1:], *count, *rate, runConfig{batch: *batch, drain: *drain, poll: *poll, p99: *p99}))
 	}
 	if os.Args[1] == "setup" {
 		_, statErr := os.Stat(*file)
@@ -170,7 +178,7 @@ func splitList(s string) []string {
 
 // send runs the transactions of send and prints what came of them, as tools/cmd/load of dapps did;
 // it tells the exit status
-func send(c *chainClient, contract string, args []string, n, rate int, cfg runConfig) int {
+func send(c *chainClient, by *account, contract string, args []string, n, rate int, cfg runConfig) int {
 	call, err := newContractCall(c.nodes[0], contract, args)
 	if err != nil {
 		log.Print(err)
@@ -181,7 +189,7 @@ func send(c *chainClient, contract string, args []string, n, rate int, cfg runCo
 		if err != nil {
 			return nil, err
 		}
-		return c.signer.contract(c.founder, call.id, values)
+		return c.signer.contract(by, call.id, values)
 	}}
 	seq := 0
 	s, err := runStep(c, w, rate, n, cfg, &seq)

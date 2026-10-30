@@ -131,6 +131,9 @@ func init() {
 	// TxPool
 	cmdFlags.IntVar(&conf.Config.TxPool.MaxCount, "txPoolCount", 0, "Transactions the node keeps in memory for the blocks to come; 0 takes 100000")
 	cmdFlags.Int64Var(&conf.Config.TxPool.MaxBytes, "txPoolBytes", 0, "Bytes of the transactions the node keeps in memory; 0 takes 256 MiB")
+	cmdFlags.IntVar(&conf.Config.TxPool.MaxPerKey, "txPoolPerKey", 0, "Transactions of an account the node keeps in memory; 0 takes 1024")
+	cmdFlags.IntVar(&conf.Config.TxPool.ReserveCount, "txPoolReserveCount", 0, "Transactions of the node and evidences of validators it keeps beyond txPoolCount; 0 takes 1024")
+	cmdFlags.Int64Var(&conf.Config.TxPool.ReserveBytes, "txPoolReserveBytes", 0, "Bytes of the transactions of the node and evidences of validators beyond txPoolBytes; 0 takes 16 MiB")
 	cmdFlags.IntVar(&conf.Config.TxPool.BadMinutes, "txBadMinutes", 0, "Minutes the node answers the status of a transaction it refused; 0 takes 60")
 
 	// Exec
