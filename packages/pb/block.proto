@@ -30,6 +30,8 @@ message BlockData {
     bytes merkle_root =3;
     bytes bin_data =4;
     repeated bytes tx_full_data =5;
+    // after_txs is what the execution of the block writes, which every node computes when it
+    // executes the block: a block carries it no more, and a block that does is read without it
     AfterTxs after_txs =6;
     bool sys_update = 7;
 }

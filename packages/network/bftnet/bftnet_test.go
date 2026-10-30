@@ -23,12 +23,16 @@ import (
 
 // testHandler admits each message once, by its wire form
 type testHandler struct {
-	mu    sync.Mutex
-	seen  map[string]bool
-	votes []*bft.Vote
-	props []*bft.Proposal
-	evids [][]byte
-	certs [][]byte
+	mu      sync.Mutex
+	seen    map[string]bool
+	votes   []*bft.Vote
+	props   []*bft.Proposal
+	evids   [][]byte
+	certs   [][]byte
+	txs     map[string][]byte // the bodies of the transactions by their hashes
+	asked   []uint64          // the heights of the transactions asked
+	rounds  []uint32          // the rounds of the transactions asked
+	batches []*bft.Batch
 }
 
 func newTestHandler() *testHandler { return &testHandler{seen: map[string]bool{}} }
@@ -70,7 +74,41 @@ func (h *testHandler) Certificates(from uint64, count int) ([][]byte, error) {
 	return h.certs[from:], nil
 }
 
+// Compact is the block of the proposal behind a mark
+func (h *testHandler) Compact(p *bft.Proposal) ([]byte, error) {
+	if len(p.Block) == 0 {
+		return nil, errors.New("no block")
+	}
+	return append([]byte("compact:"), p.Block...), nil
+}
+
+func (h *testHandler) Transactions(height uint64, round uint32, _ bft.Hash, hashes [][]byte) [][]byte {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.asked = append(h.asked, height)
+	h.rounds = append(h.rounds, round)
+	bodies := make([][]byte, len(hashes))
+	for i, x := range hashes {
+		bodies[i] = h.txs[string(x)]
+	}
+	return bodies
+}
+
 func (h *testHandler) MaxBlockSize() int64 { return 1000 }
+
+func (h *testHandler) MaxBlockTxs() int { return 10 }
+
+func (h *testHandler) Batch(b *bft.Batch) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.batches = append(h.batches, b)
+}
+
+func (h *testHandler) batchCount() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return len(h.batches)
+}
 
 func (h *testHandler) counts() (int, int, int) {
 	h.mu.Lock()
@@ -122,6 +160,8 @@ func testServer(t *testing.T, s *Service) (string, func() int) {
 					s.Serve(conn)
 				case network.RequestTypeBftCertificates:
 					s.ServeCertificates(conn)
+				case network.RequestTypeBftTransactions:
+					s.ServeTransactions(conn)
 				}
 			}()
 		}
@@ -141,10 +181,11 @@ func TestReadFrame(t *testing.T) {
 		kind uint8
 		size int64
 	}{
-		{0, 1}, {4, 1},
+		{0, 1}, {5, 1},
 		{FrameVote, maxPayload(FrameVote, 1000) + 1},
 		{FrameProposal, maxPayload(FrameProposal, 1000) + 1},
 		{FrameEvidence, maxPayload(FrameEvidence, 1000) + 1},
+		{FrameBatch, maxPayload(FrameBatch, 1000) + 1},
 	} {
 		head := []byte{c.kind}
 		head = binary.BigEndian.AppendUint32(head, uint32(c.size))
@@ -153,7 +194,7 @@ func TestReadFrame(t *testing.T) {
 			t.Fatalf("kind %d of %d bytes: %v", c.kind, c.size, err)
 		}
 	}
-	for _, kind := range []uint8{FrameProposal, FrameVote, FrameEvidence} {
+	for _, kind := range []uint8{FrameProposal, FrameVote, FrameEvidence, FrameBatch} {
 		max := maxPayload(kind, 1000)
 		frame := AppendFrame(nil, kind, make([]byte, max))
 		if _, _, err := ReadFrame(bytes.NewReader(frame), 1000); err != nil {
@@ -286,9 +327,49 @@ func TestRelay(t *testing.T) {
 		t.Fatal("the relayed vote differs")
 	}
 
-	// the node's own messages
+	// the node's own messages, a proposal with its block in the compact form
 	a.SendVote(testVote(1))
 	waitFor(t, "the vote of the node", func() bool { _, votes, _ := hb.counts(); return votes == 2 })
+	own := &bft.Proposal{Height: 5, Round: 2, ValidRound: 0, Validator: 1, Hash: bft.Hash{3}, Block: []byte{7},
+		Signature: make([]byte, crypto.NodeSignatureSize())}
+	if err := a.SendProposal(own); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, "the proposal of the node", func() bool { props, _, _ := hb.counts(); return props == 2 })
+	hb.mu.Lock()
+	got := hb.props[1].Block
+	hb.mu.Unlock()
+	if string(got) != "compact:\x07" {
+		t.Fatalf("the proposal carries %q", got)
+	}
+	if err := a.SendProposal(&bft.Proposal{Height: 5, Round: 3}); err == nil {
+		t.Fatal("a proposal without its compact form is sent")
+	}
+
+	// a batch of the node goes to its peers; a batch the node takes it does not relay, and one
+	// above max_tx_block it does not take
+	batch := &bft.Batch{Height: 5, Round: 2, Validator: 1, Seq: 1, Hashes: [][]byte{testHash(1)},
+		Signature: make([]byte, crypto.NodeSignatureSize())}
+	a.SendBatch(batch)
+	waitFor(t, "the batch of the node", func() bool { return hb.batchCount() == 1 })
+	big := &bft.Batch{Height: 5, Round: 2, Validator: 1, Seq: 2, Hashes: make([][]byte, 11),
+		Signature: make([]byte, crypto.NodeSignatureSize())}
+	for i := range big.Hashes {
+		big.Hashes[i] = testHash(byte(i))
+	}
+	for _, f := range [][]byte{AppendFrame(nil, FrameBatch, big.Marshal()), AppendFrame(nil, FrameBatch, batch.Marshal())} {
+		if _, err := client.Write(f); err != nil {
+			t.Fatal(err)
+		}
+	}
+	waitFor(t, "the batch taken", func() bool { return ha.batchCount() == 1 })
+	time.Sleep(100 * time.Millisecond)
+	if n := hb.batchCount(); n != 1 {
+		t.Fatalf("the peer took %d batches, want the 1 of the node", n)
+	}
+	if got := ha.batches[0]; !bytes.Equal(got.Marshal(), batch.Marshal()) {
+		t.Fatal("the batch taken differs")
+	}
 }
 
 // A peer connects again after its stream breaks, and SetPeers closes the streams of the peers
@@ -429,5 +510,64 @@ func TestRegister(t *testing.T) {
 	Register(nil)
 	if Current() != nil {
 		t.Fatal("the service is still registered")
+	}
+}
+
+func testHash(i byte) []byte {
+	h := make([]byte, bft.HashSize)
+	h[0] = i
+	return h
+}
+
+// A node fetches the bodies of the transactions it asks the proposer for, nil for one the
+// proposer does not have, and refuses an answer that is not of its request or longer than a block
+func TestTransactions(t *testing.T) {
+	h := newTestHandler()
+	h.txs = map[string][]byte{string(testHash(1)): []byte("one"), string(testHash(3)): []byte("three")}
+	addr, _ := testServer(t, NewService(DefaultConfig, h))
+	bodies, err := FetchTransactions(addr, 9, 3, bft.Hash{5}, [][]byte{testHash(3), testHash(2), testHash(1)}, 1000, time.Second)
+	if err != nil || len(bodies) != 3 || string(bodies[0]) != "three" || bodies[1] != nil || string(bodies[2]) != "one" {
+		t.Fatalf("3 transactions: %v, %q", err, bodies)
+	}
+	if len(h.asked) != 1 || h.asked[0] != 9 || h.rounds[0] != 3 {
+		t.Fatalf("asked %v in rounds %v", h.asked, h.rounds)
+	}
+	// the bodies together longer than the block
+	if _, err := FetchTransactions(addr, 9, 3, bft.Hash{5}, [][]byte{testHash(3), testHash(1)}, 7, time.Second); err == nil {
+		t.Fatal("bodies longer than the block are taken")
+	}
+	// a request for more hashes than a block holds is not answered
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	(&network.RequestType{Type: network.RequestTypeBftTransactions}).Write(conn)
+	req := binary.BigEndian.AppendUint64(nil, 9)
+	req = binary.BigEndian.AppendUint32(req, 3)
+	req = append(req, make([]byte, bft.HashSize)...)
+	conn.Write(binary.BigEndian.AppendUint32(req, 1000/bft.HashSize+1))
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	if n, err := conn.Read(make([]byte, 4)); err == nil {
+		t.Fatalf("a request of too many hashes is answered with %d bytes", n)
+	}
+	conn.Close()
+
+	// an answer of another count of transactions is refused
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer l.Close()
+	go func() {
+		conn, err := l.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		io.ReadFull(conn, make([]byte, 2+8+4+bft.HashSize+4+bft.HashSize))
+		conn.Write([]byte{0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0})
+	}()
+	if _, err := FetchTransactions(l.Addr().String(), 9, 3, bft.Hash{5}, [][]byte{testHash(1)}, 1000, time.Second); err == nil {
+		t.Fatal("an answer of 2 transactions for 1 is taken")
 	}
 }

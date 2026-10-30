@@ -305,10 +305,8 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
 			return errors.Wrap(err, "rollbacks hash")
 		}
 		b.rollbacksHash = rHash
-		if len(spentInfos) > 0 {
-			if err := sqldb.CreateSpentInfoBatches(tx, spentInfos); err != nil {
-				return errors.Wrap(err, "batches insert spent_info")
-			}
+		if err := sqldb.WriteBlockOutputs(tx, b.Header.BlockId, spentInfos); err != nil {
+			return err
 		}
 
 		if err := sqldb.CreateBatchesRollbackTx(tx, playTx.Rts); err != nil {

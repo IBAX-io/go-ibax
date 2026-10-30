@@ -20,6 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/faults"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/network/bftnet"
 	"github.com/IBAX-io/go-ibax/packages/service/bftmon"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
@@ -35,8 +36,13 @@ import (
 // of package bft at the height after the last block, gives it the messages the pool admitted and
 // the timeouts it scheduled, stores the sign state before it sends a message the machine signed,
 // and commits the block of a decision with its certificate. On such a chain BlockGenerator starts
-// the driver and generates no block itself. Every call of the machine runs under DBLock, as the
-// trial of a block and its commit use the database.
+// the driver and generates no block itself. DBLock guards only the execution and the writing of
+// a block (plan 5.9): the proposer's trial of its block (Value), a validator's trial of a proposal
+// (Valid) and the commit of a decision. The machine, the messages and the verification of
+// signatures run without it, so the synchronization writing a block holds up none of them.
+// Proposals travel with their blocks in the compact form (package block): the driver fills in the
+// block of a proposal it takes from its transaction queue and the proposer, apart from the
+// goroutine of run, and gives the proposal to the pool and the machine once it has the block.
 
 const (
 	// bftTick is how often the driver checks its peers, its height and the transactions
@@ -72,8 +78,12 @@ type bftDriver struct {
 
 	mu   sync.Mutex // guards pool, which the handler of the service also uses
 	pool *bft.Pool
+	// bodies is the blocks of the proposals the node made or filled in
+	bodies *bftBodies
+	// spec runs the batches of the streaming proposals of the others
+	spec *bftSpeculator
 
-	// m is used only by run, under DBLock
+	// m is used only by the goroutine of run
 	m *bft.Machine
 	// unsaved is a sign state the node could not store, and unsent the messages signed with it:
 	// the driver sends them once it stores the state
@@ -101,10 +111,23 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 		logger:    logger.WithFields(log.Fields{"consensus": "bft"}),
 		networkID: uint64(conf.Config.LocalConf.NetworkID),
 		events:    make(chan any, bftEvents),
+		bodies:    newBftBodies(),
 	}
 	cfg := bftnet.DefaultConfig
 	cfg.Rate = syspar.GetBftPeerMsgRate()
 	d.svc = bftnet.NewService(cfg, d)
+	d.spec = &bftSpeculator{
+		logger: d.logger,
+		begin:  speculate,
+		parse:  block.ParseTransactions,
+		raw:    transaction.TxPool.Raw,
+		fetch:  fetchStreamed,
+		idle: func() time.Duration {
+			propose, _, _ := syspar.GetBftTimeouts()
+			return propose
+		},
+	}
+	speculations = d.spec
 	d.store = func(s *bft.SignState) error {
 		return (&sqldb.BftSignState{Height: int64(s.Height), Data: s.Marshal()}).Save()
 	}
@@ -112,7 +135,7 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 	d.clockDrift = utils.ClockDrift
 	d.transmit = func(o bft.Output) {
 		if o.Proposal != nil {
-			d.svc.SendProposal(o.Proposal)
+			d.sendProposal(o.Proposal)
 		} else {
 			d.svc.SendVote(o.Vote)
 		}
@@ -122,12 +145,14 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 
 func (d *bftDriver) run() {
 	syspar.SetRunModel(consts.HonorNodeMode)
-	DBLock()
+	// the machine starts at the height after the last block under DBLock; the restored sign state
+	// runs without it, as the machine does, since it may try a block (Value, Valid), which takes it
+	lockWrites()
 	err := d.reset()
+	DBUnlock()
 	if err == nil {
 		err = d.restore()
 	}
-	DBUnlock()
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Fatal("starting the consensus")
 	}
@@ -207,7 +232,11 @@ func lastBlock() (uint64, error) {
 }
 
 func (d *bftDriver) newMachine(height uint64, set bft.Validators) {
-	d.m = bft.NewMachine(d.config(), bftApp{d.logger}, syspar.GetNodePrivKey(), syspar.GetNodePubKey(), d.networkID, height, set)
+	app := bftApp{logger: d.logger, bodies: d.bodies, spec: d.spec, stream: func(height uint64, round uint32) *bftStream {
+		return &bftStream{send: d.svc.SendBatch, key: syspar.GetNodePrivKey(), networkID: d.networkID,
+			height: height, round: round, validator: set.Proposer(height, round), kept: d.bodies.stream(height, round)}
+	}}
+	d.m = bft.NewMachine(d.config(), app, syspar.GetNodePrivKey(), syspar.GetNodePubKey(), d.networkID, height, set)
 }
 
 // reset starts the pool and the machine at the height after the last block
@@ -287,6 +316,7 @@ func (d *bftDriver) syncHeight() error {
 		d.pool = bft.NewPool(d.networkID, syspar.GetBftMaxFutureRounds(), last+1, set)
 	}
 	d.mu.Unlock()
+	d.bodies.prune(last)
 	d.newMachine(last+1, set)
 	d.logger.WithFields(log.Fields{"height": last + 1, "validators": set.N()}).Debug("moved to the height")
 	d.onHeight(from, last+1, set, now)
@@ -321,8 +351,6 @@ func (d *bftDriver) event(e any) {
 	if bftStopped() {
 		return
 	}
-	DBLock()
-	defer DBUnlock()
 	if err := d.syncHeight(); err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the height")
 		return
@@ -345,8 +373,6 @@ func (d *bftDriver) tick() {
 	now := time.Now()
 	d.checkOverdue(now)
 	d.checkClock(now)
-	DBLock()
-	defer DBUnlock()
 	if err := d.syncHeight(); err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the height")
 		return
@@ -386,9 +412,16 @@ func (d *bftDriver) hasWork() bool {
 func (d *bftDriver) send(m any) {
 	switch m := m.(type) {
 	case *bft.Proposal:
-		d.svc.SendProposal(m)
+		d.sendProposal(m)
 	case *bft.Vote:
 		d.svc.SendVote(m)
+	}
+}
+
+func (d *bftDriver) sendProposal(p *bft.Proposal) {
+	if err := d.svc.SendProposal(p); err != nil {
+		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": p.Height, "round": p.Round}).
+			Error("the compact form of a proposal")
 	}
 }
 
@@ -460,21 +493,33 @@ func (d *bftDriver) saveUnsaved() {
 // commit commits the block of a decision with its certificate, unless the synchronization
 // committed the height first; a commit that fails leaves the height to the synchronization
 func (d *bftDriver) commit(c *bft.Commit) {
-	last, err := lastBlock()
-	if err != nil {
-		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting the last block")
+	if !commitDecision(d.logger, c) {
 		return
-	}
-	if last < c.Height {
-		if _, err := block.Commit(c.Block, bft.CertificateOf(c)); err != nil {
-			d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": c.Height}).Error("committing the decision")
-			return
-		}
-		d.logger.WithFields(log.Fields{"height": c.Height, "round": c.Round, "hash": fmt.Sprintf("%x", c.Hash[:8])}).Info("committed")
 	}
 	if err := d.syncHeight(); err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the next height")
 	}
+}
+
+// commitDecision commits the block of the decision under DBLock if the last block is below its
+// height, and reports whether the node has the height committed
+func commitDecision(logger *log.Entry, c *bft.Commit) bool {
+	lockWrites()
+	defer DBUnlock()
+	last, err := lastBlock()
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting the last block")
+		return false
+	}
+	if last >= c.Height {
+		return true
+	}
+	if _, err := block.Commit(c.Block, bft.CertificateOf(c)); err != nil {
+		logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": c.Height}).Error("committing the decision")
+		return false
+	}
+	logger.WithFields(log.Fields{"height": c.Height, "round": c.Round, "hash": fmt.Sprintf("%x", c.Hash[:8])}).Info("committed")
+	return true
 }
 
 // post queues a message for the driver, and drops it if the queue is full
@@ -497,18 +542,110 @@ func countAdmission(a bft.Admission) bool {
 	return a.Kept()
 }
 
-// Proposal is bftnet.Handler.Proposal
+// Proposal is bftnet.Handler.Proposal: a proposal the pool would admit is new, and the driver
+// fills in its block apart; it gives the proposal to the pool and the machine once it has it
 func (d *bftDriver) Proposal(p *bft.Proposal) bool {
 	p.Received = faults.Now()
 	d.mu.Lock()
-	a := d.pool.AddProposal(p)
+	a, key := d.pool.Admissible(p)
 	d.mu.Unlock()
 	if !countAdmission(a) {
 		return false
 	}
+	k := bftProposalKey{p.Height, p.Round, p.Validator, p.Hash}
+	if !d.bodies.start(k) {
+		bftmon.Count(bftmon.MessagesDuplicate)
+		return false
+	}
+	go d.expand(p, key, k)
+	return true
+}
+
+// expand fills in the block of a proposal from the transaction queue and the proposer, and gives
+// the proposal to the pool and the machine
+func (d *bftDriver) expand(p *bft.Proposal, key []byte, k bftProposalKey) {
+	defer d.bodies.done(k)
+	compact := p.Block
+	start := time.Now()
+	if b := d.bodies.get(p.Hash); b != nil && bytes.Equal(b.compact, compact) {
+		p.Block = b.block
+	} else {
+		bin, bodies, err := block.Expand(compact, syspar.GetMaxBlockSize(), transaction.TxPool.Stored,
+			func(hashes [][]byte) ([][]byte, error) {
+				addr, ok := syspar.GetNodeTCPAddress(key)
+				if !ok {
+					return nil, fmt.Errorf("no address of validator %d", p.Validator)
+				}
+				return bftnet.FetchTransactions(addr, p.Height, p.Round, p.Hash, hashes, syspar.GetMaxBlockSize(), bftnet.DefaultConfig.Dial)
+			})
+		if err != nil {
+			bftmon.Count(bftmon.MessagesDropped)
+			d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": p.Height, "round": p.Round}).
+				Warn("filling in the block of a proposal")
+			return
+		}
+		hashes, _ := block.CompactHashes(compact)
+		d.bodies.put(p.Height, p.Hash, bin, compact, hashes, bodies)
+		p.Block = bin
+	}
+	metrics.BlockStage.WithLabelValues(metrics.KindTrial, metrics.StageExpand).Observe(metrics.Since(start))
+	d.mu.Lock()
+	a := d.pool.AddProposal(p)
+	d.mu.Unlock()
+	if !countAdmission(a) {
+		return
+	}
 	bftmon.Count(bftmon.MessagesAdmitted)
 	d.post(p)
-	return true
+}
+
+// Compact is bftnet.Handler.Compact
+func (d *bftDriver) Compact(p *bft.Proposal) ([]byte, error) {
+	return d.bodies.compact(p.Height, p.Hash, p.Block)
+}
+
+// Transactions is bftnet.Handler.Transactions: the bodies of the blocks the node made or filled
+// in, those it streamed for the zero hash, and those of its queue
+func (d *bftDriver) Transactions(height uint64, round uint32, hash bft.Hash, hashes [][]byte) [][]byte {
+	if hash == (bft.Hash{}) {
+		return d.bodies.streamedBodies(height, round, hashes, transaction.TxPool.Stored)
+	}
+	return d.bodies.transactions(hash, hashes, transaction.TxPool.Stored)
+}
+
+// Batch is bftnet.Handler.Batch: the speculation runs a batch the pool would admit
+func (d *bftDriver) Batch(b *bft.Batch) {
+	if bftStopped() {
+		return
+	}
+	d.mu.Lock()
+	key, ok := d.pool.AdmissibleBatch(b)
+	d.mu.Unlock()
+	if !ok {
+		bftmon.Count(bftmon.MessagesDropped)
+		return
+	}
+	d.spec.take(b, key)
+}
+
+// MaxBlockTxs is bftnet.Handler.MaxBlockTxs
+func (d *bftDriver) MaxBlockTxs() int { return syspar.GetMaxTxCount() }
+
+// fetchStreamed takes the bodies of the transactions of a batch from its proposer
+func fetchStreamed(b *bft.Batch, key []byte, hashes [][]byte) ([][]byte, error) {
+	addr, ok := syspar.GetNodeTCPAddress(key)
+	if !ok {
+		return nil, errNoProposer
+	}
+	bodies, err := bftnet.FetchTransactions(addr, b.Height, b.Round, bft.Hash{}, hashes, syspar.GetMaxBlockSize(), bftnet.DefaultConfig.Dial)
+	if err != nil {
+		return nil, err
+	}
+	// the proposer sends the bodies as a block stores them, compressed
+	for i, body := range bodies {
+		bodies[i] = types.DoZlibUnCompress(body)
+	}
+	return bodies, nil
 }
 
 // Vote is bftnet.Handler.Vote
@@ -549,47 +686,58 @@ func (d *bftDriver) Certificates(from uint64, count int) ([][]byte, error) {
 func (d *bftDriver) MaxBlockSize() int64 { return syspar.GetMaxBlockSize() }
 
 // maxTimeWait is how long a proposer waits at most for its clock to pass the time of the last
-// block: the time of a block of an honest proposer is not ahead of its clock, so the clock of the
-// next is past it within a second but for the drift of the clocks
-const maxTimeWait = time.Second
+// block
+const maxTimeWait = syspar.BftProposerWait
 
 // bftApp is the node the machine asks for a block and for its validity
 type bftApp struct {
 	logger *log.Entry
+	bodies *bftBodies
+	spec   *bftSpeculator
+	// stream is the stream of the trial of the block of the node at a height and a round
+	stream func(height uint64, round uint32) *bftStream
 }
 
 // Value generates the block of the proposer: its time is the clock in seconds and above the time
 // of the last block, so a chain has at most one block a second, and the proposer makes it within
-// max_block_generation_time from when it began (syspar.GetBftTimeliness). A proposer whose clock
-// is not yet past the time of the last block waits for it, up to maxTimeWait, out of that time:
-// else a chain that commits faster than a block a second takes its blocks ever further ahead of
-// the clocks, until the validators refuse them as untimely (design 4.4)
+// max_block_generation_time from when it reads its clock (syspar.GetBftTimeliness). A proposer
+// whose clock is not yet past the time of the last block waits for it, up to maxTimeWait, before
+// it reads its clock: else a chain that commits faster than a block a second takes its blocks ever
+// further ahead of the clocks, until the validators refuse them as untimely (design 4.4)
 func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
-	prev := &sqldb.InfoBlock{}
-	if _, err := prev.Get(); err != nil {
+	prev, err := lastBefore(height)
+	if err != nil {
 		return nil, bft.Hash{}, err
-	}
-	if uint64(prev.BlockID)+1 != height {
-		return nil, bft.Hash{}, fmt.Errorf("the last block %d is not before height %d", prev.BlockID, height)
 	}
 	start := time.Now()
 	if wait := time.Unix(prev.Time+1, 0).Sub(faults.Now()); wait > 0 {
 		time.Sleep(min(wait, maxTimeWait))
 	}
+	waited := time.Since(start)
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageWait).Observe(waited.Seconds())
+	// the block is made and tried under DBLock, on the last block as it is then
+	lockWrites()
+	defer DBUnlock()
+	if prev, err = lastBefore(height); err != nil {
+		return nil, bft.Hash{}, err
+	}
 	ts := max(faults.Now().Unix(), prev.Time+1)
+	collect := time.Now()
 	privateKey, publicKey := utils.GetNodeKeys()
 	dtx := DelayedTx{privateKey: privateKey, publicKey: publicKey, logger: a.logger, time: ts}
 	txs, err := dtx.RunForDelayBlockID(int64(height))
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
-	trs, classifyTxsMap, err := processTransactionsNew(a.logger, txs, time.Unix(ts, 0))
+	trs, parsed, err := processTransactionsNew(a.logger, txs, time.Unix(ts, 0))
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
 	if len(trs) == 0 {
 		return nil, bft.Hash{}, block.ErrEmptyBlock
 	}
+	collected := time.Since(collect)
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageCollect).Observe(collected.Seconds())
 	position, err := syspar.GetThisNodePosition()
 	if err != nil {
 		return nil, bft.Hash{}, err
@@ -613,21 +761,75 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
-	b, err := block.Propose(bin, classifyTxsMap, start)
+	trial := time.Now()
+	var stream *bftStream
+	var s block.Stream
+	if a.stream != nil {
+		stream = a.stream(height, round)
+		s = stream
+	}
+	b, err := block.Propose(bin, parsed, collect, s)
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
+	if stream != nil {
+		stream.flush()
+	}
+	tried := time.Since(trial)
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageTrial).Observe(tried.Seconds())
 	hash, err := bft.HashOf(b.Header.BlockHash)
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
+	total, behind := time.Since(collect), time.Since(time.Unix(ts, 0))
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageTotal).Observe(total.Seconds())
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageBehind).Observe(behind.Seconds())
+	if limit := time.Duration(syspar.GetMaxBlockGenerationTime()) * time.Millisecond; total > limit {
+		a.logger.WithFields(log.Fields{"type": consts.BlockError, "height": height, "round": round, "txs": len(b.TxFullData),
+			"wait": waited, "collect": collected, "trial": tried, "total": total, "behind": behind}).Warn("a proposal past max_block_generation_time")
+	}
+	compact, err := block.Compact(b.BinData, b.Transactions)
+	if err != nil {
+		return nil, bft.Hash{}, err
+	}
+	hashes, bodies := make([][]byte, len(b.Transactions)), make([][]byte, len(b.Transactions))
+	for i, t := range b.Transactions {
+		hashes[i], bodies[i] = t.Hash(), t.Compressed()
+	}
+	a.bodies.put(height, hash, b.BinData, compact, hashes, bodies)
 	a.logger.WithFields(log.Fields{"height": height, "round": round, "txs": len(b.TxFullData)}).Debug("proposing")
 	return b.BinData, hash, nil
 }
 
-// Valid is valid(v): block.Validate
+// lastBefore is the last block, which is the block before the height
+func lastBefore(height uint64) (*sqldb.InfoBlock, error) {
+	prev := &sqldb.InfoBlock{}
+	if _, err := prev.Get(); err != nil {
+		return nil, err
+	}
+	if uint64(prev.BlockID)+1 != height {
+		return nil, fmt.Errorf("the last block %d is not before height %d", prev.BlockID, height)
+	}
+	return prev, nil
+}
+
+// dbWrites is DBLock as a sync.Locker
+type dbWrites struct{}
+
+func (dbWrites) Lock()   { DBLock() }
+func (dbWrites) Unlock() { DBUnlock() }
+
+// Valid is valid(v): the speculation of the streaming proposal goes on with the block, or else
+// block.Validate tries it under DBLock
 func (a bftApp) Valid(height uint64, hash bft.Hash, bin []byte) bool {
-	err := block.Validate(bin, int64(height), hash)
+	start := time.Now()
+	defer func() {
+		metrics.BlockStage.WithLabelValues(metrics.KindTrial, metrics.StageValid).Observe(time.Since(start).Seconds())
+	}()
+	err := a.spec.finish(height, hash, bin)
+	if errors.Is(err, block.ErrSpeculation) {
+		err = block.Validate(bin, int64(height), hash, dbWrites{})
+	}
 	if err != nil {
 		a.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": height}).Warn("an invalid proposal")
 	}
@@ -636,7 +838,7 @@ func (a bftApp) Valid(height uint64, hash bft.Hash, bin []byte) bool {
 
 // Timely is block.Timely at the time the node took the proposal
 func (a bftApp) Timely(p *bft.Proposal) bool {
-	ahead, behind := syspar.GetBftTimeliness()
+	ahead, behind := syspar.GetBftTimeliness(p.Round)
 	err := block.Timely(p.Block, p.Received, ahead, behind)
 	if err != nil {
 		a.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": p.Height, "round": p.Round}).Warn("an untimely proposal")

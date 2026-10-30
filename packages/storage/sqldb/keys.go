@@ -63,7 +63,7 @@ func (m *Key) CapableAmount() decimal.Decimal {
 
 // Get is retrieving model from database
 func (m *Key) Get(db *DbTransaction, wallet int64) (bool, error) {
-	return isFound(GetDB(db).Where("id = ? and ecosystem = ?", wallet, m.ecosystem).First(m))
+	return db.firstKey(m, wallet)
 }
 
 func (m *Key) AccountKeyID() int64 {

@@ -1,0 +1,174 @@
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) IBAX. All rights reserved.
+ *  See LICENSE in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+package daemons
+
+import (
+	"sync"
+
+	"github.com/IBAX-io/go-ibax/packages/bft"
+	"github.com/IBAX-io/go-ibax/packages/block"
+	"github.com/IBAX-io/go-ibax/packages/transaction"
+)
+
+// bftBlock is a block of a proposal the node made or filled in: its compact form, the form the
+// node sends, and the bodies of its transactions by their hashes, which the node gives the
+// validators that do not have them
+type bftBlock struct {
+	height  uint64
+	block   []byte
+	compact []byte
+	bodies  map[string][]byte
+}
+
+// bftBodies is the blocks of the proposals of the height before the node's and above, by their
+// hashes: a validator a height behind fills in a proposal of its height from the others
+type bftBodies struct {
+	mu       sync.Mutex
+	blocks   map[bft.Hash]*bftBlock
+	inflight map[bftProposalKey]bool // the proposals whose blocks the node is filling in
+	// streamed is the transactions the node streamed as the proposer of a height and a round
+	streamed map[bftRound]*bftStreamed
+}
+
+// bftRound is a round of a height
+type bftRound struct {
+	height uint64
+	round  uint32
+}
+
+// bftProposalKey is a proposal the pool tells apart from the others
+type bftProposalKey struct {
+	height    uint64
+	round     uint32
+	validator uint32
+	hash      bft.Hash
+}
+
+func newBftBodies() *bftBodies {
+	return &bftBodies{blocks: map[bft.Hash]*bftBlock{}, inflight: map[bftProposalKey]bool{}, streamed: map[bftRound]*bftStreamed{}}
+}
+
+// put keeps a block whose transactions have the hashes and the bodies, in their order
+func (s *bftBodies) put(height uint64, hash bft.Hash, bin, compact []byte, hashes, bodies [][]byte) {
+	b := &bftBlock{height: height, block: bin, compact: compact, bodies: make(map[string][]byte, len(hashes))}
+	for i, h := range hashes {
+		b.bodies[string(h)] = bodies[i]
+	}
+	s.mu.Lock()
+	s.blocks[hash] = b
+	s.mu.Unlock()
+}
+
+func (s *bftBodies) get(hash bft.Hash) *bftBlock {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.blocks[hash]
+}
+
+// prune drops the blocks below the height and the proposals being filled in below it
+func (s *bftBodies) prune(height uint64) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for h, b := range s.blocks {
+		if b.height < height {
+			delete(s.blocks, h)
+		}
+	}
+	for k := range s.inflight {
+		if k.height < height {
+			delete(s.inflight, k)
+		}
+	}
+	for k := range s.streamed {
+		if k.height < height {
+			delete(s.streamed, k)
+		}
+	}
+}
+
+// stream is the transactions the node streams as the proposer of the height and the round
+func (s *bftBodies) stream(height uint64, round uint32) *bftStreamed {
+	t := &bftStreamed{txs: map[string]*transaction.Transaction{}}
+	s.mu.Lock()
+	s.streamed[bftRound{height, round}] = t
+	s.mu.Unlock()
+	return t
+}
+
+// streamedBodies is the bodies of the hashes the node streamed at the height and the round,
+// those it does not have taken from stored
+func (s *bftBodies) streamedBodies(height uint64, round uint32, hashes [][]byte, stored func([][]byte) [][]byte) [][]byte {
+	s.mu.Lock()
+	t := s.streamed[bftRound{height, round}]
+	s.mu.Unlock()
+	if t == nil {
+		return stored(hashes)
+	}
+	return fillBodies(hashes, t.body, stored)
+}
+
+// start reports whether the node starts filling in the block of the proposal: false if it is
+// filling it in already
+func (s *bftBodies) start(k bftProposalKey) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.inflight[k] {
+		return false
+	}
+	s.inflight[k] = true
+	return true
+}
+
+func (s *bftBodies) done(k bftProposalKey) {
+	s.mu.Lock()
+	delete(s.inflight, k)
+	s.mu.Unlock()
+}
+
+// compact is the compact form of the block of the hash at the height: a block the node neither
+// made nor filled in, one it restored, it keeps from then on
+func (s *bftBodies) compact(height uint64, hash bft.Hash, bin []byte) ([]byte, error) {
+	if b := s.get(hash); b != nil {
+		return b.compact, nil
+	}
+	compact, hashes, bodies, err := block.CompactBlock(bin)
+	if err != nil {
+		return nil, err
+	}
+	s.put(height, hash, bin, compact, hashes, bodies)
+	return compact, nil
+}
+
+// transactions is the bodies of the hashes in the block of the hash, those it does not have
+// taken from stored
+func (s *bftBodies) transactions(hash bft.Hash, hashes [][]byte, stored func([][]byte) [][]byte) [][]byte {
+	b := s.get(hash)
+	if b == nil {
+		return stored(hashes)
+	}
+	return fillBodies(hashes, func(h []byte) []byte { return b.bodies[string(h)] }, stored)
+}
+
+// fillBodies is the bodies of the hashes by body, those it does not have taken from stored
+func fillBodies(hashes [][]byte, body func([]byte) []byte, stored func([][]byte) [][]byte) [][]byte {
+	bodies := make([][]byte, len(hashes))
+	var missing []int
+	for i, h := range hashes {
+		if bodies[i] = body(h); bodies[i] == nil {
+			missing = append(missing, i)
+		}
+	}
+	if len(missing) > 0 {
+		rest := make([][]byte, len(missing))
+		for j, i := range missing {
+			rest[j] = hashes[i]
+		}
+		for j, body := range stored(rest) {
+			bodies[missing[j]] = body
+		}
+	}
+	return bodies
+}

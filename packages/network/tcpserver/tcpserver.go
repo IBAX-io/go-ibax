@@ -99,6 +99,15 @@ func HandleTCPRequest(rw net.Conn) {
 			}
 		}
 		return
+
+	case network.RequestTypeBftTransactions:
+		if s := bftnet.Current(); s != nil {
+			rw.SetDeadline(time.Now().Add(consts.ReadTimeout * time.Second))
+			if err = s.ServeTransactions(rw); err != nil {
+				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": rw.RemoteAddr()}).Debug("bft transactions request")
+			}
+		}
+		return
 	}
 
 	if err != nil || response == nil {

@@ -6,9 +6,12 @@
 package sqldb
 
 import (
+	"bytes"
+	"cmp"
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -48,37 +51,94 @@ func (si *SpentInfo) TableName() string {
 	return "spent_info"
 }
 
-// CreateSpentInfoBatches records the outputs of a block and the spending of earlier ones: an
-// output it spends takes the input that spends it
-func CreateSpentInfoBatches(dbTx *gorm.DB, spentInfos []SpentInfo) error {
-	if len(spentInfos) == 0 {
+// blockOutputWrites splits the outputs a block holds into the ones it made, which it inserts,
+// spent or not, and the earlier ones it spent, which it updates. The earlier outputs it read and
+// left unspent are not written.
+func blockOutputWrites(blockID int64, outputs []SpentInfo) (made, spent []SpentInfo) {
+	for _, o := range outputs {
+		switch {
+		case o.BlockId == blockID:
+			made = append(made, o)
+		case o.SpentBlock == blockID:
+			spent = append(spent, o)
+		}
+	}
+	// the rows of a block go into the primary key in its order, so that they fill its pages one
+	// after the other
+	order := func(a, b SpentInfo) int {
+		if c := bytes.Compare(a.OutputTxHash, b.OutputTxHash); c != 0 {
+			return c
+		}
+		if c := cmp.Compare(a.OutputKeyId, b.OutputKeyId); c != 0 {
+			return c
+		}
+		return cmp.Compare(a.OutputIndex, b.OutputIndex)
+	}
+	slices.SortFunc(made, order)
+	slices.SortFunc(spent, func(a, b SpentInfo) int {
+		if c := cmp.Compare(a.BlockId, b.BlockId); c != 0 {
+			return c
+		}
+		return order(a, b)
+	})
+	return made, spent
+}
+
+// WriteBlockOutputs records the outputs the block made and the spending of earlier ones: an output
+// it spends takes the input that spends it. An output is unspent while its spent_block is 0 (the
+// check spent_info_spent), so the update reads each output it spends by the primary key of the
+// unspent partition alone, and moves it to the partition of the range of the block.
+func WriteBlockOutputs(dbTx *gorm.DB, blockID int64, outputs []SpentInfo) error {
+	made, spent := blockOutputWrites(blockID, outputs)
+	if len(made) > 0 {
+		if err := dbTx.Exec(`INSERT INTO "spent_info" ("input_tx_hash", "input_index", "output_tx_hash",
+				"output_index", "output_key_id", "output_value", "ecosystem", "block_id", "type", "spent_block")
+			SELECT i, ii, o, oi, k, v::numeric, e, b, t, s
+			FROM unnest(?::bytea[], ?::integer[], ?::bytea[], ?::integer[], ?::bigint[], ?::text[], ?::bigint[],
+				?::bigint[], ?::bigint[], ?::bigint[]) AS u(i, ii, o, oi, k, v, e, b, t, s)`,
+			column(made, func(r SpentInfo) []byte { return r.InputTxHash }),
+			column(made, func(r SpentInfo) int32 { return r.InputIndex }),
+			column(made, func(r SpentInfo) []byte { return r.OutputTxHash }),
+			column(made, func(r SpentInfo) int32 { return r.OutputIndex }),
+			column(made, func(r SpentInfo) int64 { return r.OutputKeyId }),
+			column(made, func(r SpentInfo) string { return r.OutputValue }),
+			column(made, func(r SpentInfo) int64 { return r.Ecosystem }),
+			column(made, func(r SpentInfo) int64 { return r.BlockId }),
+			column(made, func(r SpentInfo) int64 { return int64(r.Type) }),
+			column(made, func(r SpentInfo) int64 { return r.SpentBlock })).Error; err != nil {
+			return fmt.Errorf("inserting the outputs of block %d: %w", blockID, err)
+		}
+	}
+	if len(spent) == 0 {
 		return nil
 	}
-	return dbTx.Exec(`INSERT INTO "spent_info" ("input_tx_hash", "input_index", "output_tx_hash", "output_index",
-			"output_key_id", "output_value", "ecosystem", "block_id", "type", "spent_block")
-		SELECT i, ii, o, oi, k, v::numeric, e, b, t, s
-		FROM unnest(?::bytea[], ?::integer[], ?::bytea[], ?::integer[], ?::bigint[], ?::text[], ?::bigint[], ?::bigint[],
-			?::bigint[], ?::bigint[]) AS u(i, ii, o, oi, k, v, e, b, t, s)
-		ON CONFLICT ("output_tx_hash", "output_key_id", "output_index") DO UPDATE SET
-			"input_tx_hash" = "excluded"."input_tx_hash", "input_index" = "excluded"."input_index",
-			"spent_block" = "excluded"."spent_block"`,
-		column(spentInfos, func(r SpentInfo) []byte { return r.InputTxHash }),
-		column(spentInfos, func(r SpentInfo) int32 { return r.InputIndex }),
-		column(spentInfos, func(r SpentInfo) []byte { return r.OutputTxHash }),
-		column(spentInfos, func(r SpentInfo) int32 { return r.OutputIndex }),
-		column(spentInfos, func(r SpentInfo) int64 { return r.OutputKeyId }),
-		column(spentInfos, func(r SpentInfo) string { return r.OutputValue }),
-		column(spentInfos, func(r SpentInfo) int64 { return r.Ecosystem }),
-		column(spentInfos, func(r SpentInfo) int64 { return r.BlockId }),
-		column(spentInfos, func(r SpentInfo) int64 { return int64(r.Type) }),
-		column(spentInfos, func(r SpentInfo) int64 { return r.SpentBlock })).Error
+	res := dbTx.Exec(`UPDATE "spent_info" SET "input_tx_hash" = u.i, "input_index" = u.ii, "spent_block" = u.s
+		FROM unnest(?::bigint[], ?::bytea[], ?::bigint[], ?::integer[], ?::bytea[], ?::integer[], ?::bigint[])
+			AS u(b, o, k, oi, i, ii, s)
+		WHERE "block_id" = u.b AND "output_tx_hash" = u.o AND "output_key_id" = u.k AND "output_index" = u.oi
+			AND "spent_block" = 0`,
+		column(spent, func(r SpentInfo) int64 { return r.BlockId }),
+		column(spent, func(r SpentInfo) []byte { return r.OutputTxHash }),
+		column(spent, func(r SpentInfo) int64 { return r.OutputKeyId }),
+		column(spent, func(r SpentInfo) int32 { return r.OutputIndex }),
+		column(spent, func(r SpentInfo) []byte { return r.InputTxHash }),
+		column(spent, func(r SpentInfo) int32 { return r.InputIndex }),
+		column(spent, func(r SpentInfo) int64 { return r.SpentBlock }))
+	if res.Error != nil {
+		return fmt.Errorf("spending the outputs of block %d: %w", blockID, res.Error)
+	}
+	if res.RowsAffected != int64(len(spent)) {
+		return fmt.Errorf("block %d spends %d outputs, %d of them are unspent in spent_info", blockID,
+			len(spent), res.RowsAffected)
+	}
+	return nil
 }
 
 func GetTxOutputsEcosystem(db *DbTransaction, ecosystem int64, keyIds []int64) ([]SpentInfo, error) {
 	query :=
 		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.ecosystem, si.block_id
 		FROM spent_info si
-		WHERE si.ecosystem = ? AND si.output_key_id IN ? AND si.input_tx_hash IS NULL
+		WHERE si.ecosystem = ? AND si.output_key_id IN ? AND si.spent_block = 0
 		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index `
 	var result []SpentInfo
 	err := GetDB(db).Raw(query, ecosystem, keyIds).Scan(&result).Error
@@ -92,7 +152,7 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	query :=
 		` SELECT si.output_tx_hash, si.output_index, si.output_key_id, si.output_value, si.ecosystem, si.block_id
 		FROM spent_info si
-		WHERE si.output_key_id IN ? AND si.input_tx_hash IS NULL
+		WHERE si.output_key_id IN ? AND si.spent_block = 0
 		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index `
 	var result []SpentInfo
 	err := GetDB(db).Raw(query, keyIds).Scan(&result).Error
@@ -102,10 +162,11 @@ func GetTxOutputs(db *DbTransaction, keyIds []int64) ([]SpentInfo, error) {
 	return result, nil
 }
 
-// RollbackOutputs undoes the outputs of the block: those it spent are unspent again, and those it
-// made are deleted
+// RollbackOutputs undoes the outputs of the block: those it spent are unspent again, moving back to
+// the unspent partition, and those it made are deleted. spent_block > 0 lets the generic plan of
+// the statement read the spent outputs by their partial index.
 func RollbackOutputs(blockID int64, db *DbTransaction, logger *log.Entry) error {
-	err := GetDB(db).Exec(`UPDATE spent_info SET input_tx_hash = null, input_index = 0, spent_block = 0 WHERE spent_block = ?`, blockID).Error
+	err := GetDB(db).Exec(`UPDATE spent_info SET input_tx_hash = null, input_index = 0, spent_block = 0 WHERE spent_block = ? AND spent_block > 0`, blockID).Error
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Errorf("updating input_tx_hash rollback outputs by blockID : %d", blockID)
 		return err
@@ -129,7 +190,7 @@ func GetBlockOutputs(dbTx *DbTransaction, blockID int64) ([]SpentInfo, error) {
 func (si *SpentInfo) GetBalance(db *DbTransaction, keyId, ecosystem int64) (decimal.Decimal, error) {
 	var amount decimal.Decimal
 	f, err := isFound(GetDB(db).Table(si.TableName()).Select("coalesce(sum(output_value),'0') amount").
-		Where("input_tx_hash is NULL AND output_key_id = ? AND ecosystem = ?", keyId, ecosystem).Take(&amount))
+		Where("spent_block = 0 AND output_key_id = ? AND ecosystem = ?", keyId, ecosystem).Take(&amount))
 	if err != nil {
 		return decimal.Zero, err
 	}
@@ -157,7 +218,7 @@ SELECT * FROM
         LEFT JOIN "1_keys"
           ON spent_info.ecosystem = "1_keys".ecosystem
             AND id = spent_info.output_key_id
-        WHERE input_tx_hash is null
+        WHERE spent_block = 0
             AND "spent_info".ecosystem = ?
             AND blocked = 0
             AND deleted = 0

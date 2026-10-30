@@ -178,13 +178,13 @@ func Ntp_Work(ctx context.Context) {
 	}
 }
 
-func generateProcessBlockNew(blockHeader, prevBlock *types.BlockHeader, trs [][]byte, classifyTxsMap map[int][]*transaction.Transaction) error {
+func generateProcessBlockNew(blockHeader, prevBlock *types.BlockHeader, trs [][]byte, txs []*transaction.Transaction) error {
 	blockBin, err := generateNextBlock(blockHeader, prevBlock, trs)
 	if err != nil {
 		return err
 	}
 	//err = block.InsertBlockWOForks(blockBin, true, false)
-	err = block.InsertBlockWOForksNew(blockBin, classifyTxsMap, true, false)
+	err = block.InsertBlockWOForksNew(blockBin, txs, true, false)
 	if err != nil {
 		log.WithError(err).Error("on inserting new block")
 		return err

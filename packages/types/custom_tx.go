@@ -20,6 +20,9 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
+// digitsRE is the form of an amount: decimal digits only
+var digitsRE = regexp.MustCompile(`^\d+$`)
+
 // Transaction types.
 const (
 	FirstBlockTxType = iota + 1
@@ -185,7 +188,7 @@ func (txSmart *SmartTransaction) Validate() error {
 	}
 
 	if txSmart.TransferSelf != nil {
-		if ok, _ := regexp.MatchString("^\\d+$", txSmart.TransferSelf.Value); !ok {
+		if !digitsRE.MatchString(txSmart.TransferSelf.Value) {
 			return errors.New("error TransferSelf Value must be a positive integer")
 		}
 		if value, err := decimal.NewFromString(txSmart.TransferSelf.Value); err != nil || value.LessThanOrEqual(decimal.Zero) {
@@ -197,7 +200,7 @@ func (txSmart *SmartTransaction) Validate() error {
 		if converter.IDToAddress(txSmart.UTXO.ToID) == `invalid` {
 			return errors.New("error UTXO ToID must be a valid address")
 		}
-		if ok, _ := regexp.MatchString("^\\d+$", txSmart.UTXO.Value); !ok {
+		if !digitsRE.MatchString(txSmart.UTXO.Value) {
 			return errors.New("error UTXO Value must be a positive integer")
 		}
 		if value, err := decimal.NewFromString(txSmart.UTXO.Value); err != nil || value.LessThanOrEqual(decimal.Zero) {

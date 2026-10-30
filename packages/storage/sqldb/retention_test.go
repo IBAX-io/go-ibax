@@ -7,8 +7,11 @@ package sqldb
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"strconv"
 	"testing"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -123,7 +126,8 @@ func TestRetain(t *testing.T) {
 	require.EqualValues(t, 1, countRows(t, db, `SELECT count(*) FROM pg_tables WHERE schemaname = ? AND tablename = ?`,
 		migration.PartsSchema, "rollback_tx_p2"))
 
-	// at 20000 range 0 leaves, block 1 stays, and the spent output of block 5 leaves
+	// at 20000 range 0 leaves, block 1 stays, and the spent output of block 5 leaves with range 0 of
+	// spent_info, not by a deletion of its rows; the unspent output stays
 	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
 	require.EqualValues(t, 5, countRows(t, db, blocks))
 	found, err := (&BlockChain{}).Get(1)
@@ -132,18 +136,21 @@ func TestRetain(t *testing.T) {
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "rollback_tx"`))
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "log_transactions"`))
 	require.EqualValues(t, 1, countRows(t, db, `SELECT count(*) FROM "spent_info"`))
-	// range 0 of the six tables, and range 1 of log_transactions, complete and older than MaxTxBack
-	require.EqualValues(t, 7, countRows(t, db, `SELECT count(*) FROM "retired_partitions" WHERE "boundary" = 20000`))
+	require.EqualValues(t, 1, countRows(t, db, `SELECT count(*) FROM "spent_info" WHERE "spent_block" = 0`))
+	require.EqualValues(t, 1, countRows(t, db, fmt.Sprintf(`SELECT count(*) FROM "%s"."spent_info_p0"`, migration.RetiredSchema)))
+	// range 0 of the seven tables, and range 1 of log_transactions, complete and older than MaxTxBack
+	require.EqualValues(t, 8, countRows(t, db, `SELECT count(*) FROM "retired_partitions" WHERE "boundary" = 20000`))
 	id, err := NewDbTransaction(GetDB(db)).GetNextID("rollback_tx")
 	require.NoError(t, err)
 	require.EqualValues(t, 4, id, "the ids of the rows that left are not given again")
-	require.NoError(t, CheckRollbackTo(db, 9999))
-	require.True(t, errors.Is(CheckRollbackTo(db, 9998), ErrBeyondRetention))
+	// nothing has been dropped yet: the rollback of block 20000 puts back what it took out
+	require.NoError(t, CheckRollbackTo(db, 5))
 
 	// the rollback of block 20000 puts range 0 back
 	require.NoError(t, RestoreRetired(db, 20000))
 	require.EqualValues(t, 7, countRows(t, db, blocks))
 	require.EqualValues(t, 3, countRows(t, db, `SELECT count(*) FROM "rollback_tx"`))
+	require.EqualValues(t, 2, countRows(t, db, `SELECT count(*) FROM "spent_info"`))
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "retired_partitions"`))
 
 	// at 30000 the ranges that left at 20000 are dropped, and the chain is not rolled back before
@@ -158,6 +165,40 @@ func TestRetain(t *testing.T) {
 	first, err := FirstKeptBlock()
 	require.NoError(t, err)
 	require.EqualValues(t, 20000, first, "range 1 is out of the window at 30000")
+}
+
+// retainTime is the time of the retention at the boundary 20000 with rows outputs spent in range 0
+func retainTime(t *testing.T, rows int64) time.Duration {
+	db := retentionDB(t)
+	conf.Config.Storage.Archive = false
+	T := int64(1) << 32
+	chainRows(t, db, T)
+	require.NoError(t, GetDB(db).Exec(`INSERT INTO "spent_info" (input_tx_hash, input_index, output_tx_hash,
+			output_index, output_key_id, output_value, ecosystem, block_id, type, spent_block)
+		SELECT sha256(int8send(-g)), 0, sha256(int8send(g)), 0, 1 + g % 100000, 1, 1, 2 + g % 9990, 0, 10 + g % 9990
+		FROM generate_series(1, ?) g`, rows).Error)
+	require.NoError(t, Retain(db, 10000, T, testWindow))
+	addBlocks(t, db, T, 20000, 29999)
+	start := time.Now()
+	require.NoError(t, Retain(db, 20000, T+consts.MaxTxBack+1, testWindow))
+	took := time.Since(start)
+	require.EqualValues(t, 1, countRows(t, db, `SELECT count(*) FROM "spent_info"`))
+	return took
+}
+
+// TestRetainSpentRows: the boundary takes the spent outputs of a range out in a time that does not
+// grow with their number. IBAX_TEST_SPENT_ROWS sets the number of the large range.
+func TestRetainSpentRows(t *testing.T) {
+	rows, _ := strconv.ParseInt(os.Getenv("IBAX_TEST_SPENT_ROWS"), 10, 64)
+	if rows == 0 {
+		t.Skip("IBAX_TEST_SPENT_ROWS sets no number of spent outputs")
+	}
+	// each in a transaction of its own, rolled back before the next takes the locks of the retention
+	var small, large time.Duration
+	t.Run("small", func(t *testing.T) { small = retainTime(t, 9999) })
+	t.Run("large", func(t *testing.T) { large = retainTime(t, rows) })
+	t.Logf("retention at the boundary: %v with 9999 spent outputs, %v with %d", small, large, rows)
+	require.Less(t, large-small, 100*time.Millisecond)
 }
 
 func TestRetainArchive(t *testing.T) {

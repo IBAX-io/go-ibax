@@ -8,12 +8,10 @@ package block
 import (
 	"bytes"
 	"crypto/rand"
-	"fmt"
 	mrand "math/rand/v2"
 	"testing"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
-	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
@@ -28,46 +26,15 @@ var blockSizeSuites = []struct{ cryptoer, hasher string }{
 }
 
 type testTx struct {
-	fullData  []byte
-	after     *types.AfterTx
-	rollbacks []*types.RollbackTx
+	fullData []byte
 }
 
 // newTestTx returns a transaction as play leaves it: its stored bytes, half random so that they
-// do not compress away, and the after_txs entries it adds
-func newTestTx(r *mrand.Rand, blockID int64) testTx {
+// do not compress away
+func newTestTx(r *mrand.Rand) testTx {
 	fullData := make([]byte, 200+r.IntN(8000))
 	rand.Read(fullData[:len(fullData)/2])
-	hash := crypto.DoubleHash(fullData)
-	tx := testTx{
-		fullData: fullData,
-		after: &types.AfterTx{
-			UsedTx: hash,
-			Lts: &types.LogTransaction{
-				Block:        blockID,
-				Hash:         hash,
-				Timestamp:    r.Int64(),
-				Address:      r.Int64(),
-				EcosystemId:  1,
-				ContractName: "@1TokensTransfer",
-				InvokeStatus: pbgo.TxInvokeStatusCode(r.IntN(3)),
-			},
-			UpdTxStatus: &pbgo.TxResult{Hash: hash, Result: "1", BlockId: blockID},
-		},
-	}
-	for range r.IntN(4) {
-		data := make([]byte, r.IntN(400))
-		rand.Read(data)
-		tx.rollbacks = append(tx.rollbacks, &types.RollbackTx{
-			BlockId:   blockID,
-			TxHash:    hash,
-			NameTable: "1_keys",
-			TableId:   fmt.Sprint(r.Int64()),
-			Data:      string(data),
-			DataHash:  crypto.Hash(data),
-		})
-	}
-	return tx
+	return testTx{fullData: fullData}
 }
 
 func testHeaders(r *mrand.Rand) (*types.BlockHeader, *types.BlockHeader) {
@@ -98,15 +65,12 @@ func marshalTestBlock(t *testing.T, key []byte, cur, prev *types.BlockHeader, tx
 	t.Helper()
 	header := *cur
 	header.RollbacksHash = crypto.Hash([]byte("rollbacks"))
-	afters := &types.AfterTxs{}
 	var fullData [][]byte
 	for _, tx := range txs {
-		afters.Txs = append(afters.Txs, tx.after)
-		afters.Rts = append(afters.Rts, tx.rollbacks...)
 		fullData = append(fullData, bytes.Clone(tx.fullData))
 	}
 	block := &types.BlockData{}
-	if err := block.Apply(types.WithCurHeader(&header), types.WithPrevHeader(prev), types.WithAfterTxs(afters),
+	if err := block.Apply(types.WithCurHeader(&header), types.WithPrevHeader(prev),
 		types.WithSysUpdate(sysUpdate), types.WithTxFullData(fullData)); err != nil {
 		t.Fatal(err)
 	}
@@ -134,8 +98,8 @@ func TestBlockSizeCountsEncodedBlock(t *testing.T) {
 				size := newBlockSize(1<<40, cur, prev)
 				var txs []testTx
 				for n := range 40 {
-					tx := newTestTx(r, cur.BlockId)
-					if !size.add(tx.fullData, tx.after, tx.rollbacks) {
+					tx := newTestTx(r)
+					if !size.add(types.DoZlibCompress(tx.fullData)) {
 						t.Fatal("add refused a transaction under the limit")
 					}
 					txs = append(txs, tx)
@@ -168,12 +132,12 @@ func TestBlockSizeFillsToLimit(t *testing.T) {
 			cur, prev := testHeaders(r)
 			var txs []testTx
 			for range 25 {
-				txs = append(txs, newTestTx(r, cur.BlockId))
+				txs = append(txs, newTestTx(r))
 			}
 			// The limit at which exactly the 25 transactions fit
 			count := newBlockSize(1<<40, cur, prev)
 			for _, tx := range txs {
-				count.add(tx.fullData, tx.after, tx.rollbacks)
+				count.add(types.DoZlibCompress(tx.fullData))
 			}
 			limit := count.size()
 
@@ -185,7 +149,7 @@ func TestBlockSizeFillsToLimit(t *testing.T) {
 				var fit []testTx
 				for _, tx := range txs {
 					before := *size
-					if !size.add(tx.fullData, tx.after, tx.rollbacks) {
+					if !size.add(types.DoZlibCompress(tx.fullData)) {
 						if *size != before {
 							t.Fatal("a refused transaction was counted")
 						}
@@ -213,9 +177,9 @@ func TestBlockSizeRefusesOversizedTransaction(t *testing.T) {
 	r := mrand.New(mrand.NewPCG(5, 6))
 	cur, prev := testHeaders(r)
 	empty := newBlockSize(1<<40, cur, prev).size()
-	tx := newTestTx(r, cur.BlockId)
+	tx := newTestTx(r)
 	size := newBlockSize(empty+int64(len(tx.fullData))/2, cur, prev)
-	if size.add(tx.fullData, tx.after, tx.rollbacks) {
+	if size.add(types.DoZlibCompress(tx.fullData)) {
 		t.Fatal("a transaction larger than the room in an empty block was added")
 	}
 }

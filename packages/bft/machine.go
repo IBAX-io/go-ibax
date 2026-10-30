@@ -395,6 +395,8 @@ func (m *Machine) startRound(round uint32) {
 			p = &Proposal{Block: m.validValue.Block, Hash: m.validValue.Hash} // L16
 		} else if block, hash, err := m.app.Value(m.height, m.round); err == nil && hash != Nil { // L18
 			p = &Proposal{Block: block, Hash: hash}
+			// the block of the proposer is valid as Value made it: the node tries it once
+			m.valid[hash] = true
 		}
 		if p != nil {
 			// L19: broadcast <PROPOSAL, h_p, round_p, proposal, validRound_p>

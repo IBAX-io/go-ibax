@@ -92,6 +92,8 @@ func (f *FuelCategory) Detail() (string, any) {
 	return f.FuelType.String(), f.FeesInfo()
 }
 
+// FeesInfo is the detail of the fees of the category. It is a part of PaymentInfo.Detail, which
+// takes the whole detail through JSON once.
 func (f *FuelCategory) FeesInfo() any {
 	detail := types.NewMap()
 	detail.Set("decimal", f.Decimal)
@@ -99,9 +101,7 @@ func (f *FuelCategory) FeesInfo() any {
 	detail.Set("conversion_rate", f.ConversionRate)
 	detail.Set("flag", f.Flag)
 	detail.Set("arithmetic", f.Arithmetic.String())
-	b, _ := JSONEncode(detail)
-	s, _ := JSONDecode(b)
-	return s
+	return detail
 }
 
 func (f *FuelCategory) Fees() decimal.Decimal {
@@ -123,6 +123,8 @@ func (c Combustion) Fees(sum decimal.Decimal) decimal.Decimal {
 	return sum.Mul(decimal.NewFromInt(c.Percent)).Div(decimal.New(100, 0)).Floor()
 }
 
+// Detail is the detail of the combustion of sum. It is a part of PaymentInfo.DetailCombustion,
+// which takes the whole detail through JSON once.
 func (c Combustion) Detail(sum decimal.Decimal) any {
 	detail := types.NewMap()
 	combustion := c.Fees(sum)
@@ -131,9 +133,7 @@ func (c Combustion) Detail(sum decimal.Decimal) any {
 	detail.Set("before", sum)
 	detail.Set("value", combustion)
 	detail.Set("after", sum.Sub(combustion))
-	b, _ := JSONEncode(detail)
-	s, _ := JSONDecode(b)
-	return s
+	return detail
 }
 
 func (pay *PaymentInfo) PushFuelCategories(fes ...FuelCategory) {
@@ -170,6 +170,9 @@ func (pay *PaymentInfo) GetEstimate() decimal.Decimal {
 	return money
 }
 
+// Detail is the detail of the payment as the history keeps it: its JSON, decoded, so its maps have
+// their keys in order and its numbers are those JSON gives. Taking a value through JSON twice gives
+// what taking it once does, so the parts of the detail go through it with the whole.
 func (pay *PaymentInfo) Detail() any {
 	detail := types.NewMap()
 	for i := 0; i < len(pay.FuelCategories); i++ {
@@ -209,15 +212,9 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	if err := sc.hasExistKeyID(eco, f.FromID); err != nil {
 		return errors.Wrapf(err, "from ID %d does not exist", f.FromID)
 	}
-	if err := sc.hasExistKeyID(eco, f.ToID); err != nil {
-		return errors.Wrapf(err, "to ID %d does not exist", f.ToID)
-	}
-	if err := sc.hasExistKeyID(eco, f.TaxesID); err != nil {
-		return errors.Wrapf(err, "taxes ID %d does not exist", f.TaxesID)
-	}
 	if found, err := f.PayWallet.SetTablePrefix(eco).Get(sc.DbTransaction, f.FromID); err != nil || !found {
 		if err != nil {
-			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting wallet")
+			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting wallet")
 			return err
 		}
 		err = fmt.Errorf(eEcoKeyNotFound, converter.AddressToString(f.FromID), eco)
@@ -237,7 +234,7 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 		sp := &sqldb.Ecosystem{}
 		_, err := sp.Get(sc.DbTransaction, eco)
 		if err != nil {
-			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting ecosystem")
+			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting ecosystem")
 			return err
 		}
 		difference, _ := converter.FormatMoney(estimate.Sub(amount).String(), int32(sp.Digits))
@@ -270,6 +267,8 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 	placeholder := `taxes for execution of %s contract`
 	comment := fmt.Sprintf(placeholder, sc.TxContract.Name)
 	status := pbgo.TxInvokeStatusCode_SUCCESS
+	// a penalty runs after the savepoint of the transaction took back what it paid
+	sc.FeeCredits = sc.FeeCredits[:0]
 	if errNeedPay {
 		comment = "(error)" + comment
 		status = pbgo.TxInvokeStatusCode_PENALTY
@@ -321,6 +320,10 @@ func (sc *SmartContract) accountBalanceSingle(eco, id int64) (decimal.Decimal, e
 	return balance, nil
 }
 
+// payTaxes debits the payer with the sum, and leaves the credit of the recipient to the settlement of
+// the block (FeeSettlement), so that no transaction writes the rows of the accounts that every
+// transaction pays. The history row of the payment has the balance of the payer; the settlement
+// row of the block has the balance of the recipient.
 func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasScenesType, comment string, status pbgo.TxInvokeStatusCode) error {
 	if sum.IsZero() {
 		return nil
@@ -334,21 +337,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 	case GasScenesType_Taxes:
 		toID = pay.TaxesID
 	}
-	if err := sc.hasExistKeyID(pay.TokenEco, toID); err != nil {
-		return err
-	}
-	var (
-		values *types.Map
-		fromIDBalance,
-		toIDBalance decimal.Decimal
-		err error
-	)
-	if pay.FromID == toID {
-		if fromIDBalance, err = sc.accountBalanceSingle(pay.TokenEco, pay.FromID); err != nil {
-			return err
-		}
-		toIDBalance = fromIDBalance
-	} else {
+	if pay.FromID != toID {
 		if _, _, err := sc.updateWhere(
 			[]string{`-amount`}, []any{sum}, "1_keys",
 			types.LoadMap(map[string]any{
@@ -357,36 +346,28 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 			})); err != nil {
 			return err
 		}
-		if _, _, err := sc.updateWhere(
-			[]string{"+amount"}, []any{sum}, "1_keys",
-			types.LoadMap(map[string]any{
-				"id":        toID,
-				"ecosystem": pay.TokenEco,
-			})); err != nil {
-			return err
-		}
-		if fromIDBalance, err = sc.accountBalanceSingle(pay.TokenEco, pay.FromID); err != nil {
-			return err
-		}
-		if toIDBalance, err = sc.accountBalanceSingle(pay.TokenEco, toID); err != nil {
-			return err
-		}
+		sc.FeeCredits = append(sc.FeeCredits, FeeCredit{Ecosystem: pay.TokenEco, Recipient: toID, Amount: sum})
 	}
-
-	values = types.LoadMap(map[string]any{
-		"sender_id":         pay.FromID,
-		"sender_balance":    fromIDBalance,
-		"recipient_id":      toID,
-		"recipient_balance": toIDBalance,
-		"amount":            sum,
-		"comment":           comment,
-		"status":            int64(status),
-		"block_id":          sc.BlockHeader.BlockId,
-		"txhash":            sc.Hash,
-		"ecosystem":         pay.TokenEco,
-		"type":              int64(t),
-		"created_at":        sc.Timestamp,
+	fromIDBalance, err := sc.accountBalanceSingle(pay.TokenEco, pay.FromID)
+	if err != nil {
+		return err
+	}
+	values := types.LoadMap(map[string]any{
+		"sender_id":      pay.FromID,
+		"sender_balance": fromIDBalance,
+		"recipient_id":   toID,
+		"amount":         sum,
+		"comment":        comment,
+		"status":         int64(status),
+		"block_id":       sc.BlockHeader.BlockId,
+		"txhash":         sc.Hash,
+		"ecosystem":      pay.TokenEco,
+		"type":           int64(t),
+		"created_at":     sc.Timestamp,
 	})
+	if pay.FromID == toID {
+		values.Set("recipient_balance", fromIDBalance)
+	}
 	if t == GasScenesType_Reward || t == GasScenesType_Direct {
 		values.Set("value_detail", pay.Detail())
 	}
@@ -394,11 +375,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 		values.Set("value_detail", pay.DetailCombustion())
 	}
 	_, _, err = sc.insert(values.Keys(), values.Values(), `1_history`)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (sc *SmartContract) needPayment() bool {

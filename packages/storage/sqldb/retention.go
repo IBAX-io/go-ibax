@@ -76,21 +76,6 @@ func Retain(dbTx *DbTransaction, blockID, blockTime, historyBlocks int64) error 
 			}
 		}
 	}
-	// a spent output leaves with the block that spent it, to the archive schema on an archive node;
-	// an unspent one stays
-	cut := blockID - historyBlocks
-	del := `DELETE FROM "spent_info" WHERE "spent_block" BETWEEN 1 AND ?`
-	if conf.Config.Storage.Archive {
-		del = fmt.Sprintf(`WITH "spent" AS (%s RETURNING *) INSERT INTO "%s"."spent_info" SELECT * FROM "spent"`,
-			del, migration.ArchiveSchema)
-	}
-	res := db.Exec(del, cut-1)
-	if res.Error != nil {
-		return fmt.Errorf("deleting the spent outputs: %w", res.Error)
-	}
-	if res.RowsAffected > 0 {
-		return raiseRollbackFloor(dbTx, cut-1)
-	}
 	return nil
 }
 
@@ -301,11 +286,6 @@ func (tr *DbTransaction) idFloor(table string) (int64, error) {
 	})
 }
 
-// archivedSpentInfo is the table of the archive schema of the spent outputs out of the window
-var archivedSpentInfo = fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%[1]s"."spent_info" (LIKE "spent_info" INCLUDING DEFAULTS INCLUDING INDEXES);
-	CREATE OR REPLACE VIEW "%[1]s"."spent_info_all" AS SELECT * FROM "spent_info" UNION ALL SELECT * FROM "%[1]s"."spent_info";`,
-	migration.ArchiveSchema)
-
 // archiveTable is the table of the archive schema of the partitions out of the window of a table
 func archiveTable(t migration.PartitionedTable) string {
 	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%[1]s"."%[2]s" (LIKE "%[2]s" INCLUDING DEFAULTS) PARTITION BY RANGE ("%[3]s");
@@ -365,9 +345,6 @@ func PrepareArchive() error {
 			return fmt.Errorf("preparing the archive of %s: %w", t.Name, err)
 		}
 	}
-	if err := DBConn.Exec(archivedSpentInfo).Error; err != nil {
-		return fmt.Errorf("preparing the archive of spent_info: %w", err)
-	}
 	return nil
 }
 
@@ -378,7 +355,7 @@ func archived(table string) *gorm.DB {
 
 // ArchivedTable is the table, or on an archive node the view, that the queries of the API and of
 // the synchronization of other nodes read for the rows of the table, wherever they are: a
-// partitioned table or spent_info
+// partitioned table
 func ArchivedTable(table string) string {
 	if conf.Config.Storage.Archive {
 		return fmt.Sprintf(`"%s"."%s_all"`, migration.ArchiveSchema, table)

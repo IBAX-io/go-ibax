@@ -138,7 +138,7 @@ func ExecContract(rt *RunTime, name, txs string, params ...any) (any, error) {
 			_, err = rtemp.Run(block.GetCodeBlock(), nil, rt.extend)
 			rt.cost = rtemp.cost
 			if err != nil {
-				logger.WithFields(log.Fields{"error": err, "method_name": method, "type": consts.ContractError}).Error("executing contract method")
+				logger.WithFields(log.Fields{"error": err, "method_name": method, "type": consts.ContractError}).Log(errLevel(err), "executing contract method")
 				break
 			}
 		}
