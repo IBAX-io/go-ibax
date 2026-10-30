@@ -191,8 +191,26 @@ func poolLimits(t *testing.T, count int, bytes int64, perKey, reserve int) {
 
 func requirePlaced(t *testing.T, p *Pool, tx *Transaction, rate Rate, now int64, want error) {
 	t.Helper()
-	if err := p.place(tx, rate, now, nil); err != want {
+	if err := p.take(tx, rate, now, nil); err != want {
 		t.Fatalf("%s: %v, want %v", tx.Hash(), err, want)
+	}
+	requireStatus(t, p, tx, want)
+}
+
+// requireStatus checks the status of a transaction take placed or refused with want: pending, or
+// the refusal but for a full pool
+func requireStatus(t *testing.T, p *Pool, tx *Transaction, want error) {
+	t.Helper()
+	pending, msg, _ := p.Status(tx.Hash())
+	switch {
+	case want == nil && !pending:
+		t.Fatalf("%s: not pending", tx.Hash())
+	case want != nil && pending:
+		t.Fatalf("%s: pending, refused with %v", tx.Hash(), want)
+	case want != nil && want != ErrPoolFull && msg != want.Error():
+		t.Fatalf("%s: status %q, want %q", tx.Hash(), msg, want)
+	case want == ErrPoolFull && msg != "":
+		t.Fatalf("%s: status %q of a full pool", tx.Hash(), msg)
 	}
 }
 

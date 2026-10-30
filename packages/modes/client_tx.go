@@ -23,7 +23,7 @@ type blockchainTxPreprocessor struct{}
 
 // ProcessClientTxBatches verifies the transactions of a client in parallel and puts them in the
 // pool. A transaction that does not parse or verify refuses them all, as does a pool with no room;
-// one the pool finds bad otherwise, its status answers.
+// one the pool finds bad or refuses otherwise, its status answers.
 func (p blockchainTxPreprocessor) ProcessClientTxBatches(txDatas [][]byte, key int64, le *log.Entry) ([]string, error) {
 	rtxs := make([]*transaction.Transaction, 0, len(txDatas))
 	for _, txData := range txDatas {

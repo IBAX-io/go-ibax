@@ -84,11 +84,15 @@ func utxoTx(hash string, key, eco int64) *Transaction {
 func admitFunded(t *testing.T, p *Pool, l ledger, tx *Transaction, want error) {
 	t.Helper()
 	f, err := fundsOf(tx, l)
-	if err == nil {
-		err = p.place(tx, RateClient, time.Now().Unix(), f)
+	taken := err == nil
+	if taken {
+		err = p.take(tx, RateClient, time.Now().Unix(), f)
 	}
 	if !errors.Is(err, want) {
 		t.Fatalf("%s: %v, want %v", tx.Hash(), err, want)
+	}
+	if taken {
+		requireStatus(t, p, tx, want)
 	}
 }
 

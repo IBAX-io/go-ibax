@@ -188,7 +188,7 @@ func VerifyAll(txs []*Transaction) []error {
 
 // Admit puts the transactions in the pool once Check takes them, each error at the index of its
 // transaction. A transaction the pool holds is taken again as it is. A transaction Check refuses
-// is bad; place refuses the others it has no room or no funds for.
+// is bad; take refuses the others it has no room or no funds for.
 func (p *Pool) Admit(txs []*Transaction, rate Rate) []error {
 	errs := make([]error, len(txs))
 	fresh := make([]*Transaction, 0, len(txs))
@@ -228,10 +228,20 @@ func (p *Pool) Admit(txs []*Transaction, rate Rate) []error {
 		if _, ok := p.entries[h]; ok {
 			continue
 		}
-		errs[i] = p.place(t, rate, now, fund[j])
+		errs[i] = p.take(t, rate, now, fund[j])
 	}
 	p.gauge()
 	return errs
+}
+
+// take places a transaction. The status of one it refuses is the refusal, until the pool takes
+// it, but for a full pool, which the client is answered with.
+func (p *Pool) take(t *Transaction, rate Rate, now int64, f *funds) error {
+	err := p.place(t, rate, now, f)
+	if err != nil && !errors.Is(err, ErrPoolFull) {
+		p.setBad(string(t.Hash()), err.Error())
+	}
+	return err
 }
 
 // place puts a transaction in the pool, or refuses it. A transaction of the node or an evidence of
