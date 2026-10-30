@@ -6,6 +6,7 @@
 package transaction
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -22,6 +23,7 @@ func coins(n int64) string { return decimal.New(n, 12).String() }
 // rest, 624,750,000, not issued
 func supplyTestBlock() *types.FirstBlock {
 	crypto.InitHashAlgo(crypto.HashAlgo_KECCAK256.String())
+	crypto.InitAsymAlgo(crypto.AsymAlgo_ECC_P256.String())
 	parts := []struct {
 		name   string
 		amount int64
@@ -31,7 +33,8 @@ func supplyTestBlock() *types.FirstBlock {
 	}
 	fb := &types.FirstBlock{KeyID: crypto.AddressSeed("founder"), Supply: coins(2100000000)}
 	for _, p := range parts {
-		fb.Allocations = append(fb.Allocations, types.Allocation{Name: p.name, KeyID: crypto.AddressSeed(p.name), Amount: coins(p.amount)})
+		fb.Allocations = append(fb.Allocations, types.Allocation{Name: p.name, KeyID: crypto.AddressSeed(p.name), Amount: coins(p.amount),
+			Conditions: "@1" + strings.ToUpper(p.name[:1]) + p.name[1:] + "Release"})
 	}
 	return fb
 }
@@ -54,7 +57,7 @@ func TestFirstBlockSupply(t *testing.T) {
 	}
 
 	// the allocations may take the whole supply, to the smallest unit
-	fb.Allocations = append(fb.Allocations, types.Allocation{Name: "rest", KeyID: crypto.AddressSeed("rest"), Amount: coins(624750000)})
+	fb.Allocations = append(fb.Allocations, types.Allocation{Name: "rest", KeyID: crypto.AddressSeed("rest"), Amount: coins(624750000), Conditions: "@1RestRelease"})
 	if _, _, err := FirstBlockSupply(fb); err != nil {
 		t.Fatalf("the whole supply: %v", err)
 	}
@@ -66,6 +69,7 @@ func TestFirstBlockSupply(t *testing.T) {
 
 func TestFirstBlockSupplyDefault(t *testing.T) {
 	crypto.InitHashAlgo(crypto.HashAlgo_KECCAK256.String())
+	crypto.InitAsymAlgo(crypto.AsymAlgo_ECC_P256.String())
 	fb := &types.FirstBlock{KeyID: crypto.AddressSeed("founder")}
 	supply, allocs, err := FirstBlockSupply(fb)
 	if err != nil {
@@ -77,6 +81,37 @@ func TestFirstBlockSupplyDefault(t *testing.T) {
 	}
 	if len(fb.Allocations) != 0 {
 		t.Fatal("the default changed the first block")
+	}
+}
+
+// The allocations of a first block of the BFT consensus credit no account of a validator, of its
+// node key or of its operator, and the founder's only without conditions
+func TestFirstBlockSupplyKeyedAccounts(t *testing.T) {
+	_, node, err := crypto.GenAccountKey(crypto.AsymAlgo_ECC_P256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	operator := crypto.AddressSeed("operator")
+	bft := func() *types.FirstBlock {
+		fb := supplyTestBlock()
+		fb.BftConsensus = 1
+		fb.HonorNodes = fmt.Sprintf(`[{"tcp_address":"127.0.0.1:7078","api_address":"http://127.0.0.1:7079","public_key":"%x","key_id":"%d"}]`, node.Raw, operator)
+		return fb
+	}
+	if _, _, err := FirstBlockSupply(bft()); err != nil {
+		t.Fatal(err)
+	}
+	for name, id := range map[string]int64{"node": crypto.NodeAccountKey(node.Raw).Address(), "operator": operator} {
+		fb := bft()
+		fb.Allocations[0].KeyID = id
+		if _, _, err := FirstBlockSupply(fb); err == nil || !strings.Contains(err.Error(), "of a key of a node or an operator") {
+			t.Errorf("an allocation to the account of the %s: %v", name, err)
+		}
+	}
+	fb := bft()
+	fb.Allocations[5].KeyID, fb.Allocations[5].Conditions = fb.KeyID, ""
+	if _, _, err := FirstBlockSupply(fb); err != nil {
+		t.Errorf("an allocation to the founder: %v", err)
 	}
 }
 
@@ -104,6 +139,21 @@ func TestFirstBlockSupplyRefuses(t *testing.T) {
 		{"amount of a fraction", func(fb *types.FirstBlock) { fb.Allocations[0].Amount = "1.5" }, "allocation migration"},
 		{"empty amount", func(fb *types.FirstBlock) { fb.Allocations[0].Amount = "" }, "allocation migration"},
 		{"more than the supply", func(fb *types.FirstBlock) { fb.Supply = coins(1475249999) }, "more than the supply"},
+		// an account without a key is only of the contracts its conditions name
+		{"no conditions", func(fb *types.FirstBlock) { fb.Allocations[0].Conditions = "" }, "an account without a key is only of contracts"},
+		{"conditions without @1", func(fb *types.FirstBlock) { fb.Allocations[0].Conditions = "MigrationClaim" }, "the conditions"},
+		{"conditions of another ecosystem", func(fb *types.FirstBlock) { fb.Allocations[0].Conditions = "@2MigrationClaim" }, "the conditions"},
+		{"conditions with a space", func(fb *types.FirstBlock) { fb.Allocations[0].Conditions = "@1A, @1B" }, "the conditions"},
+		{"conditions of an empty name", func(fb *types.FirstBlock) { fb.Allocations[0].Conditions = "@1A,," }, "the conditions"},
+		{"conditions of 17 contracts", func(fb *types.FirstBlock) {
+			fb.Allocations[0].Conditions = "@1A" + strings.Repeat(",@1A", 16)
+		}, "the conditions"},
+		{"conditions of the founder", func(fb *types.FirstBlock) {
+			fb.Allocations[5].KeyID, fb.Allocations[5].Conditions = fb.KeyID, "@1FoundationRelease"
+		}, "the founder's account has a key"},
+		{"the account of the node", func(fb *types.FirstBlock) {
+			fb.Allocations[0].KeyID = crypto.NodeAccountKey(fb.NodePublicKey).Address()
+		}, "of a key of a node or an operator"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

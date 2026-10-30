@@ -6,12 +6,16 @@
 package transaction
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/shopspring/decimal"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -22,6 +26,27 @@ import (
 const FounderAllocation = "founder"
 
 var allocationName = regexp.MustCompile(`^[a-z][a-z0-9_]{0,63}$`)
+
+// allocationConditions are the conditions of an account of an allocation: contracts of ecosystem
+// 1, each with its @1, separated by commas without spaces, so that the first block has a single
+// form of them
+var allocationContract = regexp.MustCompile(`^@1[A-Za-z][A-Za-z0-9_]{0,99}$`)
+
+// maxAllocationContracts is the number of contracts the conditions of an allocation name at most
+const maxAllocationContracts = 16
+
+func allocationConditions(conditions string) bool {
+	names := strings.Split(conditions, ",")
+	if len(names) > maxAllocationContracts {
+		return false
+	}
+	for _, name := range names {
+		if !allocationContract.MatchString(name) {
+			return false
+		}
+	}
+	return true
+}
 
 // amountDigits is the precision of the amounts of the accounts, decimal(30)
 const amountDigits = 30
@@ -40,7 +65,9 @@ func amountOf(s string) (decimal.Decimal, error) {
 // FirstBlockSupply is the supply of the coin of ecosystem 1 the first block fixes and the
 // allocations it credits, checked: the supply is a positive amount; each allocation has a name
 // of its own, of lower case letters, digits and _, and credits a positive amount to an account
-// of its own; and they sum to at most the supply, the rest of which is not issued. A first block
+// of its own: the founder's, without conditions, or one of contracts, which the conditions name
+// and no key of the first block has, neither of a node nor of an operator; and they sum to at
+// most the supply, the rest of which is not issued. A first block
 // that names no supply has consts.TotalSupply, and one that allocates nothing credits
 // consts.FounderAmount to the founder.
 func FirstBlockSupply(data *types.FirstBlock) (decimal.Decimal, []types.Allocation, error) {
@@ -55,6 +82,10 @@ func FirstBlockSupply(data *types.FirstBlock) (decimal.Decimal, []types.Allocati
 	if len(allocs) == 0 {
 		allocs = []types.Allocation{{Name: FounderAllocation, KeyID: data.KeyID,
 			Amount: decimal.New(consts.FounderAmount, int32(consts.MoneyDigits)).String()}}
+	}
+	keyed, err := firstBlockKeys(data)
+	if err != nil {
+		return decimal.Decimal{}, nil, err
 	}
 	names, keys := map[string]bool{}, map[int64]bool{}
 	sum := decimal.Zero
@@ -73,6 +104,15 @@ func FirstBlockSupply(data *types.FirstBlock) (decimal.Decimal, []types.Allocati
 			return decimal.Decimal{}, nil, fmt.Errorf("allocation %s: another credits account %s", a.Name, converter.AddressToString(a.KeyID))
 		}
 		keys[a.KeyID] = true
+		switch {
+		case a.KeyID == data.KeyID && a.Conditions != "":
+			return decimal.Decimal{}, nil, fmt.Errorf("allocation %s: the founder's account has a key, and no conditions", a.Name)
+		case a.KeyID == data.KeyID:
+		case keyed[a.KeyID]:
+			return decimal.Decimal{}, nil, fmt.Errorf("allocation %s: account %s is of a key of a node or an operator", a.Name, converter.AddressToString(a.KeyID))
+		case !allocationConditions(a.Conditions):
+			return decimal.Decimal{}, nil, fmt.Errorf("allocation %s: the conditions %q are not 1 to 16 contracts @1Name, separated by commas: an account without a key is only of contracts", a.Name, a.Conditions)
+		}
 		amount, err := amountOf(a.Amount)
 		if err != nil {
 			return decimal.Decimal{}, nil, fmt.Errorf("allocation %s: %w", a.Name, err)
@@ -83,4 +123,27 @@ func FirstBlockSupply(data *types.FirstBlock) (decimal.Decimal, []types.Allocati
 		return decimal.Decimal{}, nil, errors.New("the allocations sum to more than the supply")
 	}
 	return supply, allocs, nil
+}
+
+// firstBlockKeys are the accounts of the keys of the nodes and of the operators the first block
+// names, besides the founder's: the node of the first block, and each validator of a chain of the
+// BFT consensus and its operator
+func firstBlockKeys(data *types.FirstBlock) (map[int64]bool, error) {
+	keyed := map[int64]bool{crypto.NodeAccountKey(data.NodePublicKey).Address(): true}
+	if data.BftConsensus != 1 {
+		return keyed, nil
+	}
+	operators, err := BftOperators(data.HonorNodes)
+	if err != nil {
+		return nil, err
+	}
+	var nodes []*syspar.HonorNode
+	if err := json.Unmarshal([]byte(data.HonorNodes), &nodes); err != nil {
+		return nil, err
+	}
+	for i, n := range nodes {
+		keyed[crypto.NodeAccountKey(n.PublicKey).Address()] = true
+		keyed[operators[i]] = true
+	}
+	return keyed, nil
 }

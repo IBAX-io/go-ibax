@@ -56,7 +56,7 @@ func init() {
 	generateFirstBlockCmd.Flags().BoolVar(&honorNodesOnly, "honorNodesOnly", false, "if true - only the honor nodes generate blocks, the chain never enters the candidate node mode")
 	generateFirstBlockCmd.Flags().BoolVar(&bftConsensus, "bftConsensus", false, "if true - the validators commit each block by the votes of more than two thirds of them (needs --honorNodesOnly and --honorNodes)")
 	generateFirstBlockCmd.Flags().StringVar(&honorNodesFilepath, "honorNodes", "", "file of the validators of a chain of the BFT consensus, in the JSON of the platform parameter honor_nodes, each with the key_id of its operator; this node first, operated by the founder")
-	generateFirstBlockCmd.Flags().StringVar(&supplyFilepath, "supply", "", `file of the supply of the coin of ecosystem 1 and the allocations of the first block, in the smallest unit, e.g. {"supply":"2100000000000000000000","allocations":[{"name":"reserve","account":"1234-5678-9012-3456-7890","amount":"210000000000000000000"}]}; the rest of the supply is not issued (default: the supply 2100000000, the founder 5250000)`)
+	generateFirstBlockCmd.Flags().StringVar(&supplyFilepath, "supply", "", `file of the supply of the coin of ecosystem 1 and the allocations of the first block, in the smallest unit, e.g. {"supply":"2100000000000000000000","allocations":[{"name":"reserve","account":"1234-5678-9012-3456-7890","amount":"210000000000000000000","conditions":"@1ReserveRelease"}]}: an allocation to an account other than the founder's names the contracts that move it; the rest of the supply is not issued (default: the supply 2100000000, the founder 5250000)`)
 	generateFirstBlockCmd.Flags().StringVar(&accountAlgorithms, "accountAlgorithms", "", `algorithms account keys may have, as the platform parameter account_algorithms, e.g. [{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"}] (default: the node algorithm, with the latest days FIPS allows on a FIPS node and no days otherwise)`)
 }
 
@@ -185,9 +185,10 @@ func readSupply() (string, []types.Allocation) {
 	var file struct {
 		Supply      string `json:"supply"`
 		Allocations []struct {
-			Name    string `json:"name"`
-			Account string `json:"account"`
-			Amount  string `json:"amount"`
+			Name       string `json:"name"`
+			Account    string `json:"account"`
+			Amount     string `json:"amount"`
+			Conditions string `json:"conditions"`
 		} `json:"allocations"`
 	}
 	dec := json.NewDecoder(strings.NewReader(string(data)))
@@ -204,7 +205,7 @@ func readSupply() (string, []types.Allocation) {
 		if id == 0 {
 			log.WithFields(log.Fields{"allocation": a.Name, "account": a.Account}).Fatal("the account of an allocation is not an account")
 		}
-		allocs[i] = types.Allocation{Name: a.Name, KeyID: id, Amount: a.Amount}
+		allocs[i] = types.Allocation{Name: a.Name, KeyID: id, Amount: a.Amount, Conditions: a.Conditions}
 	}
 	return file.Supply, allocs
 }

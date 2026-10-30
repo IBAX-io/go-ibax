@@ -205,15 +205,24 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 		}
 	}
 
-	// Each allocation credits its account, which the first block creates without a key if it is
-	// not that of the founder, a node or an operator: the account of a part of the supply that
-	// only contracts move. The coins are an output of the first block, which TransferSelf moves to
-	// the account; a chain of the honor nodes only takes no TransferSelf, so there they are the
-	// balance of the account.
+	// Each allocation credits its account: the founder's, or one the first block creates without
+	// a key, of the conditions of the allocation, a part of the supply that only these contracts
+	// move (CallContractAs), as CheckTxSign refuses every transaction signed for it. The coins are
+	// an output of the first block, which TransferSelf moves to the account; a chain of the honor
+	// nodes only takes no TransferSelf, so there they are the balance of the account.
 	outputs := map[sqldb.KeyUTXO][]sqldb.SpentInfo{}
 	for i, a := range allocs {
-		if err := insert(a.KeyID, []byte{}); err != nil {
-			return err
+		if a.KeyID != keyID {
+			if created[a.KeyID] {
+				return fmt.Errorf("allocation %s: account %s has a key", a.Name, converter.AddressToString(a.KeyID))
+			}
+			created[a.KeyID] = true
+			err := sqldb.GetDB(dbTx).Exec(`insert into "1_keys" (id,account,pub,conditions) values(?,?,?,?)`,
+				a.KeyID, converter.AddressToString(a.KeyID), []byte{}, a.Conditions).Error
+			if err != nil {
+				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "allocation": a.Name}).Error("inserting the account of an allocation")
+				return err
+			}
 		}
 		if data.HonorNodesOnly != 1 {
 			// the block writes the outputs with the outputs of its transactions

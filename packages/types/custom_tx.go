@@ -58,11 +58,14 @@ type FirstBlock struct {
 }
 
 // Allocation is an amount the first block credits to an account of ecosystem 1: a part of the
-// supply, named, in its smallest unit
+// supply, named, in its smallest unit. An allocation to the founder has no Conditions; any other
+// credits an account the first block creates without a key, which only the contracts of its
+// Conditions move (CallContractAs), as the conditions of 1_keys name them.
 type Allocation struct {
-	Name   string
-	KeyID  int64
-	Amount string
+	Name       string
+	KeyID      int64
+	Amount     string
+	Conditions string
 }
 
 func (t *FirstBlock) TxType() byte { return FirstBlockTxType }
