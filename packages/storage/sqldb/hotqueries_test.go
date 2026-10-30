@@ -15,14 +15,15 @@ import (
 
 // hotQueries are the queries a node runs per transaction or per block, as the bench profiles them
 // (pg_stat_statements), with values in place of the parameters, and the indexes each must read by:
-// an index of a partition is matched by its name with the range as p\d+
+// an index of a partition is matched by its name with the range as p\d+. An account is in a few
+// ecosystems, so reading it by its account alone is as good as by both
 var hotQueries = []struct {
 	sql     string
 	indexes []string
 }{
 	{`SELECT * FROM "1_keys" WHERE id = 1 and ecosystem = 1 ORDER BY "1_keys"."id" LIMIT 1`, []string{`1_keys_pkey`}},
 	{`SELECT id, amount, "ecosystem" FROM "1_keys" WHERE "ecosystem" = 1 and "account" = '0000-0000-0000-0000-0000' and "deleted" = 0`,
-		[]string{`1_keys_ecosystem_account`}},
+		[]string{`1_keys_(ecosystem_account|account_idx)$`}},
 	{`UPDATE "1_keys" SET amount = amount + 1 WHERE "ecosystem" = 1 and "id" = 1`, []string{`1_keys_pkey`}},
 	{`SELECT * FROM "1_ecosystems" WHERE id = 1`, []string{`1_ecosystems_pkey`}},
 	{`SELECT * FROM "1_parameters" WHERE ecosystem = 1 and name = 'utxo_fee'`, []string{`1_parameters_ecosystem_name_idx`}},
@@ -65,13 +66,34 @@ var hotQueries = []struct {
 		[]string{`1_roles_participants_account`, `1_notifications_role`}},
 }
 
+// hotRows fill the tables whose plans turn on their size, as a node has them: accounts, each in a
+// few ecosystems, and outputs of which most are spent
+var hotRows = []string{
+	`INSERT INTO "1_keys" (id, ecosystem, account) SELECT g + 1000000, g % 4 + 1, lpad((g / 4)::text, 24, '0')
+		FROM generate_series(1, 20000) g`,
+	`INSERT INTO spent_info (input_tx_hash, output_tx_hash, output_index, output_key_id, output_value, ecosystem, block_id, type)
+		SELECT CASE WHEN g % 10 = 0 THEN NULL ELSE int8send(g) END, int8send(g + 1000000), 0, g % 1000 + 1000000, 1,
+			g % 4 + 1, g, 0 FROM generate_series(1, 20000) g`,
+}
+
+// hotTables are the tables the hot queries read
+var hotTables = []string{"1_keys", "1_ecosystems", "1_parameters", "1_members", "1_applications", "transactions_status",
+	"log_transactions", "stop_network_txs", "log_transaction_counts", "spent_info", "block_chain", "confirmations",
+	"rollback_tx", "1_history", "1_app_params", "1_notifications", "1_roles_participants"}
+
 var planIndex = regexp.MustCompile(`Index(?: Only)? Scan(?: Backward)? using "?([^" ]+)"?|Bitmap Index Scan on "?([^" ]+)"?`)
 
-// TestHotQueriesUseIndexes: with sequential scans disabled the planner takes the cheapest index, so
-// that each query reads by the index it is meant to read by, whatever the size of the tables, and
-// by none whose condition leaves the rest to a filter
+// TestHotQueriesUseIndexes: with the tables filled and analyzed, and sequential scans disabled, the
+// planner takes the cheapest index, so that each query reads by the index it is meant to read by,
+// and by none whose condition leaves the rest to a filter, whatever the database had before
 func TestHotQueriesUseIndexes(t *testing.T) {
 	db := testDB(t)
+	for _, q := range hotRows {
+		require.NoError(t, db.Exec(q).Error, q)
+	}
+	for _, table := range hotTables {
+		require.NoError(t, db.Exec(`ANALYZE "`+table+`"`).Error, table)
+	}
 	require.NoError(t, db.Exec(`SET LOCAL enable_seqscan = off`).Error)
 	for _, q := range hotQueries {
 		var plan []string
