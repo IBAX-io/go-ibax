@@ -256,7 +256,7 @@ func (sc *SmartContract) setHonorNodes(par *sqldb.PlatformParameter, value strin
 }
 
 // checkAccountAlgorithms refuses a new value of account_algorithms that is malformed, moves a
-// day later, or removes an algorithm some keys still have
+// day later, removes an algorithm that only verifies, or removes one some keys still have
 func checkAccountAlgorithms(dbTx *sqldb.DbTransaction, value string) error {
 	next, err := syspar.ParseAccountAlgorithms(value)
 	if err != nil {

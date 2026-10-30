@@ -289,8 +289,10 @@ func (s AccountAlgorithmSet) Signer(registered, sent []byte, keyID, blockTime in
 
 // CheckChange refuses a new value that moves a day of an algorithm kept in the set later or
 // removes it: the days set at genesis follow the regulations, and may only come earlier. An
-// algorithm kept neither starts nor stops verifying only, and keeps the contract that verifies. It
-// returns the algorithms the new value removes, which must have no keys left.
+// algorithm kept neither starts nor stops verifying only, and keeps the contract that verifies.
+// An algorithm that only verifies is never removed: its entry stays, inert once its last day has
+// passed, so that no later value brings it back signing, with a later day or in another contract.
+// It returns the algorithms the new value removes, which must have no keys left.
 func (s AccountAlgorithmSet) CheckChange(next AccountAlgorithmSet) ([]crypto.AsymAlgo, error) {
 	later := func(prev, day time.Time) bool {
 		return !prev.IsZero() && (day.IsZero() || day.After(prev))
@@ -299,6 +301,9 @@ func (s AccountAlgorithmSet) CheckChange(next AccountAlgorithmSet) ([]crypto.Asy
 	for _, prev := range s {
 		a, kept := next.find(prev.Algo)
 		if !kept {
+			if prev.VerifyOnly() {
+				return nil, fmt.Errorf("%s: %s only verifies, and stays listed; its last day may come earlier", AccountAlgorithms, prev.Algo)
+			}
 			removed = append(removed, prev.Algo)
 			continue
 		}
