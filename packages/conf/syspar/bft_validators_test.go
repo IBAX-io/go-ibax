@@ -7,6 +7,7 @@ package syspar
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
 	"time"
 
@@ -109,6 +110,35 @@ func TestCheckBftParameter(t *testing.T) {
 	}
 	if _, behind := GetBftTimeliness(1000); behind != func() time.Duration { _, b := GetBftTimeliness(100); return b }() {
 		t.Errorf("the bound behind grows past round %d", bftTimelinessRounds)
+	}
+}
+
+// The first block of a chain of the BFT consensus writes starting values that keep each pair of
+// bftPairs, with max_block_generation_time at its starting 2000 ms: bft_timeout_propose_ms 3000,
+// which chains of the consensus before the margin started with, does not, and such a chain is not
+// upgraded but made again (README, Branches and chains)
+func TestBftParametersKeepPairs(t *testing.T) {
+	mutex.Lock()
+	saved := cache
+	cache = map[string]string{MaxBlockGenerationTime: "2000"}
+	for _, p := range BftParameters {
+		cache[p[0]] = p[1]
+	}
+	mutex.Unlock()
+	defer func() {
+		mutex.Lock()
+		cache = saved
+		mutex.Unlock()
+	}()
+	for _, p := range bftPairs {
+		for _, name := range []string{p.longer, p.shorter} {
+			if err := CheckBftParameter(name, strconv.FormatInt(pairValue(name), 10)); err != nil {
+				t.Errorf("the starting value of %s: %v", name, err)
+			}
+		}
+	}
+	if err := CheckBftParameter(BftTimeoutPropose, "3000"); err == nil {
+		t.Error("bft_timeout_propose_ms 3000 keeps the margin over max_block_generation_time 2000")
 	}
 }
 
