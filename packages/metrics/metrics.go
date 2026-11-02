@@ -43,6 +43,7 @@ const (
 	StagePrepare  = "prepare"  // reading the outputs and the parameters the transactions need
 	StageExecute  = "execute"  // running the transactions
 	StageAfter    = "after"    // writing the logs, the statuses and the rollbacks of the transactions
+	StageStream   = "stream"   // writing the logs, the statuses and the rollbacks of the committed transactions while the block runs
 	StageInsert   = "insert"   // inserting the block
 	StageCommit   = "commit"   // committing the database transaction
 	StageNotify   = "notify"   // sending the notifications
@@ -52,6 +53,7 @@ const (
 	StageHold     = "hold"     // holding a trial: the snapshot of the memory it changed, and the memory set back
 	StageWait     = "wait"     // the proposer waits for its clock to pass the time of the last block
 	StageCollect  = "collect"  // the proposer takes the transactions of its block from the queue
+	StageCheck    = "check"    // checking the header, the transactions and the sign of a block
 	StageTrial    = "trial"    // the proposer runs its block
 	StageBehind   = "behind"   // from the time of the proposed block to the end of the proposal
 	StageValid    = "valid"    // valid(v) of a proposal from its arrival, by the speculation or by Validate

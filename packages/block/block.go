@@ -8,6 +8,7 @@ package block
 import (
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -76,28 +77,40 @@ func (b *Block) limitMode() transaction.LimitMode {
 	return transaction.GetLetParsing()
 }
 
-// InsertBlockWOForks is inserting blocks
-// InsertBlockWOForksNew inserts a block: a block the node generates runs txs, the parsed transactions
-// of its data in its order
-func InsertBlockWOForksNew(data []byte, txs []*transaction.Transaction, genBlock, firstBlock bool) error {
-	block, err := ProcessBlockByBinData(data, !firstBlock)
+// InsertFirstBlock inserts block 1 of its data
+func InsertFirstBlock(data []byte) error {
+	block, err := ProcessBlockByBinData(data, false)
 	if err != nil {
 		return err
-	}
-
-	block.GenBlock = genBlock
-	if genBlock {
-		block.Transactions = txs
 	}
 	if err := block.Check(); err != nil {
 		return err
 	}
+	return block.PlaySafe()
+}
 
-	err = block.PlaySafe()
+// InsertGenerated runs and inserts the block of header this node generates of the transactions
+// txs, which processTransactionsNew took and checked at the time of the block. The block is not
+// encoded before it runs: InsertIntoBlockchain encodes and signs it of the transactions that ran
+func InsertGenerated(header *types.BlockHeader, txs []*transaction.Transaction) error {
+	prev, err := GetBlockHeaderFromBlockChain(header.BlockId - 1)
 	if err != nil {
 		return err
 	}
-
-	log.WithFields(log.Fields{"block_id": block.Header.BlockId}).Debug("block was inserted successfully")
+	block := &Block{
+		BlockData:         &types.BlockData{Header: header, PrevHeader: prev},
+		PrevRollbacksHash: prev.RollbacksHash,
+		Transactions:      txs,
+		GenBlock:          true,
+	}
+	start := time.Now()
+	if err := block.checkGenerated(); err != nil {
+		return err
+	}
+	metrics.BlockStage.WithLabelValues(metrics.KindGenerate, metrics.StageCheck).Observe(metrics.Since(start))
+	if err := block.PlaySafe(); err != nil {
+		return err
+	}
+	log.WithFields(log.Fields{"block_id": header.BlockId}).Debug("block was inserted successfully")
 	return nil
 }

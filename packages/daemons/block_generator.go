@@ -15,6 +15,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -128,13 +129,16 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	trs, parsed, err := processTransactionsNew(d.logger, txs, st)
+	_, parsed, err := processTransactionsNew(d.logger, txs, st)
 	if err != nil {
 		return err
 	}
+	if len(parsed) > 0 {
+		metrics.BlockStage.WithLabelValues(metrics.KindGenerate, metrics.StageCollect).Observe(metrics.Since(st))
+	}
 
 	// Block generation will be started only if we have transactions
-	if len(trs) == 0 {
+	if len(parsed) == 0 {
 		return nil
 	}
 
@@ -149,16 +153,12 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		ConsensusMode: consts.HonorNodeMode,
 	}
 
-	prev := &types.BlockHeader{
-		BlockId:       prevBlock.BlockID,
-		BlockHash:     prevBlock.Hash,
-		RollbacksHash: prevBlock.RollbacksHash,
-	}
-
-	err = generateProcessBlockNew(header, prev, trs, parsed)
+	err = generateProcessBlockNew(header, parsed)
 	if err != nil {
 		return err
 	}
+	// the transactions left in the queue may make the block of the next slot without a wait
+	d.sleepTime = 0
 	//go notificator.CheckTokenMovementLimits(nil, conf.Config.TokenMovement, header.BlockId)
 	return nil
 }

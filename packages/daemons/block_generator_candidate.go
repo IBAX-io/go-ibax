@@ -73,12 +73,12 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	trs, parsed, err := processTransactionsNew(d.logger, txs, st)
+	_, parsed, err := processTransactionsNew(d.logger, txs, st)
 	if err != nil {
 		return err
 	}
 	// Block generation will be started only if we have transactions
-	if len(trs) == 0 {
+	if len(parsed) == 0 {
 		return nil
 	}
 	lastBlockInterval := time.Unix(prevBlock.Time, 0)
@@ -109,13 +109,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		ConsensusMode:  consts.CandidateNodeMode,
 		CandidateNodes: candidateNodesByte,
 	}
-	prev := &types.BlockHeader{
-		BlockId:       prevBlock.BlockID,
-		BlockHash:     prevBlock.Hash,
-		RollbacksHash: prevBlock.RollbacksHash,
-	}
-
-	err = generateProcessBlockNew(header, prev, trs, parsed)
+	err = generateProcessBlockNew(header, parsed)
 	if err != nil {
 		return err
 	}

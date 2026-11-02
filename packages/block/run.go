@@ -169,11 +169,17 @@ func (r *blockRun) execute() error {
 // the records of its transactions written whether or not
 func (r *blockRun) end(err error) error {
 	b := r.b
+	var written afterWritten
 	if r.state != nil {
 		r.state.stop()
+		written = r.state.written
+		if err == nil {
+			err = r.state.streamErr
+		}
 		if err == nil {
 			err = r.state.finish(r)
 		}
+		b.stage(metrics.StageStream, time.Now().Add(-written.spent))
 	} else if err == nil && b.IsGenesis() {
 		var rts []*types.RollbackTx
 		if rts, err = r.fees.Settle(r.dbTx, b.Header); err != nil {
@@ -191,7 +197,7 @@ func (r *blockRun) end(err error) error {
 	if b.GenBlock {
 		b.TxFullData = r.processed
 	}
-	if errA := b.AfterPlayTxs(r.dbTx); errA != nil {
+	if errA := b.AfterPlayTxs(r.dbTx, written); errA != nil {
 		if err == nil {
 			return errA
 		}

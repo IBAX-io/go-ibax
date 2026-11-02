@@ -101,6 +101,11 @@ type stateExec struct {
 	// again is the connection of the runs the commit runs again in parallel, which it pins at
 	// its first
 	again *sql.Conn
+	// stream writes the records of the transactions the block committed while it runs; stop
+	// ends it with what it wrote and its error
+	stream    *afterStream
+	written   afterWritten
+	streamErr error
 }
 
 // contractOf is the name of the contract of the transaction
@@ -169,6 +174,7 @@ func (e *stateExec) parallel(i int, t *transaction.Transaction, conn *sql.Conn) 
 
 // reloadSysPar reads again the parameters of the platform a failed run changed in memory
 func (e *stateExec) reloadSysPar(i int) error {
+	e.stream.hold()
 	if err := syspar.SysUpdate(e.st.NewOrderedView(i, "").Transaction()); err != nil {
 		return fmt.Errorf("updating syspar: %w", err)
 	}
@@ -178,6 +184,7 @@ func (e *stateExec) reloadSysPar(i int) error {
 
 // ordered runs the transaction i in order, while no worker runs, with the limits of the block
 func (e *stateExec) ordered(i int) txRun {
+	e.stream.hold()
 	e.node.Lock()
 	defer e.node.Unlock()
 	for range maxRestarts {
@@ -321,7 +328,7 @@ func (b *Block) beginState(dbTx *sqldb.DbTransaction) (*stateExec, error) {
 		return nil, err
 	}
 	st.SetOutputs(b.OutputsMap)
-	return &stateExec{b: b, dbTx: dbTx, st: st, limits: limits, ecoParams: b.EcoParams}, nil
+	return &stateExec{b: b, dbTx: dbTx, st: st, limits: limits, ecoParams: b.EcoParams, stream: newAfterStream(dbTx)}, nil
 }
 
 // run runs the transactions from to to of the block in its state, in parallel, and commits them
@@ -355,8 +362,12 @@ func (e *stateExec) run(r *blockRun, from, to int) error {
 	return err
 }
 
-// stop stops the workers
+// stop stops the workers and the writer of the records of the transactions
 func (e *stateExec) stop() {
+	if e.stream != nil {
+		e.written, e.streamErr = e.stream.stop()
+		e.stream = nil
+	}
 	if e.stopRun != nil {
 		e.stopRun()
 		e.stopRun = nil
@@ -388,7 +399,11 @@ func (e *stateExec) finish(r *blockRun) error {
 func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued bool) error {
 	st := e.st
 	txs, txBadChan, afters, processedTx, fees := b.Transactions, br.bad, br.afters, &br.processed, br.fees
+	// the block takes the connection of its transaction for a statement, and holds it until its
+	// next transaction, and once it commits them
+	defer e.stream.hold()
 	for curTx := from; curTx < to; curTx++ {
+		e.stream.release()
 		var r txRun
 		if queued {
 			<-e.runs[curTx].done
@@ -499,6 +514,8 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 		// A transaction that would make the block longer than max_block_size waits for the next
 		// block; one that does not fit even into an empty block never will.
 		if b.GenBlock && !b.size.add(t.Compressed()) {
+			// the savepoint of a run in order is on the connection of the block, held since the run
+			e.stream.hold()
 			if errRoll := t.DbTransaction.RollbackSavepoint(consts.SetSavePointMarkBlock(hex.EncodeToString(t.Hash()))); errRoll != nil {
 				return errRoll
 			}
@@ -538,6 +555,7 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 		}
 		afters.Txs = append(afters.Txs, after)
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
+		e.stream.send(afters)
 		*processedTx = append(*processedTx, t.FullData)
 		if b.onCommit != nil {
 			b.onCommit(t)

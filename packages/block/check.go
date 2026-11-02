@@ -38,6 +38,16 @@ func (b *Block) Check() error {
 	return b.CheckSign()
 }
 
+// checkGenerated checks the block this node generates: its header, and its transactions as Check
+// does but for CheckBatch, which processTransactionsNew ran at the time of the block. The block is
+// not signed before it runs
+func (b *Block) checkGenerated() error {
+	if err := b.checkHeader(); err != nil {
+		return err
+	}
+	return newTxChecks().count(b, b.Transactions, make([]error, len(b.Transactions)))
+}
+
 // checkHeader checks the header of the block against the chain
 func (b *Block) checkHeader() error {
 	logger := b.GetLogger()
@@ -103,9 +113,13 @@ func newTxChecks() *txChecks {
 // twice, at most max_block_user_transactions of a key, and each valid at the time of the block.
 // A transaction that is not valid it takes out of the block.
 func (c *txChecks) check(b *Block, txs []*transaction.Transaction) error {
+	return c.count(b, txs, transaction.CheckBatch(txs, b.Header.Timestamp))
+}
+
+// count checks the transactions txs as check does, with checked the errors CheckBatch has of them
+func (c *txChecks) count(b *Block, txs []*transaction.Transaction, checked []error) error {
 	logger := b.GetLogger()
 	txCounter, txHashes := c.counter, c.hashes
-	checked := transaction.CheckBatch(txs, b.Header.Timestamp)
 	for i, t := range txs {
 		hexHash := string(converter.BinToHex(t.Hash()))
 		// check for duplicate transactions

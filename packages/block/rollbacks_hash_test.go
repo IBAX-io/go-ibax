@@ -22,12 +22,19 @@ func TestRollbacksHashCoversTheRecordsOfTheBlock(t *testing.T) {
 		{OutputTxHash: []byte{1}, OutputKeyId: 5, OutputValue: "1", Ecosystem: 1, BlockId: 7},
 		{OutputTxHash: []byte{3}, OutputKeyId: 6, OutputValue: "4", Ecosystem: 1, BlockId: 3, InputTxHash: []byte{2}},
 	}
-	want, err := rollbacksHash(7, rts, outputs)
+	hashes := func(rts ...*sqldb.RollbackTx) []string {
+		h, err := rollbackHashes(rts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return h
+	}
+	want, err := rollbacksHash(7, hashes(rts...), outputs)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	reordered, err := rollbacksHash(7, []*sqldb.RollbackTx{rts[1], rts[0]}, []sqldb.SpentInfo{outputs[1], outputs[0]})
+	reordered, err := rollbacksHash(7, hashes(rts[1], rts[0]), []sqldb.SpentInfo{outputs[1], outputs[0]})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +43,7 @@ func TestRollbacksHashCoversTheRecordsOfTheBlock(t *testing.T) {
 	}
 
 	// an output of an earlier block that the block spends is not a record of the block
-	own, err := rollbacksHash(7, rts, outputs[:1])
+	own, err := rollbacksHash(7, hashes(rts...), outputs[:1])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +53,7 @@ func TestRollbacksHashCoversTheRecordsOfTheBlock(t *testing.T) {
 
 	changed := *rts[0]
 	changed.Data = `{"amount":"9"}`
-	other, err := rollbacksHash(7, []*sqldb.RollbackTx{&changed, rts[1]}, outputs)
+	other, err := rollbacksHash(7, hashes(&changed, rts[1]), outputs)
 	if err != nil {
 		t.Fatal(err)
 	}

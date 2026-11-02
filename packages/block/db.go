@@ -9,7 +9,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -49,17 +51,35 @@ func ProcessBlockByBinData(data []byte, checkSize bool) (*Block, error) {
 	return block, nil
 }
 
-// rollbacksHash is the hash of the rollback records and the outputs a block writes, taken from
-// the records the block wrote rather than read back from the tables
-func rollbacksHash(blockID int64, rts []*sqldb.RollbackTx, outputs []sqldb.SpentInfo) ([]byte, error) {
-	arr := make([]string, 0, len(rts)+len(outputs))
-	for _, row := range rts {
-		data, err := json.Marshal(row)
+// rollbackHashes are the hashes of the rollback records rts, taken in parallel before the records
+// have their ids, which rollbacksHash takes
+func rollbackHashes(rts []*sqldb.RollbackTx) ([]string, error) {
+	hashes := make([]string, len(rts))
+	workers := min(runtime.GOMAXPROCS(0), len(rts)/256+1)
+	errs := make([]error, workers)
+	var wg sync.WaitGroup
+	for w := range workers {
+		wg.Go(func() {
+			for i := w; i < len(rts) && errs[w] == nil; i += workers {
+				hashes[i], errs[w] = rollbackHash(rts[i])
+			}
+		})
+	}
+	wg.Wait()
+	for _, err := range errs {
 		if err != nil {
 			return nil, err
 		}
-		arr = append(arr, crypto.HashHex(data))
 	}
+	return hashes, nil
+}
+
+// rollbacksHash is the hash of the rollback records and the outputs a block writes, taken from
+// the hashes of its rollback records (rollbackHashes) and its outputs rather than read back from
+// the tables
+func rollbacksHash(blockID int64, hashes []string, outputs []sqldb.SpentInfo) ([]byte, error) {
+	arr := make([]string, 0, len(hashes)+len(outputs))
+	arr = append(arr, hashes...)
 	for _, row := range outputs {
 		if row.BlockId != blockID {
 			continue
@@ -228,53 +248,47 @@ func (b *Block) upsertInfoBlock(dbTx *sqldb.DbTransaction, block *sqldb.BlockCha
 	return nil
 }
 
-type AfterTxs struct {
-	UsedTx   [][]byte
-	Rts      []*sqldb.RollbackTx
-	Lts      []*sqldb.LogTransaction
-	TxStatus []*sqldb.TransactionStatus
+// afterRows are the records the transactions of a block write: the logs and the statuses of the
+// transactions, and the rollback records
+type afterRows struct {
+	rts      []*sqldb.RollbackTx
+	lts      []*sqldb.LogTransaction
+	statuses []*sqldb.TransactionStatus
 }
 
-func (b *Block) GenAfterTxs() *AfterTxs {
-	after := b.AfterTxs
-	playTx := &AfterTxs{
-		Rts:      make([]*sqldb.RollbackTx, len(after.Rts)),
-		Lts:      make([]*sqldb.LogTransaction, len(after.Txs)),
-		TxStatus: make([]*sqldb.TransactionStatus, len(after.Txs)),
+// newAfterRows are the records of the transactions txs and of the rollback records rts
+func newAfterRows(txs []*types.AfterTx, rts []*types.RollbackTx) *afterRows {
+	rows := &afterRows{
+		rts:      make([]*sqldb.RollbackTx, len(rts)),
+		lts:      make([]*sqldb.LogTransaction, len(txs)),
+		statuses: make([]*sqldb.TransactionStatus, len(txs)),
 	}
-
-	for i := 0; i < len(after.Rts); i++ {
-		tx := after.Rts[i]
-		rt := new(sqldb.RollbackTx)
-		rt.BlockID = tx.BlockId
-		rt.NameTable = tx.NameTable
-		rt.Data = tx.Data
-		rt.TableID = tx.TableId
-		rt.TxHash = tx.TxHash
-		rt.DataHash = tx.DataHash
-		playTx.Rts[i] = rt
+	for i, tx := range rts {
+		rows.rts[i] = &sqldb.RollbackTx{
+			BlockID:   tx.BlockId,
+			NameTable: tx.NameTable,
+			Data:      tx.Data,
+			TableID:   tx.TableId,
+			TxHash:    tx.TxHash,
+			DataHash:  tx.DataHash,
+		}
 	}
-
-	for i := 0; i < len(after.Txs); i++ {
-		tx := after.Txs[i]
-		playTx.UsedTx = append(playTx.UsedTx, tx.UsedTx)
-		lt := new(sqldb.LogTransaction)
-		lt.Block = tx.Lts.Block
-		lt.Hash = tx.Lts.Hash
-		//lt.TxData = tx.Lts.TxData
-		lt.Timestamp = tx.Lts.Timestamp
-		lt.Address = tx.Lts.Address
-		lt.EcosystemID = tx.Lts.EcosystemId
-		lt.ContractName = tx.Lts.ContractName
-		lt.Status = int64(tx.Lts.InvokeStatus)
-		playTx.Lts[i] = lt
-
+	for i, tx := range txs {
+		rows.lts[i] = &sqldb.LogTransaction{
+			Block:        tx.Lts.Block,
+			Hash:         tx.Lts.Hash,
+			Timestamp:    tx.Lts.Timestamp,
+			Address:      tx.Lts.Address,
+			EcosystemID:  tx.Lts.EcosystemId,
+			ContractName: tx.Lts.ContractName,
+			Status:       int64(tx.Lts.InvokeStatus),
+		}
 		if u := tx.UpdTxStatus; u != nil {
 			var penalty int64
 			if u.Code == pbgo.TxInvokeStatusCode_PENALTY {
 				penalty = 1
 			}
-			playTx.TxStatus[i] = &sqldb.TransactionStatus{
+			rows.statuses[i] = &sqldb.TransactionStatus{
 				Hash:     u.Hash,
 				Time:     tx.Lts.Timestamp,
 				WalletID: tx.Lts.Address,
@@ -284,38 +298,50 @@ func (b *Block) GenAfterTxs() *AfterTxs {
 			}
 		}
 	}
-	return playTx
+	return rows
 }
 
-func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction) error {
-	playTx := b.GenAfterTxs()
-	err := sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
-		if err := sqldb.CreateLogTransactionBatches(tx, playTx.Lts); err != nil {
-			return errors.Wrap(err, "batches insert log_transactions")
+// writeTxRows writes the logs, the rollback records and the statuses of rows, each in a statement
+func writeTxRows(tx *gorm.DB, rows *afterRows) error {
+	if err := sqldb.CreateLogTransactionBatches(tx, rows.lts); err != nil {
+		return errors.Wrap(err, "batches insert log_transactions")
+	}
+	if err := sqldb.CreateBatchesRollbackTx(tx, rows.rts); err != nil {
+		return errors.Wrap(err, "batches insert rollback tx")
+	}
+	if err := sqldb.UpsertBlockStatusBatches(tx, rows.statuses); err != nil {
+		return errors.Wrap(err, "batches upsert transaction status")
+	}
+	return nil
+}
+
+// AfterPlayTxs writes the records of the transactions of the block the stream did not write
+// (afterStream), the counts of the logs, the outputs and the rollbacks hash of the block
+func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction, written afterWritten) error {
+	after := b.AfterTxs
+	rest := newAfterRows(after.Txs[written.txs:], after.Rts[written.rts:])
+	lts := append(written.lts, rest.lts...)
+	hashes, err := rollbackHashes(rest.rts)
+	if err != nil {
+		return errors.Wrap(err, "rollbacks hash")
+	}
+	err = sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
+		if err := writeTxRows(tx, rest); err != nil {
+			return err
 		}
-		if err := sqldb.CountLogTransactions(tx, playTx.Lts); err != nil {
+		if err := sqldb.CountLogTransactions(tx, lts); err != nil {
 			return errors.Wrap(err, "count log_transactions")
 		}
-		if err := sqldb.CreateStopNetworkTxs(tx, b.stopNetworkHashes(playTx.Lts), b.Header.BlockId); err != nil {
+		if err := sqldb.CreateStopNetworkTxs(tx, b.stopNetworkHashes(lts), b.Header.BlockId); err != nil {
 			return errors.Wrap(err, "insert stop_network_txs")
 		}
 		spentInfos := sqldb.GetAllOutputs(b.OutputsMap)
-		rHash, err := rollbacksHash(b.Header.BlockId, playTx.Rts, spentInfos)
+		rHash, err := rollbacksHash(b.Header.BlockId, append(written.hashes, hashes...), spentInfos)
 		if err != nil {
 			return errors.Wrap(err, "rollbacks hash")
 		}
 		b.rollbacksHash = rHash
-		if err := sqldb.WriteBlockOutputs(tx, b.Header.BlockId, spentInfos); err != nil {
-			return err
-		}
-
-		if err := sqldb.CreateBatchesRollbackTx(tx, playTx.Rts); err != nil {
-			return errors.Wrap(err, "batches insert rollback tx")
-		}
-		if err := sqldb.UpsertBlockStatusBatches(tx, playTx.TxStatus); err != nil {
-			return errors.Wrap(err, "batches upsert transaction status")
-		}
-		return nil
+		return sqldb.WriteBlockOutputs(tx, b.Header.BlockId, spentInfos)
 	})
 	if err != nil || !sqldb.IsRetentionBoundary(b.Header.BlockId) {
 		return err
