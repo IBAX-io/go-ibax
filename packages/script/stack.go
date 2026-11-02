@@ -22,10 +22,6 @@ func (rt *RunTime) swap(n int) {
 	rt.stack[rt.len()-n], rt.stack[rt.len()-1] = rt.peek(), rt.stack[rt.len()-n]
 }
 
-func (rt *RunTime) dup(n int) {
-	rt.push(&rt.stack[rt.len()-n])
-}
-
 func (rt *RunTime) peek() any {
 	return rt.stack[rt.len()-1]
 }

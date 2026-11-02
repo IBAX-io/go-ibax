@@ -18,6 +18,8 @@ enum GasScenesType {
   Direct = 15;
   Combustion = 16;
   TransferSelf =  24;
+  // Settlement credits an account with the fees the transactions of a block pay it
+  Settlement = 25;
 }
 
 enum GasPayAbleType {

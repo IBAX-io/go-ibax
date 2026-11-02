@@ -28,13 +28,18 @@ const namespace = "ibax"
 // The kinds of a block execution
 const (
 	KindGenerate = "generate" // the node makes the block
-	KindTrial    = "trial"    // a BFT trial, rolled back
+	KindTrial    = "trial"    // a BFT trial, held for the decision of its height
+	KindHeld     = "held"     // the node commits the trial it held of the block its height decided
 	KindApply    = "apply"    // the node applies a block another node made
 	KindReceived = "received" // a block the node got from another node, parsed before it runs
+	KindPropose  = "propose"  // a proposer of the BFT consensus makes its proposal
 )
 
 // The stages of a block execution
 const (
+	StageBegin    = "begin"    // taking the snapshot of the memory and the database transaction of a trial
+	StageExpand   = "expand"   // filling in the block of a compact proposal from the queue and the proposer
+	StageVerify   = "verify"   // verifying in parallel the signatures of the transactions of another node's block
 	StagePrepare  = "prepare"  // reading the outputs and the parameters the transactions need
 	StageExecute  = "execute"  // running the transactions
 	StageAfter    = "after"    // writing the logs, the statuses and the rollbacks of the transactions
@@ -43,7 +48,13 @@ const (
 	StageNotify   = "notify"   // sending the notifications
 	StageTotal    = "total"    // the whole execution
 	StageParse    = "parse"    // parsing the block from its bytes
-	StageRollback = "rollback" // rolling back a trial
+	StageRollback = "rollback" // rolling back a trial that failed, or one held of a block not decided
+	StageHold     = "hold"     // holding a trial: the snapshot of the memory it changed, and the memory set back
+	StageWait     = "wait"     // the proposer waits for its clock to pass the time of the last block
+	StageCollect  = "collect"  // the proposer takes the transactions of its block from the queue
+	StageTrial    = "trial"    // the proposer runs its block
+	StageBehind   = "behind"   // from the time of the proposed block to the end of the proposal
+	StageValid    = "valid"    // valid(v) of a proposal from its arrival, by the speculation or by Validate
 )
 
 // The stages of a transaction execution
@@ -92,6 +103,44 @@ var (
 		Namespace: namespace, Name: "tx_results_total",
 		Help: "Executed transactions by result.",
 	}, []string{"kind", "result"})
+
+	// TxRuns counts the runs of the transactions of the blocks the state of the block commits, by
+	// how they ran: in parallel; again after the transactions before them committed, as their run
+	// in parallel read what those wrote; in order, as the state runs them only in order
+	TxRuns = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "tx_runs_total",
+		Help: "Committed runs of transactions by how they ran: parallel, again, ordered.",
+	}, []string{"run"})
+
+	// Speculations counts how the speculations of streaming proposals ended: finished, as the
+	// proposal went on from them; refused, as they decided a proposal is not valid; validated, as
+	// they did not decide the proposal and the node tried it from the start; aborted, with no
+	// proposal of theirs
+	Speculations = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "speculations_total",
+		Help: "Speculations of streaming proposals by how they ended: finished, refused, validated, aborted.",
+	}, []string{"result"})
+
+	// StateFallbacks counts what the state of the block ran in PostgreSQL or only in order, by
+	// reason
+	StateFallbacks = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "state_fallbacks_total",
+		Help: "Statements the state of the block ran in PostgreSQL or only in order, by reason.",
+	}, []string{"reason"})
+
+	// StateFlush is the time the state of a block takes to write the rows it changed to
+	// PostgreSQL at the end of the block
+	StateFlush = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: namespace, Name: "state_flush_seconds",
+		Help:    "Time to write the rows the state of a block changed to PostgreSQL.",
+		Buckets: prometheus.ExponentialBuckets(0.001, 2, 14),
+	})
+
+	// StateFlushRows counts the rows the state of the blocks wrote to PostgreSQL, by operation
+	StateFlushRows = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "state_flush_rows_total",
+		Help: "Rows the state of the blocks wrote to PostgreSQL by operation: insert, update, delete.",
+	}, []string{"op"})
 
 	// DBStatements counts the database statements by their operation
 	DBStatements = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -164,7 +213,7 @@ func init() {
 	registry.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, DBStatements, DBCache,
+		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, Speculations, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
 		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
 	)
 }

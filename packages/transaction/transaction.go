@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
+	"sync"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
@@ -21,7 +22,25 @@ type Transaction struct {
 	FullData []byte // full transaction, with type and data
 	*InToCxt
 	*OutCtx
-	Inner TransactionCaller
+	Inner  TransactionCaller
+	packed *packed
+}
+
+// packed is the data of a transaction as a block stores it, compressed once for the transaction
+// and its clones
+type packed struct {
+	once sync.Once
+	data []byte
+}
+
+// Compressed is the data of the transaction as a block stores it
+func (t *Transaction) Compressed() []byte {
+	p := t.packed
+	if p == nil {
+		return types.DoZlibCompress(t.FullData)
+	}
+	p.once.Do(func() { p.data = types.DoZlibCompress(t.FullData) })
+	return p.data
 }
 
 // TransactionCaller is parsing transactions

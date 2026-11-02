@@ -58,7 +58,8 @@ func newSignDriver(t *testing.T, ctx context.Context, proposer bool) *signDriver
 	}
 	logger := log.WithFields(log.Fields{})
 	logger.Logger.SetLevel(log.FatalLevel)
-	d := &signDriver{bftDriver: &bftDriver{ctx: ctx, logger: logger, networkID: 7, events: make(chan any, bftEvents)}}
+	d := &signDriver{bftDriver: &bftDriver{ctx: ctx, logger: logger, networkID: 7, events: make(chan any, bftEvents),
+		bodies: newBftBodies()}}
 	d.pool = bft.NewPool(7, 10, 1, set)
 	d.restart = func() *bft.Machine {
 		return bft.NewMachine(bft.DefaultConfig, signApp{}, keys[self][0], keys[self][1], 7, 1, set)

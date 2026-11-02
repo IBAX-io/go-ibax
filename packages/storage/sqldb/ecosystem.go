@@ -126,9 +126,25 @@ func GetEcoParam(db *DbTransaction, ids []int64) ([]EcoParam, error) {
 	return ret, nil
 }
 
-// Get is fill receiver from db
+// Get reads the ecosystem id. A transaction reads each once, and the views of a block share what
+// they read; an ecosystem with another id than id already is read as First reads it.
 func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
-	return isFound(GetDB(dbTx).First(sys, "id = ?", id))
+	if sys.ID != 0 && sys.ID != id {
+		return isFound(GetDB(dbTx).First(sys, "id = ?", id))
+	}
+	row, err := cached(dbTx, ecosysTable, "row:"+strconv.FormatInt(id, 10), func() (*Ecosystem, error) {
+		e := new(Ecosystem)
+		found, err := isFound(GetDB(dbTx).First(e, "id = ?", id))
+		if err != nil || !found {
+			return nil, err
+		}
+		return e, nil
+	})
+	if err != nil || row == nil {
+		return false, err
+	}
+	*sys = *row
+	return true, nil
 }
 
 // IsFrozen reports whether the nodes refuse the transactions of the ecosystem. Ecosystem 1, which

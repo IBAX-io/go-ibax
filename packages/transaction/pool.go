@@ -186,6 +186,52 @@ func VerifyAll(txs []*Transaction) []error {
 	return errs
 }
 
+// Stored is each transaction of the hashes in the form a block stores it, compressed, nil for one
+// the pool does not have: a validator fills in the block of a compact proposal with them
+func (p *Pool) Stored(hashes [][]byte) [][]byte {
+	data := make([][]byte, len(hashes))
+	p.mu.Lock()
+	for i, h := range hashes {
+		if e, ok := p.entries[string(h)]; ok {
+			data[i] = e.data
+		}
+	}
+	p.mu.Unlock()
+	stored := make([][]byte, len(hashes))
+	workers := min(runtime.GOMAXPROCS(0), len(hashes))
+	var wg sync.WaitGroup
+	next := make(chan int)
+	for range workers {
+		wg.Go(func() {
+			for i := range next {
+				stored[i] = types.DoZlibCompress(data[i])
+			}
+		})
+	}
+	for i, d := range data {
+		if d != nil {
+			next <- i
+		}
+	}
+	close(next)
+	wg.Wait()
+	return stored
+}
+
+// Raw is the bodies of the transactions of the hashes the pool holds, as they were sent, nil for
+// those it does not hold
+func (p *Pool) Raw(hashes [][]byte) [][]byte {
+	data := make([][]byte, len(hashes))
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for i, h := range hashes {
+		if e, ok := p.entries[string(h)]; ok {
+			data[i] = e.data
+		}
+	}
+	return data
+}
+
 // Admit puts the transactions in the pool once Check takes them, each error at the index of its
 // transaction. A transaction the pool holds is taken again as it is. A transaction Check refuses
 // is bad; take refuses the others it has no room or no funds for.

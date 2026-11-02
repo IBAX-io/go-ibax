@@ -124,7 +124,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	trs, classifyTxsMap, err := processTransactionsNew(d.logger, txs, st)
+	trs, parsed, err := processTransactionsNew(d.logger, txs, st)
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		RollbacksHash: prevBlock.RollbacksHash,
 	}
 
-	err = generateProcessBlockNew(header, prev, trs, classifyTxsMap)
+	err = generateProcessBlockNew(header, prev, trs, parsed)
 	if err != nil {
 		return err
 	}
@@ -166,8 +166,10 @@ func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) 
 		types.WithTxFullData(trs))
 }
 
-func processTransactionsNew(logger *log.Entry, txs []*transaction.Pending, st time.Time) ([][]byte, map[int][]*transaction.Transaction, error) {
-	classifyTxsMap := make(map[int][]*transaction.Transaction)
+// processTransactionsNew takes the transactions of a new block: the delayed ones of txs first, then
+// those of the pool. It returns their data and the parsed transactions, in the order the block
+// executes and stores them
+func processTransactionsNew(logger *log.Entry, txs []*transaction.Pending, st time.Time) ([][]byte, []*transaction.Transaction, error) {
 	var done = make(<-chan time.Time, 1)
 	limited := syspar.IsHonorNodeMode() || syspar.IsBftConsensus()
 	if syspar.IsBftConsensus() {
@@ -216,15 +218,7 @@ func processTransactionsNew(logger *log.Entry, txs []*transaction.Pending, st ti
 	// Checks preprocessing count limits
 	txList := make([][]byte, 0, len(trs))
 	txs = append(txs, trs...)
-
-	allDelayedContract, err := sqldb.GetAllDelayedContract()
-	if err != nil {
-		return nil, nil, err
-	}
-	var contractNames []string
-	for _, contract := range allDelayedContract {
-		contractNames = append(contractNames, contract.Contract)
-	}
+	taken := make([]*transaction.Transaction, 0, len(txs))
 
 	parsed := make([]*transaction.Transaction, len(txs))
 	for i, txItem := range txs {
@@ -235,7 +229,7 @@ func processTransactionsNew(logger *log.Entry, txs []*transaction.Pending, st ti
 		if limited {
 			select {
 			case <-done:
-				return txList, classifyTxsMap, nil
+				return txList, taken, nil
 			default:
 			}
 		}
@@ -245,12 +239,11 @@ func processTransactionsNew(logger *log.Entry, txs []*transaction.Pending, st ti
 			continue
 		}
 		if txItem.Rate == transaction.RateStopNetwork {
-			classifyTxsMap[types.StopNetworkTxType] = append(classifyTxsMap[types.StopNetworkTxType], tr)
-			txList = append(txList[:0], txs[i].Data)
-			break
+			// a StopNetwork transaction is alone in its block
+			return [][]byte{txItem.Data}, []*transaction.Transaction{tr}, nil
 		}
 		if tr.IsSmartContract() {
-			err = limits.CheckLimit(tr.Inner)
+			err := limits.CheckLimit(tr.Inner)
 			if errors.Cause(err) == transaction.ErrLimitStop && i > 0 {
 				break
 			} else if err != nil {
@@ -259,25 +252,9 @@ func processTransactionsNew(logger *log.Entry, txs []*transaction.Pending, st ti
 				}
 				continue
 			}
-			if tr.Type() == types.TransferSelfTxType {
-				classifyTxsMap[types.TransferSelfTxType] = append(classifyTxsMap[types.TransferSelfTxType], tr)
-				txList = append(txList, txs[i].Data)
-				continue
-			}
-			if tr.Type() == types.UtxoTxType {
-				classifyTxsMap[types.UtxoTxType] = append(classifyTxsMap[types.UtxoTxType], tr)
-				txList = append(txList, txs[i].Data)
-				continue
-			}
-
-			if utils.StringInSlice(contractNames, tr.SmartContract().TxContract.Name) {
-				classifyTxsMap[types.DelayTxType] = append(classifyTxsMap[types.DelayTxType], tr)
-				txList = append(txList, txs[i].Data)
-				continue
-			}
-			classifyTxsMap[types.SmartContractTxType] = append(classifyTxsMap[types.SmartContractTxType], tr)
 		}
-		txList = append(txList, txs[i].Data)
+		txList = append(txList, txItem.Data)
+		taken = append(taken, tr)
 	}
-	return txList, classifyTxsMap, nil
+	return txList, taken, nil
 }

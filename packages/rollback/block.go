@@ -11,6 +11,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	log "github.com/sirupsen/logrus"
@@ -94,8 +95,11 @@ func RollbackBlock(data []byte) error {
 }
 
 func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
-	// rollback transactions in reverse order
+	// the settlement of the fees ran after the transactions, and the transactions in their order
 	logger := block.GetLogger()
+	if err := rollbackTransaction(block.Header.BlockId, smart.SettlementHash, dbTx, logger); err != nil {
+		return err
+	}
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
 		t := block.Transactions[i]
 		t.DbTransaction = dbTx

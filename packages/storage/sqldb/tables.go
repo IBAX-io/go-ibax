@@ -100,7 +100,7 @@ func (t *Table) GetColumns(dbTx *DbTransaction, name, jsonKey string) (map[strin
 	if jsonKey != "" {
 		keyStr = `->'` + jsonKey + `'`
 	}
-	rows, err := GetDB(dbTx).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(columns`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
+	rows, err := dbTx.queryRaw(`SELECT data.* FROM "1_tables", jsonb_each_text(columns`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +125,7 @@ func (t *Table) GetPermissions(dbTx *DbTransaction, name, jsonKey string) (map[s
 		keyStr = `->'` + jsonKey + `'`
 	}
 	perms, err := cached(dbTx, `1_tables`, fmt.Sprintf("perm:%d:%s:%s", t.Ecosystem, name, jsonKey), func() (map[string]string, error) {
-		rows, err := GetDB(dbTx).Raw(`SELECT data.* FROM "1_tables", jsonb_each_text(permissions`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name).Rows()
+		rows, err := dbTx.queryRaw(`SELECT data.* FROM "1_tables", jsonb_each_text(permissions`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name)
 		if err != nil {
 			return nil, err
 		}

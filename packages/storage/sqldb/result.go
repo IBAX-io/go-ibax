@@ -22,7 +22,7 @@ type SingleResult struct {
 // Single is retrieving single result
 func (dbTx *DbTransaction) Single(query string, args ...any) *SingleResult {
 	var result []byte
-	err := GetDB(dbTx).Raw(query, args...).Row().Scan(&result)
+	err := dbTx.rowRaw(query, args...).Scan(&result)
 	switch {
 	case err == sql.ErrNoRows:
 		return &SingleResult{[]byte(""), nil}
@@ -137,18 +137,20 @@ func (r *OneRow) Int() (map[string]int, error) {
 
 // GetAllTransaction is retrieve all query result rows
 func (dbTx *DbTransaction) GetAllTransaction(query string, countRows int, args ...any) ([]map[string]string, error) {
-	request := GetDB(dbTx).Raw(query, args...)
+	var rows *sql.Rows
+	var err error
 	if countRows > 0 {
-		request = request.Limit(countRows)
+		rows, err = GetDB(dbTx).Raw(query, args...).Limit(countRows).Rows()
+	} else {
+		rows, err = dbTx.queryRaw(query, args...)
 	}
-	rows, err := request.Rows()
 	if err != nil {
-		return nil, fmt.Errorf("%s in query %s %s", err, query, args)
+		return nil, fmt.Errorf("%w in query %s %s", err, query, args)
 	}
 	defer rows.Close()
 	result, err := getResult(rows, countRows)
 	if err != nil {
-		return nil, fmt.Errorf("%s in query %s %s", err, query, args)
+		return nil, fmt.Errorf("%w in query %s %s", err, query, args)
 	}
 	return result, nil
 }
@@ -158,7 +160,7 @@ func (dbTx *DbTransaction) GetOneRowTransaction(query string, args ...any) *OneR
 	result := make(map[string]string)
 	all, err := dbTx.GetAllTransaction(query, -1, args...)
 	if err != nil {
-		return &OneRow{result: result, err: fmt.Errorf("%s in query %s %s", err, query, args)}
+		return &OneRow{result: result, err: fmt.Errorf("%w in query %s %s", err, query, args)}
 	}
 	if len(all) == 0 {
 		return &OneRow{result: result, err: nil}

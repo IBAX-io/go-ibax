@@ -61,9 +61,10 @@ func FirstKeptBlock() (int64, error) {
 	return id[0], nil
 }
 
-// GetMaxBlock returns last block existence
+// GetMaxBlock returns last block existence. It reads the header of the block, not its data: the
+// callers ask for the height, the hash or the time, and the data of a block is megabytes.
 func (b *BlockChain) GetMaxBlock() (bool, error) {
-	return isFound(DBConn.Last(b))
+	return isFound(DBConn.Omit("data").Last(b))
 }
 
 // GetMaxForeignBlock returns last block generated not by key_id

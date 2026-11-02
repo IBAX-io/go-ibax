@@ -573,6 +573,17 @@ func GetDefaultRemoteHosts() []string {
 	return ret
 }
 
+// GetNodeTCPAddress is the TCP address of the honor node of the public key, if one has it
+func GetNodeTCPAddress(publicKey []byte) (string, bool) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	item, ok := nodes[hex.EncodeToString(publicKey)]
+	if !ok {
+		return "", false
+	}
+	return item.TCPAddress, true
+}
+
 // GetRemoteHosts returns array of hostnames excluding myself
 func GetRemoteHosts() []string {
 	ret := make([]string, 0)

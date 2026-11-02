@@ -233,7 +233,7 @@ func VMRun(vm *VM, block *CodeBlock, params []any, extend map[string]any, hash [
 	ret, err = rt.Run(block, params, extend)
 	extend[Extend_txcost] = rt.Cost()
 	if err != nil {
-		vm.logger.WithFields(log.Fields{"type": consts.VMError, "tx_hash": fmt.Sprintf("%x", hash), "error": err, "original_contract": extend[Extend_original_contract], "this_contract": extend[Extend_this_contract], "ecosystem_id": extend[Extend_ecosystem_id]}).Error("running block in smart vm")
+		vm.logger.WithFields(log.Fields{"type": consts.VMError, "tx_hash": fmt.Sprintf("%x", hash), "error": err, "original_contract": extend[Extend_original_contract], "this_contract": extend[Extend_this_contract], "ecosystem_id": extend[Extend_ecosystem_id]}).Log(errLevel(err), "running block in smart vm")
 		return nil, err
 	}
 	return

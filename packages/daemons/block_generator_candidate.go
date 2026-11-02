@@ -73,7 +73,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	trs, classifyTxsMap, err := processTransactionsNew(d.logger, txs, st)
+	trs, parsed, err := processTransactionsNew(d.logger, txs, st)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		RollbacksHash: prevBlock.RollbacksHash,
 	}
 
-	err = generateProcessBlockNew(header, prev, trs, classifyTxsMap)
+	err = generateProcessBlockNew(header, prev, trs, parsed)
 	if err != nil {
 		return err
 	}

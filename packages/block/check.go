@@ -28,6 +28,18 @@ func (b *Block) Check() error {
 	if b.IsGenesis() {
 		return nil
 	}
+	if err := b.checkHeader(); err != nil {
+		return err
+	}
+	if err := newTxChecks().check(b, b.Transactions); err != nil {
+		return err
+	}
+	// hash compare could be failed in the case of fork
+	return b.CheckSign()
+}
+
+// checkHeader checks the header of the block against the chain
+func (b *Block) checkHeader() error {
 	logger := b.GetLogger()
 	if b.PrevHeader.BlockId != b.Header.BlockId-1 {
 		var err error
@@ -74,11 +86,27 @@ func (b *Block) Check() error {
 	if !bytes.Equal(b.PrevRollbacksHash, b.PrevHeader.RollbacksHash) {
 		return ErrIncorrectRollbackHash
 	}
-	// check each transaction
-	txCounter := make(map[int64]int)
-	txHashes := make(map[string]struct{})
-	checked := transaction.CheckBatch(b.Transactions, b.Header.Timestamp)
-	for i, t := range b.Transactions {
+	return nil
+}
+
+// txChecks checks the transactions of a block, which it takes in parts in their order
+type txChecks struct {
+	counter map[int64]int
+	hashes  map[string]struct{}
+}
+
+func newTxChecks() *txChecks {
+	return &txChecks{counter: make(map[int64]int), hashes: make(map[string]struct{})}
+}
+
+// check checks the transactions txs of the block, which follow those it checked: no transaction
+// twice, at most max_block_user_transactions of a key, and each valid at the time of the block.
+// A transaction that is not valid it takes out of the block.
+func (c *txChecks) check(b *Block, txs []*transaction.Transaction) error {
+	logger := b.GetLogger()
+	txCounter, txHashes := c.counter, c.hashes
+	checked := transaction.CheckBatch(txs, b.Header.Timestamp)
+	for i, t := range txs {
 		hexHash := string(converter.BinToHex(t.Hash()))
 		// check for duplicate transactions
 		if _, ok := txHashes[hexHash]; ok {
@@ -98,15 +126,11 @@ func (b *Block) Check() error {
 				transaction.MarkTransactionBad(t.Hash(), err.Error())
 			}
 			delete(txHashes, hexHash)
-			b.Transactions = append(b.Transactions[:i], b.Transactions[i+1:]...)
+			if at := len(b.Transactions) - len(txs) + i; at >= 0 && at < len(b.Transactions) && b.Transactions[at] == t {
+				b.Transactions = append(b.Transactions[:at], b.Transactions[at+1:]...)
+			}
 			return errors.Wrap(err, "check transaction")
 		}
-	}
-
-	// hash compare could be failed in the case of fork
-	err = b.CheckSign()
-	if err != nil {
-		return err
 	}
 	return nil
 }

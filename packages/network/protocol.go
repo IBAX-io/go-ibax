@@ -34,6 +34,8 @@ const (
 	RequestTypeBftMessages
 	// RequestTypeBftCertificates fetches the F18 certificates of a range of heights
 	RequestTypeBftCertificates
+	// RequestTypeBftTransactions fetches the transactions of the block of an F18 proposal
+	RequestTypeBftTransactions
 
 	// BlocksPerRequest contains count of blocks per request
 	BlocksPerRequest int = 10

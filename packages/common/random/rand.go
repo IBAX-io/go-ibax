@@ -11,21 +11,31 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 )
 
-type Rand struct {
-	src *rand.Rand
+// TxRand is the random source of a transaction: seeded with its hash, so every node draws the same
+// numbers for it, whatever runs before it in the block and wherever it runs
+func TxRand(hash []byte) *rand.Rand {
+	return rand.New(&lazySource{seed: int64(crypto.CalcChecksum(hash))})
 }
 
-func (r *Rand) BytesSeed(b []byte) *rand.Rand {
-	seed := crypto.CalcChecksum(b)
-	r.src.Seed(int64(seed))
-	return r.src
+// lazySource is the source rand.NewSource makes of its seed, made when a number is first drawn:
+// the source is kilobytes seeded in hundreds of steps, and most transactions draw none
+type lazySource struct {
+	seed int64
+	src  rand.Source64
 }
 
-func NewRand(seed int64) *Rand {
-	return &Rand{
-		src: rand.New(rand.NewSource(seed)),
+func (s *lazySource) source() rand.Source64 {
+	if s.src == nil {
+		s.src = rand.NewSource(s.seed).(rand.Source64)
 	}
+	return s.src
 }
+
+func (s *lazySource) Int63() int64 { return s.source().Int63() }
+
+func (s *lazySource) Uint64() uint64 { return s.source().Uint64() }
+
+func (s *lazySource) Seed(seed int64) { s.seed, s.src = seed, nil }
 
 func RandInt(min, max int) int {
 	if min >= max || min == 0 || max == 0 {
@@ -41,7 +51,6 @@ const (
 	KC_RAND_KIND_ALL   = 3 //
 )
 
-//
 func Krand(size int64, kind int) []byte {
 	ikind, kinds, result := kind, [][]int{{10, 48}, {26, 97}, {26, 65}}, make([]byte, size)
 	is_all := kind > 2 || kind < 0
@@ -56,7 +65,6 @@ func Krand(size int64, kind int) []byte {
 	return result
 }
 
-//
 func RandNumber(size int64) string {
 	result := Krand(size, KC_RAND_KIND_ALL)
 	return string(result[:])

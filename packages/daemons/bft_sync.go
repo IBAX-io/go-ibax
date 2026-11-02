@@ -49,7 +49,7 @@ func updateChainBft(ctx context.Context, d *daemon) error {
 		return nil
 	}
 
-	DBLock()
+	lockWrites()
 	defer func() {
 		node.NodeDoneUpdatingBlockchain()
 		DBUnlock()

@@ -619,6 +619,9 @@ func getColumns(columns string) (colsSQL string, colout []byte, err error) {
 
 // CreateView is creating smart contract view table
 func CreateView(sc *SmartContract, vname, columns, where string, applicationID int64) (err error) {
+	if err := sc.serialOnly("the schema"); err != nil {
+		return err
+	}
 	if err = validateAccess(sc, "CreateView"); err != nil {
 		return
 	}
@@ -826,6 +829,9 @@ func parseViewWhereSql(sc *SmartContract, columns string) (tabsSQL, whsSQL strin
 
 // CreateTable is creating smart contract table
 func CreateTable(sc *SmartContract, name, columns, permissions string, applicationID int64) (err error) {
+	if err := sc.serialOnly("the schema"); err != nil {
+		return err
+	}
 	if err := validateAccess(sc, "CreateTable"); err != nil {
 		return err
 	}
@@ -997,7 +1003,8 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 	if err = sc.AccessColumns(tblname, &columns, false); err != nil {
 		return 0, nil, err
 	}
-	q := sqldb.GetDB(sc.DbTransaction).Table(tblname).Select(PrepareColumns(columns)).Where(where, whereArgs...)
+	sel := sqldb.Select{Table: tblname, Columns: PrepareColumns(columns), Where: where, Args: whereArgs,
+		Offset: int(offset), Limit: int(limit)}
 
 	//group + order => false
 	//group + no order => true
@@ -1009,7 +1016,7 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 	}
 
 	if len(group) != 0 {
-		q = q.Group(group)
+		sel.Group = group
 		if inOrder != nil {
 			order, err = qb.GetOrder(tblname, inOrder, false)
 			if err != nil {
@@ -1017,17 +1024,15 @@ func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrde
 			}
 		}
 	}
+	sel.Order = order
 
-	q = q.Order(order)
-
-	if query != "" {
-		q = q.Select(query)
+	if q, ok := query.(string); ok && q != "" {
+		sel.Columns = q
 	}
 	if all {
-		rows, err = q.Rows()
-	} else {
-		rows, err = q.Offset(int(offset)).Limit(int(limit)).Rows()
+		sel.Offset, sel.Limit = 0, -1
 	}
+	rows, err = sc.DbTransaction.Query(&sel)
 	if err != nil {
 		return 0, nil, logErrorDB(err, fmt.Sprintf("selecting rows from table %s %s where %s order %s",
 			tblname, PrepareColumns(columns), where, order))
@@ -1151,6 +1156,9 @@ func CheckCondition(sc *SmartContract, condition string) (bool, error) {
 
 // FlushContract is flushing contract
 func FlushContract(sc *SmartContract, iroot any, id int64) error {
+	if err := sc.serialOnly("the contracts of the VM"); err != nil {
+		return err
+	}
 	if err := validateAccess(sc, "FlushContract"); err != nil {
 		return err
 	}
@@ -1502,6 +1510,9 @@ func checkTableNameRule(name string) error {
 
 // CreateColumn is creating column
 func CreateColumn(sc *SmartContract, tableName, name, colType, permissions string) (err error) {
+	if err := sc.serialOnly("the schema"); err != nil {
+		return err
+	}
 	if err := sc.denyBftTable(tableName); err != nil {
 		return err
 	}
@@ -1725,6 +1736,9 @@ func ValidateCron(cronSpec string) (err error) {
 }
 
 func UpdateCron(sc *SmartContract, id int64) error {
+	if err := sc.serialOnly("the processes of the node"); err != nil {
+		return err
+	}
 	cronTask := &sqldb.Cron{}
 	cronTask.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
 
@@ -1748,6 +1762,9 @@ func UpdateCron(sc *SmartContract, id int64) error {
 }
 
 func UpdateNodesBan(smartContract *SmartContract, timestamp int64) error {
+	if err := smartContract.serialOnly("the processes of the node"); err != nil {
+		return err
+	}
 	if conf.Config.IsSupportingChildChain() {
 		return ErrNotImplementedOnChildChain
 	}
@@ -1927,21 +1944,33 @@ func BytesToString(src []byte) string {
 
 // CreateCLB creates a new child chain via chainmanager (Needle API name kept for compatibility)
 func CreateCLB(sc *SmartContract, name, dbUser, dbPassword string, port int64) error {
+	if err := sc.serialOnly("the processes of the node"); err != nil {
+		return err
+	}
 	return chainmanager.Manager.CreateChildChain(name, dbUser, dbPassword, int(port))
 }
 
 // DeleteCLB delete clb
 func DeleteCLB(sc *SmartContract, name string) error {
+	if err := sc.serialOnly("the processes of the node"); err != nil {
+		return err
+	}
 	return chainmanager.Manager.DeleteChildChain(name)
 }
 
 // StartCLB run CLB process
 func StartCLB(sc *SmartContract, name string) error {
+	if err := sc.serialOnly("the processes of the node"); err != nil {
+		return err
+	}
 	return chainmanager.Manager.StartChildChain(name)
 }
 
 // StopCLBProcess stops CLB process
 func StopCLBProcess(sc *SmartContract, name string) error {
+	if err := sc.serialOnly("the processes of the node"); err != nil {
+		return err
+	}
 	return chainmanager.Manager.StopChildChain(name)
 }
 
@@ -2291,6 +2320,9 @@ func UpdateRolesNotifications(sc *SmartContract, ecosystemID int64, roles ...any
 	sc.Notifications.AddRoles(ecosystemID, rolesList...)
 }
 func DelColumn(sc *SmartContract, tableName, name string) (err error) {
+	if err := sc.serialOnly("the schema"); err != nil {
+		return err
+	}
 	if err := sc.denyBftTable(tableName); err != nil {
 		return err
 	}
@@ -2372,6 +2404,9 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 }
 
 func DelTable(sc *SmartContract, tableName string) (err error) {
+	if err := sc.serialOnly("the schema"); err != nil {
+		return err
+	}
 	if err := sc.denyBftTable(tableName); err != nil {
 		return err
 	}

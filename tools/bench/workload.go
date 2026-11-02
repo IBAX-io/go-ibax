@@ -20,8 +20,8 @@ type workload struct {
 // workloads are the workloads of the perf plan §4.2:
 //
 //	self      TransferSelf, UTXO to account and back in turn
-//	utxo      UTXO transfers from each account to the next
-//	transfer  @1TokensSend of 1 from each account to the next: the transfer of a chain of the honor
+//	utxo      UTXO transfers from each account to its peer
+//	transfer  @1TokensSend of 1 from each account to its peer: the transfer of a chain of the honor
 //	          nodes only, which takes no TransferSelf nor UTXO
 //	contract  the contract mix: ProfileEdit, NotificationsSend and TokensSend, 4:3:3
 //	write     BenchWrite: 5 DBInsert and 5 DBUpdate a transaction
@@ -29,6 +29,10 @@ func workloads(c *chainClient, accounts []*account, names []string, run int) ([]
 	n := len(accounts)
 	// Each run marks its transactions, which stay unlike those of the runs before it
 	mark := func(seq int) string { return strconv.Itoa(run) + "-" + strconv.Itoa(seq) }
+	// The peer of the account of a transaction is half the accounts away: the transactions that
+	// follow one another touch other accounts, as the transfers of different users do, rather
+	// than each spending what the one before it paid in
+	peer := func(seq int) *account { return accounts[(seq+n/2)%n] }
 	var out []workload
 	for _, name := range names {
 		if c.honorOnly && (name == "self" || name == "utxo") {
@@ -42,7 +46,7 @@ func workloads(c *chainClient, accounts []*account, names []string, run int) ([]
 				return nil, err
 			}
 			out = append(out, workload{name, func(seq int) (*signedTx, error) {
-				return c.signer.contract(accounts[seq%n], id, map[string]any{"Recipient": accounts[(seq+1)%n].address(), "Amount": "1", "Comment": mark(seq)})
+				return c.signer.contract(accounts[seq%n], id, map[string]any{"Recipient": peer(seq).address(), "Amount": "1", "Comment": mark(seq)})
 			}})
 		case "self":
 			out = append(out, workload{name, func(seq int) (*signedTx, error) {
@@ -55,7 +59,7 @@ func workloads(c *chainClient, accounts []*account, names []string, run int) ([]
 			}})
 		case "utxo":
 			out = append(out, workload{name, func(seq int) (*signedTx, error) {
-				return c.signer.utxo(accounts[seq%n], accounts[(seq+1)%n].keyID, "1", mark(seq))
+				return c.signer.utxo(accounts[seq%n], peer(seq).keyID, "1", mark(seq))
 			}})
 		case "contract":
 			ids, err := c.contractIDs("@1ProfileEdit", "@1NotificationsSend", "@1TokensSend")
@@ -63,7 +67,7 @@ func workloads(c *chainClient, accounts []*account, names []string, run int) ([]
 				return nil, err
 			}
 			out = append(out, workload{name, func(seq int) (*signedTx, error) {
-				a, next := accounts[seq%n], accounts[(seq+1)%n]
+				a, next := accounts[seq%n], peer(seq)
 				switch seq % 10 {
 				case 0, 1, 2, 3:
 					return c.signer.contract(a, ids["@1ProfileEdit"], map[string]any{"Name": "bench", "Info": "bench " + mark(seq)})

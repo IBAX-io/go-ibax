@@ -10,12 +10,22 @@ smart contract, database table and interface.
 
 ### Branches and chains
 
-The `develop` branch runs **new chains only**: a chain whose first block a `develop` binary
-generated. It is not an in-place upgrade of an existing network, mainnet or testnet, whose
-nodes keep the binaries of their own release line. The first block names its chain format
-(`ChainFormat`, `consts.ChainFormat`); a node refuses to load, sync or start on a chain whose
-first block names another format, and a first block of an earlier binary names none. A change
-of the format starts a new chain from a new first block.
+A binary of the `develop` branch runs **newly created chains only**: chains whose first block a
+`develop` binary generated. It must not upgrade any existing chain in place, including the
+production nodes that run the `main` release line (v1.4.x) on mainnet and testnet: those nodes
+keep the binaries of `main`.
+
+Nor does a chain of `develop` take, in place, a later `develop` binary whose consensus rules or
+first-block parameters differ from those of the binary that generated its first block. The merge
+of `feat/tps` is such a change: it raises the starting `bft_timeout_propose_ms` from 3000 to 4000
+and bounds the timeouts by margins. A chain created before that merge keeps its binaries; a chain
+on the merged code is created anew by a binary of the merged code.
+
+The first block names its chain format (`ChainFormat`, `consts.ChainFormat`); a node refuses to
+load, sync or start on a chain whose first block names another format, and a first block of an
+earlier binary names none. A change of the consensus rules or of the first-block parameters
+raises `consts.ChainFormat`, so a node of the new code refuses a chain of the old one rather than
+run it under rules it was not created with.
 
 ### Build from Source
 

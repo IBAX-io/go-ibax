@@ -146,3 +146,33 @@ func TestCachedFirst(t *testing.T) {
 		t.Fatalf("not found is cached: finds %d", finds)
 	}
 }
+
+func TestTxCacheSavepoints(t *testing.T) {
+	_, c := withTxCache(t.Context())
+	tr := &DbTransaction{cache: c}
+	loads := 0
+	load := func() (int64, error) { loads++; return 1, nil }
+	cached(tr, "1_keys", "k", load)
+	cached(tr, "1_tables", "k", load)
+	savepointStatement(c, `SAVEPOINT "a-1";`)
+	c.forget("1_keys")
+	cached(tr, "1_keys", "k", load)
+	savepointStatement(c, `ROLLBACK TO SAVEPOINT "a-1"`)
+	cached(tr, "1_keys", "k", load)
+	cached(tr, "1_tables", "k", load)
+	if loads != 4 {
+		t.Fatalf("loads %d, want 4", loads)
+	}
+	savepointStatement(c, `RELEASE SAVEPOINT "a-1"`)
+	if len(c.marks) != 0 || len(c.written) != 0 {
+		t.Fatal("release")
+	}
+	savepointStatement(c, `ROLLBACK TO SAVEPOINT "b"`)
+	cached(tr, "1_tables", "k", load)
+	if loads != 5 {
+		t.Fatalf("unknown savepoint: loads %d, want 5", loads)
+	}
+}
+
+// TestSnapshotReplay: a run on the snapshot of the transaction of a block records what it reads and
+// writes, and its writes replayed in the transaction of the block write there what it wrote.

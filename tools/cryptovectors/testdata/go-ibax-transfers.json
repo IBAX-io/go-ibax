@@ -1,5 +1,5 @@
 {
-  "source": "go-ibax transaction.(*Transaction).Unmarshall (client tx type 0x80) then SmartTransactionParser.Validate (SmartTransaction.Validate, the account key in the header verifies the signature) via tools/cryptovectors; data is written by the client. Test keys only.",
+  "source": "go-ibax transaction.(*Transaction).UnmarshallClient (client tx type 0x80) then SmartTransactionParser.Validate (SmartTransaction.Validate, the account key in the header verifies the signature) via tools/cryptovectors; data is written by the client. Test keys only.",
   "cases": [
     {
       "cryptoer": "ECC_Secp256k1",

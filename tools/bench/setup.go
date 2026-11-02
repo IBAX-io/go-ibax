@@ -48,6 +48,9 @@ type setupConfig struct {
 	accounts int
 	fund     decimal.Decimal
 	batch    int
+	// inFlight bounds the transactions of the founder setup has in the pools at a time: a node
+	// takes TxPool.MaxPerKey of an account
+	inFlight int
 	timeout  time.Duration
 }
 
@@ -75,7 +78,9 @@ func setup(c *chainClient, cfg setupConfig) error {
 	for _, a := range accounts {
 		a.unregistered = true
 	}
-	each := func(step string, sign func(i int, a *account) (*signedTx, error)) error {
+	// each runs a transaction of each account; those of one sender, the founder, go inFlight at
+	// a time, each part once the one before is in blocks
+	each := func(step string, sign func(i int, a *account) (*signedTx, error), part int) error {
 		txs := make([]*signedTx, 0, len(accounts))
 		for i, a := range accounts {
 			tx, err := sign(i, a)
@@ -84,12 +89,22 @@ func setup(c *chainClient, cfg setupConfig) error {
 			}
 			txs = append(txs, tx)
 		}
-		return c.run(step, txs, cfg.batch, cfg.timeout)
+		for i := 0; i < len(txs); i += part {
+			name := step
+			if part < len(txs) {
+				name = fmt.Sprintf("%s %d-%d", step, i+1, min(i+part, len(txs)))
+			}
+			if err := c.run(name, txs[i:min(i+part, len(txs))], cfg.batch, cfg.timeout); err != nil {
+				return err
+			}
+		}
+		return nil
 	}
+	all := len(accounts)
 
 	if err := each("NewUser", func(_ int, a *account) (*signedTx, error) {
 		return c.signer.contract(a, ids["@1NewUser"], map[string]any{"NewPubkey": fmt.Sprintf("%x", a.public.Bytes())})
-	}); err != nil {
+	}, all); err != nil {
 		return err
 	}
 	for _, a := range accounts {
@@ -97,7 +112,7 @@ func setup(c *chainClient, cfg setupConfig) error {
 	}
 	if err := each("TokensSend from the founder", func(_ int, a *account) (*signedTx, error) {
 		return c.signer.contract(c.founder, ids["@1TokensSend"], map[string]any{"Recipient": a.address(), "Amount": cfg.fund.String(), "Comment": "bench " + a.address()})
-	}); err != nil {
+	}, max(cfg.inFlight, 1)); err != nil {
 		return err
 	}
 	half := cfg.fund.Div(decimal.NewFromInt(2)).Floor().String()
@@ -105,12 +120,12 @@ func setup(c *chainClient, cfg setupConfig) error {
 		log.Print("TransferSelf to UTXO: none, a chain of the honor nodes only has no UTXO")
 	} else if err := each("TransferSelf to UTXO", func(_ int, a *account) (*signedTx, error) {
 		return c.signer.transferSelf(a, half, "Account", "UTXO")
-	}); err != nil {
+	}, all); err != nil {
 		return err
 	}
 	if err := each("ProfileEdit", func(i int, a *account) (*signedTx, error) {
 		return c.signer.contract(a, ids["@1ProfileEdit"], map[string]any{"Name": "bench" + strconv.FormatInt(a.keyID&0x7fffffffffff, 36)})
-	}); err != nil {
+	}, all); err != nil {
 		return err
 	}
 

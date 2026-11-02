@@ -53,20 +53,6 @@ var (
 		t.Column("stop_time", "int", {"default": "0"})
 	{{footer}}
 
-	{{head "spent_info"}}
-		t.Column("input_tx_hash", "bytea", {"null": true})
-		t.Column("input_index", "integer", {"null": true})
-		t.Column("output_tx_hash", "bytea")
-		t.Column("output_index", "integer")
-		t.Column("output_key_id", "bigint")
-		t.Column("output_value", "decimal(30)", {"default_raw": "'0' CHECK (output_value >= 0)"})
-		t.Column("ecosystem", "bigint", {"default": "1"})
-		t.Column("block_id", "bigint")
-		t.Column("type", "bigint")
-		t.Column("spent_block", "bigint", {"default": "0"})
-	{{footer "primary(output_tx_hash,output_key_id,output_index)" "index(block_id)" "index(spent_block)" "index(input_tx_hash)" "index(output_key_id)" "index(output_tx_hash)" "index(ecosystem, output_key_id, block_id)"}}
-	sql("CREATE INDEX \"spent_info_unspent\" ON \"spent_info\" (output_key_id, ecosystem) WHERE input_tx_hash IS NULL;")
-
 	{{head "transactions_status"}}
 		t.Column("hash", "bytea", {"default": ""})
 		t.Column("time", "bigint", {"default": "0"})

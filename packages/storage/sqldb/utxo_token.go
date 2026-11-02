@@ -1,17 +1,8 @@
 package sqldb
 
-import (
-	"sort"
-	"sync"
-)
-
-var (
-	lock = &sync.RWMutex{}
-)
+import "sort"
 
 func InsertTxOutputs(outputTxHash []byte, txOutputsMapCtx map[KeyUTXO][]SpentInfo, outputsMap map[KeyUTXO][]SpentInfo) {
-	lock.Lock()
-	defer lock.Unlock()
 	for keyUTXO, txOutput := range txOutputsMapCtx {
 		spentInfos := outputsMap[keyUTXO]
 		for i, _ := range txOutput {
@@ -23,8 +14,6 @@ func InsertTxOutputs(outputTxHash []byte, txOutputsMapCtx map[KeyUTXO][]SpentInf
 }
 
 func UpdateTxInputs(inputTxHash []byte, blockID int64, txInputsMapCtx map[KeyUTXO][]SpentInfo, outputsMap map[KeyUTXO][]SpentInfo) {
-	lock.Lock()
-	defer lock.Unlock()
 	// the inputs are numbered key by key in the order of ecosystem and key ID, not in the random
 	// order of the map, so that every node writes the same input_index
 	keys := make([]KeyUTXO, 0, len(txInputsMapCtx))
@@ -52,8 +41,6 @@ func UpdateTxInputs(inputTxHash []byte, blockID int64, txInputsMapCtx map[KeyUTX
 }
 
 func PutAllOutputsMap(outputs []SpentInfo, outputsMap map[KeyUTXO][]SpentInfo) {
-	lock.Lock()
-	defer lock.Unlock()
 	//if len(outputsMap) == 0 {
 	//	outputsMap = make(map[KeyUTXO][]SpentInfo)
 	//}
@@ -70,8 +57,6 @@ func PutOutputsMap(keyUTXO KeyUTXO, outputs []SpentInfo, outputsMap map[KeyUTXO]
 }
 
 func GetUnusedOutputsMap(keyUTXO KeyUTXO, outputsMap map[KeyUTXO][]SpentInfo) []SpentInfo {
-	lock.Lock()
-	defer lock.Unlock()
 	spentInfos := outputsMap[keyUTXO]
 	var inputIndex int32
 	var list []SpentInfo

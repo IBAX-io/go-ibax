@@ -173,8 +173,10 @@ type Proposal struct {
 	ValidRound int32
 	Validator  uint32
 	Hash       Hash
-	Block      []byte
-	Signature  []byte
+	// Block is the block in the node; on the network it is the compact form of package block,
+	// which the node that takes the proposal fills in before the pool admits it
+	Block     []byte
+	Signature []byte
 	// Received is when the node took the proposal from the network, for Timely: the node neither
 	// signs nor sends it
 	Received time.Time
@@ -191,17 +193,23 @@ func (p *Proposal) Verify(publicKey []byte, networkID uint64) error {
 	return Verify(publicKey, networkID, p.Height, p.Round, TypeProposal, p.Hash, p.ValidRound, p.Signature)
 }
 
-// Marshal is the wire form of a proposal: height u64 ‖ round u32 ‖ validRound i32 ‖
+// Marshal is the form of a proposal with its block: height u64 ‖ round u32 ‖ validRound i32 ‖
 // validator u32 ‖ hash 32 ‖ len u32 ‖ block ‖ len u16 ‖ signature
 func (p *Proposal) Marshal() []byte {
-	b := make([]byte, 0, 8+4+4+4+HashSize+4+len(p.Block)+2+len(p.Signature))
+	return p.MarshalBlock(p.Block)
+}
+
+// MarshalBlock is the form of the proposal with the block given in place of its block: on the
+// network, the compact form of its block
+func (p *Proposal) MarshalBlock(block []byte) []byte {
+	b := make([]byte, 0, 8+4+4+4+HashSize+4+len(block)+2+len(p.Signature))
 	b = binary.BigEndian.AppendUint64(b, p.Height)
 	b = binary.BigEndian.AppendUint32(b, p.Round)
 	b = binary.BigEndian.AppendUint32(b, uint32(p.ValidRound))
 	b = binary.BigEndian.AppendUint32(b, p.Validator)
 	b = append(b, p.Hash[:]...)
-	b = binary.BigEndian.AppendUint32(b, uint32(len(p.Block)))
-	b = append(b, p.Block...)
+	b = binary.BigEndian.AppendUint32(b, uint32(len(block)))
+	b = append(b, block...)
 	return appendBytes16(b, p.Signature)
 }
 

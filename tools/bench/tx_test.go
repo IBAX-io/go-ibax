@@ -52,7 +52,7 @@ func TestSignedTransactionsPassTheNode(t *testing.T) {
 		}
 		for name, tx := range map[string]*signedTx{"TransferSelf": self, "UTXO": utxo} {
 			parsed := &transaction.Transaction{}
-			if err := parsed.Unmarshall(bytes.NewBuffer(bytes.Clone(tx.data)), true); err != nil {
+			if err := parsed.UnmarshallClient(bytes.NewBuffer(bytes.Clone(tx.data)), true); err != nil {
 				t.Fatalf("%s %s: refused: %v", a.Algo, name, err)
 			}
 			if got := parsed.Hash(); string(got) != string(mustHex(t, tx.hash)) {
@@ -60,7 +60,7 @@ func TestSignedTransactionsPassTheNode(t *testing.T) {
 			}
 			forged := bytes.Clone(tx.data)
 			forged[len(forged)-1] ^= 1
-			if err := (&transaction.Transaction{}).Unmarshall(bytes.NewBuffer(forged), true); err == nil {
+			if err := (&transaction.Transaction{}).UnmarshallClient(bytes.NewBuffer(forged), true); err == nil {
 				t.Fatalf("%s %s: a changed signature passed", a.Algo, name)
 			}
 		}

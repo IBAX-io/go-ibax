@@ -27,6 +27,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	emailRE = regexp.MustCompile(`^(?i)[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
+	nameRE  = regexp.MustCompile(`(?is)^@(\d+)(\w[_\w\d]*)$`)
+)
+
 var ErrSliceSize = errors.New("Slice size larger than buffer size")
 
 var FirstEcosystemTables = map[string]bool{
@@ -787,15 +792,13 @@ func EscapeForJSON(data string) string {
 
 // ValidateEmail validates email
 func ValidateEmail(email string) bool {
-	Re := regexp.MustCompile(`^(?i)[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
-	return Re.MatchString(email)
+	return emailRE.MatchString(email)
 }
 
 // ParseName gets a state identifier and the name of the contract or table
 // from the full name like @[id]name
 func ParseName(in string) (id int64, name string) {
-	re := regexp.MustCompile(`(?is)^@(\d+)(\w[_\w\d]*)$`)
-	ret := re.FindStringSubmatch(in)
+	ret := nameRE.FindStringSubmatch(in)
 	if len(ret) == 3 {
 		id = StrToInt64(ret[1])
 		name = ret[2]

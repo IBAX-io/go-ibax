@@ -72,13 +72,13 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 
 		selectCost, err := queryCoster.QueryCost(sc.DbTransaction, selectQuery, selectArgs...)
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table, "query": selectQuery, "fields": fields, "values": ivalues, "where": inWhere}).Error("getting query total cost")
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table, "query": selectQuery, "fields": fields, "values": ivalues, "where": inWhere}).Log(dbLevel(err), "getting query total cost")
 			return 0, "", err
 		}
 		rows = sc.DbTransaction.GetOneRowTransaction(selectQuery, selectArgs...)
 		logData, err = rows.String()
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": selectQuery}).Error("getting one row transaction")
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": selectQuery}).Log(dbLevel(err), "getting one row transaction")
 			return 0, "", err
 		}
 		cost += selectCost
@@ -111,7 +111,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			updateQuery := `UPDATE "` + sqlBuilder.Table + `" SET ` + updateExpr + " " + whereExpr
 			updateCost, err := queryCoster.QueryCost(sc.DbTransaction, updateQuery, args...)
 			if err != nil {
-				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": updateQuery}).Error("getting query total cost for update query")
+				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": updateQuery}).Log(dbLevel(err), "getting query total cost for update query")
 				return 0, "", err
 			}
 			cost += updateCost
@@ -120,7 +120,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 		err = sc.DbTransaction.Update(sqlBuilder.Table, updateExpr, whereExpr, args...)
 		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Error("getting update query")
+			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Log(dbLevel(err), "getting update query")
 			return 0, "", err
 		}
 		if maxIDCached && !setsID(fields) {
@@ -159,7 +159,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 
 	insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery, insertArgs...)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("getting total query cost for insert query")
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Log(dbLevel(err), "getting total query cost for insert query")
 		return 0, "", err
 	}
 	rollDataHashStr = qb.BoundStatement(insertQuery, insertArgs)
@@ -167,7 +167,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 	err = sc.DbTransaction.ExecSql(insertQuery, insertArgs...)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Error("executing insert query")
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Log(dbLevel(err), "executing insert query")
 		return 0, "", err
 	}
 	if id, err := strconv.ParseInt(sqlBuilder.TableID(), 10, 64); maxIDCached && err == nil {
@@ -271,4 +271,13 @@ func shortString(raw string, length int) string {
 	}
 
 	return raw
+}
+
+// dbLevel is the level of the log of the error of a statement: the statement after which the
+// transaction runs again is the flow of the block, not a fault
+func dbLevel(err error) log.Level {
+	if sqldb.IsRerun(err) {
+		return log.DebugLevel
+	}
+	return log.ErrorLevel
 }

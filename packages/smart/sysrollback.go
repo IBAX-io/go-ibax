@@ -31,6 +31,9 @@ type SysRollData struct {
 }
 
 func SysRollback(sc *SmartContract, data SysRollData) error {
+	if err := sc.serialOnly("the contracts of the VM"); err != nil {
+		return err
+	}
 	out, err := marshalJSON(data, `marshaling sys rollback`)
 	if err != nil {
 		return err

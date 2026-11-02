@@ -100,7 +100,7 @@ func init() {
 	cmdFlags.StringVar(&conf.Config.DB.Password, "dbPassword", "123456", "DB password")
 	cmdFlags.IntVar(&conf.Config.DB.LockTimeout, "dbLockTimeout", 5000, "DB lock timeout")
 	cmdFlags.IntVar(&conf.Config.DB.IdleInTxTimeout, "dbIdleInTxTimeout", 5000, "DB idle tx timeout")
-	cmdFlags.IntVar(&conf.Config.DB.MaxIdleConns, "dbMaxIdleConns", 5, "DB sets the maximum number of connections in the idle connection pool")
+	cmdFlags.IntVar(&conf.Config.DB.MaxIdleConns, "dbMaxIdleConns", 100, "DB sets the maximum number of connections in the idle connection pool; the workers of a block hold one each, so it is at least their number")
 	cmdFlags.IntVar(&conf.Config.DB.MaxOpenConns, "dbMaxOpenConns", 100, "sets the maximum number of open connections to the database")
 
 	//Redis
@@ -135,6 +135,11 @@ func init() {
 	cmdFlags.IntVar(&conf.Config.TxPool.ReserveCount, "txPoolReserveCount", 0, "Transactions of the node and evidences of validators it keeps beyond txPoolCount; 0 takes 1024")
 	cmdFlags.Int64Var(&conf.Config.TxPool.ReserveBytes, "txPoolReserveBytes", 0, "Bytes of the transactions of the node and evidences of validators beyond txPoolBytes; 0 takes 16 MiB")
 	cmdFlags.IntVar(&conf.Config.TxPool.BadMinutes, "txBadMinutes", 0, "Minutes the node answers the status of a transaction it refused; 0 takes 60")
+
+	// Exec
+	cmdFlags.IntVar(&conf.Config.Exec.Workers, "execWorkers", 0, "Workers running the transactions of a block in parallel; 0 takes the CPUs, 1 runs them in order")
+	cmdFlags.IntVar(&conf.Config.Exec.GCPercent, "gcPercent", 0, "GOGC of the node; 0 takes 400, the variable GOGC wins")
+	cmdFlags.Int64Var(&conf.Config.Exec.MemoryLimitMiB, "memoryLimitMiB", 0, "Soft limit of the memory of the node in MiB; 0 sets none, the variable GOMEMLIMIT wins")
 
 	// TokenMovement
 	cmdFlags.StringVar(&conf.Config.TokenMovement.Host, "tmovHost", "", "Token movement host")

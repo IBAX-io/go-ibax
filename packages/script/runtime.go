@@ -108,17 +108,29 @@ type RunTime struct {
 	timeLimit bool
 	callDepth uint16
 	mem       int64
-	memVars   map[any]int64
+	// memVars is the memory of each of vars, memExtend that of each of extend
+	memVars   []int64
+	memExtend map[string]int64
 	errInfo   ErrInfo
 }
+
+// initialStack is the room a runtime makes on its stack for the values of a run: a condition or a
+// contract of a few calls fits, a deeper one grows the stack
+const initialStack = 32
+
+// initialVars is the room a runtime makes for the variables of a run, as initialStack is for its
+// stack
+const initialVars = 64
 
 // NewRunTime creates a new RunTime for the virtual machine
 func NewRunTime(vm *VM, cost int64) *RunTime {
 	return &RunTime{
-		stack:   make([]any, 0, 1024),
-		vm:      vm,
-		cost:    cost,
-		memVars: make(map[any]int64),
+		stack:     make([]any, 0, initialStack),
+		vm:        vm,
+		cost:      cost,
+		vars:      make([]any, 0, initialVars),
+		memVars:   make([]int64, 0, initialVars),
+		memExtend: make(map[string]int64),
 	}
 }
 
@@ -372,14 +384,14 @@ func (rt *RunTime) setExtendVar(k string, v any) {
 
 func (rt *RunTime) recalcMemExtendVar(k string) {
 	mem := calcMem(rt.extend[k])
-	rt.mem += mem - rt.memVars[k]
-	rt.memVars[k] = mem
+	rt.mem += mem - rt.memExtend[k]
+	rt.memExtend[k] = mem
 }
 
 func (rt *RunTime) addVar(v any) {
 	rt.vars = append(rt.vars, v)
 	mem := calcMem(v)
-	rt.memVars[len(rt.vars)-1] = mem
+	rt.memVars = append(rt.memVars, mem)
 	rt.mem += mem
 }
 
@@ -585,6 +597,27 @@ func isSelfAssignment(dest, value any) bool {
 	return false
 }
 
+// placedError is an error with the place of the contract that met it in its text: the error it
+// met stays under it
+type placedError struct {
+	text  string
+	cause error
+}
+
+func (e *placedError) Error() string { return e.text }
+
+func (e *placedError) Unwrap() error { return e.cause }
+
+// errLevel is the level of the log of err: the statement after which the transaction runs again
+// is the flow of the block, not a fault
+func errLevel(err error) log.Level {
+	var r interface{ Rerun() bool }
+	if errors.As(err, &r) && r.Rerun() {
+		return log.DebugLevel
+	}
+	return log.ErrorLevel
+}
+
 // RunCode executes CodeBlock
 func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 	var cmd *ByteCode
@@ -608,7 +641,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 			}
 
 			if len(rt.errInfo.Name) > 0 && rt.errInfo.Name != `ExecContract` {
-				err = fmt.Errorf("%s [%s %s%s", err, rt.errInfo.Name, curContract, line)
+				err = fmt.Errorf("%w [%s %s%s", err, rt.errInfo.Name, curContract, line)
 				rt.errInfo.Name = ``
 			} else {
 				out := err.Error()
@@ -622,7 +655,7 @@ func (rt *RunTime) RunCode(block *CodeBlock) (status int, err error) {
 				} else {
 					out += ` [`
 				}
-				err = fmt.Errorf(`%s%s%s`, out, curContract, line)
+				err = &placedError{text: out + curContract + line, cause: err}
 			}
 		}
 	}()
