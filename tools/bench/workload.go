@@ -9,7 +9,11 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"strings"
 )
+
+// iswapFile is the state file of iswap, which the workloads iswap-* read
+var iswapFile = "iswap.json"
 
 // workload makes the transaction seq of a run, of the accounts in turn; no two of a run are alike
 type workload struct {
@@ -86,7 +90,15 @@ func workloads(c *chainClient, accounts []*account, names []string, run int) ([]
 				return c.signer.contract(accounts[seq%n], id, map[string]any{"N": int64(run)*1_000_000 + int64(seq)})
 			}})
 		default:
-			return nil, fmt.Errorf("no workload %q: self, utxo, transfer, contract or write", name)
+			if strings.HasPrefix(name, "iswap-") {
+				w, err := iswapWorkloads(c, accounts, name, run, iswapFile)
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, w)
+				continue
+			}
+			return nil, fmt.Errorf("no workload %q: self, utxo, transfer, contract, write or iswap-*", name)
 		}
 	}
 	return out, nil

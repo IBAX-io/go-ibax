@@ -35,14 +35,20 @@ func newSigner(info *chainInfo) *signer {
 	return &signer{networkID: info.NetworkID, time: time.Now().Unix()}
 }
 
-// sign fills the header of tx with the account and signs it: the hash is the double hash of the
-// payload, and the signature is of the hash, as AccountKey.Verify checks it. The header carries
-// the key of an account that has not registered it only.
+// sign fills the header of tx with the account and signs it in ecosystem 1
 func (s *signer) sign(a *account, tx *types.SmartTransaction) (*signedTx, error) {
+	return s.signIn(a, 1, tx)
+}
+
+// signIn fills the header of tx with the account and the ecosystem, whose tables the contracts
+// read and write by names without one, and signs it: the hash is the double hash of the payload,
+// and the signature is of the hash, as AccountKey.Verify checks it. The header carries the key of
+// an account that has not registered it only.
+func (s *signer) signIn(a *account, eco int64, tx *types.SmartTransaction) (*signedTx, error) {
 	if tx.Header == nil {
 		tx.Header = &types.Header{}
 	}
-	tx.EcosystemID = 1
+	tx.EcosystemID = eco
 	tx.KeyID = a.keyID
 	tx.Time = s.time
 	tx.NetworkID = s.networkID
@@ -67,6 +73,11 @@ func (s *signer) sign(a *account, tx *types.SmartTransaction) (*signedTx, error)
 
 func (s *signer) contract(a *account, id int, params map[string]any) (*signedTx, error) {
 	return s.sign(a, &types.SmartTransaction{Header: &types.Header{ID: id}, Params: params})
+}
+
+// contractIn signs a transaction of the contract id in the ecosystem eco
+func (s *signer) contractIn(a *account, eco int64, id int, params map[string]any) (*signedTx, error) {
+	return s.signIn(a, eco, &types.SmartTransaction{Header: &types.Header{ID: id}, Params: params})
 }
 
 func (s *signer) transferSelf(a *account, value, source, target string) (*signedTx, error) {

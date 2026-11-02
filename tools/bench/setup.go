@@ -247,34 +247,41 @@ func (c *chainClient) contractIDs(names ...string) (map[string]int, error) {
 // run sends the transactions of a step of setup, batch at a time to the nodes in turn, and waits
 // until each succeeded in a block; it fails on the first that failed
 func (c *chainClient) run(step string, txs []*signedTx, batch int, timeout time.Duration) error {
+	_, err := c.runFor(step, txs, batch, timeout)
+	return err
+}
+
+// runFor is run that tells the results of the contracts of the transactions, by their hashes
+func (c *chainClient) runFor(step string, txs []*signedTx, batch int, timeout time.Duration) (map[string]string, error) {
 	start := time.Now()
 	for i := 0; i < len(txs); i += batch {
 		if err := c.nodes[(i/batch)%len(c.nodes)].send(txs[i:min(i+batch, len(txs))]); err != nil {
-			return fmt.Errorf("%s: %w", step, err)
+			return nil, fmt.Errorf("%s: %w", step, err)
 		}
 	}
 	hashes := make([]string, len(txs))
 	for i, tx := range txs {
 		hashes[i] = tx.hash
 	}
-	failed, pending, err := c.await(hashes, timeout)
+	results, failed, pending, err := c.await(hashes, timeout)
 	if err != nil {
-		return fmt.Errorf("%s: %w", step, err)
+		return nil, fmt.Errorf("%s: %w", step, err)
 	}
 	for h, why := range failed {
-		return fmt.Errorf("%s: %d of %d failed, %s: %s", step, len(failed), len(txs), h, why)
+		return nil, fmt.Errorf("%s: %d of %d failed, %s: %s", step, len(failed), len(txs), h, why)
 	}
 	if len(pending) > 0 {
-		return fmt.Errorf("%s: %d of %d in no block after %s", step, len(pending), len(txs), timeout)
+		return nil, fmt.Errorf("%s: %d of %d in no block after %s", step, len(pending), len(txs), timeout)
 	}
 	log.Printf("%s: %d in blocks in %.1fs", step, len(txs), time.Since(start).Seconds())
-	return nil
+	return results, nil
 }
 
 // await asks the first node the status of the transactions until each succeeded in a block or
-// failed, or the time runs out: it tells those that failed and why, and those still pending
-func (c *chainClient) await(hashes []string, timeout time.Duration) (failed map[string]string, pending []string, err error) {
-	failed = map[string]string{}
+// failed, or the time runs out: it tells the results of those that succeeded, those that failed
+// and why, and those still pending
+func (c *chainClient) await(hashes []string, timeout time.Duration) (results, failed map[string]string, pending []string, err error) {
+	results, failed = map[string]string{}, map[string]string{}
 	pending = hashes
 	deadline := time.Now().Add(timeout)
 	for len(pending) > 0 && time.Now().Before(deadline) {
@@ -284,7 +291,7 @@ func (c *chainClient) await(hashes []string, timeout time.Duration) (failed map[
 			part := pending[i:min(i+1000, len(pending))]
 			statuses, err := c.nodes[0].statuses(part)
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 			for _, h := range part {
 				s := statuses[h]
@@ -293,10 +300,12 @@ func (c *chainClient) await(hashes []string, timeout time.Duration) (failed map[
 					still = append(still, h)
 				case s.failure() != "":
 					failed[h] = s.failure()
+				default:
+					results[h] = s.Result
 				}
 			}
 		}
 		pending = still
 	}
-	return failed, pending, nil
+	return results, failed, pending, nil
 }

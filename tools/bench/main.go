@@ -9,6 +9,7 @@
 //	bench run   -node URL[,URL...] -key FILE [-file FILE] [-workloads self,utxo,contract,write]
 //	            [-rates 100,200,...] [-duration 30s] [-p99 2s] [-metrics URL[,URL...]] [-out DIR]
 //	bench send  -node URL[,URL...] -key FILE -n N [-rate R] CONTRACT [NAME=VALUE...]
+//	bench iswap -node URL[,URL...] -key FILE -bundle FILE [-file FILE] [-iswap FILE] [-tokens N] [-traders N]
 //
 // setup makes the accounts of the bench, of an account algorithm, each a member of ecosystem 1
 // with coins on its account and in UTXO, and the contract of the write-heavy workload, signed by
@@ -27,6 +28,15 @@
 // transaction, 1 to N, so that no two are alike. It prints "sent N in_blocks K refused R seconds S"
 // and "latency_ms p50 A p95 B max C" of the transactions in blocks, and exits 1 when a transaction
 // reached no block.
+//
+// iswap installs iSwap (IBAX-io/iswap-contracts, the contracts.json of -bundle) in an ecosystem of
+// its own, makes -tokens token ecosystems and a pair of each two, readies the first -traders
+// accounts of the file to trade (members, tokens, approvals of the routers), adds the liquidity of
+// the founder, and checks the contracts on the chain: a swap pays what the formula of Uniswap V2
+// tells, liquidity comes back, and the calls that would take the tokens of a pair fail. It keeps
+// what it made in the file of -iswap, and goes on from the step it stopped at. The workloads
+// iswap-swap, iswap-swaps, iswap-hop, iswap-exactout, iswap-addliq, iswap-token and iswap-defi of
+// run read that file.
 package main
 
 import (
@@ -43,8 +53,8 @@ import (
 
 func main() {
 	log.SetFlags(log.Ltime)
-	if len(os.Args) < 2 || (os.Args[1] != "setup" && os.Args[1] != "run" && os.Args[1] != "send") {
-		fmt.Fprintln(os.Stderr, "usage: bench setup|run|send [flags]; bench setup -h tells the flags")
+	if len(os.Args) < 2 || (os.Args[1] != "setup" && os.Args[1] != "run" && os.Args[1] != "send" && os.Args[1] != "iswap") {
+		fmt.Fprintln(os.Stderr, "usage: bench setup|run|send|iswap [flags]; bench setup -h tells the flags")
 		os.Exit(2)
 	}
 	fs := flag.NewFlagSet(os.Args[1], flag.ExitOnError)
@@ -60,7 +70,7 @@ func main() {
 	timeout := fs.Duration("timeout", 5*time.Minute, "time a step of setup waits for its transactions")
 	inFlight := fs.Int("in-flight", 1000, "transactions of the founder setup has in the pools at a time, at most the TxPool.MaxPerKey of the nodes")
 
-	names := fs.String("workloads", "self,utxo,transfer,contract,write", "workloads run measures: self (TransferSelf), utxo (UTXO), transfer (@1TokensSend), contract (a mix of 4 @1ProfileEdit, 3 @1NotificationsSend and 3 @1TokensSend), write (5 DBInsert and 5 DBUpdate a transaction)")
+	names := fs.String("workloads", "self,utxo,transfer,contract,write", "workloads run measures: self (TransferSelf), utxo (UTXO), transfer (@1TokensSend), contract (a mix of 4 @1ProfileEdit, 3 @1NotificationsSend and 3 @1TokensSend), write (5 DBInsert and 5 DBUpdate a transaction), iswap-swap, iswap-swaps, iswap-hop, iswap-exactout, iswap-addliq, iswap-token, iswap-defi (DeFi on iSwap, after bench iswap)")
 	rates := fs.String("rates", "100,200,500,1000,2000,3000,5000", "rates (transactions a second) run steps through")
 	duration := fs.Duration("duration", 30*time.Second, "time a step sends")
 	p99 := fs.Duration("p99", 2*time.Second, "P99 target of the latency to a block of every node")
@@ -69,6 +79,11 @@ func main() {
 	metrics := fs.String("metrics", "", "URLs of the /metrics of the nodes, comma-separated")
 	out := fs.String("out", "bench-results", "directory of the reports")
 	label := fs.String("label", "", "text the report starts with: the build, the machine, the network")
+
+	bundle := fs.String("bundle", "", "contracts.json of iSwap, which iswap imports")
+	iswapState := fs.String("iswap", "iswap.json", "file of what iswap made, which the iswap-* workloads read")
+	tokens := fs.Int("tokens", 4, "token ecosystems iswap makes, a pair of each two")
+	traders := fs.Int("traders", 1000, "accounts of the file, the first, that iswap readies to trade")
 
 	signerFile := fs.String("signer", "", "file of the private key, of the algorithm of -key-algo, that signs the transactions send sends, which carry its key in the header, as a key not registered yet signs (default the founder key, which logs in)")
 	count := fs.Int("n", 0, "transactions send sends")
@@ -98,6 +113,24 @@ func main() {
 			by.unregistered = true
 		}
 		os.Exit(send(c, by, fs.Arg(0), fs.Args()[1:], *count, *rate, runConfig{batch: *batch, drain: *drain, poll: *poll, p99: *p99}))
+	}
+	iswapFile = *iswapState
+	if os.Args[1] == "iswap" {
+		if *bundle == "" || *tokens < 3 || *traders < 2 {
+			fmt.Fprintln(os.Stderr, "usage: bench iswap -node URL[,URL...] -key FILE -bundle FILE [-file FILE] [-iswap FILE] [-tokens N >= 3] [-traders N >= 2]")
+			os.Exit(2)
+		}
+		accs, err := loadAccounts(*file)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if len(accs) < *traders {
+			log.Fatalf("%s has %d accounts, -traders is %d", *file, len(accs), *traders)
+		}
+		if err := iswap(c, iswapConfig{bundle: *bundle, state: *iswapState, tokens: *tokens, accounts: accs[:*traders], batch: *batch, inFlight: *inFlight, timeout: *timeout}); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	if os.Args[1] == "setup" {
 		_, statErr := os.Stat(*file)
