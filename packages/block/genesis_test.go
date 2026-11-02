@@ -139,8 +139,6 @@ func TestCheckGenesisRefusesAlteredBlock(t *testing.T) {
 	}
 }
 
-// The genesis block must hold a valid account_algorithms the node algorithm is in, a founder
-// account key that may be registered at the genesis time, and allocations within the supply
 // A genesis block of another chain format, as an earlier binary made with none, is refused: a
 // chain is not upgraded in place
 func TestCheckGenesisRefusesAnotherChainFormat(t *testing.T) {
@@ -154,6 +152,8 @@ func TestCheckGenesisRefusesAnotherChainFormat(t *testing.T) {
 	}
 }
 
+// The genesis block must hold a valid account_algorithms the node algorithm is in, a founder
+// account key that may be registered at the genesis time, and allocations within the supply
 func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
 	defer useSuite("ECC_P256", "SHA256")
 	useSuite("ECC_P256", "SHA256")
