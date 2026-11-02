@@ -36,11 +36,11 @@ func TestMemStateRestoreReloads(t *testing.T) {
 	mem := takeMemState()
 	dbTx, err := sqldb.StartTransaction()
 	require.NoError(t, err)
-	require.NoError(t, dbTx.ExecSql(`UPDATE "1_platform_parameters" SET value = '7' WHERE name = 'gap_between_blocks'`))
+	require.NoError(t, dbTx.ExecSql(`UPDATE "1_platform_parameters" SET value = '7000' WHERE name = 'honor_slot_ms'`))
 	require.NoError(t, syspar.SysUpdate(dbTx))
 	require.NoError(t, dbTx.ExecSql(`CREATE TABLE "1_bft_trial_cols" (id bigint, data bytea)`))
 	require.NoError(t, syspar.SysTableColType(dbTx))
-	require.Equal(t, "7", syspar.SysString("gap_between_blocks"))
+	require.Equal(t, "7000", syspar.SysString("honor_slot_ms"))
 	require.True(t, syspar.IsByteColumn("1_bft_trial_cols", "data"))
 	require.NoError(t, dbTx.Rollback())
 

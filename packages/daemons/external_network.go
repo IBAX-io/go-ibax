@@ -102,8 +102,8 @@ func SendExternalTransaction() error {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("GetExternalList")
 		return err
 	}
-	timeOut := time.Now().Unix() - 10*(syspar.GetGapsBetweenBlocks()+
-		syspar.GetMaxBlockGenerationTime()/1000)
+	timeOut := time.Now().Unix() - 10*int64((syspar.GetHonorSlot()+
+		time.Duration(syspar.GetMaxBlockGenerationTime())*time.Millisecond)/time.Second)
 	for _, item := range list {
 		root := item.Url + apiExt
 		if item.Sent == 0 {

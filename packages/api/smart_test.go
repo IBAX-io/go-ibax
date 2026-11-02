@@ -476,7 +476,7 @@ func TestUpdatePlatformParam(t *testing.T) {
 	}
 
 	notvalid := []invalidPar{
-		{`gap_between_blocks`, `100000`},
+		{`honor_slot_ms`, `1500`},
 		{`rollback_blocks`, `-1`},
 		{`price_create_page`, `-20`},
 		{`max_block_size`, `0`},

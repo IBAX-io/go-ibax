@@ -42,6 +42,30 @@ func TestBlockTimeCounter(t *testing.T) {
 	fmt.Println("ranges:", start.Unix(), end.Unix())
 }
 
+// TestOneSecondSlot checks the slot of honor_slot_ms 1000: each second is a slot of its own,
+// which holds the blocks of that second, and the nodes take the seconds in turn
+func TestOneSecondSlot(t *testing.T) {
+	btc := BlockTimeCounter{
+		start:       time.Unix(100, 0),
+		duration:    time.Second,
+		numberNodes: 2,
+	}
+	for at := int64(101); at < 110; at++ {
+		start, end, err := btc.RangeByTime(time.Unix(at, 0))
+		require.NoError(t, err)
+		require.Equal(t, time.Unix(at, 0), start)
+		require.Equal(t, time.Unix(at, 0), end)
+		np, err := btc.nodePosition(time.Unix(at, 0))
+		require.NoError(t, err)
+		require.Equal(t, int((at-101)%2), np)
+	}
+	// a time within a second is in the slot of its second
+	start, end, err := btc.RangeByTime(time.Unix(105, 999_000_000))
+	require.NoError(t, err)
+	require.Equal(t, time.Unix(105, 0), start)
+	require.Equal(t, time.Unix(105, 0), end)
+}
+
 func TestRangeByTime(t *testing.T) {
 	btc := BlockTimeCounter{
 		start:       time.Unix(1532977623, 0),

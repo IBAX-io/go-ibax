@@ -26,6 +26,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// honorPoll is how often a node of a chain of honor nodes looks for the transactions of a block
+const honorPoll = 100 * time.Millisecond
+
 // BlockGenerator is daemon that generates blocks
 func BlockGenerator(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
@@ -47,7 +50,8 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 		return BlockGeneratorCandidate(ctx, d)
 	}
 	syspar.SetRunModel(consts.HonorNodeMode)
-	d.sleepTime = time.Second
+	// a node makes the block of a slot as soon as it has transactions for it (plan 5.1)
+	d.sleepTime = honorPoll
 	if node.IsNodePaused() {
 		return nil
 	}
@@ -55,7 +59,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	nodePosition, err := syspar.GetThisNodePosition()
 	if err != nil {
 		// we are not honor node and can't generate new blocks
-		d.sleepTime = syspar.GetMaxBlockTimeDuration()
+		d.sleepTime = syspar.GetHonorSlot()
 		d.logger.WithFields(log.Fields{"type": consts.JustWaiting, "error": err}).Debug("we are not honor node, sleep for 10 seconds")
 		return nil
 	}
@@ -172,19 +176,13 @@ func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) 
 func processTransactionsNew(logger *log.Entry, txs []*transaction.Pending, st time.Time) ([][]byte, []*transaction.Transaction, error) {
 	var done = make(<-chan time.Time, 1)
 	limited := syspar.IsHonorNodeMode() || syspar.IsBftConsensus()
-	if syspar.IsBftConsensus() {
-		// the proposer of a chain of the BFT consensus has no time slot: it takes transactions
-		// for half of max_block_generation_time, and its trial executes them again in about as
-		// long, so it makes the block within max_block_generation_time (syspar.GetBftTimeliness)
+	if limited {
+		// a node takes transactions for half of max_block_generation_time, and executes them in
+		// about as long, so it makes the block within max_block_generation_time: the time a
+		// proposer of a chain of the BFT consensus has (syspar.GetBftTimeliness), and the time a
+		// block of a chain of honor nodes takes, which may span slots, as a slot holds at most
+		// one block and the next block takes the next free slot
 		done = time.After(time.Duration(syspar.GetMaxBlockGenerationTime()) * time.Millisecond / 2)
-	} else if limited {
-		btc := protocols.NewBlockTimeCounter()
-		_, endTime, err := btc.RangeByTime(st)
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.TimeCalcError, "error": err}).Error("on getting end time of generation")
-			return nil, nil, err
-		}
-		done = time.After(endTime.Sub(st))
 	}
 	trs := transaction.TxPool.Take(syspar.GetMaxTxCount() - len(txs))
 

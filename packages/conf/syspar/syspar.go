@@ -33,8 +33,9 @@ const (
 	FuelRate = `fuel_rate`
 	// HonorNodes is the list of nodes
 	HonorNodes = `honor_nodes`
-	// GapsBetweenBlocks is the time between blocks
-	GapsBetweenBlocks = `gap_between_blocks`
+	// HonorSlotMs is the length in ms of a time slot of a chain of honor nodes: a node makes at
+	// most one block in a slot, a whole number of seconds, as the time of a block is in seconds
+	HonorSlotMs = `honor_slot_ms`
 	// MaxBlockSize is the maximum size of the block
 	MaxBlockSize = `max_block_size`
 	// MaxTxSize is the maximum size of the transaction
@@ -498,14 +499,9 @@ func GetMaxBlockGenerationTime() int64 {
 	return converter.StrToInt64(SysString(MaxBlockGenerationTime))
 }
 
-// GetGapsBetweenBlocks is returns gaps between blocks
-func GetGapsBetweenBlocks() int64 {
-	return converter.StrToInt64(SysString(GapsBetweenBlocks))
-}
-
-// GetMaxBlockTimeDuration return max block time duration
-func GetMaxBlockTimeDuration() time.Duration {
-	return time.Millisecond*time.Duration(GetMaxBlockGenerationTime()) + time.Second*time.Duration(GetGapsBetweenBlocks())
+// GetHonorSlot is the length of a time slot of a chain of honor nodes, honor_slot_ms
+func GetHonorSlot() time.Duration {
+	return time.Millisecond * time.Duration(converter.StrToInt64(SysString(HonorSlotMs)))
 }
 
 // GetMaxTxSize is returns max tx size

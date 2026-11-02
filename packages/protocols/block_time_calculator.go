@@ -132,12 +132,10 @@ func BuildBlockTimeCalculator(transaction *sqldb.DbTransaction) (BlockTimeCalcul
 		return btc, err
 	}
 
-	blockGenerationDuration := time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
-	blocksGapDuration := time.Second * time.Duration(syspar.GetGapsBetweenBlocks())
-
+	// a slot of countBlockTime is the generation time and the gap, and a second
 	btc = NewBlockTimeCalculator(time.Unix(firstBlock.Time, 0),
-		blockGenerationDuration,
-		blocksGapDuration,
+		syspar.GetHonorSlot()-time.Second,
+		0,
 		syspar.GetNumberOfNodesFromDB(transaction),
 	)
 	return btc, nil

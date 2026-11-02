@@ -29,7 +29,7 @@ import (
 
 func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 	defer func() {
-		d.sleepTime = syspar.GetMaxBlockTimeDuration()
+		d.sleepTime = syspar.GetHonorSlot()
 	}()
 	if node.IsNodePaused() {
 		return nil
@@ -83,8 +83,8 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 	}
 	lastBlockInterval := time.Unix(prevBlock.Time, 0)
 	timeDifference := st.Sub(lastBlockInterval)
-	if timeDifference <= syspar.GetMaxBlockTimeDuration() {
-		time.Sleep(syspar.GetMaxBlockTimeDuration() - timeDifference)
+	if timeDifference <= syspar.GetHonorSlot() {
+		time.Sleep(syspar.GetHonorSlot() - timeDifference)
 		st = time.Now()
 	}
 

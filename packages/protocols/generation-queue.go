@@ -134,7 +134,7 @@ func (btc *BlockTimeCounter) TimeToGenerate(at time.Time, nodePosition int) (boo
 func NewBlockTimeCounter() *BlockTimeCounter {
 	btc := BlockTimeCounter{
 		start:       time.Unix(syspar.GetFirstBlockTimestamp(), 0),
-		duration:    syspar.GetMaxBlockTimeDuration(),
+		duration:    syspar.GetHonorSlot(),
 		numberNodes: int(syspar.GetCountOfActiveNodes()),
 	}
 	return &btc

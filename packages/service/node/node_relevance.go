@@ -31,7 +31,7 @@ func NewNodeRelevanceService() *NodeRelevanceService {
 		availableBlockchainGap = syspar.GetRbBlocks1() - consts.AvailableBCGap
 	}
 
-	checkingInterval := syspar.GetMaxBlockTimeDuration() * time.Duration(syspar.GetRbBlocks1()-consts.DefaultNodesConnectDelay)
+	checkingInterval := syspar.GetHonorSlot() * time.Duration(syspar.GetRbBlocks1()-consts.DefaultNodesConnectDelay)
 	return &NodeRelevanceService{
 		availableBlockchainGap: availableBlockchainGap,
 		checkingInterval:       checkingInterval,

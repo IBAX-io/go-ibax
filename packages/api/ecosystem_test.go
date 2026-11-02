@@ -143,7 +143,7 @@ func TestSomeSystemParam(t *testing.T) {
 
 	var ret paramsResult
 
-	param := "gap_between_blocks"
+	param := "honor_slot_ms"
 	err := sendGet(`systemparams/?names=`+param, nil, &ret)
 	if err != nil {
 		t.Error(err)

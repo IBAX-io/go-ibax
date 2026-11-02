@@ -127,8 +127,9 @@ func updatePlatformParam(sc *SmartContract, name, value, conditions string, chec
 		ival := converter.StrToInt64(value)
 	check:
 		switch name {
-		case syspar.GapsBetweenBlocks:
-			ok = ival > 0 && ival < 86400
+		case syspar.HonorSlotMs:
+			// a slot is a whole number of seconds, as is the time of a block
+			ok = ival > 0 && ival%1000 == 0 && ival < 86400000
 		case syspar.RbBlocks1:
 			// a rollback stays within the window and within one range of partitions
 			ok = ival > 0 && ival < 1000 && ival < syspar.GetHistoryBlocks()
