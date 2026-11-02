@@ -15,6 +15,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/pprof"
+	"runtime"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -234,7 +236,35 @@ func Handler() http.Handler {
 	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
 	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
 	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	mux.HandleFunc("/debug/pprof/rates", rates)
 	return mux
+}
+
+// rates sets the rates of the mutex and the block profiles, which are off unless set: mutex is the
+// fraction 1/mutex of the contention events it takes, block the nanoseconds of blocking a sample
+// stands for, and 0 turns either off
+func rates(w http.ResponseWriter, r *http.Request) {
+	set := map[string]func(int){
+		"mutex": func(n int) { runtime.SetMutexProfileFraction(n) },
+		"block": runtime.SetBlockProfileRate,
+	}
+	values := map[string]int{}
+	for name := range set {
+		v := r.URL.Query().Get(name)
+		if v == "" {
+			continue
+		}
+		n, err := strconv.Atoi(v)
+		if err != nil || n < 0 {
+			http.Error(w, fmt.Sprintf("%s: %q is not a rate", name, v), http.StatusBadRequest)
+			return
+		}
+		values[name] = n
+	}
+	for name, n := range values {
+		set[name](n)
+	}
+	fmt.Fprintf(w, "mutex %d\n", runtime.SetMutexProfileFraction(-1))
 }
 
 // CheckListen checks the listen address of the metrics: empty turns them off, otherwise it is a
