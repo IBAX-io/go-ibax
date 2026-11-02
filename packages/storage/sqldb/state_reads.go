@@ -8,6 +8,7 @@ package sqldb
 import (
 	"database/sql/driver"
 	"fmt"
+	"hash/maphash"
 	"io"
 	"reflect"
 	"strconv"
@@ -231,14 +232,38 @@ func (v *TxView) share(table, key string, val any) {
 // baseRows are the rows of PostgreSQL the block read of a table by a key of the primary key or
 // of a unique index, nil for a key no row has. PostgreSQL keeps the rows as they were when the
 // block began while the table is in the state, and a row the state changed is in its rows, so
-// the transactions of the block share what one of them read.
+// the transactions of the block share what one of them read. The rows are in shards by key, each
+// of its lock, since the workers read and add them all the time.
 type baseRows struct {
-	mu   sync.RWMutex
-	rows map[string]stateRow
+	shards [baseShards]baseShard
 	// scans are the rows of the statements the block read of the table, by stmtKey, and n the
-	// rows they keep
-	scans map[string][]stateRow
-	n     int
+	// rows they keep, under scanMu
+	scanMu sync.RWMutex
+	scans  map[string][]stateRow
+	n      int
+}
+
+// baseShards are the shards of the rows of baseRows
+const baseShards = 64
+
+// baseShard is a shard of the rows of baseRows, on a cache line of its own
+type baseShard struct {
+	mu   sync.RWMutex
+	rows map[baseKey]stateRow
+	_    [64 - 32]byte
+}
+
+// baseKey is a key of the primary key (j -1) or of the unique index j
+type baseKey struct {
+	j   int
+	key string
+}
+
+// baseSeed is the seed of the hashes that pick the shard of a key
+var baseSeed = maphash.MakeSeed()
+
+func (b *baseRows) shard(key string) *baseShard {
+	return &b.shards[maphash.String(baseSeed, key)%baseShards]
 }
 
 // maxScanRows bounds the rows of the statements a block keeps of a table
@@ -284,15 +309,15 @@ func stmtKey(query string, values []any) (string, bool) {
 
 // scan is the rows of PostgreSQL of a statement the block read, and whether it read it
 func (b *baseRows) scan(key string) ([]stateRow, bool) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
+	b.scanMu.RLock()
+	defer b.scanMu.RUnlock()
 	r, ok := b.scans[key]
 	return r, ok
 }
 
 func (b *baseRows) putScan(key string, rows []stateRow) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
+	b.scanMu.Lock()
+	defer b.scanMu.Unlock()
 	if _, ok := b.scans[key]; ok || b.n+len(rows)+1 > maxScanRows {
 		return
 	}
@@ -303,22 +328,22 @@ func (b *baseRows) putScan(key string, rows []stateRow) {
 	b.n += len(rows) + 1
 }
 
-func baseKey(j int, key string) string { return strconv.Itoa(j) + "\x00" + key }
-
 // get is the row of PostgreSQL of the key of the primary key (j -1) or of the unique index j,
 // and whether the block read it
 func (b *baseRows) get(j int, key string) (stateRow, bool) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	r, ok := b.rows[baseKey(j, key)]
+	sh := b.shard(key)
+	sh.mu.RLock()
+	defer sh.mu.RUnlock()
+	r, ok := sh.rows[baseKey{j, key}]
 	return r, ok
 }
 
 func (b *baseRows) put(j int, key string, r stateRow) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	if b.rows == nil {
-		b.rows = make(map[string]stateRow)
+	sh := b.shard(key)
+	sh.mu.Lock()
+	defer sh.mu.Unlock()
+	if sh.rows == nil {
+		sh.rows = make(map[baseKey]stateRow)
 	}
-	b.rows[baseKey(j, key)] = r
+	sh.rows[baseKey{j, key}] = r
 }

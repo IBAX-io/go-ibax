@@ -12,6 +12,7 @@ import (
 	"slices"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -98,6 +99,10 @@ func (s *stateSchema) plan(ctx context.Context, q driver.QueryerContext, query s
 	if ok {
 		return p, nil
 	}
+	if savepointStmt(query) {
+		// the savepoints of the block are named by its transactions: the plans keep none
+		return parseStmt(query, nil), nil
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if p, ok := s.plans[query]; ok {
@@ -113,6 +118,16 @@ func (s *stateSchema) plan(ctx context.Context, q driver.QueryerContext, query s
 	}
 	s.plans[query] = p
 	return p, nil
+}
+
+// savepointStmt tells a statement sets, releases or rolls back to a savepoint, or ends the
+// transaction, which parseStmt plans without the catalog
+func savepointStmt(query string) bool {
+	word := strings.TrimLeft(query, " \t\r\n")
+	if i := strings.IndexAny(word, " \t\r\n;"); i >= 0 {
+		word = word[:i]
+	}
+	return strings.EqualFold(word, "savepoint") || strings.EqualFold(word, "release") || strings.EqualFold(word, "rollback")
 }
 
 // meta is the table of the name; nil for a relation that is no table of the schema
