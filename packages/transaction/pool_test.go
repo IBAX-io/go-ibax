@@ -7,6 +7,9 @@ package transaction
 
 import (
 	"bytes"
+	"math/rand"
+	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -388,5 +391,116 @@ func TestPoolReserveEvidence(t *testing.T) {
 	requirePlaced(t, p, evidenceTx("evidence", smart.BftEvidenceContract, addr, key, now), RateClient, now, nil)
 	if p.reserved != 1 {
 		t.Fatalf("reserve %d", p.reserved)
+	}
+}
+
+// TestPoolOrderIndex: through random puts, evictions, sends and removals, Take and Unsent are the
+// entries, and those not sent, sorted in the order of the blocks
+func TestPoolOrderIndex(t *testing.T) {
+	poolLimits(t, 200, 1<<20, 1000, 50)
+	now := time.Now().Unix()
+	rnd := rand.New(rand.NewSource(1))
+	p := NewPool()
+	sorted := func(keep func(*poolEntry) bool) []string {
+		var list []*poolEntry
+		for _, e := range p.entries {
+			if keep(e) {
+				list = append(list, e)
+			}
+		}
+		sort.Slice(list, func(i, j int) bool { return before(list[i], list[j]) })
+		out := make([]string, len(list))
+		for i, e := range list {
+			out[i] = string(e.hash)
+		}
+		return out
+	}
+	hashes := func(list []*poolEntry) []string {
+		out := make([]string, len(list))
+		for i, e := range list {
+			out[i] = string(e.hash)
+		}
+		return out
+	}
+	for i := range 5000 {
+		h := strconv.Itoa(i)
+		switch r := rnd.Intn(10); {
+		case r < 6:
+			rate := RateClient
+			if rnd.Intn(20) == 0 {
+				rate = RateOnBlock
+			}
+			p.take(keyTx(h, int64(rnd.Intn(300)), (now-int64(rnd.Intn(30)))*1000, int64(rnd.Intn(3))-1), rate, now, nil)
+		case r < 8:
+			var sent [][]byte
+			for _, e := range first(p.unsent, rnd.Intn(5)) {
+				sent = append(sent, e.hash)
+			}
+			p.MarkSent(sent)
+		default:
+			var gone [][]byte
+			for _, e := range first(p.order, rnd.Intn(8)) {
+				gone = append(gone, e.hash)
+			}
+			p.Remove(gone)
+		}
+		if p.order.Len() != len(p.entries) {
+			t.Fatalf("step %d: %d ordered of %d", i, p.order.Len(), len(p.entries))
+		}
+		if i%97 == 0 {
+			if got, want := hashes(first(p.order, 0)), sorted(func(*poolEntry) bool { return true }); !equalStrings(got, want) {
+				t.Fatalf("step %d: order %v, want %v", i, got, want)
+			}
+			if got, want := hashes(first(p.unsent, 0)), sorted(func(e *poolEntry) bool { return !e.sent }); !equalStrings(got, want) {
+				t.Fatalf("step %d: unsent %v, want %v", i, got, want)
+			}
+		}
+	}
+}
+
+// BenchmarkPoolFullAdmit: a transaction that comes before the last of a full pool of 100,000
+func BenchmarkPoolFullAdmit(b *testing.B) {
+	saved := conf.Config.TxPool
+	defer func() { conf.Config.TxPool = saved }()
+	conf.Config.TxPool.MaxCount = 100000
+	conf.Config.TxPool.MaxBytes = 1 << 30
+	conf.Config.TxPool.MaxPerKey = 1 << 30
+	now := time.Now().Unix()
+	p := NewPool()
+	for i := range 100000 {
+		p.take(keyTx("f"+strconv.Itoa(i), int64(i), now*1000, 0), RateClient, now, nil)
+	}
+	b.ResetTimer()
+	for i := range b.N {
+		if err := p.take(keyTx("e"+strconv.Itoa(i), int64(i), (now-1)*1000-int64(i), 0), RateClient, now, nil); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkPoolTake: a block takes 20,000 of a pool of 100,000
+func BenchmarkPoolTake(b *testing.B) {
+	saved := conf.Config.TxPool
+	defer func() { conf.Config.TxPool = saved }()
+	conf.Config.TxPool.MaxCount = 100000
+	conf.Config.TxPool.MaxBytes = 1 << 30
+	conf.Config.TxPool.MaxPerKey = 1 << 30
+	now := time.Now().Unix()
+	p := NewPool()
+	for i := range 100000 {
+		p.take(keyTx("f"+strconv.Itoa(i), int64(i), now*1000+int64(i%1000), 0), RateClient, now, nil)
+	}
+	txs := make(map[*poolEntry]*Transaction, len(p.entries))
+	for _, e := range p.entries {
+		txs[e] = e.tx
+	}
+	b.ResetTimer()
+	for range b.N {
+		p.Take(20000)
+		b.StopTimer()
+		for e, tx := range txs {
+			e.tx = tx
+		}
+		b.StartTimer()
 	}
 }

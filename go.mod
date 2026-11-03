@@ -61,6 +61,7 @@ require (
 	github.com/gofrs/flock v0.8.1 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
+	github.com/google/btree v1.1.3 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/gorilla/rpc v1.2.0 // indirect
 	github.com/hashicorp/go-envparse v0.1.0 // indirect

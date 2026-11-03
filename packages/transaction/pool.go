@@ -9,10 +9,10 @@ import (
 	"bytes"
 	"errors"
 	"runtime"
-	"sort"
 	"sync"
 	"time"
 
+	"github.com/google/btree"
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 
@@ -109,8 +109,10 @@ type Pool struct {
 	reserved      int
 	reservedBytes int64
 	perKey        map[int64]int // the transactions of clients and other nodes of each account
-	worst         *poolEntry    // the last of them in the order of the blocks, nil if unknown
 	expired       int64         // the second the pool last took out the transactions too old
+	// order is the entries in the order of the blocks, and unsent those not sent to the other
+	// nodes: a block, the gossip and a full pool take the first or the last in log n
+	order, unsent *btree.BTreeG[*poolEntry]
 	// what the transactions hold of each balance
 	held map[fundsBucket]decimal.Decimal
 }
@@ -120,7 +122,8 @@ var TxPool = NewPool()
 
 // NewPool is an empty pool
 func NewPool() *Pool {
-	return &Pool{entries: make(map[string]*poolEntry), bad: make(map[string]badStatus), perKey: make(map[int64]int), held: make(map[fundsBucket]decimal.Decimal)}
+	return &Pool{entries: make(map[string]*poolEntry), bad: make(map[string]badStatus), perKey: make(map[int64]int), held: make(map[fundsBucket]decimal.Decimal),
+		order: btree.NewG(32, before), unsent: btree.NewG(32, before)}
 }
 
 func maxPoolCount() int {
@@ -371,39 +374,31 @@ func (p *Pool) expire(now int64) {
 // out none when it cannot make the room.
 func (p *Pool) evict(t *Transaction, size int) bool {
 	next := &poolEntry{rate: RateClient, expedite: t.Expedite(), time: t.Timestamp(), seq: p.seq + 1}
-	if w := p.worstEntry(); w == nil || !before(next, w) {
-		return false
-	}
-	list := p.ordered(func(e *poolEntry) bool { return !e.reserved })
 	count, room := len(p.entries)-p.reserved, maxPoolBytes()-(p.bytes-p.reservedBytes)
-	n := 0
-	for i := len(list) - 1; i >= 0 && before(next, list[i]); i-- {
-		n++
-		count--
-		room += int64(len(list[i].data))
-		if count < maxPoolCount() && int64(size) <= room {
-			for _, e := range list[len(list)-n:] {
-				h := string(e.hash)
-				p.remove(h)
-				p.setBad(h, statusEvicted)
-			}
+	var out []*poolEntry
+	fits := false
+	p.order.Descend(func(e *poolEntry) bool {
+		if e.reserved {
 			return true
 		}
-	}
-	return false
-}
-
-// worstEntry is the last transaction of a client or another node in the order of the blocks
-func (p *Pool) worstEntry() *poolEntry {
-	if p.worst != nil {
-		return p.worst
-	}
-	for _, e := range p.entries {
-		if !e.reserved && (p.worst == nil || before(p.worst, e)) {
-			p.worst = e
+		if !before(next, e) {
+			return false
 		}
+		out = append(out, e)
+		count--
+		room += int64(len(e.data))
+		fits = count < maxPoolCount() && int64(size) <= room
+		return !fits
+	})
+	if !fits {
+		return false
 	}
-	return p.worst
+	for _, e := range out {
+		h := string(e.hash)
+		p.remove(h)
+		p.setBad(h, statusEvicted)
+	}
+	return true
 }
 
 // Restore puts back the transactions of a block rolled back, beyond the bounds of the pool: the
@@ -443,15 +438,16 @@ func (p *Pool) put(t *Transaction, rate Rate, sent bool, f *funds) {
 		p.held[f.bucket] = p.held[f.bucket].Add(f.amount)
 	}
 	p.entries[h] = e
+	p.order.ReplaceOrInsert(e)
+	if !sent {
+		p.unsent.ReplaceOrInsert(e)
+	}
 	p.bytes += int64(len(t.FullData))
 	if reserved {
 		p.reserved++
 		p.reservedBytes += int64(len(t.FullData))
 	} else {
 		p.perKey[e.key]++
-		if p.worst != nil && before(p.worst, e) {
-			p.worst = e
-		}
 	}
 	delete(p.bad, h)
 }
@@ -463,6 +459,10 @@ func (p *Pool) remove(h string) {
 	}
 	p.bytes -= int64(len(e.data))
 	delete(p.entries, h)
+	p.order.Delete(e)
+	if !e.sent {
+		p.unsent.Delete(e)
+	}
 	if e.reserved {
 		p.reserved--
 		p.reservedBytes -= int64(len(e.data))
@@ -476,9 +476,6 @@ func (p *Pool) remove(h string) {
 			delete(p.held, f.bucket)
 		}
 	}
-	if p.worst == e {
-		p.worst = nil
-	}
 }
 
 func (p *Pool) gauge() {
@@ -486,15 +483,17 @@ func (p *Pool) gauge() {
 	metrics.TxPool.WithLabelValues("bytes").Set(float64(p.bytes))
 }
 
-// ordered is the entries in the order of the blocks
-func (p *Pool) ordered(keep func(*poolEntry) bool) []*poolEntry {
-	list := make([]*poolEntry, 0, len(p.entries))
-	for _, e := range p.entries {
-		if keep == nil || keep(e) {
-			list = append(list, e)
-		}
+// first is the first limit entries of the tree, all for a limit of 0 or less
+func first(t *btree.BTreeG[*poolEntry], limit int) []*poolEntry {
+	n := t.Len()
+	if limit > 0 && limit < n {
+		n = limit
 	}
-	sort.Slice(list, func(i, j int) bool { return before(list[i], list[j]) })
+	list := make([]*poolEntry, 0, n)
+	t.Ascend(func(e *poolEntry) bool {
+		list = append(list, e)
+		return len(list) < n
+	})
 	return list
 }
 
@@ -503,7 +502,7 @@ func before(a, b *poolEntry) bool {
 	if a.rate != b.rate {
 		return a.rate < b.rate
 	}
-	if c := a.expedite.Cmp(b.expedite); c != 0 {
+	if c := cmpExpedite(a.expedite, b.expedite); c != 0 {
 		return c > 0
 	}
 	if a.time != b.time {
@@ -512,15 +511,21 @@ func before(a, b *poolEntry) bool {
 	return a.seq < b.seq
 }
 
+// cmpExpedite compares two expedites; most are zero, which it compares without allocating
+func cmpExpedite(a, b decimal.Decimal) int {
+	sa, sb := a.Sign(), b.Sign()
+	if sa != sb || sa == 0 {
+		return sa - sb
+	}
+	return a.Cmp(b)
+}
+
 // Take is the first limit transactions in the order of the blocks, parsed. They stay in the pool
 // until their block is committed; a transaction is handed out parsed once, and parsed again after,
 // as a block that runs it changes it.
 func (p *Pool) Take(limit int) []*Pending {
 	p.mu.Lock()
-	list := p.ordered(nil)
-	if limit > 0 && len(list) > limit {
-		list = list[:limit]
-	}
+	list := first(p.order, limit)
 	out := make([]*Pending, 0, len(list))
 	for _, e := range list {
 		out = append(out, &Pending{Tx: e.tx, Data: e.data, Rate: e.rate})
@@ -546,11 +551,7 @@ func (p *Pool) Take(limit int) []*Pending {
 func (p *Pool) Unsent(limit int) (data, hashes [][]byte) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	list := p.ordered(func(e *poolEntry) bool { return !e.sent })
-	if limit > 0 && len(list) > limit {
-		list = list[:limit]
-	}
-	for _, e := range list {
+	for _, e := range first(p.unsent, limit) {
 		data = append(data, e.data)
 		hashes = append(hashes, e.hash)
 	}
@@ -562,8 +563,9 @@ func (p *Pool) MarkSent(hashes [][]byte) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for _, h := range hashes {
-		if e, ok := p.entries[string(h)]; ok {
+		if e, ok := p.entries[string(h)]; ok && !e.sent {
 			e.sent = true
+			p.unsent.Delete(e)
 		}
 	}
 }
@@ -622,12 +624,9 @@ func (p *Pool) Len() int {
 func (p *Pool) HasStopNetwork() bool {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	for _, e := range p.entries {
-		if e.rate == RateStopNetwork {
-			return true
-		}
-	}
-	return false
+	// the transaction that stops the network is last in the order of the blocks
+	e, ok := p.order.Max()
+	return ok && e.rate == RateStopNetwork
 }
 
 // Status is whether the pool holds the transaction, or the error it was found bad with
