@@ -85,8 +85,12 @@ func runWorkload(c *chainClient, w workload, cfg runConfig, seq *int) []step {
 			break
 		}
 		out = append(out, *s)
-		log.Printf("%s at %d/s: sent %d, in blocks %d (all nodes %d), failed %d, refused %d, lost %d, %.0f TPS, P99 %.0f ms (all nodes %.0f ms), pass %v",
-			w.name, rate, s.Sent, s.InBlock, s.InAll, s.FailedInBlock, s.Refused, s.Lost, s.TPS, s.Latency.P99, s.LatencyAll.P99, s.Pass)
+		runs := ""
+		if len(s.Nodes) > 0 {
+			runs = ", tx runs parallel / early / again / ordered " + txRuns(s.Nodes[0])
+		}
+		log.Printf("%s at %d/s: sent %d, in blocks %d (all nodes %d), failed %d, refused %d, lost %d, %.0f TPS, P99 %.0f ms (all nodes %.0f ms)%s, pass %v",
+			w.name, rate, s.Sent, s.InBlock, s.InAll, s.FailedInBlock, s.Refused, s.Unsent+s.Lost, s.TPS, s.Latency.P99, s.LatencyAll.P99, runs, s.Pass)
 		if s.Unsent+s.Refused+s.Lost > 0 || s.TPS < 0.8*float64(rate) {
 			break
 		}

@@ -15,6 +15,9 @@ import (
 // iswapFile is the state file of iswap, which the workloads iswap-* read
 var iswapFile = "iswap.json"
 
+// iswapRotate is the pairs the workload iswap-swap rotates over, and the paths iswap-hop does
+var iswapRotate = 1
+
 // workload makes the transaction seq of a run, of the accounts in turn; no two of a run are alike
 type workload struct {
 	name string

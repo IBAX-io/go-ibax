@@ -72,6 +72,10 @@ func delta(before, after samples) samples {
 	return out
 }
 
+// txRunLabels are the ways a committed transaction ran, in the order of the reports: in parallel;
+// early, again on a worker after the commit of what it read; again, on the commit thread; in order
+var txRunLabels = []string{"parallel", "early", "again", "ordered"}
+
 // nodeProfile is what a node spent on the transactions of a step: the blocks it executed, the mean
 // time of each stage of them, the statements and the signature checks
 type nodeProfile struct {
@@ -86,6 +90,9 @@ type nodeProfile struct {
 	StatementsPerTx map[string]float64 `json:"statements_per_tx"`
 	// TxStageUs is the mean time of each stage of a transaction
 	TxStageUs map[string]float64 `json:"tx_stage_us"`
+	// TxRuns are the committed runs of transactions by how they ran: parallel, early, again,
+	// ordered; a label the node does not count is 0
+	TxRuns map[string]float64 `json:"tx_runs"`
 	// SignVerifies is the count of signature checks
 	SignVerifies float64 `json:"sign_verifies"`
 	// LockWaitS and LockHoldS are the time spent waiting for and holding DBLock
@@ -103,6 +110,10 @@ func profileOf(node string, d samples, seconds float64) nodeProfile {
 	p := nodeProfile{
 		Node: node, Blocks: map[string]float64{}, StageMs: map[string]float64{}, TxsPerBlock: map[string]float64{},
 		StatementsPerTx: map[string]float64{}, TxStageUs: map[string]float64{}, Statements: map[string]float64{},
+		TxRuns: map[string]float64{},
+	}
+	for _, run := range txRunLabels {
+		p.TxRuns[run] = 0
 	}
 	labels := func(key, prefix string) map[string]string {
 		out := map[string]string{}
@@ -135,6 +146,8 @@ func profileOf(node string, d samples, seconds float64) nodeProfile {
 			if s.count > 0 {
 				p.TxStageUs[l["stage"]] = s.sum / s.count * 1e6
 			}
+		case strings.HasPrefix(key, "ibax_tx_runs_total{"):
+			p.TxRuns[labels(key, "ibax_tx_runs_total")["run"]] = s.count
 		case strings.HasPrefix(key, "ibax_sign_verify_seconds{"):
 			p.SignVerifies += s.count
 		case strings.HasPrefix(key, "ibax_db_statements_total{"):

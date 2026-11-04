@@ -30,13 +30,16 @@ const (
 	iswapSupply    = "1000000000000000000000000000"
 	iswapFund      = "100000000000000000"
 	iswapLiquidity = "1000000000000000000000"
-	// iswapApprove is the allowance of each account to the routers, for good
-	iswapApprove = "1000000000000000000000000000"
 	// iswapAmountIn is the amount in of a swap, iswapAddAmount of each token an add of liquidity
 	// adds: small against the liquidity, a run moves the prices little
 	iswapAmountIn  = 1_000_000_000_000
 	iswapAddAmount = 1_000_000_000_000
+	// iswapDeadline is how long after it is signed a transaction of the routers may run
+	iswapDeadline = 7 * 24 * time.Hour
 )
+
+// deadline is the Deadline of a transaction of the routers signed now
+func deadline() int64 { return time.Now().Add(iswapDeadline).Unix() }
 
 // iswapConfig is what iswap installs: the bundle of iSwap, the token ecosystems, and the accounts
 // of the bench that trade
@@ -95,7 +98,7 @@ var iswapSteps = []iswapStep{
 	{"pairs", iswapPairs},
 	{"members", iswapMembers},
 	{"funds", iswapFunds},
-	{"approvals", iswapApprovals},
+	{"debit", iswapDebit},
 	{"liquidity", iswapAddLiquidity},
 	{"check", iswapCheck},
 }
@@ -370,7 +373,7 @@ func (c *chainClient) each(step string, accounts []*account, cfg iswapConfig, si
 }
 
 // iswapMembers makes the accounts members of the ecosystem of iSwap, whose transactions they sign,
-// and of the token ecosystems, whose tokens they approve
+// and of the token ecosystems, whose tokens they trade
 func iswapMembers(c *chainClient, cfg iswapConfig, s *iswapState) error {
 	id, err := c.nodes[0].contractID("@1NewUser")
 	if err != nil {
@@ -411,52 +414,69 @@ func iswapFunds(c *chainClient, cfg iswapConfig, s *iswapState) error {
 	return nil
 }
 
-// iswapRouters are the contracts of iSwap that take the tokens of an account it approved
-var iswapRouters = []string{"SwapExactTokensForTokens", "SwapTokensForExactTokens", "AddLiquidity"}
+// iswapRouters are the contracts of iSwap that debit the signer of the transaction, which the
+// parameter signer_debit_contracts of ecosystem 1 names
+var iswapRouters = []string{
+	"SwapExactTokensForTokens", "SwapTokensForExactTokens", "MultiSwapExactTokensForTokens", "MultiSwapTokensForExactTokens",
+	"AddLiquidity", "NewPairApply", "VotePairApply", "VotePairAuction", "DividendNFTMint",
+}
 
-// iswapApprovals approves the routers of iSwap for the tokens of each account
-func iswapApprovals(c *chainClient, cfg iswapConfig, s *iswapState) error {
-	id, err := c.nodes[0].contractID("@1TokensApprove")
+// iswapDebit lets the routers of iSwap debit the signer: it sets the parameter
+// signer_debit_contracts of ecosystem 1 to their full names, with those of other contracts it
+// names kept
+func iswapDebit(c *chainClient, cfg iswapConfig, s *iswapState) error {
+	ids, err := c.contractIDs("@1EditParameter", "@1NewParameter")
 	if err != nil {
 		return err
 	}
-	for _, eco := range s.Tokens {
-		for _, router := range iswapRouters {
-			if err := c.each(fmt.Sprintf("TokensApprove of ecosystem %d to %s", eco, router), cfg.accounts, cfg, func(a *account) (*signedTx, error) {
-				return c.signer.contractIn(a, eco, id, map[string]any{"Amount": iswapApprove, "SpenderEcosystem": s.Ecosystem, "SpenderContract": router})
-			}); err != nil {
-				return err
+	at := "@" + strconv.FormatInt(s.Ecosystem, 10)
+	var p struct {
+		ID    string `json:"id"`
+		Value string `json:"value"`
+	}
+	var names []string
+	err = c.nodes[0].get("ecosystemparam/signer_debit_contracts?ecosystem=1", &p)
+	var apiErr *apiError
+	switch {
+	case errors.As(err, &apiErr) && apiErr.Code == "E_PARAMNOTFOUND":
+		p.ID = ""
+	case err != nil:
+		return fmt.Errorf("signer_debit_contracts: %w", err)
+	default:
+		for _, name := range strings.Split(p.Value, ",") {
+			if name = strings.TrimSpace(name); name != "" && !strings.HasPrefix(name, at) {
+				names = append(names, name)
 			}
 		}
 	}
-	return nil
+	for _, router := range iswapRouters {
+		names = append(names, at+router)
+	}
+	value := strings.Join(names, ",")
+	var tx *signedTx
+	if p.ID == "" {
+		tx, err = c.signer.contract(c.founder, ids["@1NewParameter"], map[string]any{"Name": "signer_debit_contracts", "Value": value, "Conditions": `ContractConditions("@1DeveloperCondition")`})
+	} else {
+		pid, perr := strconv.ParseInt(p.ID, 10, 64)
+		if perr != nil {
+			return fmt.Errorf("signer_debit_contracts: id %q", p.ID)
+		}
+		tx, err = c.signer.contract(c.founder, ids["@1EditParameter"], map[string]any{"Id": pid, "Value": value})
+	}
+	_, err = c.one("signer_debit_contracts", tx, err, cfg.timeout)
+	return err
 }
 
 // iswapAddLiquidity adds the first liquidity of each pair, of the founder
 func iswapAddLiquidity(c *chainClient, cfg iswapConfig, s *iswapState) error {
-	approveID, err := c.nodes[0].contractID("@1TokensApprove")
-	if err != nil {
-		return err
-	}
 	addID, err := c.iswapID(s, "AddLiquidity")
 	if err != nil {
-		return err
-	}
-	var approvals []*signedTx
-	for _, eco := range s.Tokens {
-		tx, err := c.signer.contractIn(c.founder, eco, approveID, map[string]any{"Amount": iswapApprove, "SpenderEcosystem": s.Ecosystem, "SpenderContract": "AddLiquidity"})
-		if err != nil {
-			return err
-		}
-		approvals = append(approvals, tx)
-	}
-	if err := c.run("TokensApprove of the founder", approvals, cfg.batch, cfg.timeout); err != nil {
 		return err
 	}
 	// The pairs of a token ecosystem take the tokens of the founder one after another
 	for _, p := range s.Pairs {
 		tx, err := c.signer.contractIn(c.founder, s.Ecosystem, addID, map[string]any{
-			"EcosystemA": p[0], "EcosystemB": p[1], "AmountADesired": iswapLiquidity, "AmountBDesired": iswapLiquidity, "AmountAMin": "1", "AmountBMin": "1",
+			"EcosystemA": p[0], "EcosystemB": p[1], "AmountADesired": iswapLiquidity, "AmountBDesired": iswapLiquidity, "AmountAMin": "1", "AmountBMin": "1", "Deadline": deadline(),
 		})
 		if _, err := c.one(fmt.Sprintf("AddLiquidity %d-%d", p[0], p[1]), tx, err, cfg.timeout); err != nil {
 			return err
@@ -503,6 +523,9 @@ func (c *chainClient) tokenBalance(address string, eco int64) (string, error) {
 // the reserves equal to the balances of the pair, a removal of liquidity pays back its share, and
 // the contracts refuse the calls that would take the tokens of the pairs
 func iswapCheck(c *chainClient, cfg iswapConfig, s *iswapState) error {
+	// The headers of a process share their time: InitParam again would be the transaction of the
+	// step pairs, which the node takes for a double, when one process ran both
+	c.signer.time = time.Now().Unix()
 	a := cfg.accounts[0]
 	p := s.Pairs[0]
 	swapID, err := c.iswapID(s, "SwapExactTokensForTokens")
@@ -523,6 +546,14 @@ func iswapCheck(c *chainClient, cfg iswapConfig, s *iswapState) error {
 	}
 	amountIn := int64(iswapAmountIn)
 	tx, err := c.signer.contractIn(a, s.Ecosystem, swapID, map[string]any{"Path": []any{p[0], p[1]}, "AmountIn": strconv.FormatInt(amountIn, 10), "AmountOutMin": "1"})
+	if err := c.fail("SwapExactTokensForTokens without a deadline", tx, err, "Parameter Deadline has not been found", cfg.timeout); err != nil {
+		return err
+	}
+	tx, err = c.signer.contractIn(a, s.Ecosystem, swapID, map[string]any{"Path": []any{p[0], p[1]}, "AmountIn": strconv.FormatInt(amountIn, 10), "AmountOutMin": "1", "Deadline": 1})
+	if err := c.fail("SwapExactTokensForTokens past its deadline", tx, err, "EXPIRED", cfg.timeout); err != nil {
+		return err
+	}
+	tx, err = c.signer.contractIn(a, s.Ecosystem, swapID, map[string]any{"Path": []any{p[0], p[1]}, "AmountIn": strconv.FormatInt(amountIn, 10), "AmountOutMin": "1", "Deadline": deadline()})
 	result, err := c.one("SwapExactTokensForTokens", tx, err, cfg.timeout)
 	if err != nil {
 		return err
@@ -550,7 +581,7 @@ func iswapCheck(c *chainClient, cfg iswapConfig, s *iswapState) error {
 
 	// The tokens of a pair go by its contracts only, from the routers only
 	at := "@" + strconv.FormatInt(s.Ecosystem, 10)
-	ids, err := c.contractIDs(at+"PairSwap", at+"PairBurn", at+"MintFee", "@1TokensSendSeed", at+"CreatePair", at+"InitParam")
+	ids, err := c.contractIDs(at+"PairSwap", at+"PairBurn", at+"MintFee", "@1TokensSendSeed", "@1TokensTransfer", at+"CreatePair", at+"InitParam")
 	if err != nil {
 		return err
 	}
@@ -562,7 +593,7 @@ func iswapCheck(c *chainClient, cfg iswapConfig, s *iswapState) error {
 	if err := c.fail("PairSwap called by an account", tx, err, "invalid map type", cfg.timeout); err != nil {
 		return err
 	}
-	tx, err = c.signer.contractIn(a, s.Ecosystem, ids[at+"PairBurn"], map[string]any{"Pair": pairMap, "Liquidity": "1"})
+	tx, err = c.signer.contractIn(a, s.Ecosystem, ids[at+"PairBurn"], map[string]any{"Pair": pairMap, "Liquidity": "1", "NftId": 1})
 	if err := c.fail("PairBurn called by an account", tx, err, "invalid map type", cfg.timeout); err != nil {
 		return err
 	}
@@ -574,9 +605,19 @@ func iswapCheck(c *chainClient, cfg iswapConfig, s *iswapState) error {
 	if err := c.fail("TokensSendSeed of a pair by an account", tx, err, "Access denied", cfg.timeout); err != nil {
 		return err
 	}
+	// a transaction of @1TokensTransfer is no contract of signer_debit_contracts, nor of the
+	// conditions of a pair
+	tx, err = c.signer.contract(a, ids["@1TokensTransfer"], map[string]any{"Amount": "1", "SenderAccount": after.Account, "RecipientAccount": a.address(), "Ecosystem": p[1]})
+	if err := c.fail("TokensTransfer of a pair by an account", tx, err, "cannot be made", cfg.timeout); err != nil {
+		return err
+	}
+	tx, err = c.signer.contract(a, ids["@1TokensTransfer"], map[string]any{"Amount": "1", "SenderAccount": a.address(), "RecipientAccount": after.Account, "Ecosystem": p[1]})
+	if err := c.fail("TokensTransfer of the signer by its transaction", tx, err, "cannot be made", cfg.timeout); err != nil {
+		return err
+	}
 	// a contract of iSwap runs in a transaction of its ecosystem only: in another, the unprefixed
 	// tables would be those of the other ecosystem
-	tx, err = c.signer.contractIn(a, p[0], swapID, map[string]any{"Path": []any{p[0], p[1]}, "AmountIn": "1000", "AmountOutMin": "1"})
+	tx, err = c.signer.contractIn(a, p[0], swapID, map[string]any{"Path": []any{p[0], p[1]}, "AmountIn": "1000", "AmountOutMin": "1", "Deadline": deadline()})
 	if err := c.fail("SwapExactTokensForTokens in a token ecosystem", tx, err, "iSwap runs in the transactions of its ecosystem", cfg.timeout); err != nil {
 		return err
 	}
@@ -607,18 +648,22 @@ func iswapCheckRemove(c *chainClient, cfg iswapConfig, s *iswapState) error {
 	b0, _ := c.tokenBalance(a.address(), p[0])
 	b1, _ := c.tokenBalance(a.address(), p[1])
 	amount := strconv.FormatInt(iswapAddAmount, 10)
-	tx, err := c.signer.contractIn(a, s.Ecosystem, addID, map[string]any{"EcosystemA": p[0], "EcosystemB": p[1], "AmountADesired": amount, "AmountBDesired": amount, "AmountAMin": "1", "AmountBMin": "1"})
+	tx, err := c.signer.contractIn(a, s.Ecosystem, addID, map[string]any{"EcosystemA": p[0], "EcosystemB": p[1], "AmountADesired": amount, "AmountBDesired": amount, "AmountAMin": "1", "AmountBMin": "1", "Deadline": deadline()})
 	result, err := c.one("AddLiquidity of an account", tx, err, cfg.timeout)
 	if err != nil {
 		return err
 	}
 	// the result of a contract is the text of its value: a map prints as map[key:value ...]
-	m := regexp.MustCompile(`liquidity:(\d+)`).FindStringSubmatch(result)
+	m := regexp.MustCompile(`liquidity:(\d+) nftId:(\d+)`).FindStringSubmatch(result)
 	if m == nil {
 		return fmt.Errorf("AddLiquidity: result %q", result)
 	}
 	liquidity := m[1]
-	tx, err = c.signer.contractIn(a, s.Ecosystem, removeID, map[string]any{"EcosystemA": p[0], "EcosystemB": p[1], "Liquidity": liquidity, "AmountAMin": "1", "AmountBMin": "1"})
+	nft, err := strconv.ParseInt(m[2], 10, 64)
+	if err != nil {
+		return fmt.Errorf("AddLiquidity: result %q", result)
+	}
+	tx, err = c.signer.contractIn(a, s.Ecosystem, removeID, map[string]any{"EcosystemA": p[0], "EcosystemB": p[1], "Liquidity": liquidity, "NftId": nft, "AmountAMin": "1", "AmountBMin": "1", "Deadline": deadline()})
 	result, err = c.one("RemoveLiquidity of an account", tx, err, cfg.timeout)
 	if err != nil {
 		return err
@@ -654,10 +699,12 @@ func amountOut(reserveIn, reserveOut, in decimal.Decimal) decimal.Decimal {
 
 // iswapWorkloads are the DeFi workloads of iSwap, of the accounts iswap readied:
 //
-//	swap      SwapExactTokensForTokens on one pair, both ways in turn: every swap writes the row
-//	          and the balances of the same pair
+//	swap      SwapExactTokensForTokens on the first -rotate pairs in turn (1 by default), both ways
+//	          in turn: with 1, every swap writes the row and the balances of the same pair
 //	swaps     SwapExactTokensForTokens on each pair in turn
-//	hop       SwapExactTokensForTokens along a path of 3 tokens, both ways in turn: 2 pairs a swap
+//	hop       SwapExactTokensForTokens along -rotate paths of 3 tokens in turn (1 by default),
+//	          path i of the tokens 3i, 3i+1, 3i+2 (modulo the tokens), both ways in turn: 2 pairs a
+//	          swap
 //	exactout  SwapTokensForExactTokens on each pair in turn
 //	addliq    AddLiquidity of each account to each pair in turn
 //	token     @1TokensSend of a token ecosystem from each account to its peer
@@ -693,27 +740,35 @@ func iswapWorkloads(c *chainClient, accounts []*account, name string, run int, f
 		return []any{p[1], p[0]}
 	}
 	t := s.Tokens
+	// the transactions of a run may wait long in the pools: their deadline is far
+	until := deadline()
+	rotate := max(iswapRotate, 1)
+	pairs := s.Pairs[:min(rotate, len(s.Pairs))]
 	swap := func(a *account, seq int, p []any) (*signedTx, error) {
-		return c.signer.contractIn(a, s.Ecosystem, ids["SwapExactTokensForTokens"], map[string]any{"Path": p, "AmountIn": amount(iswapAmountIn, seq), "AmountOutMin": "1"})
+		return c.signer.contractIn(a, s.Ecosystem, ids["SwapExactTokensForTokens"], map[string]any{"Path": p, "AmountIn": amount(iswapAmountIn, seq), "AmountOutMin": "1", "Deadline": until})
 	}
 	kinds := map[string]func(a *account, seq int) (*signedTx, error){
-		"swap": func(a *account, seq int) (*signedTx, error) { return swap(a, seq, path(s.Pairs[0], seq)) },
+		"swap": func(a *account, seq int) (*signedTx, error) {
+			return swap(a, seq, path(pairs[seq%len(pairs)], seq/len(pairs)))
+		},
 		"swaps": func(a *account, seq int) (*signedTx, error) {
 			return swap(a, seq, path(s.Pairs[seq%len(s.Pairs)], seq/len(s.Pairs)))
 		},
 		"hop": func(a *account, seq int) (*signedTx, error) {
-			if (seq/n)%2 == 0 {
-				return swap(a, seq, []any{t[0], t[1], t[2]})
+			i := seq % rotate
+			hop := []any{t[3*i%len(t)], t[(3*i+1)%len(t)], t[(3*i+2)%len(t)]}
+			if (seq/rotate/n)%2 == 1 {
+				hop[0], hop[2] = hop[2], hop[0]
 			}
-			return swap(a, seq, []any{t[2], t[1], t[0]})
+			return swap(a, seq, hop)
 		},
 		"exactout": func(a *account, seq int) (*signedTx, error) {
 			p := s.Pairs[seq%len(s.Pairs)]
-			return c.signer.contractIn(a, s.Ecosystem, ids["SwapTokensForExactTokens"], map[string]any{"Path": path(p, seq/len(s.Pairs)), "AmountOut": amount(iswapAmountIn/2, seq), "AmountInMax": strconv.FormatInt(iswapAmountIn*10, 10)})
+			return c.signer.contractIn(a, s.Ecosystem, ids["SwapTokensForExactTokens"], map[string]any{"Path": path(p, seq/len(s.Pairs)), "AmountOut": amount(iswapAmountIn/2, seq), "AmountInMax": strconv.FormatInt(iswapAmountIn*10, 10), "Deadline": until})
 		},
 		"addliq": func(a *account, seq int) (*signedTx, error) {
 			p := s.Pairs[seq%len(s.Pairs)]
-			return c.signer.contractIn(a, s.Ecosystem, ids["AddLiquidity"], map[string]any{"EcosystemA": p[0], "EcosystemB": p[1], "AmountADesired": amount(iswapAddAmount, seq), "AmountBDesired": strconv.FormatInt(iswapAddAmount*2, 10), "AmountAMin": "1", "AmountBMin": "1"})
+			return c.signer.contractIn(a, s.Ecosystem, ids["AddLiquidity"], map[string]any{"EcosystemA": p[0], "EcosystemB": p[1], "AmountADesired": amount(iswapAddAmount, seq), "AmountBDesired": strconv.FormatInt(iswapAddAmount*2, 10), "AmountAMin": "1", "AmountBMin": "1", "Deadline": until})
 		},
 		"token": func(a *account, seq int) (*signedTx, error) {
 			return c.signer.contract(a, ids["TokensSend"], map[string]any{"Recipient": accounts[(seq+n/2)%n].address(), "Amount": "1", "Comment": strconv.Itoa(run) + "-" + strconv.Itoa(seq), "Ecosystem": t[seq%len(t)]})

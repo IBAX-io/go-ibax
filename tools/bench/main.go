@@ -29,14 +29,17 @@
 // and "latency_ms p50 A p95 B max C" of the transactions in blocks, and exits 1 when a transaction
 // reached no block.
 //
-// iswap installs iSwap (IBAX-io/iswap-contracts, the contracts.json of -bundle) in an ecosystem of
-// its own, makes -tokens token ecosystems and a pair of each two, readies the first -traders
-// accounts of the file to trade (members, tokens, approvals of the routers), adds the liquidity of
-// the founder, and checks the contracts on the chain: a swap pays what the formula of Uniswap V2
-// tells, liquidity comes back, and the calls that would take the tokens of a pair fail. It keeps
-// what it made in the file of -iswap, and goes on from the step it stopped at. The workloads
-// iswap-swap, iswap-swaps, iswap-hop, iswap-exactout, iswap-addliq, iswap-token and iswap-defi of
-// run read that file.
+// iswap installs iSwap (IBAX-io/iswap-contracts develop, the contracts.json of -bundle) in an
+// ecosystem of its own, makes -tokens token ecosystems and a pair of each two (16 make 120 pairs),
+// readies the first -traders accounts of the file to trade (members, tokens), lets the routers
+// debit the signer (the parameter signer_debit_contracts of ecosystem 1, with no approvals), adds
+// the liquidity of the founder, and checks the contracts on the chain: a swap pays what the formula
+// of Uniswap V2 tells, a swap needs its deadline, liquidity comes back from its liquidity NFT, and
+// the calls that would take the tokens of a pair fail. It keeps what it made in the file of
+// -iswap, and goes on from the step it stopped at. The workloads iswap-swap, iswap-swaps,
+// iswap-hop, iswap-exactout, iswap-addliq, iswap-token and iswap-defi of run read that file;
+// iswap-swap rotates over -rotate pairs and iswap-hop over -rotate paths. A report splits the
+// committed runs of the transactions of each node into parallel, early, again and ordered.
 package main
 
 import (
@@ -84,6 +87,7 @@ func main() {
 	iswapState := fs.String("iswap", "iswap.json", "file of what iswap made, which the iswap-* workloads read")
 	tokens := fs.Int("tokens", 4, "token ecosystems iswap makes, a pair of each two")
 	traders := fs.Int("traders", 1000, "accounts of the file, the first, that iswap readies to trade")
+	rotate := fs.Int("rotate", 1, "pairs the workload iswap-swap rotates over, and paths of 3 tokens iswap-hop does")
 
 	signerFile := fs.String("signer", "", "file of the private key, of the algorithm of -key-algo, that signs the transactions send sends, which carry its key in the header, as a key not registered yet signs (default the founder key, which logs in)")
 	count := fs.Int("n", 0, "transactions send sends")
@@ -115,6 +119,7 @@ func main() {
 		os.Exit(send(c, by, fs.Arg(0), fs.Args()[1:], *count, *rate, runConfig{batch: *batch, drain: *drain, poll: *poll, p99: *p99}))
 	}
 	iswapFile = *iswapState
+	iswapRotate = *rotate
 	if os.Args[1] == "iswap" {
 		if *bundle == "" || *tokens < 3 || *traders < 2 {
 			fmt.Fprintln(os.Stderr, "usage: bench iswap -node URL[,URL...] -key FILE -bundle FILE [-file FILE] [-iswap FILE] [-tokens N >= 3] [-traders N >= 2]")

@@ -105,16 +105,32 @@ func (r *report) markdown() string {
 			b.WriteString("\n")
 		}
 		if len(s.Nodes) > 0 {
-			b.WriteString("| Node | Blocks by kind | Mean stage ms | Txs/block | Statements/tx | Tx stage µs | Signature checks | DBLock wait / hold s | CPU cores | RSS MiB |\n")
-			b.WriteString("|---|---|---|---|---|---|---|---|---|---|\n")
+			b.WriteString("| Node | Blocks by kind | Mean stage ms | Txs/block | Statements/tx | Tx stage µs | Tx runs parallel / early / again / ordered | Signature checks | DBLock wait / hold s | CPU cores | RSS MiB |\n")
+			b.WriteString("|---|---|---|---|---|---|---|---|---|---|---|\n")
 			for _, p := range s.Nodes {
-				fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %.0f | %.1f / %.1f | %.2f | %.0f |\n",
+				fmt.Fprintf(&b, "| %s | %s | %s | %s | %s | %s | %s | %.0f | %.1f / %.1f | %.2f | %.0f |\n",
 					p.Node, kv(p.Blocks, "%.0f"), kv(p.StageMs, "%.1f"), kv(p.TxsPerBlock, "%.0f"), kv(p.StatementsPerTx, "%.1f"),
-					kv(p.TxStageUs, "%.0f"), p.SignVerifies, p.LockWaitS, p.LockHoldS, p.CPUCores, p.RSSMiB)
+					kv(p.TxStageUs, "%.0f"), txRuns(p), p.SignVerifies, p.LockWaitS, p.LockHoldS, p.CPUCores, p.RSSMiB)
 			}
 		}
 	}
 	return b.String()
+}
+
+// txRuns is the committed runs of transactions of a node by how they ran, in the order of
+// txRunLabels, then the labels it does not know
+func txRuns(p nodeProfile) string {
+	parts := make([]string, 0, len(p.TxRuns))
+	for _, run := range txRunLabels {
+		parts = append(parts, fmt.Sprintf("%.0f", p.TxRuns[run]))
+	}
+	out := strings.Join(parts, " / ")
+	for _, run := range sortedKeys(p.TxRuns) {
+		if !slices.Contains(txRunLabels, run) {
+			out += fmt.Sprintf(", %s %.0f", run, p.TxRuns[run])
+		}
+	}
+	return out
 }
 
 func sortedKeys[V any](m map[string]V) []string {

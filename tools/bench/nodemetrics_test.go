@@ -30,6 +30,9 @@ ibax_block_db_statements_count{kind="generate"} ` + itoa(blocks) + `
 ibax_sign_verify_seconds_bucket{algo="ECC_Secp256k1",le="+Inf"} ` + itoa(verifies) + `
 ibax_sign_verify_seconds_sum{algo="ECC_Secp256k1"} 1
 ibax_sign_verify_seconds_count{algo="ECC_Secp256k1"} ` + itoa(verifies) + `
+# TYPE ibax_tx_runs_total counter
+ibax_tx_runs_total{run="parallel"} ` + itoa(txs-statements/100) + `
+ibax_tx_runs_total{run="again"} ` + itoa(statements/100) + `
 # TYPE process_cpu_seconds_total counter
 process_cpu_seconds_total ` + itoa(cpu) + `
 `
@@ -43,11 +46,16 @@ process_cpu_seconds_total ` + itoa(cpu) + `
 	for name, got := range map[string]float64{
 		"generate blocks": p.Blocks["generate"], "total ms": p.StageMs["generate/total"], "txs a block": p.TxsPerBlock["generate"],
 		"statements a tx": p.StatementsPerTx["generate"], "signature checks": p.SignVerifies, "cores": p.CPUCores,
+		"parallel runs": p.TxRuns["parallel"], "early runs": p.TxRuns["early"], "again runs": p.TxRuns["again"],
 	} {
-		want := map[string]float64{"generate blocks": 4, "total ms": 2000, "txs a block": 200, "statements a tx": 5, "signature checks": 2400, "cores": 2}[name]
+		want := map[string]float64{"generate blocks": 4, "total ms": 2000, "txs a block": 200, "statements a tx": 5, "signature checks": 2400, "cores": 2,
+			"parallel runs": 760, "early runs": 0, "again runs": 40}[name]
 		if got != want {
 			t.Errorf("%s: %v, want %v", name, got, want)
 		}
+	}
+	if got := txRuns(p); got != "760 / 0 / 40 / 0" {
+		t.Errorf("tx runs %q, want 760 / 0 / 40 / 0", got)
 	}
 }
 
