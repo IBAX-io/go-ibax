@@ -6,7 +6,9 @@
 package sqldb
 
 import (
+	"errors"
 	"slices"
+	"sync"
 
 	"gorm.io/gorm"
 )
@@ -28,20 +30,41 @@ func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
 	return isFound(archived("log_transactions").Where("hash = ?", hash).First(lt))
 }
 
-// KnownLogTransactions are the hashes of those in a block, in one query
+// knownChunk is the most hashes KnownLogTransactions looks up in one query
+const knownChunk = 512
+
+// KnownLogTransactions are the hashes of those in a block. Without a transaction it looks the
+// hashes up in parts at once, on connections of their own: a block of thousands of transactions
+// waits for the longest part only.
 func KnownLogTransactions(dbTx *DbTransaction, hashes [][]byte) (map[string]bool, error) {
 	known := make(map[string]bool)
 	if len(hashes) == 0 {
 		return known, nil
 	}
-	var found [][]byte
-	if err := GetDB(dbTx).Raw(`SELECT "hash" FROM "log_transactions" WHERE "hash" IN ?
-		UNION ALL SELECT "hash" FROM "stop_network_txs" WHERE "hash" IN ?`, hashes, hashes).
-		Scan(&found).Error; err != nil {
+	chunk := knownChunk
+	if dbTx != nil {
+		chunk = len(hashes)
+	}
+	parts := make([][][]byte, (len(hashes)+chunk-1)/chunk)
+	errs := make([]error, len(parts))
+	var wg sync.WaitGroup
+	for k := range parts {
+		wg.Go(func() {
+			part := hashes[k*chunk : min((k+1)*chunk, len(hashes))]
+			arr := column(part, func(h []byte) []byte { return h })
+			errs[k] = GetDB(dbTx).Raw(`SELECT "hash" FROM "log_transactions" WHERE "hash" = ANY(?::bytea[])
+		UNION ALL SELECT "hash" FROM "stop_network_txs" WHERE "hash" = ANY(?::bytea[])`, arr, arr).
+				Scan(&parts[k]).Error
+		})
+	}
+	wg.Wait()
+	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
-	for _, h := range found {
-		known[string(h)] = true
+	for _, found := range parts {
+		for _, h := range found {
+			known[string(h)] = true
+		}
 	}
 	return known, nil
 }
