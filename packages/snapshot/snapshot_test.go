@@ -104,7 +104,7 @@ func TestStateHashCanonical(t *testing.T) {
 	for i, tb := range sa.Tables {
 		names[i] = tb.Name
 	}
-	require.Equal(t, []string{"1_bag", "1_history", "1_keys", "1_names", "info_block"}, names)
+	require.Equal(t, []string{"1_bag", "1_history", "1_keys", "1_names", "info_block", SchemaEntry}, names)
 	require.Equal(t, int64(2), sa.Tables[1].Rows)
 	require.Equal(t, sa.Hash, hashOf(t, a, 3).Hash)
 
@@ -225,6 +225,74 @@ func TestStateHashLayout(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, before.Hash, st.Hash)
+		})
+	}
+}
+
+// The hash covers the schema of the state: each object of a table, the partitions, the functions
+// and the views change it, and what a snapshot cannot carry fails it
+func TestStateHashSchema(t *testing.T) {
+	base := testDB(t)
+	exec(t, base, schema)
+	before := hashOf(t, base, 2)
+	var history Desc
+	for _, tb := range before.Tables {
+		if tb.Name == "1_history" {
+			d, err := ParseDesc(tb.Desc)
+			require.NoError(t, err)
+			history = *d
+		}
+	}
+	require.Equal(t, []string{"block_id", "id"}, history.Key)
+	require.Equal(t, "RANGE (block_id)", history.PartKey)
+	require.Len(t, history.Partitions, 2)
+	require.Equal(t, Partition{Schema: "public", Name: "1_history_0", Bound: "FOR VALUES FROM ('0') TO ('100')"}, history.Partitions[0])
+
+	for _, change := range []string{
+		`CREATE INDEX ON "1_keys" (amount)`,
+		`CREATE INDEX ON "1_history_0" (note)`,
+		`ALTER TABLE "1_names" ADD CONSTRAINT positive CHECK (f > 0)`,
+		`ALTER TABLE "1_bag" ADD UNIQUE (v)`,
+		`ALTER TABLE "1_bag" ALTER COLUMN n SET NOT NULL`,
+		`ALTER TABLE "1_bag" ALTER COLUMN v TYPE text COLLATE "C"`,
+		`CREATE TABLE "1_history_2" PARTITION OF "1_history" FOR VALUES FROM (200) TO (300)`,
+		`CREATE FUNCTION f() RETURNS int LANGUAGE sql AS 'SELECT 1'`,
+		`CREATE VIEW v AS SELECT v FROM "1_bag"`,
+		`CREATE FUNCTION tf() RETURNS trigger LANGUAGE plpgsql AS 'BEGIN RETURN NEW; END';
+			CREATE TRIGGER tr BEFORE INSERT ON "1_bag" FOR EACH ROW EXECUTE FUNCTION tf()`,
+	} {
+		t.Run(change, func(t *testing.T) {
+			db := testDB(t)
+			exec(t, db, schema, change)
+			require.NotEqual(t, before.Hash, hashOf(t, db, 2).Hash)
+		})
+	}
+	// what is of the node alone keeps it
+	for _, change := range []string{
+		`CREATE INDEX ON block_chain (data)`,
+		`CREATE TABLE migration_history (id serial PRIMARY KEY, version text)`,
+		`CREATE SCHEMA other; CREATE TABLE other.t (id int); CREATE SEQUENCE other.s`,
+	} {
+		t.Run(change, func(t *testing.T) {
+			db := testDB(t)
+			exec(t, db, schema, change)
+			require.Equal(t, before.Hash, hashOf(t, db, 2).Hash)
+		})
+	}
+	for _, change := range []string{
+		`CREATE SEQUENCE s`,
+		`ALTER TABLE "1_bag" ADD COLUMN k bigint GENERATED ALWAYS AS IDENTITY`,
+		`CREATE MATERIALIZED VIEW m AS SELECT 1`,
+		`CREATE TYPE e AS ENUM ('a')`,
+	} {
+		t.Run(change, func(t *testing.T) {
+			db := testDB(t)
+			exec(t, db, schema, change)
+			s, err := Begin(context.Background(), db)
+			require.NoError(t, err)
+			defer s.Close()
+			_, err = s.Hash(context.Background(), 2, nil)
+			require.ErrorContains(t, err, "the state cannot carry")
 		})
 	}
 }

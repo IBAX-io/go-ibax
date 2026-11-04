@@ -15,7 +15,8 @@
 // is the hash of its description, its rows, its bytes and the hashes of its chunks; the state
 // hash is the hash of the names of the tables, in the "C" order, each with its table hash. The
 // hash function is that of the chain. A chunk is the unit a node verifies of a snapshot it
-// downloads.
+// downloads. The description of a table is its schema, Desc, and the entry SchemaEntry describes
+// the functions and the views (schema.go), so that the state hash covers what an import creates.
 //
 // Begin takes a snapshot of the database in a read-only transaction of REPEATABLE READ, which
 // the node opens right after it commits the block of the height and before it commits the next:
@@ -195,6 +196,7 @@ func end(conn *sql.Conn) {
 // table is a table of the state as the snapshot describes it
 type table struct {
 	oid   uint32
+	kind  byte
 	name  string
 	desc  string
 	query string
@@ -202,7 +204,7 @@ type table struct {
 
 // tables reads the tables of the state of the snapshot and how to encode each
 func (s *Snapshot) tables(ctx context.Context) ([]table, error) {
-	rows, err := s.conn.QueryContext(ctx, `SELECT c.oid, c.relname FROM pg_class c
+	rows, err := s.conn.QueryContext(ctx, `SELECT c.oid, c.relkind, c.relname FROM pg_class c
 		JOIN pg_namespace n ON n.oid = c.relnamespace
 		WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p') AND NOT c.relispartition
 		ORDER BY c.relname COLLATE "C"`)
@@ -212,10 +214,12 @@ func (s *Snapshot) tables(ctx context.Context) ([]table, error) {
 	var ts []table
 	for rows.Next() {
 		var t table
-		if err := rows.Scan(&t.oid, &t.name); err != nil {
+		var kind string
+		if err := rows.Scan(&t.oid, &kind, &t.name); err != nil {
 			rows.Close()
 			return nil, err
 		}
+		t.kind = kind[0]
 		if !nodeTables[t.name] {
 			ts = append(ts, t)
 		}
@@ -229,84 +233,14 @@ func (s *Snapshot) tables(ctx context.Context) ([]table, error) {
 			return nil, fmt.Errorf("describing %s: %w", ts[i].name, err)
 		}
 	}
+	schema, err := s.describeSchema(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("describing the schema: %w", err)
+	}
+	ts = append(ts, schema)
+	// the order of the bytes of the names, that of the "C" collation
+	slices.SortFunc(ts, func(a, b table) int { return strings.Compare(a.name, b.name) })
 	return ts, nil
-}
-
-// describe sets the description of a table, its columns in their order with their types, whether
-// they may be null and their defaults, and its primary key, and the query of its encoding
-func (s *Snapshot) describe(ctx context.Context, t *table) error {
-	type column struct {
-		name, typ, def string
-		notNull, text  bool
-	}
-	rows, err := s.conn.QueryContext(ctx, `SELECT a.attname, format_type(a.atttypid, a.atttypmod), a.attnotnull,
-		coalesce(pg_get_expr(d.adbin, d.adrelid), ''), a.attcollation <> 0
-		FROM pg_attribute a LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
-		WHERE a.attrelid = $1 AND a.attnum > 0 AND NOT a.attisdropped ORDER BY a.attnum`, t.oid)
-	if err != nil {
-		return err
-	}
-	var cols []column
-	for rows.Next() {
-		var c column
-		if err := rows.Scan(&c.name, &c.typ, &c.notNull, &c.def, &c.text); err != nil {
-			rows.Close()
-			return err
-		}
-		if !slices.Contains(nodeColumns[t.name], c.name) {
-			cols = append(cols, c)
-		}
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	if len(cols) == 0 {
-		return errors.New("a table without columns")
-	}
-	rows, err = s.conn.QueryContext(ctx, `SELECT a.attname FROM pg_index i
-		CROSS JOIN LATERAL unnest(i.indkey) WITH ORDINALITY AS k(attnum, ord)
-		JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = k.attnum
-		WHERE i.indrelid = $1 AND i.indisprimary ORDER BY k.ord`, t.oid)
-	if err != nil {
-		return err
-	}
-	var key []string
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			rows.Close()
-			return err
-		}
-		key = append(key, name)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return err
-	}
-
-	var desc strings.Builder
-	names := make([]string, len(cols))
-	for i, c := range cols {
-		names[i] = quote(c.name)
-		fmt.Fprintf(&desc, "%s %s %t %s\n", c.name, c.typ, c.notNull, c.def)
-	}
-	fmt.Fprintf(&desc, "key %s\n", strings.Join(key, ","))
-	t.desc = desc.String()
-	order := make([]string, len(key))
-	for i, k := range key {
-		order[i] = quote(k)
-		if j := slices.IndexFunc(cols, func(c column) bool { return c.name == k }); j >= 0 && cols[j].text {
-			order[i] += ` COLLATE "C"`
-		}
-	}
-	from := "public." + quote(t.name)
-	if len(order) == 0 {
-		// the text of the row is that of the columns of the state alone
-		order = []string{fmt.Sprintf(`(ROW(%s))::text COLLATE "C"`, strings.Join(names, ", "))}
-	}
-	t.query = fmt.Sprintf(`COPY (SELECT %s FROM %s ORDER BY %s) TO STDOUT`, strings.Join(names, ", "), from, strings.Join(order, ", "))
-	return nil
 }
 
 func quote(name string) string {
@@ -411,6 +345,10 @@ func (s *Snapshot) encode(ctx context.Context, t table, sink Sink) (Table, error
 		c.out = out
 	}
 	err = conn.Raw(func(dc any) error {
+		if t.query == "" {
+			// the entry of the schema, of no rows
+			return nil
+		}
 		pg, ok := dc.(*stdlib.Conn)
 		if !ok {
 			return fmt.Errorf("a connection of %T, not of pgx", dc)
