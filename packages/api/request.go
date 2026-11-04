@@ -22,6 +22,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
@@ -252,7 +253,7 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 	if publicKey, err = crypto.NodePrivateToPublic(connect.PrivateKey); err != nil {
 		return
 	}
-	txTime := time.Now().Unix()
+	txTime := faults.Now().Unix()
 
 	if newTime := form.Get("txtime"); len(newTime) > 0 {
 		txTime = converter.StrToInt64(newTime)

@@ -20,6 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -253,7 +254,8 @@ func (p *Pool) admit(txs []*Transaction, rate Rate, sent bool) []error {
 		}
 	}
 	p.mu.Unlock()
-	now := time.Now().Unix()
+	// the window of the signed times is of the clock of the node, as the times of its blocks
+	now := faults.Now().Unix()
 	checked := CheckBatch(fresh, now)
 	fund, l := make([]*funds, len(fresh)), newBatchLedger()
 	for j, t := range fresh {
