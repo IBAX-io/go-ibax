@@ -75,6 +75,19 @@ func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
 	for i := 1; i < len(rts)+1; i++ {
 		rts[i-1].ID = rollbackSys.ID + int64(i) - 1
 	}
+	copied, err := copyInto(dbTx, "rollback_tx",
+		[]string{"id", "block_id", "tx_hash", "table_name", "table_id", "data", "data_hash"},
+		func() []stateRow {
+			rows := make([]stateRow, len(rts))
+			for i, r := range rts {
+				rows[i] = stateRow{textInt(r.ID), textInt(r.BlockID), textBytea(r.TxHash), textString(r.NameTable),
+					textString(r.TableID), textString(r.Data), textBytea(r.DataHash)}
+			}
+			return rows
+		})
+	if copied || err != nil {
+		return err
+	}
 	return dbTx.Exec(`INSERT INTO "rollback_tx" ("id", "block_id", "tx_hash", "table_name", "table_id", "data", "data_hash")
 		SELECT * FROM unnest(?::bigint[], ?::bigint[], ?::bytea[], ?::varchar[], ?::varchar[], ?::text[], ?::bytea[])`,
 		column(rts, func(r *RollbackTx) int64 { return r.ID }),

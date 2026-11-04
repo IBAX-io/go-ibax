@@ -74,9 +74,23 @@ func (lt *LogTransaction) Create(dbTx *DbTransaction) error {
 	return GetDB(dbTx).Create(lt).Error
 }
 
+// CreateLogTransactionBatches writes the logs in a statement, a COPY on a connection of the state
 func CreateLogTransactionBatches(dbTx *gorm.DB, lts []*LogTransaction) error {
 	if len(lts) == 0 {
 		return nil
+	}
+	copied, err := copyInto(dbTx, "log_transactions",
+		[]string{"hash", "block", "timestamp", "address", "ecosystem_id", "status", "contract_name"},
+		func() []stateRow {
+			rows := make([]stateRow, len(lts))
+			for i, r := range lts {
+				rows[i] = stateRow{textBytea(r.Hash), textInt(r.Block), textInt(r.Timestamp), textInt(r.Address),
+					textInt(r.EcosystemID), textInt(r.Status), textString(r.ContractName)}
+			}
+			return rows
+		})
+	if copied || err != nil {
+		return err
 	}
 	return dbTx.Exec(`INSERT INTO "log_transactions" ("hash", "block", "timestamp", "address", "ecosystem_id", "status", "contract_name")
 		SELECT * FROM unnest(?::bytea[], ?::bigint[], ?::bigint[], ?::bigint[], ?::bigint[], ?::bigint[], ?::varchar[])`,
