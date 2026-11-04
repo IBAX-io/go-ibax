@@ -32,4 +32,12 @@ type Config struct {
 	JitterMs int `json:"jitter_ms"`
 	// ClockOffsetMs is how far ahead of the system clock Now is
 	ClockOffsetMs int `json:"clock_offset_ms"`
+	// ClockFrom, ClockAt and ClockSpeed run the clock fast, so that a test makes a long chain in a
+	// short time: Now is ClockFrom (Unix seconds) at the system time ClockAt (Unix seconds) and
+	// goes ClockSpeed seconds a second, until it reaches the system clock, which it is from then
+	// on. The nodes of a chain read the same values, so their clocks agree; the first block of the
+	// chain is of a time not after ClockFrom (generateFirstBlock --time).
+	ClockFrom  int64   `json:"clock_from"`
+	ClockAt    int64   `json:"clock_at"`
+	ClockSpeed float64 `json:"clock_speed"`
 }

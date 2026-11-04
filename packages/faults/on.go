@@ -55,7 +55,8 @@ func Watch(path string) {
 			}
 			if old := config(); !equal(old, c) {
 				log.WithFields(log.Fields{"refuse": c.Refuse, "delay_ms": c.DelayMs, "jitter_ms": c.JitterMs,
-					"clock_offset_ms": c.ClockOffsetMs}).Warn("the faults change")
+					"clock_offset_ms": c.ClockOffsetMs, "clock_from": c.ClockFrom, "clock_at": c.ClockAt,
+					"clock_speed": c.ClockSpeed}).Warn("the faults change")
 			}
 			current.Store(c)
 			mu.Lock()
@@ -77,12 +78,34 @@ func Watch(path string) {
 
 func equal(a, b *Config) bool {
 	return slices.Equal(a.Refuse, b.Refuse) && a.DelayMs == b.DelayMs && a.JitterMs == b.JitterMs &&
-		a.ClockOffsetMs == b.ClockOffsetMs
+		a.ClockOffsetMs == b.ClockOffsetMs && a.ClockFrom == b.ClockFrom && a.ClockAt == b.ClockAt &&
+		a.ClockSpeed == b.ClockSpeed
 }
 
-// Now is the clock of the node: the clock of the system, ClockOffsetMs ahead
+// Now is the clock of the node: the clock of the system, or the fast clock until it reaches it,
+// ClockOffsetMs ahead
 func Now() time.Time {
-	return time.Now().Add(time.Duration(config().ClockOffsetMs) * time.Millisecond)
+	c := config()
+	now, _ := clock(c, time.Now())
+	return now.Add(time.Duration(c.ClockOffsetMs) * time.Millisecond)
+}
+
+// clock is the time of the clock at the system time, and how many of its seconds a second takes
+func clock(c *Config, system time.Time) (time.Time, float64) {
+	if c.ClockSpeed <= 0 {
+		return system, 1
+	}
+	fast := time.Unix(c.ClockFrom, 0).Add(time.Duration(float64(system.Sub(time.Unix(c.ClockAt, 0))) * c.ClockSpeed))
+	if fast.Before(system) {
+		return fast, c.ClockSpeed
+	}
+	return system, 1
+}
+
+// Until is how long the system clock takes until the clock of the node reaches t
+func Until(t time.Time) time.Duration {
+	now, speed := clock(config(), time.Now())
+	return time.Duration(float64(t.Sub(now.Add(time.Duration(config().ClockOffsetMs)*time.Millisecond))) / speed)
 }
 
 // Dial dials another node unless the faults refuse its address

@@ -21,6 +21,9 @@ func Watch(path string) {}
 // Now is the clock of the node: the clock of the system
 func Now() time.Time { return time.Now() }
 
+// Until is how long the clock of the node takes until t: time.Until
+func Until(t time.Time) time.Duration { return time.Until(t) }
+
 // Dial dials another node: net.DialTimeout
 func Dial(addr string, timeout time.Duration) (net.Conn, error) {
 	return net.DialTimeout("tcp", addr, timeout)

@@ -744,7 +744,7 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 		return nil, bft.Hash{}, err
 	}
 	start := time.Now()
-	if wait := time.Unix(prev.Time+1, 0).Sub(faults.Now()); wait > 0 {
+	if wait := faults.Until(time.Unix(prev.Time+1, 0)); wait > 0 {
 		time.Sleep(min(wait, maxTimeWait))
 	}
 	waited := time.Since(start)

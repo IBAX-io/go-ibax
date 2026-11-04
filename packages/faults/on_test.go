@@ -92,3 +92,25 @@ func TestFaults(t *testing.T) {
 	}
 	c.Close()
 }
+
+// TestFastClock: the fast clock goes ClockSpeed seconds a second from ClockFrom, until it reaches
+// the system clock, and Until is of the system clock
+func TestFastClock(t *testing.T) {
+	system := time.Unix(1_000_000, 0)
+	c := &Config{ClockFrom: 100, ClockAt: 1_000_000, ClockSpeed: 200}
+	if now, speed := clock(c, system.Add(time.Second)); now.Unix() != 300 || speed != 200 {
+		t.Fatalf("a second after: %d at %v", now.Unix(), speed)
+	}
+	// it reaches the system clock after (1,000,000 - 100) / 199 seconds
+	if now, speed := clock(c, system.Add(5100*time.Second)); !now.Equal(system.Add(5100*time.Second)) || speed != 1 {
+		t.Fatalf("after it reached the system clock: %v at %v", now, speed)
+	}
+	if now, _ := clock(&Config{}, system); !now.Equal(system) {
+		t.Fatalf("no fast clock: %v", now)
+	}
+	current.Store(&Config{ClockFrom: time.Now().Unix() - 1000, ClockAt: time.Now().Unix(), ClockSpeed: 100})
+	defer current.Store(&Config{})
+	if d := Until(Now().Add(10 * time.Second)); d < 90*time.Millisecond || d > 110*time.Millisecond {
+		t.Fatalf("10 s of the clock take %v", d)
+	}
+}
