@@ -7,6 +7,7 @@ package block
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -37,6 +38,12 @@ type memState struct {
 
 func takeMemState() memState {
 	return memState{vm: script.GetVM().Snapshot(), lang: language.TakeSnapshot()}
+}
+
+// KeepMemState takes the state outside the database that executing blocks changes and returns
+// what puts it back, the platform parameters and the column types read again from the database
+func KeepMemState() func() error {
+	return takeMemState().restore
 }
 
 func (m memState) restore() error {
@@ -243,6 +250,46 @@ func Certify(binData []byte, cert *bft.Certificate) (*Block, error) {
 	if err := b.checkContent(); err != nil {
 		return nil, err
 	}
+	return b, nil
+}
+
+// VerifyCertified checks, of a block as a peer sends it, that the certificate commits it and
+// verifies by the validators set, without the database: the block carries the header of the block
+// it follows, whose hashes its hash takes, so the certificate commits the header it carries too.
+// It returns the block, its transactions as written.
+func VerifyCertified(raw []byte, cert *bft.Certificate, set bft.Validators, networkID uint64) (*types.BlockData, error) {
+	b := &types.BlockData{}
+	if err := proto.Unmarshal(raw, b); err != nil {
+		return nil, fmt.Errorf("parsing the block: %w", err)
+	}
+	if b.Header == nil || b.PrevHeader == nil {
+		return nil, errors.New("a block without its header or the header of the block before")
+	}
+	height := b.Header.BlockId
+	if uint64(height) != cert.Height || b.PrevHeader.BlockId != height-1 {
+		return nil, fmt.Errorf("the certificate of height %d commits no block %d after %d", cert.Height, height, b.PrevHeader.BlockId)
+	}
+	if b.Header.Version < consts.BvValidatorsHash {
+		return nil, fmt.Errorf("block %d: version %d, without the validators hash", height, b.Header.Version)
+	}
+	merkle := b.GenMerkleRoot()
+	if !bytes.Equal(merkle, b.MerkleRoot) {
+		return nil, fmt.Errorf("block %d: the merkle root is not that of its transactions", height)
+	}
+	if !bytes.Equal(b.Header.GenHash(b.PrevHeader, merkle), b.Header.BlockHash) {
+		return nil, fmt.Errorf("block %d: the hash is not that of its content", height)
+	}
+	hash, err := bft.HashOf(b.Header.BlockHash)
+	if err != nil {
+		return nil, err
+	}
+	if hash != cert.Hash {
+		return nil, fmt.Errorf("the certificate of height %d commits another block than %x", height, b.Header.BlockHash)
+	}
+	if err := cert.Verify(set, networkID, cert.Height, cert.Hash); err != nil {
+		return nil, fmt.Errorf("the certificate of height %d: %w", height, err)
+	}
+	b.BinData = raw
 	return b, nil
 }
 

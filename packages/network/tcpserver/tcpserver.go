@@ -18,6 +18,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/network/snapnet"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/snapshot"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -107,7 +108,7 @@ func HandleTCPRequest(rw net.Conn) {
 	case network.RequestTypeSnapshot:
 		rw.SetDeadline(time.Now().Add(consts.ReadTimeout * time.Second))
 		store := snapshot.Store{Dir: filepath.Join(conf.Config.DirPathConf.DataDir, snapshot.DirName)}
-		if err = snapnet.Serve(rw, store); err != nil {
+		if err = snapnet.Serve(rw, store, setProofs); err != nil {
 			log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": rw.RemoteAddr()}).Debug("snapshot request")
 		}
 		return
@@ -163,4 +164,17 @@ func TcpListener(laddr string) error {
 	}()
 
 	return nil
+}
+
+// setProofs are the proofs of the validators sets the node serves
+func setProofs(from int64, n int) ([]snapnet.Proof, error) {
+	rows, err := sqldb.SetProofs(from, n)
+	if err != nil {
+		return nil, err
+	}
+	ps := make([]snapnet.Proof, len(rows))
+	for i, r := range rows {
+		ps[i] = snapnet.Proof{FromHeight: r.FromHeight, Block: r.Block, Cert: r.Cert, Set: r.Set}
+	}
+	return ps, nil
 }

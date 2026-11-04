@@ -85,6 +85,12 @@ type peer struct {
 
 func serve(t *testing.T, store snapshot.Store) *peer {
 	t.Helper()
+	return serveProofs(t, store, func(int64, int) ([]Proof, error) { return nil, nil })
+}
+
+// serveProofs serves a store and proofs of the validators sets
+func serveProofs(t *testing.T, store snapshot.Store, proofs Proofs) *peer {
+	t.Helper()
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	t.Cleanup(func() { l.Close() })
@@ -101,7 +107,7 @@ func serve(t *testing.T, store snapshot.Store) *peer {
 				if rt.Read(c) != nil || rt.Type != network.RequestTypeSnapshot {
 					return
 				}
-				Serve(counter{c, p}, store)
+				Serve(counter{c, p}, store, proofs)
 			}()
 		}
 	}()
@@ -314,4 +320,39 @@ func TestServePaths(t *testing.T) {
 	chunks, err = FetchChunks(p.addr, height-1, "1_history", 0, 1, time.Second)
 	require.NoError(t, err)
 	require.Empty(t, chunks)
+}
+
+// TestProofs fetches the proofs of the validators sets from a peer: by requests of MaxProofs at
+// most, in order, and a peer that answers them out of order fails
+func TestProofs(t *testing.T) {
+	var all []Proof
+	for h := int64(100); h <= 2000; h += 100 {
+		all = append(all, Proof{FromHeight: h, Block: rows(byte(h), 1000), Cert: rows(1, 200), Set: rows(2, 300)})
+	}
+	from := func(ps []Proof) Proofs {
+		return func(from int64, n int) ([]Proof, error) {
+			var out []Proof
+			for _, p := range ps {
+				if p.FromHeight > from && len(out) < n {
+					out = append(out, p)
+				}
+			}
+			return out, nil
+		}
+	}
+	p := serveProofs(t, snapshot.Store{Dir: t.TempDir()}, from(all))
+	got, err := FetchProofs(p.addr, 0, 255, 5*time.Second)
+	require.NoError(t, err)
+	require.Equal(t, all[:MaxProofs], got)
+	got, err = FetchProofs(p.addr, got[len(got)-1].FromHeight, MaxProofs, 5*time.Second)
+	require.NoError(t, err)
+	require.Equal(t, all[MaxProofs:], got)
+	got, err = FetchProofs(p.addr, 2000, MaxProofs, 5*time.Second)
+	require.NoError(t, err)
+	require.Empty(t, got)
+
+	swapped := []Proof{all[1], all[0]}
+	p = serveProofs(t, snapshot.Store{Dir: t.TempDir()}, func(int64, int) ([]Proof, error) { return swapped, nil })
+	_, err = FetchProofs(p.addr, 0, MaxProofs, 5*time.Second)
+	require.ErrorContains(t, err, "the proof of height 100 after 200")
 }

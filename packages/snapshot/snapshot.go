@@ -51,15 +51,20 @@ var chunkBytes = 1 << 20
 var nodeTables = map[string]bool{
 	"block_chain":         true,
 	"bft_certificates":    true,
+	"bft_set_proofs":      true,
 	"confirmations":       true,
 	"bft_sign_state":      true,
 	"bft_state_hashes":    true,
 	"install":             true,
 	"migration_history":   true,
 	"queue_blocks":        true,
+	"snapshot_joins":      true,
 	"stop_daemons":        true,
 	"transactions_status": true,
 }
+
+// IsNodeTable reports whether a table is out of the state
+func IsNodeTable(name string) bool { return nodeTables[name] }
 
 // nodeColumns are the columns of the tables of the state a node writes of its own
 var nodeColumns = map[string][]string{

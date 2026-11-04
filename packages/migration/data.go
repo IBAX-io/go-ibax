@@ -25,6 +25,17 @@ var (
 		t.Column("hash", "bytea", {"default": ""})
 	{{footer "primary(height)"}}
 
+	{{head "bft_set_proofs"}}
+		t.Column("height", "bigint", {"default": "0"})
+		t.Column("block", "bytea", {"default": ""})
+		t.Column("cert", "bytea", {"default": ""})
+	{{footer "primary(height)"}}
+
+	{{head "snapshot_joins"}}
+		t.Column("height", "bigint", {"default": "0"})
+		t.Column("hash", "bytea", {"default": ""})
+	{{footer "primary(height)"}}
+
 	{{head "bft_sign_state"}}
 		t.Column("height", "bigint", {"default": "0"})
 		t.Column("data", "bytea", {"default": ""})

@@ -5,12 +5,18 @@
 
 package sqldb
 
-import "gorm.io/gorm"
+import (
+	"fmt"
 
-// The tables of a chain of the BFT consensus (F18). bft_certificates, bft_validator_sets and
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
+)
+
+// The tables of a chain of the BFT consensus (F18). bft_certificates, bft_set_proofs and
 // bft_sign_state are of the node: a committed block is never rolled back on such a chain, so a
-// node writes them as it commits and keeps them. 1_bft_evidence and 1_bft_reviews are chain state,
-// written by the evidence and review transactions and rolled back with them.
+// node writes them as it commits and keeps them. bft_validator_sets, 1_bft_evidence and
+// 1_bft_reviews are chain state, written in the transactions of the blocks, the evidences and the
+// reviews and rolled back with them.
 
 // BftCertificate is the commit certificate of a height: Data is bft.Certificate.Marshal
 type BftCertificate struct {
@@ -63,6 +69,87 @@ func (s *BftValidatorSet) GetAt(dbTx *DbTransaction, height int64) (bool, error)
 	return isFound(GetDB(dbTx).Where("from_height <= ?", height).Order("from_height desc").First(s))
 }
 
+// BftSetProof is the proof of a change of the validators set out of the window of the blocks: the
+// block of Height, whose header has the hash of the set of Height+1, and its certificate. A node
+// that joins from a snapshot walks the sets from block 1 to the snapshot height by the proofs
+// (design 4.5).
+type BftSetProof struct {
+	Height int64 `gorm:"primary_key;not null"`
+	Block  []byte
+	Cert   []byte
+}
+
+// TableName returns name of table
+func (BftSetProof) TableName() string {
+	return "bft_set_proofs"
+}
+
+// SetProof is the proof of the validators set from a height on: the block before the height and
+// its certificate, and the set
+type SetProof struct {
+	FromHeight int64
+	Block      []byte
+	Cert       []byte
+	Set        []byte
+}
+
+// SetProofs reads up to n proofs of the sets from the heights after from, ascending: of the
+// blocks the node keeps, and of those out of its window, bft_set_proofs. Block 1 has no
+// certificate, so the set it leaves has no proof: a node has it of its block 1.
+func SetProofs(from int64, n int) ([]SetProof, error) {
+	var ps []SetProof
+	err := DBConn.Raw(fmt.Sprintf(`SELECT DISTINCT ON ("from_height") * FROM (
+			SELECT s."from_height", b."data" AS "block", c."data" AS "cert", s."data" AS "set"
+			FROM "bft_validator_sets" s
+			JOIN %s b ON b."id" = s."from_height" - 1
+			JOIN %s c ON c."height" = s."from_height" - 1
+			WHERE s."from_height" > ?
+			UNION ALL
+			SELECT s."from_height", p."block", p."cert", s."data"
+			FROM "bft_validator_sets" s JOIN "bft_set_proofs" p ON p."height" = s."from_height" - 1
+			WHERE s."from_height" > ?
+		) AS proofs ORDER BY "from_height" LIMIT ?`, ArchivedTable("block_chain"), ArchivedTable("bft_certificates")),
+		from, from, n).Scan(&ps).Error
+	return ps, err
+}
+
+// SaveSetProofs stores proofs of the sets out of the window of the blocks
+func SaveSetProofs(dbTx *DbTransaction, ps []BftSetProof) error {
+	if len(ps) == 0 {
+		return nil
+	}
+	return GetDB(dbTx).Clauses(clause.OnConflict{DoNothing: true}).Create(&ps).Error
+}
+
+// SnapshotJoin is the snapshot a node joined the chain from (design 4.5): the node has no
+// rollback records before its height, nor the partitions the boundary before it retired
+type SnapshotJoin struct {
+	Height int64 `gorm:"primary_key;not null"`
+	Hash   []byte
+}
+
+// TableName returns name of table
+func (SnapshotJoin) TableName() string {
+	return "snapshot_joins"
+}
+
+// Create records the join
+func (j *SnapshotJoin) Create(dbTx *DbTransaction) error {
+	return GetDB(dbTx).Create(j).Error
+}
+
+// JoinedHeight is the height of the last snapshot the node joined from, 0 if none
+func JoinedHeight(dbTx *DbTransaction) (int64, error) {
+	var h []int64
+	if err := GetDB(dbTx).Raw(`SELECT coalesce(max("height"), 0) FROM "snapshot_joins"`).Scan(&h).Error; err != nil {
+		return 0, err
+	}
+	if len(h) == 0 {
+		return 0, nil
+	}
+	return h[0], nil
+}
+
 // BftStateHash is the state hash this node computed of the snapshot of a height: the hash of the
 // state as of the commit of its block (packages/snapshot)
 type BftStateHash struct {
@@ -78,6 +165,11 @@ func (BftStateHash) TableName() string {
 // Save writes the hash of its height, outside any block transaction
 func (h *BftStateHash) Save() error {
 	return DBConn.Save(h).Error
+}
+
+// SaveIn writes the hash of its height in a transaction
+func (h *BftStateHash) SaveIn(dbTx *DbTransaction) error {
+	return GetDB(dbTx).Save(h).Error
 }
 
 // Get reads the hash of a height

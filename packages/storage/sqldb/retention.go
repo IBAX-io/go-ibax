@@ -130,6 +130,17 @@ func attachedRanges(dbTx *DbTransaction, table string) ([]int64, error) {
 func retire(dbTx *DbTransaction, t migration.PartitionedTable, r, blockID int64) error {
 	db := GetDB(dbTx)
 	part := migration.PartitionName(t.Name, r)
+	if t.Name == "block_chain" {
+		// the changes of the validators set of the range keep their proofs: the blocks before
+		// them, with their certificates, which come after them in PartitionedTables
+		if err := db.Exec(fmt.Sprintf(`INSERT INTO "bft_set_proofs" ("height", "block", "cert")
+			SELECT b."id", b."data", c."data" FROM "%s"."%s" b
+			JOIN "bft_certificates" c ON c."height" = b."id"
+			JOIN "bft_validator_sets" s ON s."from_height" = b."id" + 1
+			ON CONFLICT ("height") DO NOTHING`, migration.PartsSchema, part)).Error; err != nil {
+			return fmt.Errorf("keeping the proofs of the validators sets of %s: %w", part, err)
+		}
+	}
 	if err := db.Exec(fmt.Sprintf(`ALTER TABLE "%s" DETACH PARTITION "%s"."%s"`, t.Name, migration.PartsSchema, part)).Error; err != nil {
 		return fmt.Errorf("retiring %s: %w", part, err)
 	}
@@ -261,8 +272,14 @@ func CheckRollbackTo(dbTx *DbTransaction, blockID int64) error {
 	if err != nil {
 		return err
 	}
-	if blockID < floor {
-		return fmt.Errorf("%w: block %d, lowest %d", ErrBeyondRetention, blockID, floor)
+	// a node that joined from a snapshot has neither the blocks before it nor the partitions
+	// the boundary before it retired
+	joined, err := JoinedHeight(dbTx)
+	if err != nil {
+		return err
+	}
+	if lowest := max(floor, joined); blockID < lowest {
+		return fmt.Errorf("%w: block %d, lowest %d", ErrBeyondRetention, blockID, lowest)
 	}
 	return nil
 }
