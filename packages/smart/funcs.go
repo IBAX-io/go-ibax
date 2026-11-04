@@ -312,6 +312,8 @@ func EmbedFuncs(vt script.VMType) map[string]any {
 		"MathModDecimal":               MathModDecimal,
 		"CreateView":                   CreateView,
 		"SqrtDecimal":                  SqrtDecimal,
+		"ISqrt":                        ISqrt,
+		"MulDiv":                       MulDiv,
 		"Div":                          Div,
 		"GreaterThan":                  GreaterThan,
 		"GreaterThanOrEqual":           GreaterThanOrEqual,

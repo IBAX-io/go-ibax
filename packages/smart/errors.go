@@ -94,6 +94,9 @@ var (
 	errNotValidUTF       = errors.New(`result is not valid utf-8 string`)
 	errFloat             = errors.New(`incorrect float value`)
 	errFloatResult       = errors.New(`incorrect float result`)
+	errInteger           = errors.New(`incorrect integer value`)
+	errIntegerDivZero    = errors.New(`integer division by zero`)
+	errNegativeSqrt      = errors.New(`square root of a negative number`)
 
 	errMaxPrice = fmt.Errorf(`price value is more than %d`, MaxPrice)
 )

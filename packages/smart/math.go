@@ -5,9 +5,11 @@
 package smart
 
 import (
-	"github.com/shopspring/decimal"
 	"math"
+	"math/big"
 	"strconv"
+
+	"github.com/shopspring/decimal"
 )
 
 func parseFloat(x any) (float64, error) {
@@ -128,6 +130,71 @@ func SqrtDecimal(str string) decimal.Decimal {
 		z = one
 	}
 	return z
+}
+
+// parseInteger converts an int64, a money value or a numeric string to a big integer.
+// Fractions are rejected, so the integer functions below never round their input.
+func parseInteger(x any) (*big.Int, error) {
+	var d decimal.Decimal
+	switch v := x.(type) {
+	case int64:
+		return big.NewInt(v), nil
+	case decimal.Decimal:
+		d = v
+	case string:
+		var err error
+		if d, err = decimal.NewFromString(v); err != nil {
+			return nil, errInteger
+		}
+	default:
+		return nil, errInteger
+	}
+	if !d.Equal(d.Truncate(0)) {
+		return nil, errInteger
+	}
+	return d.BigInt(), nil
+}
+
+// ISqrt returns the integer square root of x, the greatest integer whose square
+// does not exceed x. The result is exact for integers of any size.
+func ISqrt(x any) (decimal.Decimal, error) {
+	n, err := parseInteger(x)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	if n.Sign() < 0 {
+		return decimal.Zero, errNegativeSqrt
+	}
+	return decimal.NewFromBigInt(new(big.Int).Sqrt(n), 0), nil
+}
+
+// MulDiv returns floor(a*b/c) computed on integers. Unlike the money division
+// operator, which rounds the quotient to 16 decimal places before it is floored,
+// the result always equals the exact integer quotient.
+func MulDiv(a, b, c any) (decimal.Decimal, error) {
+	x, err := parseInteger(a)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	y, err := parseInteger(b)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	z, err := parseInteger(c)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	if z.Sign() == 0 {
+		return decimal.Zero, errIntegerDivZero
+	}
+	x.Mul(x, y)
+	// DivMod is Euclidean division; it equals floor division for a positive
+	// divisor and is one above it when a negative divisor leaves a remainder.
+	q, m := new(big.Int).DivMod(x, z, new(big.Int))
+	if m.Sign() != 0 && z.Sign() < 0 {
+		q.Sub(q, big.NewInt(1))
+	}
+	return decimal.NewFromBigInt(q, 0), nil
 }
 
 func Div(str1 string, str2 string) string {
