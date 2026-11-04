@@ -59,6 +59,10 @@ const (
 	bftReceived = 64
 )
 
+// bftNext is the event of a height a commit moved to: the machine starts it at once if there is
+// work, not at the next tick, which would hold a chain under load to a block a tick
+type bftNext struct{}
+
 var bftStart sync.Once
 
 // startBftConsensus starts the driver once
@@ -78,7 +82,7 @@ type bftDriver struct {
 	logger    *log.Entry
 	networkID uint64
 	svc       *bftnet.Service
-	events    chan any // *bft.Proposal, *bft.Vote, bft.Timeout
+	events    chan any // *bft.Proposal, *bft.Vote, bft.Timeout, bftNext
 	received  chan [][]byte
 
 	mu   sync.Mutex // guards pool, which the handler of the service also uses
@@ -362,12 +366,17 @@ func (d *bftDriver) event(e any) {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the height")
 		return
 	}
-	if t, ok := e.(bft.Timeout); ok {
-		d.countTimeout(t)
-		d.apply(d.m.OnTimeout(t))
-		return
+	switch e := e.(type) {
+	case bft.Timeout:
+		d.countTimeout(e)
+		d.apply(d.m.OnTimeout(e))
+	case bftNext:
+		if !d.m.Decided() && d.hasWork() {
+			d.apply(d.m.Start())
+		}
+	default:
+		d.give(e)
 	}
-	d.give(e)
 }
 
 func (d *bftDriver) tick() {
@@ -505,7 +514,11 @@ func (d *bftDriver) commit(c *bft.Commit) {
 	}
 	if err := d.syncHeight(); err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the next height")
+		return
 	}
+	// posted, not started here: a machine of one validator decides in Start, and its commit would
+	// start the next height within this one
+	d.post(bftNext{})
 }
 
 // commitDecision commits the block of the decision under DBLock if the last block is below its
