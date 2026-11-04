@@ -46,12 +46,12 @@ import (
 var chunkBytes = 1 << 20
 
 // nodeTables are the tables out of the state: the history of the chain, which blocks and their
-// certificates carry, and what a node writes of its own
+// certificates carry, and what a node writes of its own. The rows of rollback_tx are of the state:
+// contracts read them (GetHistory), with their ids.
 var nodeTables = map[string]bool{
 	"block_chain":         true,
 	"bft_certificates":    true,
 	"confirmations":       true,
-	"rollback_tx":         true,
 	"bft_sign_state":      true,
 	"bft_state_hashes":    true,
 	"install":             true,

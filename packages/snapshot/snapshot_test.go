@@ -284,6 +284,7 @@ func TestStateHashSchema(t *testing.T) {
 		`ALTER TABLE "1_bag" ADD COLUMN k bigint GENERATED ALWAYS AS IDENTITY`,
 		`CREATE MATERIALIZED VIEW m AS SELECT 1`,
 		`CREATE TYPE e AS ENUM ('a')`,
+		`ALTER TABLE "1_bag" ADD COLUMN g int GENERATED ALWAYS AS (n + 1) STORED`,
 	} {
 		t.Run(change, func(t *testing.T) {
 			db := testDB(t)

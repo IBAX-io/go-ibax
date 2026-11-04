@@ -46,9 +46,7 @@ type Column struct {
 	Name    string `json:"name"`
 	Type    string `json:"type"`
 	NotNull bool   `json:"notNull,omitempty"`
-	// Default is the default, or the expression of a generated column
-	Default   string `json:"default,omitempty"`
-	Generated bool   `json:"generated,omitempty"`
+	Default string `json:"default,omitempty"`
 	// Collation is the collation of the column if not that of its type
 	Collation string `json:"collation,omitempty"`
 }
@@ -153,10 +151,15 @@ func (s *Snapshot) describe(ctx context.Context, t *table) error {
 	}
 	for rows.Next() {
 		var c Column
-		var collated bool
-		if err := rows.Scan(&c.Name, &c.Type, &c.NotNull, &c.Default, &c.Generated, &collated, &c.Collation); err != nil {
+		var generated, collated bool
+		if err := rows.Scan(&c.Name, &c.Type, &c.NotNull, &c.Default, &generated, &collated, &c.Collation); err != nil {
 			rows.Close()
 			return err
+		}
+		if generated {
+			rows.Close()
+			// an import copies the values of every column
+			return fmt.Errorf("the state cannot carry the generated column %s", c.Name)
 		}
 		if !slices.Contains(nodeColumns[t.name], c.Name) {
 			d.Columns = append(d.Columns, c)
@@ -260,10 +263,10 @@ func (s *Snapshot) partitions(ctx context.Context, t *table, d *Desc) error {
 	return nil
 }
 
-// describeSchema is the entry of the schema but its tables. The state is of tables, partitions,
-// functions and views alone: a sequence, out of those a node table owns, a materialized view, a
-// foreign table, a type or an aggregate of the schema fail the hash, as the snapshot could not
-// carry it.
+// describeSchema is the entry of the schema but its tables. The state is of tables of plain
+// columns, partitions, functions and views alone: a sequence, out of those a node table owns, a
+// materialized view, a foreign table, a type or an aggregate of the schema fail the hash, as a
+// generated column does, since the snapshot could not carry it.
 func (s *Snapshot) describeSchema(ctx context.Context) (table, error) {
 	nodes := make([]string, 0, len(nodeTables))
 	for name := range nodeTables {
