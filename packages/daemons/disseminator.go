@@ -9,6 +9,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"github.com/IBAX-io/go-ibax/packages/network/bftnet"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 
@@ -23,10 +24,15 @@ import (
 // Disseminator is send to all nodes from nodes_connections the following data
 // if we are honor node: sends blocks and transactions hashes
 // else send the full transactions
+// A node of a chain of the BFT consensus sends its transactions over the streams of the consensus.
 func Disseminator(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
 		defer atomic.StoreUint32(&d.atomic, 0)
 	} else {
+		return nil
+	}
+	if syspar.IsBftConsensus() {
+		sendBftTransactions()
 		return nil
 	}
 
@@ -50,6 +56,22 @@ func Disseminator(ctx context.Context, d *daemon) error {
 	// we are not honor node for this StateID and WalletID, so just send transactions
 	d.logger.Debug("we are honor_node, sending transactions")
 	return sendTransactions(ctx, d.logger)
+}
+
+// sendBftTransactions sends the transactions of the clients of the node to the other nodes in
+// frames of bftnet; until the consensus driver starts the service, they wait in the pool. The
+// others relay none of them.
+func sendBftTransactions() {
+	svc := bftnet.Current()
+	if svc == nil {
+		return
+	}
+	data, hashes := transaction.TxPool.Unsent(syspar.GetMaxTxCount())
+	if len(data) == 0 {
+		return
+	}
+	svc.SendTxs(data)
+	transaction.TxPool.MarkSent(hashes)
 }
 
 func sendTransactions(ctx context.Context, logger *log.Entry) error {
@@ -103,17 +125,10 @@ func markSent(trs []tcpclient.Tx) {
 
 // send block and transactions hashes
 func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.Entry) error {
-	bftChain := syspar.IsBftConsensus()
-	var block *sqldb.InfoBlock
-	var err error
-	if !bftChain {
-		// a validator of a chain of the BFT consensus announces no block: the others commit it
-		// by its certificate
-		block, err = sqldb.BlockGetUnsent()
-		if err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting unsent blocks")
-			return err
-		}
+	block, err := sqldb.BlockGetUnsent()
+	if err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting unsent blocks")
+		return err
 	}
 
 	trs := unsentTransactions()
@@ -129,10 +144,7 @@ func sendBlockWithTxHashes(ctx context.Context, honorNodeID int64, logger *log.E
 		banHosts       []string
 		candidateNodes sqldb.CandidateNodes
 	)
-	if bftChain {
-		// a chain of the BFT consensus bans no node locally: every validator has all transactions
-		hosts = syspar.GetRemoteHosts()
-	} else if ok {
+	if ok {
 		hosts, banHosts, err = node.GetNodesBanService().FilterHosts(syspar.GetRemoteHosts())
 	} else {
 		candidateNodes, err = GetCandidateNodes()

@@ -54,6 +54,8 @@ const (
 	MessagesUndecoded = "undecoded"
 	// StreamsRefused is the streams the node closed past their rate or of an address it refuses
 	StreamsRefused = "refused_streams"
+	// TxFramesDropped is the frames of transactions of the node a full queue of a peer dropped
+	TxFramesDropped = "dropped_tx_frames"
 )
 
 // EscalationHeights is the last heights the escalation rate is of: the share of them committed

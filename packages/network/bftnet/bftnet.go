@@ -23,6 +23,12 @@
 // The handler, the node, admits the messages (bft.Pool) and tells whether a message is new; the
 // service relays a new message to the other validators, so that a message reaches every honest
 // validator once one has it. A batch is the proposer's alone: the service relays none.
+//
+// A node sends the transactions its clients gave it to the other nodes in frames of the kind
+// FrameTxs, count u32 ‖ count × (len u32 ‖ body), of about TxFrameBytes each. The stream writes
+// them after the consensus frames and keeps at most Config.TxQueueBytes of them for a peer; past
+// it the newest are dropped, and the proposer of a block gives the bodies a node does not have.
+// The service relays none: every node sends its own transactions to all the others.
 package bftnet
 
 import (
@@ -49,7 +55,13 @@ const (
 	FrameVote     uint8 = 2
 	FrameEvidence uint8 = 3
 	FrameBatch    uint8 = 4
+	FrameTxs      uint8 = 5
 )
+
+// TxFrameBytes is the size a frame of transactions is cut at: a transaction longer than it goes
+// alone in its frame. It bounds how long a frame of transactions holds up the consensus frames
+// behind it.
+const TxFrameBytes = 1 << 20
 
 // MaxCertificates is the most certificates one request fetches
 const MaxCertificates = 100
@@ -84,6 +96,8 @@ type Handler interface {
 	Evidence(body []byte) bool
 	// Batch takes a decoded batch of a proposal
 	Batch(b *bft.Batch)
+	// Txs takes the bodies of transactions another node sent; it does not block the stream
+	Txs(bodies [][]byte)
 	// Certificates is the stored certificates of the heights from, from+1, … up to count of
 	// them, stopping at the first height without one
 	Certificates(from uint64, count int) ([][]byte, error)
@@ -104,6 +118,9 @@ type Config struct {
 	// Queue is the frames waiting for each peer; past it the newest are dropped, the resends
 	// of the node make up for them
 	Queue int
+	// TxQueueBytes is the bytes of the frames of transactions waiting for each peer; past it
+	// the newest are dropped, the proposers give the bodies of their blocks
+	TxQueueBytes int64
 	// Dial and Write are the timeouts of a connection and of a write
 	Dial, Write time.Duration
 }
@@ -116,6 +133,8 @@ var DefaultConfig = Config{
 	Queue: 4096,
 	Dial:  5 * time.Second,
 	Write: 5 * time.Second,
+
+	TxQueueBytes: 64 << 20,
 }
 
 // Service is the consensus messages of a node on the network
@@ -156,6 +175,8 @@ func maxPayload(kind uint8, maxBlock int64) int64 {
 	case FrameBatch:
 		// the hashes of a batch are bounded by the block; UnmarshalBatch counts them by max_tx_block
 		return 8 + 4 + 4 + 4 + 4 + bft.MaxBatchHeader + 4 + maxBlock + 2 + sig
+	case FrameTxs:
+		return maxBlock
 	}
 	return -1
 }
@@ -284,6 +305,11 @@ func (s *Service) take(kind uint8, payload []byte) bool {
 	case FrameBatch:
 		if b, err := bft.UnmarshalBatch(payload, s.handler.MaxBlockTxs()); err == nil {
 			s.handler.Batch(b)
+			return false
+		}
+	case FrameTxs:
+		if bodies, err := UnmarshalTxs(payload, s.handler.MaxBlockTxs()); err == nil {
+			s.handler.Txs(bodies)
 			return false
 		}
 	}
@@ -509,17 +535,119 @@ func (s *Service) SendEvidence(body []byte) { s.Broadcast(FrameEvidence, body) }
 // SendBatch broadcasts a batch of a proposal of the node
 func (s *Service) SendBatch(b *bft.Batch) { s.Broadcast(FrameBatch, b.Marshal()) }
 
+// MarshalTxs is the payload of a frame of transactions
+func MarshalTxs(bodies [][]byte) []byte {
+	size := 4
+	for _, b := range bodies {
+		size += 4 + len(b)
+	}
+	p := make([]byte, 0, size)
+	p = binary.BigEndian.AppendUint32(p, uint32(len(bodies)))
+	for _, b := range bodies {
+		p = binary.BigEndian.AppendUint32(p, uint32(len(b)))
+		p = append(p, b...)
+	}
+	return p
+}
+
+// UnmarshalTxs decodes the payload of a frame of transactions of at most maxTxs bodies, none of
+// them empty
+func UnmarshalTxs(p []byte, maxTxs int) ([][]byte, error) {
+	if len(p) < 4 {
+		return nil, ErrFrame
+	}
+	count := binary.BigEndian.Uint32(p)
+	p = p[4:]
+	if int64(count) > int64(maxTxs) || int64(count)*4 > int64(len(p)) {
+		return nil, ErrFrame
+	}
+	bodies := make([][]byte, count)
+	for i := range bodies {
+		if len(p) < 4 {
+			return nil, ErrFrame
+		}
+		l := binary.BigEndian.Uint32(p)
+		p = p[4:]
+		if l == 0 || int64(l) > int64(len(p)) {
+			return nil, ErrFrame
+		}
+		bodies[i], p = p[:l:l], p[l:]
+	}
+	if len(p) != 0 {
+		return nil, ErrFrame
+	}
+	return bodies, nil
+}
+
+// SendTxs sends the bodies of transactions of the node to every peer, in frames of at most
+// TxFrameBytes, or max_block_size if less, and max_tx_block bodies; a body longer goes alone in
+// its frame, and one that does not fit in a frame of max_block_size is left out
+func (s *Service) SendTxs(bodies [][]byte) {
+	maxBlock, maxTxs := s.handler.MaxBlockSize(), s.handler.MaxBlockTxs()
+	limit := min(TxFrameBytes, maxBlock)
+	var frame [][]byte
+	size := int64(4)
+	flush := func() {
+		if len(frame) > 0 {
+			s.broadcastTxs(AppendFrame(nil, FrameTxs, MarshalTxs(frame)))
+		}
+		frame, size = frame[:0], 4
+	}
+	for _, b := range bodies {
+		l := int64(4 + len(b))
+		if len(b) == 0 || 4+l > maxBlock {
+			continue
+		}
+		if len(frame) > 0 && (size+l > limit || len(frame) >= maxTxs) {
+			flush()
+		}
+		frame = append(frame, b)
+		size += l
+	}
+	flush()
+}
+
+func (s *Service) broadcastTxs(frame []byte) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, p := range s.peers {
+		if !p.sendTxs(frame) {
+			bftmon.Count(bftmon.TxFramesDropped)
+		}
+	}
+}
+
 // peer is the stream to another validator: it connects, and connects again after a failure
 type peer struct {
 	addr  string
 	cfg   Config
 	queue chan []byte
-	done  chan struct{}
-	once  sync.Once
+	// txs is the frames of transactions, written after those of queue, and txBytes their bytes
+	txs     chan []byte
+	txBytes atomic.Int64
+	done    chan struct{}
+	once    sync.Once
 }
 
 func newPeer(addr string, cfg Config) *peer {
-	return &peer{addr: addr, cfg: cfg, queue: make(chan []byte, cfg.Queue), done: make(chan struct{})}
+	return &peer{addr: addr, cfg: cfg, queue: make(chan []byte, cfg.Queue), txs: make(chan []byte, cfg.Queue),
+		done: make(chan struct{})}
+}
+
+// sendTxs queues a frame of transactions, and reports whether it is queued
+func (p *peer) sendTxs(frame []byte) bool {
+	n := int64(len(frame))
+	if p.txBytes.Add(n) > p.cfg.TxQueueBytes {
+		p.txBytes.Add(-n)
+		return false
+	}
+	select {
+	case p.txs <- frame:
+		return true
+	default:
+		p.txBytes.Add(-n)
+		return false
+	}
 }
 
 func (p *peer) send(frame []byte) {
@@ -565,17 +693,27 @@ func (p *peer) connect() (net.Conn, error) {
 	return conn, nil
 }
 
-// stream writes the queued frames until the peer is closed, nil, or a write fails
+// stream writes the queued frames, those of transactions when no other waits, until the peer is
+// closed, nil, or a write fails
 func (p *peer) stream(conn net.Conn) error {
 	for {
+		var frame []byte
 		select {
 		case <-p.done:
 			return nil
-		case frame := <-p.queue:
-			conn.SetWriteDeadline(time.Now().Add(p.cfg.Write))
-			if _, err := conn.Write(frame); err != nil {
-				return err
+		case frame = <-p.queue:
+		default:
+			select {
+			case <-p.done:
+				return nil
+			case frame = <-p.queue:
+			case frame = <-p.txs:
+				p.txBytes.Add(-int64(len(frame)))
 			}
+		}
+		conn.SetWriteDeadline(time.Now().Add(p.cfg.Write))
+		if _, err := conn.Write(frame); err != nil {
+			return err
 		}
 	}
 }

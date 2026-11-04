@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -53,6 +54,9 @@ const (
 	// bftEvents is the messages and timeouts waiting for the driver; past it a message is
 	// dropped from the queue, the resends make up for it
 	bftEvents = 4096
+	// bftReceived is the frames of transactions of the other nodes waiting for the pool; past it
+	// a frame is dropped, the proposers give the bodies of their blocks
+	bftReceived = 64
 )
 
 var bftStart sync.Once
@@ -75,6 +79,7 @@ type bftDriver struct {
 	networkID uint64
 	svc       *bftnet.Service
 	events    chan any // *bft.Proposal, *bft.Vote, bft.Timeout
+	received  chan [][]byte
 
 	mu   sync.Mutex // guards pool, which the handler of the service also uses
 	pool *bft.Pool
@@ -111,6 +116,7 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 		logger:    logger.WithFields(log.Fields{"consensus": "bft"}),
 		networkID: uint64(conf.Config.LocalConf.NetworkID),
 		events:    make(chan any, bftEvents),
+		received:  make(chan [][]byte, bftReceived),
 		bodies:    newBftBodies(),
 	}
 	cfg := bftnet.DefaultConfig
@@ -156,6 +162,7 @@ func (d *bftDriver) run() {
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Fatal("starting the consensus")
 	}
+	go d.receiveTxs()
 	bftnet.Register(d.svc)
 	defer func() {
 		bftnet.Register(nil)
@@ -660,6 +667,33 @@ func (d *bftDriver) Vote(v *bft.Vote) bool {
 	d.watch.precommit(v, time.Now())
 	d.post(v)
 	return true
+}
+
+// Txs is bftnet.Handler.Txs: the pool takes the transactions apart from the stream, which carries
+// the votes too
+func (d *bftDriver) Txs(bodies [][]byte) {
+	select {
+	case d.received <- bodies:
+	default:
+		bftmon.Count(bftmon.TxFramesDropped)
+	}
+}
+
+// receiveTxs puts the transactions of the other nodes in the pool as sent: each node sends its
+// own to all the others
+func (d *bftDriver) receiveTxs() {
+	for {
+		select {
+		case <-d.ctx.Done():
+			return
+		case bodies := <-d.received:
+			maxSize := syspar.GetMaxTxSize()
+			bodies = slices.DeleteFunc(bodies, func(b []byte) bool { return int64(len(b)) > maxSize })
+			if err := transaction.TxPool.Receive(bodies, true); err != nil {
+				d.logger.WithFields(log.Fields{"type": consts.ProtocolError, "error": err}).Warn("taking the transactions of a node")
+			}
+		}
+	}
 }
 
 // Evidence is bftnet.Handler.Evidence
