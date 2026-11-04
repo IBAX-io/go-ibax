@@ -17,6 +17,8 @@ const (
 	eColumnExist           = `column %s exists`
 	eColumnNotExist        = `column %s doesn't exist`
 	eColumnType            = `Type '%s' of columns is not supported`
+	eIndexName             = `index name %v is not valid`
+	eIndexType             = `column %v of type %v cannot be indexed`
 	eNotCustomTable        = `%s is not a custom table`
 	eEmptyCond             = `%v condition is empty`
 	eIncorrectSignature    = `incorrect signature %s`

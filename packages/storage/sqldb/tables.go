@@ -161,6 +161,25 @@ func CreateTable(dbTx *DbTransaction, tableName, colsSQL string) error {
 				ALTER TABLE ONLY "` + tableName + `" ADD CONSTRAINT "` + tableName + `_pkey" PRIMARY KEY (id);`)
 }
 
+// CreateTableIndex creates the index of the columns of a table, unique or not. The name of the
+// index is the name of the table and the name of the index, which PostgreSQL keeps whole up to
+// 63 bytes.
+func CreateTableIndex(dbTx *DbTransaction, tableName, name string, unique bool, cols []string) error {
+	kind, suffix := `INDEX`, `_index`
+	if unique {
+		kind, suffix = `UNIQUE INDEX`, `_unique`
+	}
+	indexName := tableName + `_` + name + suffix
+	if len(indexName) > 63 {
+		return fmt.Errorf(`index name %s is longer than 63 bytes`, indexName)
+	}
+	quoted := make([]string, len(cols))
+	for i, c := range cols {
+		quoted[i] = `"` + c + `"`
+	}
+	return dbTx.ExecSql(`CREATE ` + kind + ` "` + indexName + `" ON "` + tableName + `" (` + strings.Join(quoted, `, `) + `)`)
+}
+
 // CreateView is creating view table
 func CreateView(dbTx *DbTransaction, inViewName, inTables, inWhere, inColSQL string) error {
 	inSQL := `CREATE VIEW "` + inViewName + `" AS SELECT ` + inColSQL + ` FROM ` + inTables + ` WHERE ` + inWhere + `;`

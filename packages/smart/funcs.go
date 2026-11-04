@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -565,7 +566,45 @@ func CreateContract(sc *SmartContract, name, value, conditions string, tokenEcos
 	return id, nil
 }
 
-func getColumns(columns string) (colsSQL string, colout []byte, err error) {
+// tableIndex is an index of a new table: the columns that name it in "unique" or "index", in the
+// order of the columns
+type tableIndex struct {
+	name   string
+	unique bool
+	cols   []string
+}
+
+// maxIndexName is the longest name of an index of a table
+const maxIndexName = 32
+
+var indexNameRe = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
+
+// indexedTypes are the column types an index may cover: their values are never longer than a key
+// of an index of PostgreSQL may be, so a write that the state of a block accepts never fails there
+var indexedTypes = map[string]bool{`number`: true, `money`: true, `character`: true, `datetime`: true}
+
+// columnIndexes are the indexes the column takes part in: "unique" names a unique index and
+// "index" an index that is not unique, both by names of latin letters, digits and underscores
+func columnIndexes(data map[string]any) (names []string, unique []bool, err error) {
+	for _, key := range []string{`unique`, `index`} {
+		v, ok := data[key]
+		if !ok {
+			continue
+		}
+		name, ok := v.(string)
+		if !ok || len(name) == 0 || len(name) > maxIndexName || !indexNameRe.MatchString(name) {
+			return nil, nil, fmt.Errorf(eIndexName, v)
+		}
+		if !indexedTypes[fmt.Sprint(data[`type`])] {
+			return nil, nil, fmt.Errorf(eIndexType, data[`name`], data[`type`])
+		}
+		names = append(names, name)
+		unique = append(unique, key == `unique`)
+	}
+	return
+}
+
+func getColumns(columns string) (colsSQL string, colout []byte, indexes []*tableIndex, err error) {
 	var (
 		sqlColType string
 		cols       []any
@@ -576,6 +615,7 @@ func getColumns(columns string) (colsSQL string, colout []byte, err error) {
 	}
 	colperm := make(map[string]string)
 	colList := make(map[string]bool)
+	byName := make(map[string]*tableIndex)
 	for _, icol := range cols {
 		var data map[string]any
 		switch v := icol.(type) {
@@ -600,6 +640,23 @@ func getColumns(columns string) (colsSQL string, colout []byte, err error) {
 			return
 		}
 
+		names, unique, ierr := columnIndexes(data)
+		if ierr != nil {
+			err = ierr
+			return
+		}
+		for i, name := range names {
+			ix := byName[name]
+			if ix == nil {
+				ix = &tableIndex{name: name, unique: unique[i]}
+				byName[name] = ix
+				indexes = append(indexes, ix)
+			} else if ix.unique != unique[i] {
+				err = fmt.Errorf(eIndexName, name)
+				return
+			}
+			ix.cols = append(ix.cols, colname)
+		}
 		colList[colname] = true
 		colsSQL += `"` + colname + `" ` + sqlColType + " ,\n"
 		condition := ``
@@ -855,13 +912,18 @@ func CreateTable(sc *SmartContract, name, columns, permissions string, applicati
 		return fmt.Errorf(eTableExists, name)
 	}
 
-	colsSQL, colout, err := getColumns(columns)
+	colsSQL, colout, indexes, err := getColumns(columns)
 	if err != nil {
 		return err
 	}
 
 	if err = sqldb.CreateTable(sc.DbTransaction, tableName, strings.TrimRight(colsSQL, ",\n")); err != nil {
 		return logErrorDB(err, "creating tables")
+	}
+	for _, ix := range indexes {
+		if err = sqldb.CreateTableIndex(sc.DbTransaction, tableName, ix.name, ix.unique, ix.cols); err != nil {
+			return logErrorDB(err, "creating table index")
+		}
 	}
 
 	var perm permTable
@@ -1275,6 +1337,9 @@ func columnConditions(sc *SmartContract, columns string) (err error) {
 		}
 		if len(typeToPSQL[data[`type`].(string)]) == 0 {
 			return logErrorShort(errIncorrectType, consts.InvalidObject)
+		}
+		if _, _, err = columnIndexes(data); err != nil {
+			return err
 		}
 		condition := ``
 		switch v := data[`conditions`].(type) {
