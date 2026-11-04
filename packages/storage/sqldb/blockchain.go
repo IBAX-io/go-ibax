@@ -114,6 +114,29 @@ func (b *BlockChain) GetBlocksFrom(startFromID int64, ordering string, limit int
 	return *blockchain, err
 }
 
+// GetBlocksWithin returns in order the blocks after the block startFromID, at most limit of them
+// and of at most bytes bytes together, but for the first one, that it returns whatever its length
+func (b *BlockChain) GetBlocksWithin(startFromID int64, limit int, bytes int64) ([]BlockChain, error) {
+	var sizes []int64
+	err := archived("block_chain").Where("id > ?", startFromID).Order("id ASC").Limit(limit).
+		Pluck("octet_length(data)", &sizes).Error
+	if err != nil {
+		return nil, err
+	}
+	n, total := 0, int64(0)
+	for _, size := range sizes {
+		if n > 0 && total+size > bytes {
+			break
+		}
+		total += size
+		n++
+	}
+	if n == 0 {
+		return nil, nil
+	}
+	return b.GetBlocksFrom(startFromID, "ASC", n)
+}
+
 // GetReverseBlockchain returns records of blocks in reverse ordering
 func (b *BlockChain) GetReverseBlockchain(endBlockID int64, limit int) ([]BlockChain, error) {
 	var err error

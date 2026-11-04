@@ -16,7 +16,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/rollback"
 	"github.com/IBAX-io/go-ibax/packages/script"
@@ -152,39 +151,29 @@ func UpdateChain(ctx context.Context, d *daemon, host string, maxBlockID int64) 
 	st := time.Now()
 
 	d.logger.WithFields(log.Fields{"min_block": curBlock.BlockID, "max_block": maxBlockID, "count": maxBlockID - curBlock.BlockID}).Info("starting downloading blocks")
-	for blockID := curBlock.BlockID + 1; blockID <= maxBlockID; blockID += int64(network.BlocksPerRequest) {
-		if loopErr := func() error {
-			ctxDone, cancel := context.WithCancel(ctx)
-			defer func() {
-				cancel()
-				d.logger.WithFields(log.Fields{"count": count, "time": time.Since(st).String()}).Info("blocks downloaded")
-			}()
-
-			rawBlocksChan, err := tcpclient.GetBlocksBodies(ctxDone, host, blockID, false)
-			if err != nil {
-				d.logger.WithFields(log.Fields{"error": err, "type": consts.BlockError}).Error("getting block body")
-				return err
+	defer func() {
+		d.logger.WithFields(log.Fields{"count": count, "time": time.Since(st).String()}).Info("blocks downloaded")
+	}()
+	_, err := playBatches(ctx, host, curBlock.BlockID+1, maxBlockID, false, func(b batch) (int64, error) {
+		var n int64
+		for rawBlock := range b.blocks {
+			if err := playRawBlock(rawBlock); err != nil {
+				return n, err
 			}
-
-			for rawBlock := range rawBlocksChan {
-				if err = playRawBlock(rawBlock); err != nil {
-					// d.logger.WithFields(log.Fields{"error": err, "type": consts.BlockError}).Error("playing raw block")
-					return err
-				}
-				if candidateNodes, err := syspar.GetCandidateNodes(); err == nil && len(candidateNodes) > 0 {
-					syspar.SetRunModel(consts.CandidateNodeMode)
-				} else {
-					syspar.SetRunModel(consts.HonorNodeMode)
-				}
-				count++
+			if candidateNodes, err := syspar.GetCandidateNodes(); err == nil && len(candidateNodes) > 0 {
+				syspar.SetRunModel(consts.CandidateNodeMode)
+			} else {
+				syspar.SetRunModel(consts.HonorNodeMode)
 			}
-
-			return nil
-		}(); loopErr != nil {
-			return loopErr
+			count++
+			n++
 		}
+		return n, nil
+	})
+	if err != nil {
+		d.logger.WithFields(log.Fields{"error": err, "type": consts.BlockError}).Error("getting block body")
 	}
-	return nil
+	return err
 }
 
 func banNodePause(host string, blockID, blockTime int64, err error) {
