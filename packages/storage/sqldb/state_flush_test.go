@@ -8,6 +8,7 @@ package sqldb
 import (
 	"context"
 	"fmt"
+	"io"
 	"slices"
 	"strconv"
 	"testing"
@@ -70,5 +71,30 @@ func TestStateFlushInsert(t *testing.T) {
 			got := pgText(t, conn, fmt.Sprintf(`SELECT "%s" FROM state_probe WHERE id = %d`, col, id))
 			require.Equal(t, vals[i], got, "%s %s row %d", types[i], col, id)
 		}
+	}
+}
+
+// TestCopyRows: the rows read in pieces of any length are the text of COPY of each row
+func TestCopyRows(t *testing.T) {
+	s := func(v string) *string { return &v }
+	rows := []stateRow{
+		{s("1"), s("plain"), nil},
+		{s("2"), s("a\\b\tc\nd\re"), s("")},
+		{s("3"), s("\\"), s("end\\")},
+	}
+	want := "1\tplain\t\\N\n2\ta\\\\b\\tc\\nd\\re\t\n3\t\\\\\tend\\\\\n"
+	for _, size := range []int{1, 2, 7, 64, 65536} {
+		r := &copyRows{cols: []int{0, 1, 2}, rows: slices.Clone(rows)}
+		var got []byte
+		buf := make([]byte, size)
+		for {
+			n, err := r.Read(buf)
+			got = append(got, buf[:n]...)
+			if err != nil {
+				require.Equal(t, io.EOF, err)
+				break
+			}
+		}
+		require.Equal(t, want, string(got), "pieces of %d", size)
 	}
 }

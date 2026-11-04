@@ -8,6 +8,7 @@ package sqldb
 import (
 	"bytes"
 	"context"
+	"io"
 	"slices"
 	"strconv"
 	"strings"
@@ -197,7 +198,8 @@ func flushUpdate(ctx context.Context, c *stateConn, m *tableMeta, pkIdx, cols []
 }
 
 // flushInsert copies the rows to the table: COPY reads the text of the values with the input
-// functions of the types of the columns, as a cast of the text does
+// functions of the types of the columns, as a cast of the text does. The rows are written as
+// COPY sends them, so PostgreSQL reads the first while the last are written.
 func flushInsert(ctx context.Context, c *stateConn, m *tableMeta, cols []int, rows []stateRow) error {
 	var b strings.Builder
 	b.WriteString("COPY ")
@@ -210,18 +212,33 @@ func flushInsert(ctx context.Context, c *stateConn, m *tableMeta, cols []int, ro
 		b.WriteString(quoteIdent(m.cols[i].name))
 	}
 	b.WriteString(") FROM STDIN")
-	var data bytes.Buffer
-	for _, row := range rows {
-		for k, i := range cols {
-			if k > 0 {
-				data.WriteByte('\t')
-			}
-			copyText(&data, row[i])
-		}
-		data.WriteByte('\n')
-	}
-	_, err := c.pg.Conn().PgConn().CopyFrom(ctx, &data, b.String())
+	_, err := c.pg.Conn().PgConn().CopyFrom(ctx, &copyRows{cols: cols, rows: rows}, b.String())
 	return err
+}
+
+// copyRows reads the rows in the text format of COPY, a row at a time as it is read
+type copyRows struct {
+	cols []int
+	rows []stateRow
+	buf  bytes.Buffer
+}
+
+func (r *copyRows) Read(p []byte) (int, error) {
+	for r.buf.Len() < len(p) && len(r.rows) > 0 {
+		row := r.rows[0]
+		r.rows = r.rows[1:]
+		for k, i := range r.cols {
+			if k > 0 {
+				r.buf.WriteByte('\t')
+			}
+			copyText(&r.buf, row[i])
+		}
+		r.buf.WriteByte('\n')
+	}
+	if r.buf.Len() == 0 {
+		return 0, io.EOF
+	}
+	return r.buf.Read(p)
 }
 
 // copyText writes a value in the text format of COPY: \N for NULL, and the backslash and the
@@ -232,18 +249,24 @@ func copyText(w *bytes.Buffer, v *string) {
 		return
 	}
 	s := *v
+	from := 0
 	for i := 0; i < len(s); i++ {
-		switch ch := s[i]; ch {
+		var esc string
+		switch s[i] {
 		case '\\':
-			w.WriteString(`\\`)
+			esc = `\\`
 		case '\n':
-			w.WriteString(`\n`)
+			esc = `\n`
 		case '\r':
-			w.WriteString(`\r`)
+			esc = `\r`
 		case '\t':
-			w.WriteString(`\t`)
+			esc = `\t`
 		default:
-			w.WriteByte(ch)
+			continue
 		}
+		w.WriteString(s[from:i])
+		w.WriteString(esc)
+		from = i + 1
 	}
+	w.WriteString(s[from:])
 }
