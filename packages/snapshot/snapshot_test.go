@@ -192,3 +192,39 @@ func TestStateHashChunks(t *testing.T) {
 	require.Equal(t, TableHash(h), h.Hash)
 	require.Equal(t, hashOf(t, db, 1).Hash, st.Hash)
 }
+
+// What commits after Begin does not wait for the snapshot: Begin locks no table of the state. A
+// column added keeps the hash of the snapshot; a table rewritten, truncated, or a partition
+// detached fails it, as the rows the snapshot would read are those of the new storage.
+func TestStateHashLayout(t *testing.T) {
+	db := testDB(t)
+	exec(t, db, schema, `INSERT INTO "1_keys" VALUES (1, 1, 100, NULL, NULL)`, `INSERT INTO "1_history" VALUES (1, 5, 'x'), (2, 150, 'y')`)
+	before := hashOf(t, db, 1)
+	for _, c := range []struct {
+		change string
+		fails  bool
+	}{
+		{`ALTER TABLE "1_bag" ADD COLUMN extra text DEFAULT 'd'`, false},
+		{`ALTER TABLE "1_keys" ALTER COLUMN amount TYPE numeric(40)`, false},
+		{`ALTER TABLE "1_keys" ALTER COLUMN amount TYPE numeric(30, 2)`, true},
+		{`TRUNCATE "1_names"`, true},
+		{`ALTER TABLE "1_history" DETACH PARTITION "1_history_1"`, true},
+		{`ALTER TABLE "1_bag" DROP COLUMN n`, true},
+	} {
+		t.Run(c.change, func(t *testing.T) {
+			db := testDB(t)
+			exec(t, db, schema, `INSERT INTO "1_keys" VALUES (1, 1, 100, NULL, NULL)`, `INSERT INTO "1_history" VALUES (1, 5, 'x'), (2, 150, 'y')`)
+			s, err := Begin(context.Background(), db)
+			require.NoError(t, err)
+			defer s.Close()
+			exec(t, db, `SET lock_timeout TO 1000`, c.change)
+			st, err := s.Hash(context.Background(), 2, nil)
+			if c.fails {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, before.Hash, st.Hash)
+		})
+	}
+}

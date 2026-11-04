@@ -63,6 +63,28 @@ func (s *BftValidatorSet) GetAt(dbTx *DbTransaction, height int64) (bool, error)
 	return isFound(GetDB(dbTx).Where("from_height <= ?", height).Order("from_height desc").First(s))
 }
 
+// BftStateHash is the state hash this node computed of the snapshot of a height: the hash of the
+// state as of the commit of its block (packages/snapshot)
+type BftStateHash struct {
+	Height int64 `gorm:"primary_key;not null"`
+	Hash   []byte
+}
+
+// TableName returns name of table
+func (BftStateHash) TableName() string {
+	return "bft_state_hashes"
+}
+
+// Save writes the hash of its height, outside any block transaction
+func (h *BftStateHash) Save() error {
+	return DBConn.Save(h).Error
+}
+
+// Get reads the hash of a height
+func (h *BftStateHash) Get(height int64) (bool, error) {
+	return isFound(DBConn.Where("height = ?", height).First(h))
+}
+
 // BftSignState is what a validator signed at its current height, with its lock and valid value,
 // written before the node sends a signed message so that a restart does not sign a conflicting
 // one

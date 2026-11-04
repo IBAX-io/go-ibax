@@ -45,7 +45,8 @@ func bftTestFirstBlock(t *testing.T, n int) (*types.FirstBlock, []bftTestNode) {
 			KeyID:      strconv.Itoa(-5000 + i),
 		}
 	}
-	return &types.FirstBlock{KeyID: -5000, NodePublicKey: first, HonorNodesOnly: 1, BftConsensus: 1}, nodes
+	return &types.FirstBlock{KeyID: -5000, NodePublicKey: first, HonorNodesOnly: 1, BftConsensus: 1,
+		SnapshotInterval: 20000, SnapshotDelay: 1000}, nodes
 }
 
 func bftTestSetNodes(t *testing.T, fb *types.FirstBlock, nodes []bftTestNode) {
@@ -69,6 +70,9 @@ func TestCheckFirstBlockConsensus(t *testing.T) {
 	if err := CheckFirstBlockConsensus(&types.FirstBlock{BftConsensus: 2}); err == nil {
 		t.Fatal("bft_consensus 2 passes")
 	}
+	if err := CheckFirstBlockConsensus(&types.FirstBlock{SnapshotInterval: 10, SnapshotDelay: 3}); err == nil {
+		t.Fatal("snapshots without the flag pass")
+	}
 
 	fb, nodes := bftTestFirstBlock(t, 4)
 	bftTestSetNodes(t, fb, nodes)
@@ -85,6 +89,22 @@ func TestCheckFirstBlockConsensus(t *testing.T) {
 			fb.HonorNodesOnly = 0
 			return nodes
 		}, "honor nodes only"},
+		{"no snapshots", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
+			fb.SnapshotInterval, fb.SnapshotDelay = 0, 0
+			return nodes
+		}, "the interval is a multiple"},
+		{"an interval within a partition", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
+			fb.SnapshotInterval = 15000
+			return nodes
+		}, "the interval is a multiple"},
+		{"the delay of a partition", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
+			fb.SnapshotDelay = 10000
+			return nodes
+		}, "below 10000"},
+		{"no delay", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
+			fb.SnapshotDelay = 0
+			return nodes
+		}, "the delay is at least 1"},
 		{"3 validators", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
 			return nodes[:3]
 		}, "at least 4"},

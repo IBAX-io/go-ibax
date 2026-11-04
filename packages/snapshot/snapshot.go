@@ -52,6 +52,7 @@ var nodeTables = map[string]bool{
 	"confirmations":       true,
 	"rollback_tx":         true,
 	"bft_sign_state":      true,
+	"bft_state_hashes":    true,
 	"install":             true,
 	"migration_history":   true,
 	"queue_blocks":        true,
@@ -99,13 +100,15 @@ type Sink func(table string) (io.WriteCloser, error)
 
 // Snapshot is the state of the database as of the moment Begin took it
 type Snapshot struct {
-	db   *sql.DB
-	conn *sql.Conn
-	id   string
+	db     *sql.DB
+	conn   *sql.Conn
+	id     string
+	layout map[string]string
 }
 
 // Begin takes a snapshot of the database: what it has committed so far, and nothing it commits
-// after Begin returns
+// after Begin returns. The caller calls it before anything changes the tables of the state after
+// what the snapshot is of: Hash checks that their layout is still that of Begin.
 func Begin(ctx context.Context, db *sql.DB) (*Snapshot, error) {
 	conn, err := begin(ctx, db, "")
 	if err != nil {
@@ -116,7 +119,40 @@ func Begin(ctx context.Context, db *sql.DB) (*Snapshot, error) {
 		end(conn)
 		return nil, fmt.Errorf("exporting the snapshot: %w", err)
 	}
+	if s.layout, err = layouts(ctx, conn); err != nil {
+		end(conn)
+		return nil, fmt.Errorf("reading the layout of the tables: %w", err)
+	}
 	return s, nil
+}
+
+// layouts reads the storage of each table, the files of its rows and those of its partitions, as
+// the catalog has it in the transaction of conn. A snapshot sees the rows of a table as of its moment only while the
+// storage is the same: PostgreSQL gives the transactions of an earlier snapshot the rows of the
+// new storage of a table rewritten, truncated or with partitions detached or attached, the
+// changes that are not MVCC-safe.
+func layouts(ctx context.Context, conn *sql.Conn) (map[string]string, error) {
+	// the catalog alone, as of the snapshot of the transaction: no function that locks a table
+	rows, err := conn.QueryContext(ctx, `WITH RECURSIVE tree(root, rel) AS (
+			SELECT r.oid, r.oid FROM pg_class r JOIN pg_namespace n ON n.oid = r.relnamespace
+			WHERE n.nspname = 'public' AND r.relkind IN ('r', 'p') AND NOT r.relispartition
+			UNION ALL SELECT t.root, i.inhrelid FROM tree t JOIN pg_inherits i ON i.inhparent = t.rel)
+		SELECT r.relname, string_agg(c.oid::text || ':' || c.relfilenode::text, ',' ORDER BY c.oid)
+		FROM tree t JOIN pg_class r ON r.oid = t.root JOIN pg_class c ON c.oid = t.rel
+		GROUP BY r.relname`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	all := map[string]string{}
+	for rows.Next() {
+		var name, layout string
+		if err := rows.Scan(&name, &layout); err != nil {
+			return nil, err
+		}
+		all[name] = layout
+	}
+	return all, rows.Err()
 }
 
 // Close ends the transaction of the snapshot
@@ -277,8 +313,10 @@ func quote(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
 
-// Hash computes the state of the snapshot and its hash by workers, each in a transaction of its
-// own of the snapshot, and gives the encoding of each table to sink
+// Hash computes the state of the snapshot and its hash by workers, and gives the encoding of each
+// table to sink. Each table encodes in a transaction of its own of the snapshot, so that what the
+// node commits meanwhile waits for the lock of a table only while the table encodes. A table
+// whose layout changed since Begin fails the hash: its rows would not be those of the snapshot.
 func (s *Snapshot) Hash(ctx context.Context, workers int, sink Sink) (*State, error) {
 	ts, err := s.tables(ctx)
 	if err != nil {
@@ -293,18 +331,11 @@ func (s *Snapshot) Hash(ctx context.Context, workers int, sink Sink) (*State, er
 	var wg sync.WaitGroup
 	for w := range workers {
 		wg.Go(func() {
-			conn, err := begin(ctx, s.db, s.id)
-			if err != nil {
-				errs[w] = err
-				cancel()
-				return
-			}
-			defer end(conn)
 			for i := range next {
 				if errs[w] != nil {
 					continue
 				}
-				if state.Tables[i], errs[w] = encode(ctx, conn, ts[i], sink); errs[w] != nil {
+				if state.Tables[i], errs[w] = s.encode(ctx, ts[i], sink); errs[w] != nil {
 					errs[w] = fmt.Errorf("encoding %s: %w", ts[i].name, errs[w])
 					cancel()
 				}
@@ -325,6 +356,9 @@ func (s *Snapshot) Hash(ctx context.Context, workers int, sink Sink) (*State, er
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	if err := s.checkLayout(ctx, ts); err != nil {
+		return nil, err
+	}
 	var all bytes.Buffer
 	for _, t := range state.Tables {
 		all.Write(lenPrefix(t.Name))
@@ -334,8 +368,33 @@ func (s *Snapshot) Hash(ctx context.Context, workers int, sink Sink) (*State, er
 	return state, nil
 }
 
-// encode encodes a table and computes its hash
-func encode(ctx context.Context, conn *sql.Conn, t table, sink Sink) (Table, error) {
+// checkLayout checks the tables encoded have the layout of Begin still: what changed it after
+// encoding them would not have changed their rows, but the encoding cannot tell when
+func (s *Snapshot) checkLayout(ctx context.Context, ts []table) error {
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	now, err := layouts(ctx, conn)
+	if err != nil {
+		return fmt.Errorf("reading the layout of the tables: %w", err)
+	}
+	for _, t := range ts {
+		if now[t.name] != s.layout[t.name] {
+			return fmt.Errorf("the storage of %s changed while the snapshot was hashed", t.name)
+		}
+	}
+	return nil
+}
+
+// encode encodes a table, in a transaction of the snapshot, and computes its hash
+func (s *Snapshot) encode(ctx context.Context, t table, sink Sink) (Table, error) {
+	conn, err := begin(ctx, s.db, s.id)
+	if err != nil {
+		return Table{}, err
+	}
+	defer end(conn)
 	c := &chunker{buf: make([]byte, 0, chunkBytes)}
 	var out io.WriteCloser
 	if sink != nil {
@@ -345,7 +404,7 @@ func encode(ctx context.Context, conn *sql.Conn, t table, sink Sink) (Table, err
 		}
 		c.out = out
 	}
-	err := conn.Raw(func(dc any) error {
+	err = conn.Raw(func(dc any) error {
 		pg, ok := dc.(*stdlib.Conn)
 		if !ok {
 			return fmt.Errorf("a connection of %T, not of pgx", dc)

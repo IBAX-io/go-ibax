@@ -192,6 +192,7 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 	if err := t.dbTx.Commit(); err != nil {
 		return nil, true, err
 	}
+	states.afterCommit(b.Header.BlockId)
 	if err := t.mem.restore(); err != nil {
 		return nil, true, err
 	}
@@ -396,8 +397,7 @@ func Timely(binData []byte, received time.Time, ahead, behind time.Duration) err
 // validatorsHash takes, on a chain of the BFT consensus, the validators set of the next height
 // as the execution of the block leaves it (design 4.1): a generated block puts its hash in its
 // header, and a block of another node is valid only if its header has the hash. Block 1 carries
-// no hash, the set it leaves is that of the honor_nodes it writes. No block carries a state hash
-// until the nodes take snapshots.
+// no hash, the set it leaves is that of the honor_nodes it writes. It checks the state hash too.
 func (b *Block) validatorsHash(dbTx *sqldb.DbTransaction) error {
 	b.nextValidators = nil
 	if !syspar.IsBftConsensus() {
@@ -413,14 +413,62 @@ func (b *Block) validatorsHash(dbTx *sqldb.DbTransaction) error {
 	}
 	hash := crypto.Hash(b.nextValidators)
 	if b.GenBlock {
-		b.Header.NextValidatorsHash, b.Header.StateHash = hash, nil
-		return nil
+		b.Header.NextValidatorsHash = hash
+		return b.putStateHash()
 	}
 	if !bytes.Equal(b.Header.NextValidatorsHash, hash) {
 		return fmt.Errorf("block %d: the validators hash %x is not %x, the hash of the set it leaves", b.Header.BlockId, b.Header.NextValidatorsHash, hash)
 	}
-	if len(b.Header.StateHash) > 0 {
+	return b.checkStateHash()
+}
+
+// putStateHash puts in the header of a generated block the state hash it carries (design 4.3):
+// at the delay after a snapshot height, the hash of the snapshot if the node has it, else none
+func (b *Block) putStateHash() error {
+	b.Header.StateHash = nil
+	s := stateHeight(b.Header.BlockId)
+	if s == 0 {
+		return nil
+	}
+	hash, status, err := states.get(s)
+	if err != nil {
+		return err
+	}
+	if status == stateDone {
+		b.Header.StateHash = hash
+	}
+	return nil
+}
+
+// checkStateHash checks the state hash of the block of another node (design 4.3). A block may
+// carry none: a proposer without the hash, after a restart that lost its snapshot, proposes
+// without it, so that the chain goes on whatever the nodes lost. A block carries one only at the
+// delay after a snapshot height, the hash of the snapshot. A validator prevotes a proposal with
+// the hash only if it has the hash and it is the same; it commits a block a certificate commits,
+// whose hash more than two thirds of the validators prevoted, once it has hashed the snapshot,
+// if it is the same, and if the node lost the snapshot, as it is. A node whose state hash is not
+// the one the chain committed stops at the block.
+func (b *Block) checkStateHash() error {
+	if len(b.Header.StateHash) == 0 {
+		return nil
+	}
+	s := stateHeight(b.Header.BlockId)
+	if s == 0 {
 		return fmt.Errorf("block %d: a state hash at a height without a snapshot", b.Header.BlockId)
+	}
+	get := states.wait
+	if b.trial {
+		get = states.get
+	}
+	hash, status, err := get(s)
+	if err != nil {
+		return err
+	}
+	switch {
+	case status == stateDone && !bytes.Equal(hash, b.Header.StateHash):
+		return fmt.Errorf("block %d: the state hash %x of height %d is not %x, the hash of the state of this node", b.Header.BlockId, b.Header.StateHash, s, hash)
+	case status != stateDone && b.trial:
+		return fmt.Errorf("block %d: this node has no state hash of height %d yet", b.Header.BlockId, s)
 	}
 	return nil
 }

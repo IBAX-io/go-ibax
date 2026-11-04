@@ -680,6 +680,18 @@ func IsBftConsensus() bool {
 	return firstBlockData != nil && firstBlockData.BftConsensus == 1
 }
 
+// SnapshotHeights is the interval of the snapshots of the state of a chain of the BFT consensus
+// and the delay after a snapshot at which a block carries its state hash, as the first block
+// fixes them; 0, 0 on another chain
+func SnapshotHeights() (interval, delay int64) {
+	mutex.RLock()
+	defer mutex.RUnlock()
+	if firstBlockData == nil || firstBlockData.BftConsensus != 1 {
+		return 0, 0
+	}
+	return int64(firstBlockData.SnapshotInterval), int64(firstBlockData.SnapshotDelay)
+}
+
 // IsHonorNodesOnly reports whether only the honor nodes generate the blocks of the chain. The
 // first block fixes it, as it fixes IsBftConsensus: the node reads it from the data of the first
 // block and not from the platform parameter, which only shows it.

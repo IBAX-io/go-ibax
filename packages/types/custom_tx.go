@@ -56,6 +56,12 @@ type FirstBlock struct {
 	// HonorNodes is the initial value of the platform parameter honor_nodes: the validators of a
 	// chain of the BFT consensus, which its first block names
 	HonorNodes string
+	// SnapshotInterval is the heights between two snapshots of the state of a chain of the BFT
+	// consensus: each node hashes the state as of each height it divides (design 4.3)
+	SnapshotInterval uint64
+	// SnapshotDelay is the heights after a snapshot at which a block carries its state hash: the
+	// time the nodes have to compute it
+	SnapshotDelay uint64
 	// Supply is the amount of the coin of ecosystem 1 that may ever exist, in its smallest unit:
 	// the allocations of the first block and the rest, which is not issued. Empty, it is
 	// consts.TotalSupply.

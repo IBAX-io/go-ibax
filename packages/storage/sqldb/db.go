@@ -116,10 +116,14 @@ func InitDB(cfg conf.DBConfig) error {
 	return nil
 }
 
+func dsnOf(cfg conf.DBConfig) string {
+	return fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable password=%s TimeZone=UTC", cfg.Host, cfg.Port, cfg.User, cfg.Name, cfg.Password)
+}
+
 // GormInit is initializes Gorm connection
 func GormInit(conf conf.DBConfig) error {
 	var err error
-	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable password=%s TimeZone=UTC", conf.Host, conf.Port, conf.User, conf.Name, conf.Password)
+	dsn := dsnOf(conf)
 	// every connection takes the settings of the node as it opens, so no transaction sets them
 	params := map[string]string{
 		"lock_timeout":                        strconv.Itoa(conf.LockTimeout),

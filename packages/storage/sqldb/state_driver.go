@@ -12,6 +12,7 @@ import (
 	"errors"
 	"slices"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 )
@@ -39,6 +40,18 @@ func stateOf(ctx context.Context) stateQueryer {
 }
 
 // openDB opens the database of the DSN with connections that go through stateConn
+// SnapshotDB opens the pool the snapshots of the state take their connections from
+// (packages/snapshot): plain connections of pgx apart from those of the node, without its
+// timeouts, since a snapshot keeps its transactions open while the node commits the blocks after
+// it
+func SnapshotDB(cfg conf.DBConfig) (*sql.DB, error) {
+	pc, err := pgx.ParseConfig(dsnOf(cfg))
+	if err != nil {
+		return nil, err
+	}
+	return stdlib.OpenDB(*pc), nil
+}
+
 func openDB(dsn string, params map[string]string) (*sql.DB, error) {
 	cfg, err := pgx.ParseConfig(dsn)
 	if err != nil {
