@@ -94,7 +94,7 @@ func TestFaults(t *testing.T) {
 }
 
 // TestFastClock: the fast clock goes ClockSpeed seconds a second from ClockFrom, until it reaches
-// the system clock, and Until is of the system clock
+// the system clock, Until is of the system clock, and Span of the clock of the node
 func TestFastClock(t *testing.T) {
 	system := time.Unix(1_000_000, 0)
 	c := &Config{ClockFrom: 100, ClockAt: 1_000_000, ClockSpeed: 200}
@@ -112,5 +112,8 @@ func TestFastClock(t *testing.T) {
 	defer current.Store(&Config{})
 	if d := Until(Now().Add(10 * time.Second)); d < 90*time.Millisecond || d > 110*time.Millisecond {
 		t.Fatalf("10 s of the clock take %v", d)
+	}
+	if d := Span(2 * time.Second); d != 200*time.Second {
+		t.Fatalf("2 s of the system go %v of the clock", d)
 	}
 }

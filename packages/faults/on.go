@@ -108,6 +108,14 @@ func Until(t time.Time) time.Duration {
 	return time.Duration(float64(t.Sub(now.Add(time.Duration(config().ClockOffsetMs)*time.Millisecond))) / speed)
 }
 
+// Span is how far the clock of the node goes while the system clock goes d: what of the node takes
+// d of the system, the making of a block, its way to the other nodes, takes the clock of the node
+// d times the speed of the fast clock
+func Span(d time.Duration) time.Duration {
+	_, speed := clock(config(), time.Now())
+	return time.Duration(float64(d) * speed)
+}
+
 // Dial dials another node unless the faults refuse its address
 func Dial(addr string, timeout time.Duration) (net.Conn, error) {
 	if slices.Contains(config().Refuse, addr) {
