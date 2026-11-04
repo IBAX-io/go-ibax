@@ -10,10 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -697,11 +699,34 @@ func amountOut(reserveIn, reserveOut, in decimal.Decimal) decimal.Decimal {
 	return withFee.Mul(reserveOut).Div(reserveIn.Mul(decimal.NewFromInt(1000)).Add(withFee)).Floor()
 }
 
+// heatOf returns the pair of each sequence number among n pairs, the pair of rank r in proportion
+// to 1/(r+1)^skew: the inverse of the cumulative heat at a uniform number the sequence number
+// hashes to, so a run takes the same pairs each time
+func heatOf(n int, skew float64) func(seq int) int {
+	cum := make([]float64, n)
+	total := 0.0
+	for r := range n {
+		total += 1 / math.Pow(float64(r+1), skew)
+		cum[r] = total
+	}
+	return func(seq int) int {
+		h := uint64(seq)*0x9E3779B97F4A7C15 + 0x632BE59BD9B4E019
+		h ^= h >> 31
+		h *= 0xBF58476D1CE4E5B9
+		h ^= h >> 29
+		u := float64(h>>11) / (1 << 53) * total
+		r, _ := slices.BinarySearch(cum, u)
+		return min(r, n-1)
+	}
+}
+
 // iswapWorkloads are the DeFi workloads of iSwap, of the accounts iswap readied:
 //
 //	swap      SwapExactTokensForTokens on the first -rotate pairs in turn (1 by default), both ways
 //	          in turn: with 1, every swap writes the row and the balances of the same pair
 //	swaps     SwapExactTokensForTokens on each pair in turn
+//	hot       SwapExactTokensForTokens on the pairs by their heat (-skew), as on a DEX: the pair of
+//	          rank r takes swaps in proportion to 1/(r+1)^skew, in an order fixed by the sequence
 //	hop       SwapExactTokensForTokens along -rotate paths of 3 tokens in turn (1 by default),
 //	          path i of the tokens 3i, 3i+1, 3i+2 (modulo the tokens), both ways in turn: 2 pairs a
 //	          swap
@@ -747,7 +772,11 @@ func iswapWorkloads(c *chainClient, accounts []*account, name string, run int, f
 	swap := func(a *account, seq int, p []any) (*signedTx, error) {
 		return c.signer.contractIn(a, s.Ecosystem, ids["SwapExactTokensForTokens"], map[string]any{"Path": p, "AmountIn": amount(iswapAmountIn, seq), "AmountOutMin": "1", "Deadline": until})
 	}
+	heat := heatOf(len(s.Pairs), iswapSkew)
 	kinds := map[string]func(a *account, seq int) (*signedTx, error){
+		"hot": func(a *account, seq int) (*signedTx, error) {
+			return swap(a, seq, path(s.Pairs[heat(seq)], seq))
+		},
 		"swap": func(a *account, seq int) (*signedTx, error) {
 			return swap(a, seq, path(pairs[seq%len(pairs)], seq/len(pairs)))
 		},

@@ -73,7 +73,7 @@ func main() {
 	timeout := fs.Duration("timeout", 5*time.Minute, "time a step of setup waits for its transactions")
 	inFlight := fs.Int("in-flight", 1000, "transactions of the founder setup has in the pools at a time, at most the TxPool.MaxPerKey of the nodes")
 
-	names := fs.String("workloads", "self,utxo,transfer,contract,write", "workloads run measures: self (TransferSelf), utxo (UTXO), transfer (@1TokensSend), contract (a mix of 4 @1ProfileEdit, 3 @1NotificationsSend and 3 @1TokensSend), write (5 DBInsert and 5 DBUpdate a transaction), iswap-swap, iswap-swaps, iswap-hop, iswap-exactout, iswap-addliq, iswap-token, iswap-defi (DeFi on iSwap, after bench iswap)")
+	names := fs.String("workloads", "self,utxo,transfer,contract,write", "workloads run measures: self (TransferSelf), utxo (UTXO), transfer (@1TokensSend), contract (a mix of 4 @1ProfileEdit, 3 @1NotificationsSend and 3 @1TokensSend), write (5 DBInsert and 5 DBUpdate a transaction), iswap-swap, iswap-swaps, iswap-hot, iswap-hop, iswap-exactout, iswap-addliq, iswap-token, iswap-defi (DeFi on iSwap, after bench iswap)")
 	rates := fs.String("rates", "100,200,500,1000,2000,3000,5000", "rates (transactions a second) run steps through")
 	duration := fs.Duration("duration", 30*time.Second, "time a step sends")
 	p99 := fs.Duration("p99", 2*time.Second, "P99 target of the latency to a block of every node")
@@ -88,6 +88,7 @@ func main() {
 	tokens := fs.Int("tokens", 4, "token ecosystems iswap makes, a pair of each two")
 	traders := fs.Int("traders", 1000, "accounts of the file, the first, that iswap readies to trade")
 	rotate := fs.Int("rotate", 1, "pairs the workload iswap-swap rotates over, and paths of 3 tokens iswap-hop does")
+	skew := fs.Float64("skew", 1, "exponent of the heat of the pairs of the workload iswap-hot: the pair of rank r (from 0) takes swaps in proportion to 1/(r+1)^skew, as a few pairs of a DEX take most of its trades")
 
 	signerFile := fs.String("signer", "", "file of the private key, of the algorithm of -key-algo, that signs the transactions send sends, which carry its key in the header, as a key not registered yet signs (default the founder key, which logs in)")
 	count := fs.Int("n", 0, "transactions send sends")
@@ -120,6 +121,7 @@ func main() {
 	}
 	iswapFile = *iswapState
 	iswapRotate = *rotate
+	iswapSkew = *skew
 	if os.Args[1] == "iswap" {
 		if *bundle == "" || *tokens < 3 || *traders < 2 {
 			fmt.Fprintln(os.Stderr, "usage: bench iswap -node URL[,URL...] -key FILE -bundle FILE [-file FILE] [-iswap FILE] [-tokens N >= 3] [-traders N >= 2]")

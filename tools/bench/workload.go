@@ -18,6 +18,10 @@ var iswapFile = "iswap.json"
 // iswapRotate is the pairs the workload iswap-swap rotates over, and the paths iswap-hop does
 var iswapRotate = 1
 
+// iswapSkew is the exponent of the heat of the pairs of the workload iswap-hot: the pair of rank r
+// (from 0) takes swaps in proportion to 1/(r+1)^iswapSkew
+var iswapSkew = 1.0
+
 // workload makes the transaction seq of a run, of the accounts in turn; no two of a run are alike
 type workload struct {
 	name string
