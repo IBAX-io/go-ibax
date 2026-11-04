@@ -35,11 +35,11 @@ type Stream interface {
 	Commit(t *transaction.Transaction)
 }
 
-// shell is the header of the block without what its trial sets, its signature, its hash and its
-// rollbacks hash, and the rollbacks hash of the block before it as the block carries it
+// shell is the header of the block without what its trial sets, its signature, its hash, its
+// rollbacks hash and its validators and state hashes, and the rollbacks hash of the block before it as the block carries it
 func (b *Block) shell() ([]byte, error) {
 	h := *b.Header
-	h.Sign, h.BlockHash, h.RollbacksHash = nil, nil, nil
+	h.Sign, h.BlockHash, h.RollbacksHash, h.NextValidatorsHash, h.StateHash = nil, nil, nil, nil, nil
 	return proto.Marshal(&types.BlockData{Header: &h, PrevHeader: &types.BlockHeader{RollbacksHash: b.PrevRollbacksHash}})
 }
 
@@ -202,6 +202,7 @@ func (s *Speculation) Finish(binData []byte, height int64, hash bft.Hash) error 
 		return s.failed
 	}
 	b.Header.Sign, b.Header.BlockHash, b.Header.RollbacksHash = full.Header.Sign, full.Header.BlockHash, full.Header.RollbacksHash
+	b.Header.NextValidatorsHash, b.Header.StateHash = full.Header.NextValidatorsHash, full.Header.StateHash
 	b.MerkleRoot, b.BinData, b.TxFullData = full.MerkleRoot, full.BinData, full.TxFullData
 	b.SysUpdate = b.SysUpdate || full.SysUpdate
 	if rest := full.Transactions[n:]; len(rest) > 0 {

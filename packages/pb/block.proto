@@ -21,6 +21,11 @@ message BlockHeader{
   int32 consensus_mode = 10;
   bytes candidate_nodes = 11;
   int64 network_id = 12;
+  // the hash of the validators set of the next height, as the execution of the block leaves it,
+  // on a chain of the BFT consensus from block 2 (block version 4)
+  bytes next_validators_hash = 13;
+  // the state hash of the snapshot height whose state the block confirms (block version 4)
+  bytes state_hash = 14;
 }
 
 // BlockData is a structure of the block's

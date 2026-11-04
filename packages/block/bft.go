@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -182,7 +183,7 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 	c := &sqldb.BftCertificate{Height: b.Header.BlockId, Round: int64(cert.Round), Hash: cert.Hash[:], Data: cert.Marshal()}
 	err = c.Create(t.dbTx)
 	if err == nil && syspar.IsBftConsensus() {
-		err = storeValidators(t.dbTx, b.Header.BlockId+1)
+		err = b.storeValidators(t.dbTx)
 	}
 	if err != nil {
 		t.dbTx.Rollback()
@@ -392,15 +393,52 @@ func Timely(binData []byte, received time.Time, ahead, behind time.Duration) err
 	return nil
 }
 
-// storeValidators writes, in the transaction of block height−1, the validators set of height if
-// it is not the set before: the nodes of honor_nodes in their order, but the stopped ones and
-// those an evidence keeps out of height (design 4.5)
-func storeValidators(dbTx *sqldb.DbTransaction, height int64) error {
-	set, err := smart.BftValidatorsOf(dbTx, height)
+// validatorsHash takes, on a chain of the BFT consensus, the validators set of the next height
+// as the execution of the block leaves it (design 4.1): a generated block puts its hash in its
+// header, and a block of another node is valid only if its header has the hash. Block 1 carries
+// no hash, the set it leaves is that of the honor_nodes it writes. No block carries a state hash
+// until the nodes take snapshots.
+func (b *Block) validatorsHash(dbTx *sqldb.DbTransaction) error {
+	b.nextValidators = nil
+	if !syspar.IsBftConsensus() {
+		return nil
+	}
+	set, err := smart.BftValidatorsOf(dbTx, b.Header.BlockId+1)
 	if err != nil {
 		return err
 	}
-	data := set.Marshal()
+	b.nextValidators = set.Marshal()
+	if b.IsGenesis() {
+		return nil
+	}
+	hash := crypto.Hash(b.nextValidators)
+	if b.GenBlock {
+		b.Header.NextValidatorsHash, b.Header.StateHash = hash, nil
+		return nil
+	}
+	if !bytes.Equal(b.Header.NextValidatorsHash, hash) {
+		return fmt.Errorf("block %d: the validators hash %x is not %x, the hash of the set it leaves", b.Header.BlockId, b.Header.NextValidatorsHash, hash)
+	}
+	if len(b.Header.StateHash) > 0 {
+		return fmt.Errorf("block %d: a state hash at a height without a snapshot", b.Header.BlockId)
+	}
+	return nil
+}
+
+// storeValidators writes, in the transaction of the block, the validators set of the next height
+// if it is not the set before: the nodes of honor_nodes in their order, but the stopped ones and
+// those an evidence keeps out of the height (design 4.5)
+func (b *Block) storeValidators(dbTx *sqldb.DbTransaction) error {
+	height := b.Header.BlockId + 1
+	data := b.nextValidators
+	if data == nil {
+		// block 1 makes the chain one of the BFT consensus as it inserts it
+		set, err := smart.BftValidatorsOf(dbTx, height)
+		if err != nil {
+			return err
+		}
+		data = set.Marshal()
+	}
 	last := &sqldb.BftValidatorSet{}
 	found, err := last.GetAt(dbTx, height)
 	if err != nil {

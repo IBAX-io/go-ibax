@@ -82,7 +82,7 @@ func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 		}
 	}
 	if syspar.IsBftConsensus() {
-		if err := storeValidators(dbTx, b.Header.BlockId+1); err != nil {
+		if err := b.storeValidators(dbTx); err != nil {
 			dbTx.Rollback()
 			return err
 		}

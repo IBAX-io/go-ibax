@@ -31,6 +31,9 @@ func blockVer(cur, prev *BlockHeader) (ret string) {
 	if cur.Version >= consts.BvRollbackHash {
 		ret = fmt.Sprintf(",%x", prev.RollbacksHash)
 	}
+	if cur.Version >= consts.BvValidatorsHash {
+		ret += fmt.Sprintf(",%x,%x", cur.NextValidatorsHash, cur.StateHash)
+	}
 	return
 }
 
