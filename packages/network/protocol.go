@@ -36,6 +36,8 @@ const (
 	RequestTypeBftCertificates
 	// RequestTypeBftTransactions fetches the transactions of the block of an F18 proposal
 	RequestTypeBftTransactions
+	// RequestTypeSnapshot fetches the snapshots of the state a node keeps (package snapnet)
+	RequestTypeSnapshot
 
 	// BlocksPerRequest is the most blocks a node sends for a request of the blocks after a block
 	BlocksPerRequest int = 1000

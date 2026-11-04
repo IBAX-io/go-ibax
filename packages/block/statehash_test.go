@@ -109,7 +109,7 @@ func TestStateHashesAfterCommit(t *testing.T) {
 	require.Equal(t, stateDone, status)
 	require.Equal(t, want.Hash, hash)
 
-	manifest, err := os.ReadFile(filepath.Join(states.dir, "10000", manifestName))
+	manifest, err := os.ReadFile(filepath.Join(states.dir, "10000", "state.json"))
 	require.NoError(t, err)
 	var state snapshot.State
 	require.NoError(t, json.Unmarshal(manifest, &state))

@@ -6,14 +6,18 @@ package tcpserver
 
 import (
 	"net"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/network/bftnet"
+	"github.com/IBAX-io/go-ibax/packages/network/snapnet"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
+	"github.com/IBAX-io/go-ibax/packages/snapshot"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -97,6 +101,14 @@ func HandleTCPRequest(rw net.Conn) {
 			if err = s.ServeCertificates(rw); err != nil {
 				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": rw.RemoteAddr()}).Debug("bft certificates request")
 			}
+		}
+		return
+
+	case network.RequestTypeSnapshot:
+		rw.SetDeadline(time.Now().Add(consts.ReadTimeout * time.Second))
+		store := snapshot.Store{Dir: filepath.Join(conf.Config.DirPathConf.DataDir, snapshot.DirName)}
+		if err = snapnet.Serve(rw, store); err != nil {
+			log.WithFields(log.Fields{"type": consts.NetworkError, "error": err, "host": rw.RemoteAddr()}).Debug("snapshot request")
 		}
 		return
 

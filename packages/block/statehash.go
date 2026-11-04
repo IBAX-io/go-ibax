@@ -8,14 +8,8 @@ package block
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
-	"slices"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -44,8 +38,6 @@ const (
 	snapshotWorkers = 4
 	// keptSnapshots is the snapshots whose files a node keeps, the latest
 	keptSnapshots = 2
-	// manifestName is the file of a snapshot that has its tables, their chunks and the state hash
-	manifestName = "state.json"
 )
 
 // stateHashes takes the snapshots of the state of a chain of the BFT consensus and hashes them
@@ -65,7 +57,7 @@ type stateHashes struct {
 
 var states = &stateHashes{open: func() (*sql.DB, string, error) {
 	db, err := sqldb.SnapshotDB(conf.Config.DB)
-	return db, filepath.Join(conf.Config.DirPathConf.DataDir, "snapshots"), err
+	return db, filepath.Join(conf.Config.DirPathConf.DataDir, snapshot.DirName), err
 }}
 
 // stateHeight is the snapshot height whose state hash the block of a height carries, 0 if none:
@@ -145,75 +137,27 @@ func (s *stateHashes) afterCommit(height int64) {
 	}()
 }
 
-// hash hashes the snapshot of a height and writes its files: the encoding of each table and the
-// manifest, in a directory it renames to the height once complete
+// hash hashes the snapshot of a height and writes its files (snapshot.Store), keeping those of
+// the latest keptSnapshots snapshots
 func (s *stateHashes) hash(snap *snapshot.Snapshot, height int64) (*snapshot.State, error) {
 	defer snap.Close()
-	var sink snapshot.Sink
-	var tmp string
-	if s.dir != "" {
-		tmp = filepath.Join(s.dir, strconv.FormatInt(height, 10)+".tmp")
-		if err := os.RemoveAll(tmp); err != nil {
-			return nil, err
-		}
-		if err := os.MkdirAll(tmp, 0o755); err != nil {
-			return nil, err
-		}
-		sink = func(table string) (io.WriteCloser, error) {
-			return os.Create(filepath.Join(tmp, table+".copy"))
-		}
+	if s.dir == "" {
+		return snap.Hash(context.Background(), snapshotWorkers, nil)
 	}
-	state, err := snap.Hash(context.Background(), snapshotWorkers, sink)
-	if err != nil || s.dir == "" {
-		if tmp != "" {
-			os.RemoveAll(tmp)
-		}
-		return state, err
-	}
-	manifest, err := json.Marshal(state)
-	if err == nil {
-		err = os.WriteFile(filepath.Join(tmp, manifestName), manifest, 0o644)
-	}
-	final := filepath.Join(s.dir, strconv.FormatInt(height, 10))
-	if err == nil {
-		if err = os.RemoveAll(final); err == nil {
-			err = os.Rename(tmp, final)
-		}
-	}
+	store := snapshot.Store{Dir: s.dir}
+	files, err := store.Create(height)
 	if err != nil {
-		os.RemoveAll(tmp)
 		return nil, err
 	}
-	return state, s.prune()
-}
-
-// prune removes the files of the snapshots but the latest keptSnapshots, and of those left
-// incomplete
-func (s *stateHashes) prune() error {
-	entries, err := os.ReadDir(s.dir)
+	state, err := snap.Hash(context.Background(), snapshotWorkers, files.Sink())
+	if err == nil {
+		err = files.Commit(state)
+	}
 	if err != nil {
-		return err
+		files.Abort()
+		return nil, err
 	}
-	var heights []int64
-	for _, e := range entries {
-		name := e.Name()
-		if h, err := strconv.ParseInt(name, 10, 64); err == nil && e.IsDir() {
-			heights = append(heights, h)
-			continue
-		}
-		if base, ok := strings.CutSuffix(name, ".tmp"); ok {
-			if h, err := strconv.ParseInt(base, 10, 64); err == nil && !s.isPending(h) {
-				os.RemoveAll(filepath.Join(s.dir, name))
-			}
-		}
-	}
-	slices.Sort(heights)
-	for _, h := range heights[:max(0, len(heights)-keptSnapshots)] {
-		if err := os.RemoveAll(filepath.Join(s.dir, strconv.FormatInt(h, 10))); err != nil {
-			return err
-		}
-	}
-	return nil
+	return state, store.Prune(keptSnapshots, s.isPending)
 }
 
 func (s *stateHashes) isPending(height int64) bool {

@@ -359,13 +359,19 @@ func (s *Snapshot) Hash(ctx context.Context, workers int, sink Sink) (*State, er
 	if err := s.checkLayout(ctx, ts); err != nil {
 		return nil, err
 	}
+	state.Hash = StateHash(state.Tables)
+	return state, nil
+}
+
+// StateHash is the state hash of the tables of a state: of the name and the hash of each, in
+// their order
+func StateHash(tables []Table) []byte {
 	var all bytes.Buffer
-	for _, t := range state.Tables {
+	for _, t := range tables {
 		all.Write(lenPrefix(t.Name))
 		all.Write(t.Hash)
 	}
-	state.Hash = crypto.Hash(all.Bytes())
-	return state, nil
+	return crypto.Hash(all.Bytes())
 }
 
 // checkLayout checks the tables encoded have the layout of Begin still: what changed it after
