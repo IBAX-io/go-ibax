@@ -121,9 +121,9 @@ func (st *BlockState) newView(i int, contract string, ordered bool, conn *sql.Co
 
 // PinConn takes a connection of the pool for the views a worker runs in parallel through a
 // block, so their statements do not take and give back a connection each; closing it gives it
-// back to the pool
+// back to the pool of the blocks
 func PinConn(ctx context.Context) (*sql.Conn, error) {
-	db, err := DBConn.DB()
+	db, err := execDB().DB()
 	if err != nil {
 		return nil, err
 	}

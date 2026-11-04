@@ -16,7 +16,8 @@ const (
 )
 
 // Query is a read of rows: the columns or JSON paths (column->key) to read, every column the reader
-// may read when none is named; the filter; the order; and the page
+// may read when none is named; the filter; the order; the page; and whether to count the rows the
+// filter matches, which it does unless Count is false
 type Query struct {
 	Ecosystem int64    `json:"ecosystem"`
 	Columns   []string `json:"columns"`
@@ -24,14 +25,20 @@ type Query struct {
 	Order     Order    `json:"order"`
 	Limit     *int     `json:"limit"`
 	Offset    int      `json:"offset"`
+	Count     *bool    `json:"count"`
 }
 
-// Result is a page of rows: how many rows the filter matches, the columns read and their values
+// Result is a page of rows: how many rows the filter matches, the columns read and their values.
+// A query that does not count has no count, and More tells whether rows follow the page.
 type Result struct {
-	Count   int64            `json:"count"`
+	Count   *int64           `json:"count,omitempty"`
+	More    bool             `json:"more,omitempty"`
 	Columns []Column         `json:"columns"`
 	List    []map[string]any `json:"list"`
 }
+
+// counts tells the query counts the rows its filter matches
+func (q Query) counts() bool { return q.Count == nil || *q.Count }
 
 // RowResult is one row and the columns read
 type RowResult struct {
@@ -142,27 +149,45 @@ func (t *Table) Query(q Query) (*Result, error) {
 	filter := ` FROM ` + t.from() + ` WHERE ` + visible + ` AND ` + where
 
 	result := &Result{Columns: names(refs, q.Columns)}
-	rows, err := query(`SELECT count(*)`+filter, s.args...)
-	if err != nil {
-		return nil, queryFailed(err, t.physical)
-	}
-	defer rows.Close()
-	if rows.Next() {
-		if err := rows.Scan(&result.Count); err != nil {
-			return nil, queryFailed(err, t.physical)
+	if q.counts() {
+		if result.Count, err = t.count(filter, s.args); err != nil {
+			return nil, err
 		}
 	}
-	rows.Close()
 
+	// a query that does not count reads a row more, to tell whether rows follow the page
+	read := limit
+	if !q.counts() {
+		read++
+	}
 	text := `SELECT ` + selectList(refs) + filter
 	if order != "" {
 		text += ` ORDER BY ` + order
 	}
-	text += ` LIMIT ` + strconv.Itoa(limit) + ` OFFSET ` + strconv.Itoa(q.Offset)
+	text += ` LIMIT ` + strconv.Itoa(read) + ` OFFSET ` + strconv.Itoa(q.Offset)
 	if result.List, err = t.read(text, s.args, result.Columns); err != nil {
 		return nil, err
 	}
+	if len(result.List) > limit {
+		result.List, result.More = result.List[:limit], true
+	}
 	return result, nil
+}
+
+// count is the number of the rows the filter matches
+func (t *Table) count(filter string, args []any) (*int64, error) {
+	rows, err := query(`SELECT count(*)`+filter, args...)
+	if err != nil {
+		return nil, queryFailed(err, t.physical)
+	}
+	defer rows.Close()
+	var n int64
+	if rows.Next() {
+		if err := rows.Scan(&n); err != nil {
+			return nil, queryFailed(err, t.physical)
+		}
+	}
+	return &n, rows.Err()
 }
 
 // Row reads the row whose column (the id when none is given) holds a value

@@ -25,9 +25,24 @@ func (c *Contract) TableName() string {
 	return `1_contracts`
 }
 
-// Get is retrieving id contracts from database
+// contracts are the contracts Get read, until a block commits
+var contracts BlockCache[int64, *Contract]
+
+// Get is retrieving id contracts from database, once a block
 func (c *Contract) Get(Id int64) (bool, error) {
-	return isFound(DBConn.Where("id = ?", Id).First(c))
+	row, err := contracts.Get(Id, func() (*Contract, bool, error) {
+		row := new(Contract)
+		found, err := isFound(DBConn.Where("id = ?", Id).First(row))
+		if err != nil || !found {
+			return nil, false, err
+		}
+		return row, true, nil
+	})
+	if err != nil || row == nil {
+		return false, err
+	}
+	*c = *row
+	return true, nil
 }
 
 // GetList is retrieving records from database

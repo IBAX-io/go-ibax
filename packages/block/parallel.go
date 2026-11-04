@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"runtime"
 	"slices"
 	"sync"
 	"time"
@@ -41,12 +40,7 @@ import (
 // the order of the block do, so the block is the same whatever the workers.
 
 // execWorkers is the number of the workers that run the transactions of a block in parallel
-func execWorkers() int {
-	if n := conf.Config.Exec.Workers; n > 0 {
-		return n
-	}
-	return runtime.NumCPU()
-}
+func execWorkers() int { return conf.Config.Exec.WorkerCount() }
 
 // maxRestarts bounds the runs in order of a transaction that each put more tables in PostgreSQL
 const maxRestarts = 64

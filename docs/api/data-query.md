@@ -63,7 +63,8 @@ Every table in the genesis data of a new chain declares `permissions.read`.
 | `GET table/{table}`                   | `getTable(name, ecosystem)`    | the table's permissions and columns (public)      |
 | `GET history/{table}/{id}`            |                                | past values of a row the reader sees, readable columns only |
 
-REST GETs take `ecosystem` and `columns` (comma separated) as URL parameters.
+REST GETs take `ecosystem` and `columns` (comma separated) as URL parameters; `GET list/{table}`
+also takes `limit`, `offset` and `count`.
 
 A query body looks like this:
 
@@ -84,6 +85,8 @@ A query body looks like this:
 - `limit`: 1 to 1000, 25 by default. `offset`: 0 to 1000000.
 - `order`: a list of `{column: "asc" | "desc"}`. It always ends with `id` ascending, so pages never
   overlap.
+- `count`: `false` skips counting the rows the filter matches, which costs a scan of all of them;
+  counted by default.
 
 A page looks like this:
 
@@ -96,7 +99,8 @@ A page looks like this:
 ```
 
 Each row holds exactly the columns announced in `columns`. `count` is the number of rows the
-filter matches.
+filter matches. A query with `"count": false` has no `count`; its page has `"more": true` when rows
+follow it.
 
 ## Interface sources
 

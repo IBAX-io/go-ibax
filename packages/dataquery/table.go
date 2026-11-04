@@ -92,7 +92,39 @@ func Describe(reader Reader, name string, ecosystem int64) (*Table, error) {
 	if !identifier.MatchString(name) {
 		return nil, ErrTableNotFound(name)
 	}
-	t := &Table{reader: reader, Name: name, Ecosystem: ecosystem, checked: map[string]error{}}
+	d, err := descriptions.Get(tableKey{name: name, ecosystem: ecosystem}, func() (*description, bool, error) {
+		d, err := describe(name, ecosystem)
+		return d, err == nil, err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &Table{reader: reader, Name: name, Ecosystem: ecosystem, Record: d.record, physical: d.physical,
+		shared: d.shared, columns: d.columns, ordered: d.ordered, reads: d.reads, checked: map[string]error{}}, nil
+}
+
+// tableKey is a table of an ecosystem
+type tableKey struct {
+	name      string
+	ecosystem int64
+}
+
+// description is what Describe finds of a table, the same for every reader; no Table changes it
+type description struct {
+	record   sqldb.Table
+	physical string
+	shared   bool
+	columns  map[string]tableColumn
+	ordered  []string
+	reads    map[string]string
+}
+
+// descriptions are the tables described, until a block commits
+var descriptions sqldb.BlockCache[tableKey, *description]
+
+// describe reads the definition of the table name of the ecosystem
+func describe(name string, ecosystem int64) (*description, error) {
+	t := &Table{Name: name, Ecosystem: ecosystem}
 	t.shared = converter.FirstEcosystemTables[name]
 	if t.shared {
 		t.physical = "1_" + name
@@ -118,7 +150,8 @@ func Describe(reader Reader, name string, ecosystem int64) (*Table, error) {
 	if err := t.readConditions(); err != nil {
 		return nil, err
 	}
-	return t, nil
+	return &description{record: t.Record, physical: t.physical, shared: t.shared, columns: t.columns,
+		ordered: t.ordered, reads: t.reads}, nil
 }
 
 // selfDescribed are the tables of an ecosystem that are not rows of 1_tables, each with the record

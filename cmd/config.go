@@ -100,7 +100,7 @@ func init() {
 	cmdFlags.StringVar(&conf.Config.DB.Password, "dbPassword", "123456", "DB password")
 	cmdFlags.IntVar(&conf.Config.DB.LockTimeout, "dbLockTimeout", 5000, "DB lock timeout")
 	cmdFlags.IntVar(&conf.Config.DB.IdleInTxTimeout, "dbIdleInTxTimeout", 5000, "DB idle tx timeout")
-	cmdFlags.IntVar(&conf.Config.DB.MaxIdleConns, "dbMaxIdleConns", 100, "DB sets the maximum number of connections in the idle connection pool; the workers of a block hold one each, so it is at least their number")
+	cmdFlags.IntVar(&conf.Config.DB.MaxIdleConns, "dbMaxIdleConns", 100, "sets the maximum number of idle connections of the pool of the API and the daemons; the blocks run in a pool of their own, of execWorkers+4 connections")
 	cmdFlags.IntVar(&conf.Config.DB.MaxOpenConns, "dbMaxOpenConns", 100, "sets the maximum number of open connections to the database")
 
 	//Redis

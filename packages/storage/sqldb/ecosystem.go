@@ -126,20 +126,34 @@ func GetEcoParam(db *DbTransaction, ids []int64) ([]EcoParam, error) {
 	return ret, nil
 }
 
+// ecosystems are the ecosystems read outside a transaction, until a block commits
+var ecosystems BlockCache[int64, *Ecosystem]
+
 // Get reads the ecosystem id. A transaction reads each once, and the views of a block share what
-// they read; an ecosystem with another id than id already is read as First reads it.
+// they read; outside a transaction it is read once a block; an ecosystem with another id than id
+// already is read as First reads it.
 func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
 	if sys.ID != 0 && sys.ID != id {
 		return isFound(GetDB(dbTx).First(sys, "id = ?", id))
 	}
-	row, err := cached(dbTx, ecosysTable, "row:"+strconv.FormatInt(id, 10), func() (*Ecosystem, error) {
+	load := func() (*Ecosystem, error) {
 		e := new(Ecosystem)
 		found, err := isFound(GetDB(dbTx).First(e, "id = ?", id))
 		if err != nil || !found {
 			return nil, err
 		}
 		return e, nil
-	})
+	}
+	var row *Ecosystem
+	var err error
+	if dbTx == nil {
+		row, err = ecosystems.Get(id, func() (*Ecosystem, bool, error) {
+			e, err := load()
+			return e, e != nil, err
+		})
+	} else {
+		row, err = cached(dbTx, ecosysTable, "row:"+strconv.FormatInt(id, 10), load)
+	}
 	if err != nil || row == nil {
 		return false, err
 	}

@@ -116,60 +116,98 @@ func InitDB(cfg conf.DBConfig) error {
 	return nil
 }
 
-// GormInit is initializes Gorm connection
-func GormInit(conf conf.DBConfig) error {
-	var err error
-	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable password=%s TimeZone=UTC", conf.Host, conf.Port, conf.User, conf.Name, conf.Password)
+// GormInit is initializes Gorm connection: DBConn, the pool of the API and the daemons, and
+// the pool the blocks run in, so a block never waits for a connection a request holds
+func GormInit(cfg conf.DBConfig) error {
+	dsn := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable password=%s TimeZone=UTC", cfg.Host, cfg.Port, cfg.User, cfg.Name, cfg.Password)
 	// every connection takes the settings of the node as it opens, so no transaction sets them
 	params := map[string]string{
-		"lock_timeout":                        strconv.Itoa(conf.LockTimeout),
-		"idle_in_transaction_session_timeout": strconv.Itoa(conf.IdleInTxTimeout),
+		"lock_timeout":                        strconv.Itoa(cfg.LockTimeout),
+		"idle_in_transaction_session_timeout": strconv.Itoa(cfg.IdleInTxTimeout),
 	}
-open:
-	db, err := openDB(dsn, params)
+	db, err := openGorm(dsn, params)
+	if err != nil && strings.Contains(err.Error(), "SQLSTATE 3D000") {
+		err = createDatabase(fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable TimeZone=UTC", cfg.Host, cfg.Port, cfg.User, cfg.Password), cfg.Name)
+		if err == nil {
+			db, err = openGorm(dsn, params)
+		}
+	}
 	if err != nil {
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("cant open connection to DB")
 		return err
 	}
-	DBConn, err = gorm.Open(postgres.New(postgres.Config{
+	exec, err := openGorm(dsn, params)
+	if err != nil {
+		closeGorm(db)
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("cant open connection to DB")
+		return err
+	}
+	setPool(db, cfg.MaxIdleConns, cfg.MaxOpenConns)
+	n := execConns(conf.Config.Exec.WorkerCount())
+	setPool(exec, n, n)
+	DBConn, execConn = db, exec
+	return nil
+}
+
+// execConn is the pool of the blocks: the transaction of a block, the connections its workers
+// hold, and the one the block runs transactions again on
+var execConn *gorm.DB
+
+// execConns is the size of the pool of the blocks whose workers are workers: a connection each,
+// one for the transaction of the block, one it runs transactions again on, and two for the
+// rollback and the BFT round a block may overlap
+func execConns(workers int) int { return workers + 4 }
+
+// execDB is the pool the blocks run in; DBConn when GormInit opened none
+func execDB() *gorm.DB {
+	if execConn != nil {
+		return execConn
+	}
+	return DBConn
+}
+
+// openGorm opens a pool of pgx connections with the statement count and the transaction cache
+func openGorm(dsn string, params map[string]string) (*gorm.DB, error) {
+	sqlDB, err := openDB(dsn, params)
+	if err != nil {
+		return nil, err
+	}
+	db, err := gorm.Open(postgres.New(postgres.Config{
 		// The extended protocol: pgx prepares a statement once on a connection and keeps it in
 		// its statement cache, so a statement a block repeats is planned once
-		Conn: db,
+		Conn: sqlDB,
 	}), &gorm.Config{
 		AllowGlobalUpdate: true,                                  //allow global update
 		Logger:            logger.Default.LogMode(logger.Silent), // start Logger, show detail log
 	})
 	if err != nil {
-		db.Close()
-		if strings.Contains(err.Error(), "SQLSTATE 3D000") {
-			err := createDatabase(fmt.Sprintf("host=%s port=%d user=%s password=%s sslmode=disable TimeZone=UTC", conf.Host, conf.Port, conf.User, conf.Password), conf.Name)
-			if err != nil {
-				return err
-			}
-			goto open
-		}
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("cant open connection to DB")
-		DBConn = nil
-		return err
+		sqlDB.Close()
+		return nil, err
 	}
-	if err = registerStatementCount(DBConn); err != nil {
-		DBConn = nil
-		return err
+	if err = registerStatementCount(db); err != nil {
+		sqlDB.Close()
+		return nil, err
 	}
-	if err = registerTxCache(DBConn); err != nil {
-		DBConn = nil
-		return err
+	if err = registerTxCache(db); err != nil {
+		sqlDB.Close()
+		return nil, err
 	}
-	sqlDB, err := DBConn.DB()
-	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("cant get sql DB")
-		DBConn = nil
-		return err
-	}
+	return db, nil
+}
 
+func setPool(db *gorm.DB, idle, open int) {
+	sqlDB, _ := db.DB()
 	sqlDB.SetConnMaxLifetime(time.Minute * 10)
-	sqlDB.SetMaxIdleConns(conf.MaxIdleConns)
-	sqlDB.SetMaxOpenConns(conf.MaxOpenConns)
-	return nil
+	sqlDB.SetMaxIdleConns(idle)
+	sqlDB.SetMaxOpenConns(open)
+}
+
+func closeGorm(db *gorm.DB) error {
+	sqlDB, err := db.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
 }
 
 func createDatabase(dsn string, dbName string) error {
@@ -189,17 +227,16 @@ func createDatabase(dsn string, dbName string) error {
 
 // GormClose is closing Gorm connection
 func GormClose() error {
+	var err error
+	if execConn != nil {
+		err = closeGorm(execConn)
+		execConn = nil
+	}
 	if DBConn != nil {
-		sqlDB, err := DBConn.DB()
-		if err != nil {
-			return err
-		}
-		if err = sqlDB.Close(); err != nil {
-			return err
-		}
+		err = errors.Join(err, closeGorm(DBConn))
 		DBConn = nil
 	}
-	return nil
+	return err
 }
 
 // DbTransaction is gorm.DB wrapper
@@ -235,11 +272,11 @@ func (d *DbTransaction) Debug() *DbTransaction {
 	return d
 }
 
-// StartTransaction is beginning transaction
+// StartTransaction is beginning transaction, in the pool of the blocks
 func StartTransaction() (*DbTransaction, error) {
 	ctx, statements := withStatementCount()
 	ctx, cache := withTxCache(ctx)
-	conn := DBConn.WithContext(ctx).Begin()
+	conn := execDB().WithContext(ctx).Begin()
 	if conn.Error != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": conn.Error}).Error("cannot start transaction because of connection error")
 		return nil, conn.Error
@@ -257,9 +294,15 @@ func (tr *DbTransaction) Rollback() error {
 	return tr.conn.Rollback().Error
 }
 
-// Commit is transaction commit
+// Commit is transaction commit; a transaction StartTransaction began counts in Commits
 func (tr *DbTransaction) Commit() error {
-	return tr.conn.Commit().Error
+	if err := tr.conn.Commit().Error; err != nil {
+		return err
+	}
+	if tr.statements != nil {
+		commits.Add(1)
+	}
+	return nil
 }
 
 // Connection returns connection of database

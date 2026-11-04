@@ -118,6 +118,14 @@ func getListHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if text := values.Get("count"); text != "" {
+		count, err := strconv.ParseBool(text)
+		if err != nil {
+			dataErrorResponse(w, dataquery.ErrWhere("count "+text))
+			return
+		}
+		q.Count = &count
+	}
 	for name, target := range map[string]*int{"limit": nil, "offset": &q.Offset} {
 		text := values.Get(name)
 		if text == "" {
