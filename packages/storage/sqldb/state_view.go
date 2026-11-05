@@ -22,9 +22,11 @@ import (
 // ErrNeedsOrder. A view run in the order of the block reads the state as the block committed it,
 // and runs in PostgreSQL what the state cannot run in memory.
 type TxView struct {
-	st       *BlockState
-	index    int
-	ordered  bool
+	st      *BlockState
+	index   int
+	ordered bool
+	// start is the seq the state published when the view began
+	start    uint64
 	contract string
 	// conn is the connection a view run in parallel holds, which the worker pins for the block
 	conn   *sql.Conn
@@ -115,7 +117,7 @@ func (st *BlockState) NewParallelView(i int, contract string, conn *sql.Conn) *T
 }
 
 func (st *BlockState) newView(i int, contract string, ordered bool, conn *sql.Conn) *TxView {
-	return &TxView{st: st, index: i, ordered: ordered, contract: contract, conn: conn, sysGen: st.sysGen.Load(),
+	return &TxView{st: st, index: i, ordered: ordered, contract: contract, conn: conn, sysGen: st.sysGen.Load(), start: st.pub.Load(),
 		own: make(map[string]*viewTable), idBase: make(map[string]int64)}
 }
 

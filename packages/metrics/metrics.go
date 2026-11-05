@@ -113,7 +113,7 @@ var (
 	// in parallel read what those wrote; in order, as the state runs them only in order
 	TxRuns = prometheus.NewCounterVec(prometheus.CounterOpts{
 		Namespace: namespace, Name: "tx_runs_total",
-		Help: "Committed runs of transactions by how they ran: parallel, again, ordered.",
+		Help: "Committed runs of transactions by how they ran: parallel, early, again, ordered.",
 	}, []string{"run"})
 
 	// Speculations counts how the speculations of streaming proposals ended: finished, as the

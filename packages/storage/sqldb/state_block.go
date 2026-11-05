@@ -202,6 +202,8 @@ type BlockState struct {
 	// block has not changed, by table and key of the cache of a transaction
 	shared      sync.Map
 	sharedCount atomic.Int64
+	// readers are the readers of the block the commits wake, nil when the block keeps none
+	readers atomic.Pointer[readerIndex]
 }
 
 // txSlot is a transaction of the block: the contract it runs, and the ids it took by table in its
@@ -543,7 +545,17 @@ func (st *BlockState) Holds(v *TxView) bool {
 func (st *BlockState) Commit(i int, v *TxView) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
-	st.apply(v)
+	ri := st.readers.Load()
+	var touches *[]touch
+	if ri != nil {
+		touches = new([]touch)
+	}
+	st.apply(v, touches)
+	if ri != nil {
+		ri.mu.Lock()
+		ri.wake(i, *touches)
+		ri.mu.Unlock()
+	}
 	st.idMu.Lock()
 	if i >= st.next {
 		st.next = i + 1
@@ -556,6 +568,11 @@ func (st *BlockState) Commit(i int, v *TxView) {
 
 // Skip passes the transaction i, which commits nothing
 func (st *BlockState) Skip(i int) {
+	if ri := st.readers.Load(); ri != nil {
+		ri.mu.Lock()
+		ri.committed = max(ri.committed, i+1)
+		ri.mu.Unlock()
+	}
 	st.idMu.Lock()
 	if i >= st.next {
 		st.next = i + 1
@@ -563,8 +580,9 @@ func (st *BlockState) Skip(i int) {
 	st.idMu.Unlock()
 }
 
-// apply writes the changes of a view into the state. The caller holds the lock of the state.
-func (st *BlockState) apply(v *TxView) {
+// apply writes the changes of a view into the state, and appends them to touches unless nil.
+// The caller holds the lock of the state.
+func (st *BlockState) apply(v *TxView, touches *[]touch) {
 	changed := false
 	for _, name := range v.order {
 		vt := v.own[name]
@@ -626,6 +644,9 @@ func (st *BlockState) apply(v *TxView) {
 				}
 			}
 			ts.addEvent(stateEvent{seq: st.seq, old: c.old, new: c.new}, c.pk)
+			if touches != nil {
+				*touches = append(*touches, touch{ts: ts, pk: c.pk, old: c.old, new: c.new})
+			}
 			if ts.maxLoaded {
 				st.idMu.Lock()
 				oldID, hadOld := ts.rowID(c.old)
