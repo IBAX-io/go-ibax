@@ -21,6 +21,9 @@ type txstatusError struct {
 	Type  string `json:"type,omitempty"`
 	Error string `json:"error,omitempty"`
 	Id    string `json:"id,omitempty"`
+	// Retryable tells the node refused the transaction for the room of its pool: the same
+	// transaction sent to it again once a block takes some of its pool goes in
+	Retryable bool `json:"retryable,omitempty"`
 }
 
 type txstatusResult struct {
@@ -55,6 +58,9 @@ func getTxStatus(r *http.Request, hash string) (*txstatusResult, error) {
 					Type:  "txError",
 					Error: ts.Error,
 				}
+			}
+			if status.Message != nil {
+				status.Message.Retryable = ts.Retry
 			}
 		}
 	}

@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"maps"
 	"runtime"
 	"slices"
 	"sync"
@@ -114,6 +115,8 @@ func runStep(c *chainClient, w workload, rate, total int, cfg runConfig, seq *in
 	before := scrapeAll(cfg.metrics)
 
 	sentAt := make([]time.Time, total)
+	// to is the node each was sent to, which alone tells why it refused one
+	to := make([]int, total)
 	unsent := make([]bool, total)
 	var unsentMu sync.Mutex
 	failures := map[string]int{}
@@ -147,14 +150,14 @@ func runStep(c *chainClient, w workload, rate, total int, cfg runConfig, seq *in
 		<-tick.C
 		due := min(total, int(float64(rate)*time.Since(start).Seconds()))
 		for next < due {
-			to := min(due, next+cfg.batch)
+			end := min(due, next+cfg.batch)
 			now := time.Now()
-			for j := next; j < to; j++ {
-				sentAt[j] = now
+			for j := next; j < end; j++ {
+				sentAt[j], to[j] = now, turn%len(queues)
 			}
-			queues[turn%len(queues)] <- batch{next, to}
+			queues[turn%len(queues)] <- batch{next, end}
 			turn++
-			next = to
+			next = end
 		}
 	}
 	tick.Stop()
@@ -218,15 +221,22 @@ func runStep(c *chainClient, w workload, rate, total int, cfg runConfig, seq *in
 		s.TPS = float64(s.InAll) / s.Seconds
 	}
 
-	// The status of each tells those that failed in their block, and why those in none are not
-	statuses := map[string]*txStatus{}
-	for i := 0; i < len(hashes); i += 1000 {
-		part, err := c.nodes[0].statuses(hashes[i:min(i+1000, len(hashes))])
-		if err != nil {
-			return nil, err
+	// The status of each, at the node it was sent to, tells those that failed in their block, and
+	// why those in none are not
+	byNode := make([][]string, len(c.nodes))
+	for j, tx := range txs {
+		if !unsent[j] {
+			byNode[to[j]] = append(byNode[to[j]], tx.hash)
 		}
-		for h, st := range part {
-			statuses[h] = st
+	}
+	statuses := map[string]*txStatus{}
+	for k, n := range c.nodes {
+		for i := 0; i < len(byNode[k]); i += 1000 {
+			part, err := n.statuses(byNode[k][i:min(i+1000, len(byNode[k]))])
+			if err != nil {
+				return nil, err
+			}
+			maps.Copy(statuses, part)
 		}
 	}
 	for _, h := range hashes {

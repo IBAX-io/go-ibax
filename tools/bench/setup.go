@@ -9,9 +9,14 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"os"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 
 	"github.com/shopspring/decimal"
 )
@@ -245,7 +250,8 @@ func (c *chainClient) contractIDs(names ...string) (map[string]int, error) {
 }
 
 // run sends the transactions of a step of setup, batch at a time to the nodes in turn, and waits
-// until each succeeded in a block; it fails on the first that failed
+// until each succeeded in a block; it fails on the first that failed. A transaction a node refused
+// for the room of its pool goes to it again after its next block.
 func (c *chainClient) run(step string, txs []*signedTx, batch int, timeout time.Duration) error {
 	_, err := c.runFor(step, txs, batch, timeout)
 	return err
@@ -254,16 +260,15 @@ func (c *chainClient) run(step string, txs []*signedTx, batch int, timeout time.
 // runFor is run that tells the results of the contracts of the transactions, by their hashes
 func (c *chainClient) runFor(step string, txs []*signedTx, batch int, timeout time.Duration) (map[string]string, error) {
 	start := time.Now()
+	outs := make([]*outbox, len(c.nodes))
+	for i, n := range c.nodes {
+		outs[i] = newOutbox(n)
+	}
 	for i := 0; i < len(txs); i += batch {
-		if err := c.nodes[(i/batch)%len(c.nodes)].send(txs[i:min(i+batch, len(txs))]); err != nil {
-			return nil, fmt.Errorf("%s: %w", step, err)
-		}
+		o := outs[(i/batch)%len(outs)]
+		o.queue = append(o.queue, txs[i:min(i+batch, len(txs))])
 	}
-	hashes := make([]string, len(txs))
-	for i, tx := range txs {
-		hashes[i] = tx.hash
-	}
-	results, failed, pending, err := c.await(hashes, timeout)
+	results, failed, pending, err := c.await(outs, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", step, err)
 	}
@@ -273,39 +278,140 @@ func (c *chainClient) runFor(step string, txs []*signedTx, batch int, timeout ti
 	if len(pending) > 0 {
 		return nil, fmt.Errorf("%s: %d of %d in no block after %s", step, len(pending), len(txs), timeout)
 	}
-	log.Printf("%s: %d in blocks in %.1fs", step, len(txs), time.Since(start).Seconds())
+	resent := 0
+	for _, o := range outs {
+		resent += o.resent
+	}
+	if resent > 0 {
+		log.Printf("%s: %d in blocks in %.1fs, %d sent again after the pool of their node refused them for its room", step, len(txs), time.Since(start).Seconds(), resent)
+	} else {
+		log.Printf("%s: %d in blocks in %.1fs", step, len(txs), time.Since(start).Seconds())
+	}
 	return results, nil
 }
 
-// await asks the first node the status of the transactions until each succeeded in a block or
-// failed, or the time runs out: it tells the results of those that succeeded, those that failed
-// and why, and those still pending
-func (c *chainClient) await(hashes []string, timeout time.Duration) (results, failed map[string]string, pending []string, err error) {
+// outbox are the transactions of a step for a node: the batches to send it, and those sent, whose
+// status the node tells, as a node keeps the refusals of its pool to itself. A batch the pool had
+// no room for, and a transaction it refused for its room, go to the node again once a block past
+// the last when they were sent takes some of the pool: the pool held the transactions that took
+// the room, which that block takes, so it comes.
+type outbox struct {
+	n     *node
+	queue [][]*signedTx
+	// sent are those sent, and the last block of the node then
+	sent   map[string]*signedTx
+	at     map[string]int64
+	after  int64 // the queue waits for a block of the node past after, if not -1
+	retry  []*signedTx
+	resent int
+}
+
+func newOutbox(n *node) *outbox {
+	return &outbox{n: n, sent: map[string]*signedTx{}, at: map[string]int64{}, after: -1}
+}
+
+// poolFull tells the node refused a request for the room of its pool
+func poolFull(err error) bool {
+	return err != nil && strings.Contains(err.Error(), transaction.ErrPoolFull.Error())
+}
+
+// flush sends the queue to the node, once a block is past the one it waits for
+func (o *outbox) flush() error {
+	if len(o.queue) == 0 {
+		return nil
+	}
+	last, err := o.n.maxBlock()
+	if err != nil || last <= o.after {
+		return err
+	}
+	o.after = -1
+	for len(o.queue) > 0 {
+		b := o.queue[0]
+		if err := o.n.send(b); poolFull(err) {
+			o.after = last
+			return nil
+		} else if err != nil {
+			return err
+		}
+		for _, tx := range b {
+			o.sent[tx.hash], o.at[tx.hash] = tx, last
+		}
+		o.queue = o.queue[1:]
+	}
+	return nil
+}
+
+// again keeps the transaction sent, refused for the room of the pool, to send again
+func (o *outbox) again(h string) {
+	o.retry = append(o.retry, o.sent[h])
+	o.after = max(o.after, o.at[h])
+}
+
+// requeue queues those to send again as a batch
+func (o *outbox) requeue() {
+	if len(o.retry) > 0 {
+		o.queue = append(o.queue, o.retry)
+		o.resent += len(o.retry)
+		o.retry = nil
+	}
+}
+
+// await sends the queues of the outboxes and asks each node the status of the transactions it was
+// sent until each succeeded in a block or failed, or the time runs out: it tells the results of
+// those that succeeded, those that failed and why, and those still pending. A transaction a pool
+// refused for its room is sent again, the others refused failed.
+func (c *chainClient) await(outs []*outbox, timeout time.Duration) (results, failed map[string]string, pending []string, err error) {
 	results, failed = map[string]string{}, map[string]string{}
-	pending = hashes
 	deadline := time.Now().Add(timeout)
-	for len(pending) > 0 && time.Now().Before(deadline) {
-		time.Sleep(500 * time.Millisecond)
-		var still []string
-		for i := 0; i < len(pending); i += 1000 {
-			part := pending[i:min(i+1000, len(pending))]
-			statuses, err := c.nodes[0].statuses(part)
-			if err != nil {
-				return nil, nil, nil, err
-			}
-			for _, h := range part {
-				s := statuses[h]
-				switch {
-				case s == nil || !s.done():
-					still = append(still, h)
-				case s.failure() != "":
-					failed[h] = s.failure()
-				default:
-					results[h] = s.Result
-				}
+	busy := func() bool {
+		for _, o := range outs {
+			if len(o.queue) > 0 || len(o.sent) > 0 {
+				return true
 			}
 		}
-		pending = still
+		return false
+	}
+	for busy() && time.Now().Before(deadline) {
+		for _, o := range outs {
+			if err := o.flush(); err != nil {
+				return nil, nil, nil, err
+			}
+		}
+		time.Sleep(500 * time.Millisecond)
+		for _, o := range outs {
+			hashes := slices.Collect(maps.Keys(o.sent))
+			for i := 0; i < len(hashes); i += 1000 {
+				part := hashes[i:min(i+1000, len(hashes))]
+				statuses, err := o.n.statuses(part)
+				if err != nil {
+					return nil, nil, nil, err
+				}
+				for _, h := range part {
+					s := statuses[h]
+					switch {
+					case s == nil || !s.done():
+						continue
+					case s.retry():
+						o.again(h)
+					case s.failure() != "":
+						failed[h] = s.failure()
+					default:
+						results[h] = s.Result
+					}
+					delete(o.sent, h)
+					delete(o.at, h)
+				}
+			}
+			o.requeue()
+		}
+	}
+	for _, o := range outs {
+		pending = append(pending, slices.Collect(maps.Keys(o.sent))...)
+		for _, b := range o.queue {
+			for _, tx := range b {
+				pending = append(pending, tx.hash)
+			}
+		}
 	}
 	return results, failed, pending, nil
 }
