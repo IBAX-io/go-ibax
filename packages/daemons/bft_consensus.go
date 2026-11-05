@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"sync"
 	"time"
 
@@ -53,7 +54,14 @@ const (
 	// bftEvents is the messages and timeouts waiting for the driver; past it a message is
 	// dropped from the queue, the resends make up for it
 	bftEvents = 4096
+	// bftReceived is the frames of transactions of the other nodes waiting for the pool; past it
+	// a frame is dropped, the proposers give the bodies of their blocks
+	bftReceived = 64
 )
+
+// bftNext is the event of a height a commit moved to: the machine starts it at once if there is
+// work, not at the next tick, which would hold a chain under load to a block a tick
+type bftNext struct{}
 
 var bftStart sync.Once
 
@@ -74,7 +82,8 @@ type bftDriver struct {
 	logger    *log.Entry
 	networkID uint64
 	svc       *bftnet.Service
-	events    chan any // *bft.Proposal, *bft.Vote, bft.Timeout
+	events    chan any // *bft.Proposal, *bft.Vote, bft.Timeout, bftNext
+	received  chan [][]byte
 
 	mu   sync.Mutex // guards pool, which the handler of the service also uses
 	pool *bft.Pool
@@ -111,6 +120,7 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 		logger:    logger.WithFields(log.Fields{"consensus": "bft"}),
 		networkID: uint64(conf.Config.LocalConf.NetworkID),
 		events:    make(chan any, bftEvents),
+		received:  make(chan [][]byte, bftReceived),
 		bodies:    newBftBodies(),
 	}
 	cfg := bftnet.DefaultConfig
@@ -156,6 +166,7 @@ func (d *bftDriver) run() {
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Fatal("starting the consensus")
 	}
+	go d.receiveTxs()
 	bftnet.Register(d.svc)
 	defer func() {
 		bftnet.Register(nil)
@@ -355,12 +366,17 @@ func (d *bftDriver) event(e any) {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the height")
 		return
 	}
-	if t, ok := e.(bft.Timeout); ok {
-		d.countTimeout(t)
-		d.apply(d.m.OnTimeout(t))
-		return
+	switch e := e.(type) {
+	case bft.Timeout:
+		d.countTimeout(e)
+		d.apply(d.m.OnTimeout(e))
+	case bftNext:
+		if !d.m.Decided() && d.hasWork() {
+			d.apply(d.m.Start())
+		}
+	default:
+		d.give(e)
 	}
-	d.give(e)
 }
 
 func (d *bftDriver) tick() {
@@ -498,7 +514,11 @@ func (d *bftDriver) commit(c *bft.Commit) {
 	}
 	if err := d.syncHeight(); err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the next height")
+		return
 	}
+	// posted, not started here: a machine of one validator decides in Start, and its commit would
+	// start the next height within this one
+	d.post(bftNext{})
 }
 
 // commitDecision commits the block of the decision under DBLock if the last block is below its
@@ -662,6 +682,33 @@ func (d *bftDriver) Vote(v *bft.Vote) bool {
 	return true
 }
 
+// Txs is bftnet.Handler.Txs: the pool takes the transactions apart from the stream, which carries
+// the votes too
+func (d *bftDriver) Txs(bodies [][]byte) {
+	select {
+	case d.received <- bodies:
+	default:
+		bftmon.Count(bftmon.TxFramesDropped)
+	}
+}
+
+// receiveTxs puts the transactions of the other nodes in the pool as sent: each node sends its
+// own to all the others
+func (d *bftDriver) receiveTxs() {
+	for {
+		select {
+		case <-d.ctx.Done():
+			return
+		case bodies := <-d.received:
+			maxSize := syspar.GetMaxTxSize()
+			bodies = slices.DeleteFunc(bodies, func(b []byte) bool { return int64(len(b)) > maxSize })
+			if err := transaction.TxPool.Receive(bodies, true); err != nil {
+				d.logger.WithFields(log.Fields{"type": consts.ProtocolError, "error": err}).Warn("taking the transactions of a node")
+			}
+		}
+	}
+}
+
 // Evidence is bftnet.Handler.Evidence
 func (d *bftDriver) Evidence(body []byte) bool { return d.takeEvidence(body) }
 
@@ -710,7 +757,7 @@ func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
 		return nil, bft.Hash{}, err
 	}
 	start := time.Now()
-	if wait := time.Unix(prev.Time+1, 0).Sub(faults.Now()); wait > 0 {
+	if wait := faults.Until(time.Unix(prev.Time+1, 0)); wait > 0 {
 		time.Sleep(min(wait, maxTimeWait))
 	}
 	waited := time.Since(start)
@@ -838,7 +885,10 @@ func (a bftApp) Valid(height uint64, hash bft.Hash, bin []byte) bool {
 
 // Timely is block.Timely at the time the node took the proposal
 func (a bftApp) Timely(p *bft.Proposal) bool {
+	// the bounds are of what takes the system clock, the making and the way of the proposal; the
+	// times of the block and of its receipt are of the clock of the node
 	ahead, behind := syspar.GetBftTimeliness(p.Round)
+	ahead, behind = faults.Span(ahead), faults.Span(behind)
 	err := block.Timely(p.Block, p.Received, ahead, behind)
 	if err != nil {
 		a.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": p.Height, "round": p.Round}).Warn("an untimely proposal")

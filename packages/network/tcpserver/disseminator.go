@@ -229,5 +229,5 @@ func saveNewTransactions(binaryTxs []byte) error {
 
 		datas = append(datas, txBinData)
 	}
-	return transaction.TxPool.Receive(datas)
+	return transaction.TxPool.Receive(datas, false)
 }

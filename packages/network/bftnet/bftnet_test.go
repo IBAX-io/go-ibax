@@ -11,6 +11,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -33,6 +34,7 @@ type testHandler struct {
 	asked   []uint64          // the heights of the transactions asked
 	rounds  []uint32          // the rounds of the transactions asked
 	batches []*bft.Batch
+	bodies  [][][]byte // the transactions of each frame taken
 }
 
 func newTestHandler() *testHandler { return &testHandler{seen: map[string]bool{}} }
@@ -102,6 +104,18 @@ func (h *testHandler) Batch(b *bft.Batch) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.batches = append(h.batches, b)
+}
+
+func (h *testHandler) Txs(bodies [][]byte) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.bodies = append(h.bodies, bodies)
+}
+
+func (h *testHandler) txFrames() [][][]byte {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return slices.Clone(h.bodies)
 }
 
 func (h *testHandler) batchCount() int {
@@ -181,11 +195,12 @@ func TestReadFrame(t *testing.T) {
 		kind uint8
 		size int64
 	}{
-		{0, 1}, {5, 1},
+		{0, 1}, {6, 1},
 		{FrameVote, maxPayload(FrameVote, 1000) + 1},
 		{FrameProposal, maxPayload(FrameProposal, 1000) + 1},
 		{FrameEvidence, maxPayload(FrameEvidence, 1000) + 1},
 		{FrameBatch, maxPayload(FrameBatch, 1000) + 1},
+		{FrameTxs, maxPayload(FrameTxs, 1000) + 1},
 	} {
 		head := []byte{c.kind}
 		head = binary.BigEndian.AppendUint32(head, uint32(c.size))
@@ -194,7 +209,7 @@ func TestReadFrame(t *testing.T) {
 			t.Fatalf("kind %d of %d bytes: %v", c.kind, c.size, err)
 		}
 	}
-	for _, kind := range []uint8{FrameProposal, FrameVote, FrameEvidence, FrameBatch} {
+	for _, kind := range []uint8{FrameProposal, FrameVote, FrameEvidence, FrameBatch, FrameTxs} {
 		max := maxPayload(kind, 1000)
 		frame := AppendFrame(nil, kind, make([]byte, max))
 		if _, _, err := ReadFrame(bytes.NewReader(frame), 1000); err != nil {

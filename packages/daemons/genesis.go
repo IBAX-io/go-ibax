@@ -26,6 +26,8 @@ func InitialLoad(logger *log.Entry) error {
 
 	if toLoad {
 		logger.Debug("start first block loading")
+		// the state outside the database before block 1, which a join replaces with its own
+		restore := block.KeepMemState()
 
 		if err := firstLoad(logger); err != nil {
 			logger.WithError(err).Error("cant load first block form file or host")
@@ -35,7 +37,10 @@ func InitialLoad(logger *log.Entry) error {
 		if err := sqldb.UpdateSchema(); err != nil {
 			return err
 		}
-		return nil
+		DBLock()
+		defer DBUnlock()
+		_, err := joinFromSnapshot(context.Background(), logger, restore)
+		return err
 	}
 
 	// The chain was loaded on an earlier start: the node's suite must still be the chain's

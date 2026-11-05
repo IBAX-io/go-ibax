@@ -7,11 +7,13 @@ package block
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -36,6 +38,12 @@ type memState struct {
 
 func takeMemState() memState {
 	return memState{vm: script.GetVM().Snapshot(), lang: language.TakeSnapshot()}
+}
+
+// KeepMemState takes the state outside the database that executing blocks changes and returns
+// what puts it back, the platform parameters and the column types read again from the database
+func KeepMemState() func() error {
+	return takeMemState().restore
 }
 
 func (m memState) restore() error {
@@ -182,7 +190,7 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 	c := &sqldb.BftCertificate{Height: b.Header.BlockId, Round: int64(cert.Round), Hash: cert.Hash[:], Data: cert.Marshal()}
 	err = c.Create(t.dbTx)
 	if err == nil && syspar.IsBftConsensus() {
-		err = storeValidators(t.dbTx, b.Header.BlockId+1)
+		err = b.storeValidators(t.dbTx)
 	}
 	if err != nil {
 		t.dbTx.Rollback()
@@ -191,6 +199,7 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 	if err := t.dbTx.Commit(); err != nil {
 		return nil, true, err
 	}
+	states.afterCommit(b.Header.BlockId)
 	if err := t.mem.restore(); err != nil {
 		return nil, true, err
 	}
@@ -241,6 +250,46 @@ func Certify(binData []byte, cert *bft.Certificate) (*Block, error) {
 	if err := b.checkContent(); err != nil {
 		return nil, err
 	}
+	return b, nil
+}
+
+// VerifyCertified checks, of a block as a peer sends it, that the certificate commits it and
+// verifies by the validators set, without the database: the block carries the header of the block
+// it follows, whose hashes its hash takes, so the certificate commits the header it carries too.
+// It returns the block, its transactions as written.
+func VerifyCertified(raw []byte, cert *bft.Certificate, set bft.Validators, networkID uint64) (*types.BlockData, error) {
+	b := &types.BlockData{}
+	if err := proto.Unmarshal(raw, b); err != nil {
+		return nil, fmt.Errorf("parsing the block: %w", err)
+	}
+	if b.Header == nil || b.PrevHeader == nil {
+		return nil, errors.New("a block without its header or the header of the block before")
+	}
+	height := b.Header.BlockId
+	if uint64(height) != cert.Height || b.PrevHeader.BlockId != height-1 {
+		return nil, fmt.Errorf("the certificate of height %d commits no block %d after %d", cert.Height, height, b.PrevHeader.BlockId)
+	}
+	if b.Header.Version < consts.BvValidatorsHash {
+		return nil, fmt.Errorf("block %d: version %d, without the validators hash", height, b.Header.Version)
+	}
+	merkle := b.GenMerkleRoot()
+	if !bytes.Equal(merkle, b.MerkleRoot) {
+		return nil, fmt.Errorf("block %d: the merkle root is not that of its transactions", height)
+	}
+	if !bytes.Equal(b.Header.GenHash(b.PrevHeader, merkle), b.Header.BlockHash) {
+		return nil, fmt.Errorf("block %d: the hash is not that of its content", height)
+	}
+	hash, err := bft.HashOf(b.Header.BlockHash)
+	if err != nil {
+		return nil, err
+	}
+	if hash != cert.Hash {
+		return nil, fmt.Errorf("the certificate of height %d commits another block than %x", height, b.Header.BlockHash)
+	}
+	if err := cert.Verify(set, networkID, cert.Height, cert.Hash); err != nil {
+		return nil, fmt.Errorf("the certificate of height %d: %w", height, err)
+	}
+	b.BinData = raw
 	return b, nil
 }
 
@@ -392,15 +441,99 @@ func Timely(binData []byte, received time.Time, ahead, behind time.Duration) err
 	return nil
 }
 
-// storeValidators writes, in the transaction of block height−1, the validators set of height if
-// it is not the set before: the nodes of honor_nodes in their order, but the stopped ones and
-// those an evidence keeps out of height (design 4.5)
-func storeValidators(dbTx *sqldb.DbTransaction, height int64) error {
-	set, err := smart.BftValidatorsOf(dbTx, height)
+// validatorsHash takes, on a chain of the BFT consensus, the validators set of the next height
+// as the execution of the block leaves it (design 4.1): a generated block puts its hash in its
+// header, and a block of another node is valid only if its header has the hash. Block 1 carries
+// no hash, the set it leaves is that of the honor_nodes it writes. It checks the state hash too.
+func (b *Block) validatorsHash(dbTx *sqldb.DbTransaction) error {
+	b.nextValidators = nil
+	if !syspar.IsBftConsensus() {
+		return nil
+	}
+	set, err := smart.BftValidatorsOf(dbTx, b.Header.BlockId+1)
 	if err != nil {
 		return err
 	}
-	data := set.Marshal()
+	b.nextValidators = set.Marshal()
+	if b.IsGenesis() {
+		return nil
+	}
+	hash := crypto.Hash(b.nextValidators)
+	if b.GenBlock {
+		b.Header.NextValidatorsHash = hash
+		return b.putStateHash()
+	}
+	if !bytes.Equal(b.Header.NextValidatorsHash, hash) {
+		return fmt.Errorf("block %d: the validators hash %x is not %x, the hash of the set it leaves", b.Header.BlockId, b.Header.NextValidatorsHash, hash)
+	}
+	return b.checkStateHash()
+}
+
+// putStateHash puts in the header of a generated block the state hash it carries (design 4.3):
+// at the delay after a snapshot height, the hash of the snapshot if the node has it, else none
+func (b *Block) putStateHash() error {
+	b.Header.StateHash = nil
+	s := stateHeight(b.Header.BlockId)
+	if s == 0 {
+		return nil
+	}
+	hash, status, err := states.get(s)
+	if err != nil {
+		return err
+	}
+	if status == stateDone {
+		b.Header.StateHash = hash
+	}
+	return nil
+}
+
+// checkStateHash checks the state hash of the block of another node (design 4.3). A block may
+// carry none: a proposer without the hash, after a restart that lost its snapshot, proposes
+// without it, so that the chain goes on whatever the nodes lost. A block carries one only at the
+// delay after a snapshot height, the hash of the snapshot. A validator prevotes a proposal with
+// the hash only if it has the hash and it is the same; it commits a block a certificate commits,
+// whose hash more than two thirds of the validators prevoted, once it has hashed the snapshot,
+// if it is the same, and if the node lost the snapshot, as it is. A node whose state hash is not
+// the one the chain committed stops at the block.
+func (b *Block) checkStateHash() error {
+	if len(b.Header.StateHash) == 0 {
+		return nil
+	}
+	s := stateHeight(b.Header.BlockId)
+	if s == 0 {
+		return fmt.Errorf("block %d: a state hash at a height without a snapshot", b.Header.BlockId)
+	}
+	get := states.wait
+	if b.trial {
+		get = states.get
+	}
+	hash, status, err := get(s)
+	if err != nil {
+		return err
+	}
+	switch {
+	case status == stateDone && !bytes.Equal(hash, b.Header.StateHash):
+		return fmt.Errorf("block %d: the state hash %x of height %d is not %x, the hash of the state of this node", b.Header.BlockId, b.Header.StateHash, s, hash)
+	case status != stateDone && b.trial:
+		return fmt.Errorf("block %d: this node has no state hash of height %d yet", b.Header.BlockId, s)
+	}
+	return nil
+}
+
+// storeValidators writes, in the transaction of the block, the validators set of the next height
+// if it is not the set before: the nodes of honor_nodes in their order, but the stopped ones and
+// those an evidence keeps out of the height (design 4.5)
+func (b *Block) storeValidators(dbTx *sqldb.DbTransaction) error {
+	height := b.Header.BlockId + 1
+	data := b.nextValidators
+	if data == nil {
+		// block 1 makes the chain one of the BFT consensus as it inserts it
+		set, err := smart.BftValidatorsOf(dbTx, height)
+		if err != nil {
+			return err
+		}
+		data = set.Marshal()
+	}
 	last := &sqldb.BftValidatorSet{}
 	found, err := last.GetAt(dbTx, height)
 	if err != nil {

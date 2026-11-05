@@ -73,7 +73,8 @@ func retentionDB(t *testing.T) *DbTransaction {
 	tx := testDB(t)
 	for _, table := range []string{"block_chain", "confirmations", "bft_certificates", "rollback_tx", "1_history",
 		"log_transactions", "spent_info", "retired_partitions", "log_transaction_ranges", "partition_id_floors",
-		"retention_state", "log_transaction_counts", "stop_network_txs"} {
+		"retention_state", "log_transaction_counts", "stop_network_txs", "bft_validator_sets", "bft_set_proofs",
+		"snapshot_joins"} {
 		require.NoError(t, tx.Exec(`DELETE FROM "`+table+`"`).Error)
 	}
 	return NewDbTransaction(tx)

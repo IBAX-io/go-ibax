@@ -108,6 +108,9 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		return err
 	}
 	rHash := b.rollbacksHash
+	if err = b.validatorsHash(dbTx); err != nil {
+		return err
+	}
 	if b.GenBlock {
 		b.Header.RollbacksHash = rHash
 		if err = b.repeatMarshallBlock(); err != nil {

@@ -300,6 +300,9 @@ func CheckFirstBlockConsensus(data *types.FirstBlock) error {
 		if len(data.HonorNodes) > 0 {
 			return errors.New("the first block names the honor nodes only on a chain of the BFT consensus")
 		}
+		if data.SnapshotInterval != 0 || data.SnapshotDelay != 0 {
+			return errors.New("the first block sets the snapshots only on a chain of the BFT consensus")
+		}
 		return nil
 	case 1:
 	default:
@@ -307,6 +310,16 @@ func CheckFirstBlockConsensus(data *types.FirstBlock) error {
 	}
 	if data.HonorNodesOnly != 1 {
 		return errors.New("a chain of the BFT consensus is a chain of the honor nodes only")
+	}
+	// a snapshot is of the block of a boundary of the retention, which changes the partitions of
+	// the tables, and is hashed before the next boundary
+	if data.SnapshotInterval == 0 || data.SnapshotInterval%migration.PartitionBlocks != 0 {
+		return fmt.Errorf("the snapshots every %d heights: the interval is a multiple of %d, the blocks of a partition",
+			data.SnapshotInterval, migration.PartitionBlocks)
+	}
+	if data.SnapshotDelay < 1 || data.SnapshotDelay >= migration.PartitionBlocks {
+		return fmt.Errorf("the state hash %d heights after its snapshot: the delay is at least 1 and below %d, the blocks of a partition",
+			data.SnapshotDelay, migration.PartitionBlocks)
 	}
 	var nodes []*syspar.HonorNode
 	if err := json.Unmarshal([]byte(data.HonorNodes), &nodes); err != nil {

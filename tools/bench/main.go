@@ -82,6 +82,7 @@ func main() {
 	metrics := fs.String("metrics", "", "URLs of the /metrics of the nodes, comma-separated")
 	out := fs.String("out", "bench-results", "directory of the reports")
 	label := fs.String("label", "", "text the report starts with: the build, the machine, the network")
+	txTime := fs.Int64("time", 0, "the Unix time of the headers of the transactions (default now): on a test chain of a fast clock (faults.Config.ClockSpeed), its time, which the blocks are of")
 
 	bundle := fs.String("bundle", "", "contracts.json of iSwap, which iswap imports")
 	iswapState := fs.String("iswap", "iswap.json", "file of what iswap made, which the iswap-* workloads read")
@@ -102,6 +103,9 @@ func main() {
 	c, err := connect(splitList(*nodes), *keyFile, *keyAlgo)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if *txTime > 0 {
+		c.signer.time = *txTime
 	}
 	log.Printf("network %d of %d nodes: node keys %s, hash %s", c.info.NetworkID, len(c.nodes), c.info.Cryptoer, c.info.Hasher)
 

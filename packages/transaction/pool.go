@@ -20,6 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -238,7 +239,10 @@ func (p *Pool) Raw(hashes [][]byte) [][]byte {
 // Admit puts the transactions in the pool once Check takes them, each error at the index of its
 // transaction. A transaction the pool holds is taken again as it is. A transaction Check refuses
 // is bad; take refuses the others it has no room or no funds for.
-func (p *Pool) Admit(txs []*Transaction, rate Rate) []error {
+func (p *Pool) Admit(txs []*Transaction, rate Rate) []error { return p.admit(txs, rate, false) }
+
+// admit is Admit; sent marks the transactions it takes as sent to the other nodes
+func (p *Pool) admit(txs []*Transaction, rate Rate, sent bool) []error {
 	errs := make([]error, len(txs))
 	fresh := make([]*Transaction, 0, len(txs))
 	index := make([]int, 0, len(txs))
@@ -250,7 +254,8 @@ func (p *Pool) Admit(txs []*Transaction, rate Rate) []error {
 		}
 	}
 	p.mu.Unlock()
-	now := time.Now().Unix()
+	// the window of the signed times is of the clock of the node, as the times of its blocks
+	now := faults.Now().Unix()
 	checked := CheckBatch(fresh, now)
 	fund, l := make([]*funds, len(fresh)), newBatchLedger()
 	for j, t := range fresh {
@@ -278,6 +283,9 @@ func (p *Pool) Admit(txs []*Transaction, rate Rate) []error {
 			continue
 		}
 		errs[i] = p.take(t, rate, now, fund[j])
+		if errs[i] == nil && sent {
+			p.markSent(h)
+		}
 	}
 	p.gauge()
 	return errs
@@ -563,10 +571,14 @@ func (p *Pool) MarkSent(hashes [][]byte) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for _, h := range hashes {
-		if e, ok := p.entries[string(h)]; ok && !e.sent {
-			e.sent = true
-			p.unsent.Delete(e)
-		}
+		p.markSent(string(h))
+	}
+}
+
+func (p *Pool) markSent(h string) {
+	if e, ok := p.entries[h]; ok && !e.sent {
+		e.sent = true
+		p.unsent.Delete(e)
 	}
 }
 
@@ -644,8 +656,9 @@ func (p *Pool) Status(hash []byte) (pending bool, badMsg string, found bool) {
 
 // Receive parses the transactions another node sent, verifies them in parallel and puts them in
 // the pool. It refuses the packet at the first transaction that does not parse or verify; one the
-// pool refuses is left out.
-func (p *Pool) Receive(datas [][]byte) error {
+// pool refuses is left out. sent marks those it takes as sent: the node they came from sends its
+// transactions to every other node itself, so this node relays none of them.
+func (p *Pool) Receive(datas [][]byte, sent bool) error {
 	txs := make([]*Transaction, 0, len(datas))
 	for _, data := range datas {
 		tx := &Transaction{}
@@ -661,7 +674,7 @@ func (p *Pool) Receive(datas [][]byte) error {
 			return err
 		}
 	}
-	for i, err := range p.Admit(txs, RateClient) {
+	for i, err := range p.admit(txs, RateClient, sent) {
 		if err != nil {
 			log.WithFields(log.Fields{"tx_hash": txs[i].Hash(), "error": err}).Debug("a transaction of another node left out")
 		}

@@ -33,13 +33,13 @@ func BlockCollection(request *network.GetBodiesRequest, w net.Conn) error {
 		}
 	}
 	if request.ReverseOrder {
-		blocks, err = block.GetReverseBlockchain(int64(request.BlockID), network.BlocksPerRequest)
+		blocks, err = block.GetReverseBlockchain(int64(request.BlockID), network.ReverseBlocksPerRequest)
 	} else {
-		blocks, err = block.GetBlocksFrom(int64(request.BlockID-1), "ASC", network.BlocksPerRequest)
+		blocks, err = block.GetBlocksWithin(int64(request.BlockID-1), network.BlocksPerRequest, network.BlocksBytesPerRequest)
 	}
 
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "block_id": request.BlockID}).Error("Error getting 1000 blocks from block_id")
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err, "block_id": request.BlockID}).Error("getting the blocks from block_id")
 		if err := network.WriteInt(0, w); err != nil {
 			log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on sending 0 requested blocks")
 		}

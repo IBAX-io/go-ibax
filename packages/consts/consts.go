@@ -17,8 +17,12 @@ const VERSION = "1.4.3"
 const BvRollbackHash = 2
 const BvIncludeRollbackHash = 3
 
+// BvValidatorsHash is the block version whose hash takes the hash of the validators set of the
+// next height and the state hash
+const BvValidatorsHash = 4
+
 // BlockVersion is block version
-const BlockVersion = BvIncludeRollbackHash
+const BlockVersion = BvValidatorsHash
 
 // DefaultTcpPort used when port number missed in host addr
 const DefaultTcpPort = 7078

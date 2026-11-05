@@ -36,9 +36,21 @@ const (
 	RequestTypeBftCertificates
 	// RequestTypeBftTransactions fetches the transactions of the block of an F18 proposal
 	RequestTypeBftTransactions
+	// RequestTypeSnapshot fetches the snapshots of the state a node keeps (package snapnet)
+	RequestTypeSnapshot
 
-	// BlocksPerRequest contains count of blocks per request
-	BlocksPerRequest int = 10
+	// BlocksPerRequest is the most blocks a node sends for a request of the blocks after a block
+	BlocksPerRequest int = 1000
+	// BlocksBytesPerRequest is the most bytes of the blocks a node sends for a request of the
+	// blocks after a block, but for the first block, that it sends whatever its length
+	BlocksBytesPerRequest int64 = 16 << 20
+	// ReverseBlocksPerRequest is the most blocks a node sends for a request of the blocks up to a
+	// block, that a node replacing the blocks of a fork reads
+	ReverseBlocksPerRequest int = 10
+	// MaxBlocksBytes bounds the bytes of the blocks of an answer a node takes: the length of a
+	// block is written in 4 bytes of uvarint, so a block has less than 1<<28 bytes, and the blocks
+	// of an answer but the first take at most BlocksBytesPerRequest
+	MaxBlocksBytes int64 = 1 << 28
 )
 
 var ErrNotAccepted = errors.New("Not accepted")

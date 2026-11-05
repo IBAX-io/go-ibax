@@ -49,7 +49,7 @@ func DisseminateTxs(rw io.ReadWriter) error {
 
 		datas = append(datas, tran)
 	}
-	return transaction.TxPool.Receive(datas)
+	return transaction.TxPool.Receive(datas, false)
 }
 
 // DecryptData is decrypting data

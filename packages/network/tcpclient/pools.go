@@ -29,20 +29,21 @@ func init() {
 }
 
 type bytePool struct {
+	mu    sync.Mutex
 	pools map[int64]*sync.Pool
 }
 
 func (p *bytePool) Get(size int64) []byte {
 	power := powerOfTwo(int(size))
-	if pool, ok := p.pools[power]; ok {
-		return pool.Get().([]byte)
+	p.mu.Lock()
+	pool, ok := p.pools[power]
+	if !ok {
+		pool = &sync.Pool{
+			New: func() any { return make([]byte, power) },
+		}
+		p.pools[power] = pool
 	}
-
-	pool := &sync.Pool{
-		New: func() any { return make([]byte, power) },
-	}
-
-	p.pools[power] = pool
+	p.mu.Unlock()
 	return pool.Get().([]byte)
 }
 
@@ -51,7 +52,10 @@ func (p *bytePool) Put(buf []byte) {
 		return
 	}
 
-	if pool, ok := p.pools[int64(len(buf))]; ok {
+	p.mu.Lock()
+	pool, ok := p.pools[int64(len(buf))]
+	p.mu.Unlock()
+	if ok {
 		pool.Put(buf)
 	}
 }

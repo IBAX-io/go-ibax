@@ -31,16 +31,27 @@ const sizeBytesLength = 4
 
 // GetBlocksBodies send GetBodiesRequest returns channel of binary blocks data
 func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrder bool) (<-chan []byte, error) {
+	blocks, _, err := GetBlocksBatch(ctx, host, blockID, reverseOrder)
+	return blocks, err
+}
+
+// GetBlocksBatch asks host for the blocks after the block blockID, or up to it in reverse order,
+// and returns the channel of their binary data with how many blocks the host sends
+func GetBlocksBatch(ctx context.Context, host string, blockID int64, reverseOrder bool) (<-chan []byte, int64, error) {
 	conn, err := newConnection(host)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+	fail := func(err error) (<-chan []byte, int64, error) {
+		conn.Close()
+		return nil, 0, err
 	}
 
 	// send the type of data
 	rt := &network.RequestType{Type: network.RequestTypeBlockCollection}
 	if err = rt.Write(conn); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("writing data type block body to connection")
-		return nil, err
+		return fail(err)
 	}
 
 	req := &network.GetBodiesRequest{
@@ -50,20 +61,23 @@ func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrd
 
 	if err = req.Write(conn); err != nil {
 		log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on sending blocks bodies request")
-		return nil, err
+		return fail(err)
 	}
 
 	blocksCount, err := network.ReadInt(conn)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on getting blocks count")
-		return nil, err
+		return fail(err)
 	}
 
 	if blocksCount == network.BlocksNotKept {
-		return nil, fmt.Errorf("%w: %s, block %d", ErrNotKept, host, blockID)
+		return fail(fmt.Errorf("%w: %s, block %d", ErrNotKept, host, blockID))
 	}
 	if blocksCount == 0 {
-		return nil, fmt.Errorf("host: %s does'nt contains blocks", host)
+		return fail(fmt.Errorf("host: %s does'nt contains blocks", host))
+	}
+	if blocksCount < 0 || blocksCount > int64(network.BlocksPerRequest) {
+		return fail(fmt.Errorf("host: %s sends %d blocks", host, blocksCount))
 	}
 
 	blocksChan, errChan := GetBlockBodiesChan(ctx, conn, blocksCount)
@@ -75,7 +89,7 @@ func GetBlocksBodies(ctx context.Context, host string, blockID int64, reverseOrd
 		}
 	}()
 
-	return blocksChan, nil
+	return blocksChan, blocksCount, nil
 }
 
 func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int64) (<-chan []byte, <-chan error) {
@@ -90,17 +104,26 @@ func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int6
 		BytesPool.Put(bodyBuf)
 	}
 
+	// a context done drops the blocks: the reading stops at once
+	stop := context.AfterFunc(ctx, func() { src.Close() })
 	go func() {
 		defer func() {
+			stop()
 			close(rawBlocksCh)
 			close(errChan)
 			src.Close()
-			go afterBodyProcessed(ctx.Done())
+			if bodyBuf != nil {
+				go afterBodyProcessed(ctx.Done())
+			}
 		}()
 
 		dataSize, err := network.ReadInt(src)
 		if err != nil {
 			errChan <- err
+			return
+		}
+		if dataSize < 0 || dataSize > network.MaxBlocksBytes {
+			errChan <- fmt.Errorf("%w: blocks of %d bytes", ErrorWrongSizeBytes, dataSize)
 			return
 		}
 
@@ -117,7 +140,7 @@ func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int6
 			}
 
 			size, intErr := binary.Uvarint(sizeBuf)
-			if intErr < 0 {
+			if intErr <= 0 || size > uint64(dataSize-bodyStartIndx) {
 				log.WithFields(log.Fields{"type": consts.ConversionError, "error": ErrorWrongSizeBytes}).Error("on convert size body")
 				errChan <- ErrorWrongSizeBytes
 				return

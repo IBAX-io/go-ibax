@@ -16,7 +16,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/network/bftnet"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 
@@ -62,32 +61,34 @@ func updateChainBft(ctx context.Context, d *daemon) error {
 		return nil
 	}
 	d.logger.WithFields(log.Fields{"from": last + 1, "to": maxBlockID, "host": host}).Info("synchronizing by certificates")
-	for h := last + 1; h <= uint64(maxBlockID); {
-		n, err := syncBatch(ctx, host, h)
+	for h := int64(last) + 1; h <= maxBlockID; {
+		n, err := syncCertified(ctx, host, h, maxBlockID)
 		if errors.Is(err, tcpclient.ErrNotKept) {
 			// the blocks are out of the window of the host: a node that keeps them goes on
-			host, n, err = syncFromKeeper(ctx, append(hosts, conf.GetNodesAddr()...), host, h)
+			var m int64
+			host, m, err = syncFromKeeper(ctx, append(hosts, conf.GetNodesAddr()...), host, h+n, maxBlockID)
+			n += m
 		}
 		if err != nil {
-			d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": h + uint64(n), "host": host}).Error("synchronizing")
+			d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": h + n, "host": host}).Error("synchronizing")
 			return err
 		}
-		h += uint64(n)
+		h += n
 	}
 	return nil
 }
 
-// syncFromKeeper commits the blocks from the height from by one of the hosts but skip that keeps
-// them, and returns it with how many it committed
-func syncFromKeeper(ctx context.Context, hosts []string, skip string, from uint64) (string, int, error) {
+// syncFromKeeper commits the blocks from the height from up to the height to at least by one of
+// the hosts but skip that keeps them, and returns it with how many it committed
+func syncFromKeeper(ctx context.Context, hosts []string, skip string, from, to int64) (string, int64, error) {
 	tried := map[string]bool{skip: true}
 	for _, host := range hosts {
 		if tried[host] {
 			continue
 		}
 		tried[host] = true
-		n, err := syncBatch(ctx, host, from)
-		if errors.Is(err, tcpclient.ErrNotKept) {
+		n, err := syncCertified(ctx, host, from, to)
+		if n == 0 && errors.Is(err, tcpclient.ErrNotKept) {
 			continue
 		}
 		return host, n, err
@@ -95,36 +96,22 @@ func syncFromKeeper(ctx context.Context, hosts []string, skip string, from uint6
 	return skip, 0, fmt.Errorf("%w by any node: height %d", tcpclient.ErrNotKept, from)
 }
 
-// syncBatch commits up to bftnet.MaxCertificates blocks from the height from, and returns how many
-func syncBatch(ctx context.Context, host string, from uint64) (int, error) {
-	certs, err := bftnet.FetchCertificates(host, from, bftnet.MaxCertificates, bftFetchTimeout)
-	if err != nil {
-		return 0, err
-	}
-	if len(certs) == 0 {
-		// the host has blocks after it: the height is out of its window
-		return 0, fmt.Errorf("%w: %s has no certificate of height %d", tcpclient.ErrNotKept, host, from)
-	}
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	bodies, err := tcpclient.GetBlocksBodies(ctx, host, int64(from), false)
-	if err != nil {
-		return 0, err
-	}
-	n := 0
-	for raw := range bodies {
-		if n == len(certs) {
-			break
+// syncCertified commits the blocks of host from the height from up to the height to at least,
+// each by its certificate, and returns how many it committed
+func syncCertified(ctx context.Context, host string, from, to int64) (int64, error) {
+	return playBatches(ctx, host, from, to, true, func(b batch) (int64, error) {
+		var n int64
+		for raw := range b.blocks {
+			if n == b.count {
+				break
+			}
+			if err := commitSynced(uint64(b.from+n), b.certs[n], raw); err != nil {
+				return n, err
+			}
+			n++
 		}
-		if err := commitSynced(from+uint64(n), certs[n], raw); err != nil {
-			return n, err
-		}
-		n++
-	}
-	if n == 0 {
-		return 0, fmt.Errorf("%s sent no block of height %d", host, from)
-	}
-	return n, nil
+		return n, nil
+	})
 }
 
 // commitSynced commits a block of a height by its certificate

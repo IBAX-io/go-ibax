@@ -60,11 +60,15 @@ func testHeaders(r *mrand.Rand) (*types.BlockHeader, *types.BlockHeader) {
 	return cur, prev
 }
 
-// marshalTestBlock encodes the block the way the generating node does after play (repeatMarshallBlock)
+// marshalTestBlock encodes the block the way the generating node does after play (repeatMarshallBlock),
+// with the hashes its trial sets at their length, the state hash of a block that confirms a snapshot
+// included
 func marshalTestBlock(t *testing.T, key []byte, cur, prev *types.BlockHeader, txs []testTx, sysUpdate bool) []byte {
 	t.Helper()
 	header := *cur
 	header.RollbacksHash = crypto.Hash([]byte("rollbacks"))
+	header.NextValidatorsHash = crypto.Hash([]byte("validators"))
+	header.StateHash = crypto.Hash([]byte("state"))
 	var fullData [][]byte
 	for _, tx := range txs {
 		fullData = append(fullData, bytes.Clone(tx.fullData))

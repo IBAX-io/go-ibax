@@ -29,6 +29,8 @@ func newBlockSize(limit int64, header, prev *types.BlockHeader) *blockSize {
 	h.Sign = make([]byte, crypto.NodeSignatureSize())
 	h.BlockHash = make([]byte, crypto.HashSize())
 	h.RollbacksHash = make([]byte, crypto.HashSize())
+	h.NextValidatorsHash = make([]byte, crypto.HashSize())
+	h.StateHash = make([]byte, crypto.HashSize())
 	fixed := &types.BlockData{
 		Header:     &h,
 		PrevHeader: prev,

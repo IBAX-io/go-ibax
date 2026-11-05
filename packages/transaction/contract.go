@@ -7,12 +7,12 @@ package transaction
 import (
 	"bytes"
 	"fmt"
-	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/types"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 )
 
@@ -36,7 +36,7 @@ func CreateContract(contractName string, keyID int64, params map[string]any,
 			ID:          int(contract.Info().ID),
 			EcosystemID: ecosysID,
 			KeyID:       keyID,
-			Time:        time.Now().Unix(),
+			Time:        faults.Now().Unix(),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		Params: params,
