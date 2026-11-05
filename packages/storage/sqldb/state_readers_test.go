@@ -6,15 +6,19 @@
 package sqldb
 
 import (
+	"math"
 	"math/rand"
+	"slices"
 	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-// TestReadersWake: a commit wakes exactly the live readers whose reads it changed, as the
-// validation of their reads after it tells, through readers that run again and register anew
+// TestReadersWake: a commit wakes readers whose reads it changed, as the validation of their reads
+// after it tells: those of the rows it changed, by a unique index, by a condition and of the
+// highest id, and of the key of a primary key in the order of the block up to the first that
+// also wrote its row; through readers that run again and register anew
 func TestReadersWake(t *testing.T) {
 	m := &tableMeta{name: "t", byName: make(map[string]*colMeta), pk: []string{"id"},
 		uniques: [][]string{{"id"}, {"eco", "name"}}}
@@ -29,6 +33,7 @@ func TestReadersWake(t *testing.T) {
 	}
 	ts := &tableState{meta: m, uniq: []*smap[string]{new(smap[string])}, uniqIx: []int{1}, hasID: true}
 	ts.resetKeys()
+	ts.maxLoaded, ts.maxKnown = true, true
 
 	rnd := rand.New(rand.NewSource(1))
 	str := func(n int) *string { s := strconv.Itoa(n); return &s }
@@ -44,10 +49,10 @@ func TestReadersWake(t *testing.T) {
 		return &bcond{op: cCmp, col: col, cmp: "=", fam: fam, vals: []*string{v}}
 	}
 	var seq uint64
-	// a view of reads at the seq now: points by the primary key or the unique index, scans by a
-	// condition or of every row, and reads of the highest id
+	// a view of reads at the seq now: points by the primary key, which it may write, or the
+	// unique index, scans by a condition or of every row, and reads of the highest id
 	view := func() *TxView {
-		v := &TxView{start: seq}
+		v := &TxView{start: seq, own: map[string]*viewTable{}}
 		for range 1 + rnd.Intn(3) {
 			switch rnd.Intn(5) {
 			case 0, 1:
@@ -62,6 +67,14 @@ func TestReadersWake(t *testing.T) {
 				require.Equal(t, r.ix, j)
 				r.point, r.key = true, key
 				v.reads = append(v.reads, r)
+				if r.ix < 0 && rnd.Intn(2) == 0 {
+					vt := v.own["t"]
+					if vt == nil {
+						vt = &viewTable{ts: ts, rows: map[string]*vchange{}}
+						v.own["t"] = vt
+					}
+					vt.rows[key] = &vchange{}
+				}
 			case 2:
 				v.reads = append(v.reads, stateRead{ts: ts, seq: seq, cond: eq(3, str(rnd.Intn(3)))})
 			case 3:
@@ -69,7 +82,7 @@ func TestReadersWake(t *testing.T) {
 					v.reads = append(v.reads, stateRead{ts: ts, seq: seq})
 				}
 			case 4:
-				v.ids = append(v.ids, idRead{ts: ts})
+				v.ids = append(v.ids, idRead{ts: ts, own: math.MinInt64, value: ts.max})
 			}
 		}
 		return v
@@ -78,10 +91,14 @@ func TestReadersWake(t *testing.T) {
 	// runs are the views of the last runs of the transactions not committed, gens their runs
 	runs := map[int]*TxView{}
 	gens := map[int]uint32{}
-	// inserts are the seqs of the commits that changed the highest id
-	var inserts []uint64
-	idChanged := func(v *TxView) bool {
-		return len(inserts) > 0 && inserts[len(inserts)-1] > v.start
+	// idStale tells a read of the highest id of the view does not hold, as the validation tells
+	idStale := func(v *TxView) bool {
+		for _, r := range v.ids {
+			if max(ts.max, r.own) != r.value {
+				return true
+			}
+		}
+		return false
 	}
 	changed := func(v *TxView) bool {
 		for i := range v.reads {
@@ -89,10 +106,58 @@ func TestReadersWake(t *testing.T) {
 				return true
 			}
 		}
-		return len(v.ids) > 0 && idChanged(v)
+		return idStale(v)
+	}
+	// expect are the readers the commit of the touches wakes: of a key of the primary key in
+	// their order up to the first that wrote its row, every other reader of what changed
+	expect := func(touches []touch) map[int]bool {
+		want := map[int]bool{}
+		for _, t := range touches {
+			if idChange(ts, t) {
+				for i, v := range runs {
+					if idStale(v) {
+						want[i] = true
+					}
+				}
+			}
+			var keyed []int
+			for i, v := range runs {
+				hit := false
+				for _, rd := range v.reads {
+					switch {
+					case rd.point && rd.ix < 0:
+						if rd.key == t.pk {
+							keyed = append(keyed, i)
+						}
+					case rd.point:
+						for _, row := range []stateRow{t.old, t.new} {
+							if row == nil {
+								continue
+							}
+							if k, ok := m.ukeyOf(ts.uniqIx[rd.ix], row); ok && k == rd.key {
+								hit = true
+							}
+						}
+					default:
+						hit = hit || t.old != nil && rd.cond.matches(t.old) || t.new != nil && rd.cond.matches(t.new)
+					}
+				}
+				if hit {
+					want[i] = true
+				}
+			}
+			slices.Sort(keyed)
+			for _, i := range slices.Compact(keyed) {
+				want[i] = true
+				if runs[i].writes(ts, t.pk) {
+					break
+				}
+			}
+		}
+		return want
 	}
 	cur := make(map[int]stateRow)
-	next, woken, checked := 0, 0, 0
+	next, woken, checked, stale := 0, 0, 0, 0
 	for k := range 3000 {
 		// the workers run ahead of the commit, at most 64 transactions
 		for ; next < k+64; next++ {
@@ -103,8 +168,13 @@ func TestReadersWake(t *testing.T) {
 		delete(runs, k)
 		seq++
 		var touches []touch
+		ids := map[int]bool{}
 		for range 1 + rnd.Intn(3) {
 			id := rnd.Intn(12)
+			if ids[id] {
+				continue
+			}
+			ids[id] = true
 			old := cur[id]
 			var nw stateRow
 			if old == nil || rnd.Intn(4) > 0 {
@@ -117,10 +187,14 @@ func TestReadersWake(t *testing.T) {
 			pk := m.pkOf(stateRow{str(id), nil, nil, nil})
 			ts.addEvent(stateEvent{seq: seq, old: old, new: nw}, pk)
 			touches = append(touches, touch{ts: ts, pk: pk, old: old, new: nw})
-			if old == nil || nw == nil {
-				inserts = append(inserts, seq)
+		}
+		ts.max = 0
+		for id, r := range cur {
+			if r != nil {
+				ts.max = max(ts.max, int64(id))
 			}
 		}
+		want := expect(touches)
 		ri.wake(k, touches)
 		got := map[int]bool{}
 		for _, r := range ri.woken {
@@ -130,10 +204,13 @@ func TestReadersWake(t *testing.T) {
 		}
 		ri.woken = nil
 		for i, v := range runs {
-			want := changed(v)
-			require.Equal(t, want, got[i], "transaction %d after the commit %d", i, k)
-			if want {
+			require.Equal(t, want[i], got[i], "transaction %d after the commit %d", i, k)
+			if got[i] {
+				// a reader woken read what changed
+				require.True(t, changed(v), "transaction %d after the commit %d", i, k)
 				checked++
+			} else if changed(v) {
+				stale++
 			}
 		}
 		// the woken run again, now or after later commits
@@ -149,4 +226,6 @@ func TestReadersWake(t *testing.T) {
 	}
 	require.Greater(t, checked, 2000)
 	require.Equal(t, checked, woken)
+	// readers behind one that wrote the row wait for its commit
+	require.Greater(t, stale, 1000)
 }

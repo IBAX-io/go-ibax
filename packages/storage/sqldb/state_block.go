@@ -551,11 +551,6 @@ func (st *BlockState) Commit(i int, v *TxView) {
 		touches = new([]touch)
 	}
 	st.apply(v, touches)
-	if ri != nil {
-		ri.mu.Lock()
-		ri.wake(i, *touches)
-		ri.mu.Unlock()
-	}
 	st.idMu.Lock()
 	if i >= st.next {
 		st.next = i + 1
@@ -564,6 +559,12 @@ func (st *BlockState) Commit(i int, v *TxView) {
 		st.contracts[v.contract] = v.IDCounts()
 	}
 	st.idMu.Unlock()
+	if ri != nil {
+		// the readers of the highest id read it after the transaction, as its next ones will
+		ri.mu.Lock()
+		ri.wake(i, *touches)
+		ri.mu.Unlock()
+	}
 }
 
 // Skip passes the transaction i, which commits nothing
