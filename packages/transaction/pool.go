@@ -85,8 +85,16 @@ type poolEntry struct {
 }
 
 type badStatus struct {
-	msg string
-	at  time.Time
+	Refusal
+	at time.Time
+}
+
+// Refusal is why the pool refused a transaction or took it out. Retry tells the node did for its
+// room, not for the transaction: the pool takes the same transaction sent again once a block
+// takes some of its transactions.
+type Refusal struct {
+	Msg   string
+	Retry bool
 }
 
 // Pool holds in memory the transactions of the blocks to come, verified and checked, in the order
@@ -275,7 +283,7 @@ func (p *Pool) admit(txs []*Transaction, rate Rate, sent bool) []error {
 				BadTxForBan(t.KeyID())
 			}
 			if bad {
-				p.setBad(h, err.Error())
+				p.setBad(h, err.Error(), false)
 			}
 			continue
 		}
@@ -296,7 +304,7 @@ func (p *Pool) admit(txs []*Transaction, rate Rate, sent bool) []error {
 func (p *Pool) take(t *Transaction, rate Rate, now int64, f *funds) error {
 	err := p.place(t, rate, now, f)
 	if err != nil && !errors.Is(err, ErrPoolFull) {
-		p.setBad(string(t.Hash()), err.Error())
+		p.setBad(string(t.Hash()), err.Error(), errors.Is(err, ErrPoolKeyFull))
 	}
 	return err
 }
@@ -372,7 +380,7 @@ func (p *Pool) expire(now int64) {
 	for h, e := range p.entries {
 		if !e.reserved && e.signed < now-consts.MaxTxBack {
 			p.remove(h)
-			p.setBad(h, statusExpired)
+			p.setBad(h, statusExpired, false)
 		}
 	}
 }
@@ -404,7 +412,7 @@ func (p *Pool) evict(t *Transaction, size int) bool {
 	for _, e := range out {
 		h := string(e.hash)
 		p.remove(h)
-		p.setBad(h, statusEvicted)
+		p.setBad(h, statusEvicted, true)
 	}
 	return true
 }
@@ -598,13 +606,13 @@ func (p *Pool) Bad(hash []byte, msg string) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.remove(string(hash))
-	p.setBad(string(hash), msg)
+	p.setBad(string(hash), msg, false)
 	p.gauge()
 }
 
-func (p *Pool) setBad(h, msg string) {
+func (p *Pool) setBad(h, msg string, retry bool) {
 	now := time.Now()
-	p.bad[h] = badStatus{msg: msg, at: now}
+	p.bad[h] = badStatus{Refusal: Refusal{Msg: msg, Retry: retry}, at: now}
 	if now.Sub(p.pruned) < time.Minute {
 		return
 	}
@@ -641,17 +649,17 @@ func (p *Pool) HasStopNetwork() bool {
 	return ok && e.rate == RateStopNetwork
 }
 
-// Status is whether the pool holds the transaction, or the error it was found bad with
-func (p *Pool) Status(hash []byte) (pending bool, badMsg string, found bool) {
+// Status is whether the pool holds the transaction, or why it refused it or took it out
+func (p *Pool) Status(hash []byte) (pending bool, bad Refusal, found bool) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	if _, ok := p.entries[string(hash)]; ok {
-		return true, "", true
+		return true, Refusal{}, true
 	}
 	if b, ok := p.bad[string(hash)]; ok && time.Since(b.at) <= badRetention() {
-		return false, b.msg, true
+		return false, b.Refusal, true
 	}
-	return false, "", false
+	return false, Refusal{}, false
 }
 
 // Receive parses the transactions another node sent, verifies them in parallel and puts them in

@@ -133,11 +133,11 @@ func TestPoolSentRemoveBad(t *testing.T) {
 	}
 
 	p.Bad([]byte("b"), "bad b")
-	if pending, msg, found := p.Status([]byte("b")); pending || msg != "bad b" || !found {
-		t.Fatalf("bad status %v %q %v", pending, msg, found)
+	if pending, bad, found := p.Status([]byte("b")); pending || bad != (Refusal{Msg: "bad b"}) || !found {
+		t.Fatalf("bad status %v %+v %v", pending, bad, found)
 	}
-	if pending, msg, found := p.Status([]byte("a")); !pending || msg != "" || !found {
-		t.Fatalf("pending status %v %q %v", pending, msg, found)
+	if pending, bad, found := p.Status([]byte("a")); !pending || bad != (Refusal{}) || !found {
+		t.Fatalf("pending status %v %+v %v", pending, bad, found)
 	}
 	if p.Len() != 1 {
 		t.Fatalf("len %d", p.Len())
@@ -151,11 +151,11 @@ func TestPoolSentRemoveBad(t *testing.T) {
 
 func TestPoolBadRetention(t *testing.T) {
 	p := NewPool()
-	p.bad["old"] = badStatus{msg: "old", at: time.Now().Add(-badRetention() - time.Minute)}
+	p.bad["old"] = badStatus{Refusal: Refusal{Msg: "old"}, at: time.Now().Add(-badRetention() - time.Minute)}
 	if _, _, found := p.Status([]byte("old")); found {
 		t.Fatal("a bad status past retention is answered")
 	}
-	p.setBad("new", "new")
+	p.setBad("new", "new", false)
 	if _, ok := p.bad["old"]; ok {
 		t.Fatal("a bad status past retention is kept")
 	}
@@ -201,11 +201,14 @@ func requirePlaced(t *testing.T, p *Pool, tx *Transaction, rate Rate, now int64,
 }
 
 // requireStatus checks the status of a transaction take placed or refused with want: pending, or
-// the refusal but for a full pool
+// the refusal but for a full pool, which is to retry for an account with MaxPerKey in the pool
 func requireStatus(t *testing.T, p *Pool, tx *Transaction, want error) {
 	t.Helper()
-	pending, msg, _ := p.Status(tx.Hash())
+	pending, bad, _ := p.Status(tx.Hash())
+	msg := bad.Msg
 	switch {
+	case bad.Retry != (want == ErrPoolKeyFull):
+		t.Fatalf("%s: retry %v, refused with %v", tx.Hash(), bad.Retry, want)
 	case want == nil && !pending:
 		t.Fatalf("%s: not pending", tx.Hash())
 	case want != nil && pending:
@@ -298,8 +301,8 @@ func TestPoolEviction(t *testing.T) {
 	if p.Has([]byte("old")) {
 		t.Fatal("a transaction too old for a block stays in a full pool")
 	}
-	if _, msg, _ := p.Status([]byte("old")); msg != statusExpired {
-		t.Fatalf("the status of the old transaction: %q", msg)
+	if _, bad, _ := p.Status([]byte("old")); bad != (Refusal{Msg: statusExpired}) {
+		t.Fatalf("the status of the old transaction: %+v", bad)
 	}
 	requirePlaced(t, p, keyTx("flood", 5, now*1000, 0), RateClient, now, ErrPoolFull)
 	requirePlaced(t, p, keyTx("earlier", 5, (now-1)*1000, 0), RateClient, now, nil)
@@ -310,8 +313,8 @@ func TestPoolEviction(t *testing.T) {
 	if p.Has([]byte("b")) || !p.Has([]byte("a")) || !p.Has([]byte("earlier")) {
 		t.Fatalf("a higher expedite takes out the last: %v", hashesOf(p.Take(0)))
 	}
-	if _, msg, _ := p.Status([]byte("b")); msg != statusEvicted {
-		t.Fatalf("the status of the evicted transaction: %q", msg)
+	if _, bad, _ := p.Status([]byte("b")); bad != (Refusal{Msg: statusEvicted, Retry: true}) {
+		t.Fatalf("the status of the evicted transaction: %+v", bad)
 	}
 	requirePlaced(t, p, keyTx("node", 7, now*1000, 0), RateOnBlock, now, nil)
 	requirePlaced(t, p, keyTx("higher", 8, now*1000, 3), RateClient, now, nil)

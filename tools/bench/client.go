@@ -204,8 +204,9 @@ func (n *node) blockTxs(from, to int64) (map[int64][]string, error) {
 
 // txError is the refusal of a transaction
 type txError struct {
-	Type string `json:"type"`
-	Msg  string `json:"error"`
+	Type      string `json:"type"`
+	Msg       string `json:"error"`
+	Retryable bool   `json:"retryable"`
 }
 
 // txStatus is what the node tells of a transaction it has seen: the block it is in, if any, and
@@ -218,6 +219,10 @@ type txStatus struct {
 
 // done is whether the transaction succeeded in a block, or failed for good
 func (s *txStatus) done() bool { return s.Message != nil || (s.BlockID != "" && s.BlockID != "0") }
+
+// retry tells the node refused the transaction for the room of its pool: it takes it sent again
+// once a block takes some of the pool
+func (s *txStatus) retry() bool { return s.Message != nil && s.Message.Retryable }
 
 // failure is why the transaction failed, or "" if it did not
 func (s *txStatus) failure() string {
