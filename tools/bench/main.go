@@ -71,7 +71,7 @@ func main() {
 	accounts := fs.Int("accounts", 1000, "accounts setup makes")
 	fund := fs.String("fund", "", "coins of ecosystem 1 setup sends each account, in its smallest unit (default 90% of the founder's account split evenly); half go to its UTXO")
 	timeout := fs.Duration("timeout", 5*time.Minute, "time a step of setup waits for its transactions")
-	inFlight := fs.Int("in-flight", 1000, "transactions of the founder setup has in the pools at a time, at most the TxPool.MaxPerKey of the nodes")
+	inFlight := fs.Int("in-flight", 1000, "transactions of the founder setup has in the pools at a time; past the TxPool.MaxPerKey of a node, those it refuses go again")
 
 	names := fs.String("workloads", "self,utxo,transfer,contract,write", "workloads run measures: self (TransferSelf), utxo (UTXO), transfer (@1TokensSend), contract (a mix of 4 @1ProfileEdit, 3 @1NotificationsSend and 3 @1TokensSend), write (5 DBInsert and 5 DBUpdate a transaction), iswap-swap, iswap-swaps, iswap-hot, iswap-hop, iswap-exactout, iswap-addliq, iswap-token, iswap-defi (DeFi on iSwap, after bench iswap)")
 	rates := fs.String("rates", "100,200,500,1000,2000,3000,5000", "rates (transactions a second) run steps through")
