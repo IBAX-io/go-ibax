@@ -34,9 +34,9 @@ import (
 var apiAddress = "http://localhost:7079"
 
 var (
-	gAuth             string
-	gAddress          string
-	gPrivate, gPublic string
+	gAuth    string
+	gAddress string
+	gKey     crypto.AccountPrivateKey
 )
 
 // TestMain runs the tests of the package, which call the API of a node at apiAddress signed by the
@@ -52,19 +52,6 @@ func TestMain(m *testing.M) {
 		os.Exit(0)
 	}
 	os.Exit(m.Run())
-}
-
-// PrivateToPublicHex returns the hex public key for the specified hex private key.
-func PrivateToPublicHex(hexkey string) (string, error) {
-	key, err := hex.DecodeString(hexkey)
-	if err != nil {
-		return ``, fmt.Errorf("Decode hex error")
-	}
-	pubKey, err := crypto.NodePrivateToPublic(key)
-	if err != nil {
-		return ``, err
-	}
-	return crypto.PubToHex(pubKey), nil
 }
 
 func sendRawRequest(rtype, url string, form *url.Values) ([]byte, error) {
@@ -117,153 +104,66 @@ func sendPost(url string, form *url.Values, v any) error {
 	return sendRequest("POST", url, form, v)
 }
 
-func keyLogin(state int64) (err error) {
-	var (
-		key, sign []byte
-	)
-
-	key, err = os.ReadFile(`key`)
+// readKey reads the account key of the tests from the file: the private key, in hex, of a key of
+// the node algorithm
+func readKey(file string) (crypto.AccountPrivateKey, error) {
+	data, err := os.ReadFile(file)
 	if err != nil {
-		return
+		return crypto.AccountPrivateKey{}, err
 	}
-	if len(key) > 64 {
-		key = key[:64]
-	}
-	var ret getUIDResult
-	err = sendGet(`getuid`, nil, &ret)
+	raw, err := hex.DecodeString(strings.TrimSpace(string(data)))
 	if err != nil {
-		return
+		return crypto.AccountPrivateKey{}, err
 	}
-	gAuth = ret.Token
-	if len(ret.UID) == 0 {
-		return fmt.Errorf(`getuid has returned empty uid`)
-	}
-
-	var pub string
-
-	sign, err = crypto.NodeSignString(string(key), `LOGIN`+ret.NetworkID+ret.UID)
-	if err != nil {
-		return
-	}
-	pub, err = PrivateToPublicHex(string(key))
-	if err != nil {
-		return
-	}
-	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)},
-		`ecosystem`: {converter.Int64ToStr(state)}, "role_id": {"0"}}
-	var logret loginResult
-	err = sendPost(`login`, &form, &logret)
-	if err != nil {
-		return
-	}
-	gAddress = logret.Account
-	gPrivate = string(key)
-	gPublic, err = PrivateToPublicHex(gPrivate)
-	gAuth = logret.Token
-	if err != nil {
-		return
-	}
-	return
+	return crypto.NewAccountPrivateKey(crypto.NodeAlgo(), raw)
 }
 
-func keyLoginToken(state int64) (err error) {
-	var (
-		key, sign []byte
-	)
-
-	str, _ := os.Getwd()
-	fmt.Println("dir " + str)
-	key, err = os.ReadFile(`key`)
+// keyLoginFile logs in to the ecosystem with the account key in the file, with the fields extra of the
+// form besides the key and the signature
+func keyLoginFile(file string, state int64, extra url.Values) error {
+	key, err := readKey(file)
 	if err != nil {
-		return
-	}
-	if len(key) > 64 {
-		key = key[:64]
+		return err
 	}
 	var ret getUIDResult
-	err = sendGet(`getuid`, nil, &ret)
-	if err != nil {
-		return
+	if err = sendGet(`getuid`, nil, &ret); err != nil {
+		return err
 	}
 	gAuth = ret.Token
 	if len(ret.UID) == 0 {
 		return fmt.Errorf(`getuid has returned empty uid`)
 	}
-
-	var pub string
-
-	sign, err = crypto.NodeSignString(string(key), `LOGIN`+ret.NetworkID+ret.UID)
+	pub, err := key.Public()
 	if err != nil {
-		return
+		return err
 	}
-	pub, err = PrivateToPublicHex(string(key))
+	sign, err := key.Sign([]byte(`LOGIN` + ret.NetworkID + ret.UID))
 	if err != nil {
-		return
+		return err
 	}
-	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)},
-		`ecosystem`: {converter.Int64ToStr(state)}, "role_id": {"0"}, "expire": {"5"}}
+	form := url.Values{"pubkey": {pub.Hex()}, "signature": {hex.EncodeToString(sign)},
+		`ecosystem`: {converter.Int64ToStr(state)}, "role_id": {"0"}}
+	for name, value := range extra {
+		form[name] = value
+	}
 	var logret loginResult
-	err = sendPost(`login`, &form, &logret)
-	if err != nil {
-		return
+	if err = sendPost(`login`, &form, &logret); err != nil {
+		return err
 	}
-	gAddress = logret.Account
-	gPrivate = string(key)
-	gPublic, err = PrivateToPublicHex(gPrivate)
-	gAuth = logret.Token
-	if err != nil {
-		return
-	}
-	return
+	gAddress, gKey, gAuth = logret.Account, key, logret.Token
+	return nil
 }
 
-func keyLoginex(state int64, m ...string) (err error) {
-	var (
-		key, sign []byte
-	)
+func keyLogin(state int64) error {
+	return keyLoginFile(`key`, state, nil)
+}
 
-	key, err = os.ReadFile(`key` + m[0])
-	if err != nil {
-		return
-	}
-	if len(key) > 64 {
-		key = key[:64]
-	}
-	var ret getUIDResult
-	err = sendGet(`getuid`, nil, &ret)
-	if err != nil {
-		return
-	}
-	gAuth = ret.Token
-	if len(ret.UID) == 0 {
-		return fmt.Errorf(`getuid has returned empty uid`)
-	}
+func keyLoginToken(state int64) error {
+	return keyLoginFile(`key`, state, url.Values{"expire": {"5"}})
+}
 
-	var pub string
-
-	sign, err = crypto.NodeSignString(string(key), `LOGIN`+ret.NetworkID+ret.UID)
-	if err != nil {
-		return
-	}
-	pub, err = PrivateToPublicHex(string(key))
-	if err != nil {
-		return
-	}
-	form := url.Values{"pubkey": {pub}, "signature": {hex.EncodeToString(sign)},
-		`ecosystem`: {converter.Int64ToStr(state)}, "role_id": {"0"}}
-	var logret loginResult
-	err = sendPost(`login`, &form, &logret)
-	if err != nil {
-		return
-	}
-	gAddress = logret.Account
-	gPrivate = string(key)
-	gPublic, err = PrivateToPublicHex(gPrivate)
-	gAuth = logret.Token
-	if err != nil {
-		return
-	}
-	return
+func keyLoginex(state int64, m ...string) error {
+	return keyLoginFile(`key`+m[0], state, nil)
 }
 
 func waitTx(hash string) (blockid int64, penalty int64, err error) {
@@ -381,11 +281,8 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 		}
 	}
 
-	var privateKey, publicKey []byte
-	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
-		return
-	}
-	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
+	var publicKey crypto.AccountKey
+	if publicKey, err = gKey.Public(); err != nil {
 		return
 	}
 
@@ -394,12 +291,12 @@ func postTxResult(name string, form getter) (id int64, msg string, err error) {
 			ID:          int(contract.ID),
 			EcosystemID: 1,
 			Time:        time.Now().Unix(),
-			KeyID:       crypto.Address(publicKey),
+			KeyID:       publicKey.Address(),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		Params: params,
 		Lang:   "en",
-	}, privateKey)
+	}, gKey)
 	if err != nil {
 		return 0, "", err
 	}
@@ -473,11 +370,8 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 		}
 	}
 
-	var privateKey, publicKey []byte
-	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
-		return
-	}
-	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
+	var publicKey crypto.AccountKey
+	if publicKey, err = gKey.Public(); err != nil {
 		return
 	}
 	arrData := make(map[string][]byte)
@@ -494,12 +388,12 @@ func postTxResultMultipart(name string, form getter) (id int64, msg string, err 
 				ID:          int(contract.ID),
 				Time:        time.Now().Unix(),
 				EcosystemID: 1,
-				KeyID:       crypto.Address(publicKey),
+				KeyID:       publicKey.Address(),
 				NetworkID:   conf.Config.LocalConf.NetworkID,
 			},
 			Params:   params,
 			Expedite: expedite,
-		}, privateKey)
+		}, gKey)
 		arrData[fmt.Sprintf("%x", txhash)] = data
 		fmt.Println(fmt.Sprintf("%x", txhash))
 	}
@@ -581,11 +475,8 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 		}
 	}
 
-	var privateKey, publicKey []byte
-	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
-		return
-	}
-	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
+	var publicKey crypto.AccountKey
+	if publicKey, err = gKey.Public(); err != nil {
 		return
 	}
 
@@ -594,11 +485,11 @@ func postSignTxResult(name string, form getter) (id int64, msg string, err error
 			ID:          int(contract.ID),
 			EcosystemID: 1,
 			Time:        time.Now().Unix(),
-			KeyID:       crypto.Address(publicKey),
+			KeyID:       publicKey.Address(),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		Params: params,
-	}, privateKey)
+	}, gKey)
 	if err != nil {
 		return 0, "", err
 	}
@@ -671,11 +562,8 @@ func postTxResult2(name string, form getter) (id int64, msg string, err error) {
 		}
 	}
 
-	var privateKey, publicKey []byte
-	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
-		return
-	}
-	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
+	var publicKey crypto.AccountKey
+	if publicKey, err = gKey.Public(); err != nil {
 		return
 	}
 
@@ -684,11 +572,11 @@ func postTxResult2(name string, form getter) (id int64, msg string, err error) {
 			ID:          int(contract.ID),
 			EcosystemID: 2,
 			Time:        time.Now().Unix(),
-			KeyID:       crypto.Address(publicKey),
+			KeyID:       publicKey.Address(),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		Params: params,
-	}, privateKey)
+	}, gKey)
 	if err != nil {
 		return 0, "", err
 	}
@@ -742,11 +630,8 @@ func postUTXOTxMultipart(form *url.Values) error {
 
 func postTransferSelfTxResult(form getter) (id int64, msg string, err error) {
 
-	var privateKey, publicKey []byte
-	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
-		return
-	}
-	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
+	var publicKey crypto.AccountKey
+	if publicKey, err = gKey.Public(); err != nil {
 		return
 	}
 
@@ -755,7 +640,7 @@ func postTransferSelfTxResult(form getter) (id int64, msg string, err error) {
 			ID:          int(1),
 			EcosystemID: 1,
 			Time:        time.Now().Unix(),
-			KeyID:       crypto.Address(publicKey),
+			KeyID:       publicKey.Address(),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		TransferSelf: &types.TransferSelf{
@@ -764,7 +649,7 @@ func postTransferSelfTxResult(form getter) (id int64, msg string, err error) {
 			Source: "UTXO",
 			Target: "Account",
 		},
-	}, privateKey)
+	}, gKey)
 	if err != nil {
 		return 0, "", err
 	}
@@ -793,11 +678,8 @@ func postTransferSelfTxResult(form getter) (id int64, msg string, err error) {
 
 func postUTXOTxResult(form getter) (id int64, msg string, err error) {
 
-	var privateKey, publicKey []byte
-	if privateKey, err = hex.DecodeString(gPrivate); err != nil {
-		return
-	}
-	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
+	var publicKey crypto.AccountKey
+	if publicKey, err = gKey.Public(); err != nil {
 		return
 	}
 
@@ -806,14 +688,14 @@ func postUTXOTxResult(form getter) (id int64, msg string, err error) {
 			ID:          int(1),
 			EcosystemID: 1,
 			Time:        time.Now().Unix(),
-			KeyID:       crypto.Address(publicKey),
+			KeyID:       publicKey.Address(),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		UTXO: &types.UTXO{
 			Value: "1000000000000000",
 			ToID:  -8055926748644556208,
 		},
-	}, privateKey)
+	}, gKey)
 	if err != nil {
 		return 0, "", err
 	}

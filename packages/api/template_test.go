@@ -65,8 +65,7 @@ func TestAPI(t *testing.T) {
 	assert.NoError(t, err)
 
 	gAddress = ``
-	gPrivate = ``
-	gPublic = ``
+	gKey = crypto.AccountPrivateKey{}
 	gAuth = ``
 	assert.NoError(t, sendPost(`content/hash/`+name, &url.Values{`ecosystem`: {`1`}, `keyID`: {msg}, `roleID`: {`0`}},
 		&retHash2))

@@ -14,6 +14,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/smart"
@@ -74,7 +75,7 @@ func (dtx *DelayedTx) createDelayTxByItem(name string, keyID, highRate int64) (*
 		Params: map[string]any{},
 	}
 
-	txData, _, err := transaction.NewInternalTransaction(smartTx, privateKey)
+	txData, _, err := transaction.NewInternalTransaction(smartTx, crypto.NodeAccountPrivateKey(privateKey))
 	if err != nil {
 		return nil, err
 	}

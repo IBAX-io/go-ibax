@@ -182,10 +182,36 @@ func AccountKeyOf(algo AsymAlgo, privateKey []byte) (AccountKey, error) {
 	return NewAccountKey(algo, pub)
 }
 
-// AccountSign signs data, hashed with the network hash, with a private key of algo
-func AccountSign(algo AsymAlgo, privateKey, data []byte) ([]byte, error) {
-	if !AccountAlgoImplemented(algo) {
-		return nil, fmt.Errorf("%w: algorithm %d is not implemented", ErrAccountKeyFormat, algo)
+// AccountPrivateKey is an account private key and the algorithm it signs with: an account signs
+// its transactions and logins with the algorithm of its own key, whatever the node algorithm
+type AccountPrivateKey struct {
+	Algo AsymAlgo
+	Raw  []byte
+}
+
+// NewAccountPrivateKey checks that raw is a private key of algo
+func NewAccountPrivateKey(algo AsymAlgo, raw []byte) (AccountPrivateKey, error) {
+	if _, err := AccountKeyOf(algo, raw); err != nil {
+		return AccountPrivateKey{}, err
 	}
-	return NewAsymAlgo(algo).Sign(privateKey, Hash(data))
+	return AccountPrivateKey{Algo: algo, Raw: bytes.Clone(raw)}, nil
+}
+
+// NodeAccountPrivateKey is the account private key of a node private key: the node account signs
+// its transactions and logins with the node key
+func NodeAccountPrivateKey(nodePrivateKey []byte) AccountPrivateKey {
+	return AccountPrivateKey{Algo: NodeAlgo(), Raw: nodePrivateKey}
+}
+
+// Public is the account public key of the private key
+func (k AccountPrivateKey) Public() (AccountKey, error) {
+	return AccountKeyOf(k.Algo, k.Raw)
+}
+
+// Sign signs data, hashed with the network hash, with the key's algorithm
+func (k AccountPrivateKey) Sign(data []byte) ([]byte, error) {
+	if !AccountAlgoImplemented(k.Algo) {
+		return nil, fmt.Errorf("%w: algorithm %d is not implemented", ErrAccountKeyFormat, k.Algo)
+	}
+	return NewAsymAlgo(k.Algo).Sign(k.Raw, Hash(data))
 }

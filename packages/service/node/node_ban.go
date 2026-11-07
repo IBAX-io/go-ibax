@@ -164,7 +164,7 @@ func (nbs *NodesBanService) newBadBlock(producer syspar.HonorNode, blockId, bloc
 	stp := &transaction.SmartTransactionParser{
 		SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 	}
-	txData, err := stp.BinMarshalWithPrivate(&sc, syspar.GetNodePrivKey(), true)
+	txData, err := stp.BinMarshalWithPrivate(&sc, crypto.NodeAccountPrivateKey(syspar.GetNodePrivKey()), true)
 	if err != nil {
 		return err
 	}

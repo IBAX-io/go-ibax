@@ -48,7 +48,8 @@ func testGenesis(t *testing.T, edit ...func(*types.FirstBlock)) []byte {
 	}
 	first := &types.FirstBlock{
 		KeyID: founder.Address(), Time: genesisTime, PublicKey: founder.Bytes(), NodePublicKey: pub,
-		AccountAlgorithms: syspar.DefaultAccountAlgorithms(crypto.NodeAlgo(), crypto.FIPSMode()).String(),
+		NodeAlgorithm:     crypto.NodeAlgo().String(),
+		AccountAlgorithms: syspar.DefaultAccountAlgorithms(crypto.NodeAlgo()).String(),
 	}
 	for _, e := range edit {
 		e(first)
@@ -153,8 +154,10 @@ func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
 		}
 	}
 	cases := map[string]func(*types.FirstBlock){
-		"no account algorithms": func(f *types.FirstBlock) { f.AccountAlgorithms = "" },
-		"empty set":             func(f *types.FirstBlock) { f.AccountAlgorithms = "[]" },
+		"no node algorithm":      func(f *types.FirstBlock) { f.NodeAlgorithm = "" },
+		"another node algorithm": func(f *types.FirstBlock) { f.NodeAlgorithm = "ECC_Secp256k1" },
+		"no account algorithms":  func(f *types.FirstBlock) { f.AccountAlgorithms = "" },
+		"empty set":              func(f *types.FirstBlock) { f.AccountAlgorithms = "[]" },
 		"node algorithm missing": func(f *types.FirstBlock) {
 			f.AccountAlgorithms = `[{"algo":"MLDSA65"}]`
 		},
@@ -162,6 +165,7 @@ func TestCheckGenesisRefusesBadAccounts(t *testing.T) {
 			f.AccountAlgorithms = `[{"algo":"ECC_P256","sign_until":"2030-06-14"}]`
 		},
 		"founder algorithm missing": func(f *types.FirstBlock) {
+			f.AccountAlgorithms = `[{"algo":"ECC_P256"}]`
 			f.PublicKey, f.KeyID = mldsa.Bytes(), mldsa.Address()
 		},
 		"founder past its registration day": func(f *types.FirstBlock) {

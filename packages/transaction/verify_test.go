@@ -145,7 +145,7 @@ func TestTransferSignatureIsCheckedOnEntry(t *testing.T) {
 				NetworkID:   c.NetworkID,
 			},
 			TransferSelf: &types.TransferSelf{Source: "Account", Target: "UTXO", Value: "1"},
-		}, key)
+		}, crypto.NodeAccountPrivateKey(key))
 		if err != nil {
 			t.Fatalf("%s: building the impersonating transaction: %v", name, err)
 		}

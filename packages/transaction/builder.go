@@ -7,17 +7,18 @@ package transaction
 import (
 	"bytes"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
 )
 
-func newTransaction(smartTx types.SmartTransaction, privateKey []byte, internal bool) (data, hash []byte, err error) {
+func newTransaction(smartTx types.SmartTransaction, key crypto.AccountPrivateKey, internal bool) (data, hash []byte, err error) {
 	stp := &SmartTransactionParser{
 		SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 	}
-	data, err = stp.BinMarshalWithPrivate(&smartTx, privateKey, internal)
+	data, err = stp.BinMarshalWithPrivate(&smartTx, key, internal)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.MarshallingError, "error": err}).Error("marshalling smart contract to msgpack")
 		return
@@ -27,12 +28,12 @@ func newTransaction(smartTx types.SmartTransaction, privateKey []byte, internal 
 
 }
 
-func NewInternalTransaction(smartTx types.SmartTransaction, privateKey []byte) (data, hash []byte, err error) {
-	return newTransaction(smartTx, privateKey, true)
+func NewInternalTransaction(smartTx types.SmartTransaction, key crypto.AccountPrivateKey) (data, hash []byte, err error) {
+	return newTransaction(smartTx, key, true)
 }
 
-func NewTransactionInProc(smartTx types.SmartTransaction, privateKey []byte) (data, hash []byte, err error) {
-	return newTransaction(smartTx, privateKey, false)
+func NewTransactionInProc(smartTx types.SmartTransaction, key crypto.AccountPrivateKey) (data, hash []byte, err error) {
+	return newTransaction(smartTx, key, false)
 }
 
 // CreateTransaction creates transaction

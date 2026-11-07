@@ -49,6 +49,9 @@ type FirstBlock struct {
 	PrivateBlockchain     uint64
 	// HonorNodesOnly is the value of the platform parameter honor_nodes_only
 	HonorNodesOnly uint64
+	// NodeAlgorithm is the signature algorithm of the node keys of the network (crypto.AsymAlgo by
+	// name): a node of another algorithm refuses the first block
+	NodeAlgorithm string
 	// AccountAlgorithms is the initial value of the platform parameter account_algorithms
 	AccountAlgorithms string
 	// BftConsensus is the value of the platform parameter bft_consensus
@@ -138,18 +141,17 @@ func (s *SmartTransaction) TxType() byte {
 	return SmartContractTxType
 }
 
-func (s *SmartTransaction) WithPrivate(privateKey []byte, internal bool) error {
-	var (
-		publicKey []byte
-		err       error
-	)
-	if publicKey, err = crypto.NodePrivateToPublic(privateKey); err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting node private key to public")
+// WithPrivate sets the account key the transaction is signed with, and with internal the account
+// it is signed by: the account of the key
+func (s *SmartTransaction) WithPrivate(key crypto.AccountPrivateKey, internal bool) error {
+	publicKey, err := key.Public()
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("converting the account private key to public")
 		return err
 	}
-	s.PublicKey = crypto.NodeAccountKey(publicKey).Bytes()
+	s.PublicKey = publicKey.Bytes()
 	if internal {
-		s.SignedBy = crypto.Address(publicKey)
+		s.SignedBy = publicKey.Address()
 	}
 	if s.NetworkID != conf.Config.LocalConf.NetworkID {
 		return fmt.Errorf("error networkid invalid")

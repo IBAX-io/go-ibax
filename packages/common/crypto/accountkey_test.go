@@ -38,7 +38,7 @@ func TestAccountKeyRoundTrip(t *testing.T) {
 				t.Fatalf("key of the private key: %v", err)
 			}
 			msg := []byte("transfer")
-			sig, err := AccountSign(a, priv, msg)
+			sig, err := AccountPrivateKey{Algo: a, Raw: priv}.Sign(msg)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -106,7 +106,7 @@ func TestAccountKeyRefusesMalformed(t *testing.T) {
 	if _, _, err := GenAccountKey(AsymAlgo_ECC_P512); err == nil {
 		t.Error("generated an ECC_P512 key")
 	}
-	if _, err := AccountSign(AsymAlgo(99), nil, []byte("x")); err == nil {
+	if _, err := (AccountPrivateKey{Algo: AsymAlgo(99)}).Sign([]byte("x")); err == nil {
 		t.Error("signed with an unknown algorithm")
 	}
 }
@@ -121,7 +121,7 @@ func TestAccountKeyRelabelledDoesNotVerify(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		sig, err := AccountSign(a, priv, msg)
+		sig, err := AccountPrivateKey{Algo: a, Raw: priv}.Sign(msg)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -152,7 +152,7 @@ func TestAccountKeyRelabelledDoesNotVerify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	sig, err := AccountSign(AsymAlgo_ECC_P256, priv, msg)
+	sig, err := AccountPrivateKey{Algo: AsymAlgo_ECC_P256, Raw: priv}.Sign(msg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,7 +201,7 @@ func TestAccountKeyVerifiesOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	data := []byte("verified once")
-	sig, err := AccountSign(key.Algo, priv, data)
+	sig, err := AccountPrivateKey{Algo: key.Algo, Raw: priv}.Sign(data)
 	if err != nil {
 		t.Fatal(err)
 	}

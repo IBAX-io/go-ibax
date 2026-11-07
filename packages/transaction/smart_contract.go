@@ -287,22 +287,22 @@ func (s *SmartTransactionParser) Marshal() ([]byte, error) {
 	return buf, nil
 }
 
-func (s *SmartTransactionParser) setSig(privateKey []byte) error {
-	signature, err := crypto.NodeSign(privateKey, s.Hash)
+func (s *SmartTransactionParser) setSig(key crypto.AccountPrivateKey) error {
+	signature, err := key.Sign(s.Hash)
 	if err != nil {
-		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by node private key")
+		log.WithFields(log.Fields{"type": consts.CryptoError, "error": err}).Error("signing by the account private key")
 		return err
 	}
 	s.TxSignature = converter.EncodeLengthPlusData(signature)
 	return nil
 }
 
-func (s *SmartTransactionParser) BinMarshalWithPrivate(smartTx *types.SmartTransaction, privateKey []byte, internal bool) ([]byte, error) {
+func (s *SmartTransactionParser) BinMarshalWithPrivate(smartTx *types.SmartTransaction, key crypto.AccountPrivateKey, internal bool) ([]byte, error) {
 	var (
 		buf []byte
 		err error
 	)
-	if err = smartTx.WithPrivate(privateKey, internal); err != nil {
+	if err = smartTx.WithPrivate(key, internal); err != nil {
 		return nil, err
 	}
 	s.TxSmart = smartTx
@@ -312,7 +312,7 @@ func (s *SmartTransactionParser) BinMarshalWithPrivate(smartTx *types.SmartTrans
 	}
 	s.Payload = buf
 	s.Hash = crypto.DoubleHash(s.Payload)
-	err = s.setSig(privateKey)
+	err = s.setSig(key)
 	if err != nil {
 		return nil, err
 	}

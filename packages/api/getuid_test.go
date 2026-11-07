@@ -31,7 +31,7 @@ func TestGetUID(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	sign, err := crypto.AccountSign(key.Algo, priv, []byte(`LOGIN`+ret.NetworkID+ret.UID))
+	sign, err := crypto.AccountPrivateKey{Algo: key.Algo, Raw: priv}.Sign([]byte(`LOGIN` + ret.NetworkID + ret.UID))
 	if err != nil {
 		t.Error(err)
 		return

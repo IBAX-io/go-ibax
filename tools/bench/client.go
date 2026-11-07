@@ -118,7 +118,7 @@ func (n *node) login(key *account) (*chainInfo, error) {
 	if err := useChain(info); err != nil {
 		return nil, err
 	}
-	signature, err := crypto.AccountSign(key.algo, key.private, []byte("LOGIN"+uid.NetworkID+uid.UID))
+	signature, err := crypto.AccountPrivateKey{Algo: key.algo, Raw: key.private}.Sign([]byte("LOGIN" + uid.NetworkID + uid.UID))
 	if err != nil {
 		return nil, err
 	}

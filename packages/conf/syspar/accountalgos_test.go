@@ -199,15 +199,6 @@ func TestAccountAlgorithmsFIPSDays(t *testing.T) {
 			t.Errorf("%s: %v", c.value, err)
 		}
 	}
-	if s := DefaultAccountAlgorithms(crypto.AsymAlgo_ECC_P256, true).String(); s != `[{"algo":"ECC_P256","sign_until":"2031-12-31"}]` {
-		t.Errorf("FIPS default %s", s)
-	}
-	if s := DefaultAccountAlgorithms(crypto.AsymAlgo_MLDSA65, true).String(); s != `[{"algo":"MLDSA65"}]` {
-		t.Errorf("FIPS ML-DSA default %s", s)
-	}
-	if s := DefaultAccountAlgorithms(crypto.AsymAlgo_ECC_P256, false).String(); s != `[{"algo":"ECC_P256"}]` {
-		t.Errorf("default %s", s)
-	}
 	for _, set := range []string{`[{"algo":"ECC_P256"}]`, `[{"algo":"ECC_P256","sign_until":"2031-12-31"}]`} {
 		if err := mustParse(t, set).CheckNode(); (err == nil) == (crypto.FIPSMode() && set == `[{"algo":"ECC_P256"}]`) {
 			t.Errorf("FIPS mode %v, %s: %v", crypto.FIPSMode(), set, err)
@@ -273,4 +264,42 @@ func TestParseAccountAlgo(t *testing.T) {
 			t.Errorf("%q: %v", bad, err)
 		}
 	}
+}
+
+// A new network takes ML-DSA-65 keys and keeps P-256 and RSA keys until their last days, after
+// its node algorithm; RSA only on a hash that defines RSASSA-PSS, and in FIPS mode only what the
+// node may verify
+func TestDefaultAccountAlgorithms(t *testing.T) {
+	const days = `{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"RSA2048","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"RSA3072","sign_until":"2031-12-31"}`
+	for _, c := range []struct {
+		node crypto.AsymAlgo
+		hash string
+		want string
+	}{
+		{crypto.AsymAlgo_MLDSA65, "SHA256", `[{"algo":"MLDSA65"},` + days + `]`},
+		{crypto.AsymAlgo_MLDSA65, "SHA3_256", `[{"algo":"MLDSA65"},` + days + `]`},
+		{crypto.AsymAlgo_MLDSA65, "KECCAK256", `[{"algo":"MLDSA65"},{"algo":"ECC_P256","sign_until":"2031-12-31"}]`},
+		{crypto.AsymAlgo_MLDSA87, "SHA256", `[{"algo":"MLDSA87"},{"algo":"MLDSA65"},` + days + `]`},
+		{crypto.AsymAlgo_ECC_P256, "SHA256", `[{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"},{"algo":"RSA2048","register_until":"2030-12-31","sign_until":"2031-12-31"},{"algo":"RSA3072","sign_until":"2031-12-31"}]`},
+		{crypto.AsymAlgo_ECC_Secp256k1, "KECCAK256", `[{"algo":"ECC_Secp256k1","sign_until":"2031-12-31"},{"algo":"MLDSA65"},{"algo":"ECC_P256","sign_until":"2031-12-31"}]`},
+	} {
+		crypto.InitHashAlgo(c.hash)
+		if crypto.FIPSMode() && crypto.CheckAccountAlgo(c.node) != nil {
+			continue
+		}
+		set := DefaultAccountAlgorithms(c.node)
+		if crypto.FIPSMode() {
+			if err := set.CheckNode(); err != nil {
+				t.Errorf("%s/%s: the default set fails on a FIPS node: %v", c.node, c.hash, err)
+			}
+			continue
+		}
+		if got := set.String(); got != c.want {
+			t.Errorf("%s/%s:\n got %s\nwant %s", c.node, c.hash, got, c.want)
+		}
+		if _, err := ParseAccountAlgorithms(set.String()); err != nil {
+			t.Errorf("%s/%s: the default set does not parse: %v", c.node, c.hash, err)
+		}
+	}
+	crypto.InitHashAlgo("SHA256")
 }

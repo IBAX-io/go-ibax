@@ -27,11 +27,12 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
+// Connect is a client of the API of a node, signing its transactions and login with the account
+// key Key, of the algorithm of the account
 type Connect struct {
-	Auth       string
-	Root       string
-	PrivateKey []byte
-	PublicKey  string
+	Auth string
+	Root string
+	Key  crypto.AccountPrivateKey
 }
 
 type WaitResult struct {
@@ -249,8 +250,8 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 		}
 	}
 
-	var publicKey []byte
-	if publicKey, err = crypto.NodePrivateToPublic(connect.PrivateKey); err != nil {
+	publicKey, err := connect.Key.Public()
+	if err != nil {
 		return
 	}
 	txTime := faults.Now().Unix()
@@ -264,11 +265,11 @@ func (connect *Connect) PostTxResult(name string, form *url.Values) (id int64, m
 			ID:          int(contract.ID),
 			EcosystemID: 1,
 			Time:        txTime,
-			KeyID:       crypto.Address(publicKey),
+			KeyID:       publicKey.Address(),
 			NetworkID:   conf.Config.LocalConf.NetworkID,
 		},
 		Params: params,
-	}, connect.PrivateKey)
+	}, connect.Key)
 	if err != nil {
 		return 0, "", err
 	}
@@ -306,11 +307,15 @@ func (connect *Connect) Login() error {
 		return nil
 	}
 	connect.Auth = ret.Token
-	sign, err = crypto.NodeSignString(hex.EncodeToString(connect.PrivateKey), `LOGIN`+ret.NetworkID+ret.UID)
+	publicKey, err := connect.Key.Public()
 	if err != nil {
 		return err
 	}
-	form := url.Values{"pubkey": {connect.PublicKey}, "signature": {hex.EncodeToString(sign)},
+	sign, err = connect.Key.Sign([]byte(`LOGIN` + ret.NetworkID + ret.UID))
+	if err != nil {
+		return err
+	}
+	form := url.Values{"pubkey": {publicKey.Hex()}, "signature": {hex.EncodeToString(sign)},
 		`ecosystem`: {`1`}, "role_id": {"0"}}
 	var logret loginResult
 	err = connect.SendPost(`login`, &form, &logret)
