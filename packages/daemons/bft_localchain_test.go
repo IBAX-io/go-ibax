@@ -300,8 +300,9 @@ func TestLocalChainCertificates(t *testing.T) {
 // address BFT_FLOOD_ADDR, the TCP address of a validator: votes of a key of no validator, votes
 // of the validator of the node keys of the data directory BFT_FLOOD_VALIDATOR out of the window
 // of the heights, and frames that do not decode, at a rate under bft_peer_msg_rate, on a stream
-// the node must keep; then three times bft_peer_msg_rate frames at once, past which the node
-// must close the stream and refuse a new one. It prints SENT with the counts of each.
+// the node must keep; then three times bft_peer_msg_rate frames at once, which the node must read
+// at its rate on the stream it keeps, while it takes a new stream of the same address. It prints
+// SENT with the counts of each.
 func TestLocalChainFlood(t *testing.T) {
 	localChain(t)
 	addr := os.Getenv("BFT_FLOOD_ADDR")
@@ -383,18 +384,23 @@ func TestLocalChainFlood(t *testing.T) {
 	for i := range 3 * rate {
 		flood = append(flood, vote(outsider, 0, height, each+i)...)
 	}
-	conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-	conn.Write(flood)
-	if !closed(conn, 5*time.Second) {
-		t.Fatalf("the node keeps a stream of %d frames at once, past its rate of %d", 3*rate, rate)
+	// the node reads the flood in about two seconds past the first rate of frames
+	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
+	if _, err := conn.Write(flood); err != nil {
+		t.Fatalf("the node does not read a stream of %d frames at once at its rate of %d: %v", 3*rate, rate, err)
+	}
+	if closed(conn, 5*time.Second) {
+		t.Fatalf("the node closed a stream of %d frames at once, past its rate of %d", 3*rate, rate)
 	}
 	fmt.Printf("SENT flood %d rate %d\n", 3*rate, rate)
 
 	again := open()
 	defer again.Close()
-	again.Write(vote(outsider, 0, height, 0))
-	if !closed(again, 5*time.Second) {
-		t.Fatal("the node takes a new stream of the address it refuses")
+	if _, err := again.Write(vote(outsider, 0, height, 0)); err != nil {
+		t.Fatalf("a new stream of the address of the flood: %v", err)
 	}
-	fmt.Println("REFUSED stream")
+	if closed(again, 2*time.Second) {
+		t.Fatal("the node closed a new stream of the address of the flood")
+	}
+	fmt.Println("KEPT streams")
 }

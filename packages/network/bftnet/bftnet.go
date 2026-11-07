@@ -9,8 +9,11 @@
 // A node keeps one stream to each other validator: a connection that opens with the request type
 // RequestTypeBftMessages and then carries frames, kind u8 ‖ len u32 ‖ payload, the payload being
 // the wire form of a proposal, a vote, an evidence or a batch of a proposal. A stream carries at most Config.Rate frames
-// a second; past that the receiver closes it and refuses the address of the sender for
-// Config.Block. A frame longer than its kind allows closes the stream before it is read.
+// a second: past it the receiver reads the stream as slowly as the rate lets it, and TCP holds the
+// sender back, whose queue drops the newest frames; the resends of the nodes make up for them. A
+// stream past its rate is neither closed nor its address refused: the receiver keeps hearing the
+// other validators, those at the same address too. A frame longer than its kind allows closes the
+// stream before it is read.
 //
 // A proposal carries its block in the compact form of package block, the hashes of its
 // transactions in the place of their bodies. A node asks the proposer for the bodies it does not
@@ -73,10 +76,6 @@ const maxCertificate = 8 + 4 + bft.HashSize + 2 + 1000*(4+2+4096)
 var (
 	// ErrFrame is a frame of an unknown kind or longer than its kind allows
 	ErrFrame = errors.New("bftnet: a malformed frame")
-	// ErrRate is a stream past its rate
-	ErrRate = errors.New("bftnet: the stream is past its rate")
-	// ErrRefused is a stream of an address refused for its rate
-	ErrRefused = errors.New("bftnet: the address is refused")
 )
 
 // Handler is the node behind the service
@@ -111,8 +110,6 @@ type Handler interface {
 type Config struct {
 	// Rate is bft_peer_msg_rate, the frames a stream carries a second at most
 	Rate int
-	// Block is how long the address of a stream past its rate is refused
-	Block time.Duration
 	// Idle closes a stream without a frame for this long
 	Idle time.Duration
 	// Queue is the frames waiting for each peer; past it the newest are dropped, the resends
@@ -128,7 +125,6 @@ type Config struct {
 // DefaultConfig is the starting values of the design, section 4.6
 var DefaultConfig = Config{
 	Rate:  500,
-	Block: 60 * time.Second,
 	Idle:  60 * time.Second,
 	Queue: 4096,
 	Dial:  5 * time.Second,
@@ -142,15 +138,15 @@ type Service struct {
 	cfg     Config
 	handler Handler
 
-	mu      sync.Mutex
-	peers   map[string]*peer
-	refused map[string]time.Time // by the IP of a sender past its rate
-	now     func() time.Time
+	mu    sync.Mutex
+	peers map[string]*peer
+	now   func() time.Time
+	sleep func(time.Duration)
 }
 
 // NewService is the service of a node
 func NewService(cfg Config, handler Handler) *Service {
-	return &Service{cfg: cfg, handler: handler, peers: map[string]*peer{}, refused: map[string]time.Time{}, now: time.Now}
+	return &Service{cfg: cfg, handler: handler, peers: map[string]*peer{}, now: time.Now, sleep: time.Sleep}
 }
 
 var current atomic.Pointer[Service]
@@ -206,62 +202,30 @@ func ReadFrame(r io.Reader, maxBlock int64) (uint8, []byte, error) {
 	return kind, payload, nil
 }
 
-func hostOf(addr net.Addr) string {
-	if addr == nil {
-		return ""
-	}
-	host, _, err := net.SplitHostPort(addr.String())
-	if err != nil {
-		return addr.String()
-	}
-	return host
-}
-
-// isRefused reports whether the address of a sender is refused now
-func (s *Service) isRefused(host string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	until, ok := s.refused[host]
-	if ok && !s.now().Before(until) {
-		delete(s.refused, host)
-		return false
-	}
-	return ok
-}
-
-func (s *Service) refuse(host string) {
-	s.mu.Lock()
-	s.refused[host] = s.now().Add(s.cfg.Block)
-	s.mu.Unlock()
-}
-
 // bucket is the rate of a stream: Rate frames a second, as many in a burst
 type bucket struct {
 	tokens float64
 	last   time.Time
 }
 
-func (b *bucket) take(rate int, now time.Time) bool {
+// wait takes a token for a frame read at now and returns how long the reader waits before it reads
+// the next frame: none while the bucket has a token, past it until the rate gives one
+func (b *bucket) wait(rate int, now time.Time) time.Duration {
 	b.tokens += now.Sub(b.last).Seconds() * float64(rate)
 	if b.tokens > float64(rate) {
 		b.tokens = float64(rate)
 	}
 	b.last = now
-	if b.tokens < 1 {
-		return false
-	}
 	b.tokens--
-	return true
+	if b.tokens >= 0 {
+		return 0
+	}
+	return time.Duration(-b.tokens / float64(rate) * float64(time.Second))
 }
 
-// Serve reads the frames of a stream the TCP server opened with RequestTypeBftMessages, until
-// the stream ends or breaks a limit
+// Serve reads the frames of a stream the TCP server opened with RequestTypeBftMessages, at most
+// Config.Rate a second, until the stream ends or carries a malformed frame
 func (s *Service) Serve(conn net.Conn) error {
-	host := hostOf(conn.RemoteAddr())
-	if s.isRefused(host) {
-		bftmon.Count(bftmon.StreamsRefused)
-		return ErrRefused
-	}
 	rate := &bucket{tokens: float64(s.cfg.Rate), last: s.now()}
 	for {
 		if err := conn.SetReadDeadline(time.Now().Add(s.cfg.Idle)); err != nil {
@@ -274,17 +238,12 @@ func (s *Service) Serve(conn net.Conn) error {
 			}
 			return err
 		}
-		if !rate.take(s.cfg.Rate, s.now()) {
-			s.refuse(host)
-			bftmon.Count(bftmon.StreamsRefused)
-			return ErrRate
-		}
-		if s.isRefused(host) {
-			bftmon.Count(bftmon.StreamsRefused)
-			return ErrRefused
-		}
 		if s.take(kind, payload) {
 			s.Broadcast(kind, payload)
+		}
+		if d := rate.wait(s.cfg.Rate, s.now()); d > 0 {
+			bftmon.Count(bftmon.FramesThrottled)
+			s.sleep(d)
 		}
 	}
 }
