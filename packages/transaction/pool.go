@@ -41,7 +41,7 @@ const (
 const (
 	defaultPoolCount    = 100000
 	defaultPoolBytes    = 256 << 20
-	defaultPerKey       = 1024
+	defaultPerKey       = 4096
 	defaultReserveCount = 1024
 	defaultReserveBytes = 16 << 20
 	defaultBadMinutes   = 60
