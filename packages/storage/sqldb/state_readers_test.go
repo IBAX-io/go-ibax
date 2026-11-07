@@ -6,6 +6,7 @@
 package sqldb
 
 import (
+	"maps"
 	"math"
 	"math/rand"
 	"slices"
@@ -16,9 +17,9 @@ import (
 )
 
 // TestReadersWake: a commit wakes readers whose reads it changed, as the validation of their reads
-// after it tells: those of the rows it changed, by a unique index, by a condition and of the
-// highest id, and of the key of a primary key in the order of the block up to the first that
-// also wrote its row; through readers that run again and register anew
+// after it tells: of the highest id, and of a point, by the primary key or a unique index, and by
+// a condition in the order of the block up to the first that also wrote what it read; through
+// readers that run again and register anew
 func TestReadersWake(t *testing.T) {
 	m := &tableMeta{name: "t", byName: make(map[string]*colMeta), pk: []string{"id"},
 		uniques: [][]string{{"id"}, {"eco", "name"}}}
@@ -49,34 +50,57 @@ func TestReadersWake(t *testing.T) {
 		return &bcond{op: cCmp, col: col, cmp: "=", fam: fam, vals: []*string{v}}
 	}
 	var seq uint64
-	// a view of reads at the seq now: points by the primary key, which it may write, or the
-	// unique index, scans by a condition or of every row, and reads of the highest id
+	// a view of reads at the seq now: points by the primary key or the unique index, scans by a
+	// condition or of every row, each of which it may write, and reads of the highest id
 	view := func() *TxView {
 		v := &TxView{start: seq, own: map[string]*viewTable{}}
+		write := func(key string, c *vchange) {
+			vt := v.own["t"]
+			if vt == nil {
+				vt = &viewTable{ts: ts, rows: map[string]*vchange{}}
+				v.own["t"] = vt
+			}
+			vt.rows[key] = c
+		}
+		// a row of the values, by column, the read requires, the others random
+		rowOf := func(vals map[int]*string) stateRow {
+			r := row(rnd.Intn(12))
+			for col, v := range vals {
+				r[col] = v
+			}
+			return r
+		}
 		for range 1 + rnd.Intn(3) {
 			switch rnd.Intn(5) {
 			case 0, 1:
 				var r stateRead
+				var vals map[int]*string
 				if rnd.Intn(2) == 0 {
-					r = stateRead{ts: ts, seq: seq, cond: eq(0, str(rnd.Intn(12))), ix: -1}
+					vals = map[int]*string{0: str(rnd.Intn(12))}
+					r = stateRead{ts: ts, seq: seq, cond: eq(0, vals[0]), ix: -1}
 				} else {
-					r = stateRead{ts: ts, seq: seq, cond: &bcond{op: cAnd, kids: []*bcond{eq(1, str(rnd.Intn(2))), eq(2, str(rnd.Intn(4)))}}, ix: 0}
+					vals = map[int]*string{1: str(rnd.Intn(2)), 2: str(rnd.Intn(4))}
+					r = stateRead{ts: ts, seq: seq, cond: &bcond{op: cAnd, kids: []*bcond{eq(1, vals[1]), eq(2, vals[2])}}, ix: 0}
 				}
 				j, key, ok := pointKey(m, ts, r.cond)
 				require.True(t, ok)
 				require.Equal(t, r.ix, j)
 				r.point, r.key = true, key
 				v.reads = append(v.reads, r)
-				if r.ix < 0 && rnd.Intn(2) == 0 {
-					vt := v.own["t"]
-					if vt == nil {
-						vt = &viewTable{ts: ts, rows: map[string]*vchange{}}
-						v.own["t"] = vt
+				if rnd.Intn(2) == 0 {
+					if w := rowOf(vals); r.ix < 0 {
+						write(key, &vchange{row: w})
+					} else {
+						write(m.pkOf(w), &vchange{row: w})
 					}
-					vt.rows[key] = &vchange{}
 				}
 			case 2:
-				v.reads = append(v.reads, stateRead{ts: ts, seq: seq, cond: eq(3, str(rnd.Intn(3)))})
+				vals := map[int]*string{3: str(rnd.Intn(3))}
+				v.reads = append(v.reads, stateRead{ts: ts, seq: seq, cond: eq(3, vals[3])})
+				if rnd.Intn(2) == 0 {
+					w := rowOf(vals)
+					write(m.pkOf(w), &vchange{row: w})
+				}
 			case 3:
 				if rnd.Intn(4) == 0 {
 					v.reads = append(v.reads, stateRead{ts: ts, seq: seq})
@@ -108,49 +132,62 @@ func TestReadersWake(t *testing.T) {
 		}
 		return idStale(v)
 	}
-	// expect are the readers the commit of the touches wakes: of a key of the primary key in
-	// their order up to the first that wrote its row, every other reader of what changed
+	// expect are the readers the commit of the touches wakes: of the highest id, and of each point
+	// and condition the touches changed in their order up to the first that wrote what it read
 	expect := func(touches []touch) map[int]bool {
 		want := map[int]bool{}
-		for _, t := range touches {
-			if idChange(ts, t) {
-				for i, v := range runs {
-					if idStale(v) {
-						want[i] = true
-					}
-				}
-			}
-			var keyed []int
+		order := slices.Sorted(maps.Keys(runs))
+		if slices.ContainsFunc(touches, func(t touch) bool { return idChange(ts, t) }) {
 			for i, v := range runs {
-				hit := false
-				for _, rd := range v.reads {
-					switch {
-					case rd.point && rd.ix < 0:
-						if rd.key == t.pk {
-							keyed = append(keyed, i)
-						}
-					case rd.point:
-						for _, row := range []stateRow{t.old, t.new} {
-							if row == nil {
-								continue
-							}
-							if k, ok := m.ukeyOf(ts.uniqIx[rd.ix], row); ok && k == rd.key {
-								hit = true
-							}
-						}
-					default:
-						hit = hit || t.old != nil && rd.cond.matches(t.old) || t.new != nil && rd.cond.matches(t.new)
-					}
-				}
-				if hit {
+				if idStale(v) {
 					want[i] = true
 				}
 			}
-			slices.Sort(keyed)
-			for _, i := range slices.Compact(keyed) {
+		}
+		type point struct {
+			ix  int
+			key string
+		}
+		var points []point
+		add := func(p point) {
+			if !slices.Contains(points, p) {
+				points = append(points, p)
+			}
+		}
+		for _, t := range touches {
+			add(point{-1, t.pk})
+			for _, row := range []stateRow{t.old, t.new} {
+				if row == nil {
+					continue
+				}
+				if k, ok := m.ukeyOf(ts.uniqIx[0], row); ok {
+					add(point{0, k})
+				}
+			}
+		}
+		for _, p := range points {
+			for _, i := range order {
+				if !slices.ContainsFunc(runs[i].reads, func(rd stateRead) bool { return rd.point && rd.ix == p.ix && rd.key == p.key }) {
+					continue
+				}
 				want[i] = true
-				if runs[i].writes(ts, t.pk) {
+				if runs[i].writes(ts, p.ix, p.key) {
 					break
+				}
+			}
+		}
+		var wrote []stateRow
+		for _, i := range order {
+			for _, rd := range runs[i].reads {
+				if rd.point {
+					continue
+				}
+				hit := slices.ContainsFunc(touches, func(t touch) bool {
+					return t.old != nil && rd.cond.matches(t.old) || t.new != nil && rd.cond.matches(t.new)
+				})
+				if hit && !slices.ContainsFunc(wrote, rd.cond.matches) {
+					want[i] = true
+					wrote = append(wrote, runs[i].wrote(ts)...)
 				}
 			}
 		}
@@ -228,4 +265,65 @@ func TestReadersWake(t *testing.T) {
 	require.Equal(t, checked, woken)
 	// readers behind one that wrote the row wait for its commit
 	require.Greater(t, stale, 1000)
+}
+
+// TestReadersWakeHotKey: transactions that read a row by its unique index, or the rows of a
+// condition, and each update the row, as the swaps of a pair do: the commit of each wakes the
+// next alone, and a run of one with a reader before it that wrote what it read waits for a wake
+func TestReadersWakeHotKey(t *testing.T) {
+	m := &tableMeta{name: "t", byName: make(map[string]*colMeta), pk: []string{"id"},
+		uniques: [][]string{{"id"}, {"eco", "name"}}}
+	for _, name := range []string{"id", "eco", "name", "amount"} {
+		cm := &colMeta{name: name, typ: newColType(20, "int8", -1)}
+		m.cols = append(m.cols, cm)
+		m.byName[name] = cm
+	}
+	ts := &tableState{meta: m, uniq: []*smap[string]{new(smap[string])}, uniqIx: []int{1}, hasID: true}
+	ts.resetKeys()
+	str := func(s string) *string { return &s }
+	eq := func(col int, v string) *bcond {
+		fam, _ := family(m.cols[col].typ, m.cols[col].typ)
+		return &bcond{op: cCmp, col: col, cmp: "=", fam: fam, vals: []*string{str(v)}}
+	}
+	pair := func(amount string) stateRow { return stateRow{str("1"), str("1"), str("2"), str(amount)} }
+	pk := m.pkOf(pair("0"))
+	for _, c := range []struct {
+		name string
+		read func() stateRead
+	}{
+		{"unique index", func() stateRead {
+			r := stateRead{ts: ts, cond: &bcond{op: cAnd, kids: []*bcond{eq(1, "1"), eq(2, "2")}}}
+			j, key, ok := pointKey(m, ts, r.cond)
+			require.True(t, ok)
+			r.point, r.ix, r.key = true, j, key
+			return r
+		}},
+		{"condition", func() stateRead { return stateRead{ts: ts, cond: eq(1, "1")} }},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			const n = 50
+			ri := newReaderIndex()
+			// each run read the row as it was before the block, and wrote it
+			view := func() *TxView {
+				return &TxView{reads: []stateRead{c.read()}, own: map[string]*viewTable{"t": {ts: ts,
+					rows: map[string]*vchange{pk: {prev: pair("0"), row: pair("9")}}}}}
+			}
+			for i := range n {
+				require.True(t, ri.register(i, 0, view()))
+			}
+			gens := map[int]uint32{}
+			for i := range n - 1 {
+				ri.wake(i, []touch{{ts: ts, pk: pk, old: pair(strconv.Itoa(i)), new: pair(strconv.Itoa(i + 1))}})
+				require.Equal(t, []Reader{{I: i + 1, Gen: gens[i+1]}}, ri.woken, "the commit %d", i)
+				ri.woken = nil
+				gens[i+1]++
+				require.True(t, ri.register(i+1, gens[i+1], view()))
+				if i+2 < n {
+					// the run of the next has a reader before it that wrote what it read
+					require.True(t, ri.awaits(i+2, view()))
+				}
+				require.False(t, ri.awaits(i+1, view()))
+			}
+		})
+	}
 }

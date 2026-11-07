@@ -116,6 +116,16 @@ var (
 		Help: "Committed runs of transactions by how they ran: parallel, early, again, ordered.",
 	}, []string{"run"})
 
+	// TxExecutions counts every run of a transaction of the blocks the state of the block runs,
+	// committed or not, by why it ran: parallel, the first run of the transaction on a worker;
+	// early, again on a worker after a commit woke it; recheck, again on a worker at once, as a
+	// commit before it was a reader changed what it read; again, at its commit; ordered, in
+	// order. The runs of a block that do not hold are those past its TxRuns.
+	TxExecutions = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "tx_executions_total",
+		Help: "Runs of transactions, committed or not, by why they ran: parallel, early, recheck, again, ordered.",
+	}, []string{"run"})
+
 	// Speculations counts how the speculations of streaming proposals ended: finished, as the
 	// proposal went on from them; refused, as they decided a proposal is not valid; validated, as
 	// they did not decide the proposal and the node tried it from the start; aborted, with no
@@ -217,7 +227,7 @@ func init() {
 	registry.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, Speculations, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
+		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, TxExecutions, Speculations, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
 		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
 	)
 }

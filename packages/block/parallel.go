@@ -184,8 +184,10 @@ func (e *stateExec) play(t *transaction.Transaction, v *sqldb.TxView, limits *tr
 }
 
 // parallel runs the transaction t, the i-th of the block, in parallel on the connection conn,
-// with limits that check nothing: the block checks them in its order
-func (e *stateExec) parallel(i int, t *transaction.Transaction, conn *sql.Conn) txRun {
+// with limits that check nothing: the block checks them in its order. why is why it runs, as
+// TxExecutions counts it.
+func (e *stateExec) parallel(i int, t *transaction.Transaction, conn *sql.Conn, why string) txRun {
+	metrics.TxExecutions.WithLabelValues(why).Inc()
 	r := e.play(t, e.st.NewParallelView(i, contractOf(t), conn), e.limits.Deferred())
 	e.st.SetRunIDs(i, r.v.IDCounts())
 	return r
@@ -207,6 +209,7 @@ func (e *stateExec) ordered(i int) txRun {
 	e.node.Lock()
 	defer e.node.Unlock()
 	for range maxRestarts {
+		metrics.TxExecutions.WithLabelValues("ordered").Inc()
 		r := e.play(e.txs[i], e.st.NewOrderedView(i, contractOf(e.txs[i])), e.limits)
 		if r.v.Barrier() {
 			e.st.SysUpdate()
@@ -266,7 +269,7 @@ func (e *stateExec) runAgain(i int) txRun {
 		}
 		e.again = conn
 	}
-	return e.parallel(i, e.txs[i], e.again)
+	return e.parallel(i, e.txs[i], e.again, "again")
 }
 
 // startWorkers starts the workers on the transactions of the parts of jobs in their order, at
@@ -353,7 +356,11 @@ func (e *stateExec) startWorkers(workers int) error {
 // since the run began may have changed what it read before it was a reader: the run that does
 // not hold then runs again at once.
 func (e *stateExec) runReader(j runJob, conn *sql.Conn) txRun {
-	r := e.parallel(j.i, j.t, conn)
+	why := "parallel"
+	if j.gen > 0 {
+		why = "early"
+	}
+	r := e.parallel(j.i, j.t, conn, why)
 	if e.rerun == nil {
 		return r
 	}
@@ -361,7 +368,7 @@ func (e *stateExec) runReader(j runJob, conn *sql.Conn) txRun {
 		if r.fatal != nil || r.v == nil || !e.st.Register(j.i, j.gen, r.v) || e.st.Holds(r.v) {
 			break
 		}
-		r = e.parallel(j.i, j.t, conn)
+		r = e.parallel(j.i, j.t, conn, "recheck")
 	}
 	return r
 }

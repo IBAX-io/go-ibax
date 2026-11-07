@@ -30,8 +30,8 @@ type readerKey struct {
 	key string
 }
 
-// pointReader is a reader of a point; writes tells the run also wrote the row of the key of the
-// primary key it read
+// pointReader is a reader of a point; writes tells the run also wrote a row of the point, whose
+// commit changes the point again
 type pointReader struct {
 	Reader
 	writes bool
@@ -44,10 +44,12 @@ type idReader struct {
 	own, value int64
 }
 
-// scanReader is a reader of the rows of a table that hold a condition, of every row for nil
+// scanReader is a reader of the rows of a table that hold a condition, of every row for nil;
+// wrote are the rows of the table the run wrote, before and after it wrote them
 type scanReader struct {
 	Reader
-	cond *bcond
+	cond  *bcond
+	wrote []stateRow
 }
 
 // touch is a row a commit changed: its primary key, the row before and after
@@ -86,16 +88,17 @@ func (st *BlockState) WatchReaders() {
 }
 
 // Register keeps the reads of the run gen of the transaction i in the view as readers, unless a
-// later run of the transaction is. It tells whether it kept them and a commit since the view
-// began may have changed what the view read before the run was a reader: the run has to check
-// it holds, as no commit woke it.
+// later run of the transaction is. It tells whether it kept them, a commit since the view began
+// may have changed what the view read before the run was a reader, and no reader before the
+// run wrote what it read: the run has to check it holds, as no commit woke it, nor will one
+// before the commit of the reader that wrote it.
 func (st *BlockState) Register(i int, gen uint32, v *TxView) bool {
 	ri := st.readers.Load()
 	if ri == nil {
 		return false
 	}
 	ri.mu.Lock()
-	kept := ri.register(i, gen, v)
+	kept := ri.register(i, gen, v) && !ri.awaits(i, v)
 	ri.mu.Unlock()
 	// the commit publishes its seq before it looks up the readers, under the lock of the index:
 	// a commit the run did not see either found the run, or published before the lock was
@@ -118,15 +121,38 @@ func (ri *readerIndex) register(i int, gen uint32, v *TxView) bool {
 			// a read of every table: the index wakes it on no commit
 		case rd.point:
 			k := readerKey{ts: rd.ts, ix: rd.ix, key: rd.key}
-			ri.points[k] = append(ri.points[k], pointReader{Reader: r, writes: rd.ix < 0 && v.writes(rd.ts, rd.key)})
+			ri.points[k] = append(ri.points[k], pointReader{Reader: r, writes: v.writes(rd.ts, rd.ix, rd.key)})
 		default:
-			ri.scans[rd.ts] = append(ri.scans[rd.ts], scanReader{Reader: r, cond: rd.cond})
+			ri.scans[rd.ts] = append(ri.scans[rd.ts], scanReader{Reader: r, cond: rd.cond, wrote: v.wrote(rd.ts)})
 		}
 	}
 	for _, rd := range v.ids {
 		ri.ids[rd.ts] = append(ri.ids[rd.ts], idReader{Reader: r, own: rd.own, value: rd.value})
 	}
 	return true
+}
+
+// awaits tells a live reader before the transaction i wrote what the view read: the commit of
+// that one wakes the readers after it of what it wrote
+func (ri *readerIndex) awaits(i int, v *TxView) bool {
+	for _, rd := range v.reads {
+		switch {
+		case rd.ts == nil:
+		case rd.point:
+			for _, r := range ri.points[readerKey{ts: rd.ts, ix: rd.ix, key: rd.key}] {
+				if r.I < i && r.writes && ri.live(r.Reader) {
+					return true
+				}
+			}
+		default:
+			for _, r := range ri.scans[rd.ts] {
+				if r.I < i && ri.live(r.Reader) && slices.ContainsFunc(r.wrote, rd.cond.matches) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // Woken are the readers the commits woke since the last call
@@ -148,8 +174,13 @@ func (ri *readerIndex) live(r Reader) bool {
 }
 
 // wake wakes the readers of the rows of the commit of the transaction i, and drops the readers
-// of the transactions committed and of the runs after which another ran. A reader is live as it
-// was before the commit, so the readers it wakes do not depend on the order of the rows.
+// of the transactions committed and of the runs after which another ran. Of the readers of a row
+// it wakes, in the order of the block, those up to the first that wrote what they read: the
+// commit of that one changes it again, and wakes those after it. A run that wrote a row of a
+// point wrote what the readers of the point after it read; one that wrote a row of a scan, before
+// or after it wrote it, what the readers after it of a condition the row holds read. A reader is
+// live as it was before the commit, so the readers it wakes do not depend on the order of the
+// rows.
 func (ri *readerIndex) wake(i int, touches []touch) {
 	ri.committed = max(ri.committed, i+1)
 	woken := map[int]uint32{}
@@ -159,8 +190,7 @@ func (ri *readerIndex) wake(i int, touches []touch) {
 			ri.woken = append(ri.woken, r)
 		}
 	}
-	// pick wakes the readers of the key in the order of the block up to the first that wrote its
-	// row: the commit of that one changes the row again, and wakes those after it
+	// pick wakes the readers of the key in the order of the block up to the first that wrote it
 	pick := func(k readerKey) {
 		list, ok := ri.points[k]
 		if !ok {
@@ -183,37 +213,63 @@ func (ri *readerIndex) wake(i int, touches []touch) {
 			ri.points[k] = list
 		}
 	}
-	var idTables []*tableState
+	// the points and tables of the commit, each once: a second pick of a point would wake those
+	// after the first reader that wrote it
+	var points []readerKey
+	var tables, idTables []*tableState
+	point := func(k readerKey) {
+		if !slices.Contains(points, k) {
+			points = append(points, k)
+		}
+	}
 	for _, t := range touches {
 		ts := t.ts
+		if !slices.Contains(tables, ts) {
+			tables = append(tables, ts)
+		}
 		if _, ok := ri.ids[ts]; ok && idChange(ts, t) && !slices.Contains(idTables, ts) {
 			idTables = append(idTables, ts)
 		}
-		pick(readerKey{ts: ts, ix: -1, key: t.pk})
+		point(readerKey{ts: ts, ix: -1, key: t.pk})
 		for j, ix := range ts.uniqIx {
 			for _, row := range []stateRow{t.old, t.new} {
 				if row == nil {
 					continue
 				}
 				if k, ok := ts.meta.ukeyOf(ix, row); ok {
-					pick(readerKey{ts: ts, ix: j, key: k})
+					point(readerKey{ts: ts, ix: j, key: k})
 				}
 			}
 		}
-		if list := ri.scans[ts]; len(list) > 0 {
-			kept := list[:0]
-			for _, r := range list {
-				if !ri.live(r.Reader) {
-					continue
-				}
-				if t.old != nil && r.cond.matches(t.old) || t.new != nil && r.cond.matches(t.new) {
-					woke(r.Reader)
-					continue
-				}
+	}
+	for _, k := range points {
+		pick(k)
+	}
+	for _, ts := range tables {
+		list := ri.scans[ts]
+		if len(list) == 0 {
+			continue
+		}
+		list = slices.DeleteFunc(list, func(r scanReader) bool { return !ri.live(r.Reader) })
+		slices.SortStableFunc(list, func(a, b scanReader) int { return a.I - b.I })
+		hit := func(r scanReader) bool {
+			return slices.ContainsFunc(touches, func(t touch) bool {
+				return t.ts == ts && (t.old != nil && r.cond.matches(t.old) || t.new != nil && r.cond.matches(t.new))
+			})
+		}
+		// wrote are the rows the readers woken wrote: a reader after them of a condition one of
+		// the rows holds waits for their commits
+		var wrote []stateRow
+		kept := list[:0]
+		for _, r := range list {
+			if !hit(r) || slices.ContainsFunc(wrote, r.cond.matches) {
 				kept = append(kept, r)
+				continue
 			}
-			ri.scans[ts] = kept
+			woke(r.Reader)
+			wrote = append(wrote, r.wrote...)
 		}
+		ri.scans[ts] = kept
 	}
 	// a reader of the highest id holds while it is what the state now and the ids the
 	// transactions before the reader take tell
@@ -261,8 +317,42 @@ func idChange(ts *tableState, t touch) bool {
 	return okOld != okNew || o != n
 }
 
-// writes tells the view wrote the row of the key of the primary key of the table
-func (v *TxView) writes(ts *tableState, pk string) bool {
+// writes tells the view wrote a row of the point of the table: the row of the key of the primary
+// key (ix -1), or a row of the key of the unique index ix before or after it wrote it
+func (v *TxView) writes(ts *tableState, ix int, key string) bool {
 	vt := v.own[ts.meta.name]
-	return vt != nil && vt.ts == ts && vt.rows[pk] != nil
+	if vt == nil || vt.ts != ts {
+		return false
+	}
+	if ix < 0 {
+		return vt.rows[key] != nil
+	}
+	for _, c := range vt.rows {
+		for _, row := range []stateRow{c.prev, c.row} {
+			if row == nil {
+				continue
+			}
+			if k, ok := ts.meta.ukeyOf(ts.uniqIx[ix], row); ok && k == key {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// wrote are the rows of the table the view wrote, before and after it wrote them
+func (v *TxView) wrote(ts *tableState) []stateRow {
+	vt := v.own[ts.meta.name]
+	if vt == nil || vt.ts != ts {
+		return nil
+	}
+	var rows []stateRow
+	for _, c := range vt.rows {
+		for _, row := range []stateRow{c.prev, c.row} {
+			if row != nil {
+				rows = append(rows, row)
+			}
+		}
+	}
+	return rows
 }
