@@ -156,7 +156,7 @@ func init() {
 
 	// CryptoSettings
 	cmdFlags.StringVar(&conf.Config.CryptoSettings.Hasher, "hasher", crypto.HashAlgo_KECCAK256.String(), fmt.Sprintf("Hash Algorithm (%s | %s | %s | %s | %s | %s)", crypto.HashAlgo_SHA256, crypto.HashAlgo_SHA384, crypto.HashAlgo_SHA512, crypto.HashAlgo_SHA3_256, crypto.HashAlgo_KECCAK256, crypto.HashAlgo_SM3))
-	cmdFlags.StringVar(&conf.Config.CryptoSettings.Cryptoer, "cryptoer", crypto.AsymAlgo_ECC_Secp256k1.String(), fmt.Sprintf("Key and Sign Algorithm (%s | %s | %s | %s | %s)", crypto.AsymAlgo_ECC_P256, crypto.AsymAlgo_ECC_Secp256k1, crypto.AsymAlgo_SM2, crypto.AsymAlgo_MLDSA65, crypto.AsymAlgo_MLDSA87))
+	cmdFlags.StringVar(&conf.Config.CryptoSettings.Cryptoer, "cryptoer", crypto.AsymAlgo_MLDSA65.String(), fmt.Sprintf("Algorithm of the node keys (%s | %s | %s | %s | %s); the first block records it, and a node of another one refuses the network", crypto.AsymAlgo_MLDSA65, crypto.AsymAlgo_MLDSA87, crypto.AsymAlgo_ECC_P256, crypto.AsymAlgo_ECC_Secp256k1, crypto.AsymAlgo_SM2))
 
 	viper.BindPFlags(configCmd.PersistentFlags())
 }
