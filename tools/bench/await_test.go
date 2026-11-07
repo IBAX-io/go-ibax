@@ -21,15 +21,17 @@ import (
 // fakeNode is a node that makes a block at a request but a send while its pool holds
 // transactions, as a validator makes none with an empty pool. Its first send finds the pool full
 // and "room" first finds the account with MaxPerKey in it: the pool holds others then, which the
-// next block takes. It refuses "bad" for good, and puts every other transaction it takes in its
-// next block.
+// next block takes; so does every "room..." at its first send. It refuses "bad" for good, and
+// puts every other transaction it takes in its next block. A request of more than maxParts
+// transactions it refuses as the API, whose multipart reader takes at most 1000 parts.
 type fakeNode struct {
-	mu      sync.Mutex
-	block   int64
-	sends   int
-	pool    map[string]bool
-	refused map[string]*txError
-	in      map[string]int64
+	mu       sync.Mutex
+	block    int64
+	sends    int
+	maxParts int
+	pool     map[string]bool
+	refused  map[string]*txError
+	in       map[string]int64
 }
 
 func newFakeNode() *fakeNode {
@@ -60,11 +62,16 @@ func (f *fakeNode) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+		if f.maxParts > 0 && len(r.MultipartForm.Value) > f.maxParts {
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(apiError{Code: "E_SERVER", Msg: "multipart: message too large"})
+			return
+		}
 		for h := range r.MultipartForm.Value {
 			switch {
 			case h == "bad":
 				f.refused[h] = &txError{Type: "txError", Msg: "bad"}
-			case h == "room" && f.refused[h] == nil:
+			case strings.HasPrefix(h, "room") && f.refused[h] == nil:
 				f.pool["held"] = true
 				f.refused[h] = &txError{Type: "txError", Msg: transaction.ErrPoolKeyFull.Error(), Retryable: true}
 			default:
@@ -114,7 +121,7 @@ func TestAwaitSendsAgainWhatAPoolHadNoRoomFor(t *testing.T) {
 		t.Cleanup(s.Close)
 		n := newNode(s.URL)
 		c.nodes = append(c.nodes, n)
-		outs = append(outs, newOutbox(n))
+		outs = append(outs, newOutbox(n, 2))
 	}
 	tx := func(h string) *signedTx { return &signedTx{hash: h, data: []byte(h)} }
 	outs[0].queue = [][]*signedTx{{tx("a"), tx("b")}}
@@ -140,5 +147,36 @@ func TestAwaitSendsAgainWhatAPoolHadNoRoomFor(t *testing.T) {
 	// each node had its own transactions only
 	if fakes[0].in["c"] != 0 || fakes[1].in["a"] != 0 {
 		t.Fatal("a transaction went to another node")
+	}
+}
+
+// await sends again, batch at a time, the transactions a pool refused for its room: more than a
+// request of the API takes at once, as when one key sends more than the MaxPerKey of the pool
+func TestAwaitSendsAgainBatchAtATime(t *testing.T) {
+	f := newFakeNode()
+	f.maxParts = 10
+	s := httptest.NewServer(f)
+	t.Cleanup(s.Close)
+	n := newNode(s.URL)
+	c := &chainClient{nodes: []*node{n}}
+	o := newOutbox(n, 10)
+	for i := 0; i < 25; i += 10 {
+		var b []*signedTx
+		for j := i; j < min(i+10, 25); j++ {
+			h := fmt.Sprintf("room%d", j)
+			b = append(b, &signedTx{hash: h, data: []byte(h)})
+		}
+		o.queue = append(o.queue, b)
+	}
+
+	results, failed, pending, err := c.await([]*outbox{o}, 20*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 25 || len(failed) != 0 || len(pending) != 0 {
+		t.Fatalf("results %d, failed %v, pending %v", len(results), failed, pending)
+	}
+	if o.resent != 25 {
+		t.Fatalf("sent again %d", o.resent)
 	}
 }

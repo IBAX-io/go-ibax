@@ -262,7 +262,7 @@ func (c *chainClient) runFor(step string, txs []*signedTx, batch int, timeout ti
 	start := time.Now()
 	outs := make([]*outbox, len(c.nodes))
 	for i, n := range c.nodes {
-		outs[i] = newOutbox(n)
+		outs[i] = newOutbox(n, batch)
 	}
 	for i := 0; i < len(txs); i += batch {
 		o := outs[(i/batch)%len(outs)]
@@ -297,6 +297,7 @@ func (c *chainClient) runFor(step string, txs []*signedTx, batch int, timeout ti
 // the room, which that block takes, so it comes.
 type outbox struct {
 	n     *node
+	batch int // transactions a request
 	queue [][]*signedTx
 	// sent are those sent, and the last block of the node then
 	sent   map[string]*signedTx
@@ -306,8 +307,8 @@ type outbox struct {
 	resent int
 }
 
-func newOutbox(n *node) *outbox {
-	return &outbox{n: n, sent: map[string]*signedTx{}, at: map[string]int64{}, after: -1}
+func newOutbox(n *node, batch int) *outbox {
+	return &outbox{n: n, batch: max(batch, 1), sent: map[string]*signedTx{}, at: map[string]int64{}, after: -1}
 }
 
 // poolFull tells the node refused a request for the room of its pool
@@ -347,13 +348,13 @@ func (o *outbox) again(h string) {
 	o.after = max(o.after, o.at[h])
 }
 
-// requeue queues those to send again as a batch
+// requeue queues those to send again, batch at a time: a node parses at most 1000 parts a request
 func (o *outbox) requeue() {
-	if len(o.retry) > 0 {
-		o.queue = append(o.queue, o.retry)
-		o.resent += len(o.retry)
-		o.retry = nil
+	for i := 0; i < len(o.retry); i += o.batch {
+		o.queue = append(o.queue, o.retry[i:min(i+o.batch, len(o.retry))])
 	}
+	o.resent += len(o.retry)
+	o.retry = nil
 }
 
 // await sends the queues of the outboxes and asks each node the status of the transactions it was

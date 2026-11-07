@@ -154,7 +154,7 @@ func (c *chainClient) fail(step string, tx *signedTx, err error, want string, ti
 		}
 		return fmt.Errorf("%s: %w", step, err)
 	}
-	o := newOutbox(c.nodes[0])
+	o := newOutbox(c.nodes[0], 1)
 	o.sent[tx.hash] = tx
 	_, failed, pending, err := c.await([]*outbox{o}, timeout)
 	if err != nil {

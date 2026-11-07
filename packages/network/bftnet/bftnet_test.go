@@ -231,23 +231,25 @@ func TestReadFrame(t *testing.T) {
 	}
 }
 
-// A stream past its rate is closed, and its address refused for Block, on every stream
+// A stream past its rate is read at its rate and kept; it takes no token of another stream
 func TestServeRate(t *testing.T) {
 	h := newTestHandler()
 	cfg := DefaultConfig
 	cfg.Rate = 5
 	s := NewService(cfg, h)
 	now := time.Unix(1000, 0)
+	var slept time.Duration
 	s.now = func() time.Time { return now }
-	refused := bftmon.Get().Messages[bftmon.StreamsRefused]
+	s.sleep = func(d time.Duration) { slept += d; now = now.Add(d) }
+	throttled := bftmon.Get().Messages[bftmon.FramesThrottled]
 
-	serve := func(frames int) (error, int) {
+	serve := func(first, frames int) (error, int) {
 		server, client := net.Pipe()
 		done := make(chan error, 1)
 		go func() { done <- s.Serve(server); server.Close() }()
 		sent := 0
 		for i := range frames {
-			if _, err := client.Write(AppendFrame(nil, FrameVote, testVote(uint32(i)).Marshal())); err != nil {
+			if _, err := client.Write(AppendFrame(nil, FrameVote, testVote(uint32(first+i)).Marshal())); err != nil {
 				break
 			}
 			sent++
@@ -260,34 +262,23 @@ func TestServeRate(t *testing.T) {
 		}
 		return err, sent
 	}
-	if err, sent := serve(5); err != nil || sent != 5 {
-		t.Fatalf("5 frames at a rate of 5: %v, %d sent", err, sent)
+	if err, sent := serve(0, 5); err != nil || sent != 5 || slept != 0 {
+		t.Fatalf("5 frames at a rate of 5: %v, %d sent, waited %v", err, sent, slept)
 	}
-	if err, sent := serve(6); !errors.Is(err, ErrRate) || sent != 6 {
-		t.Fatalf("6 frames at a rate of 5: %v, %d sent", err, sent)
+	// past the 5 tokens of the stream each frame waits a fifth of a second
+	if err, sent := serve(5, 20); err != nil || sent != 20 || slept != 3*time.Second {
+		t.Fatalf("20 frames at a rate of 5: %v, %d sent, waited %v, want 3s", err, sent, slept)
 	}
-	if _, votes, _ := h.counts(); votes != 10 {
-		t.Fatalf("%d votes taken, want 10", votes)
+	if n := bftmon.Get().Messages[bftmon.FramesThrottled] - throttled; n != 15 {
+		t.Fatalf("%d frames counted throttled, want 15", n)
 	}
-	if err, _ := serve(1); !errors.Is(err, ErrRefused) {
-		t.Fatalf("a new stream of the refused address: %v", err)
+	// a new stream of the same address has its own tokens
+	slept = 0
+	if err, sent := serve(25, 5); err != nil || sent != 5 || slept != 0 {
+		t.Fatalf("a new stream after a throttled one: %v, %d sent, waited %v", err, sent, slept)
 	}
-	if err, _ := serve(0); !errors.Is(err, ErrRefused) {
-		t.Fatalf("a new stream of the refused address, before its first frame: %v", err)
-	}
-	now = now.Add(cfg.Block - time.Second)
-	if err, _ := serve(1); !errors.Is(err, ErrRefused) {
-		t.Fatalf("a stream before the refusal ends: %v", err)
-	}
-	now = now.Add(time.Second)
-	if err, sent := serve(5); err != nil || sent != 5 {
-		t.Fatalf("a stream after the refusal: %v, %d sent", err, sent)
-	}
-	if _, votes, _ := h.counts(); votes != 15 {
-		t.Fatalf("%d votes taken, want 15", votes)
-	}
-	if n := bftmon.Get().Messages[bftmon.StreamsRefused] - refused; n != 4 {
-		t.Fatalf("%d streams counted refused, want 4", n)
+	if _, votes, _ := h.counts(); votes != 30 {
+		t.Fatalf("%d votes taken, want 30", votes)
 	}
 
 	// a frame too long closes the stream

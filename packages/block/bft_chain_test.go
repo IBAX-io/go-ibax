@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/block"
@@ -103,21 +104,15 @@ func heldCommits(t *testing.T) uint64 {
 	return m.GetHistogram().GetSampleCount()
 }
 
-// TestTrialAndCommitOnChain runs with the config of a node, IBAX_TEST_CHAIN_CONFIG, on a copy of
-// its database named IBAX_TEST_CHAIN_DB, and changes the copy: it rolls the last IBAX_TEST_CHAIN_BLOCKS blocks (20 by
-// default) back, then for each of them in turn the trial leaves the database, as the other
-// connections see it, the virtual machine, the platform parameters and the language sources as
-// they were; the commit applies it with the hash and the rollbacks hash the chain has, and stores
-// its certificate; a second trial of a committed block, on the state after it, changes nothing
-// either, whether it fails or not. The blocks take turns: the commit commits the trial it holds;
-// the commit executes a block it holds no trial of; the commit executes a block whose trial the
-// trial of another block dropped.
-func TestTrialAndCommitOnChain(t *testing.T) {
+// chainForTest opens the copy IBAX_TEST_CHAIN_DB of the database of the node of the config
+// IBAX_TEST_CHAIN_CONFIG, with the timeout of an idle transaction idleInTx if it is not 0, and
+// rolls its last IBAX_TEST_CHAIN_BLOCKS blocks (count by default) back, as a node that loads the
+// contracts again after it. It returns the blocks rolled back, in their order.
+func chainForTest(t *testing.T, count int64, idleInTx int) []sqldb.BlockChain {
 	config, name := os.Getenv("IBAX_TEST_CHAIN_CONFIG"), os.Getenv("IBAX_TEST_CHAIN_DB")
 	if config == "" || name == "" {
 		t.Skip("IBAX_TEST_CHAIN_CONFIG and IBAX_TEST_CHAIN_DB name no node and no copy of its database")
 	}
-	count := int64(20)
 	if v := os.Getenv("IBAX_TEST_CHAIN_BLOCKS"); v != "" {
 		var err error
 		count, err = strconv.ParseInt(v, 10, 64)
@@ -125,6 +120,9 @@ func TestTrialAndCommitOnChain(t *testing.T) {
 	}
 	require.NoError(t, conf.LoadConfig(config))
 	conf.Config.DB.Name = name
+	if idleInTx != 0 {
+		conf.Config.DB.IdleInTxTimeout = idleInTx
+	}
 	require.NoError(t, sqldb.GormInit(conf.Config.DB))
 	require.NoError(t, syspar.ReadNodeKeys())
 	log.SetLevel(log.FatalLevel)
@@ -153,7 +151,25 @@ func TestTrialAndCommitOnChain(t *testing.T) {
 	require.Len(t, blocks, int(count))
 
 	require.NoError(t, rollback.ToBlockID(from-1, nil, log.WithFields(log.Fields{})))
+	// a chain of the BFT consensus never rolls a committed block back and keeps its certificate:
+	// the copy forgets those of the blocks rolled back, which their commits store again
+	require.NoError(t, sqldb.DBConn.Where("height >= ?", from).Delete(&sqldb.BftCertificate{}).Error)
 	load()
+	return blocks
+}
+
+// TestTrialAndCommitOnChain runs with the config of a node, IBAX_TEST_CHAIN_CONFIG, on a copy of
+// its database named IBAX_TEST_CHAIN_DB, and changes the copy: it rolls the last IBAX_TEST_CHAIN_BLOCKS blocks (20 by
+// default) back, then for each of them in turn the trial leaves the database, as the other
+// connections see it, the virtual machine, the platform parameters and the language sources as
+// they were; the commit applies it with the hash and the rollbacks hash the chain has, and stores
+// its certificate; a second trial of a committed block, on the state after it, changes nothing
+// either, whether it fails or not. The blocks take turns: the commit commits the trial it holds;
+// the commit executes a block it holds no trial of; the commit executes a block whose trial the
+// trial of another block dropped.
+func TestTrialAndCommitOnChain(t *testing.T) {
+	blocks := chainForTest(t, 20, 0)
+	from, last := blocks[0].ID, blocks[len(blocks)-1].ID
 
 	var txs, failed int32
 	var prev []byte
@@ -212,5 +228,67 @@ func TestTrialAndCommitOnChain(t *testing.T) {
 			requireSameState(t, after, takeState(t), fmt.Sprintf("after the failed trial of block %d", want.ID))
 		}
 	}
-	t.Logf("blocks %d-%d, %d transactions: each trial left the state as it was, each commit has the hash and the rollbacks hash of the chain, the held trials committed once; %d second trials failed", from, last.ID, txs, failed)
+	t.Logf("blocks %d-%d, %d transactions: each trial left the state as it was, each commit has the hash and the rollbacks hash of the chain, the held trials committed once; %d second trials failed", from, last, txs, failed)
+}
+
+// requireCommitted commits the block with a certificate and checks the chain has it, with its
+// hash, its rollbacks hash and its certificate; it returns whether the commit committed the trial
+// the node held
+func requireCommitted(t *testing.T, want sqldb.BlockChain) bool {
+	t.Helper()
+	held := heldCommits(t)
+	hash, err := bft.HashOf(want.Hash)
+	require.NoError(t, err)
+	cert := &bft.Certificate{Height: uint64(want.ID), Round: 1, Hash: hash,
+		Precommits: []bft.Signed{{Validator: 0, Signature: []byte{1}}}}
+	_, err = block.Commit(want.Data, cert)
+	require.NoErrorf(t, err, "the commit of block %d", want.ID)
+	got := &sqldb.BlockChain{}
+	found, err := got.Get(want.ID)
+	require.NoError(t, err)
+	require.Truef(t, found, "block %d in the chain", want.ID)
+	require.Equalf(t, want.Hash, got.Hash, "the hash of block %d", want.ID)
+	require.Equalf(t, want.RollbacksHash, got.RollbacksHash, "the rollbacks hash of block %d", want.ID)
+	stored := &sqldb.BftCertificate{}
+	found, err = stored.Get(nil, want.ID)
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, cert.Marshal(), stored.Data)
+	return heldCommits(t) == held+1
+}
+
+// TestHeldTrialPastIdleTimeoutOnChain runs as TestTrialAndCommitOnChain, on its last 4 blocks, with
+// the connections of the database ending a transaction idle for 300 ms. The trial of a block waits
+// for the decision of its height as long as the network takes: the trial held for 3 times the
+// timeout commits. The commit of a held trial that fails executes the block again, and the block
+// is committed all the same: with the connection of the held trial ended, and with the trial
+// failing as PostgreSQL commits it. The chain goes on with the commit of the trial of the next
+// block.
+func TestHeldTrialPastIdleTimeoutOnChain(t *testing.T) {
+	const idleInTx = 300
+	blocks := chainForTest(t, 4, idleInTx)
+	trial := func(want sqldb.BlockChain) {
+		b, err := block.ProcessBlockByBinData(want.Data, true)
+		require.NoError(t, err)
+		require.NoErrorf(t, b.Trial(), "the trial of block %d", want.ID)
+	}
+
+	trial(blocks[0])
+	time.Sleep(3 * idleInTx * time.Millisecond)
+	require.Truef(t, requireCommitted(t, blocks[0]), "block %d commits the trial held past the timeout", blocks[0].ID)
+
+	trial(blocks[1])
+	var ended []bool
+	require.NoError(t, sqldb.DBConn.Raw(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity
+		WHERE datname = current_database() AND pid <> pg_backend_pid()
+		AND state = 'idle in transaction' AND backend_xid IS NOT NULL`).Scan(&ended).Error)
+	require.Equal(t, []bool{true}, ended, "the connection of the held trial ended")
+	require.Falsef(t, requireCommitted(t, blocks[1]), "block %d executed again", blocks[1].ID)
+
+	trial(blocks[2])
+	require.NoError(t, block.FailHeldCommit())
+	require.Falsef(t, requireCommitted(t, blocks[2]), "block %d executed again", blocks[2].ID)
+
+	trial(blocks[3])
+	require.Truef(t, requireCommitted(t, blocks[3]), "block %d commits the trial it holds", blocks[3].ID)
 }

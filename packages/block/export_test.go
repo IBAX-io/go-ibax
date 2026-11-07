@@ -5,7 +5,11 @@
 
 package block
 
-import "github.com/IBAX-io/go-ibax/packages/bft"
+import (
+	"errors"
+
+	"github.com/IBAX-io/go-ibax/packages/bft"
+)
 
 // ShellOf is the shell the proposer of the block of the hash at the height streams
 func ShellOf(binData []byte, height int64, hash bft.Hash) ([]byte, error) {
@@ -14,4 +18,16 @@ func ShellOf(binData []byte, height int64, hash bft.Hash) ([]byte, error) {
 		return nil, err
 	}
 	return b.shell()
+}
+
+// FailHeldCommit makes the commit of the trial the node holds fail: its transaction breaks a
+// deferred constraint, which PostgreSQL checks as it commits
+func FailHeldCommit() error {
+	held.Lock()
+	defer held.Unlock()
+	if held.t == nil {
+		return errors.New("the node holds no trial")
+	}
+	return held.t.dbTx.Connection().Exec(`CREATE TEMP TABLE held_commit_fails (id int UNIQUE DEFERRABLE INITIALLY DEFERRED) ON COMMIT DROP;
+		INSERT INTO held_commit_fails VALUES (1), (1)`).Error
 }

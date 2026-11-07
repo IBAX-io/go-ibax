@@ -52,8 +52,9 @@ const (
 	MessagesDuplicate = "duplicate"
 	// MessagesUndecoded is the frames whose payload does not decode
 	MessagesUndecoded = "undecoded"
-	// StreamsRefused is the streams the node closed past their rate or of an address it refuses
-	StreamsRefused = "refused_streams"
+	// FramesThrottled is the frames of the other nodes the node read past the rate of their stream,
+	// after which it waited to read the next
+	FramesThrottled = "throttled_frames"
 	// TxFramesDropped is the frames of transactions of the node a full queue of a peer dropped
 	TxFramesDropped = "dropped_tx_frames"
 )

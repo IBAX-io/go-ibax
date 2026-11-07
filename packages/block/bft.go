@@ -125,6 +125,10 @@ func (b *Block) beginTrial() (*sqldb.DbTransaction, memState, error) {
 	if err != nil {
 		return nil, mem, err
 	}
+	if err := dbTx.WaitsIdle(); err != nil {
+		dbTx.Rollback()
+		return nil, mem, err
+	}
 	b.trial = true
 	b.beginProfile()
 	b.prof.start = begin
@@ -172,7 +176,10 @@ func (b *Block) endTrial(dbTx *sqldb.DbTransaction, mem memState, err error) err
 }
 
 // commitHeld commits the trial the node holds if it is of the block the certificate commits, with
-// the certificate, and reports whether it was; one of another block it rolls back
+// the certificate, and reports whether it was; one of another block it rolls back. A trial that
+// fails to commit is not committed, unless the block is in the chain after all: Commit executes
+// the block again, as one it holds no trial of, as every node whose trial failed does, so the
+// chain goes on.
 func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 	t := takeHeld()
 	if t == nil {
@@ -194,10 +201,18 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 	}
 	if err != nil {
 		t.dbTx.Rollback()
-		return nil, true, err
+		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Warn("storing the certificate in the held trial, the block is executed again")
+		return nil, false, nil
 	}
 	if err := t.dbTx.Commit(); err != nil {
-		return nil, true, err
+		in, errIn := inChain(b)
+		if errIn != nil {
+			return nil, true, errors.Join(err, errIn)
+		}
+		if !in {
+			b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Warn("committing the held trial, the block is executed again")
+			return nil, false, nil
+		}
 	}
 	states.afterCommit(b.Header.BlockId)
 	if err := t.mem.restore(); err != nil {
@@ -211,6 +226,17 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 	}
 	metrics.BlockStage.WithLabelValues(metrics.KindHeld, metrics.StageNotify).Observe(metrics.Since(start))
 	return b, true, nil
+}
+
+// inChain reports whether the chain has the block, by its height and its hash: a commit whose
+// connection fails after PostgreSQL commits returns an error
+func inChain(b *Block) (bool, error) {
+	bc := &sqldb.BlockChain{}
+	found, err := bc.Get(b.Header.BlockId)
+	if err != nil {
+		return false, err
+	}
+	return found && bytes.Equal(bc.Hash, b.Header.BlockHash), nil
 }
 
 // committedHashes is the hashes of the transactions of the block: of a generated block, those it took
