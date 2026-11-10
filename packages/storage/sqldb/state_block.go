@@ -507,8 +507,10 @@ func (ts *tableState) setBaseMax(id int64) error {
 }
 
 // validate tells the reads of a view hold in the state as it is now: no commit since a read
-// changed what it read. The caller holds the lock of the state.
-func (st *BlockState) validate(v *TxView) bool {
+// changed what it read. For a reader i of the block, not -1, a read of the highest id of a table
+// some transaction before i not committed takes ids of holds too: the commits before i check it,
+// as the wakes of the readers do. The caller holds the lock of the state.
+func (st *BlockState) validate(v *TxView, i int) bool {
 	if v.sysGen != st.sysGen.Load() || st.allPG.Load() {
 		return false
 	}
@@ -527,11 +529,28 @@ func (st *BlockState) validate(v *TxView) bool {
 		}
 	}
 	for _, r := range v.ids {
-		if r.ts.pg.Load() || !r.ts.maxKnown || max(r.ts.max, r.own) != r.value {
+		if r.ts.pg.Load() || !r.ts.maxKnown {
+			return false
+		}
+		if max(r.ts.max, r.own) != r.value && (i < 0 || !st.takenBefore(i, r.ts.meta.name)) {
 			return false
 		}
 	}
 	return st.utxoHolds(v)
+}
+
+// takenBefore tells a transaction before i not committed takes ids of the table, in its last run
+// or as the last transaction of its contract did. It looks from i back: the transaction before
+// a reader of the highest id is mostly one that inserts too.
+func (st *BlockState) takenBefore(i int, table string) bool {
+	st.idMu.Lock()
+	defer st.idMu.Unlock()
+	for j := min(i, len(st.txs)) - 1; j >= st.next; j-- {
+		if st.takes(j, table) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // Holds tells the reads of a view of a transaction hold in the state as it is now; a view run
@@ -543,7 +562,18 @@ func (st *BlockState) Holds(v *TxView) bool {
 	}
 	st.mu.RLock()
 	defer st.mu.RUnlock()
-	return st.validate(v)
+	return st.validate(v, -1)
+}
+
+// HoldsAhead tells the reads of a view of the transaction i, a reader the commits before i wake,
+// hold as Holds does, but for the reads of the highest ids the commits before i check
+func (st *BlockState) HoldsAhead(i int, v *TxView) bool {
+	if v.ordered {
+		return true
+	}
+	st.mu.RLock()
+	defer st.mu.RUnlock()
+	return st.validate(v, i)
 }
 
 // Commit commits a view of the transaction i, which Holds, in the order of the block

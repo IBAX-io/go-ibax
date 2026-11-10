@@ -378,7 +378,7 @@ func (e *stateExec) runReader(j runJob, conn *sql.Conn) txRun {
 		return r
 	}
 	for range 2 {
-		if r.fatal != nil || r.v == nil || !e.st.Register(j.i, j.gen, r.v) || e.st.Holds(r.v) {
+		if r.fatal != nil || r.v == nil || !e.st.Register(j.i, j.gen, r.v) || e.st.HoldsAhead(j.i, r.v) {
 			break
 		}
 		r = e.parallel(j.i, j.t, conn, "recheck")

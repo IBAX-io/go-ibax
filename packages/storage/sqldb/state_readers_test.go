@@ -471,3 +471,37 @@ func TestAwaitsScanWriters(t *testing.T) {
 		}
 	}
 }
+
+// TestHoldsAhead: a run of a reader of the highest id that read it with the ids the transactions
+// before it not committed take holds ahead of their commits, which check it, but not in Holds; a
+// run that read a wrong value with none of those before it does not hold
+func TestHoldsAhead(t *testing.T) {
+	m := &tableMeta{name: "t", byName: make(map[string]*colMeta), pk: []string{"id"}, uniques: [][]string{{"id"}}}
+	cm := &colMeta{name: "id", typ: newColType(20, "int8", -1)}
+	m.cols, m.byName["id"] = []*colMeta{cm}, cm
+	ts := &tableState{meta: m, hasID: true, maxLoaded: true, maxKnown: true, max: 10}
+	ts.resetKeys()
+	st := &BlockState{txs: make([]txSlot, 4), contracts: map[string]map[string]int{"insert": {"t": 1}}}
+	// the transaction 0 inserts a row in its last run, 1 inserts none, 2 is of a contract that
+	// inserts one and has not run
+	one, none := map[string]int{"t": 1}, map[string]int{}
+	st.txs[0].ids.Store(&one)
+	st.txs[1].ids.Store(&none)
+	st.txs[2].contract = "insert"
+	read := func(value int64) *TxView {
+		return &TxView{ids: []idRead{{ts: ts, own: math.MinInt64, value: value}}}
+	}
+	require.True(t, st.Holds(read(10)))
+	require.True(t, st.HoldsAhead(1, read(11)))
+	require.False(t, st.Holds(read(11)))
+	require.True(t, st.HoldsAhead(3, read(12)))
+
+	// once 0 and 1 committed, 1 inserting none: a reader 2 that read a wrong value has none
+	// before it to check it
+	st.next, ts.max = 2, 11
+	require.False(t, st.HoldsAhead(2, read(12)))
+	require.True(t, st.HoldsAhead(2, read(11)))
+	require.True(t, st.HoldsAhead(3, read(13)))
+	ts.maxKnown = false
+	require.False(t, st.HoldsAhead(3, read(13)))
+}
