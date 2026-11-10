@@ -6,7 +6,10 @@
 package bft
 
 import (
+	"encoding/binary"
 	"errors"
+	"fmt"
+	"hash/crc32"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -18,48 +21,188 @@ import (
 // as dead rows of the size of the proposals.
 const SignStateFile = "bft_sign_state"
 
-// WriteSignState writes the sign state to path whole or not at all: to a temporary file in its
-// directory, synced, renamed over path, and the directory synced, so that after a crash path has
-// the state before or this one
-func WriteSignState(path string, s *SignState) error {
-	tmp := path + ".tmp"
-	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+// The file has two slots of the same size, which the node overwrites in turn. A slot is
+//
+//	sequence (8 bytes) | length of the state (4) | CRC-32C of the sequence, the length and the state (4) | state
+//
+// in little endian. A write overwrites the slot of the older state and syncs its data only: the
+// blocks of the file are written when it is made, so the write changes no metadata and waits for
+// no commit of the file system's journal, which on a disk busy with the database took up to
+// 0.7 s for a rename and the sync of the directory. A crash in a write damages that slot only;
+// the other keeps the state before.
+const (
+	slotHeader = 16
+	// minSlot is the smallest slot, a multiple of the page size, and the slots double from it: a
+	// sign state of the votes of ML-DSA-65 keys is about 3.4 KB
+	minSlot = 16 << 10
+)
+
+var castagnoli = crc32.MakeTable(crc32.Castagnoli)
+
+// SignFile is the open file of the sign state
+type SignFile struct {
+	path string
+	f    *os.File
+	slot int64  // size of a slot; 0 before the file is made
+	seq  uint64 // sequence of the last state written
+}
+
+// OpenSignFile opens the file of the sign state of path and reads its last state, whose blocks are
+// at most maxBlock bytes; the state is nil if the node has none
+func OpenSignFile(path string, maxBlock int64) (*SignFile, *SignState, error) {
+	sf := &SignFile{path: path}
+	f, err := os.OpenFile(path, os.O_RDWR, 0)
+	if errors.Is(err, fs.ErrNotExist) {
+		return sf, nil, nil
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	b, err := sf.read(f)
+	if err != nil {
+		f.Close()
+		return nil, nil, fmt.Errorf("%s: %w", path, err)
+	}
+	s, err := UnmarshalSignState(b, maxBlock)
+	if err != nil {
+		f.Close()
+		return nil, nil, fmt.Errorf("%s: %w", path, err)
+	}
+	sf.f = f
+	return sf, s, nil
+}
+
+// read finds the slot of the last state in f and sets the slot size and the sequence
+func (sf *SignFile) read(f *os.File) ([]byte, error) {
+	info, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	size := info.Size()
+	if size < 2*minSlot || size%(2*minSlot) != 0 {
+		return nil, fmt.Errorf("not a file of the sign state: %d bytes", size)
+	}
+	sf.slot = size / 2
+	var last []byte
+	found := false
+	for i := int64(0); i < 2; i++ {
+		buf := make([]byte, sf.slot)
+		if _, err := f.ReadAt(buf, i*sf.slot); err != nil {
+			return nil, err
+		}
+		seq, state, ok := parseSlot(buf)
+		if ok && (!found || seq > sf.seq) {
+			sf.seq, last, found = seq, state, true
+		}
+	}
+	if !found {
+		return nil, errors.New("both slots of the sign state are damaged")
+	}
+	return last, nil
+}
+
+// parseSlot is the sequence and the state of a slot, if its checksum holds
+func parseSlot(buf []byte) (uint64, []byte, bool) {
+	n := int64(binary.LittleEndian.Uint32(buf[8:12]))
+	if n > int64(len(buf))-slotHeader {
+		return 0, nil, false
+	}
+	sum := crc32.Update(crc32.Checksum(buf[:12], castagnoli), castagnoli, buf[slotHeader:slotHeader+n])
+	if sum != binary.LittleEndian.Uint32(buf[12:16]) {
+		return 0, nil, false
+	}
+	return binary.LittleEndian.Uint64(buf[:8]), buf[slotHeader : slotHeader+n], true
+}
+
+// record is a slot of the state b at sequence seq, without the padding
+func record(seq uint64, b []byte) []byte {
+	r := make([]byte, slotHeader+len(b))
+	binary.LittleEndian.PutUint64(r[:8], seq)
+	binary.LittleEndian.PutUint32(r[8:12], uint32(len(b)))
+	copy(r[slotHeader:], b)
+	sum := crc32.Update(crc32.Checksum(r[:12], castagnoli), castagnoli, b)
+	binary.LittleEndian.PutUint32(r[12:16], sum)
+	return r
+}
+
+// Write stores s: once it returns, a crash leaves s or a later state in the file
+func (sf *SignFile) Write(s *SignState) error {
+	b := s.Marshal()
+	next := sf.seq + 1
+	if sf.f == nil || int64(slotHeader+len(b)) > sf.slot {
+		if err := sf.make(next, b); err != nil {
+			return err
+		}
+		sf.seq = next
+		return nil
+	}
+	if _, err := sf.f.WriteAt(record(next, b), int64(next%2)*sf.slot); err != nil {
+		return err
+	}
+	if err := fdatasync(sf.f); err != nil {
+		return err
+	}
+	// the sequence moves on only once the slot is synced: a failed write is retried in the same
+	// slot, and the other keeps the last state stored
+	sf.seq = next
+	return nil
+}
+
+// make writes the file anew with slots that hold b, and b at seq in its slot: to a temporary file,
+// synced, renamed over the file, and the directory synced, so that after a crash the file has the
+// state before or this one. It runs for the first state and when a state outgrows the slots.
+func (sf *SignFile) make(seq uint64, b []byte) error {
+	slot := int64(minSlot)
+	for slot < 2*int64(slotHeader+len(b)) {
+		slot *= 2
+	}
+	buf := make([]byte, 2*slot)
+	copy(buf[int64(seq%2)*slot:], record(seq, b))
+
+	tmp := sf.path + ".tmp"
+	f, err := os.OpenFile(tmp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
-	if _, err = f.Write(s.Marshal()); err == nil {
+	if _, err = f.Write(buf); err == nil {
 		err = f.Sync()
 	}
-	if cerr := f.Close(); err == nil {
-		err = cerr
+	if err == nil {
+		err = os.Rename(tmp, sf.path)
+	}
+	if err == nil {
+		err = syncDir(filepath.Dir(sf.path))
 	}
 	if err != nil {
+		f.Close()
 		os.Remove(tmp)
 		return err
 	}
-	if err := os.Rename(tmp, path); err != nil {
-		return err
+	if sf.f != nil {
+		sf.f.Close()
 	}
-	dir, err := os.Open(filepath.Dir(path))
+	sf.f, sf.slot = f, slot
+	return nil
+}
+
+func syncDir(dir string) error {
+	d, err := os.Open(dir)
 	if err != nil {
 		return err
 	}
-	err = dir.Sync()
-	if cerr := dir.Close(); err == nil {
+	err = d.Sync()
+	if cerr := d.Close(); err == nil {
 		err = cerr
 	}
 	return err
 }
 
-// ReadSignState reads the sign state of path, whose blocks are at most maxBlock bytes; nil if the
-// node has none
-func ReadSignState(path string, maxBlock int64) (*SignState, error) {
-	b, err := os.ReadFile(path)
-	if errors.Is(err, fs.ErrNotExist) {
-		return nil, nil
+// Close closes the file
+func (sf *SignFile) Close() error {
+	if sf == nil || sf.f == nil {
+		return nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	return UnmarshalSignState(b, maxBlock)
+	err := sf.f.Close()
+	sf.f = nil
+	return err
 }

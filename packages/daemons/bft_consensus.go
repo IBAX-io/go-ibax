@@ -105,6 +105,8 @@ type bftDriver struct {
 	// calls transmit only after store stored the state that has the message
 	store    func(*bft.SignState) error
 	transmit func(bft.Output)
+	// signFile is the file store writes the sign state to, which restore opens
+	signFile *bft.SignFile
 
 	// evidence is the evidence the driver took, and submit submits one in a transaction
 	evidence bftEvidence
@@ -140,7 +142,7 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 	}
 	speculations = d.spec
 	d.store = func(s *bft.SignState) error {
-		return bft.WriteSignState(signStatePath(), s)
+		return d.signFile.Write(s)
 	}
 	d.submit = submitEvidenceTx
 	d.clockDrift = utils.ClockDrift
@@ -172,6 +174,7 @@ func (d *bftDriver) run() {
 	defer func() {
 		bftnet.Register(nil)
 		d.svc.Close()
+		d.signFile.Close()
 	}()
 	d.logger.WithFields(log.Fields{"height": d.m.Height()}).Info("the consensus started")
 	d.checkOperator()
@@ -277,10 +280,11 @@ func signStatePath() string {
 // restore restores the sign state the node stored at its height before it stopped (design 4.3):
 // the machine signs nothing that conflicts with it, and the pool resends its messages
 func (d *bftDriver) restore() error {
-	s, err := bft.ReadSignState(signStatePath(), syspar.GetMaxBlockSize())
+	f, s, err := bft.OpenSignFile(signStatePath(), syspar.GetMaxBlockSize())
 	if err != nil {
 		return fmt.Errorf("the stored sign state: %w", err)
 	}
+	d.signFile = f
 	if s == nil || s.Height != d.m.Height() {
 		return nil
 	}
