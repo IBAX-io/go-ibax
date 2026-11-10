@@ -83,7 +83,7 @@ func GetBlocksBatch(ctx context.Context, host string, blockID int64, reverseOrde
 	blocksChan, errChan := GetBlockBodiesChan(ctx, conn, blocksCount)
 	go func() {
 		for err := range errChan {
-			if err != nil {
+			if err != nil && ctx.Err() == nil {
 				log.WithFields(log.Fields{"type": consts.NetworkError, "error": err}).Error("on reading block bodies")
 			}
 		}
@@ -104,8 +104,15 @@ func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int6
 		BytesPool.Put(bodyBuf)
 	}
 
-	// a context done drops the blocks: the reading stops at once
+	// a context done drops the blocks: the reading stops at once, with the error of the context
+	// rather than that of the closed connection
 	stop := context.AfterFunc(ctx, func() { src.Close() })
+	readErr := func(err error) error {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		return err
+	}
 	go func() {
 		defer func() {
 			stop()
@@ -119,7 +126,7 @@ func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int6
 
 		dataSize, err := network.ReadInt(src)
 		if err != nil {
-			errChan <- err
+			errChan <- readErr(err)
 			return
 		}
 		if dataSize < 0 || dataSize > network.MaxBlocksBytes {
@@ -134,8 +141,7 @@ func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int6
 
 			_, err := io.ReadFull(src, sizeBuf)
 			if err != nil {
-				log.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("on reading size of block data")
-				errChan <- err
+				errChan <- readErr(err)
 				return
 			}
 
@@ -149,8 +155,7 @@ func GetBlockBodiesChan(ctx context.Context, src io.ReadCloser, blocksCount int6
 			bodyEndIndx := bodyStartIndx + int64(size)
 			body := bodyBuf[bodyStartIndx:bodyEndIndx]
 			if readed, err := io.ReadFull(src, body); err != nil {
-				log.WithFields(log.Fields{"type": consts.IOError, "size": size, "readed": readed, "error": err}).Error("on reading block body")
-				errChan <- err
+				errChan <- fmt.Errorf("reading %d of %d bytes of a block body: %w", readed, size, readErr(err))
 				return
 			}
 

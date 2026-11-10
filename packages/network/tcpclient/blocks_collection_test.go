@@ -75,9 +75,15 @@ func TestGetBlockBodiesChanCancel(t *testing.T) {
 		server.Write(answer(10, []byte("ab")))
 	}()
 	blocks, errs := GetBlockBodiesChan(ctx, client, 2)
+	last := make(chan error, 1)
 	go func() {
-		for range errs {
+		var err error
+		for e := range errs {
+			if e != nil {
+				err = e
+			}
 		}
+		last <- err
 	}()
 	if b := <-blocks; string(b) != "ab" {
 		t.Fatalf("first block %q", b)
@@ -90,5 +96,9 @@ func TestGetBlockBodiesChanCancel(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("the reading goes on after the cancel")
+	}
+	// the error is the cancel, not the closed connection, which GetBlocksBatch would log
+	if err := <-last; !errors.Is(err, context.Canceled) {
+		t.Fatalf("error after the cancel: %v", err)
 	}
 }
