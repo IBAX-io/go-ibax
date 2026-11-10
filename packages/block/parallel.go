@@ -136,10 +136,23 @@ type stateExec struct {
 	streamErr error
 }
 
-// contractOf is the name of the contract of the transaction
+// contractOf is what the state learns the ids the transaction takes by: the name of its contract,
+// or the kind of a transfer of the UTXO model, which runs no contract but inserts its history as
+// one does. The kinds have a space no name of a contract has.
 func contractOf(t *transaction.Transaction) string {
-	if t.IsSmartContract() && t.SmartContract().TxContract != nil {
-		return t.SmartContract().TxContract.Name
+	if !t.IsSmartContract() {
+		return ""
+	}
+	s := t.SmartContract()
+	switch {
+	case s.TxContract != nil:
+		return s.TxContract.Name
+	case s.TxSmart == nil:
+		return ""
+	case s.TxSmart.TransferSelf != nil:
+		return "transfer self"
+	case s.TxSmart.UTXO != nil:
+		return "utxo transfer"
 	}
 	return ""
 }
