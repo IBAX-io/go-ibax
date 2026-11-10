@@ -264,7 +264,7 @@ func (d *bftDriver) reset() error {
 	d.pool = bft.NewPool(d.networkID, syspar.GetBftMaxFutureRounds(), last+1, set)
 	d.mu.Unlock()
 	d.newMachine(last+1, set)
-	d.watch.moveTo(last+1, set, time.Now())
+	d.watch.moveTo(last+1, set, time.Now(), false)
 	return nil
 }
 
@@ -313,7 +313,7 @@ func (d *bftDriver) syncHeight() error {
 	d.unsaved, d.unsent = nil, nil
 	// the watch moves first: the handler records the precommits the pool admits for the new height
 	from, now := d.m.Height(), time.Now()
-	d.watch.moveTo(last+1, set, now)
+	d.watch.moveTo(last+1, set, now, d.m.Decided())
 	d.mu.Lock()
 	var kept []any
 	if d.pool.Height() == last {

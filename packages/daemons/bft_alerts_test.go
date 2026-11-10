@@ -119,7 +119,7 @@ func TestBftAlertsOfLiveness(t *testing.T) {
 	set := alertSet(4)
 	window := 30 * time.Second
 	t0 := time.Now()
-	d.watch.moveTo(20, set, t0)
+	d.watch.moveTo(20, set, t0, true)
 	precommits := func(at time.Duration, validators ...uint32) {
 		for _, v := range validators {
 			d.watch.precommit(&bft.Vote{Type: bft.TypePrecommit, Height: 20, Validator: v}, t0.Add(at))
@@ -172,7 +172,7 @@ func TestBftAlertsOfLiveness(t *testing.T) {
 	}
 
 	// a commit ends the stall; the validator back online ends the risk
-	d.watch.moveTo(21, set, t0.Add(2*window))
+	d.watch.moveTo(21, set, t0.Add(2*window), true)
 	if bftmon.Get().Alerts[bftmon.Stall].Active {
 		t.Fatal("the stall is active at a new height")
 	}
@@ -210,9 +210,9 @@ func TestBftOfflineByHeight(t *testing.T) {
 		return fmt.Sprint(s.Online, s.Margin, len(s.Offline))
 	}
 
-	d.watch.moveTo(30, set, at(0))
+	d.watch.moveTo(30, set, at(0), true)
 	precommit(30, 1, 0, 1, 2)
-	d.watch.moveTo(31, set, at(1))
+	d.watch.moveTo(31, set, at(1), true)
 	precommit(30, 1.1, 3) // after the commit of 30
 	check(100)
 	if n := len(alerts(hook, bftmon.ValidatorOffline)); n != 0 || state() != "4 1 0" {
@@ -222,18 +222,28 @@ func TestBftOfflineByHeight(t *testing.T) {
 	if n := len(alerts(hook, bftmon.ValidatorOffline)); n != 4 || state() != "0 -3 4" {
 		t.Fatalf("a busy window with no precommit: %d offline, the state %s", n, state())
 	}
-	d.watch.moveTo(32, set, at(131))
+	d.watch.moveTo(32, set, at(131), true)
 	precommit(31, 131, 0, 1, 2) // late, after the commit of 31
 	precommit(32, 131.5, 0, 1, 2)
-	d.watch.moveTo(33, set, at(132))
+	d.watch.moveTo(33, set, at(132), true)
 	check(200)
 	if s := bftmon.Get(); state() != "3 0 1" || s.Offline[0] != fmt.Sprintf("%x", set.Keys[3]) {
 		t.Fatalf("validator 3 missed height 32: the state %s", state())
 	}
-	d.watch.moveTo(50, set, at(300))
+	d.watch.moveTo(50, set, at(300), true)
 	check(301)
 	if state() != "4 1 0" {
 		t.Fatalf("after a move by more than one height: the state %s", state())
+	}
+
+	// a node behind takes block after block by their certificates, with no precommit of these
+	// heights: past a window, every validator is still at the height before
+	for h := uint64(51); h <= 60; h++ {
+		d.watch.moveTo(h, set, at(300+float64(h-50)*10), false)
+	}
+	check(400)
+	if n := len(alerts(hook, bftmon.QuorumRisk)); n != 0 || state() != "4 1 0" {
+		t.Fatalf("a node behind: %d quorum risks, the state %s", n, state())
 	}
 }
 

@@ -35,7 +35,9 @@ import (
 // quorum is the validators online less the quorum. The node assesses them at the busy heights
 // only: an idle chain has no round, and no validator misses one. A validator the node has no
 // precommit of counts as precommitting the height before the one the node started at, or moved
-// to by more than one height, as the node then took the blocks by their certificates.
+// to from a height it did not decide: the node then took the blocks by their certificates, and
+// the precommits of these heights did not reach it. A node behind, which takes block after block
+// so, judges no validator by the heights it did not run.
 //
 // The stall repeats each window a height stays busy without a commit, the set below 4 each height
 // the node moves to, the overdue review each bftOverdueEvery; the others are logged as they start.
@@ -116,11 +118,12 @@ func (w *bftWatch) precommit(v *bft.Vote, now time.Time) {
 	w.seen[k] = bftSeen{at: now, height: max(v.Height, w.seen[k].height)}
 }
 
-// moveTo starts the watch of a height and its set at now
-func (w *bftWatch) moveTo(height uint64, set bft.Validators, now time.Time) {
+// moveTo starts the watch of a height and its set at now; decided is whether the node decided the
+// height it leaves, rather than took its block by the certificate
+func (w *bftWatch) moveTo(height uint64, set bft.Validators, now time.Time, decided bool) {
 	w.mu.Lock()
 	w.prev = bft.Validators{}
-	if height == w.height+1 {
+	if height == w.height+1 && decided {
 		w.prev = w.set
 	} else {
 		w.base = bftSeen{at: now, height: height - 1}
