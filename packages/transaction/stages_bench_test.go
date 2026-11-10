@@ -60,7 +60,7 @@ func BenchmarkStageVerify(b *testing.B) {
 			if err != nil {
 				b.Fatal(err)
 			}
-			sig, err := crypto.AccountSign(algo, priv, msg)
+			sig, err := crypto.AccountPrivateKey{Algo: algo, Raw: priv}.Sign(msg)
 			if err != nil {
 				b.Fatal(err)
 			}

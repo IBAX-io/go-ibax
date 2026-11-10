@@ -9,8 +9,10 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5/stdlib"
@@ -19,7 +21,8 @@ import (
 // Import makes the state of the database that of the snapshot of a height of the store, of the
 // state hash: the schema of the state, its tables, partitions, functions and views, as the
 // manifest describes them, and the rows of the files, in one transaction, then hashes what it
-// made and checks it is of the state hash. The tables of the node are as they were. What is of
+// made and checks it is of the state hash. The tables of the node are as they were, and the node
+// columns of the tables of the state as the database made them, of their default. What is of
 // the state in the database before is dropped: the tables, the functions and the views of the
 // schema public out of the node tables, with their partitions.
 //
@@ -124,6 +127,10 @@ func importState(ctx context.Context, db *sql.DB, store Store, height int64, sta
 			return err
 		}
 	}
+	own, err := nodeColumnDefs(ctx, conn, descs)
+	if err != nil {
+		return err
+	}
 	if err := dropState(ctx, conn, run); err != nil {
 		return err
 	}
@@ -134,7 +141,7 @@ func importState(ctx context.Context, db *sql.DB, store Store, height int64, sta
 	}
 	for _, t := range state.Tables {
 		if d := descs[t.Name]; d != nil {
-			if err := createTable(t.Name, d, run); err != nil {
+			if err := createTable(t.Name, d, own[t.Name], run); err != nil {
 				return err
 			}
 		}
@@ -249,10 +256,42 @@ func dropState(ctx context.Context, conn *sql.Conn, run func(string, ...any) err
 	return nil
 }
 
-// createTable creates a table of the state and its partitions
-func createTable(name string, d *Desc, run func(string, ...any) error) error {
-	defs := make([]string, 0, len(d.Columns)+1)
-	for _, c := range d.Columns {
+// nodeColumnDefs reads the definitions of the node columns of the tables of the state from the
+// database before the import drops the tables: the import makes them again as the node made them,
+// since the snapshot carries neither them nor their values, and the indexes of the state may be
+// on them. A made column takes its default.
+func nodeColumnDefs(ctx context.Context, conn *sql.Conn, descs map[string]*Desc) (map[string][]Column, error) {
+	own := map[string][]Column{}
+	for name, cols := range nodeColumns {
+		if descs[name] == nil {
+			continue
+		}
+		for _, col := range cols {
+			c := Column{Name: col}
+			err := conn.QueryRowContext(ctx, `SELECT format_type(a.atttypid, a.atttypmod), a.attnotnull,
+				coalesce(pg_get_expr(d.adbin, d.adrelid), ''),
+				CASE WHEN a.attcollation NOT IN (0, ty.typcollation) THEN quote_ident(cn.nspname) || '.' || quote_ident(co.collname) ELSE '' END
+				FROM pg_attribute a JOIN pg_type ty ON ty.oid = a.atttypid
+				LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+				LEFT JOIN pg_collation co ON co.oid = a.attcollation LEFT JOIN pg_namespace cn ON cn.oid = co.collnamespace
+				WHERE a.attrelid = to_regclass('public.' || quote_ident($1)) AND a.attname = $2 AND NOT a.attisdropped`,
+				name, col).Scan(&c.Type, &c.NotNull, &c.Default, &c.Collation)
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, fmt.Errorf("the database has no column %s of %s, which the node makes", col, name)
+			}
+			if err != nil {
+				return nil, err
+			}
+			own[name] = append(own[name], c)
+		}
+	}
+	return own, nil
+}
+
+// createTable creates a table of the state, with the node columns of it, and its partitions
+func createTable(name string, d *Desc, own []Column, run func(string, ...any) error) error {
+	defs := make([]string, 0, len(d.Columns)+len(own)+1)
+	for _, c := range slices.Concat(d.Columns, own) {
 		def := quote(c.Name) + " " + c.Type
 		if c.Collation != "" {
 			def += " COLLATE " + c.Collation

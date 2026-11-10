@@ -38,27 +38,24 @@ const (
 )
 
 var (
-	nodePrivateKey []byte
+	nodePrivateKey crypto.AccountPrivateKey
 	nodeKeyID      int64
-	nodePublicKey  string
 	authNet        = map[string]string{}
 )
 
 func loginNetwork(urlPath string) (connect *api.Connect, err error) {
-	if len(nodePrivateKey) == 0 {
-		var pubKey []byte
-		nodePrivateKey = syspar.GetNodePrivKey()
-		if pubKey, err = crypto.NodePrivateToPublic(nodePrivateKey); err != nil {
+	if len(nodePrivateKey.Raw) == 0 {
+		var pub crypto.AccountKey
+		key := crypto.NodeAccountPrivateKey(syspar.GetNodePrivKey())
+		if pub, err = key.Public(); err != nil {
 			return
 		}
-		nodeKeyID = crypto.Address(pubKey)
-		nodePublicKey = crypto.NodeAccountKey(pubKey).Hex()
+		nodePrivateKey, nodeKeyID = key, pub.Address()
 	}
 	connect = &api.Connect{
-		Auth:       authNet[urlPath],
-		PrivateKey: nodePrivateKey,
-		PublicKey:  nodePublicKey,
-		Root:       urlPath,
+		Auth: authNet[urlPath],
+		Key:  nodePrivateKey,
+		Root: urlPath,
 	}
 	if err = connect.Login(); err != nil {
 		authNet[urlPath] = connect.Auth

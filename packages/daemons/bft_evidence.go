@@ -164,5 +164,5 @@ func evidenceTx(body []byte) ([]byte, error) {
 	stp := &transaction.SmartTransactionParser{
 		SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 	}
-	return stp.BinMarshalWithPrivate(&sc, syspar.GetNodePrivKey(), true)
+	return stp.BinMarshalWithPrivate(&sc, crypto.NodeAccountPrivateKey(syspar.GetNodePrivKey()), true)
 }

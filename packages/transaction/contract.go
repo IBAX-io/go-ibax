@@ -10,6 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/types"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/faults"
@@ -22,7 +23,7 @@ const (
 
 // CreateContract puts in the pool a transaction the node signs, which goes into its reserve
 func CreateContract(contractName string, keyID int64, params map[string]any,
-	privateKey []byte) error {
+	key crypto.AccountPrivateKey) error {
 	ecosysID, _ := converter.ParseName(contractName)
 	if ecosysID == 0 {
 		ecosysID = 1
@@ -41,7 +42,7 @@ func CreateContract(contractName string, keyID int64, params map[string]any,
 		},
 		Params: params,
 	}
-	txData, _, err := NewTransactionInProc(sc, privateKey)
+	txData, _, err := NewTransactionInProc(sc, key)
 	if err != nil {
 		return err
 	}

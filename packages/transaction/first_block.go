@@ -252,11 +252,15 @@ func (f *FirstBlockParser) Action(in *InToCxt, out *OutCtx) (err error) {
 	return nil
 }
 
-// CheckFirstBlockAccounts checks the accounts of the first block: account_algorithms is a valid
-// set the node can verify; the node algorithm is in it, since the node account signs with the
+// CheckFirstBlockAccounts checks the accounts of the first block: the node algorithm it names is
+// that of the node; account_algorithms is a valid set the node can verify; the node algorithm is
+// in it, since the node account signs with the
 // node key; the founder key is an account key that may be registered at genesis; and the supply
 // and the allocations are those of FirstBlockSupply.
 func CheckFirstBlockAccounts(data *types.FirstBlock) (syspar.AccountAlgorithmSet, crypto.AccountKey, error) {
+	if data.NodeAlgorithm != crypto.NodeAlgo().String() {
+		return nil, crypto.AccountKey{}, fmt.Errorf("the node keys of the network are %q, the node runs %s", data.NodeAlgorithm, crypto.NodeAlgo())
+	}
 	algos, err := syspar.ParseAccountAlgorithms(data.AccountAlgorithms)
 	if err != nil {
 		return nil, crypto.AccountKey{}, err

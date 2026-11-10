@@ -98,7 +98,7 @@ func updateSuites(raw []byte) (any, []string, error) {
 		v.KeyID = strconv.FormatInt(pub.Address(), 10)
 
 		if v.GoSignature == nil || !verifies(pub, []byte(v.Message), *v.GoSignature) {
-			sig, err := crypto.AccountSign(algo, priv, []byte(v.Message))
+			sig, err := crypto.AccountPrivateKey{Algo: algo, Raw: priv}.Sign([]byte(v.Message))
 			if err != nil {
 				return nil, nil, fmt.Errorf("%s: sign: %w", label, err)
 			}

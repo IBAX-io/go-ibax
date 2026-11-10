@@ -62,7 +62,7 @@ func (s *signer) signIn(a *account, eco int64, tx *types.SmartTransaction) (*sig
 		return nil, err
 	}
 	hash := crypto.DoubleHash(payload)
-	signature, err := crypto.AccountSign(a.algo, a.private, hash)
+	signature, err := crypto.AccountPrivateKey{Algo: a.algo, Raw: a.private}.Sign(hash)
 	if err != nil {
 		return nil, err
 	}

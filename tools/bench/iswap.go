@@ -147,7 +147,7 @@ func (c *chainClient) fail(step string, tx *signedTx, err error, want string, ti
 	if err != nil {
 		return err
 	}
-	if err := c.nodes[0].send([]*signedTx{tx}); err != nil {
+	if _, err := c.nodes[0].send([]*signedTx{tx}); err != nil {
 		if strings.Contains(err.Error(), want) {
 			log.Printf("%s: refused, %s", step, want)
 			return nil

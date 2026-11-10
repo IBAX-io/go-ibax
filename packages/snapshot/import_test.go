@@ -23,6 +23,7 @@ CREATE TABLE "1_pet" (id bigint PRIMARY KEY, owner bigint REFERENCES "1_owner" (
 CREATE INDEX ON "1_pet" (owner, at) WHERE at > 0;
 CREATE INDEX ON "1_history" (note);
 CREATE INDEX ON "1_history_0" (id);
+CREATE INDEX ON info_block (sent);
 CREATE FUNCTION stamp() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.at = NEW.at + 1; RETURN NEW; END $$;
 CREATE TRIGGER stamp BEFORE INSERT ON "1_pet" FOR EACH ROW EXECUTE FUNCTION stamp();
 CREATE VIEW pets AS SELECT p.id, o.name FROM "1_pet" p JOIN "1_owner" o ON o.id = p.owner`
@@ -58,7 +59,8 @@ func count(t *testing.T, db *sql.DB, q string) int {
 }
 
 // A database of other state takes that of a snapshot: the same hash, rows and objects that work
-// as those of the source, and its node tables as they were
+// as those of the source, its node tables as they were and its node columns as it made them, of
+// their default
 func TestImport(t *testing.T) {
 	src, dst := testDB(t), testDB(t)
 	exec(t, src, fullSchema, fullRows)
@@ -66,7 +68,7 @@ func TestImport(t *testing.T) {
 	st := snapshotTo(t, src, store, 10000)
 
 	exec(t, dst, `CREATE TABLE block_chain (id bigint PRIMARY KEY, data bytea)`, `INSERT INTO block_chain VALUES (1, '\x01'), (2, '\x02')`,
-		`CREATE TABLE info_block (hash bytea, block_id integer, sent smallint)`, `INSERT INTO info_block VALUES ('\x00', 1, 0)`,
+		`CREATE TABLE info_block (hash bytea, block_id integer, sent smallint NOT NULL DEFAULT 2)`, `INSERT INTO info_block VALUES ('\x00', 1, 0)`,
 		`CREATE TABLE "1_keys" (id bigint PRIMARY KEY)`, `CREATE TABLE "1_old" (v text)`,
 		`CREATE FUNCTION next_id(t text) RETURNS bigint LANGUAGE sql AS 'SELECT 7'`, `CREATE FUNCTION gone() RETURNS int LANGUAGE sql AS 'SELECT 1'`,
 		`CREATE VIEW old AS SELECT * FROM "1_old"`)
@@ -75,11 +77,15 @@ func TestImport(t *testing.T) {
 	require.Equal(t, 2, count(t, dst, `SELECT count(*) FROM block_chain`))
 	require.Equal(t, 0, count(t, dst, `SELECT count(*) FROM pg_class WHERE relname IN ('1_old', 'old')`))
 	require.Equal(t, 1, count(t, dst, `SELECT count(*) FROM pets`))
+	require.Equal(t, 2, count(t, dst, `SELECT sent FROM info_block`))
+	require.Equal(t, 1, count(t, dst, `SELECT count(*) FROM pg_indexes WHERE tablename = 'info_block' AND indexdef LIKE '%(sent)'`))
+	_, err := dst.Exec(`UPDATE info_block SET sent = NULL`)
+	require.ErrorContains(t, err, "not-null")
 	// the trigger fires on what comes after the copy alone, and the constraints hold
 	exec(t, dst, `INSERT INTO "1_pet" VALUES (3, 1, 0)`)
 	require.Equal(t, 1, count(t, dst, `SELECT at FROM "1_pet" WHERE id = 3`))
 	require.Equal(t, 6, count(t, dst, `SELECT at FROM "1_pet" WHERE id = 2`))
-	_, err := dst.Exec(`INSERT INTO "1_pet" VALUES (4, 9, 0)`)
+	_, err = dst.Exec(`INSERT INTO "1_pet" VALUES (4, 9, 0)`)
 	require.ErrorContains(t, err, "foreign key")
 	_, err = dst.Exec(`INSERT INTO "1_owner" (id, name) VALUES (2, 'o')`)
 	require.ErrorContains(t, err, "unique")
@@ -91,6 +97,17 @@ func TestImport(t *testing.T) {
 	require.Equal(t, st.Hash, hashOf(t, src, 1).Hash)
 }
 
+// The import fails before it changes anything of a database without the node columns
+func TestImportNoNodeColumn(t *testing.T) {
+	src, dst := testDB(t), testDB(t)
+	exec(t, src, fullSchema, fullRows)
+	store := Store{Dir: t.TempDir()}
+	st := snapshotTo(t, src, store, 10000)
+	exec(t, dst, `CREATE TABLE info_block (hash bytea, block_id integer)`, `CREATE TABLE "1_old" (v text)`)
+	require.ErrorContains(t, Import(context.Background(), dst, store, 10000, st.Hash, 2), "no column sent of info_block")
+	require.Equal(t, 1, count(t, dst, `SELECT count(*) FROM pg_class WHERE relname = '1_old'`))
+}
+
 // The import fails of the files of other rows than the manifest, and of a manifest of another
 // state hash
 func TestImportTampered(t *testing.T) {
@@ -98,6 +115,7 @@ func TestImportTampered(t *testing.T) {
 	exec(t, src, fullSchema, fullRows)
 	store := Store{Dir: t.TempDir()}
 	st := snapshotTo(t, src, store, 10000)
+	exec(t, dst, `CREATE TABLE info_block (hash bytea, block_id integer, sent smallint)`)
 	other := append([]byte{}, st.Hash...)
 	other[0] ^= 1
 	require.ErrorContains(t, Import(context.Background(), dst, store, 10000, other, 2), "not of the state hash")

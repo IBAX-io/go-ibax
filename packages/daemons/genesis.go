@@ -52,7 +52,39 @@ func InitialLoad(logger *log.Entry) error {
 	if !found {
 		return errors.New("reading the genesis block: not found")
 	}
-	return block.CheckGenesis(genesis.Data)
+	if err := block.CheckGenesis(genesis.Data); err != nil {
+		return err
+	}
+	return rejoin(logger)
+}
+
+// rejoin joins again from a snapshot a node with block 1 alone, whose join on an earlier start
+// did not take place or failed. The state outside the database is still as before block 1: the
+// daemons load the contracts after. A node that imported a state and has no snapshot to join
+// from is an error: its state is no longer that of block 1.
+func rejoin(logger *log.Entry) error {
+	last := &sqldb.BlockChain{}
+	if _, err := last.GetMaxBlock(); err != nil {
+		return errors.Wrap(err, "reading the last block")
+	}
+	if last.ID != 1 {
+		return nil
+	}
+	restore := block.KeepMemState()
+	DBLock()
+	defer DBUnlock()
+	joined, err := joinFromSnapshot(context.Background(), logger, restore)
+	if err != nil || joined {
+		return err
+	}
+	info := &sqldb.InfoBlock{}
+	if _, err := info.Get(); err != nil {
+		return err
+	}
+	if info.BlockID != 1 {
+		return errors.Errorf("the state is of block %d, of a join that failed, and no snapshot is to join from", info.BlockID)
+	}
+	return nil
 }
 
 // loadFirstBlock inserts block 1: the node's own 1block file when it has one, else block 1 as the

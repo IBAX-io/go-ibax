@@ -328,14 +328,16 @@ func (o *outbox) flush() error {
 	o.after = -1
 	for len(o.queue) > 0 {
 		b := o.queue[0]
-		if err := o.n.send(b); poolFull(err) {
+		sent, err := o.n.send(b)
+		for _, tx := range b[:sent] {
+			o.sent[tx.hash], o.at[tx.hash] = tx, last
+		}
+		if poolFull(err) {
+			o.queue[0] = b[sent:]
 			o.after = last
 			return nil
 		} else if err != nil {
 			return err
-		}
-		for _, tx := range b {
-			o.sent[tx.hash], o.at[tx.hash] = tx, last
 		}
 		o.queue = o.queue[1:]
 	}

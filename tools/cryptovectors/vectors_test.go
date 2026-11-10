@@ -142,11 +142,11 @@ func TestNodeSignaturesAreHedged(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		first, err := crypto.AccountSign(algo, priv, []byte(v.Message))
+		first, err := crypto.AccountPrivateKey{Algo: algo, Raw: priv}.Sign([]byte(v.Message))
 		if err != nil {
 			t.Fatal(err)
 		}
-		second, err := crypto.AccountSign(algo, priv, []byte(v.Message))
+		second, err := crypto.AccountPrivateKey{Algo: algo, Raw: priv}.Sign([]byte(v.Message))
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -131,12 +131,12 @@ func runStep(c *chainClient, w workload, rate, total int, cfg runConfig, seq *in
 			go func() {
 				defer senders.Done()
 				for b := range queues[i] {
-					if err := n.send(txs[b.from:b.to]); err != nil {
+					if sent, err := n.send(txs[b.from:b.to]); err != nil {
 						unsentMu.Lock()
-						for j := b.from; j < b.to; j++ {
+						for j := b.from + sent; j < b.to; j++ {
 							unsent[j] = true
 						}
-						failures["send: "+trim(err.Error())] += b.to - b.from
+						failures["send: "+trim(err.Error())] += b.to - b.from - sent
 						unsentMu.Unlock()
 					}
 				}
