@@ -66,6 +66,9 @@ type readerIndex struct {
 	points map[readerKey][]pointReader
 	scans  map[*tableState][]scanReader
 	ids    map[*tableState][]idReader
+	// writers are the readers of the rows of a table by a condition that wrote rows of the table,
+	// the last run of each transaction, in the order of the block: what a run registered awaits
+	writers map[*tableState][]scanReader
 	// st predicts the ids the transactions not committed take; nil predicts none
 	st *BlockState
 	// gens are the last runs registered, by transaction: a reader of an earlier run is stale
@@ -77,7 +80,7 @@ type readerIndex struct {
 
 func newReaderIndex() *readerIndex {
 	return &readerIndex{points: make(map[readerKey][]pointReader), scans: make(map[*tableState][]scanReader),
-		ids: make(map[*tableState][]idReader), gens: make(map[int]uint32)}
+		ids: make(map[*tableState][]idReader), writers: make(map[*tableState][]scanReader), gens: make(map[int]uint32)}
 }
 
 // WatchReaders makes the state keep the readers of the block, which the commits wake
@@ -123,7 +126,11 @@ func (ri *readerIndex) register(i int, gen uint32, v *TxView) bool {
 			k := readerKey{ts: rd.ts, ix: rd.ix, key: rd.key}
 			ri.points[k] = append(ri.points[k], pointReader{Reader: r, writes: v.writes(rd.ts, rd.ix, rd.key)})
 		default:
-			ri.scans[rd.ts] = append(ri.scans[rd.ts], scanReader{Reader: r, cond: rd.cond, wrote: v.wrote(rd.ts)})
+			sr := scanReader{Reader: r, cond: rd.cond, wrote: v.wrote(rd.ts)}
+			ri.scans[rd.ts] = append(ri.scans[rd.ts], sr)
+			if len(sr.wrote) != 0 {
+				ri.wrote(rd.ts, sr)
+			}
 		}
 	}
 	for _, rd := range v.ids {
@@ -132,8 +139,23 @@ func (ri *readerIndex) register(i int, gen uint32, v *TxView) bool {
 	return true
 }
 
+// wrote keeps the reader of a condition that wrote rows of the table ts as the writer of its
+// transaction, in place of the one of an earlier run
+func (ri *readerIndex) wrote(ts *tableState, r scanReader) {
+	list := ri.writers[ts]
+	k, found := slices.BinarySearchFunc(list, r.I, func(w scanReader, i int) int { return w.I - i })
+	if found {
+		list[k] = r
+		return
+	}
+	ri.writers[ts] = slices.Insert(list, k, r)
+}
+
 // awaits tells a live reader before the transaction i wrote what the view read: the commit of
-// that one wakes the readers after it of what it wrote
+// that one wakes the readers after it of what it wrote. Of the readers of a condition it checks
+// the writers of the table from the transaction before i back to the first not committed, which
+// keeps the registers of a block linear in its size when the transactions read the rows of a
+// few conditions, as the swaps of the pairs of iSwap do.
 func (ri *readerIndex) awaits(i int, v *TxView) bool {
 	for _, rd := range v.reads {
 		switch {
@@ -145,8 +167,15 @@ func (ri *readerIndex) awaits(i int, v *TxView) bool {
 				}
 			}
 		default:
-			for _, r := range ri.scans[rd.ts] {
-				if r.I < i && ri.live(r.Reader) && slices.ContainsFunc(r.wrote, rd.cond.matches) {
+			list := ri.writers[rd.ts]
+			// the writers of the transactions committed are dropped
+			if first, _ := slices.BinarySearchFunc(list, ri.committed, func(w scanReader, i int) int { return w.I - i }); first > 0 {
+				list = list[first:]
+				ri.writers[rd.ts] = list
+			}
+			k, _ := slices.BinarySearchFunc(list, i, func(w scanReader, i int) int { return w.I - i })
+			for k--; k >= 0; k-- {
+				if r := list[k]; ri.gens[r.I] == r.Gen && slices.ContainsFunc(r.wrote, rd.cond.matches) {
 					return true
 				}
 			}

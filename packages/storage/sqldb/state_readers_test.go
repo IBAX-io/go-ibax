@@ -406,3 +406,68 @@ func TestIDReadersPredicted(t *testing.T) {
 		}
 	}
 }
+
+// TestAwaitsScanWriters: a run of a reader of a condition awaits as it does when it checks every
+// reader of the table registered: some live reader before it wrote a row the condition holds,
+// through runs registered out of the order of the block, runs again and commits
+func TestAwaitsScanWriters(t *testing.T) {
+	m := &tableMeta{name: "t", byName: make(map[string]*colMeta), pk: []string{"id"}, uniques: [][]string{{"id"}}}
+	for _, name := range []string{"id", "pair"} {
+		cm := &colMeta{name: name, typ: newColType(20, "int8", -1)}
+		m.cols = append(m.cols, cm)
+		m.byName[name] = cm
+	}
+	ts := &tableState{meta: m}
+	ts.resetKeys()
+	str := func(s string) *string { return &s }
+	fam, _ := family(m.cols[1].typ, m.cols[1].typ)
+	row := func(id, pair int) stateRow { return stateRow{str(strconv.Itoa(id)), str(strconv.Itoa(pair))} }
+	rnd := rand.New(rand.NewSource(1))
+	// view reads the rows of a pair, and writes a row of a pair or none
+	view := func() *TxView {
+		cond := &bcond{op: cCmp, col: 1, cmp: "=", fam: fam, vals: []*string{str(strconv.Itoa(rnd.Intn(4)))}}
+		v := &TxView{reads: []stateRead{{ts: ts, cond: cond}}}
+		if rnd.Intn(3) > 0 {
+			id := rnd.Intn(8)
+			v.own = map[string]*viewTable{"t": {ts: ts, rows: map[string]*vchange{strconv.Itoa(id): {prev: row(id, rnd.Intn(4)), row: row(id, rnd.Intn(4))}}}}
+		}
+		return v
+	}
+	want := func(ri *readerIndex, i int, v *TxView) bool {
+		for _, r := range ri.scans[ts] {
+			if r.I < i && ri.live(r.Reader) && slices.ContainsFunc(r.wrote, v.reads[0].cond.matches) {
+				return true
+			}
+		}
+		return false
+	}
+	for round := range 50 {
+		const n = 40
+		ri := newReaderIndex()
+		register := func(i int, gen uint32) {
+			v := view()
+			if !ri.register(i, gen, v) {
+				return
+			}
+			w := want(ri, i, v)
+			require.Equal(t, w, ri.awaits(i, v), "round %d, run %d of %d", round, gen, i)
+		}
+		for _, i := range rnd.Perm(n) {
+			register(i, 0)
+		}
+		for i := range n {
+			// runs of the transactions after the commit, again
+			for range rnd.Intn(4) {
+				if j := i + rnd.Intn(n-i); j >= ri.committed {
+					register(j, ri.gens[j]+1)
+				}
+			}
+			p := rnd.Intn(4)
+			ri.wake(i, []touch{{ts: ts, pk: strconv.Itoa(p), old: row(p, rnd.Intn(4)), new: row(p, rnd.Intn(4))}})
+			for _, r := range ri.woken {
+				register(r.I, r.Gen+1)
+			}
+			ri.woken = nil
+		}
+	}
+}
