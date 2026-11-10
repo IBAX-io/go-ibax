@@ -484,13 +484,19 @@ func (d *bftDriver) apply(out []bft.Output) {
 	}
 }
 
+// slowSignState is a store of the sign state the node warns of: the messages it signs wait for it
+const slowSignState = 200 * time.Millisecond
+
 // saveUnsaved stores the sign state not stored yet and sends the messages signed with it
 func (d *bftDriver) saveUnsaved() {
 	if d.unsaved != nil {
-		s := d.unsaved
+		s, start := d.unsaved, time.Now()
 		if err := d.store(s); err != nil {
 			d.logger.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("storing the sign state, the messages wait")
 			return
+		}
+		if took := time.Since(start); took > slowSignState {
+			d.logger.WithFields(log.Fields{"height": s.Height, "round": s.Round, "took": took}).Warn("storing the sign state held the messages")
 		}
 		d.unsaved = nil
 	}

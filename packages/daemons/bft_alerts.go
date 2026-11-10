@@ -323,6 +323,23 @@ func (d *bftDriver) countTimeout(t bft.Timeout) {
 		return
 	}
 	bftmon.Update(func(s *bftmon.State) { s.Timeouts[step]++ })
+	if step == bftmon.TimeoutPropose {
+		d.logger.WithFields(log.Fields{"height": t.Height, "round": t.Round, "proposer": d.m.Proposer(),
+			"admitted": d.hasProposal(t.Height, t.Round)}).Warn("no proposal within the propose timeout")
+	}
+}
+
+// hasProposal reports whether the pool admitted a proposal of the height and round: one that came
+// and was filled in, which the machine found untimely or invalid
+func (d *bftDriver) hasProposal(height uint64, round uint32) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	for _, m := range d.pool.Messages(height) {
+		if p, ok := m.(*bft.Proposal); ok && p.Round == round {
+			return true
+		}
+	}
+	return false
 }
 
 // silent is the validators of the set of the height with no vote there

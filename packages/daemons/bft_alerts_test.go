@@ -247,11 +247,14 @@ func TestBftOfflineByHeight(t *testing.T) {
 	}
 }
 
-// A timeout counts if it takes effect at the height and round of the machine
+// A timeout counts if it takes effect at the height and round of the machine, and a timeout of
+// the propose step is logged with the proposer and whether the pool admitted its proposal
 func TestBftCountTimeout(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	d := newSignDriver(t, ctx, false)
+	logger, hook := test.NewNullLogger()
+	d.logger = logger.WithFields(log.Fields{})
 	d.apply(d.m.Start())
 	before := bftmon.Get().Timeouts
 	d.countTimeout(bft.Timeout{Height: 1, Round: 1, Step: bft.StepPropose})
@@ -264,5 +267,15 @@ func TestBftCountTimeout(t *testing.T) {
 	if after[bftmon.TimeoutPropose]-before[bftmon.TimeoutPropose] != 1 || after[bftmon.TimeoutPrevote] != before[bftmon.TimeoutPrevote] ||
 		after[bftmon.TimeoutPrecommit]-before[bftmon.TimeoutPrecommit] != 1 {
 		t.Fatalf("timeouts %v, before %v", after, before)
+	}
+	var logged []log.Fields
+	for _, e := range hook.AllEntries() {
+		if e.Message == "no proposal within the propose timeout" {
+			logged = append(logged, e.Data)
+		}
+	}
+	if len(logged) != 1 || logged[0]["height"] != uint64(1) || logged[0]["round"] != uint32(0) ||
+		logged[0]["proposer"] != d.m.Proposer() || logged[0]["admitted"] != false {
+		t.Fatalf("logged %v", logged)
 	}
 }
