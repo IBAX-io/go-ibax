@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"sync"
 	"time"
@@ -139,7 +140,7 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 	}
 	speculations = d.spec
 	d.store = func(s *bft.SignState) error {
-		return (&sqldb.BftSignState{Height: int64(s.Height), Data: s.Marshal()}).Save()
+		return bft.WriteSignState(signStatePath(), s)
 	}
 	d.submit = submitEvidenceTx
 	d.clockDrift = utils.ClockDrift
@@ -268,17 +269,20 @@ func (d *bftDriver) reset() error {
 	return nil
 }
 
+// signStatePath is the file of the sign state of the node
+func signStatePath() string {
+	return filepath.Join(conf.Config.DirPathConf.DataDir, bft.SignStateFile)
+}
+
 // restore restores the sign state the node stored at its height before it stopped (design 4.3):
 // the machine signs nothing that conflicts with it, and the pool resends its messages
 func (d *bftDriver) restore() error {
-	stored := &sqldb.BftSignState{}
-	found, err := stored.GetLast()
-	if err != nil || !found || uint64(stored.Height) != d.m.Height() {
-		return err
-	}
-	s, err := bft.UnmarshalSignState(stored.Data, syspar.GetMaxBlockSize())
+	s, err := bft.ReadSignState(signStatePath(), syspar.GetMaxBlockSize())
 	if err != nil {
-		return fmt.Errorf("the stored sign state of height %d: %w", stored.Height, err)
+		return fmt.Errorf("the stored sign state: %w", err)
+	}
+	if s == nil || s.Height != d.m.Height() {
+		return nil
 	}
 	d.mu.Lock()
 	for _, p := range s.Proposals {
@@ -485,7 +489,7 @@ func (d *bftDriver) saveUnsaved() {
 	if d.unsaved != nil {
 		s := d.unsaved
 		if err := d.store(s); err != nil {
-			d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("storing the sign state, the messages wait")
+			d.logger.WithFields(log.Fields{"type": consts.IOError, "error": err}).Error("storing the sign state, the messages wait")
 			return
 		}
 		d.unsaved = nil

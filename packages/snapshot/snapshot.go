@@ -53,7 +53,6 @@ var nodeTables = map[string]bool{
 	"bft_certificates":    true,
 	"bft_set_proofs":      true,
 	"confirmations":       true,
-	"bft_sign_state":      true,
 	"bft_state_hashes":    true,
 	"install":             true,
 	"migration_history":   true,
