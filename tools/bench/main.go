@@ -11,9 +11,9 @@
 //	bench send  -node URL[,URL...] -key FILE -n N [-rate R] CONTRACT [NAME=VALUE...]
 //	bench iswap -node URL[,URL...] -key FILE -bundle FILE [-file FILE] [-iswap FILE] [-tokens N] [-traders N]
 //
-// setup makes the accounts of the bench, of an account algorithm, each a member of ecosystem 1
-// with coins on its account and in UTXO, and the contract of the write-heavy workload, signed by
-// the founder key (of the node keys' algorithm unless -key-algo tells another); it saves the keys
+// setup makes the accounts of the bench, of an account algorithm (that of the node keys unless
+// -algo tells another), each a member of ecosystem 1 with coins on its account and in UTXO, and
+// the contract of the write-heavy workload, signed by the founder key (of the node keys' algorithm unless -key-algo tells another); it saves the keys
 // of the accounts in the file. run takes the accounts of the file and, for each workload, sends
 // transactions at each rate in turn for the duration, open loop and pre-signed, to the nodes in
 // turn, while the network keeps up: every transaction in a block of every node and at least 80% of
@@ -67,7 +67,7 @@ func main() {
 	file := fs.String("file", "bench-accounts.json", "file of the keys of the accounts")
 	batch := fs.Int("batch", 100, "transactions a request")
 
-	algo := fs.String("algo", "ECC_Secp256k1", "account algorithm of the accounts setup makes: ECC_P256, ECC_Secp256k1, SM2, MLDSA65 or MLDSA87")
+	algo := fs.String("algo", "", "account algorithm of the accounts setup makes: ECC_P256, ECC_Secp256k1, SM2, MLDSA65 or MLDSA87 (default the node keys' algorithm)")
 	accounts := fs.Int("accounts", 1000, "accounts setup makes")
 	fund := fs.String("fund", "", "coins of ecosystem 1 setup sends each account, in its smallest unit (default 90% of the founder's account split evenly); half go to its UTXO")
 	timeout := fs.Duration("timeout", 5*time.Minute, "time a step of setup waits for its transactions")
@@ -165,6 +165,9 @@ func main() {
 		}
 		if split {
 			log.Printf("each account gets %s", amount)
+		}
+		if *algo == "" {
+			*algo = c.info.Cryptoer
 		}
 		if err := setup(c, setupConfig{file: *file, algo: *algo, accounts: *accounts, fund: amount, batch: *batch, inFlight: *inFlight, timeout: *timeout}); err != nil {
 			log.Fatal(err)

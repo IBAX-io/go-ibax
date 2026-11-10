@@ -161,8 +161,38 @@ func (n *node) contractID(name string) (int, error) {
 	return info.ID, nil
 }
 
-// send submits transactions in one request; each is its hash and its bytes
-func (n *node) send(txs []*signedTx) error {
+// sendBodyMax is the most bytes of a request of send: the body size a node takes by default
+// (go-ibax config -mbs), which the keys and signatures of ML-DSA reach at a few hundred transactions
+const sendBodyMax = 1 << 20
+
+// sendPartBytes bounds the bytes of a part of the form besides its value: its boundary line and
+// its header, which names the hash
+const sendPartBytes = 256
+
+// send submits transactions, each its hash and its bytes, in as few requests as keep each under
+// sendBodyMax; it tells how many it sent, those of the requests before the one that failed
+func (n *node) send(txs []*signedTx) (int, error) {
+	sent := 0
+	for sent < len(txs) {
+		size, end := sendPartBytes, sent
+		for end < len(txs) {
+			part := sendPartBytes + len(txs[end].hash) + 2*len(txs[end].data)
+			if end > sent && size+part > sendBodyMax {
+				break
+			}
+			size += part
+			end++
+		}
+		if err := n.sendOnce(txs[sent:end]); err != nil {
+			return sent, err
+		}
+		sent = end
+	}
+	return sent, nil
+}
+
+// sendOnce submits transactions in one request
+func (n *node) sendOnce(txs []*signedTx) error {
 	var body bytes.Buffer
 	w := multipart.NewWriter(&body)
 	for _, tx := range txs {
