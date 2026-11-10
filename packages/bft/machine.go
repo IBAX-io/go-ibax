@@ -199,6 +199,9 @@ func (m *Machine) Step() Step { return m.step }
 // Decided reports whether the machine committed its height
 func (m *Machine) Decided() bool { return m.decided }
 
+// Proposer is the proposer of the round of the machine
+func (m *Machine) Proposer() uint32 { return m.set.Proposer(m.height, m.round) }
+
 // Locked is the round of the lock of the machine, NoRound for none, and the hash it locked
 func (m *Machine) Locked() (int32, Hash) {
 	if m.lockedValue == nil {

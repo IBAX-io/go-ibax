@@ -8,13 +8,11 @@ package sqldb
 import (
 	"fmt"
 
-	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
-// The tables of a chain of the BFT consensus (F18). bft_certificates, bft_set_proofs and
-// bft_sign_state are of the node: a committed block is never rolled back on such a chain, so a
-// node writes them as it commits and keeps them. bft_validator_sets, 1_bft_evidence and
+// The tables of a chain of the BFT consensus (F18). bft_certificates and bft_set_proofs are of
+// the node: a committed block is never rolled back on such a chain, so a node writes them as it commits and keeps them. bft_validator_sets, 1_bft_evidence and
 // 1_bft_reviews are chain state, written in the transactions of the blocks, the evidences and the
 // reviews and rolled back with them.
 
@@ -175,35 +173,6 @@ func (h *BftStateHash) SaveIn(dbTx *DbTransaction) error {
 // Get reads the hash of a height
 func (h *BftStateHash) Get(height int64) (bool, error) {
 	return isFound(DBConn.Where("height = ?", height).First(h))
-}
-
-// BftSignState is what a validator signed at its current height, with its lock and valid value,
-// written before the node sends a signed message so that a restart does not sign a conflicting
-// one
-type BftSignState struct {
-	Height int64 `gorm:"primary_key;not null"`
-	Data   []byte
-}
-
-// TableName returns name of table
-func (BftSignState) TableName() string {
-	return "bft_sign_state"
-}
-
-// Save writes the state of its height and drops the states of the heights below, outside any
-// block transaction
-func (s *BftSignState) Save() error {
-	return DBConn.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(s).Error; err != nil {
-			return err
-		}
-		return tx.Where("height < ?", s.Height).Delete(&BftSignState{}).Error
-	})
-}
-
-// GetLast reads the state of the highest height
-func (s *BftSignState) GetLast() (bool, error) {
-	return isFound(DBConn.Order("height desc").First(s))
 }
 
 // BftEvidence is an evidence on the chain, unique by its key (public_key, height, round, kind),

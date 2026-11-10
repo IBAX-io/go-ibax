@@ -407,12 +407,33 @@ func Validate(binData []byte, height int64, hash bft.Hash, writes sync.Locker) e
 	b.verifySignatures()
 	writes.Lock()
 	defer writes.Unlock()
+	if err := atTop(height); err != nil {
+		return err
+	}
 	err = b.Check()
 	b.trial = false
 	if err != nil {
 		return err
 	}
 	return b.Trial()
+}
+
+// ErrStale is a proposal of a height the node has the block of, which it took by its certificate
+// while the proposal waited for writes
+var ErrStale = errors.New("the node has the block of the height")
+
+// atTop checks, under writes, that the node has no block of the height: Check takes the block
+// before the height from the chain, and the transactions of a block the node has are known
+func atTop(height int64) error {
+	last := &sqldb.InfoBlock{}
+	found, err := last.Get()
+	if err != nil {
+		return err
+	}
+	if found && last.BlockID >= height {
+		return fmt.Errorf("%w %d: the last block is %d", ErrStale, height, last.BlockID)
+	}
+	return nil
 }
 
 // parseProposal parses the block of a proposal, and checks it is of the height, its hash is the

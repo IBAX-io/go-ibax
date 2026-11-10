@@ -35,7 +35,9 @@ import (
 // quorum is the validators online less the quorum. The node assesses them at the busy heights
 // only: an idle chain has no round, and no validator misses one. A validator the node has no
 // precommit of counts as precommitting the height before the one the node started at, or moved
-// to by more than one height, as the node then took the blocks by their certificates.
+// to from a height it did not decide: the node then took the blocks by their certificates, and
+// the precommits of these heights did not reach it. A node behind, which takes block after block
+// so, judges no validator by the heights it did not run.
 //
 // The stall repeats each window a height stays busy without a commit, the set below 4 each height
 // the node moves to, the overdue review each bftOverdueEvery; the others are logged as they start.
@@ -116,11 +118,12 @@ func (w *bftWatch) precommit(v *bft.Vote, now time.Time) {
 	w.seen[k] = bftSeen{at: now, height: max(v.Height, w.seen[k].height)}
 }
 
-// moveTo starts the watch of a height and its set at now
-func (w *bftWatch) moveTo(height uint64, set bft.Validators, now time.Time) {
+// moveTo starts the watch of a height and its set at now; decided is whether the node decided the
+// height it leaves, rather than took its block by the certificate
+func (w *bftWatch) moveTo(height uint64, set bft.Validators, now time.Time, decided bool) {
 	w.mu.Lock()
 	w.prev = bft.Validators{}
-	if height == w.height+1 {
+	if height == w.height+1 && decided {
 		w.prev = w.set
 	} else {
 		w.base = bftSeen{at: now, height: height - 1}
@@ -320,6 +323,23 @@ func (d *bftDriver) countTimeout(t bft.Timeout) {
 		return
 	}
 	bftmon.Update(func(s *bftmon.State) { s.Timeouts[step]++ })
+	if step == bftmon.TimeoutPropose {
+		d.logger.WithFields(log.Fields{"height": t.Height, "round": t.Round, "proposer": d.m.Proposer(),
+			"admitted": d.hasProposal(t.Height, t.Round)}).Warn("no proposal within the propose timeout")
+	}
+}
+
+// hasProposal reports whether the pool admitted a proposal of the height and round: one that came
+// and was filled in, which the machine found untimely or invalid
+func (d *bftDriver) hasProposal(height uint64, round uint32) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	for _, m := range d.pool.Messages(height) {
+		if p, ok := m.(*bft.Proposal); ok && p.Round == round {
+			return true
+		}
+	}
+	return false
 }
 
 // silent is the validators of the set of the height with no vote there

@@ -78,7 +78,6 @@ func CheckBatch(txs []*Transaction, checkTime int64) []error {
 		case err != nil:
 			errs[i] = err
 		case known[string(t.Hash())]:
-			log.WithFields(log.Fields{"tx_hash": t.Hash(), "type": consts.DuplicateObject}).Warning("double tx in log transactions")
 			errs[i] = ErrDuplicatedTx
 		}
 	}
