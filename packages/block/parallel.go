@@ -84,6 +84,15 @@ type runJob struct {
 	t   *transaction.Transaction
 	run *txRun
 	gen uint32
+	// taken is set by the first of a worker and the commit to take a run again a commit woke;
+	// nil for the first run of a transaction
+	taken *atomic.Bool
+}
+
+// earlyJob is a run again of a transaction a commit woke
+type earlyJob struct {
+	run   *txRun
+	taken atomic.Bool
 }
 
 // stateExec runs the transactions of a block in its state. The block gives it its transactions
@@ -110,7 +119,7 @@ type stateExec struct {
 	// before the transactions of jobs; early is the last of each transaction, which the block
 	// reads alone. It is nil unless the block keeps the readers.
 	rerun chan runJob
-	early []*txRun
+	early []*earlyJob
 	// tried counts the transactions that ran in parallel, conflicts those whose first run did not
 	// hold
 	tried, conflicts int
@@ -335,6 +344,10 @@ func (e *stateExec) startWorkers(workers int) error {
 						}
 					}
 				}
+				if j.taken != nil && !j.taken.CompareAndSwap(false, true) {
+					// the commit came to the transaction first and runs it itself
+					continue
+				}
 				e.node.RLock()
 				r := e.runReader(j, conn)
 				e.node.RUnlock()
@@ -380,10 +393,10 @@ func (e *stateExec) wake(cur int) {
 		if w.I <= cur || w.I >= len(e.early) {
 			continue
 		}
-		run := &txRun{done: make(chan struct{})}
+		ej := &earlyJob{run: &txRun{done: make(chan struct{})}}
 		select {
-		case e.rerun <- runJob{i: w.I, t: e.txs[w.I], run: run, gen: w.Gen + 1}:
-			e.early[w.I] = run
+		case e.rerun <- runJob{i: w.I, t: e.txs[w.I], run: ej.run, gen: w.Gen + 1, taken: &ej.taken}:
+			e.early[w.I] = ej
 		default:
 			e.early[w.I] = nil
 		}
@@ -432,7 +445,7 @@ func (e *stateExec) run(r *blockRun, from, to int) error {
 	}
 	if e.rerun != nil {
 		// the workers may start on a later part: early covers every transaction of the block
-		e.early = append(e.early, make([]*txRun, len(e.txs)-len(e.early))...)
+		e.early = append(e.early, make([]*earlyJob, len(e.txs)-len(e.early))...)
 	}
 	queued := e.jobs != nil
 	if queued {
@@ -475,15 +488,20 @@ func (e *stateExec) finish(r *blockRun) error {
 	return nil
 }
 
-// earlyRun is the last run again of the transaction i a commit woke, once it is done; nil for none
-func (e *stateExec) earlyRun(i int) *txRun {
+// earlyRun is the last run again of the transaction i a commit woke, once it is done. It is nil
+// for none, and for one no worker began: the commit runs that one itself, as a worker would only
+// begin it once it is free. woken tells a commit woke the transaction.
+func (e *stateExec) earlyRun(i int) (er *txRun, woken bool) {
 	if e.early == nil || e.early[i] == nil {
-		return nil
+		return nil, false
 	}
-	er := e.early[i]
+	ej := e.early[i]
+	if ej.taken.CompareAndSwap(false, true) {
+		return nil, true
+	}
 	// the run began before the commit came to the transaction: it ends sooner than a run now
-	<-er.done
-	return er
+	<-ej.run.done
+	return ej.run, true
 }
 
 // earlyHolds tells a run again a commit woke can commit: it ran in parallel, needs no order and
@@ -529,7 +547,7 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 			e.tried++
 			// a run a commit woke does not hold: the run again it woke holds, unless it needs the
 			// order; then a run now holds, as the transactions before it committed
-			if er := e.earlyRun(curTx); er != nil || !st.Holds(r.v) {
+			if er, woken := e.earlyRun(curTx); woken || !st.Holds(r.v) {
 				e.conflicts++
 				if er != nil && earlyHolds(st, er) {
 					r, run = *er, "early"
