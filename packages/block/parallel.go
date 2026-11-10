@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/random"
@@ -51,6 +52,19 @@ var errRestarted = errors.New("the settlement runs again after the state writes 
 // errRestarts is a transaction that does not run in order however many tables go to PostgreSQL
 var errRestarts = errors.New("the transaction does not run in order in the state of the block")
 
+// A block whose runs in parallel often do not hold keeps the readers of its transactions: the
+// commit of a transaction wakes those that read what it changed, which run again on the workers
+// ahead of their commit, so the commit does not run them again one after the other. A block
+// keeps them when, of the transactions of the block before that ran in parallel, at least
+// 1/earlyShare did not hold, and at least earlyMinRuns ran.
+const (
+	earlyShare   = 10
+	earlyMinRuns = 64
+)
+
+// earlyOn tells the last block that ran its transactions in parallel had them often not hold
+var earlyOn atomic.Bool
+
 // txRun is a run of a transaction of the block on a clone, in a view of the state
 type txRun struct {
 	t *transaction.Transaction
@@ -60,6 +74,8 @@ type txRun struct {
 	// fatal is an error of the block, out of the run of the transaction
 	fatal error
 	done  chan struct{}
+	// gen counts the runs of the transaction, the run of its job the first
+	gen uint32
 }
 
 // runJob is a transaction a worker runs
@@ -67,6 +83,16 @@ type runJob struct {
 	i   int
 	t   *transaction.Transaction
 	run *txRun
+	gen uint32
+	// taken is set by the first of a worker and the commit to take a run again a commit woke;
+	// nil for the first run of a transaction
+	taken *atomic.Bool
+}
+
+// earlyJob is a run again of a transaction a commit woke
+type earlyJob struct {
+	run   *txRun
+	taken atomic.Bool
 }
 
 // stateExec runs the transactions of a block in its state. The block gives it its transactions
@@ -89,6 +115,14 @@ type stateExec struct {
 	jobs    chan []runJob
 	window  chan struct{}
 	stopRun func()
+	// rerun are the runs again of the transactions the commits woke, which the workers take
+	// before the transactions of jobs; early is the last of each transaction, which the block
+	// reads alone. It is nil unless the block keeps the readers.
+	rerun chan runJob
+	early []*earlyJob
+	// tried counts the transactions that ran in parallel, conflicts those whose first run did not
+	// hold
+	tried, conflicts int
 	// node is held to read, by the runs in parallel, and to write, by the runs in order, what
 	// the node keeps out of the database: the contracts of the VM and the parameters
 	node sync.RWMutex
@@ -102,10 +136,23 @@ type stateExec struct {
 	streamErr error
 }
 
-// contractOf is the name of the contract of the transaction
+// contractOf is what the state learns the ids the transaction takes by: the name of its contract,
+// or the kind of a transfer of the UTXO model, which runs no contract but inserts its history as
+// one does. The kinds have a space no name of a contract has.
 func contractOf(t *transaction.Transaction) string {
-	if t.IsSmartContract() && t.SmartContract().TxContract != nil {
-		return t.SmartContract().TxContract.Name
+	if !t.IsSmartContract() {
+		return ""
+	}
+	s := t.SmartContract()
+	switch {
+	case s.TxContract != nil:
+		return s.TxContract.Name
+	case s.TxSmart == nil:
+		return ""
+	case s.TxSmart.TransferSelf != nil:
+		return "transfer self"
+	case s.TxSmart.UTXO != nil:
+		return "utxo transfer"
 	}
 	return ""
 }
@@ -159,8 +206,10 @@ func (e *stateExec) play(t *transaction.Transaction, v *sqldb.TxView, limits *tr
 }
 
 // parallel runs the transaction t, the i-th of the block, in parallel on the connection conn,
-// with limits that check nothing: the block checks them in its order
-func (e *stateExec) parallel(i int, t *transaction.Transaction, conn *sql.Conn) txRun {
+// with limits that check nothing: the block checks them in its order. why is why it runs, as
+// TxExecutions counts it.
+func (e *stateExec) parallel(i int, t *transaction.Transaction, conn *sql.Conn, why string) txRun {
+	metrics.TxExecutions.WithLabelValues(why).Inc()
 	r := e.play(t, e.st.NewParallelView(i, contractOf(t), conn), e.limits.Deferred())
 	e.st.SetRunIDs(i, r.v.IDCounts())
 	return r
@@ -182,6 +231,7 @@ func (e *stateExec) ordered(i int) txRun {
 	e.node.Lock()
 	defer e.node.Unlock()
 	for range maxRestarts {
+		metrics.TxExecutions.WithLabelValues("ordered").Inc()
 		r := e.play(e.txs[i], e.st.NewOrderedView(i, contractOf(e.txs[i])), e.limits)
 		if r.v.Barrier() {
 			e.st.SysUpdate()
@@ -241,7 +291,7 @@ func (e *stateExec) runAgain(i int) txRun {
 		}
 		e.again = conn
 	}
-	return e.parallel(i, e.txs[i], e.again)
+	return e.parallel(i, e.txs[i], e.again, "again")
 }
 
 // startWorkers starts the workers on the transactions of the parts of jobs in their order, at
@@ -293,11 +343,28 @@ func (e *stateExec) startWorkers(workers int) error {
 	var wg sync.WaitGroup
 	for _, conn := range conns {
 		wg.Go(func() {
-			for j := range next {
+			for {
+				var j runJob
+				select {
+				case j = <-e.rerun:
+				default:
+					var ok bool
+					select {
+					case j = <-e.rerun:
+					case j, ok = <-next:
+						if !ok {
+							return
+						}
+					}
+				}
+				if j.taken != nil && !j.taken.CompareAndSwap(false, true) {
+					// the commit came to the transaction first and runs it itself
+					continue
+				}
 				e.node.RLock()
-				r := e.parallel(j.i, j.t, conn)
+				r := e.runReader(j, conn)
 				e.node.RUnlock()
-				r.done = j.run.done
+				r.done, r.gen = j.run.done, j.gen
 				*j.run = r
 				close(r.done)
 			}
@@ -309,6 +376,44 @@ func (e *stateExec) startWorkers(workers int) error {
 		release()
 	}
 	return nil
+}
+
+// runReader runs the job, and keeps the run as a reader of the block, which keeps them. A commit
+// since the run began may have changed what it read before it was a reader: the run that does
+// not hold then runs again at once.
+func (e *stateExec) runReader(j runJob, conn *sql.Conn) txRun {
+	why := "parallel"
+	if j.gen > 0 {
+		why = "early"
+	}
+	r := e.parallel(j.i, j.t, conn, why)
+	if e.rerun == nil {
+		return r
+	}
+	for range 2 {
+		if r.fatal != nil || r.v == nil || !e.st.Register(j.i, j.gen, r.v) || e.st.HoldsAhead(j.i, r.v) {
+			break
+		}
+		r = e.parallel(j.i, j.t, conn, "recheck")
+	}
+	return r
+}
+
+// wake runs again on the workers the transactions after cur whose runs the commits woke; one the
+// workers have no room for runs again at its commit
+func (e *stateExec) wake(cur int) {
+	for _, w := range e.st.Woken() {
+		if w.I <= cur || w.I >= len(e.early) {
+			continue
+		}
+		ej := &earlyJob{run: &txRun{done: make(chan struct{})}}
+		select {
+		case e.rerun <- runJob{i: w.I, t: e.txs[w.I], run: ej.run, gen: w.Gen + 1, taken: &ej.taken}:
+			e.early[w.I] = ej
+		default:
+			e.early[w.I] = nil
+		}
+	}
 }
 
 // beginState begins the state of a block that is not the first
@@ -342,10 +447,18 @@ func (e *stateExec) run(r *blockRun, from, to int) error {
 	e.txs = append(e.txs, txs...)
 	if e.jobs == nil {
 		if workers := min(execWorkers(), len(txs)); workers > 1 {
+			if earlyOn.Load() {
+				e.st.WatchReaders()
+				e.rerun = make(chan runJob, 64*workers)
+			}
 			if err := e.startWorkers(workers); err != nil {
 				return err
 			}
 		}
+	}
+	if e.rerun != nil {
+		// the workers may start on a later part: early covers every transaction of the block
+		e.early = append(e.early, make([]*earlyJob, len(e.txs)-len(e.early))...)
 	}
 	queued := e.jobs != nil
 	if queued {
@@ -365,6 +478,7 @@ func (e *stateExec) stop() {
 	if e.stopRun != nil {
 		e.stopRun()
 		e.stopRun = nil
+		earlyOn.Store(e.tried >= earlyMinRuns && e.conflicts*earlyShare >= e.tried)
 	}
 	if e.again != nil {
 		e.again.Close()
@@ -385,6 +499,34 @@ func (e *stateExec) finish(r *blockRun) error {
 	e.st.End()
 	e.dbTx.ForgetCache()
 	return nil
+}
+
+// earlyRun is the last run again of the transaction i a commit woke, once it is done. It is nil
+// for none, and for one no worker began: the commit runs that one itself, as a worker would only
+// begin it once it is free. woken tells a commit woke the transaction.
+func (e *stateExec) earlyRun(i int) (er *txRun, woken bool) {
+	if e.early == nil || e.early[i] == nil {
+		return nil, false
+	}
+	ej := e.early[i]
+	if ej.taken.CompareAndSwap(false, true) {
+		return nil, true
+	}
+	// the run began before the commit came to the transaction: it ends sooner than a run now
+	<-ej.run.done
+	return ej.run, true
+}
+
+// earlyHolds tells a run again a commit woke can commit: it ran in parallel, needs no order and
+// its reads hold
+func earlyHolds(st *sqldb.BlockState, er *txRun) bool {
+	if er.fatal != nil || er.v == nil {
+		return false
+	}
+	if needs, _ := er.v.NeedsOrder(); needs {
+		return false
+	}
+	return st.Holds(er.v)
 }
 
 // commitState takes the runs of the transactions from to to in their order, runs again those
@@ -414,11 +556,18 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 			r, run = e.ordered(curTx), "ordered"
 		} else if needs, _ := r.v.NeedsOrder(); needs {
 			r, run = e.ordered(curTx), "ordered"
-		} else if !st.Holds(r.v) {
-			// the transactions before it committed: a run now holds, unless it needs the order
-			if r, run = e.runAgain(curTx), "again"; r.fatal == nil {
-				if needs, _ := r.v.NeedsOrder(); needs || !st.Holds(r.v) {
-					r, run = e.ordered(curTx), "ordered"
+		} else {
+			e.tried++
+			// a run a commit woke does not hold: the run again it woke holds, unless it needs the
+			// order; then a run now holds, as the transactions before it committed
+			if er, woken := e.earlyRun(curTx); woken || !st.Holds(r.v) {
+				e.conflicts++
+				if er != nil && earlyHolds(st, er) {
+					r, run = *er, "early"
+				} else if r, run = e.runAgain(curTx), "again"; r.fatal == nil {
+					if needs, _ := r.v.NeedsOrder(); needs || !st.Holds(r.v) {
+						r, run = e.ordered(curTx), "ordered"
+					}
 				}
 			}
 		}
@@ -532,6 +681,9 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 		}
 
 		st.Commit(curTx, r.v)
+		if e.rerun != nil {
+			e.wake(curTx)
+		}
 		st.ApplyOutputs(t.Hash(), b.Header.BlockId, t.TxInputsMap, t.TxOutputsMap)
 		txs[curTx] = t
 
