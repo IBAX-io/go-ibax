@@ -327,3 +327,82 @@ func TestReadersWakeHotKey(t *testing.T) {
 		})
 	}
 }
+
+// TestIDReadersPredicted: a commit wakes the readers of the highest id whose value is not the
+// highest id committed and the ids the transactions before them not committed take, as their last
+// runs or the last transactions of their contracts took them, when the runs change those counts
+func TestIDReadersPredicted(t *testing.T) {
+	m := &tableMeta{name: "t", byName: make(map[string]*colMeta), pk: []string{"id"}, uniques: [][]string{{"id"}}}
+	cm := &colMeta{name: "id", typ: newColType(20, "int8", -1)}
+	m.cols, m.byName["id"] = []*colMeta{cm}, cm
+	rnd := rand.New(rand.NewSource(1))
+	for round := range 50 {
+		const n = 60
+		ts := &tableState{meta: m, hasID: true, maxLoaded: true, maxKnown: true}
+		ts.resetKeys()
+		st := &BlockState{txs: make([]txSlot, n), contracts: map[string]map[string]int{
+			"a": {"t": 1}, "b": {"t": 2}, "c": {}}}
+		ri := newReaderIndex()
+		ri.st = st
+		// run sets the ids the last run of the transaction j took, or none: its contract tells them
+		run := func(j int) {
+			if rnd.Intn(3) == 0 {
+				st.txs[j].ids.Store(nil)
+				return
+			}
+			ids := map[string]int{"t": rnd.Intn(3)}
+			st.txs[j].ids.Store(&ids)
+		}
+		// read registers a reader of the transaction j at its gen, which read the value now, or a
+		// wrong one
+		read := func(j int) {
+			own := int64(math.MinInt64)
+			if rnd.Intn(4) == 0 {
+				own = ts.max + int64(rnd.Intn(n))
+			}
+			value := max(ts.max+st.predicted(j, "t"), own)
+			if rnd.Intn(10) == 0 {
+				value++
+			}
+			ri.ids[ts] = append(ri.ids[ts], idReader{Reader: Reader{I: j, Gen: ri.gens[j]}, own: own, value: value})
+		}
+		for j := range n {
+			st.txs[j].contract = []string{"a", "b", "c"}[rnd.Intn(3)]
+			run(j)
+			ri.gens[j] = 0
+		}
+		for _, j := range rnd.Perm(n) {
+			if rnd.Intn(3) > 0 {
+				read(j)
+			}
+		}
+		for i := range n {
+			for range rnd.Intn(3) {
+				if j := i + rnd.Intn(n-i); j > i {
+					run(j)
+				}
+			}
+			taken := st.takes(i, "t")
+			st.next = i + 1
+			ts.max += taken
+			want := map[int]bool{}
+			for _, r := range ri.ids[ts] {
+				if r.I > i && ri.gens[r.I] == r.Gen && max(ts.max+st.predicted(r.I, "t"), r.own) != r.value {
+					want[r.I] = true
+				}
+			}
+			id := strconv.FormatInt(ts.max, 10)
+			ri.wake(i, []touch{{ts: ts, pk: id, new: stateRow{&id}}})
+			got := map[int]bool{}
+			for _, r := range ri.woken {
+				got[r.I] = true
+			}
+			ri.woken = nil
+			require.Equal(t, want, got, "round %d, commit %d", round, i)
+			// the readers woken run again and read anew
+			for j := range got {
+				read(j)
+			}
+		}
+	}
+}

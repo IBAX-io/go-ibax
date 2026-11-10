@@ -337,13 +337,18 @@ func (st *BlockState) SetRunIDs(i int, ids map[string]int) {
 func (st *BlockState) predicted(i int, table string) int64 {
 	var n int64
 	for j := st.next; j < i && j < len(st.txs); j++ {
-		if ids := st.txs[j].ids.Load(); ids != nil {
-			n += int64((*ids)[table])
-		} else {
-			n += int64(st.contracts[st.txs[j].contract][table])
-		}
+		n += st.takes(j, table)
 	}
 	return n
+}
+
+// takes is the count of the ids of the table the transaction j takes: as in its last run, or as
+// the last transaction of its contract did. The caller holds idMu.
+func (st *BlockState) takes(j int, table string) int64 {
+	if ids := st.txs[j].ids.Load(); ids != nil {
+		return int64((*ids)[table])
+	}
+	return int64(st.contracts[st.txs[j].contract][table])
 }
 
 // table is the state of a table, which it creates for the meta with what it reads of the table

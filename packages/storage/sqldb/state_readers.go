@@ -274,13 +274,12 @@ func (ri *readerIndex) wake(i int, touches []touch) {
 	// a reader of the highest id holds while it is what the state now and the ids the
 	// transactions before the reader take tell
 	for _, ts := range idTables {
-		list := ri.ids[ts]
+		list := slices.DeleteFunc(ri.ids[ts], func(r idReader) bool { return !ri.live(r.Reader) })
+		slices.SortStableFunc(list, func(a, b idReader) int { return a.I - b.I })
+		now, known := ri.idsNow(ts, list)
 		kept := list[:0]
-		for _, r := range list {
-			if !ri.live(r.Reader) {
-				continue
-			}
-			if now, ok := ri.idNow(ts, r.I); !ok || max(now, r.own) != r.value {
+		for k, r := range list {
+			if !known || max(now[k], r.own) != r.value {
 				woke(r.Reader)
 				continue
 			}
@@ -294,16 +293,29 @@ func (ri *readerIndex) wake(i int, touches []touch) {
 	}
 }
 
-// idNow is the highest id of the table the transaction i reads now, and whether the state knows
-// it: the highest committed, and the ids the transactions before i the state has not committed
-// take
-func (ri *readerIndex) idNow(ts *tableState, i int) (int64, bool) {
+// idsNow are the highest ids of the table the readers, in the order of the block, read now, and
+// whether the state knows them: the highest committed, and the ids the transactions before each
+// reader the state has not committed take. It sums the ids of each transaction once: a sum for
+// each reader would make the commits of a block of readers cubic in its size.
+func (ri *readerIndex) idsNow(ts *tableState, list []idReader) ([]int64, bool) {
+	now := make([]int64, len(list))
 	if ri.st == nil {
-		return ts.max, ts.maxKnown && !ts.pg.Load()
+		for k := range now {
+			now[k] = ts.max
+		}
+		return now, ts.maxKnown && !ts.pg.Load()
 	}
-	ri.st.idMu.Lock()
-	defer ri.st.idMu.Unlock()
-	return ts.max + ri.st.predicted(i, ts.meta.name), ts.maxKnown && !ts.pg.Load()
+	st := ri.st
+	st.idMu.Lock()
+	defer st.idMu.Unlock()
+	j, n := st.next, int64(0)
+	for k, r := range list {
+		for ; j < r.I && j < len(st.txs); j++ {
+			n += st.takes(j, ts.meta.name)
+		}
+		now[k] = ts.max + n
+	}
+	return now, ts.maxKnown && !ts.pg.Load()
 }
 
 // idChange tells the change may change the highest id of the table: it inserted or deleted the
