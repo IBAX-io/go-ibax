@@ -881,7 +881,10 @@ func (a bftApp) Valid(height uint64, hash bft.Hash, bin []byte) bool {
 	if errors.Is(err, block.ErrSpeculation) {
 		err = block.Validate(bin, int64(height), hash, dbWrites{})
 	}
-	if err != nil {
+	switch {
+	case errors.Is(err, block.ErrStale):
+		a.logger.WithFields(log.Fields{"error": err, "height": height}).Debug("a proposal of a height decided")
+	case err != nil:
 		a.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err, "height": height}).Warn("an invalid proposal")
 	}
 	return err == nil

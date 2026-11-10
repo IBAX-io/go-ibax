@@ -96,6 +96,9 @@ func Speculate(shell []byte, height int64, writes sync.Locker) (*Speculation, er
 }
 
 func (b *Block) speculate(writes sync.Locker) (*Speculation, error) {
+	if err := atTop(b.Header.BlockId); err != nil {
+		return nil, err
+	}
 	var err error
 	if b.PrevHeader, err = GetBlockHeaderFromBlockChain(b.Header.BlockId - 1); err != nil {
 		return nil, err
