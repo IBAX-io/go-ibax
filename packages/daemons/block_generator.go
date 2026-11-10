@@ -232,7 +232,11 @@ func processTransactionsNew(logger *log.Entry, txs []*transaction.Pending, st ti
 			}
 		}
 		tr := txItem.Tx
-		if err := checked[i]; err != nil {
+		if err := checked[i]; errors.Is(err, transaction.ErrDuplicatedTx) {
+			// a block of the node took it after the pool handed it out: it is done, not bad
+			transaction.TxPool.Remove([][]byte{tr.Hash()})
+			continue
+		} else if err != nil {
 			txBadChan <- badTxStruct{hash: tr.Hash(), msg: err.Error(), keyID: tr.KeyID()}
 			continue
 		}

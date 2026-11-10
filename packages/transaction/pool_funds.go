@@ -198,13 +198,16 @@ func fundsOf(t *Transaction, l ledger) (*funds, error) {
 
 // refusal is how the pool takes an error of Check or of fundsOf: a bad transaction counts for the
 // ban of its account, one without its funds does not, and an error of reading a balance is the
-// node's, so the transaction is not bad
+// node's, so the transaction is not bad, as one a block took already is not
 func refusal(err error) (bad, ban bool) {
 	switch {
 	case errors.Is(err, errPoolLedger):
 		return false, false
 	case errors.Is(err, ErrPoolNoFunds):
 		return true, false
+	case errors.Is(err, ErrDuplicatedTx):
+		// another node relays a transaction after the block that took it
+		return false, false
 	}
 	return true, true
 }

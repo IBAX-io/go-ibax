@@ -213,7 +213,7 @@ func TestPoolFundsLedger(t *testing.T) {
 	for _, c := range []struct {
 		err       error
 		bad, bans bool
-	}{{err, false, false}, {ErrPoolNoFunds, true, false}, {ErrDuplicatedTx, true, true}} {
+	}{{err, false, false}, {ErrPoolNoFunds, true, false}, {ErrDuplicatedTx, false, false}, {ErrEarlyTime, true, true}} {
 		if bad, ban := refusal(c.err); bad != c.bad || ban != c.bans {
 			t.Fatalf("%v: bad %v, ban %v", c.err, bad, ban)
 		}
