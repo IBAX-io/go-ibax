@@ -41,7 +41,7 @@ func LoadContracts() error {
 		if err != nil {
 			return logErrorDB(err, "getting list of contracts")
 		}
-		if err = loadContractList(list); err != nil {
+		if err = loadContractList(script.GetVM(), list); err != nil {
 			return err
 		}
 	}
@@ -58,7 +58,7 @@ func LoadContract(transaction *sqldb.DbTransaction, ecosystem int64) (err error)
 	if err != nil {
 		return logErrorDB(err, "selecting all contracts from ecosystem")
 	}
-	if err = loadContractList(list); err != nil {
+	if err = loadContractList(script.GetVM(), list); err != nil {
 		return err
 	}
 	return
@@ -120,10 +120,12 @@ func (contract *Contract) GetFunc(name string) *script.CodeBlock {
 	return nil
 }
 
-func loadContractList(list []sqldb.Contract) error {
-	if script.GetVM().ShiftContract == 0 {
-		script.LoadSysFuncs(script.GetVM(), 1)
-		script.GetVM().ShiftContract = int64(len(script.GetVM().Children) - 1)
+// loadContractList compiles the contracts of list into vm, after the system functions if it has
+// none yet
+func loadContractList(vm *script.VM, list []sqldb.Contract) error {
+	if vm.ShiftContract == 0 {
+		script.LoadSysFuncs(vm, 1)
+		vm.ShiftContract = int64(len(vm.Children) - 1)
 	}
 
 	for _, item := range list {
@@ -138,7 +140,7 @@ func loadContractList(list []sqldb.Contract) error {
 			WalletID: item.WalletID,
 			TokenID:  item.TokenID,
 		}
-		if err = script.GetVM().Compile([]rune(item.Value), &owner); err != nil {
+		if err = vm.Compile([]rune(item.Value), &owner); err != nil {
 			logErrorValue(err, consts.EvalError, "Load Contract", strings.Join(clist, `,`))
 		}
 	}

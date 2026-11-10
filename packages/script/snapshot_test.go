@@ -111,3 +111,20 @@ func TestVMSnapshot(t *testing.T) {
 		t.Fatalf("after the second Restore:\n%s\nbefore:\n%s", got, before)
 	}
 }
+
+// The first contract loaded sets the shift of the contract ids and switches off the extern mode;
+// Restore puts both back, as the machine of before block 1 had them
+func TestVMSnapshotShift(t *testing.T) {
+	vm := NewVM()
+	children := len(vm.Children)
+	snap := vm.Snapshot()
+	vm.ShiftContract = 7
+	if err := vm.Compile([]rune(`contract First { action { } }`), &OwnerInfo{StateID: 1, TableID: 1}); err != nil {
+		t.Fatal(err)
+	}
+	vm.FlushExtern()
+	vm.Restore(snap)
+	if vm.ShiftContract != 0 || !vm.Extern || len(vm.Children) != children {
+		t.Fatalf("restored: shift %d, extern %v, %d children", vm.ShiftContract, vm.Extern, len(vm.Children))
+	}
+}

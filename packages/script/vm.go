@@ -47,21 +47,28 @@ func GetVM() *VM {
 // VMSnapshot is the state of the virtual machine that executing a block changes: the objects by
 // name and their values (FlushBlock sets the value of a function in place), the children by index
 // (FlushBlock replaces an edited contract in place and appends the new ones) and the owner of each
-// contract (ActivateContract and SetContractWallet change it in place).
+// contract (ActivateContract and SetContractWallet change it in place). The first contract loaded
+// sets the shift of the contract ids and switches off the extern mode: a node that joins from a
+// snapshot puts back the machine of before block 1, which loads the system functions again with the
+// contracts of the snapshot.
 type VMSnapshot struct {
-	objects  map[string]*ObjInfo
-	values   map[*ObjInfo]ObjInfo
-	children []*CodeBlock
-	owners   map[*OwnerInfo]OwnerInfo
+	objects       map[string]*ObjInfo
+	values        map[*ObjInfo]ObjInfo
+	children      []*CodeBlock
+	owners        map[*OwnerInfo]OwnerInfo
+	shiftContract int64
+	extern        bool
 }
 
 // Snapshot takes the state of the virtual machine that Restore puts back
 func (vm *VM) Snapshot() *VMSnapshot {
 	s := &VMSnapshot{
-		objects:  make(map[string]*ObjInfo, len(vm.Objects)),
-		values:   make(map[*ObjInfo]ObjInfo, len(vm.Objects)),
-		children: append([]*CodeBlock(nil), vm.Children...),
-		owners:   make(map[*OwnerInfo]OwnerInfo),
+		objects:       make(map[string]*ObjInfo, len(vm.Objects)),
+		values:        make(map[*ObjInfo]ObjInfo, len(vm.Objects)),
+		children:      append([]*CodeBlock(nil), vm.Children...),
+		owners:        make(map[*OwnerInfo]OwnerInfo),
+		shiftContract: vm.ShiftContract,
+		extern:        vm.Extern,
 	}
 	for k, v := range vm.Objects {
 		s.objects[k] = v
@@ -93,6 +100,7 @@ func (vm *VM) Restore(s *VMSnapshot) {
 	for o, v := range s.owners {
 		*o = v
 	}
+	vm.ShiftContract, vm.Extern = s.shiftContract, s.extern
 }
 
 var smartSnapshot *VMSnapshot
