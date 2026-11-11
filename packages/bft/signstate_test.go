@@ -6,6 +6,8 @@
 package bft
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"reflect"
 	"testing"
@@ -15,7 +17,7 @@ import (
 // the stored form of the state
 func (c *corner) restart(s *SignState) {
 	c.t.Helper()
-	s, err := UnmarshalSignState(s.Marshal(), 1<<20)
+	s, err := UnmarshalSignState(s.Marshal())
 	if err != nil {
 		c.t.Fatal(err)
 	}
@@ -100,7 +102,9 @@ func TestRestoreKeepsTheLock(t *testing.T) {
 	}
 }
 
-// A proposer restored with a valid value proposes it with its valid round (L15, L16, L19)
+// A proposer restored with a valid value has not its block: it proposes nothing and asks for no
+// new block; a proposal of the hash brings the block, and the next round it proposes it proposes
+// the valid value with its valid round (L15, L16, L19)
 func TestRestoreProposesTheValidValue(t *testing.T) {
 	c := newCorner(t)
 	c.lockA()
@@ -111,17 +115,55 @@ func TestRestoreProposesTheValidValue(t *testing.T) {
 	if c.app.values != 0 {
 		t.Fatal("the proposer asks for a new block though it has a valid value")
 	}
-	var p *Proposal
 	for _, o := range c.out {
 		if o.Proposal != nil {
+			t.Fatalf("a proposal without the block of the valid value: %+v", o.Proposal)
+		}
+	}
+	c.proposal(0, NoRound, hashA)
+	r := uint32(3)
+	for {
+		c.nextRound(r)
+		if r++; c.set.Proposer(1, r) == 0 {
+			break
+		}
+	}
+	var p *Proposal
+	for _, o := range c.out {
+		if o.Proposal != nil && o.Proposal.Round == r {
 			p = o.Proposal
 		}
 	}
-	if p == nil || p.Round != 3 || p.Hash != hashA || p.ValidRound != 0 {
-		t.Fatalf("the proposal %+v", p)
+	if p == nil || p.Hash != hashA || p.ValidRound != 0 || !bytes.Equal(p.Block, hashA[:]) || c.app.values != 0 {
+		t.Fatalf("the proposal of round %d: %+v, %d new values; want A of validRound 0", r, p, c.app.values)
 	}
 	if c.m.TakeSignState() == nil {
 		t.Fatal("no state after the proposal")
+	}
+}
+
+// A restored machine decides on a proposal of the state only with its block: the precommits of
+// the round decide when a proposal of the hash brings the block
+func TestRestoreDecidesWithTheBlock(t *testing.T) {
+	c := newCorner(t)
+	c.lockA()
+	c.restart(c.m.TakeSignState())
+	c.vote(1, TypePrecommit, 0, hashA)
+	c.vote(2, TypePrecommit, 0, hashA)
+	for _, o := range c.out {
+		if o.Commit != nil {
+			t.Fatal("a commit without the block")
+		}
+	}
+	c.proposal(0, NoRound, hashA)
+	var cm *Commit
+	for _, o := range c.out {
+		if o.Commit != nil {
+			cm = o.Commit
+		}
+	}
+	if cm == nil || cm.Hash != hashA || !bytes.Equal(cm.Block, hashA[:]) {
+		t.Fatalf("the commit %+v", cm)
 	}
 }
 
@@ -132,15 +174,23 @@ func TestSignStateForm(t *testing.T) {
 	c.lockA()
 	s := c.m.TakeSignState()
 	s.Proposals = []*Proposal{s.Locked}
-	got, err := UnmarshalSignState(s.Marshal(), 1<<20)
+	got, err := UnmarshalSignState(s.Marshal())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !reflect.DeepEqual(got, s) {
-		t.Fatalf("decoded %+v, want %+v", got, s)
+	// the stored form keeps the proposals without their blocks
+	header := *s.Locked
+	header.Block = []byte{}
+	want := *s
+	want.Locked, want.Valid, want.Proposals = &header, &header, []*Proposal{&header}
+	if !reflect.DeepEqual(got, &want) {
+		t.Fatalf("decoded %+v, want %+v", got, &want)
+	}
+	if !s.Locked.HasBlock() {
+		t.Fatal("Marshal took the block of the state")
 	}
 	empty := &SignState{Height: 7, LockedRound: NoRound, ValidRound: NoRound}
-	if got, err := UnmarshalSignState(empty.Marshal(), 1<<20); err != nil || !reflect.DeepEqual(got, empty) {
+	if got, err := UnmarshalSignState(empty.Marshal()); err != nil || !reflect.DeepEqual(got, empty) {
 		t.Fatalf("the empty state: %+v %v", got, err)
 	}
 
@@ -150,17 +200,27 @@ func TestSignStateForm(t *testing.T) {
 	}
 
 	b := s.Marshal()
-	if _, err := UnmarshalSignState(append(b, 0), 1<<20); !errors.Is(err, ErrFormat) {
+	if _, err := UnmarshalSignState(append(b, 0)); !errors.Is(err, ErrFormat) {
 		t.Fatalf("a byte left over: %v", err)
 	}
-	if _, err := UnmarshalSignState(b[:len(b)-1], 1<<20); !errors.Is(err, ErrFormat) {
+	if _, err := UnmarshalSignState(b[:len(b)-1]); !errors.Is(err, ErrFormat) {
 		t.Fatalf("a byte short: %v", err)
 	}
-	if _, err := UnmarshalSignState(b, 1); !errors.Is(err, ErrFormat) {
-		t.Fatalf("a block past the size: %v", err)
+	// a form whose lock has its block: height 1, round 0, locked round 0, the lock, no valid
+	// value, no proposals and no votes
+	full := s.Locked.Marshal()
+	withBlock := binary.BigEndian.AppendUint64(nil, 1)
+	withBlock = binary.BigEndian.AppendUint32(withBlock, 0)
+	withBlock = binary.BigEndian.AppendUint32(withBlock, 0)
+	withBlock = binary.BigEndian.AppendUint32(withBlock, uint32(len(full)))
+	withBlock = append(withBlock, full...)
+	withBlock = binary.BigEndian.AppendUint32(withBlock, uint32(0xffffffff))
+	withBlock = append(withBlock, 0, 0, 0, 0, 0, 0, 0, 0)
+	if _, err := UnmarshalSignState(withBlock); !errors.Is(err, ErrFormat) {
+		t.Fatalf("a proposal with its block: %v", err)
 	}
 	bad := &SignState{Height: 7, LockedRound: 0, ValidRound: NoRound}
-	if _, err := UnmarshalSignState(bad.Marshal(), 1<<20); !errors.Is(err, ErrFormat) {
+	if _, err := UnmarshalSignState(bad.Marshal()); !errors.Is(err, ErrFormat) {
 		t.Fatalf("a locked round of nil: %v", err)
 	}
 }

@@ -20,6 +20,15 @@ import (
 // round it signed before. That is the change of round of L65-L67 as a crash looks to the other
 // validators; the lock and the valid value are restored with it (L23, L29 and L15 read them), so
 // the machine prevotes what the validator may prevote after its lock.
+//
+// The state keeps the proposals, the lock and the valid value without their blocks: what the
+// validator signed is the hash of a block, so the hashes, the rounds and the signatures are all
+// the restored machine needs to sign nothing that conflicts. A block is up to max_block_size, and
+// the node stores the state on each message it signs: with the blocks a state was three times the
+// block, and a block of 6.9 MB after a stalled round took 3.6 s to store, which held the messages
+// of all the validators. The block of the valid value, which the restored machine proposes again
+// as proposer (L16), comes back with a proposal of its hash from the network; till then the
+// machine proposes nothing (see startRound).
 
 // SignState is what the validator of a machine signed at its height
 type SignState struct {
@@ -28,10 +37,11 @@ type SignState struct {
 	// above it
 	Round       uint32
 	LockedRound int32
-	Locked      *Proposal // nil for nil
+	Locked      *Proposal // nil for nil; the stored form has no block
 	ValidRound  int32
-	Valid       *Proposal // nil for nil
-	// Proposals and Votes are the messages the validator signed at the height
+	Valid       *Proposal // nil for nil; the stored form has no block
+	// Proposals and Votes are the messages the validator signed at the height; the stored form of
+	// a proposal has no block
 	Proposals []*Proposal
 	Votes     []*Vote
 }
@@ -68,6 +78,8 @@ func (m *Machine) TakeSignState() *SignState {
 // Restore restarts the machine at its height from the sign state the node stored before it
 // stopped: it takes the messages of the state as its own, restores the lock and the valid value,
 // and starts the round after the round of the state. A state of another height changes nothing.
+// The proposals, the lock and the valid value of a stored state have no blocks: the machine
+// decides on none of them and proposes none until a proposal of its hash brings the block.
 func (m *Machine) Restore(s *SignState) []Output {
 	if s == nil || s.Height != m.height || m.decided || s.Round >= math.MaxInt32 {
 		return nil
@@ -101,8 +113,8 @@ func (m *Machine) Restore(s *SignState) []Output {
 
 // Marshal is the stored form of a sign state: height u64 ‖ round u32 ‖ lockedRound i32 ‖
 // locked ‖ validRound i32 ‖ valid ‖ proposals u16 ‖ proposals ‖ votes u16 ‖ votes, a proposal
-// being len u32 ‖ the wire form of the proposal, len 0 for nil, and a vote len u16 ‖ the wire
-// form of the vote
+// being len u32 ‖ the wire form of the proposal with an empty block, len 0 for nil, and a vote
+// len u16 ‖ the wire form of the vote
 func (s *SignState) Marshal() []byte {
 	b := binary.BigEndian.AppendUint64(nil, s.Height)
 	b = binary.BigEndian.AppendUint32(b, s.Round)
@@ -125,32 +137,32 @@ func appendProposal(b []byte, p *Proposal) []byte {
 	if p == nil {
 		return binary.BigEndian.AppendUint32(b, 0)
 	}
-	m := p.Marshal()
+	m := p.MarshalBlock(nil)
 	b = binary.BigEndian.AppendUint32(b, uint32(len(m)))
 	return append(b, m...)
 }
 
-func (r *reader) proposal(maxBlock int64) *Proposal {
+func (r *reader) proposal() *Proposal {
 	n := r.u32()
 	if r.err != nil || n == 0 {
 		return nil
 	}
-	p, err := UnmarshalProposal(r.take(int(n)), maxBlock)
+	p, err := UnmarshalProposal(r.take(int(n)), 0)
 	if err != nil && r.err == nil {
 		r.err = err
 	}
 	return p
 }
 
-// UnmarshalSignState decodes a sign state whose blocks are at most maxBlock bytes
-func UnmarshalSignState(b []byte, maxBlock int64) (*SignState, error) {
+// UnmarshalSignState decodes a sign state; a proposal with a block is refused
+func UnmarshalSignState(b []byte) (*SignState, error) {
 	r := reader{b: b}
 	s := &SignState{Height: r.u64(), Round: r.u32(), LockedRound: int32(r.u32())}
-	s.Locked = r.proposal(maxBlock)
+	s.Locked = r.proposal()
 	s.ValidRound = int32(r.u32())
-	s.Valid = r.proposal(maxBlock)
+	s.Valid = r.proposal()
 	for n := r.u16(); n > 0 && r.err == nil; n-- {
-		if p := r.proposal(maxBlock); p != nil {
+		if p := r.proposal(); p != nil {
 			s.Proposals = append(s.Proposals, p)
 		}
 	}

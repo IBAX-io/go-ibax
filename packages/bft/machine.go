@@ -309,11 +309,25 @@ func (m *Machine) recordProposal(p *Proposal) {
 	first := m.proposals[p.Round]
 	if first == nil {
 		m.proposals[p.Round] = p
-		return
-	}
-	if first.Hash != p.Hash {
+	} else if first.Hash != p.Hash {
 		m.evidence(p.Round, TypeProposal, p.Validator, first.Hash, p.Hash, first.ValidRound, p.ValidRound, first.Signature, p.Signature)
+	} else {
+		m.proposals[p.Round] = withBlock(first, p)
 	}
+	// a restored machine has the lock and the valid value without their blocks: a proposal of the
+	// hash brings the block, which L16 proposes again
+	m.lockedValue = withBlock(m.lockedValue, p)
+	m.validValue = withBlock(m.validValue, p)
+}
+
+// withBlock is the proposal have with the block of p if have has no block and p is of its hash
+func withBlock(have, p *Proposal) *Proposal {
+	if have == nil || have.HasBlock() || !p.HasBlock() || have.Hash != p.Hash {
+		return have
+	}
+	full := *have
+	full.Block = p.Block
+	return &full
 }
 
 func (m *Machine) recordVote(v *Vote) {
@@ -351,6 +365,11 @@ func (m *Machine) countAny(round uint32, t MsgType) int {
 }
 
 func (m *Machine) isValid(p *Proposal) bool {
+	if !p.HasBlock() {
+		// a proposal restored from the sign state has no block to check: it is not valid till a
+		// proposal of its hash brings the block, and the cache keeps no answer for it
+		return false
+	}
 	v, ok := m.valid[p.Hash]
 	if !ok {
 		v = m.app.Valid(m.height, p.Hash, p.Block)
@@ -395,7 +414,12 @@ func (m *Machine) startRound(round uint32) {
 	if m.validator && m.set.Proposer(m.height, m.round) == m.self { // L14
 		var p *Proposal
 		if m.validValue != nil { // L15
-			p = &Proposal{Block: m.validValue.Block, Hash: m.validValue.Hash} // L16
+			// a restored machine has the valid value without its block till a proposal of the
+			// hash brings it: it proposes nothing and waits as a validator that is not the
+			// proposer, since it may propose no other value
+			if m.validValue.HasBlock() {
+				p = &Proposal{Block: m.validValue.Block, Hash: m.validValue.Hash} // L16
+			}
 		} else if block, hash, err := m.app.Value(m.height, m.round); err == nil && hash != Nil { // L18
 			p = &Proposal{Block: block, Hash: hash}
 			// the block of the proposer is valid as Value made it: the node tries it once

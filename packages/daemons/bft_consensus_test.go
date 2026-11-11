@@ -147,7 +147,7 @@ func TestBftDriverStoresBeforeSending(t *testing.T) {
 	// the node restarts with a new machine that restores what the node stored, and signs from
 	// the round after it: nothing of round 0 again
 	d.m = d.restart()
-	s, err := bft.UnmarshalSignState(d.stored.Marshal(), 1<<20)
+	s, err := bft.UnmarshalSignState(d.stored.Marshal())
 	if err != nil {
 		t.Fatal(err)
 	}
