@@ -39,6 +39,12 @@ func (b *BlockChain) Get(blockID int64) (bool, error) {
 	return isFound(DBConn.Where("id = ?", blockID).First(b))
 }
 
+// GetHead is Get with only the first size bytes of the data of the block, which hold its header
+func (b *BlockChain) GetHead(blockID int64, size int) (bool, error) {
+	return isFound(DBConn.Select("id, hash, rollbacks_hash, substring(data from 1 for ?) AS data", size).
+		Where("id = ?", blockID).First(b))
+}
+
 // GetArchived is Get for the API and the synchronization of other nodes: on an archive node it
 // finds the blocks out of the window too
 func (b *BlockChain) GetArchived(blockID int64) (bool, error) {

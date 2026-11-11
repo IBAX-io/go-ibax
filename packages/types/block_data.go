@@ -2,6 +2,7 @@ package types
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
@@ -14,6 +15,9 @@ import (
 
 const (
 	minBlockSize = 9
+	// maxHeaderSize bounds the header HeaderOf reads: the candidate nodes are its only part of
+	// some size
+	maxHeaderSize = 16 << 20
 )
 
 var (
@@ -65,6 +69,31 @@ func ParseBlockHeader(buf *bytes.Buffer, maxBlockSize int64) (header *BlockHeade
 		return nil, err
 	}
 	return blo.Header, nil
+}
+
+// HeaderOf parses the header of a block from the first bytes of its data: the marshalled block
+// leads with its header (field 1). When data ends before the header does, it tells the length of
+// the data the header needs.
+func HeaderOf(data []byte) (header *BlockHeader, need int, err error) {
+	const headerKey = 1<<3 | 2 // field 1, bytes
+	if len(data) == 0 || data[0] != headerKey {
+		return nil, 0, errors.New("the block does not lead with its header")
+	}
+	size, n := binary.Uvarint(data[1:])
+	if n == 0 {
+		return nil, len(data) + binary.MaxVarintLen64, nil
+	}
+	if n < 0 || size > uint64(maxHeaderSize) {
+		return nil, 0, errors.New("the header of the block is too long")
+	}
+	if end := 1 + n + int(size); end > len(data) {
+		return nil, end, nil
+	}
+	header = &BlockHeader{}
+	if err := header.Unmarshal(data[1+n : 1+n+int(size)]); err != nil {
+		return nil, 0, errors.Wrap(err, "unmarshalling block header")
+	}
+	return header, 0, nil
 }
 
 type BlockDataOption func(b *BlockData) error
