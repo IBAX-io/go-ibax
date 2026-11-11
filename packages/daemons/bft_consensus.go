@@ -764,7 +764,21 @@ type bftApp struct {
 // whose clock is not yet past the time of the last block waits for it, up to maxTimeWait, before
 // it reads its clock: else a chain that commits faster than a block a second takes its blocks ever
 // further ahead of the clocks, until the validators refuse them as untimely (design 4.4)
-func (a bftApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
+func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err error) {
+	// a proposer without a block proposes nothing and the round times out (startRound): the log
+	// tells why, so that each propose timeout of a proposer that runs is explained
+	defer func() {
+		if err == nil {
+			return
+		}
+		fields := log.Fields{"height": height, "round": round, "pool": transaction.TxPool.Len(), "error": err}
+		if errors.Is(err, block.ErrEmptyBlock) {
+			a.logger.WithFields(fields).Info("the proposer has no transaction for its block")
+			return
+		}
+		fields["type"] = consts.BlockError
+		a.logger.WithFields(fields).Warn("the proposer made no block")
+	}()
 	prev, err := lastBefore(height)
 	if err != nil {
 		return nil, bft.Hash{}, err
