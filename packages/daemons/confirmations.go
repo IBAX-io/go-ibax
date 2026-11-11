@@ -79,7 +79,7 @@ func confirmationsBlocks(ctx context.Context, d *daemon, lastBlockID, startBlock
 		}
 
 		block := sqldb.BlockChain{}
-		_, err := block.Get(blockID)
+		_, err := block.GetHash(blockID)
 		if err != nil {
 			d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting block by ID")
 			return err

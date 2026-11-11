@@ -51,6 +51,18 @@ func (b *BlockChain) GetArchived(blockID int64) (bool, error) {
 	return isFound(archived(b.TableName()).Where("id = ?", blockID).First(b))
 }
 
+// GetHash is Get with only the height and the hash of the block: the confirmations compare hashes,
+// and the data of a block is megabytes
+func (b *BlockChain) GetHash(blockID int64) (bool, error) {
+	return isFound(DBConn.Select("id, hash").Where("id = ?", blockID).First(b))
+}
+
+// GetArchivedHash is GetHash for the other nodes: on an archive node it finds the blocks out of
+// the window too
+func (b *BlockChain) GetArchivedHash(blockID int64) (bool, error) {
+	return isFound(archived(b.TableName()).Select("id, hash").Where("id = ?", blockID).First(b))
+}
+
 // GetByHash is retrieving model from database, archived blocks included
 func (b *BlockChain) GetByHash(BlockHash []byte) (bool, error) {
 	return isFound(archived(b.TableName()).Where("hash = ?", BlockHash).First(b))
@@ -73,9 +85,10 @@ func (b *BlockChain) GetMaxBlock() (bool, error) {
 	return isFound(DBConn.Omit("data").Last(b))
 }
 
-// GetMaxForeignBlock returns last block generated not by key_id
+// GetMaxForeignBlock returns last block generated not by key_id, without its data: the caller asks
+// for its time
 func (b *BlockChain) GetMaxForeignBlock(keyId int64) (bool, error) {
-	return isFound(DBConn.Order("id DESC").Where("key_id != ?", keyId).First(b))
+	return isFound(DBConn.Omit("data").Order("id DESC").Where("key_id != ?", keyId).First(b))
 }
 
 // GetBlockchain is retrieving chain of blocks from database
@@ -151,11 +164,12 @@ func (b *BlockChain) GetReverseBlockchain(endBlockID int64, limit int) ([]BlockC
 	return *blockchain, err
 }
 
-// GetNodeBlocksAtTime returns records of blocks for time interval and position of node
+// GetNodeBlocksAtTime returns records of blocks for time interval and position of node, without
+// their data: the callers count them
 func (b *BlockChain) GetNodeBlocksAtTime(from, to time.Time, node int64) ([]BlockChain, error) {
 	var err error
 	blockchain := new([]BlockChain)
-	err = DBConn.Model(&BlockChain{}).Where("node_position = ? AND time BETWEEN ? AND ?", node, from.Unix(), to.Unix()).Find(&blockchain).Error
+	err = DBConn.Model(&BlockChain{}).Omit("data").Where("node_position = ? AND time BETWEEN ? AND ?", node, from.Unix(), to.Unix()).Find(&blockchain).Error
 	return *blockchain, err
 }
 

@@ -18,7 +18,7 @@ import (
 func Confirmation(r *network.ConfirmRequest) (*network.ConfirmResponse, error) {
 	resp := &network.ConfirmResponse{}
 	block := &sqldb.BlockChain{}
-	found, err := block.GetArchived(int64(r.BlockID))
+	found, err := block.GetArchivedHash(int64(r.BlockID))
 	if err != nil || !found {
 		resp.Hash = make([]byte, crypto.HashSize())
 	} else {
