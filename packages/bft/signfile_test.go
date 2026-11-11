@@ -15,7 +15,7 @@ import (
 // reopen opens the file of path as a restarted node does and checks it reads want
 func reopen(t *testing.T, path string, want *SignState) *SignFile {
 	t.Helper()
-	f, s, err := OpenSignFile(path, 1<<20)
+	f, s, err := OpenSignFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,11 +75,13 @@ func TestSignStateFile(t *testing.T) {
 	f.Close()
 	f = reopen(t, path, &third)
 
-	// a state that outgrows the slots
+	// a state that outgrows the slots: votes of three slots
 	big := third
-	locked := *third.Locked
-	locked.Block = bytes.Repeat([]byte{7}, 3*minSlot)
-	big.Locked, big.Round = &locked, 5
+	vote := third.Votes[0]
+	for n := 0; n <= 3*minSlot/len(vote.Marshal()); n++ {
+		big.Votes = append(big.Votes, vote)
+	}
+	big.Round = 5
 	if err := f.Write(&big); err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +95,7 @@ func TestSignStateFile(t *testing.T) {
 	f = reopen(t, path, &third)
 	f.Close()
 
-	_, s, err := OpenSignFile(path, 1<<20)
+	_, s, err := OpenSignFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,13 +109,13 @@ func TestSignStateFile(t *testing.T) {
 	if err := os.WriteFile(path, []byte{1, 2, 3}, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := OpenSignFile(path, 1<<20); err == nil {
+	if _, _, err := OpenSignFile(path); err == nil {
 		t.Fatal("a file of 3 bytes read")
 	}
 	if err := os.WriteFile(path, make([]byte, 2*minSlot), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := OpenSignFile(path, 1<<20); err == nil {
+	if _, _, err := OpenSignFile(path); err == nil {
 		t.Fatal("a file of two empty slots read")
 	}
 }

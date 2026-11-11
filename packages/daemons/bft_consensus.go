@@ -278,9 +278,11 @@ func signStatePath() string {
 }
 
 // restore restores the sign state the node stored at its height before it stopped (design 4.3):
-// the machine signs nothing that conflicts with it, and the pool resends its messages
+// the machine signs nothing that conflicts with it, and the pool resends its votes. The proposals
+// of the state have no blocks and are not resent: the validators took them before the node
+// stored the state, and their blocks are in the proposals of the hashes the network sends
 func (d *bftDriver) restore() error {
-	f, s, err := bft.OpenSignFile(signStatePath(), syspar.GetMaxBlockSize())
+	f, s, err := bft.OpenSignFile(signStatePath())
 	if err != nil {
 		return fmt.Errorf("the stored sign state: %w", err)
 	}
@@ -289,9 +291,6 @@ func (d *bftDriver) restore() error {
 		return nil
 	}
 	d.mu.Lock()
-	for _, p := range s.Proposals {
-		d.pool.AddProposal(p)
-	}
 	for _, v := range s.Votes {
 		d.pool.AddVote(v)
 	}

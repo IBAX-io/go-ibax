@@ -32,9 +32,10 @@ const SignStateFile = "bft_sign_state"
 // the other keeps the state before.
 const (
 	slotHeader = 16
-	// minSlot is the smallest slot, a multiple of the page size, and the slots double from it: a
-	// sign state of the votes of ML-DSA-65 keys is about 3.4 KB
-	minSlot = 16 << 10
+	// minSlot is the smallest slot, a multiple of the page size, and the slots double from it: the
+	// state holds no blocks, and with the proposals and the votes of ML-DSA-65 keys, about 3.4 KB
+	// each, a state of a few rounds fits the slot and the file is made once
+	minSlot = 64 << 10
 )
 
 var castagnoli = crc32.MakeTable(crc32.Castagnoli)
@@ -47,9 +48,9 @@ type SignFile struct {
 	seq  uint64 // sequence of the last state written
 }
 
-// OpenSignFile opens the file of the sign state of path and reads its last state, whose blocks are
-// at most maxBlock bytes; the state is nil if the node has none
-func OpenSignFile(path string, maxBlock int64) (*SignFile, *SignState, error) {
+// OpenSignFile opens the file of the sign state of path and reads its last state; the state is nil
+// if the node has none
+func OpenSignFile(path string) (*SignFile, *SignState, error) {
 	sf := &SignFile{path: path}
 	f, err := os.OpenFile(path, os.O_RDWR, 0)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -63,7 +64,7 @@ func OpenSignFile(path string, maxBlock int64) (*SignFile, *SignState, error) {
 		f.Close()
 		return nil, nil, fmt.Errorf("%s: %w", path, err)
 	}
-	s, err := UnmarshalSignState(b, maxBlock)
+	s, err := UnmarshalSignState(b)
 	if err != nil {
 		f.Close()
 		return nil, nil, fmt.Errorf("%s: %w", path, err)

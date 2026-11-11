@@ -182,6 +182,12 @@ type Proposal struct {
 	Received time.Time
 }
 
+// HasBlock reports whether the proposal has its block: a proposal restored from the sign state has
+// only the signed fields
+func (p *Proposal) HasBlock() bool {
+	return len(p.Block) > 0
+}
+
 // Sign signs the proposal with the node private key of its proposer
 func (p *Proposal) Sign(privateKey []byte, networkID uint64) (err error) {
 	p.Signature, err = Sign(privateKey, networkID, p.Height, p.Round, TypeProposal, p.Hash, p.ValidRound)
