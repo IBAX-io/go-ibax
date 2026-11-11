@@ -30,6 +30,17 @@ import (
 // honorPoll is how often a node of a chain of honor nodes looks for the transactions of a block
 const honorPoll = 100 * time.Millisecond
 
+// lastGenerated is the block the node generated last, the time it ended and whether the pool still
+// held transactions then. The stages lead and cycle of the next block are measured from it when the
+// pool held transactions, so the interval of the blocks a node makes in a row under a load is
+// measured on the node and not by a client that polls the chain, and a wait for transactions is not
+// counted
+var lastGenerated struct {
+	id      int64
+	end     time.Time
+	backlog bool
+}
+
 // BlockGenerator is daemon that generates blocks
 func BlockGenerator(ctx context.Context, d *daemon) error {
 	if atomic.CompareAndSwapUint32(&d.atomic, 0, 1) {
@@ -157,6 +168,12 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 	if err != nil {
 		return err
 	}
+	end := time.Now()
+	if lastGenerated.backlog && lastGenerated.id+1 == header.BlockId {
+		metrics.BlockStage.WithLabelValues(metrics.KindGenerate, metrics.StageLead).Observe(st.Sub(lastGenerated.end).Seconds())
+		metrics.BlockStage.WithLabelValues(metrics.KindGenerate, metrics.StageCycle).Observe(end.Sub(lastGenerated.end).Seconds())
+	}
+	lastGenerated.id, lastGenerated.end, lastGenerated.backlog = header.BlockId, end, transaction.TxPool.Len() > 0
 	// the transactions left in the queue may make the block of the next slot without a wait
 	d.sleepTime = 0
 	//go notificator.CheckTokenMovementLimits(nil, conf.Config.TokenMovement, header.BlockId)
