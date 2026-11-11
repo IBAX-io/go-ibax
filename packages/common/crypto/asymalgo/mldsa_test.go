@@ -169,3 +169,21 @@ func TestMLDSALevelsAreSeparate(t *testing.T) {
 		t.Errorf("ML-DSA-65 accepted an ML-DSA-87 key and signature: %v", err)
 	}
 }
+
+// CheckPublicKey takes what the standard library parses: any encoding of the size, of the bytes of
+// a key or of none, and no other size
+func TestMLDSACheckPublicKey(t *testing.T) {
+	for _, l := range mldsaTestLevels {
+		checker := l.signer.(interface{ CheckPublicKey([]byte) error })
+		size := l.signer.PublicKeySize()
+		for _, b := range [][]byte{
+			bytes.Repeat([]byte{0}, size), bytes.Repeat([]byte{0xff}, size),
+			bytes.Repeat([]byte{0x5a}, size), nil, make([]byte, size-1), make([]byte, size+1),
+		} {
+			_, parseErr := mldsa.NewPublicKey(l.params(), b)
+			if err := checker.CheckPublicKey(b); (err == nil) != (parseErr == nil) {
+				t.Fatalf("%s: a key of %d bytes: checked %v, parsed %v", l.name, len(b), err, parseErr)
+			}
+		}
+	}
+}

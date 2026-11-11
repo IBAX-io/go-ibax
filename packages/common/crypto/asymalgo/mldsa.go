@@ -23,7 +23,8 @@ type mldsaLevel struct {
 	keys          *gencache.Cache[string, *mldsa.PublicKey]
 }
 
-// mldsaKeysSize bounds the parsed keys of a level: a parsed ML-DSA-87 key is about 60 KB
+// mldsaKeysSize bounds the parsed keys of a level: a parsed key is its encoding and its hash, under
+// 3 KB for ML-DSA-87
 const mldsaKeysSize = 1024
 
 func (l *mldsaLevel) genKeyPair() ([]byte, []byte, error) {
@@ -69,8 +70,8 @@ func (l *mldsaLevel) verify(public, hash, signature []byte) (bool, error) {
 	return true, nil
 }
 
-// publicKey is the parsed public key, kept for the latest signers: a parsed key holds the matrix
-// expanded from its seed, the cost of a verification again
+// publicKey is the parsed public key, kept for the latest signers: parsing hashes the encoding
+// with SHAKE256 (tr of FIPS 204), which a verification of the signer would do again
 func (l *mldsaLevel) publicKey(public []byte) (*mldsa.PublicKey, error) {
 	if pk, ok := l.keys.Get(string(public)); ok {
 		return pk, nil
@@ -83,11 +84,10 @@ func (l *mldsaLevel) publicKey(public []byte) (*mldsa.PublicKey, error) {
 	return pk, nil
 }
 
+// checkPublicKey checks the length only: every encoding of the length is a public key (pkDecode of
+// FIPS 204 has no other failure), and parsing it would hash it for nothing
 func (l *mldsaLevel) checkPublicKey(public []byte) error {
 	if len(public) != l.publicKeySize {
-		return ErrInvalidPublicKey
-	}
-	if _, err := mldsa.NewPublicKey(l.params(), public); err != nil {
 		return ErrInvalidPublicKey
 	}
 	return nil
