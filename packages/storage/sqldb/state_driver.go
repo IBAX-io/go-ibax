@@ -11,6 +11,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"slices"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/jackc/pgx/v5"
@@ -96,6 +97,15 @@ var (
 )
 
 func (c *stateConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	if n := statsOf(ctx); n != nil {
+		start := time.Now()
+		rows, err := c.query(ctx, query, args)
+		return timeQuery(n, start, rows, err)
+	}
+	return c.query(ctx, query, args)
+}
+
+func (c *stateConn) query(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
 	if q := stateOf(ctx); q != nil {
 		return q.query(ctx, c, query, args)
 	}
@@ -106,6 +116,15 @@ func (c *stateConn) QueryContext(ctx context.Context, query string, args []drive
 }
 
 func (c *stateConn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	if n := statsOf(ctx); n != nil {
+		start := time.Now()
+		res, err := c.exec(ctx, query, args)
+		return timeExec(n, start, res, err)
+	}
+	return c.exec(ctx, query, args)
+}
+
+func (c *stateConn) exec(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
 	if q := stateOf(ctx); q != nil {
 		return q.exec(ctx, c, query, args)
 	}

@@ -71,6 +71,10 @@ const (
 // durationBuckets cover 25 µs to about 52 s
 var durationBuckets = prometheus.ExponentialBuckets(0.000025, 2, 22)
 
+// contractBuckets cover 25 µs to about 1.6 s: a run of a transaction past it is past the time of a
+// block
+var contractBuckets = prometheus.ExponentialBuckets(0.000025, 2, 17)
+
 var (
 	registry = prometheus.NewRegistry()
 
@@ -125,6 +129,52 @@ var (
 		Namespace: namespace, Name: "tx_executions_total",
 		Help: "Runs of transactions, committed or not, by why they ran: parallel, early, recheck, again, ordered.",
 	}, []string{"run"})
+
+	// ContractTime is the time of each run of a transaction, by its contract and the part of the
+	// time: state, the time of its statements on the state of the block and PostgreSQL, with the
+	// reading of the rows they returned; other, the rest of the run, the virtual machine of the
+	// contract the most of it
+	ContractTime = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: namespace, Name: "contract_run_seconds",
+		Help:    "Time of a run of a transaction by contract and part: state, other.",
+		Buckets: contractBuckets,
+	}, []string{"contract", "part"})
+
+	// ContractFuel is the fuel of each run of a transaction, by its contract
+	ContractFuel = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: namespace, Name: "contract_run_fuel",
+		Help:    "Fuel of a run of a transaction by contract.",
+		Buckets: prometheus.ExponentialBuckets(1, 4, 16),
+	}, []string{"contract"})
+
+	// ContractStatements is the number of database statements of each run of a transaction, by
+	// its contract
+	ContractStatements = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: namespace, Name: "contract_run_statements",
+		Help:    "Database statements of a run of a transaction by contract.",
+		Buckets: prometheus.ExponentialBuckets(1, 2, 12),
+	}, []string{"contract"})
+
+	// ContractRows counts the rows the runs of the transactions read and wrote, by contract
+	ContractRows = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "contract_rows_total",
+		Help: "Rows the runs of transactions read and wrote by contract and op: read, written.",
+	}, []string{"contract", "op"})
+
+	// ContractRuns is TxRuns by contract: how the committed runs of its transactions ran
+	ContractRuns = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "contract_runs_total",
+		Help: "Committed runs of transactions by contract and how they ran: parallel, early, again, ordered.",
+	}, []string{"contract", "run"})
+
+	// ContractResults counts the transactions of the blocks by contract and result: ok; penalty,
+	// the contract failed and paid; failed, the transaction failed; time_long, the time left to
+	// the block stopped a run that took more than 50 ms; time_short, it stopped a shorter run, as
+	// the block had little time left; limit, another limit of the block stopped it
+	ContractResults = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "contract_results_total",
+		Help: "Transactions by contract and result: ok, penalty, failed, time_long, time_short, limit.",
+	}, []string{"contract", "result"})
 
 	// Speculations counts how the speculations of streaming proposals ended: finished, as the
 	// proposal went on from them; refused, as they decided a proposal is not valid; validated, as
@@ -227,7 +277,8 @@ func init() {
 	registry.MustRegister(
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
-		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, TxExecutions, Speculations, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
+		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, TxExecutions,
+		ContractTime, ContractFuel, ContractStatements, ContractRows, ContractRuns, ContractResults, Speculations, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
 		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
 	)
 }

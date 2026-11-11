@@ -11,7 +11,6 @@ import (
 	"database/sql/driver"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/metrics"
@@ -114,8 +113,8 @@ func followStatement(ctx context.Context, text string) {
 	if ctx == nil {
 		return
 	}
-	if n, ok := ctx.Value(statementsKey{}).(*atomic.Int64); ok {
-		n.Add(1)
+	if n := statsOf(ctx); n != nil {
+		n.statements.Add(1)
 	}
 	if c, ok := ctx.Value(txCacheKey{}).(*txCache); ok && c != nil && !savepointStatement(c, text) {
 		table, none, all := written(text)

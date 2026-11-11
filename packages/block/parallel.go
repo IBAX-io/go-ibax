@@ -76,6 +76,8 @@ type txRun struct {
 	done  chan struct{}
 	// gen counts the runs of the transaction, the run of its job the first
 	gen uint32
+	// spent is the time of the run
+	spent time.Duration
 }
 
 // runJob is a transaction a worker runs
@@ -186,7 +188,9 @@ func (e *stateExec) play(t *transaction.Transaction, v *sqldb.TxView, limits *tr
 	}
 	start := time.Now()
 	r.err = r.t.Play()
-	metrics.TxStage.WithLabelValues(metrics.TxPlay).Observe(metrics.Since(start))
+	r.spent = time.Since(start)
+	metrics.TxStage.WithLabelValues(metrics.TxPlay).Observe(r.spent.Seconds())
+	observeRun(r.t, r.spent, vtx.Stats())
 	if b.GenBlock && r.err == nil {
 		// the block the node generates stores the transaction compressed: the worker compresses
 		// it, not the commit
@@ -576,9 +580,13 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 			return r.fatal
 		}
 		t, err := r.t, r.err
+		if contract := contractOf(t); contract != "" {
+			metrics.ContractRuns.WithLabelValues(contract, run).Inc()
+		}
 		if err == nil && !r.v.Ordered() {
 			err = t.CheckLimits(e.limits)
 		}
+		observeResult(t, err, r.spent)
 
 		if err != nil {
 			st.Skip(curTx)

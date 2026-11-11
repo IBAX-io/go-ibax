@@ -154,9 +154,13 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 		if err != nil {
 			return err
 		}
+		before := dbTx.Stats()
 		start = time.Now()
 		err = t.Play()
-		metrics.TxStage.WithLabelValues(metrics.TxPlay).Observe(metrics.Since(start))
+		spent := time.Since(start)
+		metrics.TxStage.WithLabelValues(metrics.TxPlay).Observe(spent.Seconds())
+		observeRun(t, spent, dbTx.Stats().Since(before))
+		observeResult(t, err, spent)
 		if err != nil {
 			if err == transaction.ErrNetworkStopping {
 				// Set the node in a pause state, when the block is not a trial
