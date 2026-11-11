@@ -59,8 +59,8 @@ const (
 	StageTrial    = "trial"    // the proposer runs its block
 	StageBehind   = "behind"   // from the time of the proposed block to the end of the proposal
 	StageValid    = "valid"    // valid(v) of a proposal from its arrival, by the speculation or by Validate
-	StageLead     = "lead"     // from the end of the node's last block to the start of the collection of its next one
-	StageCycle    = "cycle"    // from the end of the node's last block to the end of its next one
+	StageLead     = "lead"     // from the end of the node's last block, the pool not empty, to the start of the collection of its next one
+	StageCycle    = "cycle"    // from the end of the node's last block, the pool not empty, to the end of its next one
 )
 
 // The stages of a transaction execution
