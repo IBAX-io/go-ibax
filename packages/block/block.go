@@ -96,6 +96,7 @@ func InsertFirstBlock(data []byte) error {
 // txs, which processTransactionsNew took and checked at the time of the block. The block is not
 // encoded before it runs: InsertIntoBlockchain encodes and signs it of the transactions that ran
 func InsertGenerated(header *types.BlockHeader, txs []*transaction.Transaction) error {
+	start := time.Now()
 	prev, err := GetBlockHeaderFromBlockChain(header.BlockId - 1)
 	if err != nil {
 		return err
@@ -106,7 +107,6 @@ func InsertGenerated(header *types.BlockHeader, txs []*transaction.Transaction) 
 		Transactions:      txs,
 		GenBlock:          true,
 	}
-	start := time.Now()
 	if err := block.checkGenerated(); err != nil {
 		return err
 	}

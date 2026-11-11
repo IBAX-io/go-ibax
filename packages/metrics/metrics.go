@@ -55,10 +55,12 @@ const (
 	StageHold     = "hold"     // holding a trial: the snapshot of the memory it changed, and the memory set back
 	StageWait     = "wait"     // the proposer waits for its clock to pass the time of the last block
 	StageCollect  = "collect"  // the proposer takes the transactions of its block from the queue
-	StageCheck    = "check"    // checking the header, the transactions and the sign of a block
+	StageCheck    = "check"    // reading the previous header, checking the header, the transactions and the sign of a block
 	StageTrial    = "trial"    // the proposer runs its block
 	StageBehind   = "behind"   // from the time of the proposed block to the end of the proposal
 	StageValid    = "valid"    // valid(v) of a proposal from its arrival, by the speculation or by Validate
+	StageLead     = "lead"     // from the end of the node's last block to the start of the collection of its next one
+	StageCycle    = "cycle"    // from the end of the node's last block to the end of its next one
 )
 
 // The stages of a transaction execution
