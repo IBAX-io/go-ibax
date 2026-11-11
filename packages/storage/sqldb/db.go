@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -246,7 +245,7 @@ func GormClose() error {
 // DbTransaction is gorm.DB wrapper
 type DbTransaction struct {
 	conn       *gorm.DB
-	statements *atomic.Int64
+	statements *txStats
 	cache      *txCache
 	// view is the view on the state of the block the statements of a transaction run in
 	view *TxView
