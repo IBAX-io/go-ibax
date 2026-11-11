@@ -165,17 +165,32 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 	return nil
 }
 
+// headPrefix is the part of the data of a block that GetBlockHeaderFromBlockChain reads first: a
+// header of a node signature of ML-DSA-87 and the candidate nodes is some kilobytes, and a longer
+// one is read again to its end
+const headPrefix = 64 << 10
+
 // GetBlockHeaderFromBlockChain is retrieving block data from blockchain
 func GetBlockHeaderFromBlockChain(blockID int64) (*types.BlockHeader, error) {
 	if blockID < 1 {
 		return &types.BlockHeader{}, nil
 	}
+	// the header only: a block of ML-DSA transactions is tens of megabytes, which the generation
+	// of the next block would read and unmarshal whole for it
 	block := new(sqldb.BlockChain)
-	if _, err := block.Get(blockID); err != nil {
+	if _, err := block.GetHead(blockID, headPrefix); err != nil {
 		return nil, errors.Wrapf(err, "find block by ID %d", blockID)
 	}
-
-	header, err := types.ParseBlockHeader(bytes.NewBuffer(block.Data), syspar.GetMaxBlockSize())
+	header, need, err := types.HeaderOf(block.Data)
+	if err == nil && need > 0 {
+		if _, err = block.GetHead(blockID, need); err != nil {
+			return nil, errors.Wrapf(err, "find block by ID %d", blockID)
+		}
+		header, need, err = types.HeaderOf(block.Data)
+		if err == nil && need > 0 {
+			err = fmt.Errorf("the data ends at %d bytes before its header does", len(block.Data))
+		}
+	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "parse block header by ID %d", blockID)
 	}
