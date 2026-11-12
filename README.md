@@ -103,6 +103,11 @@ bgwriter_flush_after = 512kB
      voting. A consumer NVMe without DRAM stopped all writes for 4-8 s, every 5-10 minutes, while a node joined
      under a load of 200 transactions/s: P99 14.3 s, 35 propose timeouts; the same test with the data in memory
      had P99 1.2 s and no propose timeout.
+   - A trim of the freed blocks at least daily (`systemctl edit fstrim.timer` with `OnCalendar=daily`, or the
+     mount option `discard`). An SSD that is not told of the blocks a node deleted, the old chain data and WAL,
+     takes them for data and collects its garbage under the load: on the consumer NVMe above, with 458 GiB deleted
+     since the last weekly trim, 4 validators passed 2,000 transfers/s, then fell step by step to sign state
+     stores of 1 s or more and 6 propose timeouts at 1,060/s; after a trim they passed 2,000/s again.
    - The check: join a node from a snapshot under the load of the network for 40 minutes. The disk passes when
      no validator on it logs `storing the sign state held the messages` with `took` of 1 s or more.
 
