@@ -76,6 +76,9 @@ max_wal_size = 32GB
 checkpoint_timeout = 15min
 wal_compression = zstd
 shared_buffers = 8GB          # a quarter of the memory of the server, up to 8 GB
+backend_flush_after = 256kB
+checkpoint_flush_after = 256kB
+bgwriter_flush_after = 512kB
 ```
 
    With the defaults (`max_wal_size` 1 GB, `shared_buffers` 128 MB) a node under load runs a checkpoint every
@@ -83,6 +86,25 @@ shared_buffers = 8GB          # a quarter of the memory of the server, up to 8 G
    settings above cut the WAL from 34.7 to 11.2 GB and the disk writes from 80.1 to 19.4 GB in 15 minutes.
    Keep 32 GB free for the WAL. `max_connections` covers the connections of the node (`DB.MaxOpenConns`) and of
    the other nodes the server holds. dapps `tools/localchain/postgresql.conf` is the same profile.
+
+   The server and the disk of a validator:
+
+   - Small dirty page limits, in bytes, so the kernel writes back all the time instead of in bursts that
+     hold every synchronous write of the disk behind them (`/etc/sysctl.d/90-ibax.conf`, then `sysctl --system`):
+
+     ```ini
+     vm.dirty_background_bytes = 67108864
+     vm.dirty_bytes = 268435456
+     ```
+
+     The `*_flush_after` settings above do the same for PostgreSQL.
+   - A disk with a DRAM cache or power loss protection (a data center NVMe). A validator stores its sign state
+     with a synchronous write before it sends a message; when the disk stops writing, the validators on it stop
+     voting. A consumer NVMe without DRAM stopped all writes for 4-8 s, every 5-10 minutes, while a node joined
+     under a load of 200 transactions/s: P99 14.3 s, 35 propose timeouts; the same test with the data in memory
+     had P99 1.2 s and no propose timeout.
+   - The check: join a node from a snapshot under the load of the network for 40 minutes. The disk passes when
+     no validator on it logs `storing the sign state held the messages` with `took` of 1 s or more.
 
 5. Initialize the database.
 
