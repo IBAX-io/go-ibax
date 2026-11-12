@@ -26,7 +26,7 @@ func ExecSchemaEcosystem(db *DbTransaction, data migration.SqlData) error {
 			return err
 		}
 		if err := db.ExecSql(q); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing comma ecosystem schema")
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(schemaLevel(err), "executing comma ecosystem schema")
 			return err
 		}
 	}
@@ -35,7 +35,7 @@ func ExecSchemaEcosystem(db *DbTransaction, data migration.SqlData) error {
 		return err
 	}
 	if err := db.ExecSql(q); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing ecosystem schema")
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(schemaLevel(err), "executing ecosystem schema")
 		return err
 	}
 	if data.Ecosystem == 1 {
@@ -44,7 +44,7 @@ func ExecSchemaEcosystem(db *DbTransaction, data migration.SqlData) error {
 			return err
 		}
 		if err := db.ExecSql(q); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing first ecosystem schema")
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(schemaLevel(err), "executing first ecosystem schema")
 			return err
 		}
 	}
@@ -55,7 +55,7 @@ func ExecSchemaEcosystem(db *DbTransaction, data migration.SqlData) error {
 		return err
 	}
 	if err := db.ExecSql(q); err != nil {
-		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("executing tables schema")
+		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(schemaLevel(err), "executing tables schema")
 		return err
 	}
 	return nil
@@ -148,4 +148,13 @@ func UpdateSchema() error {
 		return err
 	}
 	return PrepareArchive()
+}
+
+// schemaLevel is the level of the log of the error of a statement of the schema: the statement
+// after which the transaction runs again is the flow of the block, not a fault
+func schemaLevel(err error) log.Level {
+	if IsRerun(err) {
+		return log.DebugLevel
+	}
+	return log.ErrorLevel
 }
