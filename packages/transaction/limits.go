@@ -153,17 +153,25 @@ func (bl *timeBlockLimit) init() {
 	bl.Limit = time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
 }
 
-// reserve is the time the block keeps for the tail of n transactions, at most half its time
+// TailFreeTxs is how many transactions a block takes before it keeps time for their tail: a trial
+// of fewer tells no tail, so a tail measured too long, by a stall of the disk, would hold the
+// blocks below that many and never be measured again
+const TailFreeTxs = 100
+
+// reserve is the time the block keeps for the tail of n transactions. It has no bound below the
+// time of the block: the tail of a large block, which writes the records of its transactions after
+// they run, can take most of its time, and a block that keeps less is made past its time.
 func (bl *timeBlockLimit) reserve(n int) time.Duration {
-	return min(bl.Tail*time.Duration(n), bl.Limit/2)
+	return bl.Tail * time.Duration(n)
 }
 
-// left is the time left to the next transaction of the block. The first transaction has the whole
-// time of the block, none kept for its tail: a transaction the time stops as the first of its block
-// had the most time a block leaves a transaction, and the block takes it as one that never fits.
+// left is the time left to the next transaction of the block. The first TailFreeTxs transactions
+// have the whole time of the block, none kept for their tail: a transaction the time stops as the
+// first of its block had the most time a block leaves a transaction, and the block takes it as one
+// that never fits.
 func (bl *timeBlockLimit) left() time.Duration {
 	var reserve time.Duration
-	if bl.Count > 0 {
+	if bl.Count >= TailFreeTxs {
 		reserve = bl.reserve(bl.Count + 1)
 	}
 	return max(0, bl.Limit-reserve-max(0, time.Since(bl.Start)))

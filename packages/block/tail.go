@@ -8,12 +8,15 @@ package block
 import (
 	"sync"
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/transaction"
 )
 
 const (
 	// tailMinTxs is the fewest transactions of a trial that tells the tail of a transaction: the
-	// fixed time of a smaller block outweighs what its transactions add
-	tailMinTxs = 100
+	// fixed time of a smaller block outweighs what its transactions add. A block takes that many
+	// before it keeps time for their tail, so the trials go on telling it.
+	tailMinTxs = transaction.TailFreeTxs
 	// tailWeight is the weight of the last trial in the tail
 	tailWeight = 0.3
 )

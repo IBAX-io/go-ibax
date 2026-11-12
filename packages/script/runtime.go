@@ -608,11 +608,12 @@ func (e *placedError) Error() string { return e.text }
 
 func (e *placedError) Unwrap() error { return e.cause }
 
-// errLevel is the level of the log of err: the statement after which the transaction runs again
-// is the flow of the block, not a fault
+// errLevel is the level of the log of err: the statement after which the transaction runs again,
+// and the time of the block of the proposer, which leaves the transaction to the next block, are
+// the flow of the block, not a fault
 func errLevel(err error) log.Level {
 	var r interface{ Rerun() bool }
-	if errors.As(err, &r) && r.Rerun() {
+	if errors.As(err, &r) && r.Rerun() || errors.Is(err, ErrVMTimeLimit) {
 		return log.DebugLevel
 	}
 	return log.ErrorLevel
