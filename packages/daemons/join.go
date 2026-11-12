@@ -54,10 +54,18 @@ const (
 	joinWorkers = 4
 )
 
+// The waits for the state hash of the latest snapshot, that tests shorten: the interval of the
+// polls of the tip, and how long the tip may stay before the join gives up waiting
+var (
+	joinPoll  = time.Second
+	joinStall = joinTimeout
+)
+
 // The requests of the join, that tests replace
 var (
 	fetchSnapshotHeights = snapnet.Heights
 	fetchSetProofs       = snapnet.FetchProofs
+	hostWithMaxBlock     = tcpclient.HostWithMaxBlock
 )
 
 // walkedSet is a validators set of the heights from from on
@@ -85,7 +93,9 @@ type joiner struct {
 
 // joinFromSnapshot joins the node from a snapshot if it can and returns whether it did: a node of
 // a chain of the BFT consensus, not an archive, with block 1 alone, whose peers keep a snapshot
-// with a block after it that carries its state hash. A join that imported a state and failed is
+// with a block after it that carries its state hash. It joins from the latest snapshot: when the
+// block of its state hash is not yet, it waits for it, since the boundary of the snapshot retired
+// the start of the window of the ones before it. A join that imported a state and failed is
 // an error: the state of the node is no longer that of block 1. restore puts back the state
 // outside the database as before block 1, which the state of the join replaces.
 func joinFromSnapshot(ctx context.Context, logger *log.Entry, restore func() error) (bool, error) {
@@ -108,12 +118,20 @@ func joinFromSnapshot(ctx context.Context, logger *log.Entry, restore func() err
 			j.hosts = append(j.hosts, h)
 		}
 	}
-	_, tip, err := tcpclient.HostWithMaxBlock(ctx, j.hosts)
+	_, tip, err := hostWithMaxBlock(ctx, j.hosts)
 	if err != nil || len(j.hosts) == 0 {
 		logger.WithError(err).Warn("no host to join from: executing the blocks")
 		return false, nil
 	}
-	candidates := j.snapshotHeights(interval, tip)
+	heights := j.snapshotHeights(interval)
+	if len(heights) > 0 && heights[0]+delay > tip {
+		// the boundary of the latest snapshot retired the start of the window of the ones
+		// before it: the join waits for the block that carries its state hash
+		if tip, err = j.waitTip(heights[0]+delay, tip); err != nil {
+			return false, err
+		}
+	}
+	candidates := slices.DeleteFunc(heights, func(s int64) bool { return s+delay > tip })
 	if len(candidates) == 0 {
 		logger.WithField("tip", tip).Info("no snapshot to join from: executing the blocks")
 		return false, nil
@@ -154,9 +172,28 @@ func joinFromSnapshot(ctx context.Context, logger *log.Entry, restore func() err
 	return false, nil
 }
 
-// snapshotHeights lists the snapshot heights of the hosts with a block after the delay up to the
-// tip, descending
-func (j *joiner) snapshotHeights(interval, tip int64) []int64 {
+// waitTip waits for a host to have the block of a height, while the tip of the hosts moves on
+// from tip; it returns the tip it reached, short of the height if the hosts stopped for
+// joinStall
+func (j *joiner) waitTip(height, tip int64) (int64, error) {
+	j.logger.WithFields(log.Fields{"height": height, "tip": tip}).Info("waiting for the state hash of the latest snapshot")
+	moved := time.Now()
+	for tip < height && time.Since(moved) < joinStall {
+		select {
+		case <-j.ctx.Done():
+			return tip, j.ctx.Err()
+		case <-time.After(joinPoll):
+		}
+		_, t, err := hostWithMaxBlock(j.ctx, j.hosts)
+		if err == nil && t > tip {
+			tip, moved = t, time.Now()
+		}
+	}
+	return tip, nil
+}
+
+// snapshotHeights lists the snapshot heights of the hosts, descending
+func (j *joiner) snapshotHeights(interval int64) []int64 {
 	for _, h := range j.hosts {
 		heights, err := fetchSnapshotHeights(h, joinTimeout)
 		if err != nil {
@@ -164,7 +201,7 @@ func (j *joiner) snapshotHeights(interval, tip int64) []int64 {
 			continue
 		}
 		for _, s := range heights {
-			if s%interval == 0 && s+j.delay <= tip {
+			if s%interval == 0 {
 				j.heights[s] = append(j.heights[s], h)
 			}
 		}
