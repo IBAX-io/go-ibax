@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -320,5 +321,55 @@ func TestSetAt(t *testing.T) {
 		if got := string(setAt(sets, h).Keys[0]); got != want {
 			t.Fatalf("height %d: set %s, not %s", h, got, want)
 		}
+	}
+}
+
+func TestJoinWaitTip(t *testing.T) {
+	defer func(f func(context.Context, []string) (string, int64, error), poll, stall time.Duration) {
+		hostWithMaxBlock, joinPoll, joinStall = f, poll, stall
+	}(hostWithMaxBlock, joinPoll, joinStall)
+	joinPoll, joinStall = time.Millisecond, 50*time.Millisecond
+	j := &joiner{ctx: context.Background(), logger: log.NewEntry(log.StandardLogger()), hosts: []string{"a"}}
+
+	// the hosts move on to the block of the state hash
+	tip := int64(100195)
+	hostWithMaxBlock = func(context.Context, []string) (string, int64, error) { tip += 3; return "a", tip, nil }
+	got, err := j.waitTip(100200, 100195)
+	if err != nil || got < 100200 {
+		t.Fatalf("waitTip = %d, %v; want at least 100200", got, err)
+	}
+
+	// the hosts stop short of it: the wait gives up with the tip it reached
+	hostWithMaxBlock = func(context.Context, []string) (string, int64, error) { return "a", 100197, nil }
+	start := time.Now()
+	got, err = j.waitTip(100200, 100195)
+	if err != nil || got != 100197 {
+		t.Fatalf("waitTip = %d, %v; want 100197", got, err)
+	}
+	if d := time.Since(start); d > time.Second {
+		t.Fatalf("waitTip waited %v after the hosts stopped", d)
+	}
+
+	// a cancelled join stops waiting
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	j.ctx = ctx
+	if _, err = j.waitTip(100200, 100195); !errors.Is(err, context.Canceled) {
+		t.Fatalf("waitTip of a cancelled join = %v", err)
+	}
+}
+
+func TestJoinSnapshotHeights(t *testing.T) {
+	defer func(f func(string, time.Duration) ([]int64, error)) { fetchSnapshotHeights = f }(fetchSnapshotHeights)
+	fetchSnapshotHeights = func(h string, _ time.Duration) ([]int64, error) {
+		if h == "b" {
+			return nil, errors.New("down")
+		}
+		return []int64{90000, 95000, 100000}, nil
+	}
+	j := &joiner{logger: log.NewEntry(log.StandardLogger()), hosts: []string{"a", "b"}, heights: map[int64][]string{}}
+	// the latest snapshot is listed even before the block of its state hash, for the join to wait
+	if got := j.snapshotHeights(10000); !slices.Equal(got, []int64{100000, 90000}) {
+		t.Fatalf("snapshotHeights = %v", got)
 	}
 }
