@@ -7,7 +7,6 @@ package sqldb
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"strconv"
@@ -302,8 +301,10 @@ func StartTransaction() (*DbTransaction, error) {
 }
 
 // Cancel cancels a transaction StartTransaction began, from any goroutine: PostgreSQL cancels its
-// statement running, the statements after it fail, and the transaction is rolled back. Rollback
-// then succeeds.
+// statement running (cancelStatement), the statements after it fail, and database/sql ends the
+// transaction in the background: it sends ROLLBACK and closes the connection, so the server ends
+// the transaction as the connection closes if not before. Rollback then returns nil, possibly
+// before the server ended the transaction.
 func (tr *DbTransaction) Cancel() {
 	if tr != nil && tr.cancel != nil {
 		tr.cancel()
@@ -317,13 +318,14 @@ func (tr *DbTransaction) WaitsIdle() error {
 	return tr.conn.Exec("SET LOCAL idle_in_transaction_session_timeout = 0").Error
 }
 
-// Rollback is transaction rollback; a transaction Cancel rolled back is
+// Rollback is transaction rollback; that of a transaction Cancel ended returns nil, whatever
+// the end of its connection returned
 func (tr *DbTransaction) Rollback() error {
 	err := tr.conn.Rollback().Error
 	if tr.cancel != nil {
 		canceled := tr.ctx.Err() != nil
 		tr.cancel()
-		if canceled && errors.Is(err, sql.ErrTxDone) {
+		if canceled {
 			return nil
 		}
 	}

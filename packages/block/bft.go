@@ -87,8 +87,9 @@ func (t *heldTrial) wait() error {
 }
 
 // drop stops the writes of the trial, if they go on, and waits for them: their writer writes no
-// more, and the transaction of the trial is canceled, which stops its statement running in
-// PostgreSQL and rolls it back. The node rolls the trial back after.
+// more, and the transaction of the trial is canceled (DbTransaction.Cancel): PostgreSQL cancels
+// its statement running, and the transaction ends as database/sql closes its connection. The
+// rollback of the trial after succeeds.
 func (t *heldTrial) drop() {
 	t.dropped.Store(true)
 	if t.done == nil {

@@ -162,3 +162,16 @@ func TestTransactionEndClearsSchema(t *testing.T) {
 	cancel()
 	cleared(g)
 }
+
+// TestRollbackAfterCancel checks the rollback of a transaction Cancel ended returns nil however
+// it races with the end database/sql makes of the transaction, so a dropped trial logs no error
+func TestRollbackAfterCancel(t *testing.T) {
+	testPool(t)
+	for range 20 {
+		tr, err := StartTransaction()
+		require.NoError(t, err)
+		require.NoError(t, tr.conn.Exec(`SELECT 1`).Error)
+		tr.Cancel()
+		require.NoError(t, tr.Rollback())
+	}
+}

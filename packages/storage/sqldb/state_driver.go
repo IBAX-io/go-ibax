@@ -67,15 +67,17 @@ func openDB(dsn string, params map[string]string) (*sql.DB, error) {
 	return sql.OpenDB(stateConnector{stdlib.GetConnector(*cfg)}), nil
 }
 
-// cancelGrace is how long a statement whose context is canceled has to stop, after PostgreSQL
-// was asked to cancel it, before its connection is closed
+// cancelGrace is the deadline, from the cancel of the context of a statement, by which the
+// statement stops or its connection is closed; the cancel request to PostgreSQL is sent within it
 const cancelGrace = 500 * time.Millisecond
 
-// cancelStatement makes a statement whose context is canceled stop in PostgreSQL: the server
-// cancels it, and the connection is closed if it does not stop within cancelGrace. A connection
-// closed at once would leave the statement running in PostgreSQL, holding its locks, until it
-// ends by itself. The statement returns once the server canceled it and pgx waited 100 ms after
-// its cancel request, so the request cannot cancel the next statement of the connection.
+// cancelStatement makes a statement whose context is canceled stop in PostgreSQL, on every pool
+// openDB opens, those of the blocks and of the API alike: pgx sends the server a cancel request
+// and closes the connection if the statement has not stopped cancelGrace after the cancel. A
+// connection closed at once would leave the statement running in PostgreSQL, holding its locks,
+// until it ends by itself. The statement returns once the server canceled it and pgx waited
+// 100 ms after its cancel request, so the request cannot cancel the next statement of the
+// connection: a cancel costs a connection of the request and those 100 ms.
 func cancelStatement(c *pgconn.PgConn) ctxwatch.Handler {
 	return &pgconn.CancelRequestContextWatcherHandler{Conn: c, DeadlineDelay: cancelGrace}
 }

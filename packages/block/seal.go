@@ -27,8 +27,8 @@ import (
 // the proposal carries is computed from the execution alone, as every validator computes it, so
 // the time the database takes to write the block moves the commit of the height and the prevote
 // of the proposer for its block (Written), not the proposal. A drop of the trial cancels its
-// transaction: PostgreSQL cancels the statement running and rolls the transaction back, so the
-// next trial waits for no write of the dropped one. A trial whose writes fail is not committed:
+// transaction: PostgreSQL cancels the statement running, and the transaction ends as its
+// connection closes, so the next trial waits for no write of the dropped one beyond that. A trial whose writes fail is not committed:
 // the node executes the block again as one whose trial failed, as Commit does. What the writes
 // read of the state outside the database is what the transactions of the block left: the seal
 // reads it (seal, the retention's history_blocks) before the state of the node is restored.
