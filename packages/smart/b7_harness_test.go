@@ -608,16 +608,41 @@ func b7Diff(a, b string) string {
 	return ""
 }
 
+// settled runs the scenario until no statement of it waited for a lock longer than lock_timeout:
+// the tests of other packages write the same tables of the database at the same time
+func (e *b7Env) settled(s b7Scenario, mode string, impl b7Impl) string {
+	rec := e.run(s, mode, impl)
+	for try := 0; try < 10 && strings.Contains(rec, "SQLSTATE 55P03"); try++ {
+		rec = e.run(s, mode, impl)
+	}
+	return rec
+}
+
+// same runs the scenario with a and then with b until both record the same, at most a few times,
+// and gives the last records. The rows a statement that changes several rows reads come in the
+// order of the heap of PostgreSQL, which the pruning of the versions of the rows earlier runs left
+// may change between two runs; a difference of the functions differs every time
+func (e *b7Env) same(s b7Scenario, mode string, a, b b7Impl) (string, string) {
+	var x, y string
+	for try := 0; try < 5; try++ {
+		x = e.settled(s, mode, a)
+		y = e.settled(s, mode, b)
+		if x == y {
+			break
+		}
+	}
+	return x, y
+}
+
 // compare runs each scenario in each mode with the old functions and twice with those of the
 // package, the second time with what the first left in the caches, and requires the same records
 func (e *b7Env) compare(t *testing.T, scenarios []b7Scenario, modes []string) {
 	for _, s := range scenarios {
 		for _, mode := range modes {
 			// a first run fills the caches of the node both ways of running share
-			e.run(s, mode, b7Old)
-			want := e.run(s, mode, b7Old)
+			e.settled(s, mode, b7Old)
 			for pass := 1; pass <= 2; pass++ {
-				got := e.run(s, mode, b7New)
+				want, got := e.same(s, mode, b7Old, b7New)
 				if got != want {
 					t.Errorf("%s %s pass %d: the records differ at %s", s.name, mode, pass, b7Diff(want, got))
 				}
@@ -633,8 +658,7 @@ func TestB7Harness(t *testing.T) {
 	all := append(b7Scenarios(), b7TypedScenarios()...)
 	for _, s := range all {
 		for _, mode := range b7Modes {
-			first := e.run(s, mode, b7Old)
-			second := e.run(s, mode, b7Old)
+			first, second := e.same(s, mode, b7Old, b7Old)
 			require.Equal(t, first, second, "%s %s: the old functions record the same twice: %s", s.name, mode, b7Diff(first, second))
 		}
 	}

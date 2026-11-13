@@ -349,6 +349,7 @@ func (v *TxView) inPG(ctx context.Context, c *stateConn, p *stmt, query string, 
 		allPG := st.allPG.Load()
 		st.schemaChanged = true
 		st.mu.Unlock()
+		c.changesSchema()
 		if !allPG {
 			return nil, nil, v.restartFor(nil, true, "statement")
 		}

@@ -84,6 +84,9 @@ type stateConn struct {
 	inTx     bool
 	dirty    map[string]bool
 	dirtyAll bool
+	// schemaHeld tells the transaction ran a statement that may have changed the schema, which
+	// holds the numbers of indexes of the schema until it ends
+	schemaHeld bool
 }
 
 var (
@@ -149,7 +152,10 @@ func (c *stateConn) PrepareContext(ctx context.Context, query string) (driver.St
 	return c.pg.PrepareContext(ctx, query)
 }
 
-func (c *stateConn) Close() error { return c.pg.Close() }
+func (c *stateConn) Close() error {
+	c.endTx()
+	return c.pg.Close()
+}
 
 func (c *stateConn) Begin() (driver.Tx, error) {
 	return c.BeginTx(context.Background(), driver.TxOptions{})
@@ -168,6 +174,27 @@ func (c *stateConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.
 func (c *stateConn) endTx() {
 	c.inTx, c.dirtyAll = false, false
 	clear(c.dirty)
+	if c.schemaHeld {
+		c.schemaHeld = false
+		schema.releaseIndexes()
+	}
+}
+
+// changesSchema follows a statement that may change the schema: in a transaction it holds the
+// numbers of indexes until the transaction ends, out of one the statement is done and clearing
+// them is enough
+func (c *stateConn) changesSchema() {
+	switch {
+	case c.schemaHeld:
+	case c.inTx:
+		c.schemaHeld = true
+		schema.holdIndexes()
+	default:
+		schema.mu.Lock()
+		schema.indexes = nil
+		schema.indexEpoch++
+		schema.mu.Unlock()
+	}
 }
 
 // stateTx is a transaction of a stateConn
@@ -192,6 +219,7 @@ func (c *stateConn) track(ctx context.Context, query string) error {
 	if c.dirtyAll && c.inTx {
 		if ddl(query) {
 			bumpSchema()
+			c.changesSchema()
 		}
 		return nil
 	}
@@ -213,6 +241,7 @@ func (c *stateConn) track(ctx context.Context, query string) error {
 	}
 	if ddl(query) {
 		bumpSchema()
+		c.changesSchema()
 	} else if harmless(query) {
 		return nil
 	}

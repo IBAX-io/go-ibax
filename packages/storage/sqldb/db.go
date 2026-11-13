@@ -490,21 +490,38 @@ func (dbTx *DbTransaction) DropTable(tableName string) error {
 	return GetDB(dbTx).Migrator().DropTable(tableName)
 }
 
-// NumIndexes is counting table indexes
+// NumIndexes is counting table indexes. The schema keeps the numbers PostgreSQL counted (see
+// stateSchema.indexes); while a transaction that may have changed the schema is open the count is
+// that of the transaction, once in it, as it was before the numbers were kept
 func (dbTx *DbTransaction) NumIndexes(tblname string) (int, error) {
+	n, ok, epoch := schema.numIndexes(tblname)
+	if ok {
+		return n, nil
+	}
+	counted := false
+	n, err := cached(dbTx, schemaTable, "indexes:"+tblname, func() (int, error) {
+		counted = true
+		return dbTx.countIndexes(tblname)
+	})
+	if err == nil && counted {
+		schema.keepIndexes(epoch, tblname, n)
+	}
+	return n, err
+}
+
+// countIndexes counts the indexes of the table in PostgreSQL, but one
+func (dbTx *DbTransaction) countIndexes(tblname string) (int, error) {
 	var indexes int64
-	return cached(dbTx, schemaTable, "indexes:"+tblname, func() (int, error) {
-		err := GetDB(dbTx).Raw(fmt.Sprintf(`select count( i.relname) from pg_class t, pg_class i, pg_index ix, pg_attribute a
+	err := GetDB(dbTx).Raw(fmt.Sprintf(`select count( i.relname) from pg_class t, pg_class i, pg_index ix, pg_attribute a
 	 where t.oid = ix.indrelid and i.oid = ix.indexrelid and a.attrelid = t.oid and a.attnum = ANY(ix.indkey)
          and t.relkind = 'r' and t.relnamespace = current_schema()::regnamespace and t.relname = '%s'`, tblname)).Row().Scan(&indexes)
-		if err == gorm.ErrRecordNotFound {
-			return 0, nil
-		}
-		if err != nil {
-			return 0, err
-		}
-		return int(indexes - 1), nil
-	})
+	if err == gorm.ErrRecordNotFound {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return int(indexes - 1), nil
 }
 
 // IsIndex returns is table column is an index

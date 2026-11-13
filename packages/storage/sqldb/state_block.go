@@ -65,6 +65,15 @@ type stateSchema struct {
 	cat   *stateCatalog
 	metas map[string]*tableMeta
 	plans map[string]*stmt
+	// indexes are the numbers of indexes of the tables NumIndexes counted, by table. The indexes
+	// of a table in PostgreSQL change only by the statements of the chain that change the schema:
+	// an index added to the database by hand is not counted once a number is kept. No number is
+	// served while a transaction that ran such a statement is open (held counts them), and the
+	// end of such a transaction, such a statement out of one and each change of the schema clear
+	// the numbers, advancing indexEpoch.
+	indexes    map[string]int
+	indexEpoch uint64
+	held       int
 }
 
 var schema stateSchema
@@ -78,6 +87,50 @@ func bumpSchema() {
 	defer schema.mu.Unlock()
 	schema.gen++
 	schema.cat, schema.metas, schema.plans = nil, nil, nil
+	schema.indexes = nil
+	schema.indexEpoch++
+}
+
+// numIndexes is the number of indexes of the table kept, when there is one and no open
+// transaction may have changed the schema, and the epoch of the numbers kept
+func (s *stateSchema) numIndexes(table string) (int, bool, uint64) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	n, ok := s.indexes[table]
+	return n, ok && s.held == 0, s.indexEpoch
+}
+
+// keepIndexes keeps the number of indexes of the table PostgreSQL counted, unless the numbers were
+// cleared since the epoch, when the count began. A number kept while a transaction that may have
+// changed the schema is open is not served, and cleared when it ends
+func (s *stateSchema) keepIndexes(epoch uint64, table string, n int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.indexEpoch != epoch {
+		return
+	}
+	if s.indexes == nil || len(s.indexes) >= maxPlans {
+		s.indexes = make(map[string]int)
+	}
+	s.indexes[table] = n
+}
+
+// holdIndexes serves no number of indexes kept until releaseIndexes: a transaction ran a statement
+// that may have changed the schema
+func (s *stateSchema) holdIndexes() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.held++
+}
+
+// releaseIndexes ends a hold of holdIndexes: the transaction ended, committed or rolled back. The
+// numbers kept before it and while it was open are cleared
+func (s *stateSchema) releaseIndexes() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.held--
+	s.indexes = nil
+	s.indexEpoch++
 }
 
 func (s *stateSchema) catalogLocked(ctx context.Context, q driver.QueryerContext) (*stateCatalog, error) {

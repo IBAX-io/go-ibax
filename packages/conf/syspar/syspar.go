@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -761,11 +762,24 @@ func SysTableColType(dbTx *sqldb.DbTransaction) error {
 	return nil
 }
 
-// SetTableColType replaces the data types of the columns, by table and column
+// colTypeVersion counts the replacements of the data types of the columns: what is made of them,
+// such as the statements of a shape, is made again when it changed. SetTableColType is its only
+// writer
+var colTypeVersion atomic.Uint64
+
+// SetTableColType replaces the data types of the columns, by table and column. The version
+// advances after the types are replaced, so that what is made of the new types with the version
+// before is made again
 func SetTableColType(colTypes map[string]map[string]string) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	cacheTableColType = colTypes
+	colTypeVersion.Add(1)
+}
+
+// ColTypeVersion is the version of the data types of the columns, which SetTableColType advances
+func ColTypeVersion() uint64 {
+	return colTypeVersion.Load()
 }
 
 // GetTableColType returns the data types SysTableColType loaded, by table and column
