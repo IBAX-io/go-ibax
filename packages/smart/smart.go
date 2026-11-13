@@ -138,8 +138,11 @@ func (sc *SmartContract) PopStack(fn string) {
 
 func (sc *SmartContract) isAllowStack(fn string) bool {
 	// Stack contains only contracts
-	c := VMGetContract(sc.VM, fn, uint32(sc.TxSmart.EcosystemID))
-	return c != nil
+	if len(fn) == 0 {
+		return false
+	}
+	obj, ok := sc.VM.Objects[script.StateName(uint32(sc.TxSmart.EcosystemID), fn)]
+	return ok && obj.Type == script.ObjectType_Contract
 }
 
 func InitVM() {
