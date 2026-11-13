@@ -621,7 +621,7 @@ func CreateEcosystem(sc *SmartContract, wallet int64, name string) (int64, error
 
 	// The account of the founder is its account of ecosystem 1
 	founder := &sqldb.Key{}
-	if _, err = founder.SetTablePrefix(consts.DefaultTokenEcosystem).Get(sc.DbTransaction, wallet); err != nil {
+	if _, err = sc.keys.Get(sc.DbTransaction, founder.SetTablePrefix(consts.DefaultTokenEcosystem), wallet); err != nil {
 		return 0, logErrorDB(err, "getting pub key")
 	}
 	// The founder is the same account in the new ecosystem: a key signs there as it signs here, and
@@ -893,10 +893,7 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 			flag = true // The transfer was successful
 			//txOutputs = append(txOutputs, sqldb.SpentInfo{OutputKeyId: toID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem})
 			totalAmount = totalAmount.Sub(payValue)
-			if _, _, err := sc.updateWhere([]string{"+amount"}, []any{payValue}, "1_keys", types.LoadMap(map[string]any{"id": fromID, "ecosystem": ecosystem})); err != nil {
-				return false, err
-			}
-			if balance, err = sc.accountBalanceSingle(ecosystem, fromID); err != nil {
+			if balance, err = sc.updateKeyAmount("+", payValue, ecosystem, fromID, types.LoadMap(map[string]any{"id": fromID, "ecosystem": ecosystem})); err != nil {
 				return false, err
 			}
 		} else {
@@ -946,10 +943,7 @@ func TransferSelf(sc *SmartContract, value string, source string, target string)
 			flag = true // The transfer was successful
 			txOutputs = append(txOutputs, sqldb.SpentInfo{OutputIndex: 0, OutputKeyId: fromID, OutputValue: value, BlockId: blockId, Ecosystem: ecosystem, Type: consts.UTXO_Type_Self_Account})
 			totalAmount = totalAmount.Sub(payValue)
-			if _, _, err = sc.updateWhere([]string{`-amount`}, []any{payValue}, "1_keys", types.LoadMap(map[string]any{`id`: fromID, `ecosystem`: ecosystem})); err != nil {
-				return false, err
-			}
-			if balance, err = sc.accountBalanceSingle(ecosystem, fromID); err != nil {
+			if balance, err = sc.updateKeyAmount(`-`, payValue, ecosystem, fromID, types.LoadMap(map[string]any{`id`: fromID, `ecosystem`: ecosystem})); err != nil {
 				return false, err
 			}
 		} else {

@@ -61,7 +61,7 @@ type dbLedger struct{}
 
 func (dbLedger) account(eco, key int64) (decimal.Decimal, decimal.Decimal, error) {
 	k := &sqldb.Key{}
-	found, err := k.SetTablePrefix(eco).Get(nil, key)
+	found, err := k.SetTablePrefix(eco).GetState(nil, key)
 	if err != nil || !found {
 		return decimal.Zero, decimal.Zero, err
 	}

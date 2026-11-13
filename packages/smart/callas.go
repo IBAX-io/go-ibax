@@ -57,7 +57,7 @@ func CallContractAs(sc *SmartContract, rt *script.RunTime, account, name, params
 		return nil, err
 	}
 	key := &sqldb.Key{}
-	found, err := key.SetTablePrefix(ecosystem).Get(sc.DbTransaction, id)
+	found, err := sc.keys.Get(sc.DbTransaction, key.SetTablePrefix(ecosystem), id)
 	if err != nil {
 		return nil, err
 	}

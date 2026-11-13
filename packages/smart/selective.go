@@ -34,6 +34,14 @@ func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr, rollDataHas
 
 func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	table string, inWhere *types.Map, generalRollback bool, exists bool) (int64, string, error) {
+	cost, tableID, _, err := sc.writeRows(fields, ivalues, table, inWhere, generalRollback, exists)
+	return cost, tableID, err
+}
+
+// writeRows is selectiveLoggingAndUpd, which tells too the rows an update changed as they were
+// before it: their id and the columns of the fields, nil for an insert
+func (sc *SmartContract) writeRows(fields []string, ivalues []any,
+	table string, inWhere *types.Map, generalRollback bool, exists bool) (int64, string, *sqldb.OneRow, error) {
 
 	var (
 		cost    int64
@@ -43,7 +51,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	logger := sc.GetLogger()
 	if generalRollback && sc.BlockHeader == nil {
 		logger.WithFields(log.Fields{"type": consts.EmptyObject}).Error("Block is undefined")
-		return 0, ``, fmt.Errorf(`it is impossible to write to DB when Block is undefined`)
+		return 0, ``, nil, fmt.Errorf(`it is impossible to write to DB when Block is undefined`)
 	}
 	for i, field := range fields {
 		fields[i] = strings.ToLower(field)
@@ -59,7 +67,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	}
 
 	if err := setInterfaceRefs(sqlBuilder); err != nil {
-		return 0, "", err
+		return 0, "", nil, err
 	}
 
 	queryCoster := querycost.GetQueryCoster(querycost.FormulaQueryCosterType)
@@ -67,29 +75,29 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		selectQuery, selectArgs, err := sqlBuilder.GetSelectExpr()
 		if err != nil {
 			logger.WithError(err).Error("on getting sql select statement")
-			return 0, "", err
+			return 0, "", nil, err
 		}
 
 		selectCost, err := queryCoster.QueryCost(sc.DbTransaction, selectQuery, selectArgs...)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table, "query": selectQuery, "fields": fields, "values": ivalues, "where": inWhere}).Log(dbLevel(err), "getting query total cost")
-			return 0, "", err
+			return 0, "", nil, err
 		}
 		rows = sc.DbTransaction.GetOneRowTransaction(selectQuery, selectArgs...)
 		logData, err = rows.String()
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": selectQuery}).Log(dbLevel(err), "getting one row transaction")
-			return 0, "", err
+			return 0, "", nil, err
 		}
 		cost += selectCost
 		if len(logData) == 0 {
 			logger.WithFields(log.Fields{"type": consts.NotFound, "err": errUpdNotExistRecord, "table": table, "fields": fields, "values": shortString(fmt.Sprintf("%+v", ivalues), 100), "where": inWhere, "query": shortString(selectQuery, 100)}).Error("updating for not existing record")
-			return 0, "", errUpdNotExistRecord
+			return 0, "", nil, errUpdNotExistRecord
 		}
 		if sqlBuilder.IsEmptyWhere() {
 			logger.WithFields(log.Fields{"type": consts.NotFound,
 				"error": errWhereUpdate}).Error("update without where")
-			return 0, "", errWhereUpdate
+			return 0, "", nil, errWhereUpdate
 		}
 	}
 	var rollDataHashStr string
@@ -98,13 +106,13 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		updateExpr, updateArgs, err := sqlBuilder.GetSQLUpdateExpr(logData)
 		if err != nil {
 			logger.WithError(err).Error("on getting update expression for update")
-			return 0, "", err
+			return 0, "", nil, err
 		}
 
 		whereExpr, whereArgs, err := sqlBuilder.GetSQLWhereExpr()
 		if err != nil {
 			logger.WithError(err).Error("on getting where expression for update")
-			return 0, "", err
+			return 0, "", nil, err
 		}
 		args := append(updateArgs, whereArgs...)
 		if !sc.ChildChain {
@@ -112,7 +120,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			updateCost, err := queryCoster.QueryCost(sc.DbTransaction, updateQuery, args...)
 			if err != nil {
 				logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": updateQuery}).Log(dbLevel(err), "getting query total cost for update query")
-				return 0, "", err
+				return 0, "", nil, err
 			}
 			cost += updateCost
 		}
@@ -121,7 +129,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		err = sc.DbTransaction.Update(sqlBuilder.Table, updateExpr, whereExpr, args...)
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": sqlBuilder.Table, "update": updateExpr, "where": whereExpr}).Log(dbLevel(err), "getting update query")
-			return 0, "", err
+			return 0, "", nil, err
 		}
 		if maxIDCached && !setsID(fields) {
 			sc.DbTransaction.KeepMaxID(sqlBuilder.Table, prevMaxID)
@@ -132,7 +140,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 			rollbackInfoStr, err := sqlBuilder.GenerateRollBackInfoString(rollData)
 			if err != nil {
 				logger.WithError(err).Error("on generate rollback info string for update")
-				return 0, "", err
+				return 0, "", nil, err
 			}
 			addRollback(sc, sqlBuilder.Table, rollData["id"], rollbackInfoStr, rollDataHashStr)
 		}
@@ -148,19 +156,19 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		} else {
 			sqlBuilder.SetTableID(strings.Join(ids, ","))
 		}
-		return cost, sqlBuilder.TableID(), nil
+		return cost, sqlBuilder.TableID(), rows, nil
 	}
 
 	insertQuery, insertArgs, err := sqlBuilder.GetSQLInsertQuery(sqldb.NextIDGetter{Tx: sc.DbTransaction})
 	if err != nil {
 		logger.WithError(err).Error("on build insert query")
-		return 0, "", err
+		return 0, "", nil, err
 	}
 
 	insertCost, err := queryCoster.QueryCost(sc.DbTransaction, insertQuery, insertArgs...)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Log(dbLevel(err), "getting total query cost for insert query")
-		return 0, "", err
+		return 0, "", nil, err
 	}
 	rollDataHashStr = qb.BoundStatement(insertQuery, insertArgs)
 	cost += insertCost
@@ -168,7 +176,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 	err = sc.DbTransaction.ExecSql(insertQuery, insertArgs...)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Log(dbLevel(err), "executing insert query")
-		return 0, "", err
+		return 0, "", nil, err
 	}
 	if id, err := strconv.ParseInt(sqlBuilder.TableID(), 10, 64); maxIDCached && err == nil {
 		sc.DbTransaction.KeepMaxID(sqlBuilder.Table, max(prevMaxID, id))
@@ -185,7 +193,7 @@ func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
 		}
 		addRollback(sc, sqlBuilder.Table, tid, "", rollDataHashStr)
 	}
-	return cost, sqlBuilder.TableID(), nil
+	return cost, sqlBuilder.TableID(), nil, nil
 }
 
 // deleteRow deletes the row with the id from the table. The row, all its columns, is kept in a

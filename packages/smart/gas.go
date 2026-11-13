@@ -146,7 +146,12 @@ func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
 	if err := sc.hasExistKeyID(eco, f.FromID); err != nil {
 		return errors.Wrapf(err, "from ID %d does not exist", f.FromID)
 	}
-	if found, err := f.PayWallet.SetTablePrefix(eco).Get(sc.DbTransaction, f.FromID); err != nil || !found {
+	// the public key of the wallet is compared only for the caller who pays
+	get := sc.keys.GetState
+	if f.PaymentType == PaymentType_ContractCaller {
+		get = sc.keys.Get
+	}
+	if found, err := get(sc.DbTransaction, f.PayWallet.SetTablePrefix(eco), f.FromID); err != nil || !found {
 		if err != nil {
 			sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting wallet")
 			return err
@@ -245,13 +250,34 @@ func (sc *SmartContract) payContract(errNeedPay bool) error {
 
 func (sc *SmartContract) accountBalanceSingle(eco, id int64) (decimal.Decimal, error) {
 	key := &sqldb.Key{}
-	_, err := key.SetTablePrefix(eco).Get(sc.DbTransaction, id)
+	_, err := sc.keys.GetState(sc.DbTransaction, key.SetTablePrefix(eco), id)
 	if err != nil {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.ParameterExceeded, "token_ecosystem": eco, "wallet": id}).Error("get key balance")
 		return decimal.Zero, err
 	}
 	balance, _ := decimal.NewFromString(key.Amount)
 	return balance, nil
+}
+
+// updateKeyAmount adds sum to the amount of the key of the account id in the ecosystem eco, or
+// takes it away for the sign "-", as updateWhere does with where, and tells the balance of the
+// account then, as accountBalanceSingle reads it. The balance is the amount the update found less
+// or plus the sum when both are integers: PostgreSQL and the state of the block take them so, and
+// the read would give it. Otherwise the balance is read.
+func (sc *SmartContract) updateKeyAmount(sign string, sum decimal.Decimal, eco, id int64, where *types.Map) (decimal.Decimal, error) {
+	_, _, prev, err := sc.writeRows([]string{sign + "amount"}, []any{sum}, "1_keys", where, !sc.ChildChain && sc.Rollback, true)
+	if err != nil {
+		return decimal.Zero, err
+	}
+	if prev != nil && len(prev.List) == 1 && sum.Equal(sum.Truncate(0)) {
+		if amount, err := decimal.NewFromString(prev.List[0]["amount"]); err == nil && amount.Equal(amount.Truncate(0)) {
+			if sign == "-" {
+				return amount.Sub(sum), nil
+			}
+			return amount.Add(sum), nil
+		}
+	}
+	return sc.accountBalanceSingle(eco, id)
 }
 
 // payTaxes debits the payer with the sum, and leaves the credit of the recipient to the settlement of
@@ -271,9 +297,10 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 	case GasScenesType_Taxes:
 		toID = pay.TaxesID
 	}
+	var fromIDBalance decimal.Decimal
+	var err error
 	if pay.FromID != toID {
-		if _, _, err := sc.updateWhere(
-			[]string{`-amount`}, []any{sum}, "1_keys",
+		if fromIDBalance, err = sc.updateKeyAmount(`-`, sum, pay.TokenEco, pay.FromID,
 			types.LoadMap(map[string]any{
 				`id`:        pay.FromID,
 				`ecosystem`: pay.TokenEco,
@@ -281,9 +308,7 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 			return err
 		}
 		sc.FeeCredits = append(sc.FeeCredits, FeeCredit{Ecosystem: pay.TokenEco, Recipient: toID, Amount: sum})
-	}
-	fromIDBalance, err := sc.accountBalanceSingle(pay.TokenEco, pay.FromID)
-	if err != nil {
+	} else if fromIDBalance, err = sc.accountBalanceSingle(pay.TokenEco, pay.FromID); err != nil {
 		return err
 	}
 	values := types.LoadMap(map[string]any{
@@ -340,7 +365,7 @@ func (sc *SmartContract) PoolFee(txSize int64, digits int32) (payer int64, fee d
 // the keys table do not apply to them
 func (sc *SmartContract) hasExistKeyID(eco, id int64) error {
 	for _, e := range []int64{eco, consts.DefaultTokenEcosystem} {
-		found, err := (&sqldb.Key{}).SetTablePrefix(e).Get(sc.DbTransaction, id)
+		found, err := sc.keys.GetState(sc.DbTransaction, (&sqldb.Key{}).SetTablePrefix(e), id)
 		if err != nil {
 			return err
 		}

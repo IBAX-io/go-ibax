@@ -78,11 +78,8 @@ func (s *FeeSettlement) Settle(dbTx *sqldb.DbTransaction, header *types.BlockHea
 		if err := sc.hasExistKeyID(a.ecosystem, a.recipient); err != nil {
 			return nil, err
 		}
-		if _, _, err := sc.updateWhere([]string{"+amount"}, []any{sum}, "1_keys",
-			types.LoadMap(map[string]any{"id": a.recipient, "ecosystem": a.ecosystem})); err != nil {
-			return nil, err
-		}
-		balance, err := sc.accountBalanceSingle(a.ecosystem, a.recipient)
+		balance, err := sc.updateKeyAmount("+", sum, a.ecosystem, a.recipient,
+			types.LoadMap(map[string]any{"id": a.recipient, "ecosystem": a.ecosystem}))
 		if err != nil {
 			return nil, err
 		}

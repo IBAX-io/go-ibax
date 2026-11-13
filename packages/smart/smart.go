@@ -98,6 +98,8 @@ type SmartContract struct {
 	EcoParams       []sqldb.EcoParam
 	// callAs is the account that CallContractAs runs a contract as, 0 outside it
 	callAs int64
+	// keys are the rows of 1_keys the run of the transaction read, which it reads again from them
+	keys sqldb.KeyMemo
 	// logger is the entry of GetLogger, for the fields loggerKey
 	logger    *log.Entry
 	loggerKey loggerKey
@@ -869,7 +871,7 @@ func (sc *SmartContract) CheckTxSign() error {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.AccessDenied, "error": err}).Error("frozen ecosystem")
 		return err
 	}
-	isFound, err := sc.Key.SetTablePrefix(sc.TxSmart.EcosystemID).Get(sc.DbTransaction, signedBy)
+	isFound, err := sc.keys.Get(sc.DbTransaction, sc.Key.SetTablePrefix(sc.TxSmart.EcosystemID), signedBy)
 	if err != nil {
 		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting wallet")
 		return err
