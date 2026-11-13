@@ -112,6 +112,8 @@ type RunTime struct {
 	memVars   []int64
 	memExtend map[string]int64
 	errInfo   ErrInfo
+	// extArgs holds the arguments of the calls of extended functions running
+	extArgs []any
 }
 
 // initialStack is the room a runtime makes on its stack for the values of a run: a condition or a
@@ -227,85 +229,7 @@ func (rt *RunTime) callFunc(cmd uint16, obj *ObjInfo) (err error) {
 		return
 	}
 
-	var (
-		stack  Stacker
-		ok     bool
-		result []reflect.Value
-		limit  = 0
-		finfo  = obj.GetExtFuncInfo()
-		foo    = reflect.ValueOf(finfo.Func)
-		pars   = make([]reflect.Value, in)
-	)
-	if stack, ok = rt.extend[Extend_sc].(Stacker); ok {
-		if err := stack.AppendStack(finfo.Name); err != nil {
-			return err
-		}
-	}
-	rt.extend[Extend_rt] = rt
-	auto := 0
-	for k := 0; k < in; k++ {
-		if len(finfo.Auto[k]) > 0 {
-			auto++
-		}
-	}
-	shift := size - count + auto
-	if finfo.Variadic {
-		shift = size - count
-		count += auto
-		limit = count - in + 1
-	}
-	i := count
-	for ; i > limit; i-- {
-		if len(finfo.Auto[count-i]) > 0 {
-			pars[count-i] = reflect.ValueOf(rt.extend[finfo.Auto[count-i]])
-			auto--
-		} else {
-			pars[count-i] = reflect.ValueOf(rt.stack[size-i+auto])
-		}
-		if !pars[count-i].IsValid() {
-			pars[count-i] = reflect.Zero(reflect.TypeOf(``))
-		}
-	}
-	if i > 0 && size-i >= 0 {
-		pars[in-1] = reflect.ValueOf(rt.stack[size-i : size])
-	} else if in > 0 && !pars[in-1].IsValid() {
-		// A function without parameters has no last one to default
-		pars[in-1] = reflect.Zero(finfo.Params[in-1])
-	}
-	if finfo.Name == `ExecContract` && (pars[2].Kind() != reflect.String || !pars[3].IsValid()) {
-		return fmt.Errorf(`unknown function %v`, pars[1])
-	}
-	if finfo.Variadic {
-		result = foo.CallSlice(pars)
-	} else {
-		result = foo.Call(pars)
-	}
-	if shift < 0 {
-		shift = 0
-	}
-	rt.resetByIdx(shift)
-	if stack != nil {
-		stack.PopStack(finfo.Name)
-	}
-
-	for i, ret := range result {
-		// first return value of every extend function that makes queries to DB is cost
-		if _, ok := rt.vm.FuncCallsDB[finfo.Name]; ok && i == 0 {
-			if err = rt.SubCost(ret.Int()); err != nil {
-				return
-			}
-			continue
-		}
-		if finfo.Results[i].String() == `error` {
-			if ret.Interface() != nil {
-				rt.errInfo = ErrInfo{Name: finfo.Name}
-				return ret.Interface().(error)
-			}
-		} else {
-			rt.push(ret.Interface())
-		}
-	}
-	return
+	return rt.callExtend(obj.GetExtFuncInfo(), in, count, size)
 }
 
 func (rt *RunTime) extendFunc(name string) error {

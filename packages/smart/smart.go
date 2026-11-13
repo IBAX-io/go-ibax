@@ -165,6 +165,7 @@ func extendData(vt script.VMType) *script.ExtendData {
 			`*script.RunTime`:      `rt`,
 		},
 		WriteFuncs: writeFuncs,
+		Calls:      ExtCallOf,
 	}
 }
 

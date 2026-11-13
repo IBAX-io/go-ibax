@@ -209,7 +209,8 @@ func (b *CodeBlock) Extend(ext *ExtendData) {
 				Auto:     make([]string, fobj.NumIn()),
 				Variadic: fobj.IsVariadic(),
 				Func:     item,
-				CanWrite: canWrite}
+				CanWrite: canWrite,
+				Call:     extCallOf(ext, item)}
 			for i := 0; i < fobj.NumIn(); i++ {
 				if isauto, ok := ext.AutoPars[fobj.In(i).String()]; ok {
 					data.Auto[i] = isauto

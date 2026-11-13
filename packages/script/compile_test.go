@@ -680,10 +680,10 @@ func TestVMCompile(t *testing.T) {
 	}
 	vm := NewVM()
 	vm.Extern = true
-	vm.Extend(&ExtendData{map[string]any{"Println": fmt.Println, "Sprintf": fmt.Sprintf,
+	vm.Extend(&ExtendData{Objects: map[string]any{"Println": fmt.Println, "Sprintf": fmt.Sprintf,
 		"GetMap": getMap, "GetArray": getArray, "lenArray": lenArray, "outMap": outMap,
-		"str": str, "Money": Money, "Replace": strings.Replace}, nil,
-		map[string]struct{}{"Sprintf": {}}})
+		"str": str, "Money": Money, "Replace": strings.Replace},
+		WriteFuncs: map[string]struct{}{"Sprintf": {}}})
 
 	for ikey, item := range test {
 		source := []rune(item.Input)

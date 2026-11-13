@@ -16,6 +16,8 @@ type ExtendData struct {
 	Objects    map[string]any
 	AutoPars   map[string]string
 	WriteFuncs map[string]struct{}
+	// Calls tells the typed call of a function of Objects, nil for one it has none for
+	Calls func(fn any) ExtCall
 }
 
 func NewExtendData() *ExtendData {

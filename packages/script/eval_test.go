@@ -57,7 +57,7 @@ func TestEvalIf(t *testing.T) {
 		`wallet_id`: 893451,
 	}
 	vm := NewVM()
-	vm.Extend(&ExtendData{map[string]any{"Multi": Multi}, nil, nil})
+	vm.Extend(&ExtendData{Objects: map[string]any{"Multi": Multi}})
 	for _, item := range test {
 		out, err := vm.EvalIf(item.Input, 0, vars)
 		if err != nil {

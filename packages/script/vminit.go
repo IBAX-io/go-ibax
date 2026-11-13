@@ -38,6 +38,9 @@ type ExtFuncInfo struct {
 	Variadic bool
 	Func     any
 	CanWrite bool // If the function can update DB
+	// Call is the typed call of Func, nil for a function of a signature no ExtCall covers: the VM
+	// calls such a function by reflection
+	Call ExtCall
 }
 
 // FieldInfo describes the field of the data structure
@@ -175,25 +178,7 @@ func (vm *VM) Call(name string, params []any, extend map[string]any) (ret []any,
 		ret, err = rt.Run(obj.GetCodeBlock(), params, extend)
 		extend[Extend_txcost] = rt.Cost()
 	case ObjectType_ExtFunc:
-		finfo := obj.GetExtFuncInfo()
-		foo := reflect.ValueOf(finfo.Func)
-		var result []reflect.Value
-		pars := make([]reflect.Value, len(finfo.Params))
-		if finfo.Variadic {
-			for i := 0; i < len(pars)-1; i++ {
-				pars[i] = reflect.ValueOf(params[i])
-			}
-			pars[len(pars)-1] = reflect.ValueOf(params[len(pars)-1:])
-			result = foo.CallSlice(pars)
-		} else {
-			for i := 0; i < len(pars); i++ {
-				pars[i] = reflect.ValueOf(params[i])
-			}
-			result = foo.Call(pars)
-		}
-		for _, iret := range result {
-			ret = append(ret, iret.Interface())
-		}
+		ret = callExtParams(obj.GetExtFuncInfo(), params)
 	default:
 		vm.logger.WithFields(log.Fields{"type": consts.VMError, "vm_func_name": name}).Error("unknown function")
 		return nil, fmt.Errorf(`unknown function %s`, name)

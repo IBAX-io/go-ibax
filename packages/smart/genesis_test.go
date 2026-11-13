@@ -29,6 +29,7 @@ func TestGenesisContractsCompile(t *testing.T) {
 		Objects:    EmbedFuncs(defineVMType()),
 		AutoPars:   map[string]string{`*smart.SmartContract`: `sc`},
 		WriteFuncs: writeFuncs,
+		Calls:      ExtCallOf,
 	})
 	require.NoError(t, script.LoadSysFuncs(vm, 1))
 	for i, file := range files {
