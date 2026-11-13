@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -52,7 +53,14 @@ func getTxStatus(r *http.Request, hash string) (*txstatusResult, error) {
 	}
 	checkErr := func() {
 		if len(ts.Error) > 0 {
-			if err := json.Unmarshal([]byte(ts.Error), &status.Message); err != nil {
+			// the node keeps a refusal of its own (an eviction, a full pool) as plain text
+			// and an error of a contract as a JSON object
+			if !strings.HasPrefix(ts.Error, "{") {
+				status.Message = &txstatusError{
+					Type:  "txError",
+					Error: ts.Error,
+				}
+			} else if err := json.Unmarshal([]byte(ts.Error), &status.Message); err != nil {
 				logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "text": ts.Error, "error": err}).Warn("unmarshalling txstatus error")
 				status.Message = &txstatusError{
 					Type:  "txError",
