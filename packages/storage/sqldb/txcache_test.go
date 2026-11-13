@@ -6,6 +6,7 @@
 package sqldb
 
 import (
+	"context"
 	"errors"
 	"testing"
 )
@@ -176,3 +177,45 @@ func TestTxCacheSavepoints(t *testing.T) {
 
 // TestSnapshotReplay: a run on the snapshot of the transaction of a block records what it reads and
 // writes, and its writes replayed in the transaction of the block write there what it wrote.
+
+// TestTxCacheGeneration: the generation of a table moves on a statement that may write it, on any
+// change of everything and on a rollback that takes back a write of it; reads, savepoints and
+// their release, and writes of other tables leave it
+func TestTxCacheGeneration(t *testing.T) {
+	_, c := withTxCache(t.Context())
+	gen := c.generation(`"1_keys"`)
+	step := func(name string, f func(), moves bool) {
+		t.Helper()
+		f()
+		g := c.generation("1_KEYS")
+		if (g != gen) != moves {
+			t.Fatalf("%s: generation %d after %d, moves %v", name, g, gen, moves)
+		}
+		gen = g
+	}
+	step("read", func() { followStatement(withCache(c), `SELECT * FROM "1_keys" WHERE id = $1`) }, false)
+	step("other table", func() { c.forget("1_tables") }, false)
+	step("update", func() { followStatement(withCache(c), `UPDATE "1_keys" SET amount = $1`) }, true)
+	step("schema", func() { c.forgetAll() }, true)
+	step("savepoint", func() { savepointStatement(c, `SAVEPOINT "a"`) }, false)
+	step("rollback, nothing written", func() { savepointStatement(c, `ROLLBACK TO SAVEPOINT "a"`) }, false)
+	step("insert", func() { c.forget(`"1_keys"`) }, true)
+	step("rollback of another table", func() {
+		savepointStatement(c, `SAVEPOINT "b"`)
+		c.forget("1_tables")
+		savepointStatement(c, `ROLLBACK TO SAVEPOINT "b"`)
+	}, false)
+	step("rollback of the insert", func() { savepointStatement(c, `ROLLBACK TO SAVEPOINT "a"`) }, true)
+	step("release", func() { savepointStatement(c, `RELEASE SAVEPOINT "a"`) }, false)
+	step("rollback, unknown savepoint", func() { savepointStatement(c, `ROLLBACK TO SAVEPOINT "c"`) }, true)
+	step("rollback of a change of everything", func() {
+		savepointStatement(c, `SAVEPOINT "d"`)
+		c.forgetAll()
+		gen = c.generation("1_keys")
+		savepointStatement(c, `ROLLBACK TO SAVEPOINT "d"`)
+	}, true)
+}
+
+func withCache(c *txCache) context.Context {
+	return context.WithValue(context.Background(), txCacheKey{}, c)
+}

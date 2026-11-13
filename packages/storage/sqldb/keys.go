@@ -66,6 +66,21 @@ func (m *Key) Get(db *DbTransaction, wallet int64) (bool, error) {
 	return db.firstKey(m, wallet)
 }
 
+// GetState reads the key of an account in the ecosystem of m as Get does, but for its public key,
+// which it leaves as it is: the read of a balance, of the state of an account, does not decode it.
+// A key with an id is read as Get reads it.
+func (m *Key) GetState(db *DbTransaction, wallet int64) (bool, error) {
+	if m.ID != 0 {
+		return db.firstKey(m, wallet)
+	}
+	r, err := db.readKey(keyStateSQL, wallet, m.ecosystem, 0)
+	r.set(m)
+	if err != nil {
+		return true, err
+	}
+	return r.found, nil
+}
+
 func (m *Key) AccountKeyID() int64 {
 	if m.accountKeyID == 0 {
 		m.accountKeyID = converter.StringToAddress(m.AccountID)

@@ -31,6 +31,10 @@ type txCache struct {
 	// a statement that may have written any
 	written []string
 	marks   []cacheMark
+	// gens count, by table, the times the cache forgot the table, and allGen the times it forgot
+	// all: a table whose generation has not moved is as it was (generation)
+	gens   map[string]uint64
+	allGen uint64
 }
 
 type cacheMark struct {
@@ -77,6 +81,7 @@ func (c *txCache) forget(table string) {
 	defer c.mu.Unlock()
 	t := cacheTable(table)
 	delete(c.byTable, t)
+	c.bump(t)
 	if len(c.marks) > 0 {
 		c.written = append(c.written, t)
 	}
@@ -86,9 +91,25 @@ func (c *txCache) forgetAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	clear(c.byTable)
+	c.allGen++
 	if len(c.marks) > 0 {
 		c.written = append(c.written, allTables)
 	}
+}
+
+func (c *txCache) bump(t string) {
+	if c.gens == nil {
+		c.gens = make(map[string]uint64)
+	}
+	c.gens[t]++
+}
+
+// generation is the generation of the table: it moves whenever a statement may have written the
+// table, or a rollback to a savepoint took back such a statement
+func (c *txCache) generation(table string) uint64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.allGen + c.gens[cacheTable(table)]
 }
 
 func (c *txCache) savepoint(name string) {
@@ -114,6 +135,7 @@ func (c *txCache) rollbackTo(name string) {
 	i := c.lastMark(name)
 	if i < 0 {
 		clear(c.byTable)
+		c.allGen++
 		c.written, c.marks = c.written[:0], c.marks[:0]
 		return
 	}
@@ -121,9 +143,11 @@ func (c *txCache) rollbackTo(name string) {
 	for _, t := range c.written[at:] {
 		if t == allTables {
 			clear(c.byTable)
+			c.allGen++
 			break
 		}
 		delete(c.byTable, t)
+		c.bump(t)
 	}
 	c.written = c.written[:at]
 	c.marks = c.marks[:i+1]
