@@ -93,6 +93,35 @@ func directScript(tr *DbTransaction, w *strings.Builder) {
 	}
 	res, err = tr.GetAllTransaction(all, -1)
 	rec("all-after", res, err)
+
+	// the savepoints of a transaction, through gorm's Exec out of a view
+	sp := func(text string, f func(string) error, mark string) error {
+		if tr.view == nil {
+			return tr.Connection().Exec(text + mark).Error
+		}
+		return f(mark)
+	}
+	one = NewStatement(`SELECT n FROM "dr_t" WHERE id = ?`)
+	read := func(name string, id int64) {
+		row, err := tr.OneRowStatement(one, id).String()
+		rec(name, row, err)
+		row, err = tr.GetOneRowTransaction(`SELECT n, s FROM "dr_t" WHERE id = ?`, id).String()
+		rec(name, row, err)
+	}
+	rec("savepoint", sp("SAVEPOINT ", tr.Savepoint, `"dr-a";`))
+	rec("update-in-savepoint", tr.ExecSql(`UPDATE "dr_t" SET n = n + ? WHERE id = ?`, "1", int64(1)))
+	read("in-savepoint", 1)
+	rec("rollback-to", sp("ROLLBACK TO SAVEPOINT ", tr.RollbackSavepoint, `"dr-a";`))
+	read("rolled-back", 1)
+	rec("savepoint-b", sp("SAVEPOINT ", tr.Savepoint, "dr_b"))
+	rec("update-in-b", tr.ExecSql(`UPDATE "dr_t" SET n = n + ? WHERE id = ?`, "2", int64(2)))
+	rec("reset", sp("ROLLBACK TO SAVEPOINT ", tr.RollbackSavepoint, "dr_b"), sp("SAVEPOINT ", tr.Savepoint, "dr_b"))
+	read("reset", 2)
+	rec("update-in-b-again", tr.ExecSql(`UPDATE "dr_t" SET n = n + ? WHERE id = ?`, "4", int64(2)))
+	rec("release", sp("RELEASE SAVEPOINT ", tr.ReleaseSavepoint, "dr_b"))
+	read("released", 2)
+	res, err = tr.GetAllTransaction(all, -1)
+	rec("all-end", res, err)
 }
 
 // errorScript runs a statement PostgreSQL fails, as the first of a view: one after a write of the
@@ -173,6 +202,9 @@ func TestDirectRunMatchesSQL(t *testing.T) {
 	t.Cleanup(func() { db.Close() })
 	gdb, err := gorm.Open(postgres.New(postgres.Config{Conn: db}), &gorm.Config{})
 	require.NoError(t, err)
+	// the callbacks of a node: gorm counts its statements and empties the cache of the transaction
+	require.NoError(t, registerStatementCount(gdb))
+	require.NoError(t, registerTxCache(gdb))
 	saved := DBConn
 	DBConn = gdb
 	t.Cleanup(func() { DBConn = saved })

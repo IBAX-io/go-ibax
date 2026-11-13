@@ -323,17 +323,26 @@ func (tr *DbTransaction) Connection() *gorm.DB {
 // Savepoint creates PostgreSQL Savepoint. It runs the statement itself: the savepoints of gorm
 // drop its error.
 func (tr *DbTransaction) Savepoint(mark string) error {
-	return tr.Connection().Exec("SAVEPOINT " + mark).Error
+	return tr.savepointExec("SAVEPOINT " + mark)
 }
 
 // RollbackSavepoint rollbacks PostgreSQL Savepoint, with the error of the statement
 func (tr *DbTransaction) RollbackSavepoint(mark string) error {
-	return tr.Connection().Exec("ROLLBACK TO SAVEPOINT " + mark).Error
+	return tr.savepointExec("ROLLBACK TO SAVEPOINT " + mark)
 }
 
 // ReleaseSavepoint releases PostgreSQL Savepoint
 func (tr *DbTransaction) ReleaseSavepoint(mark string) error {
-	return tr.Connection().Exec("RELEASE SAVEPOINT " + mark).Error
+	return tr.savepointExec("RELEASE SAVEPOINT " + mark)
+}
+
+// savepointExec runs a statement on the savepoints of the transaction as gorm's Exec runs it, in a
+// view without database/sql
+func (tr *DbTransaction) savepointExec(text string) error {
+	if tr.conn == nil {
+		return tr.Connection().Exec(text).Error
+	}
+	return tr.exec(text)
 }
 
 func (tr *DbTransaction) ResetSavepoint(mark string) error {
