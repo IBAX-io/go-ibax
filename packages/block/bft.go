@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
@@ -60,11 +61,39 @@ func (m memState) restore() error {
 
 // heldTrial is the trial of a block a node holds for the decision of its height: the database
 // transaction of the trial, open, and the state outside the database the trial left, which the
-// node runs without until the block is committed
+// node runs without until the block is committed. The trial of a proposal of the node is held
+// once its block is sealed, while it goes on writing (sealTrial): done is closed once it wrote
+// the block, with the error err; a held trial whose writes failed is not held.
 type heldTrial struct {
 	b    *Block
 	dbTx *sqldb.DbTransaction
 	mem  memState
+	// done is nil for a trial that wrote the block before it was held
+	done chan struct{}
+	err  error
+	// stream is the writer of the records of the transactions of a trial that goes on writing,
+	// dropped tells it to stop: the node drops the trial
+	stream  *afterStream
+	dropped atomic.Bool
+}
+
+// wait waits for the trial to write the block, and returns the error of its writes
+func (t *heldTrial) wait() error {
+	if t.done == nil {
+		return nil
+	}
+	<-t.done
+	return t.err
+}
+
+// drop makes the writes of the trial stop at their next statement, and waits for them: the node
+// rolls the trial back
+func (t *heldTrial) drop() {
+	t.dropped.Store(true)
+	if t.stream != nil {
+		t.stream.cancel()
+	}
+	t.wait()
 }
 
 // held is the trial the node holds, of the last block it tried at its height. Only the driver of
@@ -91,6 +120,7 @@ func dropHeld() {
 		return
 	}
 	start := time.Now()
+	t.drop()
 	if err := t.dbTx.Rollback(); err != nil {
 		t.b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("rolling back a held trial")
 	}
@@ -98,7 +128,8 @@ func dropHeld() {
 }
 
 // Trial executes the block in a database transaction as its commit would (F18 design 4.3, plan
-// 5.9): a block is executed once. The trial that succeeds is held, its transaction open, until
+// 5.9): a block is executed once. The trial of a proposal of the node ends once its block is
+// sealed, and writes it after (sealTrial). The trial that succeeds is held, its transaction open, until
 // the decision of its height; Commit commits it if the decision is of the block, and a trial of
 // another block, or the commit of another, rolls it back. After a trial the contracts of the
 // virtual machine, the language sources and the platform parameters are as they were before it;
@@ -112,7 +143,12 @@ func (b *Block) Trial() error {
 	if err != nil {
 		return err
 	}
-	return b.endTrial(dbTx, mem, b.ProcessTxs(dbTx))
+	r := b.beginRun(dbTx)
+	err = r.execute()
+	if b.GenBlock && r.state != nil {
+		return b.sealTrial(dbTx, mem, r, err)
+	}
+	return b.endTrial(dbTx, mem, r.end(err))
 }
 
 // beginTrial drops the trial the node holds and begins the trial of the block: the state outside
@@ -170,7 +206,9 @@ func (b *Block) endTrial(dbTx *sqldb.DbTransaction, mem memState, err error) err
 	held.t = &heldTrial{b: b, dbTx: dbTx, mem: left}
 	held.Unlock()
 	b.stage(metrics.StageHold, start)
-	observeTail(b.execEnd, b.txCount())
+	if !b.execEnd.IsZero() {
+		observeTail(time.Since(b.execEnd)-b.drained, b.txCount())
+	}
 	b.endProfile(dbTx)
 	return nil
 }
@@ -189,11 +227,19 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 	hash, err := bft.HashOf(b.Header.BlockHash)
 	if err != nil || uint64(b.Header.BlockId) != cert.Height || hash != cert.Hash {
 		start := time.Now()
+		t.drop()
 		t.dbTx.Rollback()
 		metrics.BlockStage.WithLabelValues(metrics.KindTrial, metrics.StageRollback).Observe(metrics.Since(start))
 		return nil, false, nil
 	}
 	start := time.Now()
+	if err := t.wait(); err != nil {
+		t.dbTx.Rollback()
+		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Warn("writing the held trial, the block is executed again")
+		return nil, false, nil
+	}
+	metrics.BlockStage.WithLabelValues(metrics.KindHeld, metrics.StageWrites).Observe(metrics.Since(start))
+	start = time.Now()
 	c := &sqldb.BftCertificate{Height: b.Header.BlockId, Round: int64(cert.Round), Hash: cert.Hash[:], Data: cert.Marshal()}
 	err = c.Create(t.dbTx)
 	if err == nil && syspar.IsBftConsensus() {

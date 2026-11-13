@@ -21,10 +21,11 @@ const (
 	tailWeight = 0.3
 )
 
-// txTail is what a transaction adds to a trial after the transactions of the block run and the
-// writer of their records wrote what it was given: writing its state, the rows after it and the
-// block, and holding the trial. A proposer keeps that
-// much of max_block_generation_time for each transaction its block takes.
+// txTail is what a transaction adds to a trial after the transactions of the block run, but the
+// wait for the writer of their records to write what it was given: crediting the fees, writing
+// its state, the rows after it and the block, and holding the trial. A proposer keeps that much
+// of max_block_generation_time for each transaction its block takes: its own proposal is ready
+// before most of it (sealTrial), the trials of the validators are not.
 var txTail struct {
 	sync.Mutex
 	d time.Duration
@@ -69,12 +70,13 @@ func tail() time.Duration {
 	return txTail.d
 }
 
-// observeTail takes the tail of a trial of txs transactions whose transactions ended at execEnd
-func observeTail(execEnd time.Time, txs int) {
-	if execEnd.IsZero() || txs < tailMinTxs {
+// observeTail takes the tail of a trial of txs transactions that took after its transactions
+// after, the wait for the writer of their records left out
+func observeTail(after time.Duration, txs int) {
+	if after <= 0 || txs < tailMinTxs {
 		return
 	}
-	d := time.Since(execEnd) / time.Duration(txs)
+	d := after / time.Duration(txs)
 	txTail.Lock()
 	defer txTail.Unlock()
 	if txTail.d == 0 {

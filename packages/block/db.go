@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -100,6 +101,45 @@ func rollbacksHash(blockID int64, hashes []string, outputs []sqldb.SpentInfo) ([
 
 // InsertIntoBlockchain inserts a block into the blockchain
 func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
+	if err := b.seal(dbTx); err != nil {
+		return err
+	}
+	if err := b.writeBlock(dbTx); err != nil {
+		return err
+	}
+	if b.SysUpdate {
+		b.SysUpdate = false
+		if err := syspar.SysUpdate(dbTx); err != nil {
+			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
+			return err
+		}
+	}
+	return nil
+}
+
+// seal takes, from dbTx, the validators set the block leaves, and makes the header of a generated
+// block of its rollbacks hash and of the hashes of the set and of the state, and its BinData
+func (b *Block) seal(dbTx *sqldb.DbTransaction) error {
+	if err := b.validatorsHash(dbTx); err != nil {
+		return err
+	}
+	if !b.GenBlock {
+		return nil
+	}
+	b.Header.RollbacksHash = b.rollbacksHash
+	if err := b.repeatMarshallBlock(); err != nil {
+		return err
+	}
+	// blockSize counted every transaction in, so this only fails if that count is wrong
+	if int64(len(b.BinData)) > syspar.GetMaxBlockSize() {
+		return types.ErrMaxBlockSize(syspar.GetMaxBlockSize(), len(b.BinData))
+	}
+	return nil
+}
+
+// writeBlock writes the block, sealed, to block_chain and info_block; it changes nothing of the
+// block
+func (b *Block) writeBlock(dbTx *sqldb.DbTransaction) error {
 	blockID := b.Header.BlockId
 	bl := &sqldb.BlockChain{}
 	err := bl.DeleteById(dbTx, blockID)
@@ -108,19 +148,6 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		return err
 	}
 	rHash := b.rollbacksHash
-	if err = b.validatorsHash(dbTx); err != nil {
-		return err
-	}
-	if b.GenBlock {
-		b.Header.RollbacksHash = rHash
-		if err = b.repeatMarshallBlock(); err != nil {
-			return err
-		}
-		// blockSize counted every transaction in, so this only fails if that count is wrong
-		if int64(len(b.BinData)) > syspar.GetMaxBlockSize() {
-			return types.ErrMaxBlockSize(syspar.GetMaxBlockSize(), len(b.BinData))
-		}
-	}
 	blockchain := &sqldb.BlockChain{
 		ID:             blockID,
 		Hash:           b.Header.BlockHash,
@@ -152,17 +179,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating block")
 		return err
 	}
-	if err := b.upsertInfoBlock(dbTx, blockchain); err != nil {
-		return err
-	}
-	if b.SysUpdate {
-		b.SysUpdate = false
-		if err := syspar.SysUpdate(dbTx); err != nil {
-			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating syspar")
-			return err
-		}
-	}
-	return nil
+	return b.upsertInfoBlock(dbTx, blockchain)
 }
 
 // headPrefix is the part of the data of a block that GetBlockHeaderFromBlockChain reads first: a
@@ -336,14 +353,27 @@ func writeTxRows(tx *gorm.DB, rows *afterRows) error {
 // AfterPlayTxs writes the records of the transactions of the block the stream did not write
 // (afterStream), the counts of the logs, the outputs and the rollbacks hash of the block
 func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction, written afterWritten) error {
-	after := b.AfterTxs
-	rest := newAfterRows(after.Txs[written.txs:], after.Rts[written.rts:])
-	lts := append(written.lts, rest.lts...)
-	hashes, err := rollbackHashes(rest.rts)
+	outputs := sqldb.GetAllOutputs(b.OutputsMap)
+	// the writer took the hashes of the rollback records it wrote, or none of them
+	rts := newAfterRows(nil, b.AfterTxs.Rts[len(written.hashes):]).rts
+	hashes, err := rollbackHashes(rts)
 	if err != nil {
 		return errors.Wrap(err, "rollbacks hash")
 	}
-	err = sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
+	if b.rollbacksHash, err = rollbacksHash(b.Header.BlockId, append(written.hashes, hashes...), outputs); err != nil {
+		return errors.Wrap(err, "rollbacks hash")
+	}
+	return b.writeAfters(dbTx, written, outputs, syspar.GetHistoryBlocks())
+}
+
+// writeAfters writes the records of the transactions of the block the writer did not write, the
+// counts of the logs, the StopNetwork transactions and the outputs, and at a retention boundary
+// drops what is older than history blocks; it changes nothing of the block
+func (b *Block) writeAfters(dbTx *sqldb.DbTransaction, written afterWritten, outputs []sqldb.SpentInfo, history int64) error {
+	after := b.AfterTxs
+	rest := newAfterRows(after.Txs[written.txs:], after.Rts[written.rts:])
+	lts := append(slices.Clip(written.lts), rest.lts...)
+	err := sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
 		if err := writeTxRows(tx, rest); err != nil {
 			return err
 		}
@@ -353,18 +383,12 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction, written afterWritten) er
 		if err := sqldb.CreateStopNetworkTxs(tx, b.stopNetworkHashes(lts), b.Header.BlockId); err != nil {
 			return errors.Wrap(err, "insert stop_network_txs")
 		}
-		spentInfos := sqldb.GetAllOutputs(b.OutputsMap)
-		rHash, err := rollbacksHash(b.Header.BlockId, append(written.hashes, hashes...), spentInfos)
-		if err != nil {
-			return errors.Wrap(err, "rollbacks hash")
-		}
-		b.rollbacksHash = rHash
-		return sqldb.WriteBlockOutputs(tx, b.Header.BlockId, spentInfos)
+		return sqldb.WriteBlockOutputs(tx, b.Header.BlockId, outputs)
 	})
 	if err != nil || !sqldb.IsRetentionBoundary(b.Header.BlockId) {
 		return err
 	}
-	return errors.Wrap(sqldb.Retain(dbTx, b.Header.BlockId, b.Header.Timestamp, syspar.GetHistoryBlocks()), "retention")
+	return errors.Wrap(sqldb.Retain(dbTx, b.Header.BlockId, b.Header.Timestamp, history), "retention")
 }
 
 // stopNetworkHashes are the hashes of the StopNetwork transactions of the block: they are not

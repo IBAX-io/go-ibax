@@ -53,6 +53,9 @@ const (
 	StageParse    = "parse"    // parsing the block from its bytes
 	StageRollback = "rollback" // rolling back a trial that failed, or one held of a block not decided
 	StageHold     = "hold"     // holding a trial: the snapshot of the memory it changed, and the memory set back
+	StageSeal     = "seal"     // the proposer seals its block after its transactions: its hashes, its header and BinData
+	StageReady    = "ready"    // the trial of a proposal of the node from its start to its block sealed, the proposal ready
+	StageWrites   = "writes"   // the commit of a held proposal of the node waits for the writes the trial went on with
 	StageLag      = "lag"      // the proposer starts its round after the validators started it, as far as it knows
 	StageWait     = "wait"     // the proposer waits for its clock to pass the time of the last block
 	StageCollect  = "collect"  // the proposer takes the transactions of its block from the queue
