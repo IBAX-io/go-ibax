@@ -117,9 +117,14 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 	return nil
 }
 
-// seal takes, from dbTx, the validators set the block leaves, and makes the header of a generated
-// block of its rollbacks hash and of the hashes of the set and of the state, and its BinData
+// seal checks the time of the block, takes, from dbTx, the validators set the block leaves, and
+// makes the header of a generated block of its rollbacks hash and of the hashes of the set and of
+// the state, and its BinData. It reads the platform parameters as the transactions of the block
+// left them: what writes the block after reads none (writeBlock, sealTrial).
 func (b *Block) seal(dbTx *sqldb.DbTransaction) error {
+	if err := b.checkBlockTime(); err != nil {
+		return err
+	}
 	if err := b.validatorsHash(dbTx); err != nil {
 		return err
 	}
@@ -137,8 +142,27 @@ func (b *Block) seal(dbTx *sqldb.DbTransaction) error {
 	return nil
 }
 
+// checkBlockTime checks a node of the honor mode without BFT generates no two blocks in its time
+// slot
+func (b *Block) checkBlockTime() error {
+	if b.Header.BlockId <= 1 || !syspar.IsHonorNodeMode() || syspar.IsBftConsensus() {
+		return nil
+	}
+	exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Timestamp, 0), int(b.Header.NodePosition))
+	if err != nil {
+		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("block validation")
+		return err
+	}
+	if exists {
+		err = fmt.Errorf("invalid block time: %d", b.Header.Timestamp)
+		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("invalid block time")
+		return err
+	}
+	return nil
+}
+
 // writeBlock writes the block, sealed, to block_chain and info_block; it changes nothing of the
-// block
+// block and reads no platform parameter
 func (b *Block) writeBlock(dbTx *sqldb.DbTransaction) error {
 	blockID := b.Header.BlockId
 	bl := &sqldb.BlockChain{}
@@ -161,20 +185,6 @@ func (b *Block) writeBlock(dbTx *sqldb.DbTransaction) error {
 		ConsensusMode:  b.Header.ConsensusMode,
 		CandidateNodes: b.Header.CandidateNodes,
 	}
-	var validBlockTime bool
-	if blockID > 1 && syspar.IsHonorNodeMode() && !syspar.IsBftConsensus() {
-		validBlockTime, err = protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(blockchain.Time, 0), int(blockchain.NodePosition))
-		if err != nil {
-			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("block validation")
-			return err
-		}
-		if validBlockTime {
-			err = fmt.Errorf("invalid block time: %d", b.Header.Timestamp)
-			log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("invalid block time")
-			return err
-		}
-	}
-
 	if err = blockchain.Create(dbTx); err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating block")
 		return err
