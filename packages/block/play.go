@@ -138,6 +138,9 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 	limits := transaction.NewLimits(b.limitMode())
 	if !b.genStart.IsZero() {
 		limits.StartAt(b.genStart, tail())
+		if b.genLimit > 0 {
+			limits.LimitTo(b.genLimit)
+		}
 	}
 	logger := b.GetLogger()
 	for curTx := 0; curTx < len(txs); curTx++ {
@@ -178,9 +181,8 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 			if b.GenBlock {
 				if errors.Is(err, transaction.ErrTimeLeft) {
 					// the time left to the block stopped the transaction: it waits for the next
-					// block, unless no transaction is in the block and none stopped before it,
-					// so it had the most time a block leaves a transaction, and never fits
-					if len(*processedTx) == 0 && !b.genStopped {
+					// block, unless it never fits (tooLong)
+					if b.tooLong(len(*processedTx)) {
 						txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: errTxTooLong.Error(), keyID: t.KeyID()}
 					}
 					b.genStopped = true

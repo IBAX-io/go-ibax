@@ -44,6 +44,10 @@ type Block struct {
 	// the block is made within max_block_generation_time from then (syspar.GetBftTimeliness), its
 	// transactions leaving the time the block takes after them
 	genStart time.Time
+	// genLimit, if positive and below max_block_generation_time, is the time the block has from
+	// genStart: the proposer started its round after the validators and has the time left until
+	// they time out (bftApp.Value)
+	genLimit time.Duration
 	// genStopped is that the time left to the block stopped a transaction of it
 	genStopped bool
 	// execEnd is when the transactions of the execution running ended, and the writer of their

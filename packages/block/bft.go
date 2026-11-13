@@ -343,6 +343,20 @@ func Commit(binData []byte, cert *bft.Certificate) (*Block, error) {
 	return b, nil
 }
 
+// tooLong reports whether a transaction the time left to the block being generated stopped never
+// fits a block: no transaction is in the block and none stopped before it, and the block had the
+// whole of max_block_generation_time, so the transaction had the most time a block leaves one. A
+// block whose limit is shorter (Propose) takes it in a later block.
+func (b *Block) tooLong(processed int) bool {
+	return neverFits(processed, b.genStopped, b.genLimit, time.Duration(syspar.GetMaxBlockGenerationTime())*time.Millisecond)
+}
+
+// neverFits is tooLong of a block of processed transactions, stopped if the time stopped one
+// before, of the limit Propose took and of max_block_generation_time full
+func neverFits(processed int, stopped bool, limit, full time.Duration) bool {
+	return processed == 0 && !stopped && (limit <= 0 || limit >= full)
+}
+
 // checkContent checks that the hash of the block is the hash of its content: its header, the
 // last block it follows, and the merkle root of its transactions as the block carries them. A
 // parsed block takes its hash and its merkle root as they are written, so a certificate, which
@@ -364,19 +378,20 @@ func (b *Block) checkContent() error {
 
 // Propose makes the proposal of the proposer from a block whose time it read at start: the trial
 // executes it, leaves out the transactions that fail, do not fit, or leave the block no time to
-// end within max_block_generation_time from start, and sets its rollbacks hash, its hash and
-// BinData. A block left without transactions is ErrEmptyBlock.
+// end within max_block_generation_time from start, or within limit if that is shorter, and sets
+// its rollbacks hash, its hash and BinData. A block left without transactions is ErrEmptyBlock.
+// The limit is the proposer's alone: the validators try the block without one.
 //
 // A stream, if not nil, takes the header of the block before the trial and the transactions the
 // trial puts in the block as it puts them, in their order (design 4.2 "streaming proposals").
-func Propose(binData []byte, txs []*transaction.Transaction, start time.Time, stream Stream) (*Block, error) {
+func Propose(binData []byte, txs []*transaction.Transaction, start time.Time, limit time.Duration, stream Stream) (*Block, error) {
 	b, err := ProcessBlockByBinData(binData, false)
 	if err != nil {
 		return nil, err
 	}
 	b.GenBlock = true
 	b.Transactions = txs
-	b.genStart = start
+	b.genStart, b.genLimit = start, limit
 	if stream != nil {
 		shell, err := b.shell()
 		if err != nil {

@@ -64,6 +64,23 @@ const (
 // work, not at the next tick, which would hold a chain under load to a block a tick
 type bftNext struct{}
 
+// bftExpired is the event of a timeout the machine scheduled, due when it was to expire: the
+// driver takes it later if it was busy, trying a block under DBLock
+type bftExpired struct {
+	bft.Timeout
+	due time.Time
+}
+
+// bftRoundStart is when the validators started a round of a height, as far as the node knows: the
+// time a quorum of precommits of the height before reached it, for round 0 of a height it moved to
+// with work, and the time the precommit timeout of the round before was due, for a later round.
+// The proposer of the round makes its proposal within syspar.GetBftProposeBudget from then.
+type bftRoundStart struct {
+	height uint64
+	round  uint32
+	at     time.Time
+}
+
 var bftStart sync.Once
 
 // startBftConsensus starts the driver once
@@ -83,7 +100,7 @@ type bftDriver struct {
 	logger    *log.Entry
 	networkID uint64
 	svc       *bftnet.Service
-	events    chan any // *bft.Proposal, *bft.Vote, bft.Timeout, bftNext
+	events    chan any // *bft.Proposal, *bft.Vote, bftExpired, bftNext
 	received  chan [][]byte
 
 	mu   sync.Mutex // guards pool, which the handler of the service also uses
@@ -95,6 +112,8 @@ type bftDriver struct {
 
 	// m is used only by the goroutine of run
 	m *bft.Machine
+	// roundStart is used only by the goroutine of run
+	roundStart bftRoundStart
 	// unsaved is a sign state the node could not store, and unsent the messages signed with it:
 	// the driver sends them once it stores the state
 	unsaved *bft.SignState
@@ -250,7 +269,7 @@ func (d *bftDriver) newMachine(height uint64, set bft.Validators) {
 	app := bftApp{logger: d.logger, bodies: d.bodies, spec: d.spec, stream: func(height uint64, round uint32) *bftStream {
 		return &bftStream{send: d.svc.SendBatch, key: syspar.GetNodePrivKey(), networkID: d.networkID,
 			height: height, round: round, validator: set.Proposer(height, round), kept: d.bodies.stream(height, round)}
-	}}
+	}, roundStart: d.roundStartOf}
 	d.m = bft.NewMachine(d.config(), app, syspar.GetNodePrivKey(), syspar.GetNodePubKey(), d.networkID, height, set)
 }
 
@@ -336,6 +355,12 @@ func (d *bftDriver) syncHeight() error {
 	d.mu.Unlock()
 	d.bodies.prune(last)
 	d.newMachine(last+1, set)
+	d.roundStart = bftRoundStart{}
+	if decided := d.watch.decided(last); !decided.IsZero() && d.hasWork() {
+		// the validators of the quorum that reached the node then start the height at once, as
+		// they have work too under load: an idle height starts later, from when it has work
+		d.roundStart = bftRoundStart{height: last + 1, at: decided}
+	}
 	d.logger.WithFields(log.Fields{"height": last + 1, "validators": set.N()}).Debug("moved to the height")
 	d.onHeight(from, last+1, set, now)
 	for _, m := range kept {
@@ -374,9 +399,8 @@ func (d *bftDriver) event(e any) {
 		return
 	}
 	switch e := e.(type) {
-	case bft.Timeout:
-		d.countTimeout(e)
-		d.apply(d.m.OnTimeout(e))
+	case bftExpired:
+		d.expired(e)
 	case bftNext:
 		if !d.m.Decided() && d.hasWork() {
 			d.apply(d.m.Start())
@@ -466,7 +490,7 @@ func (d *bftDriver) apply(out []bft.Output) {
 		case o.Proposal != nil, o.Vote != nil:
 			d.unsent = append(d.unsent, o)
 		case o.Timeout != nil:
-			t := *o.Timeout
+			t := bftExpired{Timeout: *o.Timeout, due: time.Now().Add(o.Timeout.After)}
 			time.AfterFunc(t.After, func() {
 				select {
 				case d.events <- t:
@@ -756,6 +780,8 @@ type bftApp struct {
 	spec   *bftSpeculator
 	// stream is the stream of the trial of the block of the node at a height and a round
 	stream func(height uint64, round uint32) *bftStream
+	// roundStart is when the validators started a round, zero if the node does not know
+	roundStart func(height uint64, round uint32) time.Time
 }
 
 // Value generates the block of the proposer: its time is the clock in seconds and above the time
@@ -764,6 +790,13 @@ type bftApp struct {
 // whose clock is not yet past the time of the last block waits for it, up to maxTimeWait, before
 // it reads its clock: else a chain that commits faster than a block a second takes its blocks ever
 // further ahead of the clocks, until the validators refuse them as untimely (design 4.4)
+//
+// The proposal reaches the validators before they time out: the proposer makes it within
+// syspar.GetBftProposeBudget from when they started the round (roundStart), or from when it
+// started it if that is earlier. A proposer that starts the round late, as it was still trying
+// the block of the height before, makes a block of the time left, at least 1/proposeFloor of
+// max_block_generation_time. The limit is the proposer's choice of the transactions of its
+// block: the validators try the block without one, and its time only gets closer to their clocks.
 func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err error) {
 	// a proposer without a block proposes nothing and the round times out (startRound): the log
 	// tells why, so that each propose timeout of a proposer that runs is explained
@@ -784,6 +817,13 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 		return nil, bft.Hash{}, err
 	}
 	start := time.Now()
+	started := start
+	if a.roundStart != nil {
+		if at := a.roundStart(height, round); !at.IsZero() && at.Before(started) {
+			started = at
+		}
+	}
+	deadline := started.Add(syspar.GetBftProposeBudget(round))
 	if wait := faults.Until(time.Unix(prev.Time+1, 0)); wait > 0 {
 		time.Sleep(min(wait, maxTimeWait))
 	}
@@ -797,13 +837,21 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 	}
 	ts := max(faults.Now().Unix(), prev.Time+1)
 	collect := time.Now()
+	// the lag is how much later than the validators the proposer started the round
+	lag := start.Sub(started)
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageLag).Observe(lag.Seconds())
+	limit, late := proposeLimit(collect, deadline, maxBlockGenerationTime())
+	if late {
+		a.logger.WithFields(log.Fields{"type": consts.BlockError, "height": height, "round": round, "lag": lag,
+			"wait": waited, "limit": limit}).Warn("the proposer starts its proposal past its time")
+	}
 	privateKey, publicKey := utils.GetNodeKeys()
 	dtx := DelayedTx{privateKey: privateKey, publicKey: publicKey, logger: a.logger, time: ts}
 	txs, err := dtx.RunForDelayBlockID(int64(height))
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
-	trs, parsed, err := processTransactionsNew(a.logger, txs, time.Unix(ts, 0))
+	trs, parsed, err := processTransactionsNew(a.logger, txs, time.Unix(ts, 0), limit)
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
@@ -842,7 +890,7 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 		stream = a.stream(height, round)
 		s = stream
 	}
-	b, err := block.Propose(bin, parsed, collect, s)
+	b, err := block.Propose(bin, parsed, collect, limit, s)
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
@@ -858,9 +906,10 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 	total, behind := time.Since(collect), time.Since(time.Unix(ts, 0))
 	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageTotal).Observe(total.Seconds())
 	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageBehind).Observe(behind.Seconds())
-	if limit := time.Duration(syspar.GetMaxBlockGenerationTime()) * time.Millisecond; total > limit {
+	if total > limit {
 		a.logger.WithFields(log.Fields{"type": consts.BlockError, "height": height, "round": round, "txs": len(b.TxFullData),
-			"wait": waited, "collect": collected, "trial": tried, "total": total, "behind": behind}).Warn("a proposal past max_block_generation_time")
+			"lag": lag, "wait": waited, "limit": limit, "collect": collected, "trial": tried, "total": total,
+			"behind": behind}).Warn("a proposal past its time")
 	}
 	compact, err := block.Compact(b.BinData, b.Transactions)
 	if err != nil {
@@ -873,6 +922,42 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 	a.bodies.put(height, hash, b.BinData, compact, hashes, bodies)
 	a.logger.WithFields(log.Fields{"height": height, "round": round, "txs": len(b.TxFullData)}).Debug("proposing")
 	return b.BinData, hash, nil
+}
+
+// expired takes a timeout of the machine that expired. The precommit timeout of the current round
+// starts the next round (L65) at the validators as it expires, which the driver keeps as the start of
+// that round.
+func (d *bftDriver) expired(e bftExpired) {
+	d.countTimeout(e.Timeout)
+	if e.Step == bft.StepPrecommit && e.Height == d.m.Height() && e.Round == d.m.Round() {
+		d.roundStart = bftRoundStart{height: e.Height, round: e.Round + 1, at: e.due}
+	}
+	d.apply(d.m.OnTimeout(e.Timeout))
+}
+
+// roundStartOf is roundStart if it is of the height and the round, else zero
+func (d *bftDriver) roundStartOf(height uint64, round uint32) time.Time {
+	if s := d.roundStart; s.height == height && s.round == round {
+		return s.at
+	}
+	return time.Time{}
+}
+
+// proposeFloor is the part of max_block_generation_time a proposer past the time of its proposal
+// still gives its block: a validator that did not start the round, as it had no work, takes the
+// proposal as it comes, and the others time out whatever the size of the block
+const proposeFloor = 10
+
+// proposeLimit is the time the block of a proposal whose collection starts at collect has:
+// max_block_generation_time, cut to the deadline by which the proposal reaches the validators
+// before they time out, and at least 1/proposeFloor of it; late reports that the deadline left
+// less than that
+func proposeLimit(collect, deadline time.Time, block time.Duration) (limit time.Duration, late bool) {
+	limit = min(block, deadline.Sub(collect))
+	if floor := block / proposeFloor; limit < floor {
+		return floor, true
+	}
+	return limit, false
 }
 
 // lastBefore is the last block, which is the block before the height

@@ -431,6 +431,9 @@ func (b *Block) beginState(dbTx *sqldb.DbTransaction) (*stateExec, error) {
 	limits := transaction.NewLimits(b.limitMode())
 	if !b.genStart.IsZero() {
 		limits.StartAt(b.genStart, tail())
+		if b.genLimit > 0 {
+			limits.LimitTo(b.genLimit)
+		}
 		limits.KeepBacklog(stream.backlog)
 	}
 	return &stateExec{b: b, dbTx: dbTx, st: st, limits: limits, ecoParams: b.EcoParams, stream: stream}, nil
@@ -603,9 +606,8 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 			if b.GenBlock {
 				if errors.Is(err, transaction.ErrTimeLeft) {
 					// the time left to the block stopped the transaction: it waits for the next
-					// block, unless no transaction is in the block and none stopped before it,
-					// so it had the most time a block leaves a transaction, and never fits
-					if len(*processedTx) == 0 && !b.genStopped {
+					// block, unless it never fits (tooLong)
+					if b.tooLong(len(*processedTx)) {
 						txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: errTxTooLong.Error(), keyID: t.KeyID()}
 					}
 					if !b.genStopped {

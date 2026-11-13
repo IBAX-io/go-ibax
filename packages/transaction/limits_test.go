@@ -121,3 +121,40 @@ func TestTimeLeft(t *testing.T) {
 		t.Fatal("ErrTimeLeft is not ErrLimitStop")
 	}
 }
+
+// LimitTo shortens the time of the block from its start, and never lengthens it
+func TestLimitTo(t *testing.T) {
+	limits := NewLimits(letGenBlock)
+	var block *timeBlockLimit
+	for _, l := range limits.Limiters {
+		if bl, ok := l.(*timeBlockLimit); ok {
+			block = bl
+		}
+	}
+	if block == nil {
+		t.Fatal("no time limit of the block")
+	}
+	block.Limit = 2 * time.Second
+	near := func(left, want int64) bool { return left <= want && left > want-100 }
+
+	limits.StartAt(time.Now(), 10*time.Millisecond)
+	limits.LimitTo(5 * time.Second)
+	if left := limits.TimeLeft(); !near(left, 2000) {
+		t.Fatalf("%d ms left after a limit above the time of the block, want 2000", left)
+	}
+	limits.LimitTo(940 * time.Millisecond)
+	if left := limits.TimeLeft(); !near(left, 940) {
+		t.Fatalf("%d ms left after a limit of 940 ms, want 940", left)
+	}
+	limits.LimitTo(2 * time.Second)
+	if left := limits.TimeLeft(); !near(left, 940) {
+		t.Fatalf("%d ms left after a longer limit, want 940: a limit never lengthens the block", left)
+	}
+	limits.StartAt(time.Now().Add(-time.Second), 10*time.Millisecond)
+	if left := limits.TimeLeft(); left != 0 {
+		t.Fatalf("%d ms left 1000 ms in a block limited to 940 ms", left)
+	}
+	if err := block.check(nil, letGenBlock); !errors.Is(err, ErrTimeLeft) {
+		t.Fatalf("a block past its limit goes on: %v", err)
+	}
+}

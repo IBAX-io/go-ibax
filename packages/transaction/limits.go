@@ -208,6 +208,17 @@ func (limits *Limits) StartAt(start time.Time, tail time.Duration) {
 	}
 }
 
+// LimitTo shortens the time of the block being generated to limit from its start, if limit is
+// below it: the proposer of a chain of the BFT consensus that started its round late has less
+// than max_block_generation_time before the validators time out
+func (limits *Limits) LimitTo(limit time.Duration) {
+	for _, l := range limits.Limiters {
+		if bl, ok := l.(*timeBlockLimit); ok {
+			bl.Limit = min(bl.Limit, limit)
+		}
+	}
+}
+
 // KeepBacklog keeps, besides the tail of each transaction, the time backlog tells for the writer of
 // the records of the transactions the block committed
 func (limits *Limits) KeepBacklog(backlog func() time.Duration) {

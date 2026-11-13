@@ -53,6 +53,7 @@ const (
 	StageParse    = "parse"    // parsing the block from its bytes
 	StageRollback = "rollback" // rolling back a trial that failed, or one held of a block not decided
 	StageHold     = "hold"     // holding a trial: the snapshot of the memory it changed, and the memory set back
+	StageLag      = "lag"      // the proposer starts its round after the validators started it, as far as it knows
 	StageWait     = "wait"     // the proposer waits for its clock to pass the time of the last block
 	StageCollect  = "collect"  // the proposer takes the transactions of its block from the queue
 	StageCheck    = "check"    // reading the previous header, checking the header, the transactions and the sign of a block

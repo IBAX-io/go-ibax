@@ -57,8 +57,15 @@ type bftSeen struct {
 	height uint64
 }
 
-// bftWatch is the state of the alerts of the driver. seen, base, height, set and prev are guarded
-// by mu, as the handler of the service records the precommits; run uses the others.
+// bftQuorumKey is a value of a round that precommits may reach a quorum for
+type bftQuorumKey struct {
+	round uint32
+	hash  bft.Hash
+}
+
+// bftWatch is the state of the alerts of the driver. seen, base, height, set, prev and the
+// quorum times are guarded by mu, as the handler of the service records the precommits; run uses
+// the others.
 type bftWatch struct {
 	mu     sync.Mutex
 	seen   map[string]bftSeen // by the hex of the public key
@@ -66,6 +73,14 @@ type bftWatch struct {
 	height uint64
 	set    bft.Validators
 	prev   bft.Validators // the set of the height before, empty if the node did not run it
+
+	// precommits is the validators that precommitted each value of the height, and quorumAt
+	// when the precommits of a quorum for one value first reached the node: the validators of
+	// the quorum then commit the height and start the next. decidedAt is quorumAt of the height
+	// before, zero if the node did not see it.
+	precommits map[bftQuorumKey]map[uint32]bool
+	quorumAt   time.Time
+	decidedAt  time.Time
 
 	workSince   time.Time // when the height got a transaction to put in a block
 	stallLogged time.Time
@@ -116,6 +131,30 @@ func (w *bftWatch) precommit(v *bft.Vote, now time.Time) {
 	}
 	k := fmt.Sprintf("%x", key)
 	w.seen[k] = bftSeen{at: now, height: max(v.Height, w.seen[k].height)}
+	if v.Height == w.height && v.Hash != bft.Nil && w.quorumAt.IsZero() {
+		q := bftQuorumKey{v.Round, v.Hash}
+		if w.precommits == nil {
+			w.precommits = map[bftQuorumKey]map[uint32]bool{}
+		}
+		if w.precommits[q] == nil {
+			w.precommits[q] = map[uint32]bool{}
+		}
+		w.precommits[q][v.Validator] = true
+		if len(w.precommits[q]) >= set.Quorum() {
+			w.quorumAt = now
+		}
+	}
+}
+
+// decided is when the precommits of a quorum for the block of the height before the watch reached
+// the node, zero if it did not see them or height is another one
+func (w *bftWatch) decided(height uint64) time.Time {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if height+1 != w.height {
+		return time.Time{}
+	}
+	return w.decidedAt
 }
 
 // moveTo starts the watch of a height and its set at now; decided is whether the node decided the
@@ -128,6 +167,11 @@ func (w *bftWatch) moveTo(height uint64, set bft.Validators, now time.Time, deci
 	} else {
 		w.base = bftSeen{at: now, height: height - 1}
 	}
+	w.decidedAt = time.Time{}
+	if height == w.height+1 {
+		w.decidedAt = w.quorumAt
+	}
+	w.precommits, w.quorumAt = nil, time.Time{}
 	w.height, w.set = height, set
 	w.mu.Unlock()
 	w.workSince, w.stallLogged = time.Time{}, time.Time{}
