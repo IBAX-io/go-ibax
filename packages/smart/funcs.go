@@ -1299,7 +1299,7 @@ func PermTable(sc *SmartContract, name, permissions string) error {
 	name = converter.EscapeSQL(strings.ToLower(name))
 	tbl := &sqldb.Table{}
 	tbl.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
-	found, err := tbl.Get(sc.DbTransaction, name)
+	found, err := sc.tables.Get(sc.DbTransaction, tbl, name)
 	if err != nil {
 		return err
 	}
@@ -1386,7 +1386,7 @@ func TableConditions(sc *SmartContract, name, columns, permissions string) (err 
 
 	t := &sqldb.Table{}
 	t.SetTablePrefix(prefix)
-	exists, err := t.Get(sc.DbTransaction, name)
+	exists, err := sc.tables.Get(sc.DbTransaction, t, name)
 	if err != nil {
 		return logErrorDB(err, "table exists")
 	}
@@ -2410,7 +2410,7 @@ func DelColumn(sc *SmartContract, tableName, name string) (err error) {
 	if err = sc.AccessTable(tblname, "update"); err != nil {
 		return
 	}
-	found, err := t.Get(sc.DbTransaction, TableName)
+	found, err := sc.tables.Get(sc.DbTransaction, &t, TableName)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting table info")
 		return err
@@ -2492,7 +2492,7 @@ func DelTable(sc *SmartContract, tableName string) (err error) {
 	if err = sc.AccessTable(tblname, "update"); err != nil {
 		return
 	}
-	found, err := t.Get(sc.DbTransaction, TableName)
+	found, err := sc.tables.Get(sc.DbTransaction, &t, TableName)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting table info")
 		return err

@@ -100,6 +100,9 @@ type SmartContract struct {
 	callAs int64
 	// keys are the rows of 1_keys the run of the transaction read, which it reads again from them
 	keys sqldb.KeyMemo
+	// tables are the rows of 1_tables and their permissions the run of the transaction read, which
+	// the checks of access read again from them
+	tables sqldb.TableMemo
 	// logger is the entry of GetLogger, for the fields loggerKey
 	logger    *log.Entry
 	loggerKey loggerKey
@@ -303,7 +306,7 @@ func (sc *SmartContract) IsCustomTable(table string) (isCustom bool, err error) 
 	if len(prefix) > 0 {
 		tables := &sqldb.Table{}
 		tables.SetTablePrefix(prefix)
-		found, err := tables.Get(sc.DbTransaction, name)
+		found, err := sc.tables.Get(sc.DbTransaction, tables, name)
 		if err != nil {
 			return false, err
 		}
@@ -364,6 +367,8 @@ func (sc *SmartContract) denyBftTable(name string) error {
 	return nil
 }
 
+// AccessTablePerm checks the access right of the action to the table, and gives the permissions
+// of a custom table, which the caller does not change
 func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]string, error) {
 	var (
 		err             error
@@ -404,7 +409,7 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 	prefix, name := PrefixName(table)
 	tables := &sqldb.Table{}
 	tables.SetTablePrefix(prefix)
-	tablePermission, err = tables.GetPermissions(sc.DbTransaction, name, "")
+	tablePermission, err = sc.tables.Permissions(sc.DbTransaction, tables, name)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting table permissions")
 		return tablePermission, err
@@ -469,7 +474,7 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 	prefix, name := PrefixName(table)
 	tables := &sqldb.Table{}
 	tables.SetTablePrefix(prefix)
-	found, err := tables.Get(sc.DbTransaction, name)
+	found, err := sc.tables.Get(sc.DbTransaction, tables, name)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting table columns")
 		return err
