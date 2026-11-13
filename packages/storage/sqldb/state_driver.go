@@ -97,6 +97,9 @@ var (
 )
 
 func (c *stateConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	if StatementTrace != nil {
+		traceNamed(query, args)
+	}
 	if n := statsOf(ctx); n != nil {
 		start := time.Now()
 		rows, err := c.query(ctx, query, args)
@@ -116,6 +119,9 @@ func (c *stateConn) query(ctx context.Context, query string, args []driver.Named
 }
 
 func (c *stateConn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	if StatementTrace != nil {
+		traceNamed(query, args)
+	}
 	if n := statsOf(ctx); n != nil {
 		start := time.Now()
 		res, err := c.exec(ctx, query, args)
