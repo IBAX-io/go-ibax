@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -18,13 +17,37 @@ import (
 
 var (
 	errWhereFalse = errors.New(`false result`)
-	whereColRE    = regexp.MustCompile(`;([\w\-]+)`)
 )
+
+// whereCols is what FindAllStringSubmatchIndex of the regular expression ;([\w\-]+) gives for where:
+// for each ; followed by ASCII letters, digits, underscores and hyphens, the indexes of the match
+// and of these characters, nil when there is none
+func whereCols(where string) [][]int {
+	var cols [][]int
+	for i := 0; i < len(where); i++ {
+		if where[i] != ';' {
+			continue
+		}
+		j := i + 1
+		for j < len(where) && isWhereColByte(where[j]) {
+			j++
+		}
+		if j > i+1 {
+			cols = append(cols, []int{i, j, i + 1, j})
+			i = j - 1
+		}
+	}
+	return cols
+}
+
+func isWhereColByte(c byte) bool {
+	return c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_' || c == '-'
+}
 
 func PrepareWhere(where string) string {
 	whereStr := where
 	where = strings.Replace(where, "->", ";", -1)
-	whereSlice := whereColRE.FindAllStringSubmatchIndex(where, -1)
+	whereSlice := whereCols(where)
 	startWhere := 0
 	out := ``
 	for i := 0; i < len(whereSlice); i++ {

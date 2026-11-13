@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -26,8 +25,7 @@ const (
 )
 
 var (
-	checkNowRE = regexp.MustCompile(`(now\s*\(\s*\)|localtime|current_date|current_time|current_timestamp)`)
-	ErrNow     = errors.New(`it is prohibited to use current_time or current_date or localtime or current_timestamp sql keyword`)
+	ErrNow = errors.New(`it is prohibited to use current_time or current_date or localtime or current_timestamp sql keyword`)
 )
 
 // KeyTableChecker checks table
@@ -452,11 +450,54 @@ func wrapString(raw, wrapper string) string {
 // CheckNow allows check if the content contains postgres NOW()
 func CheckNow(inputs ...string) error {
 	for _, item := range inputs {
-		if checkNowRE.Match([]byte(strings.ToLower(item))) {
+		if hasNow(strings.ToLower(item)) {
 			return ErrNow
 		}
 	}
 	return nil
+}
+
+// hasNow tells s holds a match of the regular expression
+// (now\s*\(\s*\)|localtime|current_date|current_time|current_timestamp), where \s is the ASCII
+// space, tab, newline, form feed and carriage return
+func hasNow(s string) bool {
+	for i := 0; i < len(s); i++ {
+		switch s[i] {
+		case 'l':
+			if strings.HasPrefix(s[i:], "localtime") {
+				return true
+			}
+		case 'c':
+			// current_timestamp starts with current_time
+			if strings.HasPrefix(s[i:], "current_date") || strings.HasPrefix(s[i:], "current_time") {
+				return true
+			}
+		case 'n':
+			if strings.HasPrefix(s[i:], "now") {
+				p := skipSpaces(s, i+3)
+				if p < len(s) && s[p] == '(' {
+					p = skipSpaces(s, p+1)
+					if p < len(s) && s[p] == ')' {
+						return true
+					}
+				}
+			}
+		}
+	}
+	return false
+}
+
+// skipSpaces is the index of the first character from p of s that is not matched by \s
+func skipSpaces(s string, p int) int {
+	for p < len(s) {
+		switch s[p] {
+		case ' ', '\t', '\n', '\f', '\r':
+			p++
+		default:
+			return p
+		}
+	}
+	return p
 }
 
 func getFieldIndex(fields []string, name string) int {

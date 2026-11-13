@@ -29,7 +29,6 @@ import (
 
 var (
 	emailRE = regexp.MustCompile(`^(?i)[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,4}$`)
-	nameRE  = regexp.MustCompile(`(?is)^@(\d+)(\w[_\w\d]*)$`)
 )
 
 var ErrSliceSize = errors.New("Slice size larger than buffer size")
@@ -798,12 +797,51 @@ func ValidateEmail(email string) bool {
 // ParseName gets a state identifier and the name of the contract or table
 // from the full name like @[id]name
 func ParseName(in string) (id int64, name string) {
-	ret := nameRE.FindStringSubmatch(in)
-	if len(ret) == 3 {
-		id = StrToInt64(ret[1])
-		name = ret[2]
+	if digits, rest, ok := splitName(in); ok {
+		id = StrToInt64(digits)
+		name = rest
 	}
 	return
+}
+
+// splitName splits a full name as the regular expression (?is)^@(\d+)(\w[_\w\d]*)$ does: the
+// digits after @ but the last one when only digits follow, and the word characters after them.
+// Under (?i) \w also holds the long s and the Kelvin sign, which fold to s and k
+func splitName(in string) (digits, name string, ok bool) {
+	if len(in) < 3 || in[0] != '@' {
+		return
+	}
+	d := 1
+	for d < len(in) && in[d] >= '0' && in[d] <= '9' {
+		d++
+	}
+	if d == 1 {
+		return
+	}
+	for i := d; i < len(in); {
+		n := foldedWordLen(in, i)
+		if n == 0 {
+			return
+		}
+		i += n
+	}
+	if d == len(in) {
+		d--
+	}
+	return in[1:d], in[d:], true
+}
+
+// foldedWordLen is the length of the character of \w under (?i) at i of s, 0 for another one
+func foldedWordLen(s string, i int) int {
+	switch c := s[i]; {
+	case c >= '0' && c <= '9', c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c == '_':
+		return 1
+	case strings.HasPrefix(s[i:], "\u017f"):
+		return 2
+	case strings.HasPrefix(s[i:], "\u212a"):
+		return 3
+	}
+	return 0
 }
 
 // ParseTable return

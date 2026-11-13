@@ -7,7 +7,6 @@ package sqldb
 
 import (
 	"context"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -171,9 +170,155 @@ func cached[T any](tr *DbTransaction, table, key string, load func() (T, error))
 	return v, err
 }
 
-var leadingWord = regexp.MustCompile(`^\w+`)
+// leadingWord is the match of ^\w+ in s: the ASCII letters, digits and underscores it starts with
+func leadingWord(s string) string {
+	i := 0
+	for i < len(s) && isWordByte(s[i]) {
+		i++
+	}
+	return s[:i]
+}
 
-var writeStatement = regexp.MustCompile(`(?is)^\s*(?:insert\s+into|update|delete\s+from)\s+(?:only\s+)?(?:(?:"[^"]+"|\w+)\s*\.\s*)*("[^"]+"|\w+)`)
+func isWordByte(c byte) bool {
+	return c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c == '_'
+}
+
+// writtenTable is the submatch of the regular expression
+// (?is)^\s*(?:insert\s+into|update|delete\s+from)\s+(?:only\s+)?(?:(?:"[^"]+"|\w+)\s*\.\s*)*("[^"]+"|\w+)
+// in s: the last name of the table an insert, update or delete writes. Under (?i) the letter s also
+// matches the long s (U+017F), and \w the long s and the Kelvin sign (U+212A); \s is the ASCII
+// space, tab, newline, form feed and carriage return
+func writtenTable(s string) (string, bool) {
+	start := skipSpaces(s, 0)
+	var p int
+	if e := foldedKeyword(s, start, "update"); e >= 0 {
+		p = e
+	} else if e := foldedKeyword(s, start, "insert"); e >= 0 {
+		p = foldedKeyword(s, spaced(s, e), "into")
+	} else {
+		p = foldedKeyword(s, spaced(s, foldedKeyword(s, start, "delete")), "from")
+	}
+	if p = spaced(s, p); p < 0 {
+		return "", false
+	}
+	// only is optional and greedy: without it, it can be the name
+	if o := foldedKeyword(s, p, "only"); o >= 0 {
+		if q := spaced(s, o); q >= 0 {
+			if table, ok := qualifiedLast(s, q); ok {
+				return table, true
+			}
+		}
+	}
+	return qualifiedLast(s, p)
+}
+
+// qualifiedLast is the last name of the names separated with dots at p of s, the name before the
+// last dot when no name follows it
+func qualifiedLast(s string, p int) (string, bool) {
+	last, lastEnd := -1, -1
+	for {
+		e := sqlName(s, p)
+		if e < 0 {
+			break
+		}
+		q := skipSpaces(s, e)
+		if q == len(s) || s[q] != '.' {
+			return s[p:e], true
+		}
+		last, lastEnd = p, e
+		p = skipSpaces(s, q+1)
+	}
+	if last < 0 {
+		return "", false
+	}
+	return s[last:lastEnd], true
+}
+
+// sqlName is the end of the name "[^"]+" or \w+ (under (?i)) at p of s, -1 when there is none
+func sqlName(s string, p int) int {
+	if p >= len(s) {
+		return -1
+	}
+	if s[p] == '"' {
+		q := strings.IndexByte(s[p+1:], '"')
+		if q <= 0 {
+			return -1
+		}
+		return p + 1 + q + 1
+	}
+	e := p
+	for e < len(s) {
+		n := foldedWordLen(s, e)
+		if n == 0 {
+			break
+		}
+		e += n
+	}
+	if e == p {
+		return -1
+	}
+	return e
+}
+
+// foldedWordLen is the length of the character of \w under (?i) at i of s, 0 for another one
+func foldedWordLen(s string, i int) int {
+	switch {
+	case isWordByte(s[i]):
+		return 1
+	case strings.HasPrefix(s[i:], "\u017f"):
+		return 2
+	case strings.HasPrefix(s[i:], "\u212a"):
+		return 3
+	}
+	return 0
+}
+
+// foldedKeyword is the end of the lower case keyword at p of s matched under (?i), -1 when it is not
+// there
+func foldedKeyword(s string, p int, keyword string) int {
+	if p < 0 {
+		return -1
+	}
+	for i := 0; i < len(keyword); i++ {
+		c := keyword[i]
+		switch {
+		case p < len(s) && s[p]|0x20 == c:
+			p++
+		case c == 's' && strings.HasPrefix(s[p:], "\u017f"):
+			p += 2
+		case c == 'k' && strings.HasPrefix(s[p:], "\u212a"):
+			p += 3
+		default:
+			return -1
+		}
+	}
+	return p
+}
+
+// spaced is the index after the characters matched by \s+ at p of s, -1 when there is none or p is
+// -1
+func spaced(s string, p int) int {
+	if p < 0 {
+		return -1
+	}
+	if q := skipSpaces(s, p); q > p {
+		return q
+	}
+	return -1
+}
+
+// skipSpaces is the index of the first character from p of s that is not matched by \s
+func skipSpaces(s string, p int) int {
+	for p < len(s) {
+		switch s[p] {
+		case ' ', '\t', '\n', '\f', '\r':
+			p++
+		default:
+			return p
+		}
+	}
+	return p
+}
 
 // written tells the table a statement writes: none for a read, all for one the cache cannot tell
 func written(sql string) (table string, none, all bool) {
@@ -181,12 +326,12 @@ func written(sql string) (table string, none, all bool) {
 	if strings.Contains(strings.TrimRight(s, "; \t\n"), ";") {
 		return "", false, true
 	}
-	switch strings.ToLower(leadingWord.FindString(s)) {
+	switch strings.ToLower(leadingWord(s)) {
 	case "select", "savepoint", "release", "set", "show":
 		return "", true, false
 	case "insert", "update", "delete":
-		if m := writeStatement.FindStringSubmatch(s); m != nil {
-			return m[1], false, false
+		if table, ok := writtenTable(s); ok {
+			return table, false, false
 		}
 	}
 	return "", false, true
@@ -194,7 +339,7 @@ func written(sql string) (table string, none, all bool) {
 
 // savepointStatement makes the cache follow a statement on savepoints, and tells it is one
 func savepointStatement(c *txCache, sql string) bool {
-	word := strings.ToLower(leadingWord.FindString(strings.TrimSpace(sql)))
+	word := strings.ToLower(leadingWord(strings.TrimSpace(sql)))
 	if word != "savepoint" && word != "release" && word != "rollback" {
 		return false
 	}
