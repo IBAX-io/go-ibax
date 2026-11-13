@@ -80,8 +80,10 @@ func (c stateConnector) Driver() driver.Driver { return c.base.Driver() }
 // transaction it keeps the tables the statements PostgreSQL ran wrote: dirtyAll when one may have
 // written any table.
 type stateConn struct {
-	pg       *stdlib.Conn
-	inTx     bool
+	pg   *stdlib.Conn
+	inTx bool
+	// txSeq counts the transactions of the connection
+	txSeq    uint64
 	dirty    map[string]bool
 	dirtyAll bool
 	// schemaHeld tells the transaction ran a statement that may have changed the schema, which
@@ -168,6 +170,7 @@ func (c *stateConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.
 	}
 	c.endTx()
 	c.inTx = true
+	c.txSeq++
 	return stateTx{c: c, tx: tx}, nil
 }
 

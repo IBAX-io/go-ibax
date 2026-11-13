@@ -471,7 +471,7 @@ func (tr *DbTransaction) maxID(table string) (int64, error) {
 func (tr *DbTransaction) MaxID(table string) (int64, error) {
 	return cached(tr, table, maxIDKey, func() (int64, error) {
 		var id int64
-		rows, err := tr.queryRaw(`select id from "` + table + `" order by id desc limit 1`)
+		rows, err := tr.queryStatement(idStatement(table))
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("selecting next id from table")
 			return 0, err

@@ -236,6 +236,11 @@ func (v *TxView) run(ctx context.Context, c *stateConn, query string, args []dri
 	if err != nil {
 		return nil, nil, err
 	}
+	return v.runPlan(ctx, c, p, query, args, isQuery)
+}
+
+// runPlan runs a statement of the plan p in the view
+func (v *TxView) runPlan(ctx context.Context, c *stateConn, p *stmt, query string, args []driver.NamedValue, isQuery bool) (driver.Rows, driver.Result, error) {
 	if p.kind == stSavepoint || p.kind == stRollbackTo || p.kind == stRelease {
 		// a run that has to run again, or in order, still takes back what it wrote, in
 		// PostgreSQL too
@@ -687,16 +692,19 @@ func (v *TxView) readPoint(ts *tableState, seq uint64, cond *bcond, j int, key s
 // pointKey is the index and key a condition requires of a row by equality: -1 for the primary key
 func pointKey(m *tableMeta, ts *tableState, cond *bcond) (int, string, bool) {
 	eq := cond.equalities()
-	if len(eq) == 0 {
+	if eq.n == 0 {
 		return 0, "", false
 	}
-	val := func(c string) *string { return eq[m.colIndex(c)] }
-	if k, ok := m.keyOf(m.pk, val); ok && allIn(m, m.pk, eq) {
+	val := func(c string) *string {
+		v, _ := eq.get(m.colIndex(c))
+		return v
+	}
+	if k, ok := m.keyOf(m.pk, val); ok && allIn(m, m.pk, &eq) {
 		return -1, k, true
 	}
 	for j, ix := range ts.uniqIx {
 		cols := m.uniques[ix]
-		if !allIn(m, cols, eq) {
+		if !allIn(m, cols, &eq) {
 			continue
 		}
 		if k, ok := m.keyOf(cols, val); ok {
@@ -706,9 +714,9 @@ func pointKey(m *tableMeta, ts *tableState, cond *bcond) (int, string, bool) {
 	return 0, "", false
 }
 
-func allIn(m *tableMeta, cols []string, eq map[int]*string) bool {
+func allIn(m *tableMeta, cols []string, eq *eqSet) bool {
 	for _, c := range cols {
-		if _, ok := eq[m.colIndex(c)]; !ok {
+		if _, ok := eq.get(m.colIndex(c)); !ok {
 			return false
 		}
 	}
@@ -807,7 +815,8 @@ func (v *TxView) point(ctx context.Context, c *stateConn, ts *tableState, cond *
 	eq := cond.equalities()
 	params := make([]any, len(cols))
 	for i, col := range cols {
-		params[i] = eq[m.colIndex(col)]
+		v, _ := eq.get(m.colIndex(col))
+		params[i] = v
 	}
 	r, ok := ts.base.get(j, key)
 	if !ok {

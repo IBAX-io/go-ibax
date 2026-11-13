@@ -464,8 +464,10 @@ func b7Open(t testing.TB) *b7Env {
 	pc, err := pgx.ParseConfig(dsn)
 	require.NoError(t, err)
 	saved := sqldb.DBConn
+	// the tests of other packages that share the database lock all rows of "1_keys" in transactions
+	// of some seconds, as TestHotQueriesUseIndexes of sqldb does: the harness waits for them
 	require.NoError(t, sqldb.GormInit(conf.DBConfig{Host: pc.Host, Port: int(pc.Port), User: pc.User, Name: pc.Database,
-		Password: pc.Password, LockTimeout: 5000, IdleInTxTimeout: 50000, MaxIdleConns: 4, MaxOpenConns: 8}))
+		Password: pc.Password, LockTimeout: 120000, IdleInTxTimeout: 150000, MaxIdleConns: 4, MaxOpenConns: 8}))
 	InitVM()
 	crypto.InitHashAlgo(crypto.HashAlgo_SHA256.String())
 	seed := func(stmts ...string) {

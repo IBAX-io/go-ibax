@@ -46,6 +46,8 @@ type check struct {
 	col    string
 	strict bool
 	bound  numeric
+	// boundInt is the text of the bound when it is an integer, "" for others
+	boundInt string
 }
 
 var checkRe = regexp.MustCompile(`^CHECK \(\(\(?"?([a-z_][a-z0-9_]*)"?\)? (>=|>) \(?'?(-?[0-9]+(?:\.[0-9]+)?)'?\)?(?:::numeric)?\)\)$`)
@@ -168,7 +170,11 @@ func loadMeta(ctx context.Context, q driver.QueryerContext, table string) (*tabl
 			m.writable = false
 			continue
 		}
-		m.checks = append(m.checks, check{col: mt[1], strict: mt[2] == ">", bound: bound})
+		k := check{col: mt[1], strict: mt[2] == ">", bound: bound}
+		if bound.scale == 0 {
+			k.boundInt = bound.String()
+		}
+		m.checks = append(m.checks, k)
 	}
 	return m, nil
 }
@@ -229,11 +235,16 @@ func (m *tableMeta) checkRow(r stateRow) bool {
 		if v == nil {
 			continue
 		}
-		n, ok := parseNumeric(*v)
-		if !ok {
-			return false
+		var d int
+		if k.boundInt != "" && canonInt(*v) {
+			d = compareCanonInt(*v, k.boundInt)
+		} else {
+			n, ok := parseNumeric(*v)
+			if !ok {
+				return false
+			}
+			d = n.add(k.bound.neg()).sign()
 		}
-		d := n.add(k.bound.neg()).sign()
 		if d < 0 || k.strict && d == 0 {
 			return false
 		}

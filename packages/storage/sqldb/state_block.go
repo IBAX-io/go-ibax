@@ -60,8 +60,9 @@ var errUnsupported = errors.New("not supported by the state of the block")
 // stateSchema is what the state knows of the schema: the catalog, the tables and the plans of the
 // statements. A change of the schema clears it.
 type stateSchema struct {
-	mu    sync.RWMutex
-	gen   uint64
+	mu sync.RWMutex
+	// gen counts the changes of the schema; the plans a statement keeps are of a gen
+	gen   atomic.Uint64
 	cat   *stateCatalog
 	metas map[string]*tableMeta
 	plans map[string]*stmt
@@ -85,7 +86,7 @@ const maxPlans = 4096
 func bumpSchema() {
 	schema.mu.Lock()
 	defer schema.mu.Unlock()
-	schema.gen++
+	schema.gen.Add(1)
 	schema.cat, schema.metas, schema.plans = nil, nil, nil
 	schema.indexes = nil
 	schema.indexEpoch++
@@ -146,31 +147,39 @@ func (s *stateSchema) catalogLocked(ctx context.Context, q driver.QueryerContext
 
 // plan is the plan of a statement
 func (s *stateSchema) plan(ctx context.Context, q driver.QueryerContext, query string) (*stmt, error) {
+	p, _, err := s.planGen(ctx, q, query)
+	return p, err
+}
+
+// planGen is plan, and the gen of the schema the plan is of
+func (s *stateSchema) planGen(ctx context.Context, q driver.QueryerContext, query string) (*stmt, uint64, error) {
 	s.mu.RLock()
 	p, ok := s.plans[query]
+	gen := s.gen.Load()
 	s.mu.RUnlock()
 	if ok {
-		return p, nil
+		return p, gen, nil
 	}
 	if savepointStmt(query) {
 		// the savepoints of the block are named by its transactions: the plans keep none
-		return parseStmt(query, nil), nil
+		return parseStmt(query, nil), gen, nil
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	gen = s.gen.Load()
 	if p, ok := s.plans[query]; ok {
-		return p, nil
+		return p, gen, nil
 	}
 	cat, err := s.catalogLocked(ctx, q)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	p = parseStmt(query, cat)
 	if s.plans == nil || len(s.plans) >= maxPlans {
 		s.plans = make(map[string]*stmt)
 	}
 	s.plans[query] = p
-	return p, nil
+	return p, gen, nil
 }
 
 // savepointStmt tells a statement sets, releases or rolls back to a savepoint, or ends the
@@ -237,8 +246,11 @@ type BlockState struct {
 	// dirty are the tables the transaction of the block wrote before the state began
 	dirty    map[string]bool
 	dirtyAll bool
-	// block is the transaction of the block
-	block *DbTransaction
+	// block is the transaction of the block, conn its connection and connTx the transaction of
+	// the connection it is
+	block  *DbTransaction
+	conn   *stateConn
+	connTx uint64
 	// the transactions of the block, for the ids the earlier ones take; idMu guards next,
 	// contracts and the highest ids of the tables, which the views read for the next ids
 	idMu      sync.Mutex
@@ -314,6 +326,9 @@ func NewBlockState(block *DbTransaction, contracts []string) (*BlockState, error
 			st.dirty[t] = true
 		}
 		st.dirtyAll = c.dirtyAll
+		if c.inTx {
+			st.conn, st.connTx = c, c.txSeq
+		}
 		return nil
 	})
 	if err != nil {

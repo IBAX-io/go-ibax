@@ -16,7 +16,6 @@ package smart
 // shapes are made again when syspar replaces them (syspar.ColTypeVersion).
 
 import (
-	"database/sql"
 	"encoding/binary"
 	"fmt"
 	"reflect"
@@ -44,8 +43,9 @@ const maxShapes = 4096
 // shape is what is made of the shape of a statement
 type shape struct {
 	// text is the text of the statement: the select of the rows of an update, an insert, an
-	// update, or a select of DBSelect
+	// update, or a select of DBSelect; stmt runs it
 	text string
+	stmt *sqldb.Statement
 	// costType and costTable are what querycost reads of the text
 	costType  querycost.QueryType
 	costTable string
@@ -239,7 +239,7 @@ func (sc *SmartContract) updateShape(sw *shapeWalk, sh *shape, table string, fie
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": w.Table, "query": sh.text, "fields": fields, "values": ivalues, "where": inWhere}).Log(dbLevel(err), "getting query total cost")
 		return 0, "", nil, err
 	}
-	rows := sc.DbTransaction.GetOneRowTransaction(sh.text, sw.whereArgs...)
+	rows := sc.DbTransaction.OneRowStatement(sh.stmt, sw.whereArgs...)
 	logData, err := rows.String()
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": sh.text}).Log(dbLevel(err), "getting one row transaction")
@@ -273,13 +273,13 @@ func (sc *SmartContract) updateShape(sw *shapeWalk, sh *shape, table string, fie
 			if shapeCheck {
 				panic(fmt.Sprintf("shape of update %q %v is not the statement %q %v", usText(us), sw.args, b.text, b.args))
 			}
-			us = &shape{text: b.text}
+			us = &shape{text: b.text, stmt: sqldb.NewStatement(b.text)}
 			sw.args = append(sw.args[:0], b.args...)
 			if us.costType, us.costTable, err = querycost.Parse(b.text); err != nil {
 				return 0, "", nil, err
 			}
 		case us == nil:
-			us = &shape{text: b.text}
+			us = &shape{text: b.text, stmt: sqldb.NewStatement(b.text)}
 			if us.costType, us.costTable, err = querycost.Parse(b.text); err != nil {
 				return 0, "", nil, err
 			}
@@ -299,7 +299,7 @@ func (sc *SmartContract) updateShape(sw *shapeWalk, sh *shape, table string, fie
 		dataHash = sc.boundHash(us.text, sw.args)
 	}
 	prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(w.Table)
-	if err = sc.DbTransaction.ExecSql(us.text, sw.args...); err != nil {
+	if err = sc.DbTransaction.ExecStatement(us.stmt, sw.args...); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": w.Table, "query": us.text}).Log(dbLevel(err), "getting update query")
 		return 0, "", nil, err
 	}
@@ -369,7 +369,7 @@ func (sc *SmartContract) insertShape(sw *shapeWalk, sh *shape, table string, fie
 		dataHash = sc.boundHash(sh.text, sw.args)
 	}
 	prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(w.Table)
-	if err = sc.DbTransaction.ExecSql(sh.text, sw.args...); err != nil {
+	if err = sc.DbTransaction.ExecStatement(sh.stmt, sw.args...); err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": sh.text}).Log(dbLevel(err), "executing insert query")
 		return 0, "", nil, err
 	}
@@ -627,7 +627,7 @@ func (sc *SmartContract) keepUpdateShape(cand *writeCandidate, b *qb.SQLQueryBui
 	if err != nil {
 		return
 	}
-	sh := &shape{text: selectQuery, costType: selectType, costTable: selectTable, meta: cand.meta,
+	sh := &shape{text: selectQuery, stmt: sqldb.NewStatement(selectQuery), costType: selectType, costTable: selectTable, meta: cand.meta,
 		whereTypes: cand.whereTypes, jsonCols: w.JSONColumns()}
 	sw.key = append(append(sw.key[:0], 'U'), w.Key...)
 	for _, col := range sh.jsonCols {
@@ -637,7 +637,7 @@ func (sc *SmartContract) keepUpdateShape(cand *writeCandidate, b *qb.SQLQueryBui
 			sw.key = append(sw.key, 0)
 		}
 	}
-	shapes.put(cand.gen, sw.key, &shape{text: updateQuery, costType: updateType, costTable: updateTable})
+	shapes.put(cand.gen, sw.key, &shape{text: updateQuery, stmt: sqldb.NewStatement(updateQuery), costType: updateType, costTable: updateTable})
 	shapes.put(cand.gen, w.Key, sh)
 }
 
@@ -656,7 +656,7 @@ func (sc *SmartContract) keepInsertShape(cand *writeCandidate, insertQuery strin
 		}
 		return
 	}
-	shapes.put(cand.gen, w.Key, &shape{text: insertQuery, costType: insertType, costTable: insertTable,
+	shapes.put(cand.gen, w.Key, &shape{text: insertQuery, stmt: sqldb.NewStatement(insertQuery), costType: insertType, costTable: insertTable,
 		meta: cand.meta})
 }
 
@@ -892,7 +892,7 @@ func (sc *SmartContract) keepSelectShape(gen uint64, sw *shapeWalk, b selectBuil
 		sel = b.sel
 		text = sel.SQL()
 	}
-	sh := &shape{text: text, whereTypes: whereTypes, sel: b.sel, columns: b.columns, query: b.query}
+	sh := &shape{text: text, stmt: sqldb.NewStatement(text), whereTypes: whereTypes, sel: b.sel, columns: b.columns, query: b.query}
 	sh.sel.Args = nil
 	shapes.put(gen, sw.sel.Key, sh)
 }
@@ -911,12 +911,13 @@ func (sc *SmartContract) selectShape(sw *shapeWalk, sh *shape, tblname string, i
 	if err = sc.AccessColumns(tblname, &columns, false); err != nil {
 		return 0, nil, err
 	}
-	text := sh.text
+	text, stmt := sh.text, sh.stmt
 	if !sameSlice(columns, sh.columns) && !sh.query {
 		sel := sh.sel
 		sel.Columns = PrepareColumns(columns)
 		sel.Args = sw.args
 		text = sel.SQL()
+		stmt = nil
 	}
 	if shapeCheck {
 		b, early, late := buildSelect(tblname, inColumns, id, inOrder, offset, limit, inWhere, query, group, all)
@@ -929,7 +930,12 @@ func (sc *SmartContract) selectShape(sw *shapeWalk, sh *shape, tblname string, i
 				sel.Args, early, late))
 		}
 	}
-	rows, err := sc.DbTransaction.QueryText(text, sw.args)
+	var rows *sqldb.Rows
+	if stmt != nil {
+		rows, err = sc.DbTransaction.QueryStatement(stmt, sw.args)
+	} else {
+		rows, err = sc.DbTransaction.QueryText(text, sw.args)
+	}
 	if err != nil {
 		return 0, nil, logErrorDB(err, fmt.Sprintf("selecting rows from table %s %s where %s order %s",
 			tblname, PrepareColumns(columns), sh.sel.Where, sh.sel.Order))
@@ -939,21 +945,17 @@ func (sc *SmartContract) selectShape(sw *shapeWalk, sh *shape, tblname string, i
 
 // readSelect reads the rows of a select of DBSelect, which the filter of the permissions of the
 // table allows
-func (sc *SmartContract) readSelect(rows *sql.Rows, perm map[string]string) (int64, []any, error) {
+func (sc *SmartContract) readSelect(rows *sqldb.Rows, perm map[string]string) (int64, []any, error) {
 	defer rows.Close()
 	cols, err := rows.Columns()
 	if err != nil {
 		return 0, nil, logErrorDB(err, "getting rows columns")
 	}
+	// values are the columns of a row as database/sql scans them into a *[]byte each
 	values := make([][]byte, len(cols))
-	scanArgs := make([]any, len(values))
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
-
 	result := make([]any, 0, 50)
 	for rows.Next() {
-		err = rows.Scan(scanArgs...)
+		err = rows.ScanBytes(values)
 		if err != nil {
 			return 0, nil, logErrorDB(err, "scanning next row")
 		}

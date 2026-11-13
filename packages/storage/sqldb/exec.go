@@ -43,18 +43,7 @@ func bindPlain(s string, args []any) (string, bool) {
 			b.WriteByte(c)
 			continue
 		}
-		switch args[n].(type) {
-		case nil, string, bool, int, int8, int16, int32, int64, uint, uint16, uint32, uint64,
-			float32, float64, time.Time:
-		case []byte:
-			// gorm writes the bytes of a slice after a parenthesis each as a value
-			if afterParenthesis {
-				return "", false
-			}
-		case gorm.Valuer, clause.Expression, clause.Interface:
-			return "", false
-		case driver.Valuer:
-		default:
+		if !plainArg(args[n], true, afterParenthesis) {
 			return "", false
 		}
 		n++
@@ -62,25 +51,48 @@ func bindPlain(s string, args []any) (string, bool) {
 		b.WriteString(strconv.Itoa(n))
 	}
 	for _, v := range args[n:] {
-		switch v.(type) {
-		case nil, string, bool, int, int8, int16, int32, int64, uint, uint16, uint32, uint64,
-			float32, float64, time.Time, []byte:
-		case gorm.Valuer, clause.Expression, clause.Interface:
-			return "", false
-		case driver.Valuer:
-		default:
+		if !plainArg(v, false, false) {
 			return "", false
 		}
 	}
 	return b.String(), true
 }
 
+// plainArg tells gorm's Exec binds the value v as it is: at a placeholder, which follows a
+// parenthesis or not, or past the placeholders
+func plainArg(v any, placed, afterParenthesis bool) bool {
+	switch v.(type) {
+	case nil, string, bool, int, int8, int16, int32, int64, uint, uint16, uint32, uint64,
+		float32, float64, time.Time:
+		return true
+	case []byte:
+		// gorm writes the bytes of a slice after a parenthesis each as a value
+		return !placed || !afterParenthesis
+	case gorm.Valuer, clause.Expression, clause.Interface:
+		return false
+	case driver.Valuer:
+		return true
+	}
+	return false
+}
+
 // queryRaw runs a select in the transaction, or out of any if tr is nil, as gorm's Raw(...).Rows()
-// runs it: counted, and emptying in the cache of the transaction what it may change
-func (tr *DbTransaction) queryRaw(s string, args ...any) (*sql.Rows, error) {
+// runs it: counted, and emptying in the cache of the transaction what it may change. In a view
+// the select runs without database/sql.
+func (tr *DbTransaction) queryRaw(s string, args ...any) (*Rows, error) {
 	text, ok := bindPlain(s, args)
 	if !ok {
-		return GetDB(tr).Raw(s, args...).Rows()
+		rows, err := GetDB(tr).Raw(s, args...).Rows()
+		if err != nil {
+			return nil, err
+		}
+		return StdRows(rows), nil
+	}
+	if drv, ran, err := tr.directRun(nil, text, args, true); ran {
+		if err != nil {
+			return nil, err
+		}
+		return driverRows(drv), nil
 	}
 	db := GetDB(tr)
 	ctx, err := db.Statement.Context, db.Error
@@ -90,7 +102,10 @@ func (tr *DbTransaction) queryRaw(s string, args ...any) (*sql.Rows, error) {
 	}
 	rowStatements.Inc()
 	followStatement(ctx, text)
-	return rows, err
+	if err != nil {
+		return nil, err
+	}
+	return StdRows(rows), nil
 }
 
 // rowRaw is queryRaw for one row, as gorm's Raw(...).Row() runs it
@@ -129,11 +144,15 @@ func followStatement(ctx context.Context, text string) {
 }
 
 // exec runs a statement in the transaction, or out of any if tr is nil, as gorm's Exec runs it:
-// counted, and emptying in the cache of the transaction what it may change, whether it fails or not
+// counted, and emptying in the cache of the transaction what it may change, whether it fails or not.
+// In a view the statement runs without database/sql.
 func (tr *DbTransaction) exec(s string, args ...any) error {
 	text, ok := bindPlain(s, args)
 	if !ok {
 		return GetDB(tr).Exec(s, args...).Error
+	}
+	if _, ran, err := tr.directRun(nil, text, args, false); ran {
+		return err
 	}
 	db := GetDB(tr)
 	ctx, err := db.Statement.Context, db.Error

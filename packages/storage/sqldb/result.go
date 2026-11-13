@@ -137,13 +137,21 @@ func (r *OneRow) Int() (map[string]int, error) {
 
 // GetAllTransaction is retrieve all query result rows
 func (dbTx *DbTransaction) GetAllTransaction(query string, countRows int, args ...any) ([]map[string]string, error) {
-	var rows *sql.Rows
+	var rows *Rows
 	var err error
 	if countRows > 0 {
-		rows, err = GetDB(dbTx).Raw(query, args...).Limit(countRows).Rows()
+		var std *sql.Rows
+		if std, err = GetDB(dbTx).Raw(query, args...).Limit(countRows).Rows(); err == nil {
+			rows = StdRows(std)
+		}
 	} else {
 		rows, err = dbTx.queryRaw(query, args...)
 	}
+	return allRows(query, args, rows, err, countRows)
+}
+
+// allRows is the result GetAllTransaction makes of the rows of the query, or of its error
+func allRows(query string, args []any, rows *Rows, err error, countRows int) ([]map[string]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w in query %s %s", err, query, args)
 	}
@@ -157,8 +165,14 @@ func (dbTx *DbTransaction) GetAllTransaction(query string, countRows int, args .
 
 // GetOneRowTransaction returns one row from transactions
 func (dbTx *DbTransaction) GetOneRowTransaction(query string, args ...any) *OneRow {
+	rows, err := dbTx.queryRaw(query, args...)
+	return oneRow(query, args, rows, err)
+}
+
+// oneRow is the result GetOneRowTransaction makes of the rows of the query, or of its error
+func oneRow(query string, args []any, rows *Rows, err error) *OneRow {
 	result := make(map[string]string)
-	all, err := dbTx.GetAllTransaction(query, -1, args...)
+	all, err := allRows(query, args, rows, err, -1)
 	if err != nil {
 		return &OneRow{result: result, err: fmt.Errorf("%w in query %s %s", err, query, args)}
 	}
@@ -184,11 +198,11 @@ func (dbTx *DbTransaction) GetRows(tableName, columns string, offset, limit int)
 		return nil, err
 	}
 	defer rows.Close()
-	return getResult(rows, -1)
+	return getResult(StdRows(rows), -1)
 }
 
 func GetResult(rows *sql.Rows) ([]map[string]string, error) {
-	return getResult(rows, -1)
+	return getResult(StdRows(rows), -1)
 }
 
 // ListResult is a structure for the list result
@@ -220,54 +234,34 @@ func (dbTx *DbTransaction) GetList(query string, args ...any) *ListResult {
 	return &ListResult{result, nil}
 }
 
-func getResult(rows *sql.Rows, countRows int) ([]map[string]string, error) {
+func getResult(rows *Rows, countRows int) ([]map[string]string, error) {
 	var result []map[string]string
 	defer rows.Close()
-	//rows.ColumnTypes()
-	columntypes, err := rows.ColumnTypes()
+	types, err := rows.DatabaseTypeNames()
 	if err != nil {
 		return nil, err
 	}
-	// Get column names
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, err
 	}
-	// Make a slice for the values
-	values := make([][]byte /*sql.RawBytes*/, len(columns))
-
-	// rows.Scan wants '[]interface{}' as an argument, so we must copy the
-	// references into such a slice
-	// See http://code.google.com/p/go-wiki/wiki/InterfaceSlice for details
-	scanArgs := make([]any, len(values))
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
-
+	// values are the columns of a row as database/sql scans them into a *[]byte each: nil for NULL
+	values := make([][]byte, len(columns))
 	r := 0
-	// Fetch rows
 	for rows.Next() {
-		// get RawBytes from data
-		err = rows.Scan(scanArgs...)
-		if err != nil {
+		if err = rows.ScanBytes(values); err != nil {
 			return nil, err
 		}
-
-		// Now do something with the data.
-		// Here we just print each column as a string.
 		var value string
-		rez := make(map[string]string)
+		rez := make(map[string]string, len(columns))
 		for i, col := range values {
-			// Here we can check if the value is nil (NULL value)
-			if col == nil {
+			switch {
+			case col == nil:
 				value = "NULL"
-			} else {
-				if columntypes[i].DatabaseTypeName() == "BYTEA" {
-					value = hex.EncodeToString(col)
-				} else {
-					value = string(col)
-				}
-
+			case types[i] == "BYTEA":
+				value = hex.EncodeToString(col)
+			default:
+				value = string(col)
 			}
 			rez[columns[i]] = value
 		}

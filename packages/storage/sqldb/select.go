@@ -95,12 +95,24 @@ func writeTable(b *strings.Builder, name string) {
 
 // Query runs a select in the transaction, or out of any if tr is nil, and counts it as gorm counts
 // its statements
-func (tr *DbTransaction) Query(s *Select) (*sql.Rows, error) {
+func (tr *DbTransaction) Query(s *Select) (*Rows, error) {
 	return tr.QueryText(s.SQL(), s.Args)
 }
 
 // QueryText runs the text of a select, which SQL made, as Query runs the select
-func (tr *DbTransaction) QueryText(text string, args []any) (*sql.Rows, error) {
+func (tr *DbTransaction) QueryText(text string, args []any) (*Rows, error) {
+	return tr.queryText(nil, text, args)
+}
+
+// queryText is QueryText of the text of the statement s, when s is not nil. In a view the select
+// runs without database/sql.
+func (tr *DbTransaction) queryText(s *Statement, text string, args []any) (*Rows, error) {
+	if drv, ran, err := tr.directRun(s, text, args, true); ran {
+		if err != nil {
+			return nil, err
+		}
+		return driverRows(drv), nil
+	}
 	db := GetDB(tr)
 	var rows *sql.Rows
 	err := db.Error
@@ -109,5 +121,8 @@ func (tr *DbTransaction) QueryText(text string, args []any) (*sql.Rows, error) {
 	}
 	rowStatements.Inc()
 	followStatement(db.Statement.Context, text)
-	return rows, err
+	if err != nil {
+		return nil, err
+	}
+	return StdRows(rows), nil
 }

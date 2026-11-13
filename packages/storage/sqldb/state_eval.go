@@ -7,7 +7,6 @@ package sqldb
 
 import (
 	"database/sql/driver"
-	"math/big"
 	"regexp"
 	"strconv"
 	"strings"
@@ -43,12 +42,6 @@ var (
 
 // namedType is the type of a cast
 func namedType(name string, mods []int) (colType, bool) {
-	oids := map[string]uint32{
-		"int2": pgtype.Int2OID, "int4": pgtype.Int4OID, "int8": pgtype.Int8OID, "numeric": pgtype.NumericOID,
-		"text": pgtype.TextOID, "varchar": pgtype.VarcharOID, "bool": pgtype.BoolOID, "bytea": pgtype.ByteaOID,
-		"jsonb": pgtype.JSONBOID, "timestamp": pgtype.TimestampOID, "timestamptz": pgtype.TimestamptzOID,
-		"uuid": pgtype.UUIDOID,
-	}
 	typmod := int32(-1)
 	switch {
 	case len(mods) == 0:
@@ -69,8 +62,16 @@ func namedType(name string, mods []int) (colType, bool) {
 	default:
 		return colType{}, false
 	}
-	t := newColType(oids[name], name, typmod)
+	t := newColType(namedOIDs[name], name, typmod)
 	return t, t.supported()
+}
+
+// namedOIDs are the oids of the types a cast names
+var namedOIDs = map[string]uint32{
+	"int2": pgtype.Int2OID, "int4": pgtype.Int4OID, "int8": pgtype.Int8OID, "numeric": pgtype.NumericOID,
+	"text": pgtype.TextOID, "varchar": pgtype.VarcharOID, "bool": pgtype.BoolOID, "bytea": pgtype.ByteaOID,
+	"jsonb": pgtype.JSONBOID, "timestamp": pgtype.TimestampOID, "timestamptz": pgtype.TimestamptzOID,
+	"uuid": pgtype.UUIDOID,
 }
 
 // base is the type without its modifiers: the type of a placeholder PostgreSQL infers from it
@@ -101,7 +102,7 @@ func convert(v tval, t colType) (tval, bool) {
 	switch {
 	case v.t.kind == t.kind && t.kind != kOther:
 	case v.t.numberLike() && t.numberLike():
-		if t.kind == kInt && v.t.kind == kNumeric {
+		if t.kind == kInt && v.t.kind == kNumeric && !canonInt(s) {
 			// numeric to an integer rounds half away from zero
 			n, ok := parseNumeric(s)
 			if !ok {
@@ -122,11 +123,15 @@ func convert(v tval, t colType) (tval, bool) {
 	default:
 		return tval{}, false
 	}
-	out, ok := t.inputText(s)
+	out, ok := t.inputValue(s)
 	if !ok {
 		return tval{}, false
 	}
-	return tval{t: t, s: out}, true
+	if out == *v.s {
+		// the text stays as it is: the value keeps its text
+		return tval{t: t, s: v.s}, true
+	}
+	return tval{t: t, s: &out}, true
 }
 
 // binder binds the values of the placeholders of a statement to their types
@@ -137,6 +142,51 @@ type binder struct {
 	types []string
 	small [8]string
 	row   *tableMeta
+	// strs, exprs and conds hold the texts, expressions and conditions the binder makes, a chunk
+	// at a time
+	strs  []string
+	exprs []bexpr
+	conds []bcond
+}
+
+// chunk is the number of texts, expressions or conditions a binder makes at a time: as many as
+// the statement has values, up to 8
+func (b *binder) chunk() int { return min(max(len(b.args), 2), 8) }
+
+// str is a text the binder keeps
+func (b *binder) str(s string) *string {
+	if len(b.strs) == cap(b.strs) {
+		b.strs = make([]string, 0, b.chunk())
+	}
+	b.strs = append(b.strs, s)
+	return &b.strs[len(b.strs)-1]
+}
+
+// constant is a constant expression the binder keeps
+func (b *binder) constant(v tval) *bexpr {
+	if len(b.exprs) == cap(b.exprs) {
+		b.exprs = make([]bexpr, 0, b.chunk())
+	}
+	b.exprs = append(b.exprs, bexpr{op: eString, v: v, t: v.t})
+	return &b.exprs[len(b.exprs)-1]
+}
+
+// cond is a condition the binder keeps
+func (b *binder) cond(c bcond) *bcond {
+	if len(b.conds) == cap(b.conds) {
+		b.conds = make([]bcond, 0, b.chunk())
+	}
+	b.conds = append(b.conds, c)
+	return &b.conds[len(b.conds)-1]
+}
+
+// text is the text the type stores of a text given to its input function, kept by the binder
+func (b *binder) text(t colType, s string) (*string, bool) {
+	out, ok := t.inputValue(s)
+	if !ok {
+		return nil, false
+	}
+	return b.str(out), true
 }
 
 // bindType binds the placeholder n to the type name, false if it is bound to another
@@ -166,8 +216,11 @@ func (b *binder) param(n int, t colType) (tval, bool) {
 	if !b.bindType(n, t.name) {
 		return tval{}, false
 	}
-	s, ok := t.input(b.args[n].Value)
-	return tval{t: t, s: s}, ok
+	s, null, ok := t.inputArg(b.args[n].Value)
+	if !ok || null {
+		return tval{t: t}, ok
+	}
+	return tval{t: t, s: b.str(s)}, true
 }
 
 // bexpr is a bound expression: a constant, a column of a row, or an operation on bound expressions
@@ -179,8 +232,6 @@ type bexpr struct {
 	kids []*bexpr
 }
 
-func constant(v tval) *bexpr { return &bexpr{op: eString, v: v, t: v.t} }
-
 // bindExpr binds an expression whose value goes to the type want; a placeholder alone takes it
 func (b *binder) bindExpr(e *exprNode, want colType) (*bexpr, bool) {
 	switch e.op {
@@ -189,28 +240,27 @@ func (b *binder) bindExpr(e *exprNode, want colType) (*bexpr, bool) {
 		if !ok {
 			return nil, false
 		}
-		return constant(v), true
+		return b.constant(v), true
 	case eString:
 		if !want.supported() {
 			return nil, false
 		}
-		s, ok := want.base().inputText(e.text)
+		s, ok := b.text(want.base(), e.text)
 		if !ok {
 			return nil, false
 		}
-		return constant(tval{t: want.base(), s: s}), true
+		return b.constant(tval{t: want.base(), s: s}), true
 	case eNumber:
 		t := numberType(e.text)
-		s, ok := t.inputText(e.text)
+		s, ok := b.text(t, e.text)
 		if !ok {
 			return nil, false
 		}
-		return constant(tval{t: t, s: s}), true
+		return b.constant(tval{t: t, s: s}), true
 	case eNull:
-		return constant(tval{t: typeUnknown}), true
+		return b.constant(tval{t: typeUnknown}), true
 	case eBool:
-		s := boolText(e.text == "true")
-		return constant(tval{t: typeBool, s: &s}), true
+		return b.constant(tval{t: typeBool, s: b.str(boolText(e.text == "true"))}), true
 	case eCol:
 		if b.row == nil {
 			return nil, false
@@ -228,11 +278,11 @@ func (b *binder) bindExpr(e *exprNode, want colType) (*bexpr, bool) {
 		kid := e.kids[0]
 		if kid.op == eString {
 			// a literal takes the type of its cast
-			s, ok := t.inputText(kid.text)
+			s, ok := b.text(t, kid.text)
 			if !ok {
 				return nil, false
 			}
-			return constant(tval{t: t, s: s}), true
+			return b.constant(tval{t: t, s: s}), true
 		}
 		k, ok := b.bindExpr(kid, t)
 		if !ok {
@@ -243,7 +293,7 @@ func (b *binder) bindExpr(e *exprNode, want colType) (*bexpr, bool) {
 			if !ok {
 				return nil, false
 			}
-			return constant(v), true
+			return b.constant(v), true
 		}
 		return &bexpr{op: eCast, t: t, kids: []*bexpr{k}}, true
 	case eDecode:
@@ -252,14 +302,14 @@ func (b *binder) bindExpr(e *exprNode, want colType) (*bexpr, bool) {
 			return nil, false
 		}
 		if k.v.s == nil {
-			return constant(tval{t: typeBytea}), true
+			return b.constant(tval{t: typeBytea}), true
 		}
 		raw, ok := decodeHex(*k.v.s)
 		if !ok {
 			return nil, false
 		}
 		s := byteaText(raw)
-		return constant(tval{t: typeBytea, s: &s}), true
+		return b.constant(tval{t: typeBytea, s: &s}), true
 	case eToTimestamp:
 		kid := e.kids[0]
 		var text string
@@ -267,7 +317,7 @@ func (b *binder) bindExpr(e *exprNode, want colType) (*bexpr, bool) {
 		case eParam:
 			if n := kid.n; n < len(b.args) {
 				if b.args[n].Value == nil {
-					return constant(tval{t: typeTimestamptz}), true
+					return b.constant(tval{t: typeTimestamptz}), true
 				}
 				s, binary, ok := argText(b.args[n].Value)
 				if !ok || binary {
@@ -293,7 +343,7 @@ func (b *binder) bindExpr(e *exprNode, want colType) (*bexpr, bool) {
 			return nil, false
 		}
 		s := typeTimestamptz.timestampText(tm)
-		return constant(tval{t: typeTimestamptz, s: &s}), true
+		return b.constant(tval{t: typeTimestamptz, s: &s}), true
 	case eAdd, eSub, eConcat:
 		l, r := e.kids[0], e.kids[1]
 		var left, right *bexpr
@@ -334,7 +384,7 @@ func (b *binder) bindExpr(e *exprNode, want colType) (*bexpr, bool) {
 			if !ok {
 				return nil, false
 			}
-			return constant(v), true
+			return b.constant(v), true
 		}
 		return x, true
 	}
@@ -378,12 +428,15 @@ func (x *bexpr) eval(r stateRow) (tval, bool) {
 			if x.op == eSub {
 				q = -q
 			}
-			sum := new(big.Int).Add(big.NewInt(p), big.NewInt(q))
-			if !sum.IsInt64() {
+			sum, ok := addInt64Checked(p, q)
+			if !ok {
 				return tval{}, false
 			}
-			s, ok := x.t.inputText(sum.String())
+			s, ok := x.t.inputText(strconv.FormatInt(sum, 10))
 			return tval{t: x.t, s: s}, ok
+		}
+		if s, ok := addInt64(*a.s, *b.s, x.op == eSub); ok {
+			return tval{t: x.t, s: &s}, true
 		}
 		p, ok1 := parseNumeric(*a.s)
 		q, ok2 := parseNumeric(*b.s)
@@ -432,13 +485,15 @@ type bcond struct {
 	// fam is the kind of the comparison: kNumeric for numbers of any type
 	fam  colKind
 	vals []*string
+	// one holds the value of a condition of one
+	one [1]*string
 }
 
 // bindCond binds a condition on the columns of the table
 func (b *binder) bindCond(c *condNode) (*bcond, bool) {
 	switch c.op {
 	case cAnd, cOr:
-		x := &bcond{op: c.op}
+		x := b.cond(bcond{op: c.op, kids: make([]*bcond, 0, len(c.kids))})
 		for _, k := range c.kids {
 			bk, ok := b.bindCond(k)
 			if !ok {
@@ -453,9 +508,12 @@ func (b *binder) bindCond(c *condNode) (*bcond, bool) {
 		return nil, false
 	}
 	ct := b.row.cols[i].typ
-	x := &bcond{op: c.op, col: i, cmp: c.cmp}
+	x := b.cond(bcond{op: c.op, col: i, cmp: c.cmp})
 	if c.op == cIsNull || c.op == cNotNull {
 		return x, true
+	}
+	if len(c.vals) == 1 {
+		x.vals = x.one[:0:1]
 	}
 	for _, e := range c.vals {
 		be, ok := b.bindExpr(e, ct)
@@ -474,7 +532,7 @@ func (b *binder) bindCond(c *condNode) (*bcond, bool) {
 			return nil, false
 		}
 		x.fam = fam
-		if v.s != nil && fam == kNumeric && v.t.kind == kNumeric {
+		if v.s != nil && fam == kNumeric && v.t.kind == kNumeric && !canonInt(*v.s) {
 			n, _ := parseNumeric(*v.s)
 			s := n.normal()
 			v.s = &s
@@ -632,23 +690,64 @@ func (c *bcond) matches(r stateRow) bool { return c == nil || c.eval(r) == triTr
 
 // equalities are the values a condition requires of columns: col = value terms of its top
 // conjunction
-func (c *bcond) equalities() map[int]*string {
+func (c *bcond) equalities() eqSet {
+	var eq eqSet
 	if c == nil {
-		return nil
+		return eq
 	}
-	terms := []*bcond{c}
-	if c.op == cAnd {
-		terms = c.kids
-	}
-	eq := make(map[int]*string)
-	for _, t := range terms {
+	add := func(t *bcond) {
 		if t.op == cCmp && t.cmp == "=" && t.vals[0] != nil {
-			eq[t.col] = t.vals[0]
+			eq.set(t.col, t.vals[0])
 		} else if t.op == cIn && len(t.vals) == 1 && t.vals[0] != nil {
-			eq[t.col] = t.vals[0]
+			eq.set(t.col, t.vals[0])
 		}
 	}
+	if c.op == cAnd {
+		for _, t := range c.kids {
+			add(t)
+		}
+	} else {
+		add(c)
+	}
 	return eq
+}
+
+// eqSet is the value a condition requires of each column, by equality; the last for a column
+// required twice
+type eqSet struct {
+	n    int
+	cols [8]int
+	vals [8]*string
+	more []eqCol
+}
+
+type eqCol struct {
+	col int
+	v   *string
+}
+
+func (e *eqSet) set(col int, v *string) {
+	if e.n < len(e.cols) {
+		e.cols[e.n], e.vals[e.n] = col, v
+	} else {
+		e.more = append(e.more, eqCol{col, v})
+	}
+	e.n++
+}
+
+// get is the value required of the column; false for none
+func (e *eqSet) get(col int) (*string, bool) {
+	for i := len(e.more) - 1; i >= 0; i-- {
+		if e.more[i].col == col {
+			return e.more[i].v, true
+		}
+	}
+	for i := min(e.n, len(e.cols)) - 1; i >= 0; i-- {
+		if e.cols[i] == col {
+			return e.vals[i], true
+		}
+	}
+	return nil, false
 }
 
 // border is an order of rows by columns, bound to the table

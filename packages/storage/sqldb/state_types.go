@@ -149,92 +149,118 @@ func argText(v any) (s string, binary, ok bool) {
 // input is the text PostgreSQL stores for a value bound to a column of the type; a nil value is
 // NULL. false for a value the state does not take, or one PostgreSQL rejects.
 func (t colType) input(v any) (*string, bool) {
+	s, null, ok := t.inputArg(v)
+	if !ok || null {
+		return nil, ok
+	}
+	return &s, true
+}
+
+// inputArg is input of the value: its text, or null for NULL
+func (t colType) inputArg(v any) (out string, null, ok bool) {
 	if v == nil {
-		return nil, true
+		return "", true, true
 	}
 	s, binary, ok := argText(v)
 	if !ok {
-		return nil, false
+		return "", false, false
 	}
 	if binary {
 		if t.kind == kBytea {
-			out := byteaText([]byte(s))
-			return &out, true
+			return byteaText([]byte(s)), false, true
 		}
 		if !utf8.ValidString(s) {
-			return nil, false
+			return "", false, false
 		}
 	}
-	return t.inputText(s)
+	out, ok = t.inputValue(s)
+	return out, false, ok
 }
 
 // inputText is the text PostgreSQL stores for a text given to the input function of the type
 func (t colType) inputText(s string) (*string, bool) {
-	if !utf8.ValidString(s) {
+	out, ok := t.inputValue(s)
+	if !ok {
 		return nil, false
+	}
+	return &out, true
+}
+
+// inputValue is inputText of the text, as a value
+func (t colType) inputValue(s string) (string, bool) {
+	if out, ok := t.fastInput(s); ok {
+		return out, true
+	}
+	return t.inputFull(s)
+}
+
+// inputFull is inputText of any text
+func (t colType) inputFull(s string) (string, bool) {
+	if !utf8.ValidString(s) {
+		return "", false
 	}
 	var out string
 	switch t.kind {
 	case kInt:
 		n, err := strconv.ParseInt(strings.TrimSpace(s), 10, t.bits)
 		if err != nil {
-			return nil, false
+			return "", false
 		}
 		out = strconv.FormatInt(n, 10)
 	case kNumeric:
 		n, ok := parseNumeric(s)
 		if !ok {
-			return nil, false
+			return "", false
 		}
 		if n, ok = n.typmod(t.precision, t.scale); !ok {
-			return nil, false
+			return "", false
 		}
 		out = n.String()
 	case kText:
 		if strings.IndexByte(s, 0) >= 0 {
-			return nil, false
+			return "", false
 		}
 		out = s
 	case kVarchar, kBpchar:
 		if strings.IndexByte(s, 0) >= 0 {
-			return nil, false
+			return "", false
 		}
 		var ok bool
 		if out, ok = t.fit(s); !ok {
-			return nil, false
+			return "", false
 		}
 	case kBool:
 		b, ok := parseBool(s)
 		if !ok {
-			return nil, false
+			return "", false
 		}
 		out = boolText(b)
 	case kBytea:
 		b, ok := parseByteaText(s)
 		if !ok {
-			return nil, false
+			return "", false
 		}
 		out = byteaText(b)
 	case kJSONB:
 		var ok bool
 		if out, ok = canonJSONB(s); !ok {
-			return nil, false
+			return "", false
 		}
 	case kTimestamp, kTimestamptz:
 		tm, ok := parseTimestamp(s)
 		if !ok {
-			return nil, false
+			return "", false
 		}
 		out = t.timestampText(tm)
 	case kUUID:
 		var ok bool
 		if out, ok = parseUUID(s); !ok {
-			return nil, false
+			return "", false
 		}
 	default:
-		return nil, false
+		return "", false
 	}
-	return &out, true
+	return out, true
 }
 
 // parseUUID is the text PostgreSQL outputs for a text the input function of uuid reads: 32 hex
@@ -316,8 +342,8 @@ func (t colType) fit(s string) (string, bool) {
 func (t colType) key(s string) string {
 	switch t.kind {
 	case kNumeric:
-		if n, ok := parseNumeric(s); ok {
-			return n.normal()
+		if k, ok := numericKey(s); ok {
+			return k
 		}
 	case kBpchar:
 		return strings.TrimRight(s, " ")

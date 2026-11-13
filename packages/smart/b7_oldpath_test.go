@@ -10,7 +10,6 @@ package smart
 // each time. The comparisons of b7_harness_test.go run them against the functions of the package.
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -230,7 +229,7 @@ func b7OldDBSelect(sc *SmartContract, tblname string, inColumns any, id int64, i
 
 	var (
 		err     error
-		rows    *sql.Rows
+		rows    *sqldb.Rows
 		perm    map[string]string
 		columns []string
 		order   string
