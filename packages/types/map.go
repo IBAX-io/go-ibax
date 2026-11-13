@@ -145,6 +145,24 @@ func (m *Map) Size() int {
 	return len(m.m)
 }
 
+// First is the first element of the map in insertion order, nil for an empty or nil map. With
+// Next it walks the map without the slices of Keys and Values.
+func (m *Map) First() *Link {
+	if m == nil {
+		return nil
+	}
+	return m.head
+}
+
+// Next is the element after l in insertion order, nil after the last
+func (l *Link) Next() *Link { return l.next }
+
+// Key is the key of the element
+func (l *Link) Key() string { return l.key }
+
+// Value is the value of the element
+func (l *Link) Value() any { return l.value }
+
 // Keys returns all keys of the map (insertion order).
 func (m *Map) Keys() []string {
 	keys := make([]string, m.Size())

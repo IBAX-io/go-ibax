@@ -202,7 +202,10 @@ type b7Scenario struct {
 	name string
 	// full runs the scenario with the full access of a system contract
 	full bool
-	run  func(c *b7Call)
+	// before runs on the transaction before a view is made of it, after once it is rolled back
+	before func(tr *sqldb.DbTransaction)
+	after  func()
+	run    func(c *b7Call)
 }
 
 func b7hTransfer(c *b7Call, s int) {
@@ -534,9 +537,15 @@ var b7Modes = []string{"parallel", "ordered", "fallback", "pg"}
 // it recorded; nothing it writes stays
 func (e *b7Env) run(s b7Scenario, mode string, impl b7Impl) string {
 	t := e.t
+	if s.after != nil {
+		defer s.after()
+	}
 	tr, err := sqldb.StartTransaction()
 	require.NoError(t, err)
 	defer tr.Rollback()
+	if s.before != nil {
+		s.before(tr)
+	}
 	var (
 		view *sqldb.TxView
 		dtx  = tr

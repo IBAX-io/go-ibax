@@ -6,7 +6,6 @@ package smart
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -1028,119 +1027,6 @@ func PrepareColumns(columns []string) string {
 		colList = append(colList, icol)
 	}
 	return strings.Join(colList, `,`)
-}
-
-// DBSelect returns an array of values of the specified columns when there is selection of data 'offset', 'limit', 'where'
-func DBSelect(sc *SmartContract, tblname string, inColumns any, id int64, inOrder any,
-	offset, limit int64, inWhere *types.Map, query any, group string, all bool) (int64, []any, error) {
-
-	var (
-		err     error
-		rows    *sql.Rows
-		perm    map[string]string
-		columns []string
-		order   string
-	)
-	columns, err = qb.GetColumns(inColumns)
-	if err != nil {
-		return 0, nil, err
-	}
-	tblname = qb.GetTableName(sc.TxSmart.EcosystemID, tblname)
-	where, whereArgs, err := qb.GetWhere(tblname, inWhere)
-	if err != nil {
-		return 0, nil, err
-	}
-	if id != 0 {
-		where, whereArgs = `id = ?`, []any{converter.Int64ToStr(id)}
-		limit = 1
-	}
-	if limit == 0 {
-		limit = 25
-	}
-	if limit < 0 || limit > consts.DBFindLimit {
-		limit = consts.DBFindLimit
-	}
-	perm, err = sc.AccessTablePerm(tblname, `read`)
-	if err != nil {
-		return 0, nil, err
-	}
-	if err = sc.AccessColumns(tblname, &columns, false); err != nil {
-		return 0, nil, err
-	}
-	sel := sqldb.Select{Table: tblname, Columns: PrepareColumns(columns), Where: where, Args: whereArgs,
-		Offset: int(offset), Limit: int(limit)}
-
-	//group + order => false
-	//group + no order => true
-	//no group + order => true
-	//no group + no order => true
-	order, err = qb.GetOrder(tblname, inOrder, true)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	if len(group) != 0 {
-		sel.Group = group
-		if inOrder != nil {
-			order, err = qb.GetOrder(tblname, inOrder, false)
-			if err != nil {
-				return 0, nil, err
-			}
-		}
-	}
-	sel.Order = order
-
-	if q, ok := query.(string); ok && q != "" {
-		sel.Columns = q
-	}
-	if all {
-		sel.Offset, sel.Limit = 0, -1
-	}
-	rows, err = sc.DbTransaction.Query(&sel)
-	if err != nil {
-		return 0, nil, logErrorDB(err, fmt.Sprintf("selecting rows from table %s %s where %s order %s",
-			tblname, PrepareColumns(columns), where, order))
-	}
-	defer rows.Close()
-	cols, err := rows.Columns()
-	if err != nil {
-		return 0, nil, logErrorDB(err, "getting rows columns")
-	}
-	values := make([][]byte, len(cols))
-	scanArgs := make([]any, len(values))
-	for i := range values {
-		scanArgs[i] = &values[i]
-	}
-
-	result := make([]any, 0, 50)
-	for rows.Next() {
-		err = rows.Scan(scanArgs...)
-		if err != nil {
-			return 0, nil, logErrorDB(err, "scanning next row")
-		}
-		row := types.NewMap()
-		for i, col := range values {
-			var value string
-			if col != nil {
-				value = string(col)
-			}
-			row.Set(cols[i], value)
-		}
-		result = append(result, reflect.ValueOf(row).Interface())
-	}
-	if perm != nil && len(perm[`filter`]) > 0 {
-		fltResult, err := sc.VM.EvalIf(perm[`filter`], uint32(sc.TxSmart.EcosystemID),
-			sc.getExtend(),
-		)
-		if err != nil {
-			return 0, nil, err
-		}
-		if !fltResult {
-			log.WithFields(log.Fields{"filter": perm["filter"]}).Error("Access denied")
-			return 0, nil, errAccessDenied
-		}
-	}
-	return 0, result, nil
 }
 
 // DBUpdateExt updates the record in the specified table. You can specify 'where' query in params and then the values for this query

@@ -107,6 +107,10 @@ type SmartContract struct {
 	// statement it hashes, the data of a record and the sorted columns of a row
 	writeBuf  []byte
 	writeKeys []string
+	// walks are the walks of the shapes of the statements of the contract database functions, one
+	// for each of them running: a check of access in a select runs a select again
+	walks     []*shapeWalk
+	walkDepth int
 	// logger is the entry of GetLogger, for the fields loggerKey
 	logger    *log.Entry
 	loggerKey loggerKey

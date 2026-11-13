@@ -153,7 +153,9 @@ func (s DeleteQueryType) CalculateCost(rowCount int64) int64 {
 	return DeleteCost + int64(DeleteRowCoeff*float64(rowCount))
 }
 
-func (f *FormulaQueryCoster) QueryCost(transaction *sqldb.DbTransaction, query string, args ...any) (int64, error) {
+// Parse returns the type of the query and the table it costs the rows of, as QueryCost reads them.
+// The type keeps no text of the query.
+func Parse(query string) (QueryType, string, error) {
 	cleanedQuery := strings.TrimSpace(strings.ToLower(query))
 	var queryType QueryType
 	switch {
@@ -167,16 +169,42 @@ func (f *FormulaQueryCoster) QueryCost(transaction *sqldb.DbTransaction, query s
 		queryType = DeleteQueryType(cleanedQuery)
 	default:
 		log.WithFields(log.Fields{"type": consts.ParseError, "query": query}).Error("parsing sql query")
-		return 0, UnknownQueryTypeError
+		return nil, "", UnknownQueryTypeError
 	}
 	tableName, err := queryType.GetTableName()
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.ParseError, "query": query, "error": err}).Error("getting table name from sql query")
-		return 0, err
+		return nil, "", err
 	}
+	switch queryType.(type) {
+	case SelectQueryType:
+		queryType = SelectQueryType("")
+	case InsertQueryType:
+		queryType = InsertQueryType("")
+	case UpdateQueryType:
+		queryType = UpdateQueryType("")
+	case DeleteQueryType:
+		queryType = DeleteQueryType("")
+	}
+	return queryType, tableName, nil
+}
+
+// Cost returns the cost of a query of the type on the table, which Parse returns of the query
+func (f *FormulaQueryCoster) Cost(transaction *sqldb.DbTransaction, queryType QueryType, tableName string) (int64, error) {
 	rowCount, err := f.rowCounter.RowCount(transaction, tableName)
 	if err != nil {
 		return 0, err
 	}
 	return queryType.CalculateCost(rowCount), nil
+}
+
+// Formula is the coster of the formula of the rows of the table of a query
+var Formula = &FormulaQueryCoster{&DBCountQueryRowCounter{}}
+
+func (f *FormulaQueryCoster) QueryCost(transaction *sqldb.DbTransaction, query string, args ...any) (int64, error) {
+	queryType, tableName, err := Parse(query)
+	if err != nil {
+		return 0, err
+	}
+	return f.Cost(transaction, queryType, tableName)
 }

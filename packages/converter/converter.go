@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 
@@ -444,6 +445,9 @@ func BinUnmarshal(out *[]byte, v any) error {
 
 // Sanitize deletes unaccessable characters from input string
 func Sanitize(name string, available string) string {
+	if sanitized(name, available) {
+		return name
+	}
 	out := make([]rune, 0, len(name))
 	for _, ch := range name {
 		if ch > 127 || (ch >= '0' && ch <= '9') || ch == '_' || (ch >= 'a' && ch <= 'z') ||
@@ -452,6 +456,19 @@ func Sanitize(name string, available string) string {
 		}
 	}
 	return string(out)
+}
+
+// sanitized tells Sanitize keeps the name as it is: ASCII letters, digits, _ and the available
+// characters, which it keeps one by one
+func sanitized(name, available string) bool {
+	for i := 0; i < len(name); i++ {
+		ch := name[i]
+		if !(ch >= '0' && ch <= '9' || ch == '_' || ch >= 'a' && ch <= 'z' || ch >= 'A' && ch <= 'Z' ||
+			ch < utf8.RuneSelf && strings.IndexByte(available, ch) >= 0) {
+			return false
+		}
+	}
+	return true
 }
 
 // SanitizeScript deletes unaccessable characters from input string
@@ -857,7 +874,7 @@ func ParseTable(tblname string, defaultEcosystem int64) string {
 		}
 		name = tblname
 	}
-	return strings.ToLower(fmt.Sprintf(`%d_%s`, ecosystem, Sanitize(name, ``)))
+	return strings.ToLower(strconv.FormatInt(ecosystem, 10) + `_` + Sanitize(name, ``))
 }
 
 func SubNodeParseTable(tblname string, defaultEcosystem int64) string {
