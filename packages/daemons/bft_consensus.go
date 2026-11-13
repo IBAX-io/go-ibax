@@ -130,6 +130,10 @@ type bftDriver struct {
 
 	// m is used only by the goroutine of run
 	m *bft.Machine
+	// written is the ends of the writes of the proposals of the node the machine has not taken,
+	// as the network was stopped or the height could not be read; used only by the goroutine of
+	// run
+	written []bftWritten
 	// roundStart is used only by the goroutine of run
 	roundStart bftRoundStart
 	// unsaved is a sign state the node could not store, and unsent the messages signed with it:
@@ -424,6 +428,11 @@ func (d *bftDriver) give(m any) {
 }
 
 func (d *bftDriver) event(e any) {
+	if w, ok := e.(bftWritten); ok {
+		// the end of the writes of a proposal comes once: it waits for the machine, which takes it
+		// with the next event or tick that moves it
+		d.written = append(d.written, w)
+	}
 	if bftStopped() {
 		return
 	}
@@ -431,6 +440,7 @@ func (d *bftDriver) event(e any) {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the height")
 		return
 	}
+	d.applyWritten()
 	switch e := e.(type) {
 	case bftExpired:
 		d.expired(e)
@@ -443,7 +453,7 @@ func (d *bftDriver) event(e any) {
 		}
 		d.startWork()
 	case bftWritten:
-		d.apply(d.m.OnValid(e.height, e.hash, writtenValidity(d.logger, e)))
+		// applyWritten took it
 	default:
 		d.give(e)
 	}
@@ -463,6 +473,7 @@ func (d *bftDriver) tick() {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the height")
 		return
 	}
+	d.applyWritten()
 	busy := d.startWork()
 	d.checkLiveness(now, busy, d.m.Round(), d.silent)
 	if time.Since(d.resent) < bftResend {
@@ -638,6 +649,16 @@ func (d *bftDriver) awaitWritten(height uint64, hash bft.Hash, written func() er
 		case <-d.ctx.Done():
 		}
 	}()
+}
+
+// applyWritten gives the machine the ends of the writes of the proposals of the node it has not
+// taken: the machine ignores those of another height or of a block no longer pending
+func (d *bftDriver) applyWritten() {
+	written := d.written
+	d.written = nil
+	for _, e := range written {
+		d.apply(d.m.OnValid(e.height, e.hash, writtenValidity(d.logger, e)))
+	}
 }
 
 // writtenValidity is the validity of a block the node proposed by the end of its writes: unknown
