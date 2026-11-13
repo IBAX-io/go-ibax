@@ -88,22 +88,6 @@ func (f *FuelCategory) writeConversionRate(cr float64) {
 	f.ConversionRate = 100
 }
 
-func (f *FuelCategory) Detail() (string, any) {
-	return f.FuelType.String(), f.FeesInfo()
-}
-
-// FeesInfo is the detail of the fees of the category. It is a part of PaymentInfo.Detail, which
-// takes the whole detail through JSON once.
-func (f *FuelCategory) FeesInfo() any {
-	detail := types.NewMap()
-	detail.Set("decimal", f.Decimal)
-	detail.Set("value", f.Fees())
-	detail.Set("conversion_rate", f.ConversionRate)
-	detail.Set("flag", f.Flag)
-	detail.Set("arithmetic", f.Arithmetic.String())
-	return detail
-}
-
 func (f *FuelCategory) Fees() decimal.Decimal {
 	var value decimal.Decimal
 	switch f.Arithmetic {
@@ -121,19 +105,6 @@ func (f *FuelCategory) Fees() decimal.Decimal {
 
 func (c Combustion) Fees(sum decimal.Decimal) decimal.Decimal {
 	return sum.Mul(decimal.NewFromInt(c.Percent)).Div(decimal.New(100, 0)).Floor()
-}
-
-// Detail is the detail of the combustion of sum. It is a part of PaymentInfo.DetailCombustion,
-// which takes the whole detail through JSON once.
-func (c Combustion) Detail(sum decimal.Decimal) any {
-	detail := types.NewMap()
-	combustion := c.Fees(sum)
-	detail.Set("flag", c.Flag)
-	detail.Set("percent", c.Percent)
-	detail.Set("before", sum)
-	detail.Set("value", combustion)
-	detail.Set("after", sum.Sub(combustion))
-	return detail
 }
 
 func (pay *PaymentInfo) PushFuelCategories(fes ...FuelCategory) {
@@ -168,43 +139,6 @@ func (pay *PaymentInfo) GetEstimate() decimal.Decimal {
 		money = money.Add(f.Fees())
 	}
 	return money
-}
-
-// Detail is the detail of the payment as the history keeps it: its JSON, decoded, so its maps have
-// their keys in order and its numbers are those JSON gives. Taking a value through JSON twice gives
-// what taking it once does, so the parts of the detail go through it with the whole.
-func (pay *PaymentInfo) Detail() any {
-	detail := types.NewMap()
-	for i := 0; i < len(pay.FuelCategories); i++ {
-		detail.Set(pay.FuelCategories[i].Detail())
-	}
-	detail.Set("taxes_size", pay.TaxesSize)
-	detail.Set("payment_type", pay.PaymentType.String())
-	detail.Set("fuel_rate", pay.FuelRate)
-	detail.Set("token_symbol", pay.Ecosystem.TokenSymbol)
-	b, _ := JSONEncode(detail)
-	s, _ := JSONDecode(b)
-	return s
-}
-
-func (pay *PaymentInfo) DetailCombustion() any {
-	c := pay.Combustion
-	detail := types.NewMap()
-	var money decimal.Decimal
-	for i := 0; i < len(pay.FuelCategories); i++ {
-		f := pay.FuelCategories[i]
-		s := f.Fees().Mul(decimal.NewFromInt(c.Percent)).Div(decimal.New(100, 0)).Floor()
-		detail.Set(f.FuelType.String(), s)
-		money = money.Add(f.Fees())
-	}
-	if !pay.Indirect && pay.TokenEco != consts.DefaultTokenEcosystem {
-		detail.Set("combustion", pay.Combustion.Detail(money))
-	}
-	detail.Set("token_symbol", pay.Ecosystem.TokenSymbol)
-	detail.Set("fuel_rate", pay.FuelRate)
-	b, _ := JSONEncode(detail)
-	s, _ := JSONDecode(b)
-	return s
 }
 
 func (f *PaymentInfo) checkVerify(sc *SmartContract) error {
