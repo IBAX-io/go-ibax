@@ -14,8 +14,8 @@ import (
 
 // TestNumIndexesKept checks the numbers of indexes the schema keeps: PostgreSQL counts the indexes
 // of a table once, and again after each statement that may change the schema, in a transaction
-// run in PostgreSQL or in the order of a block, rolled back or committed, and after a change of
-// the schema; while a transaction that ran one is open, each transaction counts them itself
+// run in PostgreSQL or in the order of a block, rolled back or committed, or out of one, and after
+// a change of the schema; while a transaction that ran one is open, each transaction counts them itself
 func TestNumIndexesKept(t *testing.T) {
 	dsn := os.Getenv("IBAX_TEST_DSN")
 	if dsn == "" {
@@ -145,11 +145,18 @@ func TestNumIndexesKept(t *testing.T) {
 	n, c = num(begin())
 	require.Equal(t, [2]int64{int64(n0 + 1), 1}, [2]int64{int64(n), c})
 
+	// an index added out of a transaction is counted after the statement
+	require.NoError(t, gdb.WithContext(ctx).Exec(`CREATE INDEX b7_ix_b ON b7_ix (b)`).Error)
+	n, c = num(begin())
+	require.Equal(t, [2]int64{int64(n0 + 2), 1}, [2]int64{int64(n), c})
+	n, c = num(begin())
+	require.Equal(t, [2]int64{int64(n0 + 2), 0}, [2]int64{int64(n), c})
+
 	// a change of the schema clears the numbers
 	bumpSchema()
 	n, c = num(begin())
-	require.Equal(t, [2]int64{int64(n0 + 1), 1}, [2]int64{int64(n), c})
+	require.Equal(t, [2]int64{int64(n0 + 2), 1}, [2]int64{int64(n), c})
 	n, c = num(begin())
-	require.Equal(t, [2]int64{int64(n0 + 1), 0}, [2]int64{int64(n), c})
+	require.Equal(t, [2]int64{int64(n0 + 2), 0}, [2]int64{int64(n), c})
 	require.Zero(t, schema.held)
 }
