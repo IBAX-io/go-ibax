@@ -56,3 +56,40 @@ func TestMapMarshalJSON(t *testing.T) {
 		require.Equal(t, string(wantJSON), string(gotJSON))
 	}
 }
+
+// FuzzMapSize checks a map of NewMapSize against one of NewMap under the same operations
+func FuzzMapSize(f *testing.F) {
+	f.Add(uint8(3), []byte{0, 1, 2, 0x41, 0x82, 3, 0xc0, 4})
+	f.Add(uint8(0), []byte{1, 1, 0x81, 1})
+	f.Fuzz(func(t *testing.T, size uint8, ops []byte) {
+		a, b := NewMap(), NewMapSize(int(size%16))
+		for i, op := range ops {
+			key := string(rune('a' + op%8))
+			switch op >> 6 {
+			case 0, 1:
+				a.Set(key, i)
+				b.Set(key, i)
+			case 2:
+				a.Remove(key)
+				b.Remove(key)
+			case 3:
+				if op%8 == 0 {
+					a.Clear()
+					b.Clear()
+				}
+			}
+			require.Equal(t, a.Keys(), b.Keys())
+			require.Equal(t, a.Values(), b.Values())
+			require.Equal(t, a.String(), b.String())
+			require.Equal(t, a.Size(), b.Size())
+			ja, erra := a.MarshalJSON()
+			jb, errb := b.MarshalJSON()
+			require.Equal(t, string(ja), string(jb))
+			require.Equal(t, erra, errb)
+			for l, m := a.First(), b.First(); l != nil || m != nil; l, m = l.Next(), m.Next() {
+				require.Equal(t, l.Key(), m.Key())
+				require.Equal(t, l.Value(), m.Value())
+			}
+		}
+	})
+}

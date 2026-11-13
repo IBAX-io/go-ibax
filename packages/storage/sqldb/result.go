@@ -7,7 +7,6 @@ package sqldb
 
 import (
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -237,33 +236,34 @@ func (dbTx *DbTransaction) GetList(query string, args ...any) *ListResult {
 func getResult(rows *Rows, countRows int) ([]map[string]string, error) {
 	var result []map[string]string
 	defer rows.Close()
-	types, err := rows.DatabaseTypeNames()
-	if err != nil {
-		return nil, err
+	if rows.mem == nil {
+		// ScanText writes a bytea by the names of the types of the columns
+		types, err := rows.DatabaseTypeNames()
+		if err != nil {
+			return nil, err
+		}
+		rows.types = types
 	}
 	columns, err := rows.Columns()
 	if err != nil {
 		return nil, err
 	}
-	// values are the columns of a row as database/sql scans them into a *[]byte each: nil for NULL
-	values := make([][]byte, len(columns))
+	// values are the columns of a row as database/sql scans them into a *[]byte each, a bytea in
+	// hex
+	values := make([]string, len(columns))
+	null := make([]bool, len(columns))
 	r := 0
 	for rows.Next() {
-		if err = rows.ScanBytes(values); err != nil {
+		if err = rows.ScanText(values, null, true); err != nil {
 			return nil, err
 		}
-		var value string
 		rez := make(map[string]string, len(columns))
-		for i, col := range values {
-			switch {
-			case col == nil:
-				value = "NULL"
-			case types[i] == "BYTEA":
-				value = hex.EncodeToString(col)
-			default:
-				value = string(col)
+		for i, col := range columns {
+			if null[i] {
+				rez[col] = "NULL"
+			} else {
+				rez[col] = values[i]
 			}
-			rez[columns[i]] = value
 		}
 		result = append(result, rez)
 		r++

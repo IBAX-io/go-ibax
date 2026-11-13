@@ -117,6 +117,11 @@ func readRows(rows *Rows, rec func(string, ...any)) {
 			dest := make([][]byte, len(names))
 			err := rows.ScanBytes(dest)
 			rec("bytes", dest, err)
+			for _, hexBytea := range []bool{false, true} {
+				texts, null := make([]string, len(names)), make([]bool, len(names))
+				err := rows.ScanText(texts, null, hexBytea)
+				rec("texts", hexBytea, texts, null, err)
+			}
 		} else {
 			var id int64
 			var num string

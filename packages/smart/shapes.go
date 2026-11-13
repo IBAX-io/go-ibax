@@ -951,20 +951,17 @@ func (sc *SmartContract) readSelect(rows *sqldb.Rows, perm map[string]string) (i
 	if err != nil {
 		return 0, nil, logErrorDB(err, "getting rows columns")
 	}
-	// values are the columns of a row as database/sql scans them into a *[]byte each
-	values := make([][]byte, len(cols))
+	// values are the columns of a row as database/sql scans them into a *[]byte each, "" for NULL
+	values := make([]string, len(cols))
+	null := make([]bool, len(cols))
 	result := make([]any, 0, 50)
 	for rows.Next() {
-		err = rows.ScanBytes(values)
+		err = rows.ScanText(values, null, false)
 		if err != nil {
 			return 0, nil, logErrorDB(err, "scanning next row")
 		}
-		row := types.NewMap()
-		for i, col := range values {
-			var value string
-			if col != nil {
-				value = string(col)
-			}
+		row := types.NewMapSize(len(cols))
+		for i, value := range values {
 			row.Set(cols[i], value)
 		}
 		result = append(result, reflect.ValueOf(row).Interface())

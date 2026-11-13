@@ -209,18 +209,29 @@ func (m *tableMeta) colIndex(name string) int {
 // keyOf is the key of a row by the values of the columns: the text of each column as equality
 // compares it; false when a column is NULL, as NULL names no row
 func (m *tableMeta) keyOf(cols []string, val func(col string) *string) (string, bool) {
-	var b strings.Builder
-	for i, c := range cols {
+	var small [4]string
+	keys := small[:0]
+	n := 0
+	for _, c := range cols {
 		v := val(c)
 		if v == nil {
 			return "", false
 		}
-		if i > 0 {
-			b.WriteByte(0)
-		}
-		b.WriteString(m.byName[c].typ.key(*v))
+		k := m.byName[c].typ.key(*v)
+		keys = append(keys, k)
+		n += len(k) + 1
 	}
-	return b.String(), true
+	if len(keys) == 1 {
+		return keys[0], true
+	}
+	b := make([]byte, 0, n)
+	for i, k := range keys {
+		if i > 0 {
+			b = append(b, 0)
+		}
+		b = append(b, k...)
+	}
+	return string(b), true
 }
 
 // checkRow tells a row holds the checks and the NOT NULL columns of the table

@@ -54,9 +54,7 @@ func (r *memRows) Next(dest []driver.Value) error {
 	if r.i >= len(r.rows) {
 		return io.EOF
 	}
-	if r.m == nil {
-		r.m = typeMaps.Get().(*pgtype.Map)
-	}
+	m := r.typeMap()
 	row := r.rows[r.i]
 	r.i++
 	for j, v := range row {
@@ -64,13 +62,21 @@ func (r *memRows) Next(dest []driver.Value) error {
 			dest[j] = nil
 			continue
 		}
-		d, err := decodeText(r.m, r.types[j].oid, *v)
+		d, err := decodeText(m, r.types[j].oid, *v)
 		if err != nil {
 			return err
 		}
 		dest[j] = d
 	}
 	return nil
+}
+
+// typeMap is the map of types of pgtype the rows decode by, which Close returns
+func (r *memRows) typeMap() *pgtype.Map {
+	if r.m == nil {
+		r.m = typeMaps.Get().(*pgtype.Map)
+	}
+	return r.m
 }
 
 func (r *memRows) ColumnTypeDatabaseTypeName(index int) string {

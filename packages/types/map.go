@@ -28,6 +28,8 @@ type Map struct {
 	m    map[string]*Link
 	head *Link
 	tail *Link
+	// links are the links NewMapSize made room for, which Set takes before it makes others
+	links []Link
 }
 
 func newLink(key string, value any) *Link {
@@ -37,6 +39,11 @@ func newLink(key string, value any) *Link {
 // NewMap instantiates a linked hash map.
 func NewMap() *Map {
 	return &Map{m: make(map[string]*Link), head: nil, tail: nil}
+}
+
+// NewMapSize is NewMap of a map that holds n elements in the room it makes for them at once
+func NewMapSize(n int) *Map {
+	return &Map{m: make(map[string]*Link, n), links: make([]Link, 0, n)}
 }
 
 func ConvertMap(in any) any {
@@ -70,7 +77,7 @@ func ConvertMap(in any) any {
 
 // LoadMap instantiates a linked hash map and initializing it from map[string]interface{}.
 func LoadMap(init map[string]any) (ret *Map) {
-	ret = NewMap()
+	ret = NewMapSize(len(init))
 	keys := make([]string, 0, len(init))
 	for key := range init {
 		keys = append(keys, key)
@@ -86,7 +93,12 @@ func LoadMap(init map[string]any) (ret *Map) {
 func (m *Map) Set(key string, value any) {
 	link, found := m.m[key]
 	if !found {
-		link = newLink(key, value)
+		if len(m.links) < cap(m.links) {
+			m.links = append(m.links, Link{key: key, value: value})
+			link = &m.links[len(m.links)-1]
+		} else {
+			link = newLink(key, value)
+		}
 		if m.tail == nil {
 			m.head = link
 			m.tail = link
@@ -190,6 +202,7 @@ func (m *Map) Clear() {
 	m.m = make(map[string]*Link)
 	m.head = nil
 	m.tail = nil
+	m.links = nil
 }
 
 // String returns a string representation of container

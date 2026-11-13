@@ -8,6 +8,7 @@ package sqldb
 import (
 	"math/big"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -87,6 +88,60 @@ func checkFast(t *testing.T, a, b string) {
 	want, wantOK := canonJSONB(a)
 	if got, ok := fastJSONB(a); ok && (!wantOK || got != want) {
 		t.Fatalf("fastJSONB %q = %q, canonJSONB %q %v", a, got, want, wantOK)
+	}
+	checkKeyOf(t, a, b)
+}
+
+// keyMeta is a table of a column of each type of fastTypes and of text
+var keyMeta = func() *tableMeta {
+	m := &tableMeta{byName: map[string]*colMeta{}}
+	for i, ct := range append(fastTypes, newColType(25, "text", -1)) {
+		name := strconv.Itoa(i)
+		m.byName[name] = &colMeta{name: name, typ: ct}
+	}
+	return m
+}()
+
+// keyOfBuilder is keyOf as a strings.Builder wrote the key
+func keyOfBuilder(m *tableMeta, cols []string, val func(col string) *string) (string, bool) {
+	var b strings.Builder
+	for i, c := range cols {
+		v := val(c)
+		if v == nil {
+			return "", false
+		}
+		if i > 0 {
+			b.WriteByte(0)
+		}
+		b.WriteString(m.byName[c].typ.key(*v))
+	}
+	return b.String(), true
+}
+
+// checkKeyOf checks keyOf of keys of up to six columns of each type, with the values a and b and
+// NULL, against keyOfBuilder
+func checkKeyOf(t *testing.T, a, b string) {
+	n := len(keyMeta.byName)
+	vals := []*string{&a, &b, nil}
+	for k := 0; k <= 6; k++ {
+		cols := make([]string, k)
+		for i := range cols {
+			cols[i] = strconv.Itoa((len(a) + i*7 + len(b)*3) % n)
+		}
+		for shift := range 3 {
+			val := func(col string) *string {
+				i, _ := strconv.Atoi(col)
+				return vals[(i+shift)%3]
+			}
+			if k > 0 && shift == 2 {
+				val = func(string) *string { return &a }
+			}
+			want, wantOK := keyOfBuilder(keyMeta, cols, val)
+			got, ok := keyMeta.keyOf(cols, val)
+			if got != want || ok != wantOK {
+				t.Fatalf("keyOf %v %q %q: %q %v, want %q %v", cols, a, b, got, ok, want, wantOK)
+			}
+		}
 	}
 }
 
