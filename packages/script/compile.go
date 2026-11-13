@@ -6,6 +6,7 @@ package script
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -92,7 +93,7 @@ var (
 // StateName checks the name of the contract and modifies it to @[state]name if it is necessary.
 func StateName(state uint32, name string) string {
 	if !strings.HasPrefix(name, `@`) {
-		return fmt.Sprintf(`@%d%s`, state, name)
+		return `@` + strconv.FormatUint(uint64(state), 10) + name
 	} else if len(name) > 1 && (name[1] < '0' || name[1] > '9') {
 		name = `@1` + name[1:]
 	}

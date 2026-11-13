@@ -719,11 +719,15 @@ func GetAccessExec(s string) string {
 	return SysString(AccessExec + s)
 }
 
-func GetPriceExec(s string) (price int64, ok bool) {
-	if ok = HasSys(PriceExec + s); !ok {
-		return
+// GetPriceExec returns the price of an extended function by the name of its parameter, PriceExec and
+// the name of the function in snake case
+func GetPriceExec(param string) (price int64, ok bool) {
+	mutex.RLock()
+	value, ok := cache[param]
+	mutex.RUnlock()
+	if ok {
+		price = converter.StrToInt64(value)
 	}
-	price = SysInt64(PriceExec + s)
 	return
 }
 

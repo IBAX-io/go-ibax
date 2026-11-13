@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
@@ -71,8 +72,15 @@ type TxSignJSON struct {
 	Params  []SignRes `json:"params"`
 }
 
+// priceExecParams maps the names of the extended functions to the names of their price parameters
+var priceExecParams sync.Map
+
 func getCost(name string) int64 {
-	if price, ok := syspar.GetPriceExec(utils.ToSnakeCase(name)); ok {
+	param, ok := priceExecParams.Load(name)
+	if !ok {
+		param, _ = priceExecParams.LoadOrStore(name, syspar.PriceExec+utils.ToSnakeCase(name))
+	}
+	if price, ok := syspar.GetPriceExec(param.(string)); ok {
 		return price
 	}
 	return -1

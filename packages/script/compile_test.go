@@ -817,3 +817,20 @@ func TestAssignMustHaveValue(t *testing.T) {
 		}
 	}
 }
+
+// StateName writes the names the fmt.Sprintf it replaced wrote
+func TestStateNameAsSprintf(t *testing.T) {
+	reference := func(state uint32, name string) string {
+		if !strings.HasPrefix(name, `@`) {
+			return fmt.Sprintf(`@%d%s`, state, name)
+		} else if len(name) > 1 && (name[1] < '0' || name[1] > '9') {
+			name = `@1` + name[1:]
+		}
+		return name
+	}
+	for _, state := range []uint32{0, 1, 9, 10, 4294967295} {
+		for _, name := range []string{``, `@`, `@1Name`, `@Name`, `Name`, `@25x`, `名字`, "\xff"} {
+			assert.Equal(t, reference(state, name), StateName(state, name), "%d %q", state, name)
+		}
+	}
+}
