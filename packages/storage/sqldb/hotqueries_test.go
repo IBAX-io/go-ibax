@@ -131,15 +131,22 @@ var planIndex = regexp.MustCompile(`Index(?: Only)? Scan(?: Backward)? using "?(
 // TestHotQueriesUseIndexes: on tables of the shape of a chain under load, whatever rows and
 // statistics the database had before, and with sequential scans disabled, the planner takes the
 // cheapest index, so that each query reads by the index it is meant to read by, and by none whose
-// condition leaves the rest to a filter
+// condition leaves the rest to a filter. The plans are the same at every run: the tables are
+// truncated in the transaction of the test, so their files hold the rows of hotRows alone, not
+// the dead rows the runs before rolled back, and ANALYZE reads every row rather than a random
+// sample of them
 func TestHotQueriesUseIndexes(t *testing.T) {
 	db := testDB(t)
-	for _, table := range hotTables {
-		require.NoError(t, db.Exec(`DELETE FROM "`+table+`"`).Error)
+	tables := make([]string, len(hotTables))
+	for i, table := range hotTables {
+		tables[i] = `"` + table + `"`
 	}
+	require.NoError(t, db.Exec(`TRUNCATE `+strings.Join(tables, ", ")).Error)
 	for _, rows := range hotRows {
 		require.NoError(t, db.Exec(rows).Error, rows)
 	}
+	// a sample of 300 rows per unit of the target: 3,000,000, more than any table has
+	require.NoError(t, db.Exec(`SET LOCAL default_statistics_target = 10000`).Error)
 	for _, table := range hotTables {
 		require.NoError(t, db.Exec(`ANALYZE "`+table+`"`).Error)
 	}
