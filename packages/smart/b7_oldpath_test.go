@@ -11,6 +11,7 @@ package smart
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 	"github.com/shopspring/decimal"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
@@ -120,7 +122,7 @@ func b7OldWriteRows(sc *SmartContract, fields []string, ivalues []any,
 			}
 			cost += updateCost
 		}
-		rollDataHashStr = qb.BoundStatement(`UPDATE "`+strings.Trim(sqlBuilder.Table, `"`)+`" SET `+updateExpr+" "+whereExpr, args)
+		rollDataHashStr = b7OldBoundStatement(`UPDATE "`+strings.Trim(sqlBuilder.Table, `"`)+`" SET `+updateExpr+" "+whereExpr, args)
 		prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 		err = sc.DbTransaction.Update(sqlBuilder.Table, updateExpr, whereExpr, args...)
 		if err != nil {
@@ -133,12 +135,12 @@ func b7OldWriteRows(sc *SmartContract, fields []string, ivalues []any,
 
 		for i := 0; i < len(rows.List) && generalRollback; i++ {
 			rollData := rows.List[i]
-			rollbackInfoStr, err := sqlBuilder.GenerateRollBackInfoString(rollData)
+			rollbackInfoStr, err := b7OldRollBackInfoString(rollData)
 			if err != nil {
 				logger.WithError(err).Error("on generate rollback info string for update")
 				return 0, "", nil, err
 			}
-			addRollback(sc, sqlBuilder.Table, rollData["id"], rollbackInfoStr, rollDataHashStr)
+			b7OldAddRollback(sc, sqlBuilder.Table, rollData["id"], rollbackInfoStr, rollDataHashStr)
 		}
 
 		var ids []string
@@ -166,7 +168,7 @@ func b7OldWriteRows(sc *SmartContract, fields []string, ivalues []any,
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Log(dbLevel(err), "getting total query cost for insert query")
 		return 0, "", nil, err
 	}
-	rollDataHashStr = qb.BoundStatement(insertQuery, insertArgs)
+	rollDataHashStr = b7OldBoundStatement(insertQuery, insertArgs)
 	cost += insertCost
 	prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 	err = sc.DbTransaction.ExecSql(insertQuery, insertArgs...)
@@ -187,7 +189,7 @@ func b7OldWriteRows(sc *SmartContract, fields []string, ivalues []any,
 				tid = sqlBuilder.TableID() + "," + sqlBuilder.GetEcosystem()
 			}
 		}
-		addRollback(sc, sqlBuilder.Table, tid, "", rollDataHashStr)
+		b7OldAddRollback(sc, sqlBuilder.Table, tid, "", rollDataHashStr)
 	}
 	return cost, sqlBuilder.TableID(), nil, nil
 }
@@ -449,4 +451,44 @@ func b7OldNumIndexes(dbTx *sqldb.DbTransaction, tblname string) (int, error) {
 	}
 	b7OldIndexes[dbTx][tblname] = n
 	return n, nil
+}
+
+// b7OldAddRollback is addRollback as it was before the appenders
+func b7OldAddRollback(sc *SmartContract, table, tableID, rollbackInfoStr, rollDataHashStr string) {
+	rollbackTx := &types.RollbackTx{
+		BlockId:   sc.BlockHeader.BlockId,
+		TxHash:    sc.Hash,
+		NameTable: table,
+		TableId:   tableID,
+		Data:      rollbackInfoStr,
+		DataHash:  crypto.Hash([]byte(rollDataHashStr)),
+	}
+	sc.RollBackTx = append(sc.RollBackTx, rollbackTx)
+}
+
+// b7OldBoundStatement is qb.BoundStatement as it was before the appenders
+func b7OldBoundStatement(query string, args []any) string {
+	if len(args) == 0 {
+		return query
+	}
+	return query + " " + fmt.Sprintf("%q", args)
+}
+
+// b7OldRollBackInfoString is SQLQueryBuilder.GenerateRollBackInfoString as it was before the
+// appenders, for a prepared builder: there the table of a key table is 1_ and its name, which
+// IsKeyTable holds for, so its clause of a key table which is not one never held. The queryBuilder
+// tests compare the appender with the whole function, that clause too
+func b7OldRollBackInfoString(logData map[string]string) (string, error) {
+	rollbackInfo := make(map[string]string)
+	for k, v := range logData {
+		if k == `id` {
+			continue
+		}
+		rollbackInfo[k] = v
+	}
+	jsonRollbackInfo, err := json.Marshal(rollbackInfo)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonRollbackInfo), nil
 }

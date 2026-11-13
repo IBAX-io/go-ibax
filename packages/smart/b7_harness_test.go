@@ -401,6 +401,8 @@ func b7TypedScenarios() []b7Scenario {
 			c.UpdateExt(tbl, b7m("at", b7m("$lt", "2030-01-01")), b7m("+amount", int64(1)))
 			c.UpdateExt(tbl, b7m("day", "2023-03-03", "tm", b7m("$gt", "00:00")), b7m("-amount", int64(1)))
 			c.UpdateExt(tbl, b7m("id", int64(-3)), b7m("secret", "s", "name", "r3"))
+			c.UpdateExt(tbl, b7m("id", int64(-3)), b7m("secret", "<s&\u2028\x01>"))
+			c.UpdateExt(tbl, b7m("id", int64(-3)), b7m("secret", "z"))
 			c.Select(tbl, []any{"id", "name", "data", "bin", "at", "day", "tm", "amount", "flag", "secret", "data->a"}, 0, b7m("id", int64(1)), 0, 10,
 				b7m("id", b7m("$lte", int64(-1))), nil, "", false)
 			c.Select(tbl, "id,bin", 0, nil, 0, 10, b7m("bin", b7m("$eq", "\\x01")), nil, "", false)
@@ -576,7 +578,9 @@ func (e *b7Env) run(s b7Scenario, mode string, impl b7Impl) string {
 		fmt.Fprintf(&out, "credit %d %d %s\n", f.Ecosystem, f.Recipient, f.Amount)
 	}
 	stats := dtx.Stats().Since(before)
-	fmt.Fprintf(&out, "stats statements %d read %d written %d\n", stats.Statements-int64(trace.pgClass), stats.Read, stats.Written)
+	// the count of the indexes of a table in pg_class is a statement that reads a row, which the
+	// schema keeps the result of
+	fmt.Fprintf(&out, "stats statements %d read %d written %d\n", stats.Statements-int64(trace.pgClass), stats.Read-int64(trace.pgClass), stats.Written)
 	if view != nil {
 		out.WriteString(view.Digest())
 	}

@@ -134,12 +134,12 @@ func (n nextID) GetNextID(string) (int64, error) {
 // A statement is hashed together with its values, so two statements that differ in a value only
 // are not hashed alike
 func TestBoundStatement(t *testing.T) {
-	a := BoundStatement(`UPDATE "t" SET "v"=?`, []any{`1`})
-	b := BoundStatement(`UPDATE "t" SET "v"=?`, []any{`2`})
+	a := string(AppendBoundStatement(nil, `UPDATE "t" SET "v"=?`, []any{`1`}))
+	b := string(AppendBoundStatement(nil, `UPDATE "t" SET "v"=?`, []any{`2`}))
 	if a == b {
 		t.Errorf("%s is %s", a, b)
 	}
-	if got := BoundStatement(`DELETE FROM "t"`, nil); got != `DELETE FROM "t"` {
+	if got := string(AppendBoundStatement(nil, `DELETE FROM "t"`, nil)); got != `DELETE FROM "t"` {
 		t.Errorf("statement without values: %s", got)
 	}
 }

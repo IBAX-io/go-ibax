@@ -333,32 +333,6 @@ func (b *SQLQueryBuilder) GetSQLInsertQuery(idGetter NextIDGetter) (string, []an
 	return fmt.Sprintf(`INSERT INTO "%s" (%s) VALUES (%s)`, b.Table, flds, vls), args, nil
 }
 
-func (b SQLQueryBuilder) GenerateRollBackInfoString(logData map[string]string) (string, error) {
-	rollbackInfo := make(map[string]string)
-	for k, v := range logData {
-		var eco bool
-		idNames := strings.SplitN(b.Table, `_`, 2)
-		if len(idNames) == 2 {
-			b.keyName = idNames[1]
-			if b.KeyTableChkr.IsKeyTable(b.keyName) {
-				eco = true
-			}
-		}
-		if k == `id` || (b.isKeyTable && !eco) {
-			continue
-		}
-		rollbackInfo[k] = v
-	}
-
-	jsonRollbackInfo, err := json.Marshal(rollbackInfo)
-	if err != nil {
-		b.Logger.WithFields(log.Fields{"type": consts.JSONMarshallError, "error": err}).Error("marshalling rollback info to json")
-		return "", err
-	}
-
-	return string(jsonRollbackInfo), nil
-}
-
 // toSQLValue returns the expression of a value and the value bound to its placeholder, nil when
 // the expression has none. A value of a date or time column must be a literal
 func (b SQLQueryBuilder) toSQLValue(rawValue, rawField string) (string, any, error) {
@@ -417,15 +391,6 @@ func isParamsContainsEcosystem(fields []string, ivalues []any) (bool, int) {
 
 // sqlHexExpr is the expression of a bytea value, bound as its hex
 const sqlHexExpr = ` decode(?,'HEX')`
-
-// BoundStatement returns a statement together with the values bound to its placeholders, the form
-// in which a statement is hashed
-func BoundStatement(query string, args []any) string {
-	if len(args) == 0 {
-		return query
-	}
-	return query + " " + fmt.Sprintf("%q", args)
-}
 
 func toSQLField(rawField string) string {
 	if rawField[:1] == "+" || rawField[:1] == "-" {

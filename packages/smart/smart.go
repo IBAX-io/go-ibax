@@ -103,6 +103,10 @@ type SmartContract struct {
 	// tables are the rows of 1_tables and their permissions the run of the transaction read, which
 	// the checks of access read again from them
 	tables sqldb.TableMemo
+	// writeBuf and writeKeys are the scratch of the rollback records of writeRows: the bound
+	// statement it hashes, the data of a record and the sorted columns of a row
+	writeBuf  []byte
+	writeKeys []string
 	// logger is the entry of GetLogger, for the fields loggerKey
 	logger    *log.Entry
 	loggerKey loggerKey

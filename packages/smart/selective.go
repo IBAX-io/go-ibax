@@ -20,16 +20,25 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr, rollDataHashStr string) {
+// addRollback adds the rollback record of a row a statement wrote, with the hash of the bound
+// statement
+func addRollback(sc *SmartContract, table, tableID, rollbackInfoStr string, dataHash []byte) {
 	rollbackTx := &types.RollbackTx{
 		BlockId:   sc.BlockHeader.BlockId,
 		TxHash:    sc.Hash,
 		NameTable: table,
 		TableId:   tableID,
 		Data:      rollbackInfoStr,
-		DataHash:  crypto.Hash([]byte(rollDataHashStr)),
+		DataHash:  dataHash,
 	}
 	sc.RollBackTx = append(sc.RollBackTx, rollbackTx)
+}
+
+// boundHash returns the hash of a statement bound to its values, which the rollback records of the
+// rows it writes keep. The text is written into a buffer of the transaction used again
+func (sc *SmartContract) boundHash(query string, args []any) []byte {
+	sc.writeBuf = qb.AppendBoundStatement(sc.writeBuf[:0], query, args)
+	return crypto.Hash(sc.writeBuf)
 }
 
 func (sc *SmartContract) selectiveLoggingAndUpd(fields []string, ivalues []any,
@@ -100,7 +109,7 @@ func (sc *SmartContract) writeRows(fields []string, ivalues []any,
 			return 0, "", nil, errWhereUpdate
 		}
 	}
-	var rollDataHashStr string
+	var dataHash []byte
 
 	if !sqlBuilder.Where.IsEmpty() && len(logData) > 0 {
 		updateExpr, updateArgs, err := sqlBuilder.GetSQLUpdateExpr(logData)
@@ -124,7 +133,9 @@ func (sc *SmartContract) writeRows(fields []string, ivalues []any,
 			}
 			cost += updateCost
 		}
-		rollDataHashStr = qb.BoundStatement(`UPDATE "`+strings.Trim(sqlBuilder.Table, `"`)+`" SET `+updateExpr+" "+whereExpr, args)
+		if generalRollback && len(rows.List) > 0 {
+			dataHash = sc.boundHash(`UPDATE "`+strings.Trim(sqlBuilder.Table, `"`)+`" SET `+updateExpr+" "+whereExpr, args)
+		}
 		prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 		err = sc.DbTransaction.Update(sqlBuilder.Table, updateExpr, whereExpr, args...)
 		if err != nil {
@@ -137,12 +148,8 @@ func (sc *SmartContract) writeRows(fields []string, ivalues []any,
 
 		for i := 0; i < len(rows.List) && generalRollback; i++ {
 			rollData := rows.List[i]
-			rollbackInfoStr, err := sqlBuilder.GenerateRollBackInfoString(rollData)
-			if err != nil {
-				logger.WithError(err).Error("on generate rollback info string for update")
-				return 0, "", nil, err
-			}
-			addRollback(sc, sqlBuilder.Table, rollData["id"], rollbackInfoStr, rollDataHashStr)
+			sc.writeBuf, sc.writeKeys = sqlBuilder.AppendRollBackInfo(sc.writeBuf[:0], sc.writeKeys, rollData)
+			addRollback(sc, sqlBuilder.Table, rollData["id"], string(sc.writeBuf), dataHash)
 		}
 
 		var ids []string
@@ -170,7 +177,9 @@ func (sc *SmartContract) writeRows(fields []string, ivalues []any,
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err, "query": insertQuery}).Log(dbLevel(err), "getting total query cost for insert query")
 		return 0, "", nil, err
 	}
-	rollDataHashStr = qb.BoundStatement(insertQuery, insertArgs)
+	if generalRollback {
+		dataHash = sc.boundHash(insertQuery, insertArgs)
+	}
 	cost += insertCost
 	prevMaxID, maxIDCached := sc.DbTransaction.CachedMaxID(sqlBuilder.Table)
 	err = sc.DbTransaction.ExecSql(insertQuery, insertArgs...)
@@ -191,7 +200,7 @@ func (sc *SmartContract) writeRows(fields []string, ivalues []any,
 				tid = sqlBuilder.TableID() + "," + sqlBuilder.GetEcosystem()
 			}
 		}
-		addRollback(sc, sqlBuilder.Table, tid, "", rollDataHashStr)
+		addRollback(sc, sqlBuilder.Table, tid, "", dataHash)
 	}
 	return cost, sqlBuilder.TableID(), nil, nil
 }
