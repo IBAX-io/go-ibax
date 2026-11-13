@@ -40,6 +40,17 @@
 // node without transactions then takes those first in the order of the blocks of that validator
 // by the request RequestTypeBftPending: count u32, answered by count u32 ‖ count × (len u32 ‖
 // body), at most count of them and max_block_size bytes together.
+//
+// The requests come unauthenticated from anyone who reaches the TCP port, and a few bytes of one
+// ask for up to max_block_size of answer. The service serves at most Config.ServeTxs requests
+// RequestTypeBftTransactions at once and closes those past it unanswered: a node asks for the
+// bodies of each proposal and batch it lacks, the requests of one address are as many as the
+// validators behind it, and a request asks for no more than the 32 bytes of each hash allow. It
+// serves at most Config.ServePending requests RequestTypeBftPending at once, and one of an IP
+// address a Config.PendingInterval, the interval at which a node pulls from a validator; it answers
+// those past either with no transaction at once. The loopback address is not limited by the
+// interval: the validators of a host share it, and no other host reaches the node from it. A
+// request refused counts in bftmon RefusedTxRequests or RefusedPendingRequests.
 package bftnet
 
 import (
@@ -138,6 +149,12 @@ type Config struct {
 	TxQueueBytes int64
 	// Dial and Write are the timeouts of a connection and of a write
 	Dial, Write time.Duration
+	// ServeTxs is the requests RequestTypeBftTransactions served at once at most
+	ServeTxs int
+	// ServePending is the requests RequestTypeBftPending served at once at most, and
+	// PendingInterval how often one of an IP address is served
+	ServePending    int
+	PendingInterval time.Duration
 }
 
 // DefaultConfig is the starting values of the design, section 4.6
@@ -149,7 +166,18 @@ var DefaultConfig = Config{
 	Write: 5 * time.Second,
 
 	TxQueueBytes: 64 << 20,
+
+	ServeTxs:        64,
+	ServePending:    2,
+	PendingInterval: 2 * time.Second,
 }
+
+// maxPendingAddrs is the IP addresses whose last request RequestTypeBftPending the service keeps
+// for Config.PendingInterval; past it the requests of a new address are refused until some expire
+const maxPendingAddrs = 4096
+
+// errBusy closes a request past the requests served at once
+var errBusy = errors.New("bftnet: as many requests served as the node serves at once")
 
 // Service is the consensus messages of a node on the network
 type Service struct {
@@ -160,11 +188,63 @@ type Service struct {
 	peers map[string]*peer
 	now   func() time.Time
 	sleep func(time.Duration)
+
+	// txSlots and pendingSlots are the requests served at once
+	txSlots, pendingSlots chan struct{}
+	// pendingMu guards pendingAt, when the service last served a request RequestTypeBftPending
+	// of each IP address
+	pendingMu sync.Mutex
+	pendingAt map[string]time.Time
 }
 
 // NewService is the service of a node
 func NewService(cfg Config, handler Handler) *Service {
-	return &Service{cfg: cfg, handler: handler, peers: map[string]*peer{}, now: time.Now, sleep: time.Sleep}
+	return &Service{cfg: cfg, handler: handler, peers: map[string]*peer{}, now: time.Now, sleep: time.Sleep,
+		txSlots: make(chan struct{}, max(cfg.ServeTxs, 1)), pendingSlots: make(chan struct{}, max(cfg.ServePending, 1)),
+		pendingAt: map[string]time.Time{}}
+}
+
+// acquire takes a slot of the requests served at once, false if none is free
+func acquire(slots chan struct{}) bool {
+	select {
+	case slots <- struct{}{}:
+		return true
+	default:
+		return false
+	}
+}
+
+// pendingAllowed reports whether the service serves now a request RequestTypeBftPending of the
+// address, one of an IP address a Config.PendingInterval but for the loopback, and records it
+func (s *Service) pendingAllowed(addr net.Addr) bool {
+	host := ""
+	if addr != nil {
+		host = addr.String()
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+	}
+	if ip := net.ParseIP(host); ip != nil && ip.IsLoopback() {
+		return true
+	}
+	now := s.now()
+	s.pendingMu.Lock()
+	defer s.pendingMu.Unlock()
+	if last, ok := s.pendingAt[host]; ok && now.Sub(last) < s.cfg.PendingInterval {
+		return false
+	}
+	if len(s.pendingAt) >= maxPendingAddrs {
+		for h, last := range s.pendingAt {
+			if now.Sub(last) >= s.cfg.PendingInterval {
+				delete(s.pendingAt, h)
+			}
+		}
+		if len(s.pendingAt) >= maxPendingAddrs {
+			return false
+		}
+	}
+	s.pendingAt[host] = now
+	return true
 }
 
 var current atomic.Pointer[Service]
@@ -374,6 +454,11 @@ func FetchCertificates(addr string, from uint64, count int, timeout time.Duratio
 
 // ServeTransactions answers a request RequestTypeBftTransactions
 func (s *Service) ServeTransactions(rw io.ReadWriter) error {
+	if !acquire(s.txSlots) {
+		bftmon.Count(bftmon.RefusedTxRequests)
+		return errBusy
+	}
+	defer func() { <-s.txSlots }()
 	var req [8 + 4 + bft.HashSize + 4]byte
 	if _, err := io.ReadFull(rw, req[:]); err != nil {
 		return err
@@ -465,12 +550,32 @@ func FetchTransactions(addr string, height uint64, round uint32, hash bft.Hash, 
 	return bodies, nil
 }
 
-// ServePending answers a request RequestTypeBftPending
-func (s *Service) ServePending(rw io.ReadWriter) error {
+// ServePending answers a request RequestTypeBftPending of the connection, with no transaction if
+// it is past the requests served at once or of the address in Config.PendingInterval
+func (s *Service) ServePending(conn net.Conn) error {
 	var req [4]byte
-	if _, err := io.ReadFull(rw, req[:]); err != nil {
+	if _, err := io.ReadFull(conn, req[:]); err != nil {
 		return err
 	}
+	if !acquire(s.pendingSlots) {
+		return s.refusePending(conn)
+	}
+	defer func() { <-s.pendingSlots }()
+	if !s.pendingAllowed(conn.RemoteAddr()) {
+		return s.refusePending(conn)
+	}
+	return s.servePending(conn, req)
+}
+
+// refusePending answers a request RequestTypeBftPending with no transaction
+func (s *Service) refusePending(w io.Writer) error {
+	bftmon.Count(bftmon.RefusedPendingRequests)
+	_, err := w.Write(binary.BigEndian.AppendUint32(nil, 0))
+	return err
+}
+
+// servePending answers the request of the count
+func (s *Service) servePending(rw io.Writer, req [4]byte) error {
 	count := min(int(binary.BigEndian.Uint32(req[:])), s.handler.MaxBlockTxs())
 	maxBlock := s.handler.MaxBlockSize()
 	bodies := s.handler.PendingTxs(count, maxBlock)

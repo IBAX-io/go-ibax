@@ -63,6 +63,12 @@ const (
 	// PendingPulled is the transactions the node took from a validator that said it had some
 	// while its own pool had none
 	PendingPulled = "pulled_txs"
+	// RefusedTxRequests is the requests of the bodies of transactions closed unanswered past
+	// those served at once
+	RefusedTxRequests = "refused_tx_requests"
+	// RefusedPendingRequests is the requests of the first transactions of the pool answered with
+	// none: past those served at once, or of an address served in the interval
+	RefusedPendingRequests = "refused_pending_requests"
 )
 
 // EscalationHeights is the last heights the escalation rate is of: the share of them committed
