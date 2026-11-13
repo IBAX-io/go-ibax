@@ -994,6 +994,16 @@ func (a bftApp) propose(height uint64, round uint32, start, started, deadline ti
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
+	if b := block.HeldProposal(int64(height)); b != nil {
+		// the block of an earlier round, whose writes go on: proposed again, it keeps its trial
+		hash, err := bft.HashOf(b.Header.BlockHash)
+		if err != nil {
+			return nil, bft.Hash{}, err
+		}
+		a.logger.WithFields(log.Fields{"height": height, "round": round, "txs": len(b.TxFullData)}).
+			Debug("proposing again the block of the node whose trial it holds")
+		return b, hash, nil
+	}
 	ts := max(faults.Now().Unix(), prev.Time+1)
 	collect := time.Now()
 	// the lag is how much later than the validators the proposer started the round

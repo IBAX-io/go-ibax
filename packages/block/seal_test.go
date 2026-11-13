@@ -6,11 +6,13 @@
 package block
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -211,4 +213,45 @@ func TestDropCancelsStalledWrite(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return sqldb.DBConn.Raw(`SELECT count(*) FROM pg_namespace WHERE nspname = 'drop_stall_test'`).Scan(&schemas).Error == nil && schemas == 0
 	}, time.Second, 5*time.Millisecond, "the transaction of the dropped trial is not rolled back")
+}
+
+// TestHeldProposalKept checks the block of a proposal of the node whose writes go on, or
+// succeeded, is the block the node proposes again and takes as valid at its height without
+// executing it again, and one whose writes failed, or that the node dropped, is not
+func TestHeldProposalKept(t *testing.T) {
+	hash := bft.Hash{7}
+	b := &Block{BlockData: &types.BlockData{Header: &types.BlockHeader{BlockId: 5, BlockHash: hash[:]}}, GenBlock: true}
+	hold := func(tr *heldTrial) {
+		held.Lock()
+		held.t = tr
+		held.Unlock()
+	}
+	t.Cleanup(func() { hold(nil) })
+
+	tr := &heldTrial{b: b, done: make(chan struct{})}
+	hold(tr)
+	require.Same(t, b, HeldProposal(5), "the block whose writes go on")
+	require.Nil(t, HeldProposal(6))
+	require.Same(t, tr, heldOf(5, hash))
+	require.Nil(t, heldOf(5, bft.Hash{8}))
+	require.Nil(t, heldOf(4, hash))
+	close(tr.done)
+	require.Same(t, b, HeldProposal(5), "the block whose writes succeeded")
+	require.NoError(t, heldOf(5, hash).wait())
+
+	tr = &heldTrial{b: b, done: make(chan struct{}), err: errors.New("flush")}
+	close(tr.done)
+	hold(tr)
+	require.Nil(t, HeldProposal(5), "the block whose writes failed")
+
+	tr = &heldTrial{b: b, done: make(chan struct{})}
+	tr.dropped.Store(true)
+	hold(tr)
+	require.Nil(t, HeldProposal(5), "a dropped trial")
+	require.Nil(t, heldOf(5, hash))
+
+	// the trial of a block of another node holds no writes going on: it is valid, not proposed
+	hold(&heldTrial{b: &Block{BlockData: b.BlockData}})
+	require.Nil(t, HeldProposal(5))
+	require.NotNil(t, heldOf(5, hash))
 }

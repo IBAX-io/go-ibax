@@ -120,3 +120,34 @@ func TestPendingBlockUnknownAsksValid(t *testing.T) {
 		t.Fatal("a block Valid takes is not decided")
 	}
 }
+
+// TestPendingBlockOutlastsRounds checks the only validator whose writes outlast its propose
+// timeout proposes the same block in the next round, and decides it there once its writes end,
+// whether they end in that round or before it starts
+func TestPendingBlockOutlastsRounds(t *testing.T) {
+	own := testHash(0xaa)
+	for _, before := range []bool{false, true} {
+		c := alone(t)
+		c.take(c.m.Start())
+		c.timeout(0, StepPropose)
+		c.wantVote(TypePrevote, 0, Nil)
+		c.wantVote(TypePrecommit, 0, Nil)
+		if before {
+			// the writes end in round 0, after its nil prevote
+			c.take(c.m.OnValid(1, own, ValidityValid))
+		}
+		c.timeout(0, StepPrecommit)
+		if !c.proposed(1) {
+			t.Fatal("no proposal in the next round")
+		}
+		if !before {
+			c.wantNoVote(TypePrevote, 1)
+			c.take(c.m.OnValid(1, own, ValidityValid))
+		}
+		c.wantVote(TypePrevote, 1, own)
+		c.wantVote(TypePrecommit, 1, own)
+		if !c.m.Decided() {
+			t.Fatal("the block whose writes outlasted a round is not decided")
+		}
+	}
+}

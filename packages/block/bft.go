@@ -123,6 +123,42 @@ func takeHeld() *heldTrial {
 	return t
 }
 
+// heldOf is the trial the node holds of the block of the hash at the height, nil if it holds none
+// or dropped it
+func heldOf(height int64, hash bft.Hash) *heldTrial {
+	held.Lock()
+	defer held.Unlock()
+	t := held.t
+	if t == nil || t.dropped.Load() || t.b.Header.BlockId != height {
+		return nil
+	}
+	if h, err := bft.HashOf(t.b.Header.BlockHash); err != nil || h != hash {
+		return nil
+	}
+	return t
+}
+
+// HeldProposal is the block of the proposal of the node at the height whose trial it holds, while
+// its writes go on or once they succeeded; nil if there is none. A proposer whose block did not get
+// its prevote in a round, as its writes outlasted its propose timeout, proposes that block again
+// in a later round: its trial goes on, and the block is neither dropped nor executed again.
+func HeldProposal(height int64) *Block {
+	held.Lock()
+	defer held.Unlock()
+	t := held.t
+	if t == nil || t.done == nil || t.dropped.Load() || t.b.Header.BlockId != height {
+		return nil
+	}
+	select {
+	case <-t.done:
+		if t.err != nil {
+			return nil
+		}
+	default:
+	}
+	return t.b
+}
+
 // dropHeld rolls back the trial the node holds: the state outside the database is already as it
 // was before it
 func dropHeld() {
@@ -481,6 +517,11 @@ func Validate(binData []byte, height int64, hash bft.Hash, writes sync.Locker) e
 	defer writes.Unlock()
 	if err := atTop(height); err != nil {
 		return err
+	}
+	// the block of a trial the node holds, of its own proposal as of another, is valid once the
+	// trial wrote it: it is not executed again; a trial whose writes failed is tried again
+	if t := heldOf(height, hash); t != nil && t.wait() == nil {
+		return nil
 	}
 	err = b.Check()
 	b.trial = false

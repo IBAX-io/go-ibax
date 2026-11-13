@@ -459,7 +459,10 @@ func (m *Machine) startRound(round uint32) {
 			p = &Proposal{Block: block, Hash: hash}
 			// the block of the proposer is valid as Value made it, or once the node tells it is:
 			// the node tries it once
-			if pending {
+			if _, known := m.valid[hash]; known {
+				// the block of an earlier round of the height, proposed again: its validity is
+				// known
+			} else if pending {
 				m.pending[hash] = true
 			} else {
 				m.valid[hash] = true
