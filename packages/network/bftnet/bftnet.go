@@ -32,6 +32,14 @@
 // them after the consensus frames and keeps at most Config.TxQueueBytes of them for a peer; past
 // it the newest are dropped, and the proposer of a block gives the bodies a node does not have.
 // The service relays none: every node sends its own transactions to all the others.
+//
+// The transactions a node sent may not reach the pool of another: a full queue drops them, and a
+// full pool leaves them out. So that a proposer without transactions does not let its round time
+// out while another validator has some, a validator with transactions at its height says so in a
+// frame of the kind FramePending, height u64 ‖ validator u32, which the service relays none of; a
+// node without transactions then takes those first in the order of the blocks of that validator
+// by the request RequestTypeBftPending: count u32, answered by count u32 ‖ count × (len u32 ‖
+// body), at most count of them and max_block_size bytes together.
 package bftnet
 
 import (
@@ -59,7 +67,11 @@ const (
 	FrameEvidence uint8 = 3
 	FrameBatch    uint8 = 4
 	FrameTxs      uint8 = 5
+	FramePending  uint8 = 6
 )
+
+// pendingPayload is the length of the payload of a frame FramePending
+const pendingPayload = 8 + 4
 
 // TxFrameBytes is the size a frame of transactions is cut at: a transaction longer than it goes
 // alone in its frame. It bounds how long a frame of transactions holds up the consensus frames
@@ -97,6 +109,12 @@ type Handler interface {
 	Batch(b *bft.Batch)
 	// Txs takes the bodies of transactions another node sent; it does not block the stream
 	Txs(bodies [][]byte)
+	// Pending takes the word of the validator of the index that it has transactions at the
+	// height; it does not block the stream
+	Pending(height uint64, validator uint32)
+	// PendingTxs is the bodies of the first count transactions of the pool in the order of the
+	// blocks, as they were sent, at most maxBytes of them together
+	PendingTxs(count int, maxBytes int64) [][]byte
 	// Certificates is the stored certificates of the heights from, from+1, … up to count of
 	// them, stopping at the first height without one
 	Certificates(from uint64, count int) ([][]byte, error)
@@ -173,6 +191,8 @@ func maxPayload(kind uint8, maxBlock int64) int64 {
 		return 8 + 4 + 4 + 4 + 4 + bft.MaxBatchHeader + 4 + maxBlock + 2 + sig
 	case FrameTxs:
 		return maxBlock
+	case FramePending:
+		return pendingPayload
 	}
 	return -1
 }
@@ -269,6 +289,11 @@ func (s *Service) take(kind uint8, payload []byte) bool {
 	case FrameTxs:
 		if bodies, err := UnmarshalTxs(payload, s.handler.MaxBlockTxs()); err == nil {
 			s.handler.Txs(bodies)
+			return false
+		}
+	case FramePending:
+		if len(payload) == pendingPayload {
+			s.handler.Pending(binary.BigEndian.Uint64(payload), binary.BigEndian.Uint32(payload[8:]))
 			return false
 		}
 	}
@@ -440,6 +465,76 @@ func FetchTransactions(addr string, height uint64, round uint32, hash bft.Hash, 
 	return bodies, nil
 }
 
+// ServePending answers a request RequestTypeBftPending
+func (s *Service) ServePending(rw io.ReadWriter) error {
+	var req [4]byte
+	if _, err := io.ReadFull(rw, req[:]); err != nil {
+		return err
+	}
+	count := min(int(binary.BigEndian.Uint32(req[:])), s.handler.MaxBlockTxs())
+	maxBlock := s.handler.MaxBlockSize()
+	bodies := s.handler.PendingTxs(count, maxBlock)
+	b := binary.BigEndian.AppendUint32(nil, 0)
+	n, left := 0, maxBlock
+	for _, body := range bodies {
+		if n == count || len(body) == 0 || int64(len(body)) > left {
+			break
+		}
+		left -= int64(len(body))
+		b = binary.BigEndian.AppendUint32(b, uint32(len(body)))
+		b = append(b, body...)
+		n++
+	}
+	binary.BigEndian.PutUint32(b, uint32(n))
+	_, err := rw.Write(b)
+	return err
+}
+
+// FetchPending fetches from the node at addr the bodies of the first count transactions of its
+// pool in the order of the blocks, at most maxBlock bytes together
+func FetchPending(addr string, count int, maxBlock int64, timeout time.Duration) ([][]byte, error) {
+	conn, err := faults.Dial(addr, timeout)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	if err := conn.SetDeadline(time.Now().Add(timeout)); err != nil {
+		return nil, err
+	}
+	if err := (&network.RequestType{Type: network.RequestTypeBftPending}).Write(conn); err != nil {
+		return nil, err
+	}
+	if _, err := conn.Write(binary.BigEndian.AppendUint32(nil, uint32(max(count, 0)))); err != nil {
+		return nil, err
+	}
+	r := bufio.NewReader(conn)
+	var n [4]byte
+	if _, err := io.ReadFull(r, n[:]); err != nil {
+		return nil, err
+	}
+	got := int64(binary.BigEndian.Uint32(n[:]))
+	if got > int64(max(count, 0)) {
+		return nil, fmt.Errorf("bftnet: %d transactions for %d asked", got, count)
+	}
+	bodies := make([][]byte, got)
+	left := maxBlock
+	for i := range bodies {
+		if _, err := io.ReadFull(r, n[:]); err != nil {
+			return nil, err
+		}
+		l := int64(binary.BigEndian.Uint32(n[:]))
+		if l == 0 || l > left {
+			return nil, fmt.Errorf("bftnet: a pending transaction of %d bytes, %d left", l, left)
+		}
+		left -= l
+		bodies[i] = make([]byte, l)
+		if _, err := io.ReadFull(r, bodies[i]); err != nil {
+			return nil, err
+		}
+	}
+	return bodies, nil
+}
+
 // SetPeers sets the TCP addresses of the other validators: the service opens a stream to each
 // new one and closes those of the addresses left out
 func (s *Service) SetPeers(addrs []string) {
@@ -493,6 +588,13 @@ func (s *Service) SendEvidence(body []byte) { s.Broadcast(FrameEvidence, body) }
 
 // SendBatch broadcasts a batch of a proposal of the node
 func (s *Service) SendBatch(b *bft.Batch) { s.Broadcast(FrameBatch, b.Marshal()) }
+
+// SendPending broadcasts that the node, the validator of the index, has transactions at the
+// height
+func (s *Service) SendPending(height uint64, validator uint32) {
+	p := binary.BigEndian.AppendUint64(make([]byte, 0, pendingPayload), height)
+	s.Broadcast(FramePending, binary.BigEndian.AppendUint32(p, validator))
+}
 
 // MarshalTxs is the payload of a frame of transactions
 func MarshalTxs(bodies [][]byte) []byte {

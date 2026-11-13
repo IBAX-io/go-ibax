@@ -64,6 +64,13 @@ const (
 // work, not at the next tick, which would hold a chain under load to a block a tick
 type bftNext struct{}
 
+// bftWork is the event of the transactions the node pulled at a height from a validator that said
+// it had some (bftPending): the machine starts the height at once, its round 0 from then
+type bftWork struct {
+	height uint64
+	at     time.Time
+}
+
 // bftExpired is the event of a timeout the machine scheduled, due when it was to expire: the
 // driver takes it later if it was busy, trying a block under DBLock
 type bftExpired struct {
@@ -100,8 +107,10 @@ type bftDriver struct {
 	logger    *log.Entry
 	networkID uint64
 	svc       *bftnet.Service
-	events    chan any // *bft.Proposal, *bft.Vote, bftExpired, bftNext
+	events    chan any // *bft.Proposal, *bft.Vote, bftExpired, bftNext, bftWork
 	received  chan [][]byte
+	// pending gets the node without transactions those of a validator that has some
+	pending *bftPending
 
 	mu   sync.Mutex // guards pool, which the handler of the service also uses
 	pool *bft.Pool
@@ -148,6 +157,19 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 	cfg := bftnet.DefaultConfig
 	cfg.Rate = syspar.GetBftPeerMsgRate()
 	d.svc = bftnet.NewService(cfg, d)
+	d.pending = &bftPending{
+		poolLen: transaction.TxPool.Len,
+		fetch:   fetchPending,
+		receive: func(bodies [][]byte) int {
+			taken := d.takeTxs(bodies)
+			bftmon.Add(bftmon.PendingPulled, taken)
+			return taken
+		},
+		work:    func(height uint64, at time.Time) { d.post(bftWork{height: height, at: at}) },
+		say:     d.svc.SendPending,
+		timeout: bftnet.DefaultConfig.Dial,
+		now:     time.Now,
+	}
 	d.spec = &bftSpeculator{
 		logger: d.logger,
 		begin:  speculate,
@@ -269,7 +291,7 @@ func (d *bftDriver) newMachine(height uint64, set bft.Validators) {
 	app := bftApp{logger: d.logger, bodies: d.bodies, spec: d.spec, stream: func(height uint64, round uint32) *bftStream {
 		return &bftStream{send: d.svc.SendBatch, key: syspar.GetNodePrivKey(), networkID: d.networkID,
 			height: height, round: round, validator: set.Proposer(height, round), kept: d.bodies.stream(height, round)}
-	}, roundStart: d.roundStartOf}
+	}, roundStart: d.roundStartOf, pull: d.pending.pullNow}
 	d.m = bft.NewMachine(d.config(), app, syspar.GetNodePrivKey(), syspar.GetNodePubKey(), d.networkID, height, set)
 }
 
@@ -288,6 +310,7 @@ func (d *bftDriver) reset() error {
 	d.mu.Unlock()
 	d.newMachine(last+1, set)
 	d.watch.moveTo(last+1, set, time.Now(), false)
+	d.pending.moveTo(last+1, set, syspar.GetNodePubKey())
 	return nil
 }
 
@@ -355,6 +378,7 @@ func (d *bftDriver) syncHeight() error {
 	d.mu.Unlock()
 	d.bodies.prune(last)
 	d.newMachine(last+1, set)
+	d.pending.moveTo(last+1, set, syspar.GetNodePubKey())
 	d.roundStart = bftRoundStart{}
 	if decided := d.watch.decided(last); !decided.IsZero() && d.hasWork() {
 		// the validators of the quorum that reached the node then start the height at once, as
@@ -402,9 +426,13 @@ func (d *bftDriver) event(e any) {
 	case bftExpired:
 		d.expired(e)
 	case bftNext:
-		if !d.m.Decided() && d.hasWork() {
-			d.apply(d.m.Start())
+		d.startWork()
+	case bftWork:
+		if e.height == d.m.Height() && d.roundStart.height != e.height {
+			// the validator that had the transactions started the round then
+			d.roundStart = bftRoundStart{height: e.height, at: e.at}
 		}
+		d.startWork()
 	default:
 		d.give(e)
 	}
@@ -424,10 +452,7 @@ func (d *bftDriver) tick() {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the height")
 		return
 	}
-	busy := !d.m.Decided() && d.hasWork()
-	if busy {
-		d.apply(d.m.Start())
-	}
+	busy := d.startWork()
 	d.checkLiveness(now, busy, d.m.Round(), d.silent)
 	if time.Since(d.resent) < bftResend {
 		return
@@ -440,6 +465,19 @@ func (d *bftDriver) tick() {
 		d.send(m)
 		d.give(m)
 	}
+}
+
+// startWork starts the height if it is undecided and has work, says so to the others if the
+// pool has transactions, and reports whether it has work
+func (d *bftDriver) startWork() bool {
+	if d.m.Decided() || !d.hasWork() {
+		return false
+	}
+	if transaction.TxPool.Len() > 0 {
+		d.pending.announce(d.m.Height())
+	}
+	d.apply(d.m.Start())
+	return true
 }
 
 // hasWork reports whether the height has a transaction to put in a block: a transaction of the
@@ -737,13 +775,42 @@ func (d *bftDriver) receiveTxs() {
 		case <-d.ctx.Done():
 			return
 		case bodies := <-d.received:
-			maxSize := syspar.GetMaxTxSize()
-			bodies = slices.DeleteFunc(bodies, func(b []byte) bool { return int64(len(b)) > maxSize })
-			if err := transaction.TxPool.Receive(bodies, true); err != nil {
-				d.logger.WithFields(log.Fields{"type": consts.ProtocolError, "error": err}).Warn("taking the transactions of a node")
-			}
+			d.takeTxs(bodies)
 		}
 	}
+}
+
+// takeTxs puts transactions of another node in the pool as sent, and is the count it put
+func (d *bftDriver) takeTxs(bodies [][]byte) int {
+	maxSize := syspar.GetMaxTxSize()
+	bodies = slices.DeleteFunc(bodies, func(b []byte) bool { return int64(len(b)) > maxSize })
+	taken, full, err := transaction.TxPool.Receive(bodies, true)
+	if err != nil {
+		d.logger.WithFields(log.Fields{"type": consts.ProtocolError, "error": err}).Warn("taking the transactions of a node")
+	}
+	bftmon.Add(bftmon.PoolFullTxs, full)
+	return taken
+}
+
+// Pending is bftnet.Handler.Pending
+func (d *bftDriver) Pending(height uint64, validator uint32) {
+	if !bftStopped() {
+		d.pending.hint(height, validator)
+	}
+}
+
+// PendingTxs is bftnet.Handler.PendingTxs: the first transactions of the pool
+func (d *bftDriver) PendingTxs(count int, maxBytes int64) [][]byte {
+	return transaction.TxPool.Head(count, maxBytes)
+}
+
+// fetchPending takes the first transactions of the pool of the validator of the key
+func fetchPending(key []byte, timeout time.Duration) ([][]byte, error) {
+	addr, ok := syspar.GetNodeTCPAddress(key)
+	if !ok {
+		return nil, errNoValidator
+	}
+	return bftnet.FetchPending(addr, syspar.GetMaxTxCount(), syspar.GetMaxBlockSize(), timeout)
 }
 
 // Evidence is bftnet.Handler.Evidence
@@ -782,6 +849,9 @@ type bftApp struct {
 	stream func(height uint64, round uint32) *bftStream
 	// roundStart is when the validators started a round, zero if the node does not know
 	roundStart func(height uint64, round uint32) time.Time
+	// pull pulls before the deadline the transactions of the validators that said they had some
+	// at the height, and reports whether the pool took any
+	pull func(height uint64, deadline time.Time) bool
 }
 
 // Value generates the block of the proposer: its time is the clock in seconds and above the time
@@ -797,6 +867,9 @@ type bftApp struct {
 // the block of the height before, makes a block of the time left, at least 1/proposeFloor of
 // max_block_generation_time. The limit is the proposer's choice of the transactions of its
 // block: the validators try the block without one, and its time only gets closer to their clocks.
+//
+// A proposer that finds no transaction for its block pulls, within the same deadline, those of the
+// validators that said they had some at the height (bftPending), and makes its block of them.
 func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err error) {
 	// a proposer without a block proposes nothing and the round times out (startRound): the log
 	// tells why, so that each propose timeout of a proposer that runs is explained
@@ -829,10 +902,25 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 	}
 	waited := time.Since(start)
 	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageWait).Observe(waited.Seconds())
-	// the block is made and tried under DBLock, on the last block as it is then
+	bin, hash, err := a.propose(height, round, start, started, deadline, waited)
+	if errors.Is(err, block.ErrEmptyBlock) && a.pull != nil && a.pull(height, deadline) {
+		// the transactions of a validator that said it had some, which the pool of the node lost
+		a.logger.WithFields(log.Fields{"height": height, "round": round, "pool": transaction.TxPool.Len()}).
+			Info("the proposer pulled transactions for its block")
+		bin, hash, err = a.propose(height, round, start, started, deadline, waited)
+	}
+	return bin, hash, err
+}
+
+// propose makes the block of Value from the transactions of the pool, which the proposer started
+// at start, the validators at started, and waited for its clock: the block is made and tried under
+// DBLock, on the last block as it is then
+func (a bftApp) propose(height uint64, round uint32, start, started, deadline time.Time,
+	waited time.Duration) ([]byte, bft.Hash, error) {
 	lockWrites()
 	defer DBUnlock()
-	if prev, err = lastBefore(height); err != nil {
+	prev, err := lastBefore(height)
+	if err != nil {
 		return nil, bft.Hash{}, err
 	}
 	ts := max(faults.Now().Unix(), prev.Time+1)

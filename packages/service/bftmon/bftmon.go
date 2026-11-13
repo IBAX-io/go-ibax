@@ -57,6 +57,12 @@ const (
 	FramesThrottled = "throttled_frames"
 	// TxFramesDropped is the frames of transactions of the node a full queue of a peer dropped
 	TxFramesDropped = "dropped_tx_frames"
+	// PoolFullTxs is the transactions of other nodes the pool left out for it or the account was
+	// full: the transactions the pool of this node does not have when another proposes them
+	PoolFullTxs = "pool_full_txs"
+	// PendingPulled is the transactions the node took from a validator that said it had some
+	// while its own pool had none
+	PendingPulled = "pulled_txs"
 )
 
 // EscalationHeights is the last heights the escalation rate is of: the share of them committed
@@ -133,8 +139,13 @@ func Clear(alert string) {
 }
 
 // Count adds one to a count of the consensus messages
-func Count(name string) {
-	Update(func(s *State) { s.Messages[name]++ })
+func Count(name string) { Add(name, 1) }
+
+// Add adds n to a count of the consensus messages
+func Add(name string, n int) {
+	if n > 0 {
+		Update(func(s *State) { s.Messages[name] += int64(n) })
+	}
 }
 
 // Get is a copy of the state

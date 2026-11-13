@@ -563,6 +563,26 @@ func (p *Pool) Take(limit int) []*Pending {
 	return taken
 }
 
+// Head is the data of the first transactions in the order of the blocks, at most count of them
+// and maxBytes together
+func (p *Pool) Head(count int, maxBytes int64) [][]byte {
+	if count <= 0 {
+		return nil
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	var data [][]byte
+	p.order.Ascend(func(e *poolEntry) bool {
+		if int64(len(e.data)) > maxBytes {
+			return false
+		}
+		maxBytes -= int64(len(e.data))
+		data = append(data, e.data)
+		return len(data) < count
+	})
+	return data
+}
+
 // Unsent is the data and the hashes of the first limit transactions not sent to the other nodes
 func (p *Pool) Unsent(limit int) (data, hashes [][]byte) {
 	p.mu.Lock()
@@ -665,27 +685,48 @@ func (p *Pool) Status(hash []byte) (pending bool, bad Refusal, found bool) {
 // Receive parses the transactions another node sent, verifies them in parallel and puts them in
 // the pool. It refuses the packet at the first transaction that does not parse or verify; one the
 // pool refuses is left out. sent marks those it takes as sent: the node they came from sends its
-// transactions to every other node itself, so this node relays none of them.
-func (p *Pool) Receive(datas [][]byte, sent bool) error {
+// transactions to every other node itself, so this node relays none of them. A transaction the
+// pool holds, or one twice in the packet, is not verified again. taken is the transactions it put
+// in the pool, full those a full pool or account left out.
+func (p *Pool) Receive(datas [][]byte, sent bool) (taken, full int, err error) {
 	txs := make([]*Transaction, 0, len(datas))
+	seen := make(map[string]bool, len(datas))
 	for _, data := range datas {
 		tx := &Transaction{}
 		if err := tx.Unmarshall(bytes.NewBuffer(data), true); err != nil {
 			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("unmarshalling transaction")
-			return err
+			return 0, 0, err
 		}
-		txs = append(txs, tx)
+		if h := string(tx.Hash()); !seen[h] {
+			seen[h] = true
+			txs = append(txs, tx)
+		}
 	}
-	for _, err := range VerifyAll(txs) {
+	// the transactions the pool holds are not verified again
+	p.mu.Lock()
+	fresh := txs[:0]
+	for _, tx := range txs {
+		if _, ok := p.entries[string(tx.Hash())]; !ok {
+			fresh = append(fresh, tx)
+		}
+	}
+	p.mu.Unlock()
+	for _, err := range VerifyAll(fresh) {
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.UnmarshallingError, "error": err}).Error("verifying transaction")
-			return err
+			return 0, 0, err
 		}
 	}
-	for i, err := range p.admit(txs, RateClient, sent) {
-		if err != nil {
-			log.WithFields(log.Fields{"tx_hash": txs[i].Hash(), "error": err}).Debug("a transaction of another node left out")
+	for i, err := range p.admit(fresh, RateClient, sent) {
+		switch {
+		case err == nil:
+			taken++
+		case errors.Is(err, ErrPoolFull), errors.Is(err, ErrPoolKeyFull):
+			full++
+			fallthrough
+		default:
+			log.WithFields(log.Fields{"tx_hash": fresh[i].Hash(), "error": err}).Debug("a transaction of another node left out")
 		}
 	}
-	return nil
+	return taken, full, nil
 }

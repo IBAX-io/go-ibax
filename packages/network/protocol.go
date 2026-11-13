@@ -38,6 +38,8 @@ const (
 	RequestTypeBftTransactions
 	// RequestTypeSnapshot fetches the snapshots of the state a node keeps (package snapnet)
 	RequestTypeSnapshot
+	// RequestTypeBftPending fetches the first transactions of the pool of an F18 validator
+	RequestTypeBftPending
 
 	// BlocksPerRequest is the most blocks a node sends for a request of the blocks after a block
 	BlocksPerRequest int = 1000

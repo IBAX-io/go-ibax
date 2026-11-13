@@ -174,3 +174,77 @@ func TestTxFrameLimit(t *testing.T) {
 		t.Fatalf("%d frames taken", n)
 	}
 }
+
+// A validator says to its peers that it has transactions at a height; a peer takes the word and
+// relays none, and a frame of another length does not decode
+func TestSendPending(t *testing.T) {
+	ha, hb, hc := newTestHandler(), newTestHandler(), newTestHandler()
+	a, b, c := NewService(DefaultConfig, ha), NewService(DefaultConfig, hb), NewService(DefaultConfig, hc)
+	addrB, _ := testServer(t, b)
+	addrC, _ := testServer(t, c)
+	a.SetPeers([]string{addrB})
+	b.SetPeers([]string{addrC})
+	defer a.Close()
+	defer b.Close()
+
+	a.SendPending(288, 3)
+	waitFor(t, "the hint", func() bool { return len(hb.pendingHints()) == 1 })
+	if got := hb.pendingHints()[0]; got != [2]uint64{288, 3} {
+		t.Fatalf("the hint is %v", got)
+	}
+	undecoded := bftmon.Get().Messages[bftmon.MessagesUndecoded]
+	a.Broadcast(FramePending, make([]byte, pendingPayload-1))
+	waitFor(t, "the short hint", func() bool { return bftmon.Get().Messages[bftmon.MessagesUndecoded] > undecoded })
+	time.Sleep(100 * time.Millisecond)
+	if n := len(hc.pendingHints()); n != 0 {
+		t.Fatalf("the peer relayed %d hints", n)
+	}
+	if n := len(hb.pendingHints()); n != 1 {
+		t.Fatalf("the peer took %d hints", n)
+	}
+}
+
+// A node gives the first transactions of its pool, at most the count asked, max_tx_block and
+// max_block_size together; the client refuses an answer past what it asked
+func TestFetchPending(t *testing.T) {
+	h := newTestHandler()
+	s := NewService(DefaultConfig, h)
+	defer s.Close()
+	addr, _ := testServer(t, s)
+	// MaxBlockSize 1000 and MaxBlockTxs 10
+	for i := range 12 {
+		h.pending = append(h.pending, bytes.Repeat([]byte{byte(i + 1)}, 90))
+	}
+	got, err := FetchPending(addr, 3, 1000, time.Second)
+	if err != nil || len(got) != 3 {
+		t.Fatalf("3 asked: %d, %v", len(got), err)
+	}
+	for i := range got {
+		if !bytes.Equal(got[i], h.pending[i]) {
+			t.Fatalf("transaction %d is not the pool's", i)
+		}
+	}
+	// 10 of 90 bytes take 900 of the 1000: all of max_tx_block
+	if got, err := FetchPending(addr, 50, 1000, time.Second); err != nil || len(got) != 10 {
+		t.Fatalf("50 asked: %d, %v", len(got), err)
+	}
+	// the server sends the transactions that fit max_block_size, the first 4 of 250 bytes
+	h.mu.Lock()
+	for i := range h.pending {
+		h.pending[i] = bytes.Repeat([]byte{byte(i + 1)}, 250)
+	}
+	h.mu.Unlock()
+	if got, err := FetchPending(addr, 10, 1000, time.Second); err != nil || len(got) != 4 {
+		t.Fatalf("by the bytes: %d, %v", len(got), err)
+	}
+	// a client of a lower max_block_size refuses what is past it
+	if _, err := FetchPending(addr, 10, 600, time.Second); err == nil {
+		t.Fatal("an answer past max_block_size is taken")
+	}
+	h.mu.Lock()
+	h.pending = nil
+	h.mu.Unlock()
+	if got, err := FetchPending(addr, 10, 1000, time.Second); err != nil || len(got) != 0 {
+		t.Fatalf("an empty pool: %d, %v", len(got), err)
+	}
+}
