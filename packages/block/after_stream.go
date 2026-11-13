@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -51,6 +52,8 @@ type afterWritten struct {
 	lts      []*sqldb.LogTransaction
 	hashes   []string
 	spent    time.Duration
+	// busy is the time of the statements of the writer, without waiting for the connection
+	busy time.Duration
 }
 
 // afterStream writes the records of the transactions a block committed while it runs
@@ -63,6 +66,8 @@ type afterStream struct {
 	done  chan struct{}
 	// sentTxs and sentRts are the transactions and the rollback records the block gave the writer
 	sentTxs, sentRts int
+	// pending are the transactions the block gave the writer and it has not written
+	pending atomic.Int64
 	// written and err are those of the writer, which the block reads once it is done
 	written afterWritten
 	err     error
@@ -91,6 +96,7 @@ func (s *afterStream) send(afters *types.AfterTxs) {
 	select {
 	case s.parts <- part:
 		s.sentTxs, s.sentRts = len(afters.Txs), len(afters.Rts)
+		s.pending.Add(int64(len(part.txs)))
 	default:
 	}
 }
@@ -109,6 +115,12 @@ func (s *afterStream) release() {
 		s.conn.Unlock()
 		s.held = false
 	}
+}
+
+// backlog is the time the writer takes for the transactions it was given and has not written, at
+// the time of a statement a transaction takes the writer of the node
+func (s *afterStream) backlog() time.Duration {
+	return time.Duration(s.pending.Load()) * writeCost()
 }
 
 // stop waits for the writer to write the parts it has, and ends it; the block then has the
@@ -143,6 +155,7 @@ func (s *afterStream) write() {
 		s.written.lts = append(s.written.lts, rows.lts...)
 		s.written.hashes = append(s.written.hashes, hashes...)
 		s.written.spent += time.Since(start)
+		s.pending.Add(-int64(len(part.txs)))
 	}
 }
 
@@ -152,7 +165,9 @@ func (s *afterStream) writeRows(rows *afterRows) error {
 	chunks := func(n int, f func(tx *gorm.DB, from, to int) error) error {
 		for from := 0; from < n; from += afterChunk {
 			s.conn.Lock()
+			start := time.Now()
 			err := f(db, from, min(from+afterChunk, n))
+			s.written.busy += time.Since(start)
 			s.conn.Unlock()
 			if err != nil {
 				return err

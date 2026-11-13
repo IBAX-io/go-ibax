@@ -52,6 +52,13 @@ func (b *Block) stage(name string, since time.Time) {
 	metrics.BlockStage.WithLabelValues(kind, name).Observe(d.Seconds())
 }
 
+// note records in the profile of the execution running a time that is not a stage
+func (b *Block) note(name string, d time.Duration) {
+	if b.prof != nil {
+		b.prof.fields[name+"_ms"] = float64(d.Microseconds()) / 1000
+	}
+}
+
 // txCount is the number of the transactions of the block: of a generated block, those it took
 func (b *Block) txCount() int {
 	if b.GenBlock {

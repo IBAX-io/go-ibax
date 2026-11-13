@@ -46,8 +46,8 @@ type Block struct {
 	genStart time.Time
 	// genStopped is that the time left to the block stopped a transaction of it
 	genStopped bool
-	// execEnd is when the transactions of the execution running ended, before it writes their
-	// state
+	// execEnd is when the transactions of the execution running ended, and the writer of their
+	// records wrote what it was given, before the block writes their state
 	execEnd time.Time
 	// prof is the profile of the execution running
 	prof *execProfile

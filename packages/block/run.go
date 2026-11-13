@@ -172,7 +172,10 @@ func (r *blockRun) end(err error) error {
 	var written afterWritten
 	if r.state != nil {
 		r.state.stop()
+		// the writer wrote what it was given: what it had left the block kept as its backlog
+		b.execEnd = time.Now()
 		written = r.state.written
+		observeWrite(written)
 		if err == nil {
 			err = r.state.streamErr
 		}

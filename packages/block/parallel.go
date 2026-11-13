@@ -422,16 +422,18 @@ func (e *stateExec) wake(cur int) {
 
 // beginState begins the state of a block that is not the first
 func (b *Block) beginState(dbTx *sqldb.DbTransaction) (*stateExec, error) {
-	limits := transaction.NewLimits(b.limitMode())
-	if !b.genStart.IsZero() {
-		limits.StartAt(b.genStart, tail())
-	}
 	st, err := sqldb.NewBlockState(dbTx, nil)
 	if err != nil {
 		return nil, err
 	}
 	st.SetOutputs(b.OutputsMap)
-	return &stateExec{b: b, dbTx: dbTx, st: st, limits: limits, ecoParams: b.EcoParams, stream: newAfterStream(dbTx)}, nil
+	stream := newAfterStream(dbTx)
+	limits := transaction.NewLimits(b.limitMode())
+	if !b.genStart.IsZero() {
+		limits.StartAt(b.genStart, tail())
+		limits.KeepBacklog(stream.backlog)
+	}
+	return &stateExec{b: b, dbTx: dbTx, st: st, limits: limits, ecoParams: b.EcoParams, stream: stream}, nil
 }
 
 // run runs the transactions from to to of the block in its state, in parallel, and commits them
@@ -468,9 +470,7 @@ func (e *stateExec) run(r *blockRun, from, to int) error {
 	if queued {
 		e.jobs <- part
 	}
-	err := b.commitState(e, r, from, to, queued)
-	b.execEnd = time.Now()
-	return err
+	return b.commitState(e, r, from, to, queued)
 }
 
 // stop stops the workers and the writer of the records of the transactions
@@ -607,6 +607,12 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 					// so it had the most time a block leaves a transaction, and never fits
 					if len(*processedTx) == 0 && !b.genStopped {
 						txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: errTxTooLong.Error(), keyID: t.KeyID()}
+					}
+					if !b.genStopped {
+						// where the time stopped the block, and what it kept then
+						b.note("stop", time.Since(b.genStart))
+						b.note("backlog", e.stream.backlog())
+						b.note("tail_reserve", tail()*time.Duration(len(*processedTx)+1))
 					}
 					b.genStopped = true
 					br.stopped = true

@@ -88,6 +88,27 @@ func TestTimeLeft(t *testing.T) {
 	if left := limits.TimeLeft(); !near(left, 2000-500-600) {
 		t.Fatalf("%d ms left after 2,000 transactions with a tail of 0.3 ms, want 900", left)
 	}
+	// the backlog of the writer is kept besides the tail, from the first transaction on
+	var backlog time.Duration
+	limits.KeepBacklog(func() time.Duration { return backlog })
+	block.Count = 0
+	limits.StartAt(time.Now().Add(-500*time.Millisecond), 10*time.Millisecond)
+	backlog = 700 * time.Millisecond
+	if left := limits.TimeLeft(); !near(left, 2000-500-700) {
+		t.Fatalf("%d ms left 500 ms in a block whose writer has 700 ms left, want 800", left)
+	}
+	block.Count = 2000
+	limits.StartAt(time.Now().Add(-500*time.Millisecond), 300*time.Microsecond)
+	if left := limits.TimeLeft(); !near(left, 2000-500-600-700) {
+		t.Fatalf("%d ms left after 2,000 transactions with a tail of 0.3 ms and a backlog of 700 ms, want 200", left)
+	}
+	backlog = 1500 * time.Millisecond
+	if err := block.check(nil, letGenBlock); !errors.Is(err, ErrTimeLeft) {
+		t.Fatalf("a transaction with no time left for the backlog of the writer goes on: %v", err)
+	}
+	limits.KeepBacklog(nil)
+	block.Count = 2000
+
 	limits.StartAt(time.Now().Add(time.Second), 0)
 	if left := limits.TimeLeft(); left != 2000 {
 		t.Fatalf("%d ms left in a block that starts later, want 2000", left)

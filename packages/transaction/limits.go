@@ -146,6 +146,10 @@ type timeBlockLimit struct {
 	// writing its state, its rows and the block, and rolling the trial back
 	Tail  time.Duration
 	Count int // the transactions the block took
+	// Backlog is the time the writer of the records of the transactions the block committed
+	// takes for those it was given and has not written: the block waits for it after its
+	// transactions run. It is called from the runs in parallel too.
+	Backlog func() time.Duration
 }
 
 func (bl *timeBlockLimit) init() {
@@ -168,11 +172,15 @@ func (bl *timeBlockLimit) reserve(n int) time.Duration {
 // left is the time left to the next transaction of the block. The first TailFreeTxs transactions
 // have the whole time of the block, none kept for their tail: a transaction the time stops as the
 // first of its block had the most time a block leaves a transaction, and the block takes it as one
-// that never fits.
+// that never fits. The backlog of the writer is kept from the start: a part given to the writer
+// late in the block is written after its transactions run, all at once.
 func (bl *timeBlockLimit) left() time.Duration {
 	var reserve time.Duration
 	if bl.Count >= TailFreeTxs {
 		reserve = bl.reserve(bl.Count + 1)
+	}
+	if bl.Backlog != nil {
+		reserve += bl.Backlog()
 	}
 	return max(0, bl.Limit-reserve-max(0, time.Since(bl.Start)))
 }
@@ -196,6 +204,16 @@ func (limits *Limits) StartAt(start time.Time, tail time.Duration) {
 	for _, l := range limits.Limiters {
 		if bl, ok := l.(*timeBlockLimit); ok {
 			bl.Start, bl.Tail = start, tail
+		}
+	}
+}
+
+// KeepBacklog keeps, besides the tail of each transaction, the time backlog tells for the writer of
+// the records of the transactions the block committed
+func (limits *Limits) KeepBacklog(backlog func() time.Duration) {
+	for _, l := range limits.Limiters {
+		if bl, ok := l.(*timeBlockLimit); ok {
+			bl.Backlog = backlog
 		}
 	}
 }
