@@ -78,8 +78,18 @@ func (h *testHost) player(t *testing.T, next *int64, fail int64) func(b batch) (
 			h.playing = false
 			h.mu.Unlock()
 		}()
-		// the next batch is asked for while this one plays
-		time.Sleep(10 * time.Millisecond)
+		// the next batch is asked for while this one plays: wait for its request, if there is
+		// a next batch, rather than for a time a busy machine may not give the request
+		if b.from+b.count <= h.last {
+			for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(time.Millisecond) {
+				h.mu.Lock()
+				asked := len(h.asked) > 0 && h.asked[len(h.asked)-1] >= b.from+b.count
+				h.mu.Unlock()
+				if asked || time.Now().After(deadline) {
+					break
+				}
+			}
+		}
 		var n int64
 		for raw := range b.blocks {
 			if b.certs != nil && n == b.count {
