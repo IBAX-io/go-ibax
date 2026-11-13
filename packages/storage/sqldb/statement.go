@@ -31,6 +31,9 @@ type Statement struct {
 	afterParen []bool
 	bound      atomic.Pointer[boundText]
 	plan       atomic.Pointer[statementPlan]
+	// metric counts the statement in place of the metric of its kind: a read of a model counts as
+	// gorm's query
+	metric interface{ Inc() }
 }
 
 // boundText is the text bindPlain makes of a statement with n values
@@ -169,9 +172,12 @@ func (tr *DbTransaction) directRun(s *Statement, text string, args []any, isQuer
 			return nil, false, nil
 		}
 	}
-	if isQuery {
+	switch {
+	case s != nil && s.metric != nil:
+		s.metric.Inc()
+	case isQuery:
 		rowStatements.Inc()
-	} else {
+	default:
 		rawStatements.Inc()
 	}
 	if s != nil && s.follow {

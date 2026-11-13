@@ -134,11 +134,11 @@ var ecosystems BlockCache[int64, *Ecosystem]
 // already is read as First reads it.
 func (sys *Ecosystem) Get(dbTx *DbTransaction, id int64) (bool, error) {
 	if sys.ID != 0 && sys.ID != id {
-		return isFound(GetDB(dbTx).First(sys, "id = ?", id))
+		return sys.firstByID(dbTx, id)
 	}
 	load := func() (*Ecosystem, error) {
 		e := new(Ecosystem)
-		found, err := isFound(GetDB(dbTx).First(e, "id = ?", id))
+		found, err := e.firstByID(dbTx, id)
 		if err != nil || !found {
 			return nil, err
 		}

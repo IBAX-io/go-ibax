@@ -90,6 +90,21 @@ func (tr *DbTransaction) firstKey(m *Key, wallet int64) (bool, error) {
 // for firstKeyByIDSQL, with the id. A row that the statement gave stays in the result with an error
 // of the rows after it.
 func (tr *DbTransaction) readKey(text string, wallet, ecosystem, id int64) (keyRow, error) {
+	args := []any{wallet, ecosystem}
+	if text == firstKeyByIDSQL {
+		args = append(args, id)
+	}
+	if drv, ran, err := tr.directRun(keyStatement(text), text, args, true); ran {
+		if err != nil {
+			return keyRow{}, err
+		}
+		rows := driverRows(drv)
+		r, err := scanKey(rows)
+		if cerr := rows.Close(); err == nil {
+			err = cerr
+		}
+		return r, err
+	}
 	db := GetDB(tr)
 	ctx := db.Statement.Context
 	queryStatements.Inc()
@@ -114,7 +129,7 @@ func (tr *DbTransaction) readKey(text string, wallet, ecosystem, id int64) (keyR
 	return r, err
 }
 
-func scanKey(rows *sql.Rows) (keyRow, error) {
+func scanKey(rows rowScanner) (keyRow, error) {
 	var r keyRow
 	columns, err := rows.Columns()
 	if err != nil {
