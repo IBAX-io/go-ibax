@@ -25,7 +25,7 @@ const (
 // wait for the writer of their records to write what it was given: crediting the fees, writing
 // its state, the rows after it and the block, and holding the trial. A proposer keeps that much
 // of max_block_generation_time for each transaction its block takes: its own proposal is ready
-// before most of it (sealTrial), the trials of the validators are not.
+// before most of it (sealTrial), the prevotes of the block are not (beginState).
 var txTail struct {
 	sync.Mutex
 	d time.Duration

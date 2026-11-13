@@ -25,12 +25,16 @@ import (
 // transactions was given, the state of the block, the rest of the records, the outputs and the
 // block. The commit of the height waits for those writes, a drop of the trial stops them. What
 // the proposal carries is computed from the execution alone, as every validator computes it, so
-// the time the database takes to write the block moves the commit of the height, not the
-// proposal. A trial whose writes fail is not committed: the node executes the block again as one
-// whose trial failed, as Commit does.
+// the time the database takes to write the block moves the commit of the height and the prevote
+// of the proposer for its block (Written), not the proposal. A drop of the trial cancels its
+// transaction: PostgreSQL cancels the statement running and rolls the transaction back, so the
+// next trial waits for no write of the dropped one. A trial whose writes fail is not committed:
+// the node executes the block again as one whose trial failed, as Commit does. What the writes
+// read of the state outside the database is what the transactions of the block left: the seal
+// reads it (seal, the retention's history_blocks) before the state of the node is restored.
 
-// errTrialDropped is the error of the writes of a held trial the node dropped
-var errTrialDropped = errors.New("the held trial was dropped")
+// ErrTrialDropped is the error of the writes of a held trial the node dropped before they ended
+var ErrTrialDropped = errors.New("the held trial was dropped")
 
 // sealTrial ends the trial of a block the node generates whose transactions ran, in a state, with
 // the error err: it seals the block and holds the trial, which writes the block after, or rolls
@@ -80,6 +84,7 @@ func (b *Block) sealTrial(dbTx *sqldb.DbTransaction, mem memState, r *blockRun, 
 		p.stage(metrics.StageReady, p.start)
 	}
 	t := &heldTrial{b: b, dbTx: dbTx, mem: left, done: make(chan struct{}), stream: e.stream}
+	b.writes = t
 	held.Lock()
 	held.t = t
 	held.Unlock()
@@ -112,8 +117,9 @@ type trialWrites struct {
 }
 
 // write writes the block of the trial after its seal, in the transaction of the trial, and ends
-// the profile p of the trial; it changes nothing of the block. It stops at its next step once the
-// trial is dropped.
+// the profile p of the trial; it changes nothing of the block and reads no platform parameter.
+// Once the trial is dropped its statements fail, as its transaction is canceled, and its error is
+// ErrTrialDropped.
 func (t *heldTrial) write(e *stateExec, p *execProfile, w trialWrites) {
 	defer close(t.done)
 	b := t.b
@@ -132,7 +138,7 @@ func (t *heldTrial) write(e *stateExec, p *execProfile, w trialWrites) {
 			return
 		}
 		if t.dropped.Load() {
-			err = errTrialDropped
+			err = ErrTrialDropped
 			return
 		}
 		start := time.Now()
@@ -149,9 +155,12 @@ func (t *heldTrial) write(e *stateExec, p *execProfile, w trialWrites) {
 		return b.writeAfters(t.dbTx, written, w.outputs, w.history)
 	})
 	step(metrics.StageInsert, func() error { return b.writeBlock(t.dbTx) })
+	if err != nil && t.dropped.Load() {
+		err = ErrTrialDropped
+	}
 	t.err = err
 	if err != nil {
-		if !errors.Is(err, errTrialDropped) && !errors.Is(err, errStreamCanceled) {
+		if !errors.Is(err, ErrTrialDropped) {
 			b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Warn("writing the block of a held proposal")
 		}
 		return
@@ -160,4 +169,15 @@ func (t *heldTrial) write(e *stateExec, p *execProfile, w trialWrites) {
 	if p != nil {
 		p.end(b.Header.BlockId, len(b.TxFullData), t.dbTx.Statements())
 	}
+}
+
+// Written waits for the writes of a block the node proposed, which its trial goes on with after
+// the seal, and returns their error: ErrTrialDropped if the node dropped the trial before they
+// ended. A block of no such writes returns nil at once. The node prevotes its block only once its
+// writes succeed: a block whose writes fail is not valid at the node, as one whose trial fails.
+func (b *Block) Written() error {
+	if b.writes == nil {
+		return nil
+	}
+	return b.writes.wait()
 }

@@ -65,9 +65,9 @@ func simBlock(height uint64, round uint32, node int, tag string) ([]byte, Hash) 
 	return b, sha256.Sum256(b)
 }
 
-func (a *simApp) Value(height uint64, round uint32) ([]byte, Hash, error) {
+func (a *simApp) Value(height uint64, round uint32) ([]byte, Hash, bool, error) {
 	b, h := simBlock(height, round, a.node, "")
-	return b, h, nil
+	return b, h, false, nil
 }
 
 // Valid refuses a block whose hash is not its hash and a block of a forged time

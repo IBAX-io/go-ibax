@@ -86,13 +86,23 @@ func (t *heldTrial) wait() error {
 	return t.err
 }
 
-// drop makes the writes of the trial stop at their next statement, and waits for them: the node
-// rolls the trial back
+// drop stops the writes of the trial, if they go on, and waits for them: their writer writes no
+// more, and the transaction of the trial is canceled, which stops its statement running in
+// PostgreSQL and rolls it back. The node rolls the trial back after.
 func (t *heldTrial) drop() {
 	t.dropped.Store(true)
+	if t.done == nil {
+		return
+	}
+	select {
+	case <-t.done:
+		return
+	default:
+	}
 	if t.stream != nil {
 		t.stream.cancel()
 	}
+	t.dbTx.Cancel()
 	t.wait()
 }
 

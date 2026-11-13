@@ -55,6 +55,8 @@ type Block struct {
 	// execution is the time after execEnd but drained
 	execEnd time.Time
 	drained time.Duration
+	// writes is the trial of a block the node proposed, which writes the block after its seal
+	writes *heldTrial
 	// prof is the profile of the execution running
 	prof *execProfile
 	// rollbacksHash is the hash of the rollback records and the outputs the block wrote

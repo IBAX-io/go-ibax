@@ -11,8 +11,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
+	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/require"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -32,9 +34,9 @@ func TestHeldTrialWaitsForItsWrites(t *testing.T) {
 		t.Fatal("the commit did not wait for the writes of the trial")
 	case <-time.After(50 * time.Millisecond):
 	}
-	tr.err = errTrialDropped
+	tr.err = ErrTrialDropped
 	close(tr.done)
-	require.ErrorIs(t, <-waited, errTrialDropped)
+	require.ErrorIs(t, <-waited, ErrTrialDropped)
 
 	s := &afterStream{}
 	tr = &heldTrial{done: make(chan struct{}), stream: s}
@@ -147,4 +149,66 @@ func TestStreamCancelBoundsStall(t *testing.T) {
 	require.ErrorIs(t, err, errStreamCanceled)
 	require.Less(t, written.txs, parts*afterPartTxs)
 	require.Less(t, took, 2*stall-stall/3, "a canceled writer ends after its statement running")
+}
+
+// TestDropCancelsStalledWrite checks a drop of a held trial whose writes stall in a statement, as a
+// flush does on a storage stall, returns once PostgreSQL cancels the statement rather than once it
+// ends, and the trial's transaction is rolled back, so the next trial waits for no lock of it
+func TestDropCancelsStalledWrite(t *testing.T) {
+	dsn := os.Getenv("IBAX_TEST_DSN")
+	if dsn == "" {
+		t.Skip("IBAX_TEST_DSN names no database")
+	}
+	pc, err := pgx.ParseConfig(dsn)
+	require.NoError(t, err)
+	savedDB := sqldb.DBConn
+	require.NoError(t, sqldb.GormInit(conf.DBConfig{Name: pc.Database, Host: pc.Host, Port: int(pc.Port),
+		User: pc.User, Password: pc.Password, MaxIdleConns: 2, MaxOpenConns: 4}))
+	t.Cleanup(func() {
+		sqldb.GormClose()
+		sqldb.DBConn = savedDB
+	})
+
+	const stall = 600 * time.Millisecond
+	dbTx, err := sqldb.StartTransaction()
+	require.NoError(t, err)
+	conn := dbTx.Connection()
+	require.NoError(t, conn.Exec(`CREATE SCHEMA drop_stall_test; SET LOCAL search_path TO drop_stall_test`).Error)
+	require.NoError(t, conn.AutoMigrate(&sqldb.LogTransaction{}))
+	require.NoError(t, conn.Exec(fmt.Sprintf(`CREATE FUNCTION stall() RETURNS trigger LANGUAGE plpgsql AS
+		$$ BEGIN PERFORM pg_sleep(%g); RETURN NULL; END $$`, stall.Seconds())).Error)
+	require.NoError(t, conn.Exec(`CREATE TRIGGER stall BEFORE INSERT ON log_transactions
+		FOR EACH STATEMENT EXECUTE FUNCTION stall()`).Error)
+
+	// the writes of the trial: a statement that stalls, and the ones after it that a drop stops
+	tr := &heldTrial{done: make(chan struct{}), dbTx: dbTx}
+	statements := 0
+	go func() {
+		defer close(tr.done)
+		for i := range 3 {
+			if tr.dropped.Load() {
+				tr.err = ErrTrialDropped
+				return
+			}
+			statements++
+			if err := conn.Create(&sqldb.LogTransaction{Hash: []byte{byte(i)}, Block: 1}).Error; err != nil {
+				tr.err = err
+				return
+			}
+		}
+	}()
+	time.Sleep(stall / 3)
+	start := time.Now()
+	tr.drop()
+	took := time.Since(start)
+	require.Error(t, tr.err)
+	require.Equal(t, 1, statements, "the writes go on past the drop")
+	// the statement running had two thirds of a stall left
+	require.Less(t, took, stall/2, "the drop waits for the statement running to end")
+	require.NoError(t, dbTx.Rollback())
+
+	var schemas int64
+	require.Eventually(t, func() bool {
+		return sqldb.DBConn.Raw(`SELECT count(*) FROM pg_namespace WHERE nspname = 'drop_stall_test'`).Scan(&schemas).Error == nil && schemas == 0
+	}, time.Second, 5*time.Millisecond, "the transaction of the dropped trial is not rolled back")
 }

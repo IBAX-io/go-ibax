@@ -431,6 +431,13 @@ func (b *Block) beginState(dbTx *sqldb.DbTransaction) (*stateExec, error) {
 	// any other block as it writes them
 	stream := newAfterStream(dbTx, !b.GenBlock)
 	limits := transaction.NewLimits(b.limitMode())
+	// The proposer keeps, of the time of its block, the tail of each transaction and the backlog
+	// of the writer though its own proposal is ready before either (sealTrial): the validators try
+	// the same block in their driver, the wait for their writer and the writes of the block
+	// included, before they prevote it, and so does the proposer, once its writes end (Written),
+	// which prevotes nil if they do not end by its propose timeout. A block sized for the
+	// transactions alone would make every prevote of it, and the commit of the height, later by
+	// its writes.
 	if !b.genStart.IsZero() {
 		limits.StartAt(b.genStart, tail())
 		if b.genLimit > 0 {

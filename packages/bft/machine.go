@@ -65,8 +65,10 @@ func (c Config) timeout(s Step, round uint32) time.Duration {
 // App is what the machine asks of the node
 type App interface {
 	// Value is the block the node proposes at a height and a round, its bytes and its hash
-	// (getValue, L18); an error proposes nothing
-	Value(height uint64, round uint32) ([]byte, Hash, error)
+	// (getValue, L18); an error proposes nothing. The block is valid, or pending: the node tells
+	// its validity later by OnValid, and the machine prevotes it, as any validator, only once it
+	// is known.
+	Value(height uint64, round uint32) (block []byte, hash Hash, pending bool, err error)
 	// Valid reports whether the block may be committed at the height (valid(v)): it decodes, its
 	// hash is the hash, it follows the last block, its time is right and its transactions apply
 	Valid(height uint64, hash Hash, block []byte) bool
@@ -94,6 +96,19 @@ type Commit struct {
 	Block      []byte
 	Precommits []*Vote
 }
+
+// Validity is what the node tells OnValid of the block it proposed pending
+type Validity uint8
+
+const (
+	// ValidityUnknown is a block whose check the node gave up: the machine asks Valid if it needs
+	// to know
+	ValidityUnknown Validity = iota
+	// ValidityValid is a valid block
+	ValidityValid
+	// ValidityInvalid is a block that is not valid
+	ValidityInvalid
+)
 
 // Output is one thing the node does; one field is set
 type Output struct {
@@ -146,6 +161,8 @@ type Machine struct {
 	senders   map[uint32]map[uint32]bool // the validators with a message of a round
 	reported  map[voteKey]bool           // evidence found, by round, type and validator
 	valid     map[Hash]bool
+	// pending is the blocks of the node whose validity it tells later (Value, OnValid)
+	pending map[Hash]bool
 
 	prevoteTimeout   map[uint32]bool // L34 ran for the round
 	locked           map[uint32]bool // L36 ran for the round
@@ -181,6 +198,7 @@ func (m *Machine) NewHeight(height uint64, set Validators) {
 	m.senders = map[uint32]map[uint32]bool{}
 	m.reported = map[voteKey]bool{}
 	m.valid = map[Hash]bool{}
+	m.pending = map[Hash]bool{}
 	m.prevoteTimeout = map[uint32]bool{}
 	m.locked = map[uint32]bool{}
 	m.precommitTimeout = map[uint32]bool{}
@@ -245,6 +263,23 @@ func (m *Machine) OnVote(v *Vote) []Output {
 	}
 	m.recordVote(v)
 	m.begin()
+	return m.drain()
+}
+
+// OnValid takes the validity of a block the node proposed pending at the height: the rules that
+// waited for it run. A block of unknown validity is checked by Valid if the machine needs to know.
+func (m *Machine) OnValid(height uint64, hash Hash, v Validity) []Output {
+	if m.decided || height != m.height || !m.pending[hash] {
+		return nil
+	}
+	delete(m.pending, hash)
+	switch v {
+	case ValidityValid:
+		m.valid[hash] = true
+	case ValidityInvalid:
+		m.valid[hash] = false
+	}
+	m.run()
 	return m.drain()
 }
 
@@ -365,7 +400,7 @@ func (m *Machine) countAny(round uint32, t MsgType) int {
 }
 
 func (m *Machine) isValid(p *Proposal) bool {
-	if !p.HasBlock() {
+	if !p.HasBlock() || m.pending[p.Hash] {
 		// a proposal restored from the sign state has no block to check: it is not valid till a
 		// proposal of its hash brings the block, and the cache keeps no answer for it
 		return false
@@ -420,10 +455,15 @@ func (m *Machine) startRound(round uint32) {
 			if m.validValue.HasBlock() {
 				p = &Proposal{Block: m.validValue.Block, Hash: m.validValue.Hash} // L16
 			}
-		} else if block, hash, err := m.app.Value(m.height, m.round); err == nil && hash != Nil { // L18
+		} else if block, hash, pending, err := m.app.Value(m.height, m.round); err == nil && hash != Nil { // L18
 			p = &Proposal{Block: block, Hash: hash}
-			// the block of the proposer is valid as Value made it: the node tries it once
-			m.valid[hash] = true
+			// the block of the proposer is valid as Value made it, or once the node tells it is:
+			// the node tries it once
+			if pending {
+				m.pending[hash] = true
+			} else {
+				m.valid[hash] = true
+			}
 		}
 		if p != nil {
 			// L19: broadcast <PROPOSAL, h_p, round_p, proposal, validRound_p>
@@ -431,7 +471,11 @@ func (m *Machine) startRound(round uint32) {
 			p.Signature = m.sign(TypeProposal, p.Hash, p.ValidRound)
 			m.out = append(m.out, Output{Proposal: p})
 			m.recordProposal(p)
-			return
+			if !m.pending[p.Hash] {
+				return
+			}
+			// a proposer whose block is pending waits for its validity as a validator waits for
+			// the proposal, and times out (L57) if it does not come in time
 		}
 		// a proposer without a block waits for the proposal as a validator that is not the
 		// proposer does, and times out
@@ -453,7 +497,9 @@ func (m *Machine) rule() bool {
 
 	// L22-L27: upon <PROPOSAL, h_p, round_p, v, -1> from proposer(h_p, round_p) while
 	// step_p = propose
-	if p != nil && m.step == StepPropose && p.ValidRound == NoRound {
+	// The rule waits for valid(v) of a block of the node it tells later (OnValid), as one of
+	// another proposer waits for Valid.
+	if p != nil && m.step == StepPropose && p.ValidRound == NoRound && !m.pending[p.Hash] {
 		if m.isTimely(p) && m.isValid(p) && (m.lockedRound == NoRound || m.lockedValue.Hash == p.Hash) { // L23
 			m.broadcastVote(TypePrevote, p.Hash) // L24
 		} else {
@@ -466,7 +512,7 @@ func (m *Machine) rule() bool {
 	// L28-L33: upon <PROPOSAL, h_p, round_p, v, vr> from proposer(h_p, round_p) AND 2f+1
 	// <PREVOTE, h_p, vr, id(v)> while step_p = propose ∧ (vr >= 0 ∧ vr < round_p)
 	if p != nil && m.step == StepPropose && p.ValidRound >= 0 && int64(p.ValidRound) < int64(r) &&
-		m.count(uint32(p.ValidRound), TypePrevote, p.Hash) >= q {
+		!m.pending[p.Hash] && m.count(uint32(p.ValidRound), TypePrevote, p.Hash) >= q {
 		if m.isValid(p) && (m.lockedRound <= p.ValidRound || m.lockedValue.Hash == p.Hash) { // L29
 			m.broadcastVote(TypePrevote, p.Hash) // L30
 		} else {

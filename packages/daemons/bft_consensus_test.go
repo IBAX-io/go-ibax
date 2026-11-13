@@ -9,20 +9,24 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
+	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 )
 
 // signApp proposes one block and takes every block
 type signApp struct{}
 
-func (signApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
+func (signApp) Value(height uint64, round uint32) ([]byte, bft.Hash, bool, error) {
 	b := []byte("a block")
-	return b, sha256.Sum256(b), nil
+	return b, sha256.Sum256(b), false, nil
 }
 func (signApp) Valid(uint64, bft.Hash, []byte) bool { return true }
 func (signApp) Timely(*bft.Proposal) bool           { return true }
@@ -170,4 +174,32 @@ func TestBftDriverStoresBeforeSending(t *testing.T) {
 			t.Fatal("a message sent after the restart is not in the stored state")
 		}
 	}
+}
+
+// TestWrittenValidity checks the end of the writes of the block the node proposed tells the
+// machine its validity: valid once they succeed, not valid once they fail, unknown once the node
+// dropped them, and the driver hears of it as an event once they end
+func TestWrittenValidity(t *testing.T) {
+	logger := log.NewEntry(log.New())
+	hash := bft.Hash{1}
+	require.Equal(t, bft.ValidityValid, writtenValidity(logger, bftWritten{height: 1, hash: hash}))
+	require.Equal(t, bft.ValidityInvalid, writtenValidity(logger, bftWritten{height: 1, hash: hash, err: errors.New("flush")}))
+	require.Equal(t, bft.ValidityUnknown, writtenValidity(logger, bftWritten{height: 1, hash: hash,
+		err: fmt.Errorf("writing: %w", block.ErrTrialDropped)}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	d := &bftDriver{ctx: ctx, events: make(chan any, 1)}
+	release := make(chan struct{})
+	d.awaitWritten(3, hash, func() error { <-release; return errors.New("flush") })
+	select {
+	case <-d.events:
+		t.Fatal("the event comes before the writes end")
+	case <-time.After(20 * time.Millisecond):
+	}
+	close(release)
+	e := (<-d.events).(bftWritten)
+	require.Equal(t, uint64(3), e.height)
+	require.Equal(t, hash, e.hash)
+	require.EqualError(t, e.err, "flush")
 }
