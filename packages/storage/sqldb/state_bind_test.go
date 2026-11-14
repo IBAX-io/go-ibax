@@ -8,7 +8,9 @@ package sqldb
 import (
 	"database/sql/driver"
 	"math"
+	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -405,5 +407,207 @@ func TestInputArgInt64(t *testing.T) {
 				t.Fatalf("%s %d: %q %v %v, want %q %v", ct.name, x, s, null, ok, want, wantOK)
 			}
 		}
+	}
+}
+
+// renderedScan is the text and the indexes of the values of the statement merge rendered of the
+// plan p at each read before the statements were of the programs
+func renderedScan(p *stmt, m *tableMeta, limit, offset, extra int64) (string, []int) {
+	bounded := limit >= 0 || offset > 0
+	var b strings.Builder
+	b.WriteString("SELECT * FROM ")
+	b.WriteString(quoteIdent(m.name))
+	if p.alias != "" {
+		b.WriteString(" AS ")
+		b.WriteString(quoteIdent(p.alias))
+	}
+	params := make(map[int]int)
+	var porder []int
+	if len(p.whereToks) > 0 {
+		b.WriteString(" WHERE ")
+		renderTokens(&b, p.whereToks, params, &porder)
+	}
+	if bounded {
+		b.WriteString(" ORDER BY ")
+		if len(p.orderToks) > 0 {
+			renderTokens(&b, p.orderToks, params, &porder)
+			b.WriteString(", ")
+		}
+		for i, col := range m.pk {
+			if i > 0 {
+				b.WriteString(", ")
+			}
+			b.WriteString(quoteIdent(col))
+		}
+		if limit >= 0 {
+			b.WriteString(" LIMIT ")
+			b.WriteString(strconv.FormatInt(limit+offset+extra, 10))
+		}
+	}
+	return b.String(), porder
+}
+
+// scanTexts are statements of the shapes merge reads, with an alias, quotes, placeholders out of
+// their order and orders of more than one column
+var scanTexts = []string{
+	`SELECT * FROM t AS x WHERE x.id = $2 AND x.tx = 'it''s' ORDER BY x.n DESC LIMIT $1`,
+	`SELECT * FROM t x WHERE "tx" = $3 AND id > $1 ORDER BY i4 DESC, x.n LIMIT 5 OFFSET $2`,
+	`SELECT * FROM t WHERE id = $1 ORDER BY id LIMIT 1`,
+	`SELECT * FROM t WHERE id = $1 ORDER BY i4 NULLS FIRST OFFSET 3`,
+	`SELECT * FROM t ORDER BY n, "id" DESC LIMIT 2`,
+	`SELECT id, tx FROM t WHERE id = $1`,
+	`UPDATE t AS u SET n = $1 WHERE u.id = $2`,
+	`DELETE FROM t AS d WHERE d.tx = 'a' AND d.id = $1`,
+}
+
+// scanBounds are bounds of selects: limit, offset and the rows the state changed
+var scanBounds = [][3]int64{{-1, 0, 0}, {-1, 3, 0}, {-1, 3, 4}, {0, 0, 0}, {5, 0, 0}, {5, 2, 7}, {1, 0, 9}, {-1, -1, 2}}
+
+// scanMetas are tables with a quoted name and a primary key of two columns
+var scanMetas = func() []*tableMeta {
+	var out []*tableMeta
+	for _, c := range []struct {
+		name string
+		pk   []string
+	}{{"t", []string{"id"}}, {`a"b`, []string{"id", "i4"}}, {"t", []string{`q"k`}}} {
+		src := bindMetas[0]
+		m := &tableMeta{name: c.name, cols: src.cols, byName: src.byName, pk: c.pk, uniques: [][]string{c.pk},
+			readable: true, writable: true}
+		out = append(out, m)
+	}
+	return out
+}()
+
+// scanPlans are the plans of the selects, updates and deletes of bindTexts and scanTexts
+var scanPlans = func() []*stmt {
+	cat := &stateCatalog{rels: map[string]bool{"t": true}}
+	var out []*stmt
+	for _, text := range append(slices.Clone(bindTexts), scanTexts...) {
+		switch p := parseStmt(text, cat); p.kind {
+		case stSelect, stUpdate, stDelete:
+			out = append(out, p)
+		}
+	}
+	return out
+}()
+
+// TestScanMatchesRendered: the statement of a program is the text and the values merge rendered
+// of its plan for each bound, and plans of one statement share it
+func TestScanMatchesRendered(t *testing.T) {
+	if len(scanPlans) < 60 {
+		t.Fatalf("%d plans", len(scanPlans))
+	}
+	shared := 0
+	for _, m := range scanMetas {
+		texts := map[string]*string{}
+		for _, p := range scanPlans {
+			sc := compileBind(p, m).scan
+			if sc == nil {
+				// the binder rejects the plan, so merge never reads it
+				if !compileBind(p, m).bad {
+					t.Fatalf("%+v: no statement", p)
+				}
+				continue
+			}
+			if again := scanOf(p, m); again.where != sc.where || again.ordered != sc.ordered {
+				t.Fatalf("%+v: other texts for the same plan", p)
+			}
+			for _, bd := range scanBounds {
+				want, wantArgs := renderedScan(p, m, bd[0], bd[1], bd[2])
+				args := bindArgs(13, 0x249249249, 100, "a", "b")
+				key, keep, values, ok := sc.read(args, bd[0], bd[1], bd[2])
+				wantValues := make([]any, len(wantArgs))
+				for i, k := range wantArgs {
+					wantValues[i] = args[k].Value
+				}
+				if got := key.query(); !ok || !keep || got != want || !slices.Equal(values, wantValues) {
+					t.Fatalf("bounds %v: %q %v %v %v, rendered %q %v", bd, got, values, keep, ok, want, wantValues)
+				}
+				if len(wantArgs) > 0 {
+					if _, _, _, ok := sc.read(args[:slices.Max(wantArgs)], bd[0], bd[1], bd[2]); ok {
+						t.Fatalf("bounds %v: read without value %d", bd, slices.Max(wantArgs))
+					}
+				}
+				if key.n < 0 {
+					if prev, ok := texts[want]; ok && prev != key.text {
+						t.Fatalf("%q: two texts", want)
+					} else if ok {
+						shared++
+					}
+					texts[want] = key.text
+				}
+			}
+		}
+	}
+	if shared < 10 {
+		t.Fatalf("%d texts shared", shared)
+	}
+	if compileBind(bindPlans[5], bindMetas[0]).scan != nil {
+		t.Fatal("an insert has a statement")
+	}
+}
+
+// scanKeyOf is the key of a read of merge and the key of its text and values before
+func scanKeyOf(p *stmt, m *tableMeta, bd [3]int64, args []driver.NamedValue) (shapeScanKey, string, bool) {
+	key, keep, _, _ := compileBind(p, m).scan.read(args, bd[0], bd[1], bd[2])
+	text, porder := renderedScan(p, m, bd[0], bd[1], bd[2])
+	values := make([]any, len(porder))
+	for i, k := range porder {
+		values[i] = args[k].Value
+	}
+	vals, _ := valuesKey(values)
+	return key, text + vals, keep
+}
+
+// checkScanKeys checks that two reads have equal keys exactly when merge sent PostgreSQL the same
+// text with the same values
+func checkScanKeys(t *testing.T, i, j int, bi, bj int, ki, kj uint64, a, b string) {
+	m := scanMetas[0]
+	pi, pj := scanPlans[i%len(scanPlans)], scanPlans[j%len(scanPlans)]
+	if compileBind(pi, m).bad || compileBind(pj, m).bad {
+		return
+	}
+	ai, aj := bindArgs(13, ki, 7, a, b), bindArgs(13, kj, 7, a, b)
+	key1, old1, keep1 := scanKeyOf(pi, m, scanBounds[bi%len(scanBounds)], ai)
+	key2, old2, keep2 := scanKeyOf(pj, m, scanBounds[bj%len(scanBounds)], aj)
+	if keep1 && keep2 && (key1 == key2) != (old1 == old2) {
+		t.Fatalf("keys %v %v equal %v, texts %q %q", key1, key2, key1 == key2, old1, old2)
+	}
+}
+
+// TestScanKeys: two reads of merge share the rows of PostgreSQL exactly when they send it the same
+// text with the same values
+func TestScanKeys(t *testing.T) {
+	for i := range scanPlans {
+		for j := range scanPlans {
+			for _, bd := range [][2]int{{0, 0}, {1, 1}, {4, 4}, {4, 5}, {0, 1}, {5, 5}} {
+				for _, ks := range [][2]uint64{{0x924924924, 0x924924924}, {0x924924924, 0x492492492}, {1, 1}} {
+					checkScanKeys(t, i, j, bd[0], bd[1], ks[0], ks[1], "1", "2")
+				}
+			}
+		}
+	}
+}
+
+// FuzzScanKeys checks the keys of reads of merge with random plans, bounds and values
+func FuzzScanKeys(f *testing.F) {
+	f.Add(0, 1, 0, 0, uint64(0x924924924), uint64(0x924924924), "1", "1")
+	f.Add(3, 3, 5, 5, uint64(0x249249249), uint64(0x249249249), "abc", "abd")
+	f.Fuzz(func(t *testing.T, i, j, bi, bj int, ki, kj uint64, a, b string) {
+		if i < 0 || j < 0 || bi < 0 || bj < 0 {
+			return
+		}
+		checkScanKeys(t, i, j, bi, bj, ki, kj, a, b)
+	})
+}
+
+// TestMergeOtherMeta: merge leaves to PostgreSQL a read of a table of a meta other than the meta
+// of the program
+func TestMergeOtherMeta(t *testing.T) {
+	p := parseStmt(`SELECT * FROM t WHERE id = $1`, &stateCatalog{rels: map[string]bool{"t": true}})
+	args := []driver.NamedValue{{Ordinal: 1, Value: int64(3)}}
+	ts := &tableState{meta: bindMetas[1]}
+	if _, err := (&TxView{}).merge(t.Context(), nil, ts, compileBind(p, bindMetas[0]), args, nil, nil, -1, 0); err != errUnsupported {
+		t.Fatalf("merge: %v", err)
 	}
 }

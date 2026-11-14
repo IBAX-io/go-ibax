@@ -607,7 +607,7 @@ func (v *TxView) planned(ctx context.Context, c *stateConn, p *stmt, args []driv
 	case stMaxID:
 		return v.maxID(ts, p)
 	case stSelect:
-		rows, err := v.selectRows(ctx, c, ts, p, args, bd.cond, bd.order, bd.limit, bd.offset)
+		rows, err := v.selectRows(ctx, c, ts, prog, args, bd.cond, bd.order, bd.limit, bd.offset)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -623,9 +623,9 @@ func (v *TxView) planned(ctx context.Context, c *stateConn, p *stmt, args []driv
 	case stInsert:
 		return v.insert(ctx, c, ts, bd.row)
 	case stUpdate:
-		return v.update(ctx, c, ts, p, bd.sets, args, bd.cond)
+		return v.update(ctx, c, ts, prog, bd.sets, args, bd.cond)
 	}
-	return v.delete(ctx, c, ts, p, args, bd.cond)
+	return v.delete(ctx, c, ts, prog, args, bd.cond)
 }
 
 // read records a read of the view
@@ -679,7 +679,7 @@ func allIn(m *tableMeta, cols []string, eq *eqSet) bool {
 
 // selectRows are the rows of the table that hold the condition, in the order, past offset and up
 // to limit (-1 for none)
-func (v *TxView) selectRows(ctx context.Context, c *stateConn, ts *tableState, p *stmt, args []driver.NamedValue,
+func (v *TxView) selectRows(ctx context.Context, c *stateConn, ts *tableState, prog *bindProg, args []driver.NamedValue,
 	cond *bcond, order []border, limit, offset int64) ([]stateRow, error) {
 	m := ts.meta
 	var rows []stateRow
@@ -687,7 +687,7 @@ func (v *TxView) selectRows(ctx context.Context, c *stateConn, ts *tableState, p
 	if j, key, ok := pointKey(m, ts, cond); ok {
 		rows, err = v.point(ctx, c, ts, cond, j, key)
 	} else {
-		rows, err = v.merge(ctx, c, ts, p, args, cond, order, limit, offset)
+		rows, err = v.merge(ctx, c, ts, prog, args, cond, order, limit, offset)
 	}
 	if err != nil {
 		return nil, err
@@ -801,9 +801,13 @@ func (v *TxView) point(ctx context.Context, c *stateConn, ts *tableState, cond *
 
 // merge are the rows of the table that hold the condition: the rows the state and the view
 // changed, and the rows of PostgreSQL they did not
-func (v *TxView) merge(ctx context.Context, c *stateConn, ts *tableState, p *stmt, args []driver.NamedValue,
+func (v *TxView) merge(ctx context.Context, c *stateConn, ts *tableState, prog *bindProg, args []driver.NamedValue,
 	cond *bcond, order []border, limit, offset int64) ([]stateRow, error) {
 	m := ts.meta
+	// the statement of the program is of the columns and the key of its meta
+	if prog.meta != m {
+		return nil, errUnsupported
+	}
 	bounded := limit >= 0 || offset > 0
 	if bounded {
 		_, kinds := pkOrder(m)
@@ -847,52 +851,17 @@ func (v *TxView) merge(ctx context.Context, c *stateConn, ts *tableState, p *stm
 	}
 	v.read(ts, seq, cond)
 
-	var b strings.Builder
-	b.WriteString("SELECT * FROM ")
-	b.WriteString(quoteIdent(m.name))
-	if p.alias != "" {
-		b.WriteString(" AS ")
-		b.WriteString(quoteIdent(p.alias))
+	key, keep, values, ok := prog.scan.read(args, limit, offset, extra)
+	if !ok {
+		return nil, errUnsupported
 	}
-	params := make(map[int]int)
-	var porder []int
-	if len(p.whereToks) > 0 {
-		b.WriteString(" WHERE ")
-		renderTokens(&b, p.whereToks, params, &porder)
-	}
-	if bounded {
-		b.WriteString(" ORDER BY ")
-		if len(p.orderToks) > 0 {
-			renderTokens(&b, p.orderToks, params, &porder)
-			b.WriteString(", ")
-		}
-		for i, col := range m.pk {
-			if i > 0 {
-				b.WriteString(", ")
-			}
-			b.WriteString(quoteIdent(col))
-		}
-		if limit >= 0 {
-			b.WriteString(" LIMIT ")
-			b.WriteString(strconv.FormatInt(limit+offset+extra, 10))
-		}
-	}
-	values := make([]any, len(porder))
-	for i, n := range porder {
-		if n >= len(args) {
-			return nil, errUnsupported
-		}
-		values[i] = args[n].Value
-	}
-	query := b.String()
-	key, keep := stmtKey(query, values)
 	base, read := []stateRow(nil), false
 	if keep {
 		base, read = ts.base.scan(key)
 	}
 	if !read {
 		var err error
-		if base, err = fetchRows(ctx, c, query, values); err != nil {
+		if base, err = fetchRows(ctx, c, key.query(), values); err != nil {
 			return nil, err
 		}
 		if keep {
@@ -1050,9 +1019,9 @@ func (v *TxView) insert(ctx context.Context, c *stateConn, ts *tableState, row s
 }
 
 // update writes the rows of the condition with the assignments
-func (v *TxView) update(ctx context.Context, c *stateConn, ts *tableState, p *stmt, sets []assign, args []driver.NamedValue, cond *bcond) (*memRows, int64, error) {
+func (v *TxView) update(ctx context.Context, c *stateConn, ts *tableState, prog *bindProg, sets []assign, args []driver.NamedValue, cond *bcond) (*memRows, int64, error) {
 	m := ts.meta
-	targets, err := v.selectRows(ctx, c, ts, p, args, cond, nil, -1, 0)
+	targets, err := v.selectRows(ctx, c, ts, prog, args, cond, nil, -1, 0)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1087,9 +1056,9 @@ func (v *TxView) update(ctx context.Context, c *stateConn, ts *tableState, p *st
 	return nil, int64(len(targets)), nil
 }
 
-func (v *TxView) delete(ctx context.Context, c *stateConn, ts *tableState, p *stmt, args []driver.NamedValue, cond *bcond) (*memRows, int64, error) {
+func (v *TxView) delete(ctx context.Context, c *stateConn, ts *tableState, prog *bindProg, args []driver.NamedValue, cond *bcond) (*memRows, int64, error) {
 	m := ts.meta
-	targets, err := v.selectRows(ctx, c, ts, p, args, cond, nil, -1, 0)
+	targets, err := v.selectRows(ctx, c, ts, prog, args, cond, nil, -1, 0)
 	if err != nil {
 		return nil, 0, err
 	}

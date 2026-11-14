@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"slices"
 	"strconv"
+	"strings"
 	"unsafe"
 )
 
@@ -53,6 +54,85 @@ type bindProg struct {
 	// at the offsets of its parts in the block
 	frame reflect.Type
 	at    frameAt
+	// scan is the statement merge reads the rows of PostgreSQL of a select, an update or a delete
+	// by, of the table, nil for an insert
+	scan *scanTmpl
+}
+
+// scanTmpl is the statement of the rows of PostgreSQL of a plan: where its text of the condition,
+// ordered that with the order of a bounded select, each one of each text of the table, and
+// whereArgs and orderArgs the indexes of the values of their placeholders in their order
+type scanTmpl struct {
+	where, ordered       *string
+	whereArgs, orderArgs []int
+}
+
+// scanOf is the statement of the rows of PostgreSQL of the plan p of the table m
+func scanOf(p *stmt, m *tableMeta) *scanTmpl {
+	var b strings.Builder
+	b.WriteString("SELECT * FROM ")
+	b.WriteString(quoteIdent(m.name))
+	if p.alias != "" {
+		b.WriteString(" AS ")
+		b.WriteString(quoteIdent(p.alias))
+	}
+	params := make(map[int]int)
+	var porder []int
+	if len(p.whereToks) > 0 {
+		b.WriteString(" WHERE ")
+		renderTokens(&b, p.whereToks, params, &porder)
+	}
+	where, whereArgs := b.String(), slices.Clip(porder)
+	b.WriteString(" ORDER BY ")
+	if len(p.orderToks) > 0 {
+		renderTokens(&b, p.orderToks, params, &porder)
+		b.WriteString(", ")
+	}
+	for i, col := range m.pk {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(quoteIdent(col))
+	}
+	return &scanTmpl{where: m.scanText(where), ordered: m.scanText(b.String()), whereArgs: whereArgs, orderArgs: porder}
+}
+
+// scanText is the text s of a statement of the rows of PostgreSQL of the table, one of each text
+func (m *tableMeta) scanText(s string) *string {
+	got, _ := m.scans.LoadOrStore(s, &s)
+	return got.(*string)
+}
+
+// read is the statement of the values args of a select of the bounds limit (-1 for none) and
+// offset that reads extra rows of PostgreSQL the state changed: the key of its rows, whether the
+// key tells its values apart, and its values; false when args lack a value
+func (sc *scanTmpl) read(args []driver.NamedValue, limit, offset, extra int64) (key shapeScanKey, keep bool,
+	values []any, ok bool) {
+	key.text, key.n = sc.ordered, -1
+	porder := sc.orderArgs
+	switch {
+	case limit < 0 && offset <= 0:
+		key.text, porder = sc.where, sc.whereArgs
+	case limit >= 0:
+		key.n = limit + offset + extra
+	}
+	values = make([]any, len(porder))
+	for i, k := range porder {
+		if k >= len(args) {
+			return key, false, nil, false
+		}
+		values[i] = args[k].Value
+	}
+	key.values, keep = valuesKey(values)
+	return key, keep, values, true
+}
+
+// query is the text of the statement of the key
+func (k shapeScanKey) query() string {
+	if k.n < 0 {
+		return *k.text
+	}
+	return *k.text + " LIMIT " + strconv.FormatInt(k.n, 10)
 }
 
 // frameAt are the offsets in the block of a run of its texts, of the values of the row and the
@@ -194,6 +274,10 @@ func compileBind(p *stmt, m *tableMeta) *bindProg {
 		prog.nexprKids += len(t.kids)
 	}
 	prog.layout()
+	switch p.kind {
+	case stSelect, stUpdate, stDelete:
+		prog.scan = scanOf(p, m)
+	}
 	return prog
 }
 

@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 )
 
 // tableMeta is what the state of a block knows of a table: its columns in their order, its
@@ -28,6 +29,9 @@ type tableMeta struct {
 	// every rule PostgreSQL checks on a write: no foreign key, trigger, generated column, or
 	// check it cannot evaluate
 	readable, writable bool
+	// scans are the texts of the statements of the rows of PostgreSQL of the plans of the table,
+	// one of each text
+	scans sync.Map
 }
 
 type colMeta struct {

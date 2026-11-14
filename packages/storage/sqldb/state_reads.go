@@ -236,10 +236,10 @@ func (v *TxView) share(table, key string, val any) {
 // of its lock, since the workers read and add them all the time.
 type baseRows struct {
 	shards [baseShards]baseShard
-	// scans are the rows of the statements the block read of the table, by stmtKey, and n the
-	// rows they keep, under scanMu
+	// scans are the rows of the statements the block read of the table, by shapeScanKey, and n
+	// the rows they keep, under scanMu
 	scanMu sync.RWMutex
-	scans  map[string][]stateRow
+	scans  map[shapeScanKey][]stateRow
 	n      int
 }
 
@@ -269,12 +269,20 @@ func (b *baseRows) shard(key string) *baseShard {
 // maxScanRows bounds the rows of the statements a block keeps of a table
 const maxScanRows = 1 << 16
 
-// stmtKey is the key of a statement and its values, false for a value it does not tell apart:
-// equal keys send PostgreSQL the same statement with the same values
-func stmtKey(query string, values []any) (string, bool) {
+// shapeScanKey is the key of a statement merge sends PostgreSQL: its text, one of each text of the
+// table, its limit (-1 for none) and the key of the values, so equal keys are the same statement
+// with the same values
+type shapeScanKey struct {
+	text   *string
+	n      int64
+	values string
+}
+
+// valuesKey is the key of values, false for a value it does not tell apart: equal keys are
+// equal values
+func valuesKey(values []any) (string, bool) {
 	var b strings.Builder
-	b.Grow(len(query) + 16*len(values))
-	b.WriteString(query)
+	b.Grow(16 * len(values))
 	for _, v := range values {
 		b.WriteByte(0)
 		switch x := v.(type) {
@@ -308,21 +316,21 @@ func stmtKey(query string, values []any) (string, bool) {
 }
 
 // scan is the rows of PostgreSQL of a statement the block read, and whether it read it
-func (b *baseRows) scan(key string) ([]stateRow, bool) {
+func (b *baseRows) scan(key shapeScanKey) ([]stateRow, bool) {
 	b.scanMu.RLock()
 	defer b.scanMu.RUnlock()
 	r, ok := b.scans[key]
 	return r, ok
 }
 
-func (b *baseRows) putScan(key string, rows []stateRow) {
+func (b *baseRows) putScan(key shapeScanKey, rows []stateRow) {
 	b.scanMu.Lock()
 	defer b.scanMu.Unlock()
 	if _, ok := b.scans[key]; ok || b.n+len(rows)+1 > maxScanRows {
 		return
 	}
 	if b.scans == nil {
-		b.scans = make(map[string][]stateRow)
+		b.scans = make(map[shapeScanKey][]stateRow)
 	}
 	b.scans[key] = rows
 	b.n += len(rows) + 1
