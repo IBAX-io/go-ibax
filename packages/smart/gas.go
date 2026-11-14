@@ -301,40 +301,56 @@ func (sc *SmartContract) payTaxes(pay *PaymentInfo, sum decimal.Decimal, t GasSc
 	var err error
 	if pay.FromID != toID {
 		if fromIDBalance, err = sc.updateKeyAmount(`-`, sum, pay.TokenEco, pay.FromID,
-			types.LoadMap(map[string]any{
-				`id`:        pay.FromID,
-				`ecosystem`: pay.TokenEco,
-			})); err != nil {
+			keyWhere(pay.TokenEco, pay.FromID)); err != nil {
 			return err
 		}
 		sc.FeeCredits = append(sc.FeeCredits, FeeCredit{Ecosystem: pay.TokenEco, Recipient: toID, Amount: sum})
 	} else if fromIDBalance, err = sc.accountBalanceSingle(pay.TokenEco, pay.FromID); err != nil {
 		return err
 	}
-	values := types.LoadMap(map[string]any{
-		"sender_id":      pay.FromID,
-		"sender_balance": fromIDBalance,
-		"recipient_id":   toID,
-		"amount":         sum,
-		"comment":        comment,
-		"status":         int64(status),
-		"block_id":       sc.BlockHeader.BlockId,
-		"txhash":         sc.Hash,
-		"ecosystem":      pay.TokenEco,
-		"type":           int64(t),
-		"created_at":     sc.Timestamp,
-	})
-	if pay.FromID == toID {
-		values.Set("recipient_balance", fromIDBalance)
-	}
-	if t == GasScenesType_Reward || t == GasScenesType_Direct {
-		values.Set("value_detail", pay.Detail())
-	}
-	if t == GasScenesType_Combustion {
-		values.Set("value_detail", pay.DetailCombustion())
-	}
-	_, _, err = sc.insert(values.Keys(), values.Values(), `1_history`)
+	fields, values := sc.historyRow(pay, toID, fromIDBalance, sum, t, comment, status)
+	_, _, err = sc.insert(fields, values, `1_history`)
 	return err
+}
+
+// keyWhere is the condition of the row of the account id in the ecosystem eco: the map
+// types.LoadMap of the id and the ecosystem gives, its keys in the order of their names
+func keyWhere(eco, id int64) *types.Map {
+	where := types.NewMapSize(2)
+	where.Set("ecosystem", eco)
+	where.Set("id", id)
+	return where
+}
+
+// historyColumns are the columns of the history row of a payment that each row has, in the order
+// of their names
+var historyColumns = [...]string{"amount", "block_id", "comment", "created_at", "ecosystem",
+	"recipient_id", "sender_balance", "sender_id", "status", "txhash", "type"}
+
+// historyRow is the columns and the values of the history row of a payment: the columns each row
+// has in the order of their names, then the balance of the recipient when the payer pays itself and
+// the detail of a reward, a direct payment or a combustion, the order types.LoadMap of the columns
+// and Set of the others gave them
+func (sc *SmartContract) historyRow(pay *PaymentInfo, toID int64, fromIDBalance, sum decimal.Decimal,
+	t GasScenesType, comment string, status pbgo.TxInvokeStatusCode) ([]string, []any) {
+	fields := make([]string, len(historyColumns), len(historyColumns)+1)
+	copy(fields, historyColumns[:])
+	values := make([]any, 0, len(historyColumns)+1)
+	values = append(values, sum, sc.BlockHeader.BlockId, comment, sc.Timestamp, pay.TokenEco,
+		toID, fromIDBalance, pay.FromID, int64(status), sc.Hash, int64(t))
+	if pay.FromID == toID {
+		fields = append(fields, "recipient_balance")
+		values = append(values, fromIDBalance)
+	}
+	switch t {
+	case GasScenesType_Reward, GasScenesType_Direct:
+		fields = append(fields, "value_detail")
+		values = append(values, pay.Detail())
+	case GasScenesType_Combustion:
+		fields = append(fields, "value_detail")
+		values = append(values, pay.DetailCombustion())
+	}
+	return fields, values
 }
 
 func (sc *SmartContract) needPayment() bool {

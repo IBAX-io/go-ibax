@@ -3,10 +3,12 @@ package smart
 import (
 	"math"
 	"math/rand/v2"
+	"reflect"
 	"testing"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/shopspring/decimal"
@@ -254,4 +256,69 @@ func BenchmarkDetailText(b *testing.B) {
 			_, _ = converter.InterfaceToStr(pay.Detail())
 		}
 	})
+}
+
+// refHistoryRow is the history row of a payment as payTaxes made it: types.LoadMap of the columns
+// each row has, then Set of the balance of the recipient and the detail
+func refHistoryRow(sc *SmartContract, pay *PaymentInfo, toID int64, fromIDBalance, sum decimal.Decimal,
+	t GasScenesType, comment string, status pbgo.TxInvokeStatusCode) ([]string, []any) {
+	values := types.LoadMap(map[string]any{
+		"sender_id":      pay.FromID,
+		"sender_balance": fromIDBalance,
+		"recipient_id":   toID,
+		"amount":         sum,
+		"comment":        comment,
+		"status":         int64(status),
+		"block_id":       sc.BlockHeader.BlockId,
+		"txhash":         sc.Hash,
+		"ecosystem":      pay.TokenEco,
+		"type":           int64(t),
+		"created_at":     sc.Timestamp,
+	})
+	if pay.FromID == toID {
+		values.Set("recipient_balance", fromIDBalance)
+	}
+	if t == GasScenesType_Reward || t == GasScenesType_Direct {
+		values.Set("value_detail", pay.Detail())
+	}
+	if t == GasScenesType_Combustion {
+		values.Set("value_detail", pay.DetailCombustion())
+	}
+	return values.Keys(), values.Values()
+}
+
+// TestHistoryRow: the history row of each kind of payment, to another account and to the payer,
+// has the columns and the values in the order payTaxes gave them, and keyWhere is the map of the
+// id and the ecosystem
+func TestHistoryRow(t *testing.T) {
+	sc := &SmartContract{Hash: []byte{1, 0xff, 2}, Timestamp: 1700000000}
+	sc.BlockHeader = &types.BlockHeader{BlockId: 77}
+	n := 0
+	for _, kind := range []GasScenesType{GasScenesType_Unknown, GasScenesType_Reward, GasScenesType_Taxes,
+		GasScenesType_Direct, GasScenesType_Combustion, GasScenesType_TransferSelf, 99} {
+		for _, to := range []int64{-5, 0, 7} {
+			pay := &PaymentInfo{FromID: 7, ToID: to, TaxesID: to, TokenEco: 3, FuelRate: decimal.New(15, -1),
+				Ecosystem: &sqldb.Ecosystem{TokenSymbol: "T<"}, Combustion: &Combustion{Flag: 2, Percent: 10}}
+			pay.PushFuelCategories(FuelCategory{FuelType: FuelType_vmCost_fee, Decimal: decimal.New(98765, -2), ConversionRate: 100})
+			sum, bal := decimal.New(1234, -1), decimal.NewFromInt(-9)
+			for _, status := range []pbgo.TxInvokeStatusCode{pbgo.TxInvokeStatusCode_SUCCESS, 3} {
+				wantF, wantV := refHistoryRow(sc, pay, to, bal, sum, kind, "c", status)
+				gotF, gotV := sc.historyRow(pay, to, bal, sum, kind, "c", status)
+				if !reflect.DeepEqual(gotF, wantF) || !reflect.DeepEqual(gotV, wantV) {
+					t.Fatalf("type %d to %d:\nwant %v %#v\ngot  %v %#v", kind, to, wantF, wantV, gotF, gotV)
+				}
+				n++
+			}
+		}
+	}
+	for _, ids := range [][2]int64{{1, 2}, {0, -8810002}, {7, 0}} {
+		want := types.LoadMap(map[string]any{"id": ids[1], "ecosystem": ids[0]})
+		got := keyWhere(ids[0], ids[1])
+		if !reflect.DeepEqual(got.Keys(), want.Keys()) || !reflect.DeepEqual(got.Values(), want.Values()) {
+			t.Fatalf("where %v: want %v got %v", ids, want, got)
+		}
+	}
+	if n != 42 {
+		t.Fatalf("%d rows", n)
+	}
 }

@@ -79,7 +79,7 @@ func (s *FeeSettlement) Settle(dbTx *sqldb.DbTransaction, header *types.BlockHea
 			return nil, err
 		}
 		balance, err := sc.updateKeyAmount("+", sum, a.ecosystem, a.recipient,
-			types.LoadMap(map[string]any{"id": a.recipient, "ecosystem": a.ecosystem}))
+			keyWhere(a.ecosystem, a.recipient))
 		if err != nil {
 			return nil, err
 		}
