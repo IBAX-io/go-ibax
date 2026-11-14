@@ -50,9 +50,9 @@ type bindProg struct {
 	sets      []setTmpl
 	exprs     []exprTmpl
 	nexprKids int
-	// frame is the type of the block a run makes what it binds in, nil when it makes none, and
-	// at the offsets of its parts in the block
-	frame reflect.Type
+	// frame is the runtime type of the block a run makes what it binds in, nil when it makes
+	// none, and at the offsets of its parts in the block
+	frame unsafe.Pointer
 	at    frameAt
 	// scan is the statement merge reads the rows of PostgreSQL of a select, an update or a delete
 	// by, of the table, nil for an insert
@@ -312,8 +312,21 @@ func (prog *bindProg) layout() {
 	for i, off := range at {
 		*off = t.Field(i).Offset
 	}
-	prog.frame = t
+	prog.frame = typeOf(t)
 }
+
+// typeOf is the runtime type of t: the data word of the interface, which is the type reflect
+// itself allocates by
+func typeOf(t reflect.Type) unsafe.Pointer {
+	return (*[2]unsafe.Pointer)(unsafe.Pointer(&t))[1]
+}
+
+// newFrame allocates a zeroed value of the runtime type t as reflect.New does, without the lookup
+// of the type of a pointer to t that reflect.New makes for the Value it returns
+//
+//go:linkname newFrame reflect.unsafe_New
+//go:noescape
+func newFrame(t unsafe.Pointer) unsafe.Pointer
 
 // framePart is the part of n values of the type T at the offset at of the block base
 func framePart[T any](base unsafe.Pointer, at uintptr, n int) []T {
@@ -738,7 +751,7 @@ func (prog *bindProg) run(args []driver.NamedValue) (planBinding, bool) {
 	// what a run makes it makes in one block
 	var base unsafe.Pointer
 	if prog.frame != nil {
-		base = reflect.New(prog.frame).UnsafePointer()
+		base = newFrame(prog.frame)
 	}
 	strs := framePart[string](base, prog.at.strs, prog.nstr)
 	for i := range prog.ops {

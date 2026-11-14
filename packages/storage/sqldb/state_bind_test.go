@@ -8,10 +8,13 @@ package sqldb
 import (
 	"database/sql/driver"
 	"math"
+	"reflect"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
+	"unsafe"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/shopspring/decimal"
@@ -609,5 +612,103 @@ func TestMergeOtherMeta(t *testing.T) {
 	ts := &tableState{meta: bindMetas[1]}
 	if _, err := (&TxView{}).merge(t.Context(), nil, ts, compileBind(p, bindMetas[0]), args, nil, nil, -1, 0); err != errUnsupported {
 		t.Fatalf("merge: %v", err)
+	}
+}
+
+// TestNewFrame: a block newFrame allocates is zeroed and of the size of its type, and the
+// collector keeps what its pointers reach: blocks of the parts of a run filled with texts of their
+// own, the collector run, and the texts read back
+func TestNewFrame(t *testing.T) {
+	ft := reflect.StructOf([]reflect.StructField{
+		{Name: "P0", Type: reflect.ArrayOf(5, reflect.TypeFor[string]())},
+		{Name: "P1", Type: reflect.ArrayOf(7, reflect.TypeFor[*string]())},
+		{Name: "P2", Type: reflect.ArrayOf(3, reflect.TypeFor[bcond]())},
+	})
+	at1 := ft.Field(1).Offset
+	frames := make([]unsafe.Pointer, 2000)
+	for i := range frames {
+		base := newFrame(typeOf(ft))
+		for _, b := range unsafe.Slice((*byte)(base), ft.Size()) {
+			if b != 0 {
+				t.Fatalf("frame %d is not zeroed", i)
+			}
+		}
+		strs := framePart[string](base, 0, 5)
+		texts := framePart[*string](base, at1, 7)
+		for k := range strs {
+			strs[k] = strconv.Itoa(i*10 + k)
+			texts[k] = &strs[k]
+		}
+		s := strconv.Itoa(-i)
+		texts[6] = &s
+		frames[i] = base
+		if i%100 == 0 {
+			runtime.GC()
+		}
+	}
+	runtime.GC()
+	runtime.GC()
+	for i, base := range frames {
+		texts := framePart[*string](base, at1, 7)
+		for k := 0; k < 5; k++ {
+			if *texts[k] != strconv.Itoa(i*10+k) {
+				t.Fatalf("frame %d text %d is %q", i, k, *texts[k])
+			}
+		}
+		if *texts[6] != strconv.Itoa(-i) || texts[5] != nil {
+			t.Fatalf("frame %d: %v %v", i, texts[5], texts[6])
+		}
+	}
+	// the programs of the plans take their blocks by newFrame
+	n := 0
+	for _, p := range bindPlans {
+		if prog := compileBind(p, bindMetas[0]); prog.frame != nil {
+			n++
+		}
+	}
+	if n < 40 {
+		t.Fatalf("%d programs with a block", n)
+	}
+}
+
+// TestBindFrameKeepsValues: the block of a run is what keeps the texts it converts the values to.
+// The bindings of many runs are kept, the values dropped, the collector run and memory taken
+// again, and each binding still equals the binding of the binder.
+func TestBindFrameKeepsValues(t *testing.T) {
+	type kept struct {
+		want, got     planBinding
+		wantOK, gotOK bool
+		text          string
+	}
+	var all []kept
+	for k, p := range bindPlans {
+		prog := compileBind(p, bindMetas[0])
+		if prog.bad || prog.frame == nil {
+			continue
+		}
+		for s := uint64(0); s < 40; s++ {
+			kinds := s*0x9E3779B97F4A7C15 ^ s<<7
+			i := int64(s)*1000003 + 123456789
+			args := bindArgs(prog.need, kinds, i, strconv.Itoa(int(i)), strconv.Itoa(int(-i)))
+			got, gotOK := prog.run(args)
+			want, wantOK := bindPlan(p, bindMetas[0], bindArgs(prog.need, kinds, i, strconv.Itoa(int(i)), strconv.Itoa(int(-i))))
+			all = append(all, kept{want, got, wantOK, gotOK, bindTexts[k]})
+		}
+	}
+	for r := 0; r < 3; r++ {
+		runtime.GC()
+		junk := make([][]byte, 0, 1<<12)
+		for j := 0; j < 1<<12; j++ {
+			junk = append(junk, []byte(strconv.Itoa(j)+"xxxxxxxxxxxxxxxxxxxxxxxxxxxx"))
+		}
+		runtime.KeepAlive(junk)
+	}
+	for _, c := range all {
+		if d := diffBinding(c.want, c.wantOK, c.got, c.gotOK); d != "" {
+			t.Fatalf("%s: %s", c.text, d)
+		}
+	}
+	if len(all) < 1000 {
+		t.Fatalf("%d runs", len(all))
 	}
 }
