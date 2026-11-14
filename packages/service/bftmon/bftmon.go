@@ -36,6 +36,9 @@ const (
 	TimeoutPropose   = "propose"
 	TimeoutPrevote   = "prevote"
 	TimeoutPrecommit = "precommit"
+	// TimeoutOwnWrites is the propose timeouts of a proposer whose own block was still being
+	// written: it prevotes nil, while the other validators have its proposal and vote on it
+	TimeoutOwnWrites = "own_writes"
 )
 
 // The counts of the consensus messages the node received, by what became of them

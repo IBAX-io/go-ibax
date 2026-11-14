@@ -90,10 +90,16 @@ func TestPendingBlockTimesOut(t *testing.T) {
 	c := alone(t)
 	own := testHash(0xaa)
 	c.take(c.m.Start())
+	if !c.m.OwnPending() {
+		t.Fatal("the proposal of the pending block is not the own pending one")
+	}
 	c.timeout(0, StepPropose)
 	c.wantVote(TypePrevote, 0, Nil)
 	c.take(c.m.OnValid(1, own, ValidityValid))
 	c.wantVote(TypePrevote, 0, Nil)
+	if c.m.OwnPending() {
+		t.Fatal("the block is still pending once the node told its validity")
+	}
 	if c.m.Decided() {
 		t.Fatal("a block prevoted nil is decided")
 	}

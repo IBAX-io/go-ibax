@@ -357,6 +357,8 @@ func (d *bftDriver) countTimeout(t bft.Timeout) {
 	}
 	var step string
 	switch {
+	case t.Step == bft.StepPropose && d.m.Step() == bft.StepPropose && d.m.OwnPending():
+		step = bftmon.TimeoutOwnWrites
 	case t.Step == bft.StepPropose && d.m.Step() == bft.StepPropose:
 		step = bftmon.TimeoutPropose
 	case t.Step == bft.StepPrevote && d.m.Step() == bft.StepPrevote:
@@ -367,6 +369,10 @@ func (d *bftDriver) countTimeout(t bft.Timeout) {
 		return
 	}
 	bftmon.Update(func(s *bftmon.State) { s.Timeouts[step]++ })
+	if step == bftmon.TimeoutOwnWrites {
+		d.logger.WithFields(log.Fields{"height": t.Height, "round": t.Round}).
+			Warn("the writes of the own block did not end within the propose timeout")
+	}
 	if step == bftmon.TimeoutPropose {
 		d.logger.WithFields(log.Fields{"height": t.Height, "round": t.Round, "proposer": d.m.Proposer(),
 			"admitted": d.hasProposal(t.Height, t.Round)}).Warn("no proposal within the propose timeout")

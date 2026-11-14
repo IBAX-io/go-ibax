@@ -220,6 +220,14 @@ func (m *Machine) Decided() bool { return m.decided }
 // Proposer is the proposer of the round of the machine
 func (m *Machine) Proposer() uint32 { return m.set.Proposer(m.height, m.round) }
 
+// OwnPending reports whether the proposal of the round of the machine is its own block whose
+// validity the node has not told yet: a proposer that times out so waits for its writes, not for
+// a proposal, which the other validators have
+func (m *Machine) OwnPending() bool {
+	p := m.proposals[m.round]
+	return p != nil && p.Validator == m.self && m.pending[p.Hash]
+}
+
 // Locked is the round of the lock of the machine, NoRound for none, and the hash it locked
 func (m *Machine) Locked() (int32, Hash) {
 	if m.lockedValue == nil {
