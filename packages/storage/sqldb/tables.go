@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"strconv"
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
@@ -73,7 +74,7 @@ func (t *Table) TableName() string {
 
 // Get is retrieving model from database
 func (t *Table) Get(dbTx *DbTransaction, name string) (bool, error) {
-	return cachedFirst(dbTx, `1_tables`, fmt.Sprintf("table:%d:%s", t.Ecosystem, name), t, t.ID != 0, func() (bool, error) {
+	return cachedFirst(dbTx, `1_tables`, "table:"+strconv.FormatInt(t.Ecosystem, 10)+":"+name, t, t.ID != 0, func() (bool, error) {
 		return isFound(GetDB(dbTx).Where("ecosystem = ? and name = ?", t.Ecosystem, name).First(t))
 	})
 }
@@ -124,7 +125,7 @@ func (t *Table) GetPermissions(dbTx *DbTransaction, name, jsonKey string) (map[s
 	if jsonKey != "" {
 		keyStr = `->'` + jsonKey + `'`
 	}
-	perms, err := cached(dbTx, `1_tables`, fmt.Sprintf("perm:%d:%s:%s", t.Ecosystem, name, jsonKey), func() (map[string]string, error) {
+	perms, err := cached(dbTx, `1_tables`, "perm:"+strconv.FormatInt(t.Ecosystem, 10)+":"+name+":"+jsonKey, func() (map[string]string, error) {
 		rows, err := dbTx.queryRaw(`SELECT data.* FROM "1_tables", jsonb_each_text(permissions`+keyStr+`) AS data WHERE ecosystem = ? AND name = ?`, t.Ecosystem, name)
 		if err != nil {
 			return nil, err

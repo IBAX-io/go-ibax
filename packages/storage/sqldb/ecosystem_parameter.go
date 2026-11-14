@@ -6,7 +6,7 @@
 package sqldb
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
@@ -40,7 +40,7 @@ func (sp *StateParameter) SetTablePrefix(prefix string) *StateParameter {
 
 // Get is retrieving model from database
 func (sp *StateParameter) Get(dbTx *DbTransaction, name string) (bool, error) {
-	return cachedFirst(dbTx, `1_parameters`, fmt.Sprintf("param:%d:%s", sp.ecosystem, name), sp, sp.ID != 0, func() (bool, error) {
+	return cachedFirst(dbTx, `1_parameters`, "param:"+strconv.FormatInt(sp.ecosystem, 10)+":"+name, sp, sp.ID != 0, func() (bool, error) {
 		return sp.firstByName(dbTx, name)
 	})
 }

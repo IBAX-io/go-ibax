@@ -55,8 +55,15 @@ func withTxCache(ctx context.Context) (context.Context, *txCache) {
 	return context.WithValue(ctx, txCacheKey{}, c), c
 }
 
+// cacheTable is the name of the table the cache keys its results by: without the quotes around it,
+// in lower case. A name of ASCII without quotes and upper case letters is that name itself.
 func cacheTable(table string) string {
-	return strings.ToLower(strings.Trim(table, `"`))
+	for i := 0; i < len(table); i++ {
+		if c := table[i]; c == '"' || c >= 0x80 || 'A' <= c && c <= 'Z' {
+			return strings.ToLower(strings.Trim(table, `"`))
+		}
+	}
+	return table
 }
 
 func (c *txCache) get(table, key string) (any, bool) {

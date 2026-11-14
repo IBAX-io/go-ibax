@@ -5,7 +5,7 @@
 package sqldb
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/IBAX-io/go-ibax/packages/converter"
 )
@@ -35,7 +35,7 @@ func (sp *AppParam) SetTablePrefix(tablePrefix string) {
 
 // Get is retrieving model from database
 func (sp *AppParam) Get(dbTx *DbTransaction, app int64, name string) (bool, error) {
-	return cachedFirst(dbTx, `1_app_params`, fmt.Sprintf("appparam:%d:%d:%s", sp.ecosystem, app, name), sp, sp.ID != 0, func() (bool, error) {
+	return cachedFirst(dbTx, `1_app_params`, "appparam:"+strconv.FormatInt(sp.ecosystem, 10)+":"+strconv.FormatInt(app, 10)+":"+name, sp, sp.ID != 0, func() (bool, error) {
 		return isFound(GetDB(dbTx).Where("ecosystem=? and app_id=? and name = ?",
 			sp.ecosystem, app, name).First(sp))
 	})

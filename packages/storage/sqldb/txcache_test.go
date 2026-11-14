@@ -8,7 +8,10 @@ package sqldb
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestWritten(t *testing.T) {
@@ -218,4 +221,81 @@ func TestTxCacheGeneration(t *testing.T) {
 
 func withCache(c *txCache) context.Context {
 	return context.WithValue(context.Background(), txCacheKey{}, c)
+}
+
+// refCacheTable is the name of the table the cache keys by, as it was written
+func refCacheTable(table string) string {
+	return strings.ToLower(strings.Trim(table, `"`))
+}
+
+// TestCacheTable: the name the cache keys by is the name without its quotes in lower case, for
+// the names of the tables, each string of one and two bytes and a set of runes
+func TestCacheTable(t *testing.T) {
+	names := []string{"", `"`, `""`, "1_keys", `"1_keys"`, "1_KEYS", `"1_Keys"`, `""1_keys""`, `1_ke"ys`,
+		"1_tables", "1_parameters", "1_app_params", "1_history", "*", "1_ключи", "1_KİYS", "1_\u212a", "\xff1_keys"}
+	for c := 0; c < 256; c++ {
+		names = append(names, string([]byte{byte(c)}), "1_keys"+string([]byte{byte(c)}))
+		for d := 0; d < 256; d++ {
+			names = append(names, string([]byte{byte(c), byte(d)}))
+		}
+	}
+	for r := rune(0x80); r < 0x3000; r += 7 {
+		names = append(names, "a"+string(r), string(r)+"Z")
+	}
+	for _, s := range names {
+		if got, want := cacheTable(s), refCacheTable(s); got != want {
+			t.Fatalf("cacheTable(%q) = %q, want %q", s, got, want)
+		}
+	}
+}
+
+func FuzzCacheTable(f *testing.F) {
+	for _, s := range []string{"1_keys", `"1_KEYS"`, "1_ключи", "\xff", `"`} {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, s string) {
+		if got, want := cacheTable(s), refCacheTable(s); got != want {
+			t.Fatalf("cacheTable(%q) = %q, want %q (valid %v)", s, got, want, utf8.ValidString(s))
+		}
+	})
+}
+
+// TestCacheKeys: the rows of tables, their permissions, the parameters and the parameters of the
+// applications are keyed in the cache by the keys they were, so that a read finds what the cache
+// has under the key
+func TestCacheKeys(t *testing.T) {
+	_, c := withTxCache(t.Context())
+	tr := &DbTransaction{cache: c}
+	for _, eco := range []int64{1, 0, -7, 1 << 62, -1 << 63} {
+		for _, name := range []string{"keys", "", "a:b", "ключи"} {
+			table := Table{ID: 3, Name: name, Ecosystem: eco, Columns: fmt.Sprint(eco)}
+			c.put("1_tables", fmt.Sprintf("table:%d:%s", eco, name), firstRow[Table]{found: true, row: table})
+			got := &Table{Ecosystem: eco}
+			if found, err := got.Get(tr, name); !found || err != nil || *got != table {
+				t.Fatalf("table %d %q: %v %v %+v", eco, name, found, err, got)
+			}
+			for _, jsonKey := range []string{"", "insert"} {
+				perms := map[string]string{"k": fmt.Sprint(eco, name, jsonKey)}
+				c.put("1_tables", fmt.Sprintf("perm:%d:%s:%s", eco, name, jsonKey), perms)
+				gotPerms, err := (&Table{Ecosystem: eco}).GetPermissions(tr, name, jsonKey)
+				if err != nil || gotPerms["k"] != perms["k"] {
+					t.Fatalf("permissions %d %q %q: %v %v", eco, name, jsonKey, gotPerms, err)
+				}
+			}
+			param := StateParameter{ecosystem: eco, ID: 4, Name: name, Value: fmt.Sprint(eco)}
+			c.put("1_parameters", fmt.Sprintf("param:%d:%s", eco, name), firstRow[StateParameter]{found: true, row: param})
+			gotParam := &StateParameter{ecosystem: eco}
+			if found, err := gotParam.Get(tr, name); !found || err != nil || *gotParam != param {
+				t.Fatalf("parameter %d %q: %v %v %+v", eco, name, found, err, gotParam)
+			}
+			for _, app := range []int64{1, 0, -3, 17, -1 << 63} {
+				ap := AppParam{ecosystem: eco, ID: 5, AppID: app, Name: name, Value: fmt.Sprint(eco, app)}
+				c.put("1_app_params", fmt.Sprintf("appparam:%d:%d:%s", eco, app, name), firstRow[AppParam]{found: true, row: ap})
+				gotAP := &AppParam{ecosystem: eco}
+				if found, err := gotAP.Get(tr, app, name); !found || err != nil || *gotAP != ap {
+					t.Fatalf("app parameter %d %d %q: %v %v %+v", eco, app, name, found, err, gotAP)
+				}
+			}
+		}
+	}
 }
