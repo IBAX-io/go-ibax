@@ -28,14 +28,88 @@ func AppendBoundStatement(dst []byte, query string, args []any) []byte {
 			return fmt.Appendf(dst, " %q", args)
 		}
 	}
+	from := len(dst)
 	dst = append(dst, ' ', '[')
 	for i, arg := range args {
 		if i > 0 {
 			dst = append(dst, ' ')
 		}
-		dst = strconv.AppendQuote(dst, arg.(string))
+		dst = appendQuote(dst, arg.(string))
 	}
-	return append(dst, ']')
+	dst = append(dst, ']')
+	if appendCheck {
+		if want := fmt.Sprintf(" %q", args); string(dst[from:]) != want {
+			panic(fmt.Sprintf("b7check: the values %#v are bound as %s, not %s", args, dst[from:], want))
+		}
+	}
+	return dst
+}
+
+// appendQuote appends to dst the string s as strconv.AppendQuote does. A byte of ASCII is a rune
+// of its own: printable ASCII but the quote and the backslash as it is, the quote and the backslash
+// after a backslash, the controls of a short escape as that escape, and the other controls and DEL
+// as \x and two hex digits. Of the other bytes, a byte that does not start a valid UTF-8 sequence
+// is \x and its two hex digits, a printable rune is its bytes, and a rune that is not printable
+// takes strconv.AppendQuote itself.
+func appendQuote(dst []byte, s string) []byte {
+	dst = append(dst, '"')
+	for i := 0; i < len(s); {
+		j := i
+		for j < len(s) && plainByte(s[j]) {
+			j++
+		}
+		dst = append(dst, s[i:j]...)
+		if j == len(s) {
+			break
+		}
+		c := s[j]
+		if c < utf8.RuneSelf {
+			i = j + 1
+			switch c {
+			case '"', '\\':
+				dst = append(dst, '\\', c)
+			case '\a':
+				dst = append(dst, '\\', 'a')
+			case '\b':
+				dst = append(dst, '\\', 'b')
+			case '\f':
+				dst = append(dst, '\\', 'f')
+			case '\n':
+				dst = append(dst, '\\', 'n')
+			case '\r':
+				dst = append(dst, '\\', 'r')
+			case '\t':
+				dst = append(dst, '\\', 't')
+			case '\v':
+				dst = append(dst, '\\', 'v')
+			default:
+				dst = append(dst, '\\', 'x', lowerHex[c>>4], lowerHex[c&0xf])
+			}
+			continue
+		}
+		r, w := utf8.DecodeRuneInString(s[j:])
+		i = j + w
+		switch {
+		case r == utf8.RuneError && w == 1:
+			dst = append(dst, '\\', 'x', lowerHex[c>>4], lowerHex[c&0xf])
+		case strconv.IsPrint(r):
+			dst = append(dst, s[j:i]...)
+		default:
+			n := len(dst)
+			dst = strconv.AppendQuote(dst, s[j:i])
+			dst = append(dst[:n], dst[n+1:len(dst)-1]...)
+		}
+	}
+	return append(dst, '"')
+}
+
+// lowerHex are the digits strconv writes the \x escapes with
+const lowerHex = "0123456789abcdef"
+
+// plainByte tells strconv.AppendQuote writes the byte as it is: printable ASCII but the quote and
+// the backslash
+func plainByte(c byte) bool {
+	return c >= 0x20 && c < 0x7f && c != '"' && c != '\\'
 }
 
 // AppendRollBackInfo appends to dst the data of the rollback record of a row an update changes:

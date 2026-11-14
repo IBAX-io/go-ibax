@@ -8,8 +8,10 @@ package queryBuilder
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // oldBoundStatement is BoundStatement as it was before the appender, the reference of the tests
@@ -55,6 +57,8 @@ var appenderSeeds = []string{
 	"\xc3", "\xe2\x80", "\xe2\x80\xa8", "\xe2\x80\xa9", "\u2028\u2029", "\U0001F600", "\ufffd",
 	"\u00a0\u00ad\u200b\ufeff", "\U000E0001", "日本語", "'", "`", "%q", "{}", "NULL", "\\x01",
 	"a\x00b", "\xed\xa0\x80", "\xf4\x90\x80\x80", "timestamp 2020-01-01",
+	`{"fuel_rate":"1000000","taxes_size":3,"token_symbol":"IBXC"}`,
+	"\xb7\x2d\x68\x00\x9e\xe1\x80\x7f\xc2\xa0\xef\xbf\xbd\x1b\xf0\x9f\x98",
 }
 
 // splitArgs splits the input of a fuzz test into strings at the byte 0x1e
@@ -89,6 +93,34 @@ func TestAppendBoundStatement(t *testing.T) {
 	checkBound(t, query, []any{"1", int64(2)})
 	checkBound(t, query, []any{nil, "x"})
 	checkBound(t, query, []any{[]byte("ab"), 1.5, true})
+}
+
+// TestAppendQuoteRunes compares appendQuote with strconv.AppendQuote on each byte alone, on each
+// rune, valid or not, between plain text, and on each byte before and after the bytes of a rune
+func TestAppendQuoteRunes(t *testing.T) {
+	check := func(s string) {
+		if got, want := string(appendQuote(nil, s)), strconv.Quote(s); got != want {
+			t.Fatalf("%x: want %s got %s", s, want, got)
+		}
+	}
+	for c := 0; c < 256; c++ {
+		check(string([]byte{byte(c)}))
+		check("a" + string([]byte{byte(c)}) + "b")
+		for d := 0; d < 256; d++ {
+			check(string([]byte{byte(c), byte(d)}))
+		}
+	}
+	var buf []byte
+	for r := rune(0); r <= utf8.MaxRune; r++ {
+		buf = utf8.AppendRune(buf[:0], r)
+		if r >= 0xd800 && r < 0xe000 {
+			// utf8 encodes a surrogate as U+FFFD; write the bytes of the surrogate itself
+			buf = append(buf[:0], 0xed, byte(0x80|(r>>6)&0x3f), byte(0x80|r&0x3f))
+		}
+		check(string(buf))
+		check("x" + string(buf) + "\"")
+		check(string(buf[:len(buf)-1]) + "y")
+	}
 }
 
 func checkRollBack(t *testing.T, b *SQLQueryBuilder, logData map[string]string) {
