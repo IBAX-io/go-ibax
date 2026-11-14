@@ -202,8 +202,9 @@ func (r *Rows) valueAt(i int) driver.Value {
 }
 
 // fastCell is the text bytesOf makes of the value decodeText makes of the text s of a value of
-// the type oid, for the texts PostgreSQL outputs of integers, numerics, texts, bools, byteas and
-// jsonb, which it makes without decoding them; false for other texts, which are decoded
+// the type oid, for the texts PostgreSQL outputs of integers, numerics, texts, bools, byteas,
+// jsonb and timestamps of years of four digits, which it makes without decoding them; false for
+// other texts, which are decoded
 func fastCell(oid uint32, s string) (string, bool) {
 	switch oid {
 	case pgtype.Int8OID:
@@ -232,8 +233,112 @@ func fastCell(oid uint32, s string) (string, bool) {
 		b := make([]byte, (len(s)-2)/2)
 		hex.Decode(b, []byte(s[2:]))
 		return string(b), true
+	case pgtype.TimestamptzOID:
+		return fastTimestamp(s, true)
+	case pgtype.TimestampOID:
+		return fastTimestamp(s, false)
 	}
 	return "", false
+}
+
+// fastTimestamp is the text bytesOf makes of the time decodeText makes of the text s of a
+// timestamp, with an offset when tz, as PostgreSQL outputs one of a year of four digits in the
+// style ISO: YYYY-MM-DD HH:MM:SS, up to six digits of a fraction, and for tz the offset
+// +HH[:MM[:SS]]. decodeText makes a time of UTC of a timestamp, and of time.Local of a timestamp
+// with an offset. false for other texts.
+func fastTimestamp(s string, tz bool) (string, bool) {
+	const head = len("2006-01-02 15:04:05")
+	if len(s) < head || s[4] != '-' || s[7] != '-' || s[10] != ' ' || s[13] != ':' || s[16] != ':' {
+		return "", false
+	}
+	year, ok1 := digitsAt(s, 0, 4)
+	month, ok2 := digitsAt(s, 5, 2)
+	day, ok3 := digitsAt(s, 8, 2)
+	hour, ok4 := digitsAt(s, 11, 2)
+	minute, ok5 := digitsAt(s, 14, 2)
+	sec, ok6 := digitsAt(s, 17, 2)
+	if !ok1 || !ok2 || !ok3 || !ok4 || !ok5 || !ok6 || year < 1 || month < 1 || month > 12 || day < 1 ||
+		day > daysIn(year, month) || hour > 23 || minute > 59 || sec > 59 {
+		return "", false
+	}
+	i, nsec := head, 0
+	if i < len(s) && s[i] == '.' {
+		i++
+		from := i
+		for i < len(s) && i-from < 7 && s[i] >= '0' && s[i] <= '9' {
+			nsec = nsec*10 + int(s[i]-'0')
+			i++
+		}
+		if i == from || i-from > 6 {
+			return "", false
+		}
+		for k := i - from; k < 9; k++ {
+			nsec *= 10
+		}
+	}
+	off := 0
+	if tz {
+		if i+3 > len(s) || s[i] != '+' && s[i] != '-' {
+			return "", false
+		}
+		neg := s[i] == '-'
+		h, ok := digitsAt(s, i+1, 2)
+		if !ok {
+			return "", false
+		}
+		off, i = h*3600, i+3
+		for _, unit := range [2]int{60, 1} {
+			if i == len(s) {
+				break
+			}
+			v, ok := digitsAt(s, i+1, 2)
+			if s[i] != ':' || !ok || v > 59 {
+				return "", false
+			}
+			off, i = off+v*unit, i+3
+		}
+		if neg {
+			off = -off
+		}
+	}
+	if i != len(s) {
+		return "", false
+	}
+	t := time.Date(year, time.Month(month), day, hour, minute, sec, nsec, time.UTC)
+	if tz {
+		t = t.Add(-time.Duration(off) * time.Second).In(time.Local)
+	}
+	var buf [len(time.RFC3339Nano) + 8]byte
+	return string(t.AppendFormat(buf[:0], time.RFC3339Nano)), true
+}
+
+// digitsAt is the number of the n digits of s at i, false when they are not n digits
+func digitsAt(s string, i, n int) (int, bool) {
+	if i+n > len(s) {
+		return 0, false
+	}
+	v := 0
+	for _, c := range []byte(s[i : i+n]) {
+		if c < '0' || c > '9' {
+			return 0, false
+		}
+		v = v*10 + int(c-'0')
+	}
+	return v, true
+}
+
+// daysIn is the number of the days of the month of the year
+func daysIn(year, month int) int {
+	switch month {
+	case 2:
+		if year%4 == 0 && (year%100 != 0 || year%400 == 0) {
+			return 29
+		}
+		return 28
+	case 4, 6, 9, 11:
+		return 30
+	}
+	return 31
 }
 
 // fitsInt tells the integer of the canonical text s is one of bits bits

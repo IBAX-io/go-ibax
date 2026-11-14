@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/require"
@@ -241,6 +242,161 @@ func FuzzCellEncode(f *testing.F) {
 			if oid == pgtype.ByteaOID && hex.EncodeToString(b) != s[2:] {
 				t.Fatalf("bytea %q: hex %q", s, hex.EncodeToString(b))
 			}
+		}
+	})
+}
+
+// timestampZones are zones of time.Local with offsets of both signs, of minutes, and of seconds in
+// their past
+var timestampZones = []string{"UTC", "Asia/Shanghai", "America/St_Johns", "Asia/Kathmandu", "Europe/London",
+	"Pacific/Chatham", "America/Los_Angeles", "Asia/Kolkata", "Europe/Amsterdam", "Africa/Monrovia"}
+
+// inLocal runs f with time.Local the zone name
+func inLocal(t testing.TB, name string, f func()) {
+	loc, err := time.LoadLocation(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prev := time.Local
+	time.Local = loc
+	defer func() { time.Local = prev }()
+	f()
+}
+
+// checkTimestamp checks fastCell of the text s of a timestamp of each kind against decodeText and
+// bytesOf, and is whether it makes the text of each kind
+func checkTimestamp(t testing.TB, m *pgtype.Map, s string) (tz, plain bool) {
+	for _, oid := range []uint32{pgtype.TimestamptzOID, pgtype.TimestampOID} {
+		out, ok := fastCell(oid, s)
+		if !ok {
+			continue
+		}
+		d, err := decodeText(m, oid, s)
+		if err != nil {
+			t.Fatalf("oid %d %q in %s: fastCell %q, decodeText %v", oid, s, time.Local, out, err)
+		}
+		if b, err := bytesOf(nil, d); err != nil || string(b) != out {
+			t.Fatalf("oid %d %q in %s: fastCell %q, bytesOf %q %v", oid, s, time.Local, out, b, err)
+		}
+		if oid == pgtype.TimestamptzOID {
+			tz = true
+		} else {
+			plain = true
+		}
+	}
+	return tz, plain
+}
+
+// fastTimestamps are texts PostgreSQL outputs of timestamps of years of four digits, with an
+// offset and without
+var fastTimestamps = []string{"2020-01-02 03:04:05", "0001-01-01 00:00:00", "9999-12-31 23:59:59.999999",
+	"2024-02-29 12:00:00.5", "2000-02-29 00:00:00.000001", "1970-01-01 00:00:00.12", "0099-06-30 23:59:59"}
+
+// fastOffsets are offsets PostgreSQL outputs
+var fastOffsets = []string{"+00", "+08", "-03:30", "+05:45", "+12:45", "-00:44:30", "+05:53:28", "+14", "-12", "+00:19:32"}
+
+// slowTimestamps are texts fastCell leaves to decodeText, of each kind
+var slowTimestamps = []string{"infinity", "-infinity", "2020-01-02 03:04:05 BC", "2020-01-02 03:04:05+00 BC",
+	"10000-01-01 00:00:00", "10000-01-01 00:00:00+00", "2020-01-02 03:04:05.1234567", "2020-01-02 03:04:05.1234567+00",
+	"2020-01-02 03:04:05.", "2020-01-02 03:04:05.+00", "2020-01-02 03:04:05Z", "2020-01-02 03:04:05+100",
+	"2020-01-02 03:04:05+1", "2020-01-02 03:04:05+05:3", "2020-01-02 03:04:05+05:30:1", "2020-01-02 03:04:05+05:60",
+	"2020-01-02 03:04:05+05:30:60", "2020-01-02 03:04:05+05:30:00:00", "2020-01-02 03:04:05+05-30",
+	"2021-02-29 00:00:00", "1900-02-29 00:00:00+00", "2020-04-31 00:00:00", "2020-13-01 00:00:00", "2020-00-01 00:00:00",
+	"2020-01-00 00:00:00", "2020-01-02 24:00:00", "2020-01-02 23:60:00", "2020-01-02 23:59:60", "0000-01-01 00:00:00",
+	"2020-01-02T03:04:05", "2020-01-02 03:04", "2020-01-02", "2020-1-02 03:04:05", "２020-01-02 03:04:05",
+	"2020-01-02 03:04:05 ", "2020-01-02 03:04:05 +00", "2020-01-02 03:04:05-", "2020/01/02 03:04:05", "",
+	"2020-11-31 00:00:00", "2020-06-31 00:00:00+00", "2020-01-02 03:04:05*08", "2020-01-02 03:04:05.5 08"}
+
+// TestFastTimestamp: fastCell makes the texts of the timestamps PostgreSQL outputs of years of
+// four digits as decodeText and bytesOf make them in each time.Local, and leaves the others
+func TestFastTimestamp(t *testing.T) {
+	m := pgtype.NewMap()
+	for _, zone := range timestampZones {
+		inLocal(t, zone, func() {
+			for _, s := range fastTimestamps {
+				if tz, plain := checkTimestamp(t, m, s); tz || !plain {
+					t.Fatalf("%q: timestamptz %v, timestamp %v", s, tz, plain)
+				}
+				for _, off := range fastOffsets {
+					if tz, plain := checkTimestamp(t, m, s+off); !tz || plain {
+						t.Fatalf("%q: timestamptz %v, timestamp %v", s+off, tz, plain)
+					}
+				}
+			}
+			for _, s := range slowTimestamps {
+				if tz, plain := checkTimestamp(t, m, s); tz || plain {
+					t.Fatalf("%q: timestamptz %v, timestamp %v", s, tz, plain)
+				}
+			}
+		})
+	}
+}
+
+// TestFastTimestampOutputs: fastCell makes the text of each timestamp PostgreSQL outputs from
+// year 1 to year 7800 in sessions of zones of both signs and of seconds as decodeText and bytesOf
+// make it in each time.Local, and leaves to decodeText the texts of BC of year 1 in zones west of
+// UTC
+func TestFastTimestampOutputs(t *testing.T) {
+	conn := testConn(t)
+	ctx := context.Background()
+	m := pgtype.NewMap()
+	n, bc := 0, 0
+	for _, session := range []string{"UTC", "Asia/Kolkata", "America/St_Johns", "Europe/Amsterdam", "Africa/Monrovia",
+		"Pacific/Chatham", "America/Los_Angeles"} {
+		_, err := conn.ExecContext(ctx, `SET TimeZone = '`+session+`'`)
+		require.NoError(t, err)
+		rows, err := conn.QueryContext(ctx, `SELECT to_timestamp(e)::text, (to_timestamp(e) AT TIME ZONE 'UTC')::text
+			FROM (SELECT -62135596800 + i::float8 * 1234567.891234 + CASE WHEN i % 3 = 0 THEN 0 ELSE (i % 1000) * 0.000001 END
+			AS e FROM generate_series(0, 200000, 13) i) s`)
+		require.NoError(t, err)
+		var texts []string
+		for rows.Next() {
+			var a, b string
+			require.NoError(t, rows.Scan(&a, &b))
+			texts = append(texts, a, b)
+		}
+		require.NoError(t, rows.Err())
+		rows.Close()
+		for _, zone := range []string{"UTC", "Asia/Kathmandu", "America/St_Johns", "Africa/Monrovia"} {
+			inLocal(t, zone, func() {
+				for k, s := range texts {
+					tz, plain := checkTimestamp(t, m, s)
+					if strings.HasSuffix(s, " BC") {
+						// year 1 in a zone of a negative offset
+						if tz || plain {
+							t.Fatalf("%s %q: timestamptz %v, timestamp %v", session, s, tz, plain)
+						}
+						bc++
+						continue
+					}
+					if k%2 == 0 && (!tz || plain) || k%2 == 1 && (tz || !plain) {
+						t.Fatalf("%s %q: timestamptz %v, timestamp %v", session, s, tz, plain)
+					}
+					n++
+				}
+			})
+		}
+	}
+	if n < 400000 || bc == 0 {
+		t.Fatalf("%d texts, %d of BC", n, bc)
+	}
+}
+
+// FuzzFastTimestamp checks fastCell of texts of timestamps in zones of time.Local
+func FuzzFastTimestamp(f *testing.F) {
+	for _, s := range fastTimestamps {
+		for _, off := range fastOffsets {
+			f.Add(s + off)
+		}
+		f.Add(s)
+	}
+	for _, s := range slowTimestamps {
+		f.Add(s)
+	}
+	m := pgtype.NewMap()
+	f.Fuzz(func(t *testing.T, s string) {
+		for _, zone := range []string{"UTC", "America/St_Johns", "Asia/Kathmandu", "Africa/Monrovia"} {
+			inLocal(t, zone, func() { checkTimestamp(t, m, s) })
 		}
 	})
 }
