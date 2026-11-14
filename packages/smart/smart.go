@@ -383,7 +383,6 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 		err             error
 		tablePermission map[string]string
 	)
-	logger := sc.GetLogger()
 	isRead := action == `read`
 	if !isRead && bftTables[strings.ToLower(table)] {
 		return tablePermission, fmt.Errorf("table %s: %w", table, errBftTable)
@@ -400,13 +399,13 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 			if allowed {
 				return tablePermission, nil
 			}
-			logger.WithFields(log.Fields{"type": consts.AccessDenied}).Error("Access denied")
+			sc.GetLogger().WithFields(log.Fields{"type": consts.AccessDenied}).Error("Access denied")
 			return tablePermission, errAccessDenied
 		}
 	}
 
 	if isCustom, err := sc.IsCustomTable(table); err != nil {
-		logger.WithFields(log.Fields{"table": table, "error": err, "type": consts.DBError}).Log(dbLevel(err), "checking custom table")
+		sc.GetLogger().WithFields(log.Fields{"table": table, "error": err, "type": consts.DBError}).Log(dbLevel(err), "checking custom table")
 		return tablePermission, err
 	} else if !isCustom {
 		if isRead {
@@ -420,17 +419,17 @@ func (sc *SmartContract) AccessTablePerm(table, action string) (map[string]strin
 	tables.SetTablePrefix(prefix)
 	tablePermission, err = sc.tables.Permissions(sc.DbTransaction, tables, name)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting table permissions")
+		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting table permissions")
 		return tablePermission, err
 	}
 	if len(tablePermission[action]) > 0 {
 		ret, err := sc.EvalIf(tablePermission[action])
 		if err != nil {
-			logger.WithFields(log.Fields{"table": table, "action": action, "permissions": tablePermission[action], "error": err, "type": consts.EvalError}).Error("evaluating table permissions for action")
+			sc.GetLogger().WithFields(log.Fields{"table": table, "action": action, "permissions": tablePermission[action], "error": err, "type": consts.EvalError}).Error("evaluating table permissions for action")
 			return tablePermission, err
 		}
 		if !ret {
-			logger.WithFields(log.Fields{"table": table, "action": action, "permissions": tablePermission[action], "type": consts.EvalError}).Error("access denied")
+			sc.GetLogger().WithFields(log.Fields{"table": table, "action": action, "permissions": tablePermission[action], "type": consts.EvalError}).Error("access denied")
 			return tablePermission, fmt.Errorf("table: %w", errAccessDenied)
 		}
 	}
@@ -460,7 +459,6 @@ func getPermColumns(input string) (perm permColumn, err error) {
 
 // AccessColumns checks access rights to the columns
 func (sc *SmartContract) AccessColumns(table string, columns *[]string, update bool) error {
-	logger := sc.GetLogger()
 	if sc.FullAccess {
 		return nil
 	}
@@ -485,7 +483,7 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 	tables.SetTablePrefix(prefix)
 	found, err := sc.tables.Get(sc.DbTransaction, tables, name)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting table columns")
+		sc.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Log(dbLevel(err), "getting table columns")
 		return err
 	}
 	if !found {
@@ -496,7 +494,7 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 	}
 	cols, err := parseColumns(tables.Columns)
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("getting table columns")
+		sc.GetLogger().WithFields(log.Fields{"type": consts.JSONUnmarshallError, "error": err}).Error("getting table columns")
 		return err
 	}
 	colNames := make([]string, 0, len(*columns))
@@ -531,7 +529,7 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 		if len(cond) > 0 {
 			perm, err := getPermColumns(cond)
 			if err != nil {
-				logger.WithFields(log.Fields{"type": consts.InvalidObject, "error": err}).Error("getting access columns")
+				sc.GetLogger().WithFields(log.Fields{"type": consts.InvalidObject, "error": err}).Error("getting access columns")
 				return err
 			}
 			if update {
@@ -542,14 +540,14 @@ func (sc *SmartContract) AccessColumns(table string, columns *[]string, update b
 			if len(cond) > 0 {
 				ret, err := sc.EvalIf(cond)
 				if err != nil {
-					logger.WithFields(log.Fields{"condition": cond, "column": name,
+					sc.GetLogger().WithFields(log.Fields{"condition": cond, "column": name,
 						"type": consts.EvalError}).Error("evaluating condition")
 					return err
 				}
 				checked[name] = ret
 				if !ret {
 					if update {
-						logger.WithFields(log.Fields{"table": table, "column": name, "condition": cond, "type": consts.EvalError}).Error("access denied")
+						sc.GetLogger().WithFields(log.Fields{"table": table, "column": name, "condition": cond, "type": consts.EvalError}).Error("access denied")
 						return fmt.Errorf("column: %w", errAccessDenied)
 					}
 					colList[i] = ``
