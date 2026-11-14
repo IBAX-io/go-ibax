@@ -599,41 +599,20 @@ func (v *TxView) planned(ctx context.Context, c *stateConn, p *stmt, args []driv
 	if ts.pg.Load() {
 		return nil, 0, errUnsupported
 	}
-	b := &binder{args: args, row: m}
-	var cond *bcond
-	if p.where != nil {
-		var ok bool
-		if cond, ok = b.bindCond(p.where); !ok {
-			return nil, 0, errUnsupported
-		}
+	prog, bd, ok := bindOf(p, m, args)
+	if !ok {
+		return nil, 0, errUnsupported
 	}
 	switch p.kind {
 	case stMaxID:
 		return v.maxID(ts, p)
 	case stSelect:
-		order, ok := bindOrder(m, p.order)
-		if !ok {
-			return nil, 0, errUnsupported
-		}
-		limit, ok := b.count(p.limit)
-		if !ok {
-			return nil, 0, errUnsupported
-		}
-		offset, ok := b.count(p.offset)
-		if !ok {
-			return nil, 0, errUnsupported
-		}
-		if offset < 0 {
-			offset = 0
-		}
-		rows, err := v.selectRows(ctx, c, ts, p, args, cond, order, limit, offset)
+		rows, err := v.selectRows(ctx, c, ts, p, args, bd.cond, bd.order, bd.limit, bd.offset)
 		if err != nil {
 			return nil, 0, err
 		}
-		for _, pc := range p.proj {
-			if m.colIndex(pc.col) < 0 {
-				return nil, 0, errUnsupported
-			}
+		if !prog.projOK {
+			return nil, 0, errUnsupported
 		}
 		return project(m, p, rows), 0, nil
 	}
@@ -642,36 +621,11 @@ func (v *TxView) planned(ctx context.Context, c *stateConn, p *stmt, args []driv
 	}
 	switch p.kind {
 	case stInsert:
-		return v.insert(ctx, c, ts, p, b)
+		return v.insert(ctx, c, ts, bd.row)
 	case stUpdate:
-		return v.update(ctx, c, ts, p, b, args, cond)
+		return v.update(ctx, c, ts, p, bd.sets, args, bd.cond)
 	}
-	return v.delete(ctx, c, ts, p, args, cond)
-}
-
-// count is the value of a LIMIT or OFFSET: -1 for none
-func (b *binder) count(e *exprNode) (int64, bool) {
-	if e == nil {
-		return -1, true
-	}
-	var s *string
-	if e.op == eNumber {
-		s = &e.text
-	} else {
-		v, ok := b.param(e.n, typeInt8)
-		if !ok {
-			return 0, false
-		}
-		s = v.s
-	}
-	if s == nil {
-		return -1, true
-	}
-	n, err := strconv.ParseInt(*s, 10, 64)
-	if err != nil || n < 0 {
-		return 0, false
-	}
-	return n, true
+	return v.delete(ctx, c, ts, p, args, bd.cond)
 }
 
 // read records a read of the view
@@ -1076,39 +1030,9 @@ func (v *TxView) checkUnique(ctx context.Context, c *stateConn, ts *tableState, 
 	return nil
 }
 
-func (v *TxView) insert(ctx context.Context, c *stateConn, ts *tableState, p *stmt, b *binder) (*memRows, int64, error) {
+// insert writes the row of an insert
+func (v *TxView) insert(ctx context.Context, c *stateConn, ts *tableState, row stateRow) (*memRows, int64, error) {
 	m := ts.meta
-	row := make(stateRow, len(m.cols))
-	set := make([]bool, len(m.cols))
-	for k, name := range p.cols {
-		i := m.colIndex(name)
-		if i < 0 || set[i] {
-			return nil, 0, errUnsupported
-		}
-		set[i] = true
-		col := m.cols[i]
-		e, ok := b.bindExpr(p.vals[k], col.typ)
-		if !ok {
-			return nil, 0, errUnsupported
-		}
-		val, ok := e.eval(nil)
-		if !ok {
-			return nil, 0, errUnsupported
-		}
-		if val, ok = convert(val, col.typ); !ok {
-			return nil, 0, errUnsupported
-		}
-		row[i] = val.s
-	}
-	for i, col := range m.cols {
-		if set[i] || !col.hasDef {
-			continue
-		}
-		if !col.defOK {
-			return nil, 0, errUnsupported
-		}
-		row[i] = col.def
-	}
 	if !m.checkRow(row) {
 		return nil, 0, errUnsupported
 	}
@@ -1125,24 +1049,9 @@ func (v *TxView) insert(ctx context.Context, c *stateConn, ts *tableState, p *st
 	return nil, 1, nil
 }
 
-func (v *TxView) update(ctx context.Context, c *stateConn, ts *tableState, p *stmt, b *binder, args []driver.NamedValue, cond *bcond) (*memRows, int64, error) {
+// update writes the rows of the condition with the assignments
+func (v *TxView) update(ctx context.Context, c *stateConn, ts *tableState, p *stmt, sets []assign, args []driver.NamedValue, cond *bcond) (*memRows, int64, error) {
 	m := ts.meta
-	type assign struct {
-		col  int
-		expr *bexpr
-	}
-	var sets []assign
-	for _, s := range p.sets {
-		i := m.colIndex(s.col)
-		if i < 0 || slices.Contains(m.pk, s.col) || slices.ContainsFunc(sets, func(a assign) bool { return a.col == i }) {
-			return nil, 0, errUnsupported
-		}
-		e, ok := b.bindExpr(s.expr, m.cols[i].typ)
-		if !ok {
-			return nil, 0, errUnsupported
-		}
-		sets = append(sets, assign{col: i, expr: e})
-	}
 	targets, err := v.selectRows(ctx, c, ts, p, args, cond, nil, -1, 0)
 	if err != nil {
 		return nil, 0, err

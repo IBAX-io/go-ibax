@@ -8,6 +8,7 @@ package sqldb
 import (
 	"database/sql/driver"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -94,7 +95,10 @@ func numberType(s string) colType {
 
 // convert is the value v of a type as a value of the type t, as an assignment or a cast converts
 // it; false for a conversion the state does not make, or one that fails
-func convert(v tval, t colType) (tval, bool) {
+func convert(v tval, t colType) (tval, bool) { return convertInto(v, t, nil) }
+
+// convertInto is convert, writing a text the conversion changes into buf: a new text when nil
+func convertInto(v tval, t colType, buf *string) (tval, bool) {
 	if v.s == nil {
 		return tval{t: t}, true
 	}
@@ -131,7 +135,11 @@ func convert(v tval, t colType) (tval, bool) {
 		// the text stays as it is: the value keeps its text
 		return tval{t: t, s: v.s}, true
 	}
-	return tval{t: t, s: &out}, true
+	if buf == nil {
+		buf = new(string)
+	}
+	*buf = out
+	return tval{t: t, s: buf}, true
 }
 
 // binder binds the values of the placeholders of a statement to their types
@@ -407,7 +415,7 @@ func (x *bexpr) eval(r stateRow) (tval, bool) {
 			return tval{}, false
 		}
 		return convert(v, x.t)
-	case eAdd, eSub:
+	case eAdd, eSub, eConcat:
 		a, ok := x.kids[0].eval(r)
 		if !ok {
 			return tval{}, false
@@ -416,54 +424,50 @@ func (x *bexpr) eval(r stateRow) (tval, bool) {
 		if !ok {
 			return tval{}, false
 		}
-		if a.s == nil || b.s == nil {
-			return tval{t: x.t}, true
-		}
-		if x.t.kind == kInt {
-			p, err1 := strconv.ParseInt(*a.s, 10, 64)
-			q, err2 := strconv.ParseInt(*b.s, 10, 64)
-			if err1 != nil || err2 != nil {
-				return tval{}, false
-			}
-			if x.op == eSub {
-				q = -q
-			}
-			sum, ok := addInt64Checked(p, q)
-			if !ok {
-				return tval{}, false
-			}
-			s, ok := x.t.inputText(strconv.FormatInt(sum, 10))
-			return tval{t: x.t, s: s}, ok
-		}
-		if s, ok := addInt64(*a.s, *b.s, x.op == eSub); ok {
-			return tval{t: x.t, s: &s}, true
-		}
-		p, ok1 := parseNumeric(*a.s)
-		q, ok2 := parseNumeric(*b.s)
-		if !ok1 || !ok2 {
-			return tval{}, false
-		}
-		if x.op == eSub {
-			q = q.neg()
-		}
-		s := p.add(q).String()
-		return tval{t: x.t, s: &s}, true
-	case eConcat:
-		a, ok := x.kids[0].eval(r)
-		if !ok {
-			return tval{}, false
-		}
-		b, ok := x.kids[1].eval(r)
-		if !ok {
-			return tval{}, false
-		}
-		if a.s == nil || b.s == nil {
-			return tval{t: x.t}, true
-		}
-		s, ok := concatJSONB(*a.s, *b.s)
-		return tval{t: x.t, s: &s}, ok
+		return fold(x.op, x.t, a, b)
 	}
 	return tval{}, false
+}
+
+// fold is the value of the operation op of the type t on the values a and b; false when the
+// state cannot evaluate it
+func fold(op exprOp, t colType, a, b tval) (tval, bool) {
+	if a.s == nil || b.s == nil {
+		return tval{t: t}, true
+	}
+	if op == eConcat {
+		s, ok := concatJSONB(*a.s, *b.s)
+		return tval{t: t, s: &s}, ok
+	}
+	if t.kind == kInt {
+		p, err1 := strconv.ParseInt(*a.s, 10, 64)
+		q, err2 := strconv.ParseInt(*b.s, 10, 64)
+		if err1 != nil || err2 != nil {
+			return tval{}, false
+		}
+		if op == eSub {
+			q = -q
+		}
+		sum, ok := addInt64Checked(p, q)
+		if !ok {
+			return tval{}, false
+		}
+		s, ok := t.inputText(strconv.FormatInt(sum, 10))
+		return tval{t: t, s: s}, ok
+	}
+	if s, ok := addInt64(*a.s, *b.s, op == eSub); ok {
+		return tval{t: t, s: &s}, true
+	}
+	p, ok1 := parseNumeric(*a.s)
+	q, ok2 := parseNumeric(*b.s)
+	if !ok1 || !ok2 {
+		return tval{}, false
+	}
+	if op == eSub {
+		q = q.neg()
+	}
+	s := p.add(q).String()
+	return tval{t: t, s: &s}, true
 }
 
 // tri is a value of the logic of SQL: true, false or NULL
@@ -818,4 +822,121 @@ func compareRows(order []border, pk []int, kinds []colKind, a, b stateRow) int {
 		}
 	}
 	return 0
+}
+
+// planBinding is what binding the values of a plan to a table makes: the condition, the order
+// and the bounds of a select, the row of an insert and the assignments of an update
+type planBinding struct {
+	cond          *bcond
+	order         []border
+	limit, offset int64
+	row           stateRow
+	sets          []assign
+}
+
+// assign is the assignment of an update of a column
+type assign struct {
+	col  int
+	expr *bexpr
+}
+
+// bindPlan binds the values args to the plan p of a statement of the table m with the binder, as
+// the state runs it: the reference of what the program of the plan makes; false when the state
+// does not run the statement with the values
+func bindPlan(p *stmt, m *tableMeta, args []driver.NamedValue) (planBinding, bool) {
+	out := planBinding{limit: -1}
+	b := &binder{args: args, row: m}
+	if p.where != nil {
+		var ok bool
+		if out.cond, ok = b.bindCond(p.where); !ok {
+			return planBinding{}, false
+		}
+	}
+	switch p.kind {
+	case stSelect:
+		var ok bool
+		if out.order, ok = bindOrder(m, p.order); !ok {
+			return planBinding{}, false
+		}
+		if out.limit, ok = b.count(p.limit); !ok {
+			return planBinding{}, false
+		}
+		if out.offset, ok = b.count(p.offset); !ok {
+			return planBinding{}, false
+		}
+		if out.offset < 0 {
+			out.offset = 0
+		}
+	case stInsert:
+		row := make(stateRow, len(m.cols))
+		set := make([]bool, len(m.cols))
+		for k, name := range p.cols {
+			i := m.colIndex(name)
+			if i < 0 || set[i] {
+				return planBinding{}, false
+			}
+			set[i] = true
+			col := m.cols[i]
+			e, ok := b.bindExpr(p.vals[k], col.typ)
+			if !ok {
+				return planBinding{}, false
+			}
+			val, ok := e.eval(nil)
+			if !ok {
+				return planBinding{}, false
+			}
+			if val, ok = convert(val, col.typ); !ok {
+				return planBinding{}, false
+			}
+			row[i] = val.s
+		}
+		for i, col := range m.cols {
+			if set[i] || !col.hasDef {
+				continue
+			}
+			if !col.defOK {
+				return planBinding{}, false
+			}
+			row[i] = col.def
+		}
+		out.row = row
+	case stUpdate:
+		for _, s := range p.sets {
+			i := m.colIndex(s.col)
+			if i < 0 || slices.Contains(m.pk, s.col) || slices.ContainsFunc(out.sets, func(a assign) bool { return a.col == i }) {
+				return planBinding{}, false
+			}
+			e, ok := b.bindExpr(s.expr, m.cols[i].typ)
+			if !ok {
+				return planBinding{}, false
+			}
+			out.sets = append(out.sets, assign{col: i, expr: e})
+		}
+	}
+	return out, true
+}
+
+// count is the value of a LIMIT or OFFSET: -1 for none
+func (b *binder) count(e *exprNode) (int64, bool) {
+	if e == nil {
+		return -1, true
+	}
+	var s *string
+	if e.op == eNumber {
+		s = &e.text
+	} else {
+		v, ok := b.param(e.n, typeInt8)
+		if !ok {
+			return 0, false
+		}
+		s = v.s
+	}
+	if s == nil {
+		return -1, true
+	}
+	n, err := strconv.ParseInt(*s, 10, 64)
+	if err != nil || n < 0 {
+		return 0, false
+	}
+	return n, true
 }

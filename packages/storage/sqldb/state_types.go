@@ -161,6 +161,19 @@ func (t colType) inputArg(v any) (out string, null, ok bool) {
 	if v == nil {
 		return "", true, true
 	}
+	if x, isInt := v.(int64); isInt {
+		// the text of an int64 is the canonical text of an integer: fastInput takes it
+		switch t.kind {
+		case kInt:
+			if t.bits < 64 && (x < -1<<(t.bits-1) || x >= 1<<(t.bits-1)) {
+				return "", false, false
+			}
+			return strconv.FormatInt(x, 10), false, true
+		case kNumeric:
+			out, ok = numericTypmod(strconv.FormatInt(x, 10), t.precision, t.scale)
+			return out, false, ok
+		}
+	}
 	s, binary, ok := argText(v)
 	if !ok {
 		return "", false, false

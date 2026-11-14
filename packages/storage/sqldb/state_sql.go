@@ -156,6 +156,8 @@ type stmt struct {
 	name string
 	// head is the projection of the select on the table it last read
 	head atomic.Pointer[projHead]
+	// prog is the program that binds the values of the statement to the table it last ran on
+	prog atomic.Pointer[bindProg]
 }
 
 type projCol struct{ col, as string }
