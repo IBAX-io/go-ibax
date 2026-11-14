@@ -505,3 +505,59 @@ func TestHoldsAhead(t *testing.T) {
 	ts.maxKnown = false
 	require.False(t, st.HoldsAhead(3, read(13)))
 }
+
+// TestPointKeyComposite: a condition of each column of a key of more than one column is a point of
+// that key, whose key is the key of a row of those values, the primary key before a unique index; a
+// condition of a part of a key is not. taken finds the key of the row in the unique index it is
+// asked of.
+func TestPointKeyComposite(t *testing.T) {
+	m := &tableMeta{name: "t", byName: make(map[string]*colMeta), pk: []string{"b", "a"},
+		uniques: [][]string{{"b", "a"}, {"d"}, {"c", "d"}}}
+	for _, c := range []struct {
+		name string
+		typ  colType
+	}{{"a", newColType(20, "int8", -1)}, {"b", newColType(25, "text", -1)},
+		{"c", newColType(1700, "numeric", -1)}, {"d", newColType(25, "text", -1)}} {
+		cm := &colMeta{name: c.name, typ: c.typ}
+		m.cols = append(m.cols, cm)
+		m.byName[c.name] = cm
+	}
+	ts := &tableState{meta: m, uniqIx: []int{1, 2}}
+	str := func(s string) *string { return &s }
+	eq := func(col int, v string) *bcond {
+		fam, _ := family(m.cols[col].typ, m.cols[col].typ)
+		return &bcond{op: cCmp, col: col, cmp: "=", fam: fam, vals: []*string{str(v)}}
+	}
+	and := func(kids ...*bcond) *bcond { return &bcond{op: cAnd, kids: kids} }
+	row := stateRow{str("12"), str("x"), str("1.50"), str("w")}
+	for _, c := range []struct {
+		cond *bcond
+		j    int
+		key  string
+		ok   bool
+	}{
+		{and(eq(0, "12"), eq(1, "x")), -1, m.pkOf(row), true},
+		{and(eq(1, "x"), eq(0, "12"), eq(3, "w")), -1, m.pkOf(row), true},
+		{and(eq(0, "12"), eq(3, "w")), 0, func() string { k, _ := m.ukeyOf(1, row); return k }(), true},
+		{and(eq(2, "1.5"), eq(1, "x")), 0, "", false},
+		{and(eq(2, "1.5"), eq(3, "w")), 0, func() string { k, _ := m.ukeyOf(1, row); return k }(), true},
+		{eq(0, "12"), 0, "", false},
+		{eq(1, "x"), 0, "", false},
+	} {
+		j, key, ok := pointKey(m, ts, c.cond)
+		if j != c.j || key != c.key || ok != c.ok {
+			t.Fatalf("%+v: %d %q %v, want %d %q %v", c.cond, j, key, ok, c.j, c.key, c.ok)
+		}
+	}
+	if k, _ := m.pkOf(row), 0; k != "x\x0012" {
+		t.Fatalf("pkOf %q", k)
+	}
+	// taken finds the row by the key of the index ix in the rows the view wrote
+	key, _ := m.ukeyOf(2, row)
+	vt := &viewTable{ts: ts, rows: map[string]*vchange{}, uniq: []map[string]string{{}, {key: "other"}}}
+	v := &TxView{own: map[string]*viewTable{"t": vt}}
+	taken, err := v.taken(t.Context(), nil, ts, 2, row, "self")
+	if err != nil || !taken {
+		t.Fatalf("taken %v %v", taken, err)
+	}
+}

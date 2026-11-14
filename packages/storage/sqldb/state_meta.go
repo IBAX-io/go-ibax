@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 // tableMeta is what the state of a block knows of a table: its columns in their order, its
@@ -32,6 +33,35 @@ type tableMeta struct {
 	// scans are the texts of the statements of the rows of PostgreSQL of the plans of the table,
 	// one of each text
 	scans sync.Map
+	// keyAt are the positions of the columns of the primary key and of each unique index, which
+	// keyCols makes of pk and uniques when they are first asked for
+	keyAt atomic.Pointer[keyCols]
+}
+
+// keyCols are the positions of the columns of the primary key and of each unique index of a table
+type keyCols struct {
+	pk      []int
+	uniques [][]int
+}
+
+// keyCols are the positions of the columns of the keys of the table
+func (m *tableMeta) keyCols() *keyCols {
+	if k := m.keyAt.Load(); k != nil {
+		return k
+	}
+	positions := func(cols []string) []int {
+		at := make([]int, len(cols))
+		for i, c := range cols {
+			at[i] = m.colIndex(c)
+		}
+		return at
+	}
+	k := &keyCols{pk: positions(m.pk), uniques: make([][]int, len(m.uniques))}
+	for i, u := range m.uniques {
+		k.uniques[i] = positions(u)
+	}
+	m.keyAt.Store(k)
+	return k
 }
 
 type colMeta struct {
@@ -210,18 +240,18 @@ func (m *tableMeta) colIndex(name string) int {
 	return slices.IndexFunc(m.cols, func(c *colMeta) bool { return c.name == name })
 }
 
-// keyOf is the key of a row by the values of the columns: the text of each column as equality
-// compares it; false when a column is NULL, as NULL names no row
-func (m *tableMeta) keyOf(cols []string, val func(col string) *string) (string, bool) {
+// keyOf is the key of a row by the values of the columns at the positions at: the text of each
+// column as equality compares it; false when a column is NULL, as NULL names no row
+func (m *tableMeta) keyOf(at []int, val func(i int) *string) (string, bool) {
 	var small [4]string
 	keys := small[:0]
 	n := 0
-	for _, c := range cols {
-		v := val(c)
+	for _, i := range at {
+		v := val(i)
 		if v == nil {
 			return "", false
 		}
-		k := m.byName[c].typ.key(*v)
+		k := m.cols[i].typ.key(*v)
 		keys = append(keys, k)
 		n += len(k) + 1
 	}

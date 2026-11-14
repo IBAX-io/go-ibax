@@ -7,6 +7,7 @@ package sqldb
 
 import (
 	"math/big"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -97,7 +98,9 @@ var keyMeta = func() *tableMeta {
 	m := &tableMeta{byName: map[string]*colMeta{}}
 	for i, ct := range append(fastTypes, newColType(25, "text", -1)) {
 		name := strconv.Itoa(i)
-		m.byName[name] = &colMeta{name: name, typ: ct}
+		c := &colMeta{name: name, typ: ct}
+		m.cols = append(m.cols, c)
+		m.byName[name] = c
 	}
 	return m
 }()
@@ -137,7 +140,11 @@ func checkKeyOf(t *testing.T, a, b string) {
 				val = func(string) *string { return &a }
 			}
 			want, wantOK := keyOfBuilder(keyMeta, cols, val)
-			got, ok := keyMeta.keyOf(cols, val)
+			at := make([]int, len(cols))
+			for i, c := range cols {
+				at[i] = keyMeta.colIndex(c)
+			}
+			got, ok := keyMeta.keyOf(at, func(i int) *string { return val(keyMeta.cols[i].name) })
 			if got != want || ok != wantOK {
 				t.Fatalf("keyOf %v %q %q: %q %v, want %q %v", cols, a, b, got, ok, want, wantOK)
 			}
@@ -187,4 +194,36 @@ func FuzzFastPaths(f *testing.F) {
 		}
 	}
 	f.Fuzz(checkFast)
+}
+
+// TestKeyCols: the positions of the keys are the positions of the columns of the primary key and of
+// each unique index, and pkOf and ukeyOf are the keys by the names of the columns
+func TestKeyCols(t *testing.T) {
+	m := &tableMeta{byName: map[string]*colMeta{}, pk: []string{"c", "a"}, uniques: [][]string{{"b"}, {"c", "a"}, {"d", "b", "a"}}}
+	for _, name := range []string{"a", "b", "c", "d"} {
+		c := &colMeta{name: name, typ: newColType(25, "text", -1)}
+		m.cols = append(m.cols, c)
+		m.byName[name] = c
+	}
+	kc := m.keyCols()
+	if !slices.Equal(kc.pk, []int{2, 0}) || len(kc.uniques) != 3 || !slices.Equal(kc.uniques[0], []int{1}) ||
+		!slices.Equal(kc.uniques[1], []int{2, 0}) || !slices.Equal(kc.uniques[2], []int{3, 1, 0}) || m.keyCols() != kc {
+		t.Fatalf("key columns %v %v", kc.pk, kc.uniques)
+	}
+	a, b, c, d := "x", "y", "z", "w"
+	r := stateRow{&a, &b, &c, &d}
+	byName := func(col string) *string { return r[m.colIndex(col)] }
+	if want, _ := keyOfBuilder(m, m.pk, byName); m.pkOf(r) != want {
+		t.Fatalf("pkOf %q, want %q", m.pkOf(r), want)
+	}
+	for ix, u := range m.uniques {
+		want, _ := keyOfBuilder(m, u, byName)
+		if got, ok := m.ukeyOf(ix, r); !ok || got != want {
+			t.Fatalf("ukeyOf %d %q, want %q", ix, got, want)
+		}
+	}
+	r[3] = nil
+	if _, ok := m.ukeyOf(2, r); ok {
+		t.Fatal("a key of a NULL column")
+	}
 }

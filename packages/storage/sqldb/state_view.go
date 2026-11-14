@@ -649,28 +649,30 @@ func pointKey(m *tableMeta, ts *tableState, cond *bcond) (int, string, bool) {
 	if eq.n == 0 {
 		return 0, "", false
 	}
-	val := func(c string) *string {
-		v, _ := eq.get(m.colIndex(c))
+	val := func(i int) *string {
+		v, _ := eq.get(i)
 		return v
 	}
-	if k, ok := m.keyOf(m.pk, val); ok && allIn(m, m.pk, &eq) {
+	kc := m.keyCols()
+	if k, ok := m.keyOf(kc.pk, val); ok && allIn(kc.pk, &eq) {
 		return -1, k, true
 	}
 	for j, ix := range ts.uniqIx {
-		cols := m.uniques[ix]
-		if !allIn(m, cols, &eq) {
+		at := kc.uniques[ix]
+		if !allIn(at, &eq) {
 			continue
 		}
-		if k, ok := m.keyOf(cols, val); ok {
+		if k, ok := m.keyOf(at, val); ok {
 			return j, k, true
 		}
 	}
 	return 0, "", false
 }
 
-func allIn(m *tableMeta, cols []string, eq *eqSet) bool {
-	for _, c := range cols {
-		if _, ok := eq.get(m.colIndex(c)); !ok {
+// allIn tells the equalities have each column of the positions at
+func allIn(at []int, eq *eqSet) bool {
+	for _, i := range at {
+		if _, ok := eq.get(i); !ok {
 			return false
 		}
 	}
@@ -899,7 +901,7 @@ func eqCond(m *tableMeta, cols []string, r stateRow) *bcond {
 func (v *TxView) taken(ctx context.Context, c *stateConn, ts *tableState, ix int, row stateRow, self string) (bool, error) {
 	m := ts.meta
 	cols := m.uniques[ix]
-	key, ok := m.keyOf(cols, func(col string) *string { return row[m.colIndex(col)] })
+	key, ok := m.ukeyOf(ix, row)
 	if !ok {
 		return false, nil
 	}

@@ -530,13 +530,13 @@ func (ts *tableState) visible(pk string) (stateRow, bool) {
 
 // pkOf is the primary key of a row
 func (m *tableMeta) pkOf(r stateRow) string {
-	k, _ := m.keyOf(m.pk, func(c string) *string { return r[m.colIndex(c)] })
+	k, _ := m.keyOf(m.keyCols().pk, func(i int) *string { return r[i] })
 	return k
 }
 
 // ukeyOf is the key of a row in a unique index; false when a column is NULL
 func (m *tableMeta) ukeyOf(ix int, r stateRow) (string, bool) {
-	return m.keyOf(m.uniques[ix], func(c string) *string { return r[m.colIndex(c)] })
+	return m.keyOf(m.keyCols().uniques[ix], func(i int) *string { return r[i] })
 }
 
 // rowID is the id of a row; false for a row without
