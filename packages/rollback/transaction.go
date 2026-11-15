@@ -80,14 +80,32 @@ func rollbackInsertedRow(tx map[string]string, where string, whereArgs []any, db
 	return nil
 }
 
-func rollbackTransaction(blockID int64, txHash []byte, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
+// blockRecords are the rollback records of a block, the last first, by the hex of the hashes of
+// the transactions they are of: the block reads them at once by its key, and deletes them at once
+// after its transactions are rolled back
+type blockRecords map[string][]map[string]string
+
+func getBlockRecords(blockID int64, dbTx *sqldb.DbTransaction, logger *log.Entry) (blockRecords, error) {
 	rollbackTx := &sqldb.RollbackTx{}
-	txs, err := rollbackTx.GetRollbackTransactions(dbTx, blockID, txHash)
+	records, err := rollbackTx.GetRollbackTransactions(dbTx, blockID)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting rollback transactions")
+		return nil, err
+	}
+	return records, nil
+}
+
+func deleteBlockRecords(blockID int64, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
+	if err := sqldb.DeleteBlockRollbackTransactions(dbTx, blockID); err != nil {
+		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting rollback transactions of the block")
 		return err
 	}
-	for _, tx := range txs {
+	return nil
+}
+
+// rollbackTransaction rolls back the changes of the transaction txHash of the block
+func rollbackTransaction(records blockRecords, txHash []byte, dbTx *sqldb.DbTransaction, logger *log.Entry) error {
+	for _, tx := range records[hex.EncodeToString(txHash)] {
 		if tx["table_name"] == smart.SysName {
 			var sysData smart.SysRollData
 			err := json.Unmarshal([]byte(tx["data"]), &sysData)
@@ -169,12 +187,6 @@ func rollbackTransaction(blockID int64, txHash []byte, dbTx *sqldb.DbTransaction
 				return err
 			}
 		}
-	}
-	txForDelete := &sqldb.RollbackTx{BlockID: blockID, TxHash: txHash}
-	err = txForDelete.DeleteByHash(dbTx)
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting rollback transaction by hash")
-		return err
 	}
 	return nil
 }

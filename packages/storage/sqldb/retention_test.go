@@ -96,8 +96,7 @@ func chainRows(t *testing.T, db *DbTransaction, T int64) {
 	addBlocks(t, db, 1000, 1, 5)
 	addBlocks(t, db, T, 9999, 10000, 19999)
 	for id := int64(1); id <= 3; id++ {
-		require.NoError(t, tx.Create(&RollbackTx{ID: id, BlockID: 5, TxHash: []byte{5}, NameTable: "1_keys", TableID: "1",
-			DataHash: []byte{0}}).Error)
+		require.NoError(t, tx.Create(&RollbackTx{ID: id, BlockID: 5, TxHash: []byte{5}, NameTable: "1_keys", TableID: "1"}).Error)
 	}
 	require.NoError(t, tx.Create(&LogTransaction{Hash: []byte{5}, Block: 5, Timestamp: 1000}).Error)
 	require.NoError(t, tx.Create(&SpentInfo{OutputTxHash: []byte{5}, OutputKeyId: 1, OutputValue: "1", Ecosystem: 1,

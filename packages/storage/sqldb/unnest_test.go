@@ -16,8 +16,8 @@ import (
 )
 
 // blockRows is the number of rows of a block that the statements of gorm, one parameter per value,
-// could not write: 7 columns of rollback_tx take more than 65535 parameters
-const blockRows = 10001
+// could not write: 6 columns of rollback_tx take more than 65535 parameters
+const blockRows = 11000
 
 func hashOf(i int) []byte {
 	return binary.BigEndian.AppendUint64(nil, uint64(i))
@@ -32,8 +32,7 @@ func TestBlockWrites(t *testing.T) {
 	rts := make([]*RollbackTx, blockRows)
 	lts := make([]*LogTransaction, blockRows)
 	for i := range rts {
-		rts[i] = &RollbackTx{BlockID: 5, TxHash: hashOf(i), NameTable: "1_keys", TableID: "1", Data: `{"amount":"1"}`,
-			DataHash: []byte{1}}
+		rts[i] = &RollbackTx{BlockID: 5, TxHash: hashOf(i), NameTable: "1_keys", TableID: "1", Data: `{"amount":"1"}`}
 		lts[i] = &LogTransaction{Hash: hashOf(i), Block: 5, Timestamp: 1000, Address: -7, EcosystemID: 2, Status: 1,
 			ContractName: "@1Transfer"}
 	}
@@ -44,7 +43,7 @@ func TestBlockWrites(t *testing.T) {
 	var rt RollbackTx
 	require.NoError(t, tx.Where(`"tx_hash" = ?`, hashOf(blockRows-1)).First(&rt).Error)
 	require.Equal(t, RollbackTx{ID: rts[blockRows-1].ID, BlockID: 5, TxHash: hashOf(blockRows - 1), NameTable: "1_keys",
-		TableID: "1", Data: `{"amount":"1"}`, DataHash: []byte{1}}, rt)
+		TableID: "1", Data: `{"amount":"1"}`}, rt)
 	lt := &LogTransaction{}
 	found, err := lt.GetByHash(hashOf(3))
 	require.NoError(t, err)

@@ -15,11 +15,14 @@ import (
 
 func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []any, err error) {
 	db := GetDB(tx)
-	// get record from rollback_tx
+	// get record from rollback_tx, in the block of the transaction
 	var (
 		rollbackTxs []RollbackTx
 	)
-	err = db.Table(ArchivedTable("rollback_tx")).Where("tx_hash = ?", []byte(converter.HexToBin(hashStr))).Find(&rollbackTxs).Error
+	hash := []byte(converter.HexToBin(hashStr))
+	err = db.Table(ArchivedTable("rollback_tx")).
+		Where("block_id IN (SELECT block FROM "+ArchivedTable("log_transactions")+" WHERE hash = ?) AND tx_hash = ?", hash, hash).
+		Find(&rollbackTxs).Error
 	if err != nil {
 		return
 	}
