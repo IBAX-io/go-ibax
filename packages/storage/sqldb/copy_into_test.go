@@ -40,8 +40,8 @@ func TestCopyInto(t *testing.T) {
 		}
 		require.NoError(t, CreateLogTransactionBatches(tx, lts))
 		rts := []*RollbackTx{
-			{BlockID: block, TxHash: []byte{tag, 2}, NameTable: "1_keys", TableID: "-42", Data: `{"amount":"1\t2","s":"a\\nb"}`, DataHash: []byte{9, '\n'}},
-			{BlockID: block, TxHash: []byte{tag, 3}, NameTable: "1_keys", TableID: "7", Data: "", DataHash: []byte{}},
+			{BlockID: block, TxHash: []byte{tag, 2}, NameTable: "1_keys", TableID: "-42", Data: `{"amount":"1\t2","s":"a\\nb"}`},
+			{BlockID: block, TxHash: []byte{tag, 3}, NameTable: "1_keys", TableID: "7", Data: ""},
 		}
 		require.NoError(t, CreateBatchesRollbackTx(tx, rts))
 		var gotL []LogTransaction

@@ -13,6 +13,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/metrics"
+	"github.com/IBAX-io/go-ibax/packages/migration"
 
 	log "github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -300,9 +301,13 @@ func (tr *DbTransaction) maxID(table string) (int64, error) {
 
 // MaxID is the highest id of the table in the transaction
 func (tr *DbTransaction) MaxID(table string) (int64, error) {
+	order := `id desc`
+	if t, ok := migration.PartitionedTableOf(table); ok && t.IDByKey {
+		order = `"` + t.Key + `" desc, id desc`
+	}
 	return cached(tr, table, maxIDKey, func() (int64, error) {
 		var id int64
-		rows, err := tr.queryRaw(`select id from "` + table + `" order by id desc limit 1`)
+		rows, err := tr.queryRaw(`select id from "` + table + `" order by ` + order + ` limit 1`)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err, "table": table}).Error("selecting next id from table")
 			return 0, err

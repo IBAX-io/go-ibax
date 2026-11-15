@@ -76,16 +76,15 @@ func quantilesOf(d []time.Duration) quantiles {
 
 // runWorkload steps up the rate of a workload while the network keeps up with it: every
 // transaction in a block and at least 80% of the rate in TPS, whether the P99 passes or not; it
-// tells each step
-func runWorkload(c *chainClient, w workload, cfg runConfig, seq *int) []step {
-	var out []step
+// tells each step and hands it to done
+func runWorkload(c *chainClient, w workload, cfg runConfig, seq *int, done func(step)) {
 	for _, rate := range cfg.rates {
 		s, err := runStep(c, w, rate, rate*int(cfg.duration/time.Second), cfg, seq)
 		if err != nil {
 			log.Printf("%s at %d/s: %v", w.name, rate, err)
 			break
 		}
-		out = append(out, *s)
+		done(*s)
 		runs := ""
 		if len(s.Nodes) > 0 {
 			runs = ", tx runs parallel / early / again / ordered " + txRuns(s.Nodes[0])
@@ -96,7 +95,6 @@ func runWorkload(c *chainClient, w workload, cfg runConfig, seq *int) []step {
 			break
 		}
 	}
-	return out
 }
 
 // runStep sends total transactions, rate a second, open loop, pre-signed, to the nodes in turn, and

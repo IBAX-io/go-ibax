@@ -197,14 +197,24 @@ func main() {
 		Time: time.Now(), Label: *label, Nodes: splitList(*nodes), NetworkID: c.info.NetworkID, Cryptoer: c.info.Cryptoer,
 		Hasher: c.info.Hasher, Algo: accs[0].algo.String(), Accounts: len(accs), P99Ms: p99.Milliseconds(),
 	}
+	// The report is written again after each step, so a run stopped from outside keeps the steps
+	// it ended
+	var base string
 	seq := 0
 	for _, w := range ws {
-		r.Steps = append(r.Steps, runWorkload(c, w, cfg, &seq)...)
+		runWorkload(c, w, cfg, &seq, func(s step) {
+			r.Steps = append(r.Steps, s)
+			r.finish()
+			if base, err = r.write(*out); err != nil {
+				log.Fatal(err)
+			}
+		})
 	}
-	r.finish()
-	base, err := r.write(*out)
-	if err != nil {
-		log.Fatal(err)
+	if len(r.Steps) == 0 {
+		r.finish()
+		if base, err = r.write(*out); err != nil {
+			log.Fatal(err)
+		}
 	}
 	log.Printf("report %s.md and .json", base)
 	for _, w := range ws {

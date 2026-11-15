@@ -38,6 +38,10 @@ type PartitionedTable struct {
 	Key  string
 	// ID is whether the table has an id column that GetNextID gives
 	ID bool
+	// IDByKey is whether the ids of the table grow with its key, as they are given in the order of
+	// the blocks: the highest id is that of the highest key, which the primary key (key, id) finds,
+	// and the table has no index of the id
+	IDByKey bool
 	// ByTime is whether its partitions leave by the time of their transactions (MaxTxBack)
 	// instead of by the history_blocks window
 	ByTime bool
@@ -87,16 +91,17 @@ var PartitionedTables = []PartitionedTable{
 		PRIMARY KEY ("height")`,
 	},
 	{
-		Name: "rollback_tx", Key: "block_id", ID: true,
+		// the rollback of a block reads and deletes its records by the primary key, the history of a
+		// row reads them by the row
+		Name: "rollback_tx", Key: "block_id", ID: true, IDByKey: true,
 		columns: `"id" bigint NOT NULL DEFAULT '0',
 		"block_id" bigint NOT NULL DEFAULT '0',
 		"tx_hash" bytea NOT NULL DEFAULT '',
 		"table_name" varchar(255) NOT NULL DEFAULT '',
 		"table_id" varchar(255) NOT NULL DEFAULT '',
-		"data_hash" bytea NOT NULL DEFAULT '',
 		"data" text NOT NULL DEFAULT '',
 		PRIMARY KEY ("block_id", "id")`,
-		indexes: []string{`"id"`, `"tx_hash"`, `"table_name", "table_id", "block_id"`},
+		indexes: []string{`"table_name", "table_id", "block_id"`},
 	},
 	{
 		Name: "1_history", Key: "block_id", ID: true,

@@ -315,7 +315,6 @@ func newAfterRows(txs []*types.AfterTx, rts []*types.RollbackTx) *afterRows {
 			Data:      tx.Data,
 			TableID:   tx.TableId,
 			TxHash:    tx.TxHash,
-			DataHash:  tx.DataHash,
 		}
 	}
 	for i, tx := range txs {
