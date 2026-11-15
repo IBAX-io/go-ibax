@@ -215,9 +215,6 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 		}
 	}
 	states.afterCommit(b.Header.BlockId)
-	if sqldb.IsRetentionBoundary(b.Header.BlockId) {
-		go sqldb.FreezeClosed()
-	}
 	if err := t.mem.restore(); err != nil {
 		return nil, true, err
 	}

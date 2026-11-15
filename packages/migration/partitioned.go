@@ -197,8 +197,10 @@ func PartitionBounds(table string, k int64) string {
 
 // PartitionOptions are the storage parameters of a range partition: the rows of a range are
 // inserted and, but for the rollback of a block, neither updated nor deleted, so that a vacuum
-// the inserts trigger would only set the visibility of pages it writes whole again; the range is
-// frozen once instead, when the next range takes the inserts (sqldb.FreezeClosed)
+// the inserts trigger would only set the visibility of pages it writes whole again. Nor is a range
+// frozen: a block takes some ten transaction ids, so a range leaves the window thousands of times
+// sooner than its age reaches autovacuum_freeze_max_age; a range an archive node keeps is frozen
+// once by the autovacuum against wraparound, at its throttled pace
 const PartitionOptions = `autovacuum_vacuum_insert_threshold = -1, toast.autovacuum_vacuum_insert_threshold = -1`
 
 // CreatePartitionSQL creates the partition of range k of the table, unless it exists
