@@ -94,6 +94,9 @@ func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 		return err
 	}
 	states.afterCommit(b.Header.BlockId)
+	if sqldb.IsRetentionBoundary(b.Header.BlockId) {
+		go sqldb.FreezeClosed()
+	}
 	b.stage(metrics.StageCommit, start)
 	hashes := make([][]byte, len(b.Transactions))
 	for i, t := range b.Transactions {
