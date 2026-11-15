@@ -6,16 +6,20 @@
 package sqldb
 
 import (
+	"github.com/IBAX-io/go-ibax/packages/converter"
 	"gorm.io/gorm"
 )
 
 // RollbackTx is model. Its rows are found by the block (the primary key, block_id and id) and by the
-// row of a table (table_name, table_id); the transaction of a row is found in its block
+// row of a table (table_ref, table_id). A record is of the transaction TxIdx of its block, the
+// index of the transaction in the block, or the settlement of the fees, which follows them; its
+// table is TableRef, the ref rollback_tables gives NameTable
 type RollbackTx struct {
 	ID        int64  `gorm:"primary_key;not null"`
 	BlockID   int64  `gorm:"not null" json:"block_id"`
-	TxHash    []byte `gorm:"not null" json:"tx_hash"`
-	NameTable string `gorm:"not null;size:255;column:table_name" json:"table_name"`
+	TxIdx     int32  `gorm:"not null" json:"tx_idx"`
+	TableRef  int32  `gorm:"not null" json:"table_ref"`
+	NameTable string `gorm:"-" json:"table_name"`
 	TableID   string `gorm:"not null;size:255" json:"table_id"`
 	Data      string `gorm:"not null;type:jsonb" json:"data"`
 }
@@ -25,51 +29,59 @@ func (*RollbackTx) TableName() string {
 	return "rollback_tx"
 }
 
-// GetRollbackTransactions returns the rollback records of the block, the last first, by the hex of
-// the hashes of the transactions they are of
-func (rt *RollbackTx) GetRollbackTransactions(dbTx *DbTransaction, blockID int64) (map[string][]map[string]string, error) {
-	rows, err := dbTx.GetAllTransaction(`SELECT id, tx_hash, table_name, table_id, data FROM rollback_tx
-		WHERE block_id = ? ORDER BY block_id DESC, id DESC`, -1, blockID)
+// GetRollbackTransactions returns the rollback records of the block, the last first, with the names
+// of their tables, by the indexes of the transactions they are of
+func (rt *RollbackTx) GetRollbackTransactions(dbTx *DbTransaction, blockID int64) (map[int][]map[string]string, error) {
+	rows, err := dbTx.GetAllTransaction(`SELECT r.id, r.tx_idx, t.name AS table_name, r.table_id, r.data
+		FROM rollback_tx r JOIN rollback_tables t ON t.ref = r.table_ref
+		WHERE r.block_id = ? ORDER BY r.block_id DESC, r.id DESC`, -1, blockID)
 	if err != nil {
 		return nil, err
 	}
-	byTx := make(map[string][]map[string]string)
+	byTx := make(map[int][]map[string]string)
 	for _, r := range rows {
-		byTx[r["tx_hash"]] = append(byTx[r["tx_hash"]], r)
+		idx := converter.StrToInt(r["tx_idx"])
+		byTx[idx] = append(byTx[idx], r)
 	}
 	return byTx, nil
 }
 
-// GetBlockRollbackTransactions returns records of rollback by blockID
-func (rt *RollbackTx) GetBlockRollbackTransactions(dbTx *DbTransaction, blockID int64) ([]RollbackTx, error) {
-	var rollbackTransactions []RollbackTx
-	err := GetDB(dbTx).Where("block_id = ?", blockID).Omit("id").Order("id asc").Find(&rollbackTransactions).Error
-	return rollbackTransactions, err
-}
-
-// GetRollbackTxsByTableIDAndTableName returns records of rollback by table name and id: those in
-// the window for a contract, wherever they are for the API (archive)
+// GetRollbackTxsByTableIDAndTableName returns records of rollback by table name and id, the last
+// first: those in the window for a contract, wherever they are for the API (archive)
 func (rt *RollbackTx) GetRollbackTxsByTableIDAndTableName(tableID, tableName string, limit int, archive bool) (*[]RollbackTx, error) {
 	var rollbackTx []RollbackTx
 	db := DBConn.Table(rt.TableName())
 	if archive {
 		db = archived(rt.TableName())
 	}
-	if err := db.Where("table_id = ? AND table_name = ?", tableID, tableName).
-		Order("id desc").Limit(limit).Find(&rollbackTx).Error; err != nil {
+	if err := db.Where(`table_ref = (SELECT ref FROM rollback_tables WHERE name = ?) AND table_id = ?`, tableName, tableID).
+		Order("block_id desc, id desc").Limit(limit).Find(&rollbackTx).Error; err != nil {
 		return nil, err
+	}
+	for i := range rollbackTx {
+		rollbackTx[i].NameTable = tableName
 	}
 	return &rollbackTx, nil
 }
 
-// DeleteBlockRollbackTransactions deletes the rollback records of the block
+// DeleteBlockRollbackTransactions deletes the rollback records of the block and the refs of the
+// tables the block gave
 func DeleteBlockRollbackTransactions(dbTx *DbTransaction, blockID int64) error {
-	return GetDB(dbTx).Exec("DELETE FROM rollback_tx WHERE block_id = ?", blockID).Error
+	db := GetDB(dbTx)
+	if err := db.Exec("DELETE FROM rollback_tx WHERE block_id = ?", blockID).Error; err != nil {
+		return err
+	}
+	return deleteTableRefs(db, blockID)
 }
 
-func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
+// CreateBatchesRollbackTx writes the rollback records rts of a block, which give the tables their
+// refs through refs, the refs of the block
+func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx, refs *TableRefs) error {
 	if len(rts) == 0 {
 		return nil
+	}
+	if err := refs.set(dbTx, rts); err != nil {
+		return err
 	}
 	rollbackSys := &RollbackTx{}
 	var err error
@@ -80,11 +92,11 @@ func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
 		rts[i-1].ID = rollbackSys.ID + int64(i) - 1
 	}
 	copied, err := copyInto(dbTx, "rollback_tx",
-		[]string{"id", "block_id", "tx_hash", "table_name", "table_id", "data"},
+		[]string{"id", "block_id", "tx_idx", "table_ref", "table_id", "data"},
 		func() []stateRow {
 			rows := make([]stateRow, len(rts))
 			for i, r := range rts {
-				rows[i] = stateRow{textInt(r.ID), textInt(r.BlockID), textBytea(r.TxHash), textString(r.NameTable),
+				rows[i] = stateRow{textInt(r.ID), textInt(r.BlockID), textInt(int64(r.TxIdx)), textInt(int64(r.TableRef)),
 					textString(r.TableID), textString(r.Data)}
 			}
 			return rows
@@ -92,12 +104,12 @@ func CreateBatchesRollbackTx(dbTx *gorm.DB, rts []*RollbackTx) error {
 	if copied || err != nil {
 		return err
 	}
-	return dbTx.Exec(`INSERT INTO "rollback_tx" ("id", "block_id", "tx_hash", "table_name", "table_id", "data")
-		SELECT * FROM unnest(?::bigint[], ?::bigint[], ?::bytea[], ?::varchar[], ?::varchar[], ?::text[])`,
+	return dbTx.Exec(`INSERT INTO "rollback_tx" ("id", "block_id", "tx_idx", "table_ref", "table_id", "data")
+		SELECT * FROM unnest(?::bigint[], ?::bigint[], ?::integer[], ?::integer[], ?::varchar[], ?::text[])`,
 		column(rts, func(r *RollbackTx) int64 { return r.ID }),
 		column(rts, func(r *RollbackTx) int64 { return r.BlockID }),
-		column(rts, func(r *RollbackTx) []byte { return r.TxHash }),
-		column(rts, func(r *RollbackTx) string { return r.NameTable }),
+		column(rts, func(r *RollbackTx) int32 { return r.TxIdx }),
+		column(rts, func(r *RollbackTx) int32 { return r.TableRef }),
 		column(rts, func(r *RollbackTx) string { return r.TableID }),
 		column(rts, func(r *RollbackTx) string { return r.Data })).Error
 }

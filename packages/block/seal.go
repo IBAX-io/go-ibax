@@ -97,7 +97,7 @@ func (b *Block) sealTrial(dbTx *sqldb.DbTransaction, mem memState, r *blockRun, 
 // validators set it leaves, its header and BinData. It returns the outputs.
 func (b *Block) sealState(e *stateExec) ([]sqldb.SpentInfo, error) {
 	outputs := sqldb.GetAllOutputs(b.OutputsMap)
-	hashes, err := rollbackHashes(newAfterRows(nil, b.AfterTxs.Rts).rts)
+	hashes, err := rollbackHashes(b.AfterTxs.Rts)
 	if err != nil {
 		return nil, fmt.Errorf("rollbacks hash: %w", err)
 	}

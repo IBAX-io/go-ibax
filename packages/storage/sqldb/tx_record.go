@@ -9,20 +9,28 @@ import (
 	"database/sql"
 	"reflect"
 	"strings"
-
-	"github.com/IBAX-io/go-ibax/packages/converter"
 )
 
-func GetTxRecord(tx *DbTransaction, hashStr string) (resultList []any, err error) {
+// TxBlock returns the block of the transaction hash, wherever its log is (archive)
+func TxBlock(hash []byte) (int64, bool, error) {
+	var blocks []int64
+	if err := DBConn.Raw(`SELECT block FROM `+ArchivedTable("log_transactions")+` WHERE hash = ? LIMIT 1`, hash).
+		Scan(&blocks).Error; err != nil || len(blocks) == 0 {
+		return 0, false, err
+	}
+	return blocks[0], true, nil
+}
+
+// GetTxRecord returns the rows the transaction txIdx of the block changed, as they are
+func GetTxRecord(tx *DbTransaction, blockID int64, txIdx int) (resultList []any, err error) {
 	db := GetDB(tx)
-	// get record from rollback_tx, in the block of the transaction
-	var (
-		rollbackTxs []RollbackTx
-	)
-	hash := []byte(converter.HexToBin(hashStr))
-	err = db.Table(ArchivedTable("rollback_tx")).
-		Where("block_id IN (SELECT block FROM "+ArchivedTable("log_transactions")+" WHERE hash = ?) AND tx_hash = ?", hash, hash).
-		Find(&rollbackTxs).Error
+	var rollbackTxs []struct {
+		NameTable string `gorm:"column:table_name"`
+		TableID   string
+	}
+	err = db.Raw(`SELECT t.name AS table_name, r.table_id FROM `+ArchivedTable("rollback_tx")+` r
+		JOIN rollback_tables t ON t.ref = r.table_ref WHERE r.block_id = ? AND r.tx_idx = ? ORDER BY r.id`,
+		blockID, txIdx).Scan(&rollbackTxs).Error
 	if err != nil {
 		return
 	}

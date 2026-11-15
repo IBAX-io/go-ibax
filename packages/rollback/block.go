@@ -11,7 +11,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	log "github.com/sirupsen/logrus"
@@ -101,7 +100,7 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 	if err != nil {
 		return err
 	}
-	if err := rollbackTransaction(records, smart.SettlementHash, dbTx, logger); err != nil {
+	if err := rollbackTransaction(records, len(block.Transactions), dbTx, logger); err != nil {
 		return err
 	}
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
@@ -122,7 +121,7 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 		switch t.Inner.(type) {
 		case *transaction.SmartTransactionParser:
 			t.Inner.(*transaction.SmartTransactionParser).DbTransaction = t.DbTransaction
-			if err = rollbackTransaction(records, t.Hash(), t.DbTransaction, logger); err != nil {
+			if err = rollbackTransaction(records, i, t.DbTransaction, logger); err != nil {
 				return err
 			}
 		}

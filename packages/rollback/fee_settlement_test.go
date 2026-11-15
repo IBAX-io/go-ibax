@@ -112,14 +112,15 @@ func TestFeeSettlement(t *testing.T) {
 	// the rollback of the block
 	rows := make([]*sqldb.RollbackTx, len(rts))
 	for i, r := range rts {
-		rows[i] = &sqldb.RollbackTx{BlockID: r.BlockId, TxHash: r.TxHash, NameTable: r.NameTable, TableID: r.TableId,
+		rows[i] = &sqldb.RollbackTx{BlockID: r.BlockId, TxIdx: 0, NameTable: r.NameTable, TableID: r.TableId,
 			Data: r.Data}
 	}
-	require.NoError(t, sqldb.CreateBatchesRollbackTx(tx, rows))
+	require.NoError(t, sqldb.CreateBatchesRollbackTx(tx, rows, sqldb.NewTableRefs()))
 	logger := log.NewEntry(log.StandardLogger())
 	records, err := getBlockRecords(blockID, dbTx, logger)
 	require.NoError(t, err)
-	require.NoError(t, rollbackTransaction(records, smart.SettlementHash, dbTx, logger))
+	// the settlement of a block without transactions is of the index 0
+	require.NoError(t, rollbackTransaction(records, 0, dbTx, logger))
 	require.NoError(t, deleteBlockRecords(blockID, dbTx, logger))
 	amount, found := balance(1, producer)
 	require.True(t, found)
