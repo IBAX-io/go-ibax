@@ -215,6 +215,7 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 		}
 	}
 	states.afterCommit(b.Header.BlockId)
+	sqldb.AnalyzeRange(b.Header.BlockId)
 	if err := t.mem.restore(); err != nil {
 		return nil, true, err
 	}
