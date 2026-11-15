@@ -10,8 +10,9 @@ import (
 	"strings"
 )
 
-// PartitionBlocks is the number of blocks a partition of a table partitioned by block covers
-const PartitionBlocks = 10000
+// PartitionBlocks is the number of blocks a partition of a table partitioned by block covers: at
+// 10,000 transactions a second and a block a second, 20 million transactions a partition
+const PartitionBlocks = 2000
 
 const (
 	// PartsSchema holds the partitions of the active tables, apart from the tables the contracts
@@ -194,10 +195,16 @@ func PartitionBounds(table string, k int64) string {
 	return fmt.Sprintf("FROM (%s) TO (%d)", from, (k+1)*PartitionBlocks)
 }
 
+// PartitionOptions are the storage parameters of a range partition: the rows of a range are
+// inserted and, but for the rollback of a block, neither updated nor deleted, so that a vacuum
+// the inserts trigger would only set the visibility of pages it writes whole again; the range is
+// frozen once instead, when the next range takes the inserts (sqldb.FreezeClosed)
+const PartitionOptions = `autovacuum_vacuum_insert_threshold = -1, toast.autovacuum_vacuum_insert_threshold = -1`
+
 // CreatePartitionSQL creates the partition of range k of the table, unless it exists
 func CreatePartitionSQL(table string, k int64) string {
-	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" PARTITION OF "%s" FOR VALUES %s;`,
-		PartsSchema, PartitionName(table, k), table, PartitionBounds(table, k))
+	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" PARTITION OF "%s" FOR VALUES %s WITH (%s);`,
+		PartsSchema, PartitionName(table, k), table, PartitionBounds(table, k), PartitionOptions)
 }
 
 // sql drops and creates the table, its indexes, the partition that never leaves and the partitions

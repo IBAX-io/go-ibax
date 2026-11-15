@@ -147,5 +147,9 @@ func UpdateSchema() error {
 	if err := migration.UpdateMigrate(&MigrationHistory{}); err != nil {
 		return err
 	}
-	return PrepareArchive()
+	if err := PrepareArchive(); err != nil {
+		return err
+	}
+	go FreezeClosed()
+	return nil
 }
