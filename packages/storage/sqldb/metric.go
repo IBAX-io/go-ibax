@@ -40,9 +40,10 @@ func GetEcosystemTxPerDay(timeBlock int64) ([]*EcosystemTx, error) {
 	curDate := time.Unix(timeBlock, 0).Format(`2006-01-02`)
 	sql := `SELECT
 		EXTRACT(EPOCH FROM to_timestamp(bc.time)::date)::int "unix_time",
-		SUBSTRING(rtx.table_name FROM '^\d+') "ecosystem",
+		SUBSTRING(t.name FROM '^\d+') "ecosystem",
 		COUNT(*)
 	FROM rollback_tx rtx
+		INNER JOIN rollback_tables t ON t.ref = rtx.table_ref
 		INNER JOIN block_chain bc ON bc.id = rtx.block_id
 	WHERE to_timestamp(bc.time)::date >= (DATE('` + curDate + `') - interval '1' day)::date
 	GROUP BY unix_time, ecosystem ORDER BY unix_time, ecosystem`

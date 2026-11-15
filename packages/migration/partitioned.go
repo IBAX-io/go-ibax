@@ -92,16 +92,17 @@ var PartitionedTables = []PartitionedTable{
 	},
 	{
 		// the rollback of a block reads and deletes its records by the primary key, the history of a
-		// row reads them by the row
+		// row reads them by the row; a record has the index of its transaction in the block and the
+		// ref rollback_tables gives its table
 		Name: "rollback_tx", Key: "block_id", ID: true, IDByKey: true,
 		columns: `"id" bigint NOT NULL DEFAULT '0',
 		"block_id" bigint NOT NULL DEFAULT '0',
-		"tx_hash" bytea NOT NULL DEFAULT '',
-		"table_name" varchar(255) NOT NULL DEFAULT '',
+		"tx_idx" integer NOT NULL DEFAULT '0',
+		"table_ref" integer NOT NULL DEFAULT '0',
 		"table_id" varchar(255) NOT NULL DEFAULT '',
 		"data" text NOT NULL DEFAULT '',
 		PRIMARY KEY ("block_id", "id")`,
-		indexes: []string{`"table_name", "table_id", "block_id"`},
+		indexes: []string{`"table_ref", "table_id", "block_id"`},
 	},
 	{
 		Name: "1_history", Key: "block_id", ID: true,
@@ -227,7 +228,8 @@ func HistoryTableSQL() string {
 
 // retentionSQL creates the schemas of the partitions, the partitioned tables but 1_history and
 // the tables of the retention of rows, and of what outlives it: the count of the successful
-// transactions of every ecosystem and the hashes of the StopNetwork transactions
+// transactions of every ecosystem, the hashes of the StopNetwork transactions and the refs of the
+// tables of rollback_tx
 func retentionSQL() string {
 	var b strings.Builder
 	for _, s := range []string{PartsSchema, RetiredSchema, ArchiveSchema} {
@@ -270,6 +272,12 @@ func retentionSQL() string {
 	CREATE TABLE "stop_network_txs" (
 		"hash" bytea NOT NULL PRIMARY KEY,
 		"block" bigint NOT NULL
+	);
+	DROP TABLE IF EXISTS "rollback_tables";
+	CREATE TABLE "rollback_tables" (
+		"ref" integer NOT NULL PRIMARY KEY,
+		"name" varchar(255) NOT NULL UNIQUE,
+		"block_id" bigint NOT NULL
 	);
 `)
 	return b.String()

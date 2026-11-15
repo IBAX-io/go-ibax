@@ -24,8 +24,8 @@ import (
 // not use the connection of its transaction. The block holds the connection but while it commits
 // runs in parallel, and takes it before a statement until its next transaction, so a part never
 // goes between the statements of a run in order or after a savepoint the block may roll back to.
-// The writer takes the hashes of the rollback records before they have their ids, and writes the
-// parts in the order of the block, which gives the rollback records the ids in that order:
+// The writer takes the hashes of the rollback records, and writes the parts in the order of the
+// block, which gives the rollback records the ids, and their tables the refs, in that order:
 // AfterPlayTxs writes the rest, and the rollbacks hash of the block is the one it had without.
 
 const (
@@ -45,11 +45,13 @@ type afterPart struct {
 }
 
 // afterWritten are the records the writer wrote: of the first txs transactions of the block and
-// of their first rts rollback records, with their logs and the hashes of their rollback records
+// of their first rts rollback records, with their logs, the hashes of their rollback records and
+// the refs of the tables of the records the block gave
 type afterWritten struct {
 	txs, rts int
 	lts      []*sqldb.LogTransaction
 	hashes   []string
+	refs     *sqldb.TableRefs
 	spent    time.Duration
 }
 
@@ -72,6 +74,7 @@ type afterStream struct {
 // transaction dbTx; the block holds the connection
 func newAfterStream(dbTx *sqldb.DbTransaction) *afterStream {
 	s := &afterStream{dbTx: dbTx, parts: make(chan afterPart, 4), done: make(chan struct{}), held: true}
+	s.written.refs = sqldb.NewTableRefs()
 	s.conn.Lock()
 	go s.write()
 	return s
@@ -128,9 +131,13 @@ func (s *afterStream) write() {
 			continue
 		}
 		start := time.Now()
-		rows := newAfterRows(part.txs, part.rts)
-		hashes := make([]string, len(rows.rts))
-		for i, rt := range rows.rts {
+		var rows *afterRows
+		rows, s.err = newAfterRows(part.txs, part.rts, s.written.txs)
+		if s.err != nil {
+			continue
+		}
+		hashes := make([]string, len(part.rts))
+		for i, rt := range part.rts {
 			if hashes[i], s.err = rollbackHash(rt); s.err != nil {
 				break
 			}
@@ -166,7 +173,7 @@ func (s *afterStream) writeRows(rows *afterRows) error {
 		return errors.Wrap(err, "batches insert log_transactions")
 	}
 	if err := chunks(len(rows.rts), func(tx *gorm.DB, from, to int) error {
-		return sqldb.CreateBatchesRollbackTx(tx, rows.rts[from:to])
+		return sqldb.CreateBatchesRollbackTx(tx, rows.rts[from:to], s.written.refs)
 	}); err != nil {
 		return errors.Wrap(err, "batches insert rollback tx")
 	}
@@ -178,9 +185,23 @@ func (s *afterStream) writeRows(rows *afterRows) error {
 	return nil
 }
 
+// rollbackHashForm is the form of a rollback record its hash is of. The rollbacks hash of a block is
+// a rule of the chain, as the next block has it, so the form stays as the records are stored: the
+// JSON of a record as the table had it, without its id, which it has not yet
+type rollbackHashForm struct {
+	ID        int64
+	BlockID   int64  `json:"block_id"`
+	TxHash    []byte `json:"tx_hash"`
+	NameTable string `json:"table_name"`
+	TableID   string `json:"table_id"`
+	Data      string `json:"data"`
+	DataHash  []byte `json:"data_hash"`
+}
+
 // rollbackHash is the hash of a rollback record of the block, which rollbacksHash takes
-func rollbackHash(rt *sqldb.RollbackTx) (string, error) {
-	data, err := json.Marshal(rt)
+func rollbackHash(rt *types.RollbackTx) (string, error) {
+	data, err := json.Marshal(rollbackHashForm{BlockID: rt.BlockId, TxHash: rt.TxHash, NameTable: rt.NameTable,
+		TableID: rt.TableId, Data: rt.Data, DataHash: rt.DataHash})
 	if err != nil {
 		return "", err
 	}

@@ -68,13 +68,16 @@ func testDB(t *testing.T) *gorm.DB {
 	return tx
 }
 
-// retentionDB is testDB with the rows of the tables the retention reads deleted
+// retentionDB is testDB with the rows of the tables the retention reads deleted, and the refs of
+// the tables of rollback_tx forgotten
 func retentionDB(t *testing.T) *DbTransaction {
 	tx := testDB(t)
-	for _, table := range []string{"block_chain", "confirmations", "bft_certificates", "rollback_tx", "1_history",
-		"log_transactions", "spent_info", "retired_partitions", "log_transaction_ranges", "partition_id_floors",
-		"retention_state", "log_transaction_counts", "stop_network_txs", "bft_validator_sets", "bft_set_proofs",
-		"snapshot_joins"} {
+	ResetTableRefs()
+	t.Cleanup(ResetTableRefs)
+	for _, table := range []string{"block_chain", "confirmations", "bft_certificates", "rollback_tx", "rollback_tables",
+		"1_history", "log_transactions", "spent_info", "retired_partitions", "log_transaction_ranges",
+		"partition_id_floors", "retention_state", "log_transaction_counts", "stop_network_txs", "bft_validator_sets",
+		"bft_set_proofs", "snapshot_joins"} {
 		require.NoError(t, tx.Exec(`DELETE FROM "`+table+`"`).Error)
 	}
 	return NewDbTransaction(tx)
@@ -96,7 +99,7 @@ func chainRows(t *testing.T, db *DbTransaction, T int64) {
 	addBlocks(t, db, 1000, 1, 5)
 	addBlocks(t, db, T, 9999, 10000, 19999)
 	for id := int64(1); id <= 3; id++ {
-		require.NoError(t, tx.Create(&RollbackTx{ID: id, BlockID: 5, TxHash: []byte{5}, NameTable: "1_keys", TableID: "1"}).Error)
+		require.NoError(t, tx.Create(&RollbackTx{ID: id, BlockID: 5, TableRef: 1, TableID: "1"}).Error)
 	}
 	require.NoError(t, tx.Create(&LogTransaction{Hash: []byte{5}, Block: 5, Timestamp: 1000}).Error)
 	require.NoError(t, tx.Create(&SpentInfo{OutputTxHash: []byte{5}, OutputKeyId: 1, OutputValue: "1", Ecosystem: 1,
