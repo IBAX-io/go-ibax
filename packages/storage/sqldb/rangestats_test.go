@@ -25,7 +25,7 @@ func TestAnalyzeRange(t *testing.T) {
 		require.NoError(t, db.Exec(migration.CreatePartitionSQL(table.Name, k)).Error)
 	}
 	require.NoError(t, db.Exec(`INSERT INTO "log_transactions" ("hash", "block")
-		SELECT sha256(int8send(i)), ? + i / 3 FROM generate_series(1, 6000) i`, k*migration.PartitionBlocks).Error)
+		SELECT sha256(int8send(i)), ? + i / 4 FROM generate_series(1, 6000) i`, k*migration.PartitionBlocks).Error)
 	hashes := make([][]byte, 512)
 	for i := range hashes {
 		h := sha256.Sum256(binary.BigEndian.AppendUint64(nil, uint64(i*11+1)))
