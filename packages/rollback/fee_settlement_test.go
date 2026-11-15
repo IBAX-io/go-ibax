@@ -133,7 +133,6 @@ func TestFeeSettlement(t *testing.T) {
 	require.NoError(t, tx.Raw(`SELECT count(*) FROM "1_history" WHERE block_id = ? AND txhash = ?`, blockID,
 		smart.SettlementHash).Scan(&n).Error)
 	require.Zero(t, n)
-	require.NoError(t, tx.Raw(`SELECT count(*) FROM rollback_tx WHERE block_id = ? AND tx_hash = ?`, blockID,
-		smart.SettlementHash).Scan(&n).Error)
+	require.NoError(t, tx.Raw(`SELECT count(*) FROM rollback_tx WHERE block_id = ?`, blockID).Scan(&n).Error)
 	require.Zero(t, n)
 }

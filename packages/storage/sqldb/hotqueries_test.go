@@ -60,9 +60,12 @@ var hotQueries = []struct {
 	{`SELECT * FROM "block_chain" WHERE node_position = 0 AND time BETWEEN 1 AND 2`,
 		[]string{`block_chain_p\d+_node_position_time_idx`}},
 	{`SELECT * FROM "confirmations" WHERE block_id = 1`, []string{`confirmations_p0_pkey`}},
-	{`SELECT * FROM "rollback_tx" WHERE block_id = 1 AND tx_hash = '\x01' ORDER BY id DESC`, []string{`rollback_tx_p0_`}},
-	{`SELECT * FROM "rollback_tx" WHERE table_name = '1_keys' AND table_id = '1' ORDER BY block_id DESC`,
-		[]string{`rollback_tx_p\d+_table_name_table_id_block_id_idx`}},
+	{`SELECT r.id, r.tx_idx, t.name AS table_name, r.table_id, r.data FROM rollback_tx r
+		JOIN rollback_tables t ON t.ref = r.table_ref WHERE r.block_id = 1 ORDER BY r.block_id DESC, r.id DESC`,
+		[]string{`rollback_tx_p0_`}},
+	{`SELECT * FROM "rollback_tx" WHERE table_ref = (SELECT ref FROM rollback_tables WHERE name = '1_keys')
+		AND table_id = '1' ORDER BY block_id DESC, id DESC`,
+		[]string{`rollback_tx_p\d+_table_ref_table_id_block_id_idx`, `rollback_tables_name_key`}},
 	{`SELECT * FROM "1_history" WHERE txhash = '\x01'`, []string{`1_history_p\d+_txhash_idx`}},
 	{`select ap.value from "1_app_params" ap, "1_applications" a where ap.app_id = a.id and a."name" = 'CandidateNode'
 		and ap."name" = 'limit_candidate_pack' and a.deleted = 0 and a.ecosystem = 1`,
@@ -110,8 +113,9 @@ var hotRows = []string{
 	`INSERT INTO "stop_network_txs" (hash, block) SELECT sha256(int8send(-g)), g FROM generate_series(1, 10) g`,
 	`INSERT INTO "1_history" (id, block_id, txhash) SELECT g, 2 + g / 20, sha256(int8send(g))
 		FROM generate_series(0, 99999) g`,
-	`INSERT INTO "rollback_tx" (id, block_id, tx_hash, table_name, table_id)
-		SELECT g, 2 + g / 40, sha256(int8send(g / 2)), '1_keys', (g % 100000)::text FROM generate_series(0, 199999) g`,
+	`INSERT INTO "rollback_tables" (ref, name, block_id) SELECT g, g || '_keys', 2 FROM generate_series(1, 50) g`,
+	`INSERT INTO "rollback_tx" (id, block_id, tx_idx, table_ref, table_id)
+		SELECT g, 2 + g / 40, g % 40 / 2, 1 + g % 50, (g % 100000)::text FROM generate_series(0, 199999) g`,
 	`INSERT INTO "spent_info" (output_tx_hash, output_index, output_key_id, output_value, ecosystem, block_id, type,
 			input_tx_hash, input_index, spent_block)
 		SELECT sha256(int8send(g / 4)), g % 4, CASE WHEN g % 4 < 2 THEN 1 + g % 4 ELSE 3 + g * 7919 % 100000 END,
@@ -124,7 +128,7 @@ var hotRows = []string{
 // hotTables are the tables hotRows fills
 var hotTables = []string{"1_ecosystems", "1_keys", "1_members", "1_parameters", "1_applications", "1_app_params",
 	"1_notifications", "1_roles_participants", "log_transaction_counts", "block_chain", "confirmations",
-	"transactions_status", "log_transactions", "stop_network_txs", "1_history", "rollback_tx", "spent_info"}
+	"transactions_status", "log_transactions", "stop_network_txs", "1_history", "rollback_tx", "rollback_tables", "spent_info"}
 
 var planIndex = regexp.MustCompile(`Index(?: Only)? Scan(?: Backward)? using "?([^" ]+)"?|Bitmap Index Scan on "?([^" ]+)"?`)
 
