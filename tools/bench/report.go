@@ -43,7 +43,8 @@ func (r *report) finish() {
 	}
 }
 
-// write writes the report as bench-TIME.json and bench-TIME.md in the directory
+// write writes the report as bench-TIME.json and bench-TIME.md in the directory, each through a
+// file renamed over it, so that a reader never sees half of one
 func (r *report) write(dir string) (string, error) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
@@ -53,10 +54,17 @@ func (r *report) write(dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(base+".json", b, 0o644); err != nil {
+	if err := writeFile(base+".json", b); err != nil {
 		return "", err
 	}
-	return base, os.WriteFile(base+".md", []byte(r.markdown()), 0o644)
+	return base, writeFile(base+".md", []byte(r.markdown()))
+}
+
+func writeFile(name string, b []byte) error {
+	if err := os.WriteFile(name+".tmp", b, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(name+".tmp", name)
 }
 
 func (r *report) markdown() string {
