@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/stretchr/testify/require"
 )
 
@@ -86,6 +87,9 @@ var hotQueries = []struct {
 // and their transactions in ecosystem 1, a thousand ecosystems with their parameters and
 // applications, 5000 blocks of 10 transactions, each making 4 outputs, the first two the packaging and
 // taxes to keys 1 and 2, and 95% of the outputs spent
+// hotBlocks is the last block of hotRows
+const hotBlocks = 5001
+
 var hotRows = []string{
 	`INSERT INTO "1_ecosystems" (id, name) SELECT g, 'e' || g FROM generate_series(1, 1000) g`,
 	`INSERT INTO "1_keys" (id, ecosystem, account) SELECT g, CASE WHEN g % 10 = 0 THEN 2 + g % 999 ELSE 1 END,
@@ -146,6 +150,12 @@ func TestHotQueriesUseIndexes(t *testing.T) {
 		tables[i] = `"` + table + `"`
 	}
 	require.NoError(t, db.Exec(`TRUNCATE `+strings.Join(tables, ", ")).Error)
+	// the ranges of the blocks of hotRows, which the boundaries would have made
+	for k := int64(1); k <= hotBlocks/migration.PartitionBlocks; k++ {
+		for _, pt := range migration.PartitionedTables {
+			require.NoError(t, db.Exec(migration.CreatePartitionSQL(pt.Name, k)).Error)
+		}
+	}
 	for _, rows := range hotRows {
 		require.NoError(t, db.Exec(rows).Error, rows)
 	}

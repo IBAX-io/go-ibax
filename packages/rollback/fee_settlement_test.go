@@ -10,6 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -43,7 +44,7 @@ func TestFeeSettlement(t *testing.T) {
 	require.NoError(t, syspar.SysTableColType(dbTx))
 
 	const (
-		blockID  = int64(19998)
+		blockID  = int64(2*migration.PartitionBlocks - 2)
 		producer = int64(-1000001)
 		taxes    = int64(-1000002)
 	)
