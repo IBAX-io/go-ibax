@@ -36,6 +36,9 @@ const (
 	TimeoutPropose   = "propose"
 	TimeoutPrevote   = "prevote"
 	TimeoutPrecommit = "precommit"
+	// TimeoutOwnWrites is the propose timeouts of a proposer whose own block was still being
+	// written: it prevotes nil, while the other validators have its proposal and vote on it
+	TimeoutOwnWrites = "own_writes"
 )
 
 // The counts of the consensus messages the node received, by what became of them
@@ -57,6 +60,18 @@ const (
 	FramesThrottled = "throttled_frames"
 	// TxFramesDropped is the frames of transactions of the node a full queue of a peer dropped
 	TxFramesDropped = "dropped_tx_frames"
+	// PoolFullTxs is the transactions of other nodes the pool left out for it or the account was
+	// full: the transactions the pool of this node does not have when another proposes them
+	PoolFullTxs = "pool_full_txs"
+	// PendingPulled is the transactions the node took from a validator that said it had some
+	// while its own pool had none
+	PendingPulled = "pulled_txs"
+	// RefusedTxRequests is the requests of the bodies of transactions closed unanswered past
+	// those served at once
+	RefusedTxRequests = "refused_tx_requests"
+	// RefusedPendingRequests is the requests of the first transactions of the pool answered with
+	// none: past those served at once, or of an address served in the interval
+	RefusedPendingRequests = "refused_pending_requests"
 )
 
 // EscalationHeights is the last heights the escalation rate is of: the share of them committed
@@ -133,8 +148,13 @@ func Clear(alert string) {
 }
 
 // Count adds one to a count of the consensus messages
-func Count(name string) {
-	Update(func(s *State) { s.Messages[name]++ })
+func Count(name string) { Add(name, 1) }
+
+// Add adds n to a count of the consensus messages
+func Add(name string, n int) {
+	if n > 0 {
+		Update(func(s *State) { s.Messages[name] += int64(n) })
+	}
 }
 
 // Get is a copy of the state

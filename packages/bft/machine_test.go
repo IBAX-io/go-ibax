@@ -18,11 +18,13 @@ type cornerApp struct {
 	invalid  map[Hash]bool
 	untimely map[Hash]bool
 	values   int
+	// pending makes Value propose blocks whose validity the test tells by OnValid
+	pending bool
 }
 
-func (a *cornerApp) Value(height uint64, round uint32) ([]byte, Hash, error) {
+func (a *cornerApp) Value(height uint64, round uint32) ([]byte, Hash, bool, error) {
 	a.values++
-	return []byte("own"), testHash(0xaa), nil
+	return []byte("own"), testHash(0xaa), a.pending, nil
 }
 
 func (a *cornerApp) Valid(height uint64, hash Hash, block []byte) bool {

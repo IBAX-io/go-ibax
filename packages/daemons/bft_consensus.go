@@ -64,6 +64,39 @@ const (
 // work, not at the next tick, which would hold a chain under load to a block a tick
 type bftNext struct{}
 
+// bftWork is the event of the transactions the node pulled at a height from a validator that said
+// it had some (bftPending): the machine starts the height at once, its round 0 from then
+type bftWork struct {
+	height uint64
+	at     time.Time
+}
+
+// bftExpired is the event of a timeout the machine scheduled, due when it was to expire: the
+// driver takes it later if it was busy, trying a block under DBLock
+type bftExpired struct {
+	bft.Timeout
+	due time.Time
+}
+
+// bftWritten is the event of the end of the writes of a block the node proposed, which its trial
+// goes on with after the proposal (block.Written): the machine prevotes the block only once they
+// succeed
+type bftWritten struct {
+	height uint64
+	hash   bft.Hash
+	err    error
+}
+
+// bftRoundStart is when the validators started a round of a height, as far as the node knows: the
+// time a quorum of precommits of the height before reached it, for round 0 of a height it moved to
+// with work, and the time the precommit timeout of the round before was due, for a later round.
+// The proposer of the round makes its proposal within syspar.GetBftProposeBudget from then.
+type bftRoundStart struct {
+	height uint64
+	round  uint32
+	at     time.Time
+}
+
 var bftStart sync.Once
 
 // startBftConsensus starts the driver once
@@ -83,8 +116,10 @@ type bftDriver struct {
 	logger    *log.Entry
 	networkID uint64
 	svc       *bftnet.Service
-	events    chan any // *bft.Proposal, *bft.Vote, bft.Timeout, bftNext
+	events    chan any // *bft.Proposal, *bft.Vote, bftExpired, bftNext, bftWork, bftWritten
 	received  chan [][]byte
+	// pending gets the node without transactions those of a validator that has some
+	pending *bftPending
 
 	mu   sync.Mutex // guards pool, which the handler of the service also uses
 	pool *bft.Pool
@@ -95,6 +130,12 @@ type bftDriver struct {
 
 	// m is used only by the goroutine of run
 	m *bft.Machine
+	// written is the ends of the writes of the proposals of the node the machine has not taken,
+	// as the network was stopped or the height could not be read; used only by the goroutine of
+	// run
+	written []bftWritten
+	// roundStart is used only by the goroutine of run
+	roundStart bftRoundStart
 	// unsaved is a sign state the node could not store, and unsent the messages signed with it:
 	// the driver sends them once it stores the state
 	unsaved *bft.SignState
@@ -129,6 +170,19 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 	cfg := bftnet.DefaultConfig
 	cfg.Rate = syspar.GetBftPeerMsgRate()
 	d.svc = bftnet.NewService(cfg, d)
+	d.pending = &bftPending{
+		poolLen: transaction.TxPool.Len,
+		fetch:   fetchPending,
+		receive: func(bodies [][]byte) int {
+			taken := d.takeTxs(bodies)
+			bftmon.Add(bftmon.PendingPulled, taken)
+			return taken
+		},
+		work:    func(height uint64, at time.Time) { d.post(bftWork{height: height, at: at}) },
+		say:     d.svc.SendPending,
+		timeout: bftnet.DefaultConfig.Dial,
+		now:     time.Now,
+	}
 	d.spec = &bftSpeculator{
 		logger: d.logger,
 		begin:  speculate,
@@ -250,7 +304,7 @@ func (d *bftDriver) newMachine(height uint64, set bft.Validators) {
 	app := bftApp{logger: d.logger, bodies: d.bodies, spec: d.spec, stream: func(height uint64, round uint32) *bftStream {
 		return &bftStream{send: d.svc.SendBatch, key: syspar.GetNodePrivKey(), networkID: d.networkID,
 			height: height, round: round, validator: set.Proposer(height, round), kept: d.bodies.stream(height, round)}
-	}}
+	}, roundStart: d.roundStartOf, pull: d.pending.pullNow, written: d.awaitWritten}
 	d.m = bft.NewMachine(d.config(), app, syspar.GetNodePrivKey(), syspar.GetNodePubKey(), d.networkID, height, set)
 }
 
@@ -269,6 +323,7 @@ func (d *bftDriver) reset() error {
 	d.mu.Unlock()
 	d.newMachine(last+1, set)
 	d.watch.moveTo(last+1, set, time.Now(), false)
+	d.pending.moveTo(last+1, set, syspar.GetNodePubKey())
 	return nil
 }
 
@@ -336,6 +391,13 @@ func (d *bftDriver) syncHeight() error {
 	d.mu.Unlock()
 	d.bodies.prune(last)
 	d.newMachine(last+1, set)
+	d.pending.moveTo(last+1, set, syspar.GetNodePubKey())
+	d.roundStart = bftRoundStart{}
+	if decided := d.watch.decided(last); !decided.IsZero() && d.hasWork() {
+		// the validators of the quorum that reached the node then start the height at once, as
+		// they have work too under load: an idle height starts later, from when it has work
+		d.roundStart = bftRoundStart{height: last + 1, at: decided}
+	}
 	d.logger.WithFields(log.Fields{"height": last + 1, "validators": set.N()}).Debug("moved to the height")
 	d.onHeight(from, last+1, set, now)
 	for _, m := range kept {
@@ -366,6 +428,11 @@ func (d *bftDriver) give(m any) {
 }
 
 func (d *bftDriver) event(e any) {
+	if w, ok := e.(bftWritten); ok {
+		// the end of the writes of a proposal comes once: it waits for the machine, which takes it
+		// with the next event or tick that moves it
+		d.written = append(d.written, w)
+	}
 	if bftStopped() {
 		return
 	}
@@ -373,14 +440,20 @@ func (d *bftDriver) event(e any) {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the height")
 		return
 	}
+	d.applyWritten()
 	switch e := e.(type) {
-	case bft.Timeout:
-		d.countTimeout(e)
-		d.apply(d.m.OnTimeout(e))
+	case bftExpired:
+		d.expired(e)
 	case bftNext:
-		if !d.m.Decided() && d.hasWork() {
-			d.apply(d.m.Start())
+		d.startWork()
+	case bftWork:
+		if e.height == d.m.Height() && d.roundStart.height != e.height {
+			// the validator that had the transactions started the round then
+			d.roundStart = bftRoundStart{height: e.height, at: e.at}
 		}
+		d.startWork()
+	case bftWritten:
+		// applyWritten took it
 	default:
 		d.give(e)
 	}
@@ -400,10 +473,8 @@ func (d *bftDriver) tick() {
 		d.logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("moving to the height")
 		return
 	}
-	busy := !d.m.Decided() && d.hasWork()
-	if busy {
-		d.apply(d.m.Start())
-	}
+	d.applyWritten()
+	busy := d.startWork()
 	d.checkLiveness(now, busy, d.m.Round(), d.silent)
 	if time.Since(d.resent) < bftResend {
 		return
@@ -416,6 +487,19 @@ func (d *bftDriver) tick() {
 		d.send(m)
 		d.give(m)
 	}
+}
+
+// startWork starts the height if it is undecided and has work, says so to the others if the
+// pool has transactions, and reports whether it has work
+func (d *bftDriver) startWork() bool {
+	if d.m.Decided() || !d.hasWork() {
+		return false
+	}
+	if transaction.TxPool.Len() > 0 {
+		d.pending.announce(d.m.Height())
+	}
+	d.apply(d.m.Start())
+	return true
 }
 
 // hasWork reports whether the height has a transaction to put in a block: a transaction of the
@@ -466,7 +550,7 @@ func (d *bftDriver) apply(out []bft.Output) {
 		case o.Proposal != nil, o.Vote != nil:
 			d.unsent = append(d.unsent, o)
 		case o.Timeout != nil:
-			t := *o.Timeout
+			t := bftExpired{Timeout: *o.Timeout, due: time.Now().Add(o.Timeout.After)}
 			time.AfterFunc(t.After, func() {
 				select {
 				case d.events <- t:
@@ -553,6 +637,42 @@ func commitDecision(logger *log.Entry, c *bft.Commit) bool {
 	}
 	logger.WithFields(log.Fields{"height": c.Height, "round": c.Round, "hash": fmt.Sprintf("%x", c.Hash[:8])}).Info("committed")
 	return true
+}
+
+// awaitWritten waits, apart from the driver, for the writes of the block the node proposed at the
+// height, and gives the driver their end; the event is not dropped, the machine waits for it
+func (d *bftDriver) awaitWritten(height uint64, hash bft.Hash, written func() error) {
+	go func() {
+		e := bftWritten{height: height, hash: hash, err: written()}
+		select {
+		case d.events <- e:
+		case <-d.ctx.Done():
+		}
+	}()
+}
+
+// applyWritten gives the machine the ends of the writes of the proposals of the node it has not
+// taken: the machine ignores those of another height or of a block no longer pending
+func (d *bftDriver) applyWritten() {
+	written := d.written
+	d.written = nil
+	for _, e := range written {
+		d.apply(d.m.OnValid(e.height, e.hash, writtenValidity(d.logger, e)))
+	}
+}
+
+// writtenValidity is the validity of a block the node proposed by the end of its writes: unknown
+// for a trial the node dropped, which a validator then tries as any block if it needs to know
+func writtenValidity(logger *log.Entry, e bftWritten) bft.Validity {
+	switch {
+	case e.err == nil:
+		return bft.ValidityValid
+	case errors.Is(e.err, block.ErrTrialDropped):
+		return bft.ValidityUnknown
+	}
+	logger.WithFields(log.Fields{"type": consts.BlockError, "error": e.err, "height": e.height}).
+		Warn("writing the block of the proposal of the node failed, it is not valid")
+	return bft.ValidityInvalid
 }
 
 // post queues a message for the driver, and drops it if the queue is full
@@ -713,13 +833,42 @@ func (d *bftDriver) receiveTxs() {
 		case <-d.ctx.Done():
 			return
 		case bodies := <-d.received:
-			maxSize := syspar.GetMaxTxSize()
-			bodies = slices.DeleteFunc(bodies, func(b []byte) bool { return int64(len(b)) > maxSize })
-			if err := transaction.TxPool.Receive(bodies, true); err != nil {
-				d.logger.WithFields(log.Fields{"type": consts.ProtocolError, "error": err}).Warn("taking the transactions of a node")
-			}
+			d.takeTxs(bodies)
 		}
 	}
+}
+
+// takeTxs puts transactions of another node in the pool as sent, and is the count it put
+func (d *bftDriver) takeTxs(bodies [][]byte) int {
+	maxSize := syspar.GetMaxTxSize()
+	bodies = slices.DeleteFunc(bodies, func(b []byte) bool { return int64(len(b)) > maxSize })
+	taken, full, err := transaction.TxPool.Receive(bodies, true)
+	if err != nil {
+		d.logger.WithFields(log.Fields{"type": consts.ProtocolError, "error": err}).Warn("taking the transactions of a node")
+	}
+	bftmon.Add(bftmon.PoolFullTxs, full)
+	return taken
+}
+
+// Pending is bftnet.Handler.Pending
+func (d *bftDriver) Pending(height uint64, validator uint32) {
+	if !bftStopped() {
+		d.pending.hint(height, validator)
+	}
+}
+
+// PendingTxs is bftnet.Handler.PendingTxs: the first transactions of the pool
+func (d *bftDriver) PendingTxs(count int, maxBytes int64) [][]byte {
+	return transaction.TxPool.Head(count, maxBytes)
+}
+
+// fetchPending takes the first transactions of the pool of the validator of the key
+func fetchPending(key []byte, timeout time.Duration) ([][]byte, error) {
+	addr, ok := syspar.GetNodeTCPAddress(key)
+	if !ok {
+		return nil, errNoValidator
+	}
+	return bftnet.FetchPending(addr, syspar.GetMaxTxCount(), syspar.GetMaxBlockSize(), timeout)
 }
 
 // Evidence is bftnet.Handler.Evidence
@@ -756,6 +905,14 @@ type bftApp struct {
 	spec   *bftSpeculator
 	// stream is the stream of the trial of the block of the node at a height and a round
 	stream func(height uint64, round uint32) *bftStream
+	// roundStart is when the validators started a round, zero if the node does not know
+	roundStart func(height uint64, round uint32) time.Time
+	// pull pulls before the deadline the transactions of the validators that said they had some
+	// at the height, and reports whether the pool took any
+	pull func(height uint64, deadline time.Time) bool
+	// written gives the machine the end of the writes of the block of the node at a height, which
+	// written waits for, as the event bftWritten
+	written func(height uint64, hash bft.Hash, written func() error)
 }
 
 // Value generates the block of the proposer: its time is the clock in seconds and above the time
@@ -764,7 +921,20 @@ type bftApp struct {
 // whose clock is not yet past the time of the last block waits for it, up to maxTimeWait, before
 // it reads its clock: else a chain that commits faster than a block a second takes its blocks ever
 // further ahead of the clocks, until the validators refuse them as untimely (design 4.4)
-func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err error) {
+//
+// The proposal reaches the validators before they time out: the proposer makes it within
+// syspar.GetBftProposeBudget from when they started the round (roundStart), or from when it
+// started it if that is earlier. A proposer that starts the round late, as it was still trying
+// the block of the height before, makes a block of the time left, at least 1/proposeFloor of
+// max_block_generation_time. The limit is the proposer's choice of the transactions of its
+// block: the validators try the block without one, and its time only gets closer to their clocks.
+//
+// A proposer that finds no transaction for its block pulls, within the same deadline, those of the
+// validators that said they had some at the height (bftPending), and makes its block of them.
+//
+// The block is valid once the writes its trial goes on with after the proposal succeed: Value
+// returns it pending, and the machine prevotes it once written tells their end.
+func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, pending bool, err error) {
 	// a proposer without a block proposes nothing and the round times out (startRound): the log
 	// tells why, so that each propose timeout of a proposer that runs is explained
 	defer func() {
@@ -781,29 +951,76 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 	}()
 	prev, err := lastBefore(height)
 	if err != nil {
-		return nil, bft.Hash{}, err
+		return nil, bft.Hash{}, false, err
 	}
 	start := time.Now()
+	started := start
+	if a.roundStart != nil {
+		if at := a.roundStart(height, round); !at.IsZero() && at.Before(started) {
+			started = at
+		}
+	}
+	deadline := started.Add(syspar.GetBftProposeBudget(round))
 	if wait := faults.Until(time.Unix(prev.Time+1, 0)); wait > 0 {
 		time.Sleep(min(wait, maxTimeWait))
 	}
 	waited := time.Since(start)
 	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageWait).Observe(waited.Seconds())
-	// the block is made and tried under DBLock, on the last block as it is then
+	b, hash, err := a.propose(height, round, start, started, deadline, waited)
+	if errors.Is(err, block.ErrEmptyBlock) && a.pull != nil && a.pull(height, deadline) {
+		// the transactions of a validator that said it had some, which the pool of the node lost
+		a.logger.WithFields(log.Fields{"height": height, "round": round, "pool": transaction.TxPool.Len()}).
+			Info("the proposer pulled transactions for its block")
+		b, hash, err = a.propose(height, round, start, started, deadline, waited)
+	}
+	if err != nil {
+		return nil, bft.Hash{}, false, err
+	}
+	if a.written == nil {
+		return b.BinData, hash, false, b.Written()
+	}
+	a.written(height, hash, b.Written)
+	return b.BinData, hash, true, nil
+}
+
+// propose makes the block of Value from the transactions of the pool, which the proposer started
+// at start, the validators at started, and waited for its clock: the block is made and tried under
+// DBLock, on the last block as it is then
+func (a bftApp) propose(height uint64, round uint32, start, started, deadline time.Time,
+	waited time.Duration) (*block.Block, bft.Hash, error) {
 	lockWrites()
 	defer DBUnlock()
-	if prev, err = lastBefore(height); err != nil {
+	prev, err := lastBefore(height)
+	if err != nil {
 		return nil, bft.Hash{}, err
+	}
+	if b := block.HeldProposal(int64(height)); b != nil {
+		// the block of an earlier round, whose writes go on: proposed again, it keeps its trial
+		hash, err := bft.HashOf(b.Header.BlockHash)
+		if err != nil {
+			return nil, bft.Hash{}, err
+		}
+		a.logger.WithFields(log.Fields{"height": height, "round": round, "txs": len(b.TxFullData)}).
+			Debug("proposing again the block of the node whose trial it holds")
+		return b, hash, nil
 	}
 	ts := max(faults.Now().Unix(), prev.Time+1)
 	collect := time.Now()
+	// the lag is how much later than the validators the proposer started the round
+	lag := start.Sub(started)
+	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageLag).Observe(lag.Seconds())
+	limit, late := proposeLimit(collect, deadline, maxBlockGenerationTime())
+	if late {
+		a.logger.WithFields(log.Fields{"type": consts.BlockError, "height": height, "round": round, "lag": lag,
+			"wait": waited, "limit": limit}).Warn("the proposer starts its proposal past its time")
+	}
 	privateKey, publicKey := utils.GetNodeKeys()
 	dtx := DelayedTx{privateKey: privateKey, publicKey: publicKey, logger: a.logger, time: ts}
 	txs, err := dtx.RunForDelayBlockID(int64(height))
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
-	trs, parsed, err := processTransactionsNew(a.logger, txs, time.Unix(ts, 0))
+	trs, parsed, err := processTransactionsNew(a.logger, txs, time.Unix(ts, 0), limit)
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
@@ -842,7 +1059,7 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 		stream = a.stream(height, round)
 		s = stream
 	}
-	b, err := block.Propose(bin, parsed, collect, s)
+	b, err := block.Propose(bin, parsed, collect, limit, s)
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
@@ -858,9 +1075,10 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 	total, behind := time.Since(collect), time.Since(time.Unix(ts, 0))
 	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageTotal).Observe(total.Seconds())
 	metrics.BlockStage.WithLabelValues(metrics.KindPropose, metrics.StageBehind).Observe(behind.Seconds())
-	if limit := time.Duration(syspar.GetMaxBlockGenerationTime()) * time.Millisecond; total > limit {
+	if total > limit {
 		a.logger.WithFields(log.Fields{"type": consts.BlockError, "height": height, "round": round, "txs": len(b.TxFullData),
-			"wait": waited, "collect": collected, "trial": tried, "total": total, "behind": behind}).Warn("a proposal past max_block_generation_time")
+			"lag": lag, "wait": waited, "limit": limit, "collect": collected, "trial": tried, "total": total,
+			"behind": behind}).Warn("a proposal past its time")
 	}
 	compact, err := block.Compact(b.BinData, b.Transactions)
 	if err != nil {
@@ -872,7 +1090,43 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 	}
 	a.bodies.put(height, hash, b.BinData, compact, hashes, bodies)
 	a.logger.WithFields(log.Fields{"height": height, "round": round, "txs": len(b.TxFullData)}).Debug("proposing")
-	return b.BinData, hash, nil
+	return b, hash, nil
+}
+
+// expired takes a timeout of the machine that expired. The precommit timeout of the current round
+// starts the next round (L65) at the validators as it expires, which the driver keeps as the start of
+// that round.
+func (d *bftDriver) expired(e bftExpired) {
+	d.countTimeout(e.Timeout)
+	if e.Step == bft.StepPrecommit && e.Height == d.m.Height() && e.Round == d.m.Round() {
+		d.roundStart = bftRoundStart{height: e.Height, round: e.Round + 1, at: e.due}
+	}
+	d.apply(d.m.OnTimeout(e.Timeout))
+}
+
+// roundStartOf is roundStart if it is of the height and the round, else zero
+func (d *bftDriver) roundStartOf(height uint64, round uint32) time.Time {
+	if s := d.roundStart; s.height == height && s.round == round {
+		return s.at
+	}
+	return time.Time{}
+}
+
+// proposeFloor is the part of max_block_generation_time a proposer past the time of its proposal
+// still gives its block: a validator that did not start the round, as it had no work, takes the
+// proposal as it comes, and the others time out whatever the size of the block
+const proposeFloor = 10
+
+// proposeLimit is the time the block of a proposal whose collection starts at collect has:
+// max_block_generation_time, cut to the deadline by which the proposal reaches the validators
+// before they time out, and at least 1/proposeFloor of it; late reports that the deadline left
+// less than that
+func proposeLimit(collect, deadline time.Time, block time.Duration) (limit time.Duration, late bool) {
+	limit = min(block, deadline.Sub(collect))
+	if floor := block / proposeFloor; limit < floor {
+		return floor, true
+	}
+	return limit, false
 }
 
 // lastBefore is the last block, which is the block before the height

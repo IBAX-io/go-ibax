@@ -279,3 +279,34 @@ func TestBftCountTimeout(t *testing.T) {
 		t.Fatalf("logged %v", logged)
 	}
 }
+
+// The propose timeout of a proposer whose own block is still being written counts apart from a
+// propose timeout without a proposal, and is logged as such
+func TestBftCountTimeoutOwnWrites(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	d := newSignDriver(t, ctx, true)
+	d.app = pendingApp{}
+	d.m = d.restart()
+	logger, hook := test.NewNullLogger()
+	d.logger = logger.WithFields(log.Fields{})
+	d.apply(d.m.Start())
+	before := bftmon.Get().Timeouts
+	d.countTimeout(bft.Timeout{Height: 1, Round: 0, Step: bft.StepPropose})
+	after := bftmon.Get().Timeouts
+	if after[bftmon.TimeoutOwnWrites]-before[bftmon.TimeoutOwnWrites] != 1 || after[bftmon.TimeoutPropose] != before[bftmon.TimeoutPropose] {
+		t.Fatalf("timeouts %v, before %v", after, before)
+	}
+	var own, none int
+	for _, e := range hook.AllEntries() {
+		switch e.Message {
+		case "the writes of the own block did not end within the propose timeout":
+			own++
+		case "no proposal within the propose timeout":
+			none++
+		}
+	}
+	if own != 1 || none != 0 {
+		t.Fatalf("logged %d own writes, %d no proposal", own, none)
+	}
+}

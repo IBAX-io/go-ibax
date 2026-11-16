@@ -352,6 +352,12 @@ func (v *TxView) inPG(ctx context.Context, c *stateConn, p *stmt, query string, 
 		if !allPG {
 			return nil, nil, v.restartFor(nil, true, "statement")
 		}
+		// what the state knows of the schema the statement may change is cleared as the
+		// transaction of the block ends, committed or rolled back, as End clears it once the state
+		// is written
+		if c.inTx {
+			c.ddl = true
+		}
 		return v.pgRun(ctx, c, query, args, isQuery)
 	}
 	var pending []string

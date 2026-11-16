@@ -6,6 +6,7 @@
 package sqldb
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strconv"
@@ -249,6 +250,9 @@ type DbTransaction struct {
 	cache      *txCache
 	// view is the view on the state of the block the statements of a transaction run in
 	view *TxView
+	// ctx is the context of the transaction StartTransaction began, cancel cancels it
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // View is the view on the state of the block the transaction runs in; nil outside one
@@ -279,8 +283,10 @@ func (d *DbTransaction) Debug() *DbTransaction {
 func StartTransaction() (*DbTransaction, error) {
 	ctx, statements := withStatementCount()
 	ctx, cache := withTxCache(ctx)
+	ctx, cancel := context.WithCancel(ctx)
 	conn := execDB().WithContext(ctx).Begin()
 	if conn.Error != nil {
+		cancel()
 		log.WithFields(log.Fields{"type": consts.DBError, "error": conn.Error}).Error("cannot start transaction because of connection error")
 		return nil, conn.Error
 	}
@@ -289,7 +295,20 @@ func StartTransaction() (*DbTransaction, error) {
 		conn:       conn,
 		statements: statements,
 		cache:      cache,
+		ctx:        ctx,
+		cancel:     cancel,
 	}, nil
+}
+
+// Cancel cancels a transaction StartTransaction began, from any goroutine: PostgreSQL cancels its
+// statement running (cancelStatement), the statements after it fail, and database/sql ends the
+// transaction in the background: it sends ROLLBACK and closes the connection, so the server ends
+// the transaction as the connection closes if not before. Rollback then returns nil, possibly
+// before the server ended the transaction.
+func (tr *DbTransaction) Cancel() {
+	if tr != nil && tr.cancel != nil {
+		tr.cancel()
+	}
 }
 
 // WaitsIdle lets the transaction wait idle as long as it is open, past the
@@ -299,13 +318,25 @@ func (tr *DbTransaction) WaitsIdle() error {
 	return tr.conn.Exec("SET LOCAL idle_in_transaction_session_timeout = 0").Error
 }
 
-// Rollback is transaction rollback
+// Rollback is transaction rollback; that of a transaction Cancel ended returns nil, whatever
+// the end of its connection returned
 func (tr *DbTransaction) Rollback() error {
-	return tr.conn.Rollback().Error
+	err := tr.conn.Rollback().Error
+	if tr.cancel != nil {
+		canceled := tr.ctx.Err() != nil
+		tr.cancel()
+		if canceled {
+			return nil
+		}
+	}
+	return err
 }
 
 // Commit is transaction commit; a transaction StartTransaction began counts in Commits
 func (tr *DbTransaction) Commit() error {
+	if tr.cancel != nil {
+		defer tr.cancel()
+	}
 	if err := tr.conn.Commit().Error; err != nil {
 		return err
 	}

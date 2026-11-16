@@ -9,20 +9,25 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
+	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/service/node"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/require"
 )
 
 // signApp proposes one block and takes every block
 type signApp struct{}
 
-func (signApp) Value(height uint64, round uint32) ([]byte, bft.Hash, error) {
+func (signApp) Value(height uint64, round uint32) ([]byte, bft.Hash, bool, error) {
 	b := []byte("a block")
-	return b, sha256.Sum256(b), nil
+	return b, sha256.Sum256(b), false, nil
 }
 func (signApp) Valid(uint64, bft.Hash, []byte) bool { return true }
 func (signApp) Timely(*bft.Proposal) bool           { return true }
@@ -35,8 +40,10 @@ type signDriver struct {
 	log       []string
 	stored    *bft.SignState
 	sent      []bft.Output
-	// restart is a new machine of the keys of the validator, as after a restart of the node
+	// restart is a new machine of the keys of the validator, as after a restart of the node, of
+	// the app, signApp unless the test sets another
 	restart func() *bft.Machine
+	app     bft.App
 }
 
 func newSignDriver(t *testing.T, ctx context.Context, proposer bool) *signDriver {
@@ -59,10 +66,10 @@ func newSignDriver(t *testing.T, ctx context.Context, proposer bool) *signDriver
 	logger := log.WithFields(log.Fields{})
 	logger.Logger.SetLevel(log.FatalLevel)
 	d := &signDriver{bftDriver: &bftDriver{ctx: ctx, logger: logger, networkID: 7, events: make(chan any, bftEvents),
-		bodies: newBftBodies()}}
+		bodies: newBftBodies()}, app: signApp{}}
 	d.pool = bft.NewPool(7, 10, 1, set)
 	d.restart = func() *bft.Machine {
-		return bft.NewMachine(bft.DefaultConfig, signApp{}, keys[self][0], keys[self][1], 7, 1, set)
+		return bft.NewMachine(bft.DefaultConfig, d.app, keys[self][0], keys[self][1], 7, 1, set)
 	}
 	d.m = d.restart()
 	d.store = func(s *bft.SignState) error {
@@ -170,4 +177,73 @@ func TestBftDriverStoresBeforeSending(t *testing.T) {
 			t.Fatal("a message sent after the restart is not in the stored state")
 		}
 	}
+}
+
+// TestWrittenValidity checks the end of the writes of the block the node proposed tells the
+// machine its validity: valid once they succeed, not valid once they fail, unknown once the node
+// dropped them, and the driver hears of it as an event once they end
+func TestWrittenValidity(t *testing.T) {
+	logger := log.NewEntry(log.New())
+	hash := bft.Hash{1}
+	require.Equal(t, bft.ValidityValid, writtenValidity(logger, bftWritten{height: 1, hash: hash}))
+	require.Equal(t, bft.ValidityInvalid, writtenValidity(logger, bftWritten{height: 1, hash: hash, err: errors.New("flush")}))
+	require.Equal(t, bft.ValidityUnknown, writtenValidity(logger, bftWritten{height: 1, hash: hash,
+		err: fmt.Errorf("writing: %w", block.ErrTrialDropped)}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	d := &bftDriver{ctx: ctx, events: make(chan any, 1)}
+	release := make(chan struct{})
+	d.awaitWritten(3, hash, func() error { <-release; return errors.New("flush") })
+	select {
+	case <-d.events:
+		t.Fatal("the event comes before the writes end")
+	case <-time.After(20 * time.Millisecond):
+	}
+	close(release)
+	e := (<-d.events).(bftWritten)
+	require.Equal(t, uint64(3), e.height)
+	require.Equal(t, hash, e.hash)
+	require.EqualError(t, e.err, "flush")
+}
+
+// pendingApp proposes one block whose validity the node tells once its writes end
+type pendingApp struct{ signApp }
+
+func (pendingApp) Value(height uint64, round uint32) ([]byte, bft.Hash, bool, error) {
+	b, hash, _, err := signApp{}.Value(height, round)
+	return b, hash, true, err
+}
+
+// TestWrittenKeptWhileStopped checks the end of the writes of the proposal of the node, which
+// comes once, is not lost while the driver cannot give it to the machine, as the network is
+// stopped: the machine takes it once the driver moves it again, and the proposer prevotes then
+func TestWrittenKeptWhileStopped(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	d := newSignDriver(t, ctx, true)
+	d.app = pendingApp{}
+	d.m = d.restart()
+	d.apply(d.m.Start())
+	_, hash, _, _ := signApp{}.Value(1, 0)
+	prevoted := func() bool {
+		for _, o := range d.sent {
+			if o.Vote != nil && o.Vote.Type == bft.TypePrevote && o.Vote.Hash == hash {
+				return true
+			}
+		}
+		return false
+	}
+	require.False(t, prevoted(), "the proposer prevotes its block before its writes end")
+
+	node.PauseNodeActivity(node.PauseTypeStopingNetwork)
+	defer node.PauseNodeActivity(node.NoPause)
+	d.event(bftWritten{height: 1, hash: hash})
+	require.False(t, prevoted(), "the driver signs while the network is stopped")
+	require.Len(t, d.written, 1)
+
+	node.PauseNodeActivity(node.NoPause)
+	d.applyWritten()
+	require.True(t, prevoted(), "the end of the writes is lost")
+	require.Empty(t, d.written)
 }

@@ -88,6 +88,27 @@ func TestTimeLeft(t *testing.T) {
 	if left := limits.TimeLeft(); !near(left, 2000-500-600) {
 		t.Fatalf("%d ms left after 2,000 transactions with a tail of 0.3 ms, want 900", left)
 	}
+	// the backlog of the writer is kept besides the tail, from the first transaction on
+	var backlog time.Duration
+	limits.KeepBacklog(func() time.Duration { return backlog })
+	block.Count = 0
+	limits.StartAt(time.Now().Add(-500*time.Millisecond), 10*time.Millisecond)
+	backlog = 700 * time.Millisecond
+	if left := limits.TimeLeft(); !near(left, 2000-500-700) {
+		t.Fatalf("%d ms left 500 ms in a block whose writer has 700 ms left, want 800", left)
+	}
+	block.Count = 2000
+	limits.StartAt(time.Now().Add(-500*time.Millisecond), 300*time.Microsecond)
+	if left := limits.TimeLeft(); !near(left, 2000-500-600-700) {
+		t.Fatalf("%d ms left after 2,000 transactions with a tail of 0.3 ms and a backlog of 700 ms, want 200", left)
+	}
+	backlog = 1500 * time.Millisecond
+	if err := block.check(nil, letGenBlock); !errors.Is(err, ErrTimeLeft) {
+		t.Fatalf("a transaction with no time left for the backlog of the writer goes on: %v", err)
+	}
+	limits.KeepBacklog(nil)
+	block.Count = 2000
+
 	limits.StartAt(time.Now().Add(time.Second), 0)
 	if left := limits.TimeLeft(); left != 2000 {
 		t.Fatalf("%d ms left in a block that starts later, want 2000", left)
@@ -98,5 +119,42 @@ func TestTimeLeft(t *testing.T) {
 	}
 	if !errors.Is(ErrTimeLeft, ErrLimitStop) {
 		t.Fatal("ErrTimeLeft is not ErrLimitStop")
+	}
+}
+
+// LimitTo shortens the time of the block from its start, and never lengthens it
+func TestLimitTo(t *testing.T) {
+	limits := NewLimits(letGenBlock)
+	var block *timeBlockLimit
+	for _, l := range limits.Limiters {
+		if bl, ok := l.(*timeBlockLimit); ok {
+			block = bl
+		}
+	}
+	if block == nil {
+		t.Fatal("no time limit of the block")
+	}
+	block.Limit = 2 * time.Second
+	near := func(left, want int64) bool { return left <= want && left > want-100 }
+
+	limits.StartAt(time.Now(), 10*time.Millisecond)
+	limits.LimitTo(5 * time.Second)
+	if left := limits.TimeLeft(); !near(left, 2000) {
+		t.Fatalf("%d ms left after a limit above the time of the block, want 2000", left)
+	}
+	limits.LimitTo(940 * time.Millisecond)
+	if left := limits.TimeLeft(); !near(left, 940) {
+		t.Fatalf("%d ms left after a limit of 940 ms, want 940", left)
+	}
+	limits.LimitTo(2 * time.Second)
+	if left := limits.TimeLeft(); !near(left, 940) {
+		t.Fatalf("%d ms left after a longer limit, want 940: a limit never lengthens the block", left)
+	}
+	limits.StartAt(time.Now().Add(-time.Second), 10*time.Millisecond)
+	if left := limits.TimeLeft(); left != 0 {
+		t.Fatalf("%d ms left 1000 ms in a block limited to 940 ms", left)
+	}
+	if err := block.check(nil, letGenBlock); !errors.Is(err, ErrTimeLeft) {
+		t.Fatalf("a block past its limit goes on: %v", err)
 	}
 }
