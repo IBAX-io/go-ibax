@@ -136,6 +136,11 @@ type bftDriver struct {
 	written []bftWritten
 	// roundStart is used only by the goroutine of run
 	roundStart bftRoundStart
+	// held is the propose timeout of a round without work the node holds (idle), and work is
+	// hasWork, the pool and the delayed contracts, unless a test sets it; used only by the
+	// goroutine of run
+	held *bft.Timeout
+	work func() bool
 	// unsaved is a sign state the node could not store, and unsent the messages signed with it:
 	// the driver sends them once it stores the state
 	unsaved *bft.SignState
@@ -499,13 +504,18 @@ func (d *bftDriver) startWork() bool {
 		d.pending.announce(d.m.Height())
 	}
 	d.apply(d.m.Start())
+	d.resume()
 	return true
 }
 
 // hasWork reports whether the height has a transaction to put in a block: a transaction of the
-// pool, or a delayed contract due at the height. A chain without one has no round.
+// pool a block may take, or a delayed contract due at the height. A chain without one has no
+// round.
 func (d *bftDriver) hasWork() bool {
-	if transaction.TxPool.Len() > 0 {
+	if d.work != nil {
+		return d.work()
+	}
+	if transaction.TxPool.Live(faults.Now().Unix()) {
 		return true
 	}
 	delayed, err := sqldb.GetAllDelayedContractsForBlockID(int64(d.m.Height()))
@@ -550,13 +560,7 @@ func (d *bftDriver) apply(out []bft.Output) {
 		case o.Proposal != nil, o.Vote != nil:
 			d.unsent = append(d.unsent, o)
 		case o.Timeout != nil:
-			t := bftExpired{Timeout: *o.Timeout, due: time.Now().Add(o.Timeout.After)}
-			time.AfterFunc(t.After, func() {
-				select {
-				case d.events <- t:
-				case <-d.ctx.Done():
-				}
-			})
+			d.schedule(*o.Timeout)
 		case o.Evidence != nil:
 			if body := o.Evidence.Marshal(); d.takeEvidence(body) {
 				d.svc.SendEvidence(body)
@@ -569,6 +573,17 @@ func (d *bftDriver) apply(out []bft.Output) {
 	if commit != nil {
 		d.commit(commit)
 	}
+}
+
+// schedule posts the timeout as an event once it expires
+func (d *bftDriver) schedule(timeout bft.Timeout) {
+	t := bftExpired{Timeout: timeout, due: time.Now().Add(timeout.After)}
+	time.AfterFunc(t.After, func() {
+		select {
+		case d.events <- t:
+		case <-d.ctx.Done():
+		}
+	})
 }
 
 // slowSignState is a store of the sign state the node warns of: the messages it signs wait for it
@@ -1097,11 +1112,37 @@ func (a bftApp) propose(height uint64, round uint32, start, started, deadline ti
 // starts the next round (L65) at the validators as it expires, which the driver keeps as the start of
 // that round.
 func (d *bftDriver) expired(e bftExpired) {
+	if d.idle(e.Timeout) {
+		t := e.Timeout
+		d.held = &t
+		return
+	}
 	d.countTimeout(e.Timeout)
 	if e.Step == bft.StepPrecommit && e.Height == d.m.Height() && e.Round == d.m.Round() {
 		d.roundStart = bftRoundStart{height: e.Height, round: e.Round + 1, at: e.due}
 	}
 	d.apply(d.m.OnTimeout(e.Timeout))
+}
+
+// idle reports whether the propose timeout finds the round of the machine with nothing to wait
+// for: no block of its own being written, no proposal admitted and no transaction to put in one,
+// as a validator with work started the height and the node has none, or a block took the work.
+// A round without work runs no timer and counts no timeout: the node holds the timeout, without
+// its nil prevote, until work comes (resume), or a proposal or the votes of the others move the
+// machine on. It takes back no vote, so the safety is that of the machine.
+func (d *bftDriver) idle(t bft.Timeout) bool {
+	return t.Step == bft.StepPropose && !d.m.Decided() && t.Height == d.m.Height() && t.Round == d.m.Round() &&
+		d.m.Step() == bft.StepPropose && !d.m.OwnPending() && !d.hasProposal(t.Height, t.Round) && !d.hasWork()
+}
+
+// resume runs again the propose timeout the node held, the full timeout from now, if the machine
+// is still at its round: the proposer may yet propose with the work that came
+func (d *bftDriver) resume() {
+	t := d.held
+	d.held = nil
+	if t != nil && !d.m.Decided() && t.Height == d.m.Height() && t.Round == d.m.Round() && d.m.Step() == bft.StepPropose {
+		d.schedule(*t)
+	}
 }
 
 // roundStartOf is roundStart if it is of the height and the round, else zero

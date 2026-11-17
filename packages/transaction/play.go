@@ -60,6 +60,12 @@ func (t *Transaction) checkTime(checkTime int64) error {
 	return nil
 }
 
+// knownInBlocks is the check of the hashes against the window of the hashes of the committed
+// transactions
+var knownInBlocks = func(hashes [][]byte, checkTime int64) (map[string]bool, error) {
+	return sqldb.TxWindow.Known(hashes, checkTime)
+}
+
 // CheckBatch checks each transaction as Check does, the duplicates in the window of the hashes of
 // the committed transactions (sqldb.TxWindow), and those of StopNetwork, which the window outlives,
 // in log_transactions
@@ -75,7 +81,7 @@ func CheckBatch(txs []*Transaction, checkTime int64) []error {
 			}
 		}
 	}
-	known, err := sqldb.TxWindow.Known(hashes, checkTime)
+	known, err := knownInBlocks(hashes, checkTime)
 	if err == nil && len(stops) > 0 {
 		var stopped map[string]bool
 		if stopped, err = sqldb.KnownLogTransactions(nil, stops); err == nil {
