@@ -827,7 +827,13 @@ lp:
 			}
 			return err.Error(), nil
 		}
-		return retError(err)
+		// A contract that pays nothing and fails in its body is a failed transaction of the block
+		// all the same, with no fee: the failure is a fact of the chain, the hash is spent, and
+		// no other validator runs it again later on another state. Only a transaction that fails
+		// its checks before the body runs stays out of the block.
+		_, err = retError(err)
+		sc.Penalty = true
+		return err.Error(), nil
 	}
 
 	if needPayment {
