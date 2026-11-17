@@ -59,6 +59,9 @@ func (t *Transaction) checkTime(checkTime int64) error {
 	return nil
 }
 
+// knownInBlocks is the query of the hashes of transactions in blocks
+var knownInBlocks = sqldb.KnownLogTransactions
+
 // CheckBatch checks each transaction as Check does, with one query of the transactions in blocks
 func CheckBatch(txs []*Transaction, checkTime int64) []error {
 	errs := make([]error, len(txs))
@@ -68,7 +71,7 @@ func CheckBatch(txs []*Transaction, checkTime int64) []error {
 			hashes = append(hashes, t.Hash())
 		}
 	}
-	known, err := sqldb.KnownLogTransactions(nil, hashes)
+	known, err := knownInBlocks(nil, hashes)
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting log transactions by hash")
 	}

@@ -8,7 +8,9 @@ package transaction
 import (
 	"bytes"
 	"errors"
+	"math"
 	"runtime"
+	"slices"
 	"sync"
 	"time"
 
@@ -124,6 +126,20 @@ type Pool struct {
 	order, unsent *btree.BTreeG[*poolEntry]
 	// what the transactions hold of each balance
 	held map[fundsBucket]decimal.Decimal
+	// commits counts the removals of committed transactions, admitting is the admissions running
+	// by the count when each started, and recent is the hashes each removal took out while one
+	// ran: an admission checks its transactions against the blocks before it takes the lock, so
+	// a block committed in between found none of them in the pool to take out, and the
+	// admission must not put them in after it
+	commits   uint64
+	admitting map[uint64]int
+	recent    []removal
+}
+
+// removal is the hashes of committed transactions the pool took out at a count of commits
+type removal struct {
+	commit uint64
+	hashes map[string]bool
 }
 
 // TxPool is the pool of the node
@@ -132,7 +148,7 @@ var TxPool = NewPool()
 // NewPool is an empty pool
 func NewPool() *Pool {
 	return &Pool{entries: make(map[string]*poolEntry), bad: make(map[string]badStatus), perKey: make(map[int64]int), held: make(map[fundsBucket]decimal.Decimal),
-		order: btree.NewG(32, before), unsent: btree.NewG(32, before)}
+		admitting: make(map[uint64]int), order: btree.NewG(32, before), unsent: btree.NewG(32, before)}
 }
 
 func maxPoolCount() int {
@@ -261,6 +277,8 @@ func (p *Pool) admit(txs []*Transaction, rate Rate, sent bool) []error {
 			index = append(index, i)
 		}
 	}
+	start := p.commits
+	p.admitting[start]++
 	p.mu.Unlock()
 	// the window of the signed times is of the clock of the node, as the times of its blocks
 	now := faults.Now().Unix()
@@ -274,8 +292,13 @@ func (p *Pool) admit(txs []*Transaction, rate Rate, sent bool) []error {
 
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	defer p.admitted(start)
 	for j, t := range fresh {
 		i, h := index[j], string(t.Hash())
+		if err := checked[j]; err == nil && p.removedSince(start, h) {
+			// a block took it after CheckBatch read the blocks: it is done, not bad
+			checked[j] = ErrDuplicatedTx
+		}
 		if err := checked[j]; err != nil {
 			errs[i] = err
 			bad, ban := refusal(err)
@@ -297,6 +320,34 @@ func (p *Pool) admit(txs []*Transaction, rate Rate, sent bool) []error {
 	}
 	p.gauge()
 	return errs
+}
+
+// removedSince reports whether a removal of committed transactions after the count start took
+// out the hash
+func (p *Pool) removedSince(start uint64, h string) bool {
+	for _, r := range p.recent {
+		if r.commit > start && r.hashes[h] {
+			return true
+		}
+	}
+	return false
+}
+
+// admitted ends an admission that started at the count start, and drops the removals no running
+// admission needs: those at or before the earliest start
+func (p *Pool) admitted(start uint64) {
+	if p.admitting[start]--; p.admitting[start] <= 0 {
+		delete(p.admitting, start)
+	}
+	if len(p.admitting) == 0 {
+		p.recent = nil
+		return
+	}
+	earliest := uint64(math.MaxUint64)
+	for s := range p.admitting {
+		earliest = min(earliest, s)
+	}
+	p.recent = slices.DeleteFunc(p.recent, func(r removal) bool { return r.commit <= earliest })
 }
 
 // take places a transaction. The status of one it refuses is the refusal, until the pool takes
@@ -424,6 +475,9 @@ func (p *Pool) Restore(txs []*Transaction) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	for _, t := range txs {
+		for _, r := range p.recent {
+			delete(r.hashes, string(t.Hash()))
+		}
 		if _, ok := p.entries[string(t.Hash())]; !ok {
 			p.put(t, RateClient, true, nil)
 			p.entries[string(t.Hash())].tx = nil
@@ -610,12 +664,24 @@ func (p *Pool) markSent(h string) {
 	}
 }
 
-// Remove takes out the transactions of a block committed
+// Remove takes out the transactions of a block committed. An admission that runs keeps them out
+// of the pool though it checked them before the block was committed.
 func (p *Pool) Remove(hashes [][]byte) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.commits++
+	var r removal
+	if len(p.admitting) > 0 {
+		r = removal{commit: p.commits, hashes: make(map[string]bool, len(hashes))}
+	}
 	for _, h := range hashes {
 		p.remove(string(h))
+		if r.hashes != nil {
+			r.hashes[string(h)] = true
+		}
+	}
+	if r.hashes != nil {
+		p.recent = append(p.recent, r)
 	}
 	p.gauge()
 }
@@ -658,6 +724,22 @@ func (p *Pool) Len() int {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	return len(p.entries)
+}
+
+// Live reports whether the pool has a transaction a block of the time now may take. Once it has
+// none it takes out those of clients and other nodes too old, which no block takes; a reserved one
+// too old the block that tries it takes out as bad.
+func (p *Pool) Live(now int64) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for _, e := range p.entries {
+		if e.signed >= now-consts.MaxTxBack {
+			return true
+		}
+	}
+	p.expire(now)
+	p.gauge()
+	return false
 }
 
 // HasStopNetwork reports whether the pool holds the transaction that stops the network
