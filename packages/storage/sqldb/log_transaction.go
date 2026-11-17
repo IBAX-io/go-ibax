@@ -152,7 +152,8 @@ func CountLogTransactions(dbTx *gorm.DB, lts []*LogTransaction) error {
 // CreateStopNetworkTxs keeps the hashes of the StopNetwork transactions of the block
 func CreateStopNetworkTxs(dbTx *gorm.DB, hashes [][]byte, blockID int64) error {
 	for _, h := range hashes {
-		if err := dbTx.Exec(`INSERT INTO "stop_network_txs" ("hash", "block") VALUES (?, ?)`, h, blockID).Error; err != nil {
+		// a hash in parentheses would be taken for a list of its bytes
+		if err := dbTx.Exec(`INSERT INTO "stop_network_txs" ("hash", "block") SELECT ?::bytea, ?::bigint`, h, blockID).Error; err != nil {
 			return err
 		}
 	}
