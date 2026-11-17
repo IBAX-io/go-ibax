@@ -122,7 +122,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 // the state, and its BinData. It reads the platform parameters as the transactions of the block
 // left them: what writes the block after reads none (writeBlock, sealTrial).
 func (b *Block) seal(dbTx *sqldb.DbTransaction) error {
-	if err := b.checkBlockTime(); err != nil {
+	if err := b.checkBlockTime(dbTx); err != nil {
 		return err
 	}
 	if err := b.validatorsHash(dbTx); err != nil {
@@ -143,12 +143,13 @@ func (b *Block) seal(dbTx *sqldb.DbTransaction) error {
 }
 
 // checkBlockTime checks a node of the honor mode without BFT generates no two blocks in its time
-// slot
-func (b *Block) checkBlockTime() error {
+// slot. It reads in dbTx, the transaction of the block: at a retention boundary the block holds
+// block_chain exclusively from Retain, which runs before the seal, to its commit
+func (b *Block) checkBlockTime(dbTx *sqldb.DbTransaction) error {
 	if b.Header.BlockId <= 1 || !syspar.IsHonorNodeMode() || syspar.IsBftConsensus() {
 		return nil
 	}
-	exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Timestamp, 0), int(b.Header.NodePosition))
+	exists, err := protocols.NewBlockTimeCounter().BlockForTimeExists(dbTx, time.Unix(b.Header.Timestamp, 0), int(b.Header.NodePosition))
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("block validation")
 		return err

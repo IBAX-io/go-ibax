@@ -81,8 +81,9 @@ func (b *Block) checkHeader() error {
 		err    error
 	)
 	if syspar.IsHonorNodeMode() && !bftChain {
-		// is this block too early? Allowable error = error_time
-		exists, err = protocols.NewBlockTimeCounter().BlockForTimeExists(time.Unix(b.Header.Timestamp, 0), int(b.Header.NodePosition))
+		// is this block too early? Allowable error = error_time; read before the block opens its
+		// transaction
+		exists, err = protocols.NewBlockTimeCounter().BlockForTimeExists(nil, time.Unix(b.Header.Timestamp, 0), int(b.Header.NodePosition))
 	}
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Error("calculating block time")
