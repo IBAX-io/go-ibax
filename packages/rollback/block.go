@@ -64,7 +64,7 @@ func RollbackBlock(data []byte) error {
 		return err
 	}
 
-	bl, err = block.UnmarshallBlock(bytes.NewBuffer(b.Data), false)
+	prev, err := block.UnmarshallBlock(bytes.NewBuffer(b.Data), false)
 	if err != nil {
 		dbTx.Rollback()
 		return err
@@ -77,7 +77,7 @@ func RollbackBlock(data []byte) error {
 		NodePosition:   strconv.Itoa(int(b.NodePosition)),
 		KeyID:          b.KeyID,
 		Time:           b.Time,
-		CurrentVersion: strconv.Itoa(int(bl.Header.Version)),
+		CurrentVersion: strconv.Itoa(int(prev.Header.Version)),
 		ConsensusMode:  b.ConsensusMode,
 		CandidateNodes: b.CandidateNodes,
 	}
@@ -90,6 +90,7 @@ func RollbackBlock(data []byte) error {
 	if err = dbTx.Commit(); err != nil {
 		return err
 	}
+	// the transactions of the block rolled back go back to the pool, not those of the block before it
 	transaction.TxPool.Restore(bl.Transactions)
 	return nil
 }
