@@ -165,24 +165,17 @@ func (r *blockRun) execute() error {
 	return r.state.run(r, from, r.ran)
 }
 
-// end ends the execution: the fees of the block credited and its state written if it succeeded,
-// the records of its transactions written whether or not
-func (r *blockRun) end(err error) error {
+// close ends the transactions of the execution: the workers stopped and, if it succeeded, the
+// fees of the block credited, in its state for a block that is not the first. The block takes
+// the records of its transactions; the writer goes on writing those it was given.
+func (r *blockRun) close(err error) error {
 	b := r.b
-	var written afterWritten
 	if r.state != nil {
-		r.state.stop()
-		// the writer wrote what it was given: what it had left the block kept as its backlog
 		b.execEnd = time.Now()
-		written = r.state.written
-		observeWrite(written)
+		r.state.stopWorkers()
 		if err == nil {
-			err = r.state.streamErr
+			err = r.state.settleFees(r)
 		}
-		if err == nil {
-			err = r.state.finish(r)
-		}
-		b.stage(metrics.StageStream, time.Now().Add(-written.spent))
 	} else if err == nil && b.IsGenesis() {
 		var rts []*types.RollbackTx
 		if rts, err = r.fees.Settle(r.dbTx, b.Header); err != nil {
@@ -194,12 +187,35 @@ func (r *blockRun) end(err error) error {
 	close(r.bad)
 	metrics.TxResults.WithLabelValues(r.kind, "ok").Add(float64(len(r.processed)))
 	b.stage(metrics.StageExecute, r.start)
-	start := time.Now()
-	defer b.stage(metrics.StageAfter, start)
 	b.AfterTxs = r.afters
 	if b.GenBlock {
 		b.TxFullData = r.processed
 	}
+	return err
+}
+
+// end ends the execution: the fees of the block credited and its state written if it succeeded,
+// the records of its transactions written whether or not
+func (r *blockRun) end(err error) error {
+	b := r.b
+	err = r.close(err)
+	var written afterWritten
+	if r.state != nil {
+		start := time.Now()
+		r.state.stopStream()
+		b.drained = time.Since(start)
+		written = r.state.written
+		observeWrite(written)
+		b.stage(metrics.StageStream, time.Now().Add(-written.spent))
+		if err == nil {
+			err = r.state.streamErr
+		}
+		if err == nil {
+			err = r.state.flush()
+		}
+	}
+	start := time.Now()
+	defer b.stage(metrics.StageAfter, start)
 	if errA := b.AfterPlayTxs(r.dbTx, written); errA != nil {
 		if err == nil {
 			return errA

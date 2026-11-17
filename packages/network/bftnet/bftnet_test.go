@@ -34,7 +34,9 @@ type testHandler struct {
 	asked   []uint64          // the heights of the transactions asked
 	rounds  []uint32          // the rounds of the transactions asked
 	batches []*bft.Batch
-	bodies  [][][]byte // the transactions of each frame taken
+	bodies  [][][]byte  // the transactions of each frame taken
+	hints   [][2]uint64 // the height and the validator of each frame FramePending taken
+	pending [][]byte    // the transactions of the pool in the order of the blocks
 }
 
 func newTestHandler() *testHandler { return &testHandler{seen: map[string]bool{}} }
@@ -112,6 +114,24 @@ func (h *testHandler) Txs(bodies [][]byte) {
 	h.bodies = append(h.bodies, bodies)
 }
 
+func (h *testHandler) Pending(height uint64, validator uint32) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.hints = append(h.hints, [2]uint64{height, uint64(validator)})
+}
+
+func (h *testHandler) PendingTxs(count int, maxBytes int64) [][]byte {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.pending[:min(count, len(h.pending))]
+}
+
+func (h *testHandler) pendingHints() [][2]uint64 {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return slices.Clone(h.hints)
+}
+
 func (h *testHandler) txFrames() [][][]byte {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -176,6 +196,8 @@ func testServer(t *testing.T, s *Service) (string, func() int) {
 					s.ServeCertificates(conn)
 				case network.RequestTypeBftTransactions:
 					s.ServeTransactions(conn)
+				case network.RequestTypeBftPending:
+					s.ServePending(conn)
 				}
 			}()
 		}
@@ -195,7 +217,8 @@ func TestReadFrame(t *testing.T) {
 		kind uint8
 		size int64
 	}{
-		{0, 1}, {6, 1},
+		{0, 1}, {7, 1},
+		{FramePending, pendingPayload + 1},
 		{FrameVote, maxPayload(FrameVote, 1000) + 1},
 		{FrameProposal, maxPayload(FrameProposal, 1000) + 1},
 		{FrameEvidence, maxPayload(FrameEvidence, 1000) + 1},

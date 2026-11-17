@@ -15,6 +15,8 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgconn/ctxwatch"
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -61,7 +63,23 @@ func openDB(dsn string, params map[string]string) (*sql.DB, error) {
 	for k, v := range params {
 		cfg.RuntimeParams[k] = v
 	}
+	cfg.BuildContextWatcherHandler = cancelStatement
 	return sql.OpenDB(stateConnector{stdlib.GetConnector(*cfg)}), nil
+}
+
+// cancelGrace is the deadline, from the cancel of the context of a statement, by which the
+// statement stops or its connection is closed; the cancel request to PostgreSQL is sent within it
+const cancelGrace = 500 * time.Millisecond
+
+// cancelStatement makes a statement whose context is canceled stop in PostgreSQL, on every pool
+// openDB opens, those of the blocks and of the API alike: pgx sends the server a cancel request
+// and closes the connection if the statement has not stopped cancelGrace after the cancel. A
+// connection closed at once would leave the statement running in PostgreSQL, holding its locks,
+// until it ends by itself. The statement returns once the server canceled it and pgx waited
+// 100 ms after its cancel request, so the request cannot cancel the next statement of the
+// connection: a cancel costs a connection of the request and those 100 ms.
+func cancelStatement(c *pgconn.PgConn) ctxwatch.Handler {
+	return &pgconn.CancelRequestContextWatcherHandler{Conn: c, DeadlineDelay: cancelGrace}
 }
 
 type stateConnector struct{ base driver.Connector }
@@ -89,6 +107,10 @@ type stateConn struct {
 	// schemaHeld tells the transaction ran a statement that may have changed the schema, which
 	// holds the numbers of indexes of the schema until it ends
 	schemaHeld bool
+	// ddl tells a statement of the transaction may have changed the schema: what the state knows
+	// of it, which it may have read through the transaction since, is cleared once the
+	// transaction ends, committed or rolled back
+	ddl bool
 }
 
 var (
@@ -175,7 +197,10 @@ func (c *stateConn) BeginTx(ctx context.Context, opts driver.TxOptions) (driver.
 }
 
 func (c *stateConn) endTx() {
-	c.inTx, c.dirtyAll = false, false
+	if c.ddl {
+		bumpSchema()
+	}
+	c.inTx, c.dirtyAll, c.ddl = false, false, false
 	clear(c.dirty)
 	if c.schemaHeld {
 		c.schemaHeld = false
@@ -216,12 +241,21 @@ func (t stateTx) Rollback() error {
 	return t.tx.Rollback()
 }
 
+// schemaChanged takes a statement of the connection that may change the schema: it clears what
+// the state knows of the schema now, and again as its transaction ends
+func (c *stateConn) schemaChanged() {
+	bumpSchema()
+	if c.inTx {
+		c.ddl = true
+	}
+}
+
 // track keeps the tables a statement PostgreSQL runs in a transaction writes; a statement that may
 // change the schema clears what the state knows of it
 func (c *stateConn) track(ctx context.Context, query string) error {
 	if c.dirtyAll && c.inTx {
 		if ddl(query) {
-			bumpSchema()
+			c.schemaChanged()
 			c.changesSchema()
 		}
 		return nil
@@ -243,7 +277,7 @@ func (c *stateConn) track(ctx context.Context, query string) error {
 		return nil
 	}
 	if ddl(query) {
-		bumpSchema()
+		c.schemaChanged()
 		c.changesSchema()
 	} else if harmless(query) {
 		return nil

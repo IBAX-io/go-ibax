@@ -73,7 +73,7 @@ func BlockGeneratorCandidate(ctx context.Context, d *daemon) error {
 		return err
 	}
 
-	_, parsed, err := processTransactionsNew(d.logger, txs, st)
+	_, parsed, err := processTransactionsNew(d.logger, txs, st, maxBlockGenerationTime())
 	if err != nil {
 		return err
 	}

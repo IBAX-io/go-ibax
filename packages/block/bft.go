@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
@@ -60,11 +61,50 @@ func (m memState) restore() error {
 
 // heldTrial is the trial of a block a node holds for the decision of its height: the database
 // transaction of the trial, open, and the state outside the database the trial left, which the
-// node runs without until the block is committed
+// node runs without until the block is committed. The trial of a proposal of the node is held
+// once its block is sealed, while it goes on writing (sealTrial): done is closed once it wrote
+// the block, with the error err; a held trial whose writes failed is not held.
 type heldTrial struct {
 	b    *Block
 	dbTx *sqldb.DbTransaction
 	mem  memState
+	// done is nil for a trial that wrote the block before it was held
+	done chan struct{}
+	err  error
+	// stream is the writer of the records of the transactions of a trial that goes on writing,
+	// dropped tells it to stop: the node drops the trial
+	stream  *afterStream
+	dropped atomic.Bool
+}
+
+// wait waits for the trial to write the block, and returns the error of its writes
+func (t *heldTrial) wait() error {
+	if t.done == nil {
+		return nil
+	}
+	<-t.done
+	return t.err
+}
+
+// drop stops the writes of the trial, if they go on, and waits for them: their writer writes no
+// more, and the transaction of the trial is canceled (DbTransaction.Cancel): PostgreSQL cancels
+// its statement running, and the transaction ends as database/sql closes its connection. The
+// rollback of the trial after succeeds.
+func (t *heldTrial) drop() {
+	t.dropped.Store(true)
+	if t.done == nil {
+		return
+	}
+	select {
+	case <-t.done:
+		return
+	default:
+	}
+	if t.stream != nil {
+		t.stream.cancel()
+	}
+	t.dbTx.Cancel()
+	t.wait()
 }
 
 // held is the trial the node holds, of the last block it tried at its height. Only the driver of
@@ -83,6 +123,42 @@ func takeHeld() *heldTrial {
 	return t
 }
 
+// heldOf is the trial the node holds of the block of the hash at the height, nil if it holds none
+// or dropped it
+func heldOf(height int64, hash bft.Hash) *heldTrial {
+	held.Lock()
+	defer held.Unlock()
+	t := held.t
+	if t == nil || t.dropped.Load() || t.b.Header.BlockId != height {
+		return nil
+	}
+	if h, err := bft.HashOf(t.b.Header.BlockHash); err != nil || h != hash {
+		return nil
+	}
+	return t
+}
+
+// HeldProposal is the block of the proposal of the node at the height whose trial it holds, while
+// its writes go on or once they succeeded; nil if there is none. A proposer whose block did not get
+// its prevote in a round, as its writes outlasted its propose timeout, proposes that block again
+// in a later round: its trial goes on, and the block is neither dropped nor executed again.
+func HeldProposal(height int64) *Block {
+	held.Lock()
+	defer held.Unlock()
+	t := held.t
+	if t == nil || t.done == nil || t.dropped.Load() || t.b.Header.BlockId != height {
+		return nil
+	}
+	select {
+	case <-t.done:
+		if t.err != nil {
+			return nil
+		}
+	default:
+	}
+	return t.b
+}
+
 // dropHeld rolls back the trial the node holds: the state outside the database is already as it
 // was before it
 func dropHeld() {
@@ -91,6 +167,7 @@ func dropHeld() {
 		return
 	}
 	start := time.Now()
+	t.drop()
 	if err := t.dbTx.Rollback(); err != nil {
 		t.b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("rolling back a held trial")
 	}
@@ -98,7 +175,8 @@ func dropHeld() {
 }
 
 // Trial executes the block in a database transaction as its commit would (F18 design 4.3, plan
-// 5.9): a block is executed once. The trial that succeeds is held, its transaction open, until
+// 5.9): a block is executed once. The trial of a proposal of the node ends once its block is
+// sealed, and writes it after (sealTrial). The trial that succeeds is held, its transaction open, until
 // the decision of its height; Commit commits it if the decision is of the block, and a trial of
 // another block, or the commit of another, rolls it back. After a trial the contracts of the
 // virtual machine, the language sources and the platform parameters are as they were before it;
@@ -112,7 +190,12 @@ func (b *Block) Trial() error {
 	if err != nil {
 		return err
 	}
-	return b.endTrial(dbTx, mem, b.ProcessTxs(dbTx))
+	r := b.beginRun(dbTx)
+	err = r.execute()
+	if b.GenBlock && r.state != nil {
+		return b.sealTrial(dbTx, mem, r, err)
+	}
+	return b.endTrial(dbTx, mem, r.end(err))
 }
 
 // beginTrial drops the trial the node holds and begins the trial of the block: the state outside
@@ -170,7 +253,9 @@ func (b *Block) endTrial(dbTx *sqldb.DbTransaction, mem memState, err error) err
 	held.t = &heldTrial{b: b, dbTx: dbTx, mem: left}
 	held.Unlock()
 	b.stage(metrics.StageHold, start)
-	observeTail(b.execEnd, b.txCount())
+	if !b.execEnd.IsZero() {
+		observeTail(time.Since(b.execEnd)-b.drained, b.txCount())
+	}
 	b.endProfile(dbTx)
 	return nil
 }
@@ -189,11 +274,19 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 	hash, err := bft.HashOf(b.Header.BlockHash)
 	if err != nil || uint64(b.Header.BlockId) != cert.Height || hash != cert.Hash {
 		start := time.Now()
+		t.drop()
 		t.dbTx.Rollback()
 		metrics.BlockStage.WithLabelValues(metrics.KindTrial, metrics.StageRollback).Observe(metrics.Since(start))
 		return nil, false, nil
 	}
 	start := time.Now()
+	if err := t.wait(); err != nil {
+		t.dbTx.Rollback()
+		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Warn("writing the held trial, the block is executed again")
+		return nil, false, nil
+	}
+	metrics.BlockStage.WithLabelValues(metrics.KindHeld, metrics.StageWrites).Observe(metrics.Since(start))
+	start = time.Now()
 	c := &sqldb.BftCertificate{Height: b.Header.BlockId, Round: int64(cert.Round), Hash: cert.Hash[:], Data: cert.Marshal()}
 	err = c.Create(t.dbTx)
 	if err == nil && syspar.IsBftConsensus() {
@@ -215,6 +308,7 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 		}
 	}
 	states.afterCommit(b.Header.BlockId)
+	sqldb.AnalyzeRange(b.Header.BlockId)
 	if err := t.mem.restore(); err != nil {
 		return nil, true, err
 	}
@@ -343,6 +437,20 @@ func Commit(binData []byte, cert *bft.Certificate) (*Block, error) {
 	return b, nil
 }
 
+// tooLong reports whether a transaction the time left to the block being generated stopped never
+// fits a block: no transaction is in the block and none stopped before it, and the block had the
+// whole of max_block_generation_time, so the transaction had the most time a block leaves one. A
+// block whose limit is shorter (Propose) takes it in a later block.
+func (b *Block) tooLong(processed int) bool {
+	return neverFits(processed, b.genStopped, b.genLimit, time.Duration(syspar.GetMaxBlockGenerationTime())*time.Millisecond)
+}
+
+// neverFits is tooLong of a block of processed transactions, stopped if the time stopped one
+// before, of the limit Propose took and of max_block_generation_time full
+func neverFits(processed int, stopped bool, limit, full time.Duration) bool {
+	return processed == 0 && !stopped && (limit <= 0 || limit >= full)
+}
+
 // checkContent checks that the hash of the block is the hash of its content: its header, the
 // last block it follows, and the merkle root of its transactions as the block carries them. A
 // parsed block takes its hash and its merkle root as they are written, so a certificate, which
@@ -364,19 +472,20 @@ func (b *Block) checkContent() error {
 
 // Propose makes the proposal of the proposer from a block whose time it read at start: the trial
 // executes it, leaves out the transactions that fail, do not fit, or leave the block no time to
-// end within max_block_generation_time from start, and sets its rollbacks hash, its hash and
-// BinData. A block left without transactions is ErrEmptyBlock.
+// end within max_block_generation_time from start, or within limit if that is shorter, and sets
+// its rollbacks hash, its hash and BinData. A block left without transactions is ErrEmptyBlock.
+// The limit is the proposer's alone: the validators try the block without one.
 //
 // A stream, if not nil, takes the header of the block before the trial and the transactions the
 // trial puts in the block as it puts them, in their order (design 4.2 "streaming proposals").
-func Propose(binData []byte, txs []*transaction.Transaction, start time.Time, stream Stream) (*Block, error) {
+func Propose(binData []byte, txs []*transaction.Transaction, start time.Time, limit time.Duration, stream Stream) (*Block, error) {
 	b, err := ProcessBlockByBinData(binData, false)
 	if err != nil {
 		return nil, err
 	}
 	b.GenBlock = true
 	b.Transactions = txs
-	b.genStart = start
+	b.genStart, b.genLimit = start, limit
 	if stream != nil {
 		shell, err := b.shell()
 		if err != nil {
@@ -409,6 +518,11 @@ func Validate(binData []byte, height int64, hash bft.Hash, writes sync.Locker) e
 	defer writes.Unlock()
 	if err := atTop(height); err != nil {
 		return err
+	}
+	// the block of a trial the node holds, of its own proposal as of another, is valid once the
+	// trial wrote it: it is not executed again; a trial whose writes failed is tried again
+	if t := heldOf(height, hash); t != nil && t.wait() == nil {
+		return nil
 	}
 	err = b.Check()
 	b.trial = false

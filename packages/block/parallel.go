@@ -427,10 +427,22 @@ func (b *Block) beginState(dbTx *sqldb.DbTransaction) (*stateExec, error) {
 		return nil, err
 	}
 	st.SetOutputs(b.OutputsMap)
-	stream := newAfterStream(dbTx)
+	// the proposer takes the hashes of the rollback records as it seals its block, the writer of
+	// any other block as it writes them
+	stream := newAfterStream(dbTx, !b.GenBlock)
 	limits := transaction.NewLimits(b.limitMode())
+	// The proposer keeps, of the time of its block, the tail of each transaction and the backlog
+	// of the writer though its own proposal is ready before either (sealTrial): the validators try
+	// the same block in their driver, the wait for their writer and the writes of the block
+	// included, before they prevote it, and so does the proposer, once its writes end (Written),
+	// which prevotes nil if they do not end by its propose timeout. A block sized for the
+	// transactions alone would make every prevote of it, and the commit of the height, later by
+	// its writes.
 	if !b.genStart.IsZero() {
 		limits.StartAt(b.genStart, tail())
+		if b.genLimit > 0 {
+			limits.LimitTo(b.genLimit)
+		}
 		limits.KeepBacklog(stream.backlog)
 	}
 	return &stateExec{b: b, dbTx: dbTx, st: st, limits: limits, ecoParams: b.EcoParams, stream: stream}, nil
@@ -473,12 +485,32 @@ func (e *stateExec) run(r *blockRun, from, to int) error {
 	return b.commitState(e, r, from, to, queued)
 }
 
-// stop stops the workers and the writer of the records of the transactions
+// stop stops the writer of the records of the transactions and the workers
 func (e *stateExec) stop() {
+	e.stopStream()
+	e.stopWorkers()
+}
+
+// stopStream waits for the writer of the records of the transactions to write what it was given,
+// and ends it: written and streamErr are what it wrote and its error
+func (e *stateExec) stopStream() {
 	if e.stream != nil {
 		e.written, e.streamErr = e.stream.stop()
 		e.stream = nil
 	}
+}
+
+// cancel stops the writer of the records of the transactions and the workers without waiting
+// for what the writer was given: the transaction of the block is rolled back
+func (e *stateExec) cancel() {
+	if e.stream != nil {
+		e.stream.cancel()
+	}
+	e.stop()
+}
+
+// stopWorkers stops the workers and the runs again of the commit
+func (e *stateExec) stopWorkers() {
 	if e.stopRun != nil {
 		e.stopRun()
 		e.stopRun = nil
@@ -490,13 +522,35 @@ func (e *stateExec) stop() {
 	}
 }
 
-// finish credits the fees of the block and writes its state to PostgreSQL
-func (e *stateExec) finish(r *blockRun) error {
+// settleFees credits the fees of the block after its transactions, in its state
+func (e *stateExec) settleFees(r *blockRun) error {
 	rts, err := e.settle(r.fees)
 	if err != nil {
 		return err
 	}
 	r.afters.Rts = append(r.afters.Rts, rts...)
+	return nil
+}
+
+// read runs f, which only reads, on a view of the state after the transactions of the block and
+// its fees (settle), before the state is written; again once a read the state does not run moved
+// its table to PostgreSQL
+func (e *stateExec) read(f func(dbTx *sqldb.DbTransaction) error) error {
+	for range maxRestarts {
+		v := e.st.NewOrderedView(len(e.txs)+1, "")
+		err := f(v.Transaction())
+		if !v.Restart() {
+			return err
+		}
+		if err := v.Prepare(); err != nil {
+			return err
+		}
+	}
+	return errRestarts
+}
+
+// flush writes the state of the block to PostgreSQL, once the writer has stopped
+func (e *stateExec) flush() error {
 	if err := e.st.Flush(); err != nil {
 		return fmt.Errorf("writing the state of the block: %w", err)
 	}
@@ -603,9 +657,8 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 			if b.GenBlock {
 				if errors.Is(err, transaction.ErrTimeLeft) {
 					// the time left to the block stopped the transaction: it waits for the next
-					// block, unless no transaction is in the block and none stopped before it,
-					// so it had the most time a block leaves a transaction, and never fits
-					if len(*processedTx) == 0 && !b.genStopped {
+					// block, unless it never fits (tooLong)
+					if b.tooLong(len(*processedTx)) {
 						txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: errTxTooLong.Error(), keyID: t.KeyID()}
 					}
 					if !b.genStopped {

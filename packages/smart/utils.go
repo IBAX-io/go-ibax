@@ -22,8 +22,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// logError logs err at the level of dbLevel: a statement after which the transaction runs again
+// is no fault
 func logError(err error, errType string, comment string) error {
-	log.WithFields(log.Fields{"type": errType, "error": err}).Error(comment)
+	log.WithFields(log.Fields{"type": errType, "error": err}).Log(dbLevel(err), comment)
 	return err
 }
 

@@ -28,6 +28,8 @@ import (
 // The writer takes the hashes of the rollback records before they have their ids, and writes the
 // parts in the order of the block, which gives the rollback records the ids in that order:
 // AfterPlayTxs writes the rest, and the rollbacks hash of the block is the one it had without.
+// The writer of the block a proposer generates takes no hashes: the proposer takes them all in
+// memory as it seals the block, before the writer has written what it was given (sealTrial).
 
 const (
 	// afterPartTxs and afterPartRts are the transactions, or their rollback records, a part has
@@ -64,6 +66,10 @@ type afterStream struct {
 	held  bool
 	parts chan afterPart
 	done  chan struct{}
+	// hashes tells the writer takes the hashes of the rollback records it writes
+	hashes bool
+	// canceled makes the writer write no more: the transaction of the block is rolled back
+	canceled atomic.Bool
 	// sentTxs and sentRts are the transactions and the rollback records the block gave the writer
 	sentTxs, sentRts int
 	// pending are the transactions the block gave the writer and it has not written
@@ -73,10 +79,14 @@ type afterStream struct {
 	err     error
 }
 
+// errStreamCanceled is the error of a writer canceled before it wrote what it was given
+var errStreamCanceled = errors.New("the writer of the records of the transactions was canceled")
+
 // newAfterStream starts the writer of the records of the transactions of the block in its
-// transaction dbTx; the block holds the connection
-func newAfterStream(dbTx *sqldb.DbTransaction) *afterStream {
-	s := &afterStream{dbTx: dbTx, parts: make(chan afterPart, 4), done: make(chan struct{}), held: true}
+// transaction dbTx, which takes the hashes of the rollback records it writes if hashes; the block
+// holds the connection
+func newAfterStream(dbTx *sqldb.DbTransaction, hashes bool) *afterStream {
+	s := &afterStream{dbTx: dbTx, parts: make(chan afterPart, 4), done: make(chan struct{}), held: true, hashes: hashes}
 	s.conn.Lock()
 	go s.write()
 	return s
@@ -132,19 +142,32 @@ func (s *afterStream) stop() (afterWritten, error) {
 	return s.written, s.err
 }
 
+// cancel makes the writer write no more parts and no more statements: it ends once its statement
+// running, if any, does, with errStreamCanceled
+func (s *afterStream) cancel() {
+	s.canceled.Store(true)
+}
+
 // write writes the parts, each table in statements of at most afterChunk rows
 func (s *afterStream) write() {
 	defer close(s.done)
 	for part := range s.parts {
+		if s.err == nil && s.canceled.Load() {
+			s.err = errStreamCanceled
+		}
 		if s.err != nil {
+			s.pending.Add(-int64(len(part.txs)))
 			continue
 		}
 		start := time.Now()
 		rows := newAfterRows(part.txs, part.rts)
-		hashes := make([]string, len(rows.rts))
-		for i, rt := range rows.rts {
-			if hashes[i], s.err = rollbackHash(rt); s.err != nil {
-				break
+		var hashes []string
+		if s.hashes {
+			hashes = make([]string, len(rows.rts))
+			for i, rt := range rows.rts {
+				if hashes[i], s.err = rollbackHash(rt); s.err != nil {
+					break
+				}
 			}
 		}
 		if s.err == nil {
@@ -164,6 +187,9 @@ func (s *afterStream) writeRows(rows *afterRows) error {
 	db := sqldb.GetDB(s.dbTx)
 	chunks := func(n int, f func(tx *gorm.DB, from, to int) error) error {
 		for from := 0; from < n; from += afterChunk {
+			if s.canceled.Load() {
+				return errStreamCanceled
+			}
 			s.conn.Lock()
 			start := time.Now()
 			err := f(db, from, min(from+afterChunk, n))

@@ -20,6 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
@@ -505,5 +506,103 @@ func BenchmarkPoolTake(b *testing.B) {
 			e.tx = tx
 		}
 		b.StartTimer()
+	}
+}
+
+// stubKnown makes knownInBlocks call during with the hashes before it reports none in blocks
+func stubKnown(t *testing.T, during func(hashes [][]byte)) {
+	saved := knownInBlocks
+	t.Cleanup(func() { knownInBlocks = saved })
+	knownInBlocks = func(_ *sqldb.DbTransaction, hashes [][]byte) (map[string]bool, error) {
+		during(hashes)
+		return map[string]bool{}, nil
+	}
+}
+
+// A block committed while an admission checks a transaction takes it out of the pool before the
+// admission puts it in: the admission must not put it in after, for no block can take it again and
+// the pool would hold work no proposer can fill
+func TestPoolAdmitRacesCommit(t *testing.T) {
+	poolLimits(t, 100, 1<<20, 100, 10)
+	now := time.Now().Unix()
+	p := NewPool()
+	stubKnown(t, func(hashes [][]byte) { p.Remove(hashes) })
+	late, other := keyTx("late", 1, now*1000, 0), keyTx("other", 2, now*1000, 0)
+	errs := p.Admit([]*Transaction{late}, RateClient)
+	if errs[0] != ErrDuplicatedTx {
+		t.Fatalf("admitted a transaction committed while it was checked: %v", errs[0])
+	}
+	if p.Len() != 0 {
+		t.Fatalf("the pool holds %d transactions committed", p.Len())
+	}
+	if _, bad, _ := p.Status(late.Hash()); bad.Msg != "" {
+		t.Fatalf("a committed transaction is bad: %q", bad.Msg)
+	}
+	if len(p.recent) != 0 || len(p.admitting) != 0 {
+		t.Fatalf("an admission ended keeps %d removals, %d admissions", len(p.recent), len(p.admitting))
+	}
+
+	// a block that commits other transactions keeps none from the pool
+	stubKnown(t, func([][]byte) { p.Remove([][]byte{[]byte("third")}) })
+	if errs := p.Admit([]*Transaction{other}, RateClient); errs[0] != nil || p.Len() != 1 {
+		t.Fatalf("a transaction no block took is refused: %v, pool %d", errs[0], p.Len())
+	}
+
+	// without an admission a removal keeps no record
+	p.Remove([][]byte{[]byte("other")})
+	if len(p.recent) != 0 || p.commits != 3 {
+		t.Fatalf("records %d, commits %d", len(p.recent), p.commits)
+	}
+}
+
+// A removal a running admission needs stays until the earliest admission that started before it
+// ends, and a rolled back transaction is not refused for the block rolled back
+func TestPoolAdmitRemovals(t *testing.T) {
+	p := NewPool()
+	p.mu.Lock()
+	p.admitting[0]++
+	p.mu.Unlock()
+	p.Remove([][]byte{[]byte("a")})
+	p.mu.Lock()
+	p.admitting[1]++
+	p.mu.Unlock()
+	p.Remove([][]byte{[]byte("b")})
+	p.mu.Lock()
+	if !p.removedSince(0, "a") || !p.removedSince(1, "b") || p.removedSince(1, "a") {
+		t.Fatal("removals since a start")
+	}
+	p.admitted(1)
+	if len(p.recent) != 2 {
+		t.Fatalf("the admission of 0 runs, %d removals kept", len(p.recent))
+	}
+	p.mu.Unlock()
+	p.Restore([]*Transaction{keyTx("b", 1, 1000, 0)})
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.removedSince(0, "b") {
+		t.Fatal("a rolled back transaction is refused as committed")
+	}
+	p.admitted(0)
+	if len(p.recent) != 0 || len(p.admitting) != 0 {
+		t.Fatalf("no admission runs: %d removals, %d admissions", len(p.recent), len(p.admitting))
+	}
+}
+
+// Live finds no transaction in a pool of those too old for a block, and takes out those of clients
+func TestPoolLive(t *testing.T) {
+	poolLimits(t, 100, 1<<20, 100, 10)
+	now := time.Now().Unix()
+	p := NewPool()
+	p.put(keyTx("old", 1, (now-consts.MaxTxBack-1)*1000, 0), RateClient, false, nil)
+	p.put(keyTx("own", 2, (now-consts.MaxTxBack-1)*1000, 0), RateOnBlock, false, nil)
+	if p.Len() != 2 || p.Live(now) {
+		t.Fatalf("live with %d too old", p.Len())
+	}
+	if p.Has([]byte("old")) || !p.Has([]byte("own")) {
+		t.Fatal("an old transaction of a client stays or a reserved one is taken out")
+	}
+	p.put(keyTx("new", 3, now*1000, 0), RateClient, false, nil)
+	if !p.Live(now) {
+		t.Fatal("a pool with a new transaction is not live")
 	}
 }

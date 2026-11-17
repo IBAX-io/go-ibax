@@ -28,6 +28,9 @@ func FailHeldCommit() error {
 	if held.t == nil {
 		return errors.New("the node holds no trial")
 	}
+	if err := held.t.wait(); err != nil {
+		return err
+	}
 	return held.t.dbTx.Connection().Exec(`CREATE TEMP TABLE held_commit_fails (id int UNIQUE DEFERRABLE INITIALLY DEFERRED) ON COMMIT DROP;
 		INSERT INTO held_commit_fails VALUES (1), (1)`).Error
 }

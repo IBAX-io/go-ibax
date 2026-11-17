@@ -279,3 +279,113 @@ func TestBftCountTimeout(t *testing.T) {
 		t.Fatalf("logged %v", logged)
 	}
 }
+
+// The propose timeout of a proposer whose own block is still being written counts apart from a
+// propose timeout without a proposal, and is logged as such
+func TestBftCountTimeoutOwnWrites(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	d := newSignDriver(t, ctx, true)
+	d.app = pendingApp{}
+	d.m = d.restart()
+	logger, hook := test.NewNullLogger()
+	d.logger = logger.WithFields(log.Fields{})
+	d.apply(d.m.Start())
+	before := bftmon.Get().Timeouts
+	d.countTimeout(bft.Timeout{Height: 1, Round: 0, Step: bft.StepPropose})
+	after := bftmon.Get().Timeouts
+	if after[bftmon.TimeoutOwnWrites]-before[bftmon.TimeoutOwnWrites] != 1 || after[bftmon.TimeoutPropose] != before[bftmon.TimeoutPropose] {
+		t.Fatalf("timeouts %v, before %v", after, before)
+	}
+	var own, none int
+	for _, e := range hook.AllEntries() {
+		switch e.Message {
+		case "the writes of the own block did not end within the propose timeout":
+			own++
+		case "no proposal within the propose timeout":
+			none++
+		}
+	}
+	if own != 1 || none != 0 {
+		t.Fatalf("logged %d own writes, %d no proposal", own, none)
+	}
+}
+
+// A started height without work runs no round: the propose timeout of a round with nothing to put
+// in a block is held, counted nowhere and without a nil prevote, and runs again, the full timeout,
+// once work comes; a round with work whose proposer is silent counts the timeout and prevotes nil
+func TestBftIdleHeightCountsNoTimeout(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	d := newSignDriver(t, ctx, false)
+	logger, hook := test.NewNullLogger()
+	d.logger = logger.WithFields(log.Fields{})
+	work := false
+	d.work = func() bool { return work }
+	d.apply(d.m.Start())
+	propose := bft.Timeout{Height: 1, Round: 0, Step: bft.StepPropose, After: time.Millisecond}
+	before := bftmon.Get().Timeouts
+	for range 5 {
+		d.expired(bftExpired{Timeout: propose})
+	}
+	if after := bftmon.Get().Timeouts; after[bftmon.TimeoutPropose] != before[bftmon.TimeoutPropose] {
+		t.Fatalf("an idle round counted %d propose timeouts", after[bftmon.TimeoutPropose]-before[bftmon.TimeoutPropose])
+	}
+	if d.m.Step() != bft.StepPropose || d.m.Round() != 0 || d.held == nil || len(d.sent) != 0 {
+		t.Fatalf("an idle round moved: step %v, round %d, held %v, sent %d", d.m.Step(), d.m.Round(), d.held, len(d.sent))
+	}
+	for _, e := range hook.AllEntries() {
+		if e.Message == "no proposal within the propose timeout" {
+			t.Fatal("an idle round logged a propose timeout")
+		}
+	}
+
+	// work comes: the round resumes with the timeout again, which the silent proposer lets expire
+	work = true
+	if !d.startWork() || d.held != nil {
+		t.Fatal("work does not resume the held round")
+	}
+	if d.m.Step() != bft.StepPropose {
+		t.Fatalf("resuming prevoted at once: step %v", d.m.Step())
+	}
+	var e bftExpired
+	select {
+	case ev := <-d.events:
+		e = ev.(bftExpired)
+	case <-time.After(5 * time.Second):
+		t.Fatal("the held timeout does not run again")
+	}
+	if e.Timeout != propose {
+		t.Fatalf("resumed %v, held %v", e.Timeout, propose)
+	}
+	d.expired(e)
+	if after := bftmon.Get().Timeouts; after[bftmon.TimeoutPropose]-before[bftmon.TimeoutPropose] != 1 {
+		t.Fatalf("a stall with work counted %d propose timeouts", after[bftmon.TimeoutPropose]-before[bftmon.TimeoutPropose])
+	}
+	if d.m.Step() != bft.StepPrevote {
+		t.Fatalf("a stall with work does not prevote nil: step %v", d.m.Step())
+	}
+	d.saveUnsaved()
+	if len(d.sent) != 1 || d.sent[0].Vote == nil || d.sent[0].Vote.Type != bft.TypePrevote || d.sent[0].Vote.Round != 0 {
+		t.Fatalf("sent %v", d.sent)
+	}
+}
+
+// A held timeout of a round the machine left does not run again
+func TestBftIdleHeldTimeoutStale(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	d := newSignDriver(t, ctx, false)
+	d.work = func() bool { return false }
+	d.apply(d.m.Start())
+	d.held = &bft.Timeout{Height: 1, Round: 3, Step: bft.StepPropose, After: time.Millisecond}
+	d.resume()
+	if d.held != nil {
+		t.Fatal("a resumed timeout stays held")
+	}
+	select {
+	case ev := <-d.events:
+		t.Fatalf("a stale held timeout ran again: %v", ev)
+	case <-time.After(50 * time.Millisecond):
+	}
+}

@@ -132,6 +132,19 @@ var bftPairs = []struct {
 	{BftStopReviewDays, BftReviewVotingDays, 0, "a review would be overdue before the vote of its conclusion ends"},
 }
 
+// GetBftProposeBudget is the time the proposer of a round has for its proposal from when the
+// validators started the round, so that it reaches them within bft_timeout_propose_ms: what
+// bftPairs keeps of the timeout for the proposer, BftProposerWait for its clock and
+// max_block_generation_time for its block, and the BftTimeoutDelta each round adds to the
+// timeout. The rest of the timeout, the margin of bftPairs and more, is the way of the proposal
+// to the validators. A proposer that starts the round after the validators, as it was still
+// trying the block of the height before, has its lag less of it.
+func GetBftProposeBudget(round uint32) time.Duration {
+	propose, _, _ := GetBftTimeouts()
+	block := time.Duration(GetMaxBlockGenerationTime()) * time.Millisecond
+	return min(propose, block+BftProposerWait) + time.Duration(round)*BftTimeoutDelta
+}
+
 // pairValue is the value a node reads of a parameter of bftPairs
 func pairValue(name string) int64 {
 	if name == MaxBlockGenerationTime {
