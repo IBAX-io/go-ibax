@@ -334,3 +334,28 @@ func TestRetainArchiveAtOnce(t *testing.T) {
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM pg_tables WHERE schemaname = ?`, migration.RetiredSchema))
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "retired_partitions" WHERE "boundary" = ?`, 2*pb))
 }
+
+// TestBoundaryBlockTime checks a boundary block reads the blocks of its time slot in its own
+// transaction: Retain holds block_chain exclusively until the block commits, and DBConn, another
+// connection, waits for it (here, to its lock_timeout), as the time check of the seal did when it
+// read by DBConn and the block stopped at its boundary
+func TestBoundaryBlockTime(t *testing.T) {
+	db := retentionDB(t)
+	conf.Config.Storage.Archive = false
+	T := int64(1) << 32
+	chainRows(t, db, T)
+	require.NoError(t, Retain(db, int64(migration.PartitionBlocks), T, testWindow))
+
+	other, err := gorm.Open(postgres.Open(os.Getenv("IBAX_TEST_DSN")+" options='-c lock_timeout=200'"), &gorm.Config{})
+	require.NoError(t, err)
+	saved := DBConn
+	DBConn = other
+	defer func() { DBConn = saved }()
+	var n int64
+	require.ErrorContains(t, DBConn.Raw(`SELECT count(*) FROM "block_chain"`).Row().Scan(&n), "55P03",
+		"DBConn reads block_chain while the boundary block holds it")
+
+	blocks, err := (&BlockChain{}).GetNodeBlocksAtTime(db, time.Unix(T, 0), time.Unix(T, 0), 0)
+	require.NoError(t, err)
+	require.Len(t, blocks, 3)
+}

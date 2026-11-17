@@ -165,11 +165,13 @@ func (b *BlockChain) GetReverseBlockchain(endBlockID int64, limit int) ([]BlockC
 }
 
 // GetNodeBlocksAtTime returns records of blocks for time interval and position of node, without
-// their data: the callers count them
-func (b *BlockChain) GetNodeBlocksAtTime(from, to time.Time, node int64) ([]BlockChain, error) {
+// their data: the callers count them. A block reads them in its transaction dbTx: at a retention
+// boundary that transaction holds block_chain exclusively (Retain), and another connection would
+// wait on it until the transaction ends
+func (b *BlockChain) GetNodeBlocksAtTime(dbTx *DbTransaction, from, to time.Time, node int64) ([]BlockChain, error) {
 	var err error
 	blockchain := new([]BlockChain)
-	err = DBConn.Model(&BlockChain{}).Omit("data").Where("node_position = ? AND time BETWEEN ? AND ?", node, from.Unix(), to.Unix()).Find(&blockchain).Error
+	err = GetDB(dbTx).Model(&BlockChain{}).Omit("data").Where("node_position = ? AND time BETWEEN ? AND ?", node, from.Unix(), to.Unix()).Find(&blockchain).Error
 	return *blockchain, err
 }
 
