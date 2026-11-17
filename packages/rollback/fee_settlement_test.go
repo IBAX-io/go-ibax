@@ -10,6 +10,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -43,7 +44,7 @@ func TestFeeSettlement(t *testing.T) {
 	require.NoError(t, syspar.SysTableColType(dbTx))
 
 	const (
-		blockID  = int64(19998)
+		blockID  = int64(2*migration.PartitionBlocks - 2)
 		producer = int64(-1000001)
 		taxes    = int64(-1000002)
 	)
@@ -112,11 +113,16 @@ func TestFeeSettlement(t *testing.T) {
 	// the rollback of the block
 	rows := make([]*sqldb.RollbackTx, len(rts))
 	for i, r := range rts {
-		rows[i] = &sqldb.RollbackTx{BlockID: r.BlockId, TxHash: r.TxHash, NameTable: r.NameTable, TableID: r.TableId,
-			Data: r.Data, DataHash: r.DataHash}
+		rows[i] = &sqldb.RollbackTx{BlockID: r.BlockId, TxIdx: 0, NameTable: r.NameTable, TableID: r.TableId,
+			Data: r.Data}
 	}
-	require.NoError(t, sqldb.CreateBatchesRollbackTx(tx, rows))
-	require.NoError(t, rollbackTransaction(blockID, smart.SettlementHash, dbTx, log.NewEntry(log.StandardLogger())))
+	require.NoError(t, sqldb.CreateBatchesRollbackTx(tx, rows, sqldb.NewTableRefs()))
+	logger := log.NewEntry(log.StandardLogger())
+	records, err := getBlockRecords(blockID, dbTx, logger)
+	require.NoError(t, err)
+	// the settlement of a block without transactions is of the index 0
+	require.NoError(t, rollbackTransaction(records, 0, dbTx, logger))
+	require.NoError(t, deleteBlockRecords(blockID, dbTx, logger))
 	amount, found := balance(1, producer)
 	require.True(t, found)
 	require.Equal(t, "100", amount)
@@ -128,7 +134,6 @@ func TestFeeSettlement(t *testing.T) {
 	require.NoError(t, tx.Raw(`SELECT count(*) FROM "1_history" WHERE block_id = ? AND txhash = ?`, blockID,
 		smart.SettlementHash).Scan(&n).Error)
 	require.Zero(t, n)
-	require.NoError(t, tx.Raw(`SELECT count(*) FROM rollback_tx WHERE block_id = ? AND tx_hash = ?`, blockID,
-		smart.SettlementHash).Scan(&n).Error)
+	require.NoError(t, tx.Raw(`SELECT count(*) FROM rollback_tx WHERE block_id = ?`, blockID).Scan(&n).Error)
 	require.Zero(t, n)
 }

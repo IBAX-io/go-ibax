@@ -9,20 +9,22 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
+	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
 func TestRollbacksHashCoversTheRecordsOfTheBlock(t *testing.T) {
 	useSuite("ECC_P256", "SHA256")
-	rts := []*sqldb.RollbackTx{
-		{BlockID: 7, TxHash: []byte{1}, NameTable: "1_keys", TableID: "5", Data: `{"amount":"1"}`},
-		{BlockID: 7, TxHash: []byte{2}, NameTable: "1_keys", TableID: "6", Data: `{"amount":"2"}`},
+	rts := []*types.RollbackTx{
+		{BlockId: 7, TxHash: []byte{1}, NameTable: "1_keys", TableId: "5", Data: `{"amount":"1"}`, DataHash: []byte{9}},
+		{BlockId: 7, TxHash: []byte{2}, NameTable: "1_keys", TableId: "6", Data: `{"amount":"2"}`, DataHash: []byte{8}},
 	}
 	outputs := []sqldb.SpentInfo{
 		{OutputTxHash: []byte{1}, OutputKeyId: 5, OutputValue: "1", Ecosystem: 1, BlockId: 7},
 		{OutputTxHash: []byte{3}, OutputKeyId: 6, OutputValue: "4", Ecosystem: 1, BlockId: 3, InputTxHash: []byte{2}},
 	}
-	hashes := func(rts ...*sqldb.RollbackTx) []string {
+	hashes := func(rts ...*types.RollbackTx) []string {
 		h, err := rollbackHashes(rts)
 		if err != nil {
 			t.Fatal(err)
@@ -59,5 +61,22 @@ func TestRollbacksHashCoversTheRecordsOfTheBlock(t *testing.T) {
 	}
 	if bytes.Equal(want, other) {
 		t.Error("the hash does not cover the data of a rollback record")
+	}
+}
+
+// The hash of a rollback record is of the JSON of the record as rollback_tx had it, whatever the
+// table has now: the next block checks the rollbacks hash of the last
+func TestRollbackHashForm(t *testing.T) {
+	useSuite("ECC_P256", "SHA256")
+	rt := &types.RollbackTx{BlockId: 7, TxHash: []byte{1}, NameTable: "1_keys", TableId: "5", Data: `{"amount":"1"}`,
+		DataHash: []byte{9}}
+	got, err := rollbackHash(rt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := crypto.HashHex([]byte(`{"ID":0,"block_id":7,"tx_hash":"AQ==","table_name":"1_keys","table_id":"5",` +
+		`"data":"{\"amount\":\"1\"}","data_hash":"CQ=="}`))
+	if got != want {
+		t.Errorf("the hash of a rollback record is %s, the form of the chain gives %s", got, want)
 	}
 }

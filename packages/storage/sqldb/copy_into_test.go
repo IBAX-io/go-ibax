@@ -40,10 +40,10 @@ func TestCopyInto(t *testing.T) {
 		}
 		require.NoError(t, CreateLogTransactionBatches(tx, lts))
 		rts := []*RollbackTx{
-			{BlockID: block, TxHash: []byte{tag, 2}, NameTable: "1_keys", TableID: "-42", Data: `{"amount":"1\t2","s":"a\\nb"}`, DataHash: []byte{9, '\n'}},
-			{BlockID: block, TxHash: []byte{tag, 3}, NameTable: "1_keys", TableID: "7", Data: "", DataHash: []byte{}},
+			{BlockID: block, TxIdx: int32(tag)<<8 + 2, NameTable: "1_keys", TableID: "-42", Data: `{"amount":"1\t2","s":"a\\nb"}`},
+			{BlockID: block, TxIdx: int32(tag)<<8 + 3, NameTable: "1_keys", TableID: "7", Data: ""},
 		}
-		require.NoError(t, CreateBatchesRollbackTx(tx, rts))
+		require.NoError(t, CreateBatchesRollbackTx(tx, rts, NewTableRefs()))
 		var gotL []LogTransaction
 		require.NoError(t, tx.Raw(`SELECT * FROM "log_transactions" WHERE "block" = ? ORDER BY "hash"`, block).Scan(&gotL).Error)
 		var gotR []RollbackTx
@@ -52,7 +52,8 @@ func TestCopyInto(t *testing.T) {
 			gotL[i].Hash = gotL[i].Hash[1:]
 		}
 		for i := range gotR {
-			gotR[i].TxHash = gotR[i].TxHash[1:]
+			gotR[i].TxIdx -= int32(tag) << 8
+			require.Equal(t, rts[i].TableRef, gotR[i].TableRef)
 			require.Equal(t, rts[i].ID, gotR[i].ID)
 			gotR[i].ID = 0
 		}

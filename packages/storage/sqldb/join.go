@@ -51,6 +51,10 @@ func PrepareJoined(dbTx *DbTransaction) (int64, error) {
 			}
 		}
 	}
+	// the partitions of the tables of the state come of the snapshot without their storage parameters
+	if err := setPartitionOptions(dbTx); err != nil {
+		return 0, err
+	}
 	retired, err := retiredBefore(dbTx, "<=", 1<<62)
 	if err != nil {
 		return 0, err
@@ -74,4 +78,22 @@ func InsertJoined(dbTx *DbTransaction, blocks []BlockChain, certs []BftCertifica
 		return err
 	}
 	return db.CreateInBatches(certs, 512).Error
+}
+
+// setPartitionOptions gives the range partitions of the active tables their storage parameters
+func setPartitionOptions(dbTx *DbTransaction) error {
+	db := GetDB(dbTx)
+	for _, t := range migration.PartitionedTables {
+		ranges, err := attachedRanges(dbTx, t.Name)
+		if err != nil {
+			return err
+		}
+		for _, r := range ranges {
+			if err := db.Exec(fmt.Sprintf(`ALTER TABLE "%s"."%s" SET (%s)`, migration.PartsSchema,
+				migration.PartitionName(t.Name, r), migration.PartitionOptions)).Error; err != nil {
+				return fmt.Errorf("setting the storage parameters of %s: %w", migration.PartitionName(t.Name, r), err)
+			}
+		}
+	}
+	return nil
 }
