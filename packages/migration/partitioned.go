@@ -110,7 +110,8 @@ var PartitionedTables = []PartitionedTable{
 	},
 	{
 		// a transaction finds its rows by its block, which log_transactions gives, and the highest
-		// id is that of the highest block
+		// id is that of the highest block. An account reads its rows by the id, newest first, a page
+		// at a time: the id ends the index of each side, which an $or of the two reads apart
 		Name: "1_history", Key: "block_id", ID: true, IDByKey: true,
 		columns: `"id" bigint NOT NULL DEFAULT '0',
 		"sender_id" bigint NOT NULL DEFAULT '0',
@@ -127,7 +128,7 @@ var PartitionedTables = []PartitionedTable{
 		"ecosystem" bigint NOT NULL DEFAULT '1',
 		"type" bigint NOT NULL DEFAULT '1',
 		PRIMARY KEY ("block_id", "id")`,
-		indexes: []string{`"ecosystem", "sender_id"`, `"ecosystem", "recipient_id"`},
+		indexes: []string{`"ecosystem", "sender_id", "id"`, `"ecosystem", "recipient_id", "id"`},
 	},
 	{
 		// the one entry of the hash of a transaction a block took: the block of the transaction and

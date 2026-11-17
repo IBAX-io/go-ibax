@@ -73,6 +73,11 @@ var hotQueries = []struct {
 		[]string{`1_history_p0_pkey`}},
 	{`select id from "1_history" order by "block_id" desc, id desc limit 1`, []string{`1_history_p\d+_pkey`}},
 	{`DELETE FROM "1_history" WHERE "id"=1 AND "ecosystem"=1 AND "block_id"=1`, []string{`1_history_p0_pkey`}},
+	// a page of an account's rows, newest first, as the data API reads an $or of its two sides
+	{`SELECT "id" FROM ((SELECT * FROM "1_history" WHERE "ecosystem" = 1 AND ("sender_id" = 1)
+		ORDER BY "id" DESC LIMIT 21) UNION ALL (SELECT * FROM "1_history" WHERE "ecosystem" = 1 AND ("recipient_id" = 1)
+		AND ("sender_id" = 1) IS NOT TRUE ORDER BY "id" DESC LIMIT 21)) AS "rows" ORDER BY "id" DESC LIMIT 21`,
+		[]string{`1_history_p\d+_ecosystem_sender_id_id_idx`, `1_history_p\d+_ecosystem_recipient_id_id_idx`}},
 	{`select ap.value from "1_app_params" ap, "1_applications" a where ap.app_id = a.id and a."name" = 'CandidateNode'
 		and ap."name" = 'limit_candidate_pack' and a.deleted = 0 and a.ecosystem = 1`,
 		[]string{`1_app_params_ecosystem_app_id_name`}},
@@ -117,7 +122,8 @@ var hotRows = []string{
 	`INSERT INTO "confirmations" (block_id) SELECT g FROM generate_series(1, 5001) g`,
 	`INSERT INTO "log_transactions" (hash, block, ecosystem_id) SELECT sha256(int8send(g)), 2 + g / 20, 1
 		FROM generate_series(0, 99999) g`,
-	`INSERT INTO "1_history" (id, block_id, txhash) SELECT g, 2 + g / 20, sha256(int8send(g))
+	`INSERT INTO "1_history" (id, block_id, txhash, sender_id, recipient_id) SELECT g, 2 + g / 20, sha256(int8send(g)),
+		CASE WHEN g % 5 = 0 THEN 1 ELSE 3 + g % 1000 END, CASE WHEN g % 5 = 1 THEN 1 ELSE 3 + g % 997 END
 		FROM generate_series(0, 99999) g`,
 	`INSERT INTO "rollback_tables" (ref, name, block_id) SELECT g, g || '_keys', 2 FROM generate_series(1, 50) g`,
 	`INSERT INTO "rollback_tx" (id, block_id, tx_idx, table_ref, table_id)

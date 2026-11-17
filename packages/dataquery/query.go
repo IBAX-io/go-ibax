@@ -6,7 +6,9 @@
 package dataquery
 
 import (
+	"maps"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -138,9 +140,13 @@ func (t *Table) Query(q Query) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	where, err := s.where(q.Where, 0)
+	rest, alternatives, err := t.where(s, q.Where)
 	if err != nil {
 		return nil, err
+	}
+	where := rest
+	if alternatives != nil {
+		where = "(" + rest + " AND (" + strings.Join(alternatives, " OR ") + "))"
 	}
 	order, err := s.order(q.Order)
 	if err != nil {
@@ -161,6 +167,10 @@ func (t *Table) Query(q Query) (*Result, error) {
 		read++
 	}
 	text := `SELECT ` + selectList(refs) + filter
+	if order != "" && alternatives != nil {
+		text = `SELECT ` + selectList(refs) + ` FROM (` +
+			t.branches(visible, rest, alternatives, order, read+q.Offset) + `) AS "rows"`
+	}
 	if order != "" {
 		text += ` ORDER BY ` + order
 	}
@@ -172,6 +182,70 @@ func (t *Table) Query(q Query) (*Result, error) {
 		result.List, result.More = result.List[:limit], true
 	}
 	return result, nil
+}
+
+// maxAlternatives is the most filters of an $or that a page reads apart
+const maxAlternatives = 8
+
+// where turns a filter into SQL. When its $or is of filters that each are the equality of a column an
+// index starts with, it gives the SQL of the filter without the $or, and that of each of its filters
+// apart: a page reads each through its index (see branches). Else the SQL of the filter is all.
+func (t *Table) where(s *statement, filter Where) (string, []string, error) {
+	list, ok := filter["$or"].([]any)
+	if !ok || len(list) < 2 || len(list) > maxAlternatives || !t.indexed(list) {
+		where, err := s.where(filter, 0)
+		return where, nil, err
+	}
+	rest := maps.Clone(filter)
+	delete(rest, "$or")
+	where, err := s.where(rest, 0)
+	if err != nil {
+		return "", nil, err
+	}
+	alternatives := make([]string, len(list))
+	for i, item := range list {
+		if alternatives[i], err = s.where(item.(map[string]any), 1); err != nil {
+			return "", nil, err
+		}
+	}
+	return where, alternatives, nil
+}
+
+// indexed tells whether each filter is the equality of a column an index of the table starts with
+// to a value
+func (t *Table) indexed(list []any) bool {
+	for _, item := range list {
+		filter, ok := item.(map[string]any)
+		if !ok || len(filter) != 1 {
+			return false
+		}
+		for name, value := range filter {
+			switch value.(type) {
+			case nil, map[string]any, []any:
+				return false
+			}
+			if !t.leads[name] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// branches is the union of the rows of each alternative of an $or, in the order, each read through
+// the index its column starts and stopped after the rows a page needs: one OR of them reads every
+// row of each column's value and sorts them. A row of an alternative is left to the first that
+// holds it, so the union has the rows the filter has, once each.
+func (t *Table) branches(visible, rest string, alternatives []string, order string, rows int) string {
+	branches := make([]string, len(alternatives))
+	for i, alternative := range alternatives {
+		branch := `(SELECT * FROM ` + t.from() + ` WHERE ` + visible + ` AND ` + rest + ` AND ` + alternative
+		for _, earlier := range alternatives[:i] {
+			branch += ` AND ` + earlier + ` IS NOT TRUE`
+		}
+		branches[i] = branch + ` ORDER BY ` + order + ` LIMIT ` + strconv.Itoa(rows) + `)`
+	}
+	return strings.Join(branches, ` UNION ALL `)
 }
 
 // count is the number of the rows the filter matches
