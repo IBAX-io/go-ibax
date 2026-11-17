@@ -15,7 +15,7 @@ type blocksCounter struct {
 
 func (bc *blocksCounter) count(state blockGenerationState) (int, error) {
 	blockchain := &sqldb.BlockChain{}
-	blocks, err := blockchain.GetNodeBlocksAtTime(state.start, state.start.Add(state.duration), state.nodePosition)
+	blocks, err := blockchain.GetNodeBlocksAtTime(nil, state.start, state.start.Add(state.duration), state.nodePosition)
 	if err != nil {
 		return 0, err
 	}

@@ -16,7 +16,7 @@ import (
 // BlockTimeChecker allow check queue to generate current block
 type BlockTimeChecker interface {
 	TimeToGenerate(position int64) (bool, error)
-	BlockForTimeExists(t time.Time, nodePosition int) (bool, error)
+	BlockForTimeExists(dbTx *sqldb.DbTransaction, t time.Time, nodePosition int) (bool, error)
 	RangeByTime(at time.Time) (start, end time.Time, err error)
 }
 
@@ -70,16 +70,16 @@ func (btc *BlockTimeCounter) NodeTimeExists(t time.Time, nodePosition int) (bool
 	return false, nil
 }
 
-// BlockForTimeExists checks conformity between time and nodePosition
-// changes functionality of ValidateBlock prevent blockTimeCalculator
-func (btc *BlockTimeCounter) BlockForTimeExists(t time.Time, nodePosition int) (bool, error) {
+// BlockForTimeExists is whether the node of nodePosition has a block in the time slot of t, read
+// in dbTx: a block checks its time in its own transaction (sqldb.GetNodeBlocksAtTime)
+func (btc *BlockTimeCounter) BlockForTimeExists(dbTx *sqldb.DbTransaction, t time.Time, nodePosition int) (bool, error) {
 	startInterval, endInterval, err := btc.RangeByTime(t)
 	if err != nil {
 		return false, err
 	}
 
 	b := &sqldb.BlockChain{}
-	blocks, err := b.GetNodeBlocksAtTime(startInterval, endInterval, int64(nodePosition))
+	blocks, err := b.GetNodeBlocksAtTime(dbTx, startInterval, endInterval, int64(nodePosition))
 	if err != nil {
 		return false, err
 	}
