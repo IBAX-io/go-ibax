@@ -82,15 +82,16 @@ func Retain(dbTx *DbTransaction, blockID, blockTime, historyBlocks int64) error 
 // outOfWindow is whether the range r of the table t is out of the window at the boundary blockID
 func outOfWindow(dbTx *DbTransaction, t migration.PartitionedTable, r, blockID, blockTime, historyBlocks int64) (bool, error) {
 	end := (r + 1) * migration.PartitionBlocks
-	if !t.ByTime {
-		return end <= blockID-historyBlocks, nil
-	}
-	if end > blockID {
+	if end > blockID-historyBlocks {
 		return false, nil
+	}
+	if !t.ByTime {
+		return true, nil
 	}
 	// a transaction is refused whose signed time is earlier than MaxTxBack before the block time;
 	// a block takes it signed at most MaxTxForw after its time (transaction.checkTime), so the
-	// range leaves once its last block is so old that none of its transactions passes the check
+	// range stays, past the window, as long as a transaction of it can pass the check: the window
+	// of the duplicates is loaded from it (TxWindow)
 	var last []int64
 	if err := GetDB(dbTx).Raw(`SELECT "last_time" FROM "log_transaction_ranges" WHERE "k" = ?`, r).
 		Scan(&last).Error; err != nil {

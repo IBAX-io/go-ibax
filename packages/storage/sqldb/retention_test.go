@@ -144,8 +144,8 @@ func TestRetain(t *testing.T) {
 	require.EqualValues(t, 1, countRows(t, db, `SELECT count(*) FROM "spent_info"`))
 	require.EqualValues(t, 1, countRows(t, db, `SELECT count(*) FROM "spent_info" WHERE "spent_block" = 0`))
 	require.EqualValues(t, 1, countRows(t, db, fmt.Sprintf(`SELECT count(*) FROM "%s"."spent_info_p0"`, migration.RetiredSchema)))
-	// range 0 of the seven tables, and range 1 of log_transactions, complete and older than MaxTxBack
-	require.EqualValues(t, 8, countRows(t, db, `SELECT count(*) FROM "retired_partitions" WHERE "boundary" = ?`, 2*pb))
+	// range 0 of the seven tables: range 1 of log_transactions, older than MaxTxBack, is in the window
+	require.EqualValues(t, 7, countRows(t, db, `SELECT count(*) FROM "retired_partitions" WHERE "boundary" = ?`, 2*pb))
 	id, err := NewDbTransaction(GetDB(db)).GetNextID("rollback_tx")
 	require.NoError(t, err)
 	require.EqualValues(t, 4, id, "the ids of the rows that left are not given again")
@@ -275,8 +275,8 @@ func TestLogTxCount(t *testing.T) {
 	require.EqualValues(t, 1, count(2))
 }
 
-// A range of log_transactions leaves once its last block, plus MaxTxForw, is earlier than
-// MaxTxBack before the block time: until then a transaction of it, signed at most MaxTxForw after
+// A range of log_transactions leaves once it is out of the history_blocks window and its last
+// block, plus MaxTxForw, is earlier than MaxTxBack before the block time: until then a transaction of it, signed at most MaxTxForw after
 // its block, passes the check of its time, and its hash refuses it
 func TestRetainLogTransactionsSigned(t *testing.T) {
 	db := retentionDB(t)
@@ -290,6 +290,11 @@ func TestRetainLogTransactionsSigned(t *testing.T) {
 
 	require.NoError(t, Retain(db, 2*pb, T+consts.MaxTxForw+consts.MaxTxBack, testWindow))
 	require.EqualValues(t, 1, countRows(t, db, logged, []byte{8}), "range 0 stays while a transaction of it is in the window")
+	require.NoError(t, RestoreRetired(db, 2*pb))
+	// past MaxTxBack the range stays while it is in the history_blocks window: the status of its
+	// transactions is read from it
+	require.NoError(t, Retain(db, 2*pb, T+consts.MaxTxForw+consts.MaxTxBack+1, 2*pb))
+	require.EqualValues(t, 1, countRows(t, db, logged, []byte{8}), "range 0 stays while it is in the window")
 	require.NoError(t, RestoreRetired(db, 2*pb))
 	require.NoError(t, Retain(db, 2*pb, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
 	require.EqualValues(t, 0, countRows(t, db, logged, []byte{8}))

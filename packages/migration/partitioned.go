@@ -43,8 +43,8 @@ type PartitionedTable struct {
 	// the blocks: the highest id is that of the highest key, which the primary key (key, id) finds,
 	// and the table has no index of the id
 	IDByKey bool
-	// ByTime is whether its partitions leave by the time of their transactions (MaxTxBack)
-	// instead of by the history_blocks window
+	// ByTime is whether its partitions leave, past the history_blocks window, only once their
+	// transactions are too old to be sent again (MaxTxBack)
 	ByTime bool
 	// columns and constraints, and the indexes on the partitioned table
 	columns string
