@@ -13,7 +13,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// LogTransaction is model
+// LogTransaction is a transaction a block took, with its status: Penalty and Result are those
+// /txstatus answers, the result of the contract or the error of a penalty
 type LogTransaction struct {
 	Hash  []byte `gorm:"primary_key;not null"`
 	Block int64  `gorm:"not null"`
@@ -23,6 +24,8 @@ type LogTransaction struct {
 	EcosystemID  int64  `gorm:"not null"`
 	Status       int64  `gorm:"not null"`
 	ContractName string `gorm:"not null"`
+	Penalty      int64  `gorm:"not null"`
+	Result       string `gorm:"not null"`
 }
 
 // GetByHash returns LogTransactions existence by hash, for the API: archived ones included
@@ -99,33 +102,39 @@ func CreateLogTransactionBatches(dbTx *gorm.DB, lts []*LogTransaction) error {
 		return nil
 	}
 	copied, err := copyInto(dbTx, "log_transactions",
-		[]string{"hash", "block", "timestamp", "address", "ecosystem_id", "status", "contract_name"},
+		[]string{"hash", "block", "timestamp", "address", "ecosystem_id", "status", "contract_name", "penalty", "result"},
 		func() []stateRow {
 			rows := make([]stateRow, len(lts))
 			for i, r := range lts {
 				rows[i] = stateRow{textBytea(r.Hash), textInt(r.Block), textInt(r.Timestamp), textInt(r.Address),
-					textInt(r.EcosystemID), textInt(r.Status), textString(r.ContractName)}
+					textInt(r.EcosystemID), textInt(r.Status), textString(r.ContractName), textInt(r.Penalty),
+					textString(r.Result)}
 			}
 			return rows
 		})
 	if copied || err != nil {
 		return err
 	}
-	return dbTx.Exec(`INSERT INTO "log_transactions" ("hash", "block", "timestamp", "address", "ecosystem_id", "status", "contract_name")
-		SELECT * FROM unnest(?::bytea[], ?::bigint[], ?::bigint[], ?::bigint[], ?::bigint[], ?::bigint[], ?::varchar[])`,
+	return dbTx.Exec(`INSERT INTO "log_transactions" ("hash", "block", "timestamp", "address", "ecosystem_id", "status",
+			"contract_name", "penalty", "result")
+		SELECT * FROM unnest(?::bytea[], ?::bigint[], ?::bigint[], ?::bigint[], ?::bigint[], ?::bigint[], ?::varchar[],
+			?::bigint[], ?::varchar[])`,
 		column(lts, func(r *LogTransaction) []byte { return r.Hash }),
 		column(lts, func(r *LogTransaction) int64 { return r.Block }),
 		column(lts, func(r *LogTransaction) int64 { return r.Timestamp }),
 		column(lts, func(r *LogTransaction) int64 { return r.Address }),
 		column(lts, func(r *LogTransaction) int64 { return r.EcosystemID }),
 		column(lts, func(r *LogTransaction) int64 { return r.Status }),
-		column(lts, func(r *LogTransaction) string { return r.ContractName })).Error
+		column(lts, func(r *LogTransaction) string { return r.ContractName }),
+		column(lts, func(r *LogTransaction) int64 { return r.Penalty }),
+		column(lts, func(r *LogTransaction) string { return r.Result })).Error
 }
 
-// DeleteLogTransactionsByHash is deleting record by hash, with what outlives it
-func DeleteLogTransactionsByHash(dbTx *DbTransaction, hash []byte) (int64, error) {
+// DeleteLogTransactionsByHash deletes the transaction of the block, with what outlives it
+func DeleteLogTransactionsByHash(dbTx *DbTransaction, blockID int64, hash []byte) (int64, error) {
 	var deleted []LogTransaction
-	if err := GetDB(dbTx).Raw(`DELETE FROM "log_transactions" WHERE "hash" = ? RETURNING "ecosystem_id", "status"`, hash).
+	if err := GetDB(dbTx).Raw(`DELETE FROM "log_transactions" WHERE "block" = ? AND "hash" = ? RETURNING "ecosystem_id", "status"`,
+		blockID, hash).
 		Scan(&deleted).Error; err != nil {
 		return 0, err
 	}

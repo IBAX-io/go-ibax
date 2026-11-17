@@ -262,7 +262,7 @@ func TestLogTxCount(t *testing.T) {
 	require.EqualValues(t, 0, count(3), "failed transactions are not counted")
 
 	// the rollback of a transaction takes it off the count
-	n, err := DeleteLogTransactionsByHash(db, []byte{9})
+	n, err := DeleteLogTransactionsByHash(db, pb-1, []byte{9})
 	require.NoError(t, err)
 	require.EqualValues(t, 1, n)
 	require.EqualValues(t, 1, count(2))

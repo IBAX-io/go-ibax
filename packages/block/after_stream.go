@@ -217,11 +217,6 @@ func (s *afterStream) writeRows(rows *afterRows) error {
 	}); err != nil {
 		return errors.Wrap(err, "batches insert rollback tx")
 	}
-	if err := chunks(len(rows.statuses), func(tx *gorm.DB, from, to int) error {
-		return sqldb.UpsertBlockStatusBatches(tx, rows.statuses[from:to])
-	}); err != nil {
-		return errors.Wrap(err, "batches upsert transaction status")
-	}
 	return nil
 }
 

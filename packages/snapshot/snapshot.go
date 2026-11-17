@@ -49,17 +49,16 @@ var chunkBytes = 1 << 20
 // certificates carry, and what a node writes of its own. The rows of rollback_tx are of the state:
 // contracts read them (GetHistory), with their ids.
 var nodeTables = map[string]bool{
-	"block_chain":         true,
-	"bft_certificates":    true,
-	"bft_set_proofs":      true,
-	"confirmations":       true,
-	"bft_state_hashes":    true,
-	"install":             true,
-	"migration_history":   true,
-	"queue_blocks":        true,
-	"snapshot_joins":      true,
-	"stop_daemons":        true,
-	"transactions_status": true,
+	"block_chain":       true,
+	"bft_certificates":  true,
+	"bft_set_proofs":    true,
+	"confirmations":     true,
+	"bft_state_hashes":  true,
+	"install":           true,
+	"migration_history": true,
+	"queue_blocks":      true,
+	"snapshot_joins":    true,
+	"stop_daemons":      true,
 }
 
 // IsNodeTable reports whether a table is out of the state

@@ -32,7 +32,7 @@ func (*RollbackTx) TableName() string {
 // GetRollbackTransactions returns the rollback records of the block, the last first, with the names
 // of their tables, by the indexes of the transactions they are of
 func (rt *RollbackTx) GetRollbackTransactions(dbTx *DbTransaction, blockID int64) (map[int][]map[string]string, error) {
-	rows, err := dbTx.GetAllTransaction(`SELECT r.id, r.tx_idx, t.name AS table_name, r.table_id, r.data
+	rows, err := dbTx.GetAllTransaction(`SELECT r.id, r.block_id, r.tx_idx, t.name AS table_name, r.table_id, r.data
 		FROM rollback_tx r JOIN rollback_tables t ON t.ref = r.table_ref
 		WHERE r.block_id = ? ORDER BY r.block_id DESC, r.id DESC`, -1, blockID)
 	if err != nil {

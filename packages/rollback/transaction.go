@@ -15,6 +15,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
@@ -183,6 +184,12 @@ func rollbackTransaction(records blockRecords, txIdx int, dbTx *sqldb.DbTransact
 				return err
 			}
 		} else {
+			if pt, ok := migration.PartitionedTableOf(tx["table_name"]); ok {
+				// a row the block inserted into a table partitioned by the blocks is in the range of
+				// the block, whose key finds it: the table has no index of the id (1_history)
+				where += ` AND "` + pt.Key + `"=?`
+				whereArgs = append(whereArgs, tx["block_id"])
+			}
 			if err := rollbackInsertedRow(tx, where, whereArgs, dbTx, logger); err != nil {
 				return err
 			}

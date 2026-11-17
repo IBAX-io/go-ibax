@@ -112,14 +112,9 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 		t := block.Transactions[i]
 		t.DbTransaction = dbTx
 
-		_, err := sqldb.DeleteLogTransactionsByHash(dbTx, t.Hash())
+		_, err := sqldb.DeleteLogTransactionsByHash(dbTx, block.Header.BlockId, t.Hash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting log transactions by hash")
-			return err
-		}
-
-		if err = sqldb.DeleteTransactionStatus(dbTx, t.Hash()); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transaction status")
 			return err
 		}
 

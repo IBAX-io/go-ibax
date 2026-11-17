@@ -294,12 +294,11 @@ func (b *Block) upsertInfoBlock(dbTx *sqldb.DbTransaction, block *sqldb.BlockCha
 	return nil
 }
 
-// afterRows are the records the transactions of a block write: the logs and the statuses of the
-// transactions, and the rollback records
+// afterRows are the records the transactions of a block write: the logs of the transactions, with
+// their statuses, and the rollback records
 type afterRows struct {
-	rts      []*sqldb.RollbackTx
-	lts      []*sqldb.LogTransaction
-	statuses []*sqldb.TransactionStatus
+	rts []*sqldb.RollbackTx
+	lts []*sqldb.LogTransaction
 }
 
 // newAfterRows are the records of the transactions txs, from the transaction first of the block
@@ -307,9 +306,8 @@ type afterRows struct {
 // follows the transactions, are of the index after the last
 func newAfterRows(txs []*types.AfterTx, rts []*types.RollbackTx, first int) (*afterRows, error) {
 	rows := &afterRows{
-		rts:      make([]*sqldb.RollbackTx, len(rts)),
-		lts:      make([]*sqldb.LogTransaction, len(txs)),
-		statuses: make([]*sqldb.TransactionStatus, len(txs)),
+		rts: make([]*sqldb.RollbackTx, len(rts)),
+		lts: make([]*sqldb.LogTransaction, len(txs)),
 	}
 	idx := make(map[string]int32, len(txs)+1)
 	for i, tx := range txs {
@@ -340,33 +338,22 @@ func newAfterRows(txs []*types.AfterTx, rts []*types.RollbackTx, first int) (*af
 			Status:       int64(tx.Lts.InvokeStatus),
 		}
 		if u := tx.UpdTxStatus; u != nil {
-			var penalty int64
 			if u.Code == pbgo.TxInvokeStatusCode_PENALTY {
-				penalty = 1
+				rows.lts[i].Penalty = 1
 			}
-			rows.statuses[i] = &sqldb.TransactionStatus{
-				Hash:     u.Hash,
-				Time:     tx.Lts.Timestamp,
-				WalletID: tx.Lts.Address,
-				BlockID:  tx.Lts.Block,
-				Error:    u.Result,
-				Penalty:  penalty,
-			}
+			rows.lts[i].Result = u.Result
 		}
 	}
 	return rows, nil
 }
 
-// writeTxRows writes the logs, the rollback records and the statuses of rows, each in a statement
+// writeTxRows writes the logs and the rollback records of rows, each in a statement
 func writeTxRows(tx *gorm.DB, rows *afterRows, refs *sqldb.TableRefs) error {
 	if err := sqldb.CreateLogTransactionBatches(tx, rows.lts); err != nil {
 		return errors.Wrap(err, "batches insert log_transactions")
 	}
 	if err := sqldb.CreateBatchesRollbackTx(tx, rows.rts, refs); err != nil {
 		return errors.Wrap(err, "batches insert rollback tx")
-	}
-	if err := sqldb.UpsertBlockStatusBatches(tx, rows.statuses); err != nil {
-		return errors.Wrap(err, "batches upsert transaction status")
 	}
 	return nil
 }

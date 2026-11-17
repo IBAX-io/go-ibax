@@ -46,9 +46,11 @@ type PartitionedTable struct {
 	// ByTime is whether its partitions leave, past the history_blocks window, only once their
 	// transactions are too old to be sent again (MaxTxBack)
 	ByTime bool
-	// columns and constraints, and the indexes on the partitioned table
-	columns string
-	indexes []string
+	// columns and constraints, and the indexes on the partitioned table: btree of the columns, and
+	// hash of a column each
+	columns     string
+	indexes     []string
+	hashIndexes []string
 	// fixed is the CREATE TABLE of the partition that never leaves, if any, and more the statements
 	// after the partitions are made
 	fixed string
@@ -106,7 +108,9 @@ var PartitionedTables = []PartitionedTable{
 		indexes: []string{`"table_ref", "table_id", "block_id"`},
 	},
 	{
-		Name: "1_history", Key: "block_id", ID: true,
+		// a transaction finds its rows by its block, which log_transactions gives, and the highest
+		// id is that of the highest block
+		Name: "1_history", Key: "block_id", ID: true, IDByKey: true,
 		columns: `"id" bigint NOT NULL DEFAULT '0',
 		"sender_id" bigint NOT NULL DEFAULT '0',
 		"recipient_id" bigint NOT NULL DEFAULT '0',
@@ -122,9 +126,12 @@ var PartitionedTables = []PartitionedTable{
 		"ecosystem" bigint NOT NULL DEFAULT '1',
 		"type" bigint NOT NULL DEFAULT '1',
 		PRIMARY KEY ("block_id", "id")`,
-		indexes: []string{`"id"`, `"txhash"`, `"ecosystem", "sender_id"`, `"ecosystem", "recipient_id"`},
+		indexes: []string{`"ecosystem", "sender_id"`, `"ecosystem", "recipient_id"`},
 	},
 	{
+		// the one entry of the hash of a transaction a block took: the block of the transaction and
+		// its status (penalty and result, as /txstatus answers them). A block takes a hash once, which
+		// the duplicate check sees to (TxWindow), so the table has no key but the hash index
 		Name: "log_transactions", Key: "block", ByTime: true,
 		columns: `"hash" bytea NOT NULL DEFAULT '',
 		"block" bigint NOT NULL DEFAULT '0',
@@ -133,8 +140,9 @@ var PartitionedTables = []PartitionedTable{
 		"address" bigint NOT NULL DEFAULT '0',
 		"ecosystem_id" bigint NOT NULL DEFAULT '0',
 		"status" bigint NOT NULL DEFAULT '0',
-		PRIMARY KEY ("block", "hash")`,
-		indexes: []string{`"hash"`},
+		"penalty" bigint NOT NULL DEFAULT '0',
+		"result" varchar(255) NOT NULL DEFAULT ''`,
+		hashIndexes: []string{`"hash"`},
 	},
 	// an output stays in the unspent partition until a block spends it, and moves then to the range
 	// of that block, which leaves with the ranges of the other tables of its blocks
@@ -217,6 +225,9 @@ func (t PartitionedTable) sql() string {
 		t.Name, t.columns, t.Key)
 	for _, cols := range t.indexes {
 		fmt.Fprintf(&b, "CREATE INDEX ON \"%s\" (%s);\n", t.Name, cols)
+	}
+	for _, col := range t.hashIndexes {
+		fmt.Fprintf(&b, "CREATE INDEX ON \"%s\" USING hash (%s);\n", t.Name, col)
 	}
 	if t.fixed != "" {
 		b.WriteString(t.fixed + "\n")

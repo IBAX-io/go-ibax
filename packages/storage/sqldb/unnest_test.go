@@ -27,14 +27,12 @@ func hashOf(i int) []byte {
 func TestBlockWrites(t *testing.T) {
 	db := retentionDB(t)
 	tx := GetDB(db)
-	require.NoError(t, tx.Exec(`DELETE FROM "transactions_status"`).Error)
-
 	rts := make([]*RollbackTx, blockRows)
 	lts := make([]*LogTransaction, blockRows)
 	for i := range rts {
 		rts[i] = &RollbackTx{BlockID: 5, TxIdx: int32(i), NameTable: "1_keys", TableID: "1", Data: `{"amount":"1"}`}
 		lts[i] = &LogTransaction{Hash: hashOf(i), Block: 5, Timestamp: 1000, Address: -7, EcosystemID: 2, Status: 1,
-			ContractName: "@1Transfer"}
+			ContractName: "@1Transfer", Penalty: int64(i % 2), Result: fmt.Sprintf(`{"type":"panic","error":"%d"}`, i)}
 	}
 	require.NoError(t, CreateBatchesRollbackTx(tx, rts, NewTableRefs()))
 	require.NoError(t, CreateLogTransactionBatches(tx, lts))
@@ -98,21 +96,6 @@ func TestBlockWrites(t *testing.T) {
 		{InputTxHash: []byte{5}, OutputTxHash: []byte{9}, OutputIndex: 0, OutputKeyId: 9, OutputValue: "1",
 			Ecosystem: 1, BlockId: 4, SpentBlock: 6},
 	}), "block 6 spends 1 outputs, 0 of them are unspent")
-
-	// the status /sendTx recorded takes the block's, and its time and type stay
-	require.NoError(t, (&TransactionStatus{Hash: []byte{1}, Time: 10, Type: 3, WalletID: -5}).Create())
-	require.NoError(t, UpsertBlockStatusBatches(tx, []*TransactionStatus{
-		{Hash: []byte{1}, Time: 20, Type: 4, WalletID: -5, BlockID: 7, Error: "it's done", Penalty: 1},
-		nil,
-		{Hash: []byte{2}, Time: 11, Type: 4, WalletID: 6, BlockID: 7, Error: `{"type":"panic"}`},
-	}))
-	var statuses []TransactionStatus
-	require.NoError(t, tx.Order("hash").Find(&statuses).Error)
-	require.Equal(t, []TransactionStatus{
-		{Hash: []byte{1}, Time: 10, Type: 3, WalletID: -5, BlockID: 7, Error: "it's done", Penalty: 1},
-		{Hash: []byte{2}, Time: 11, Type: 4, WalletID: 6, BlockID: 7, Error: `{"type":"panic"}`},
-	}, statuses)
-	require.NoError(t, UpsertBlockStatusBatches(tx, []*TransactionStatus{nil}))
 
 	// the rollback of block 5 moves the output it spent back to the unspent partition and deletes
 	// those it made
