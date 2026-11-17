@@ -43,9 +43,9 @@ type PartitionedTable struct {
 	// the blocks: the highest id is that of the highest key, which the primary key (key, id) finds,
 	// and the table has no index of the id
 	IDByKey bool
-	// ByTime is whether its partitions leave, past the history_blocks window, only once their
-	// transactions are too old to be sent again (MaxTxBack)
-	ByTime bool
+	// Kept is whether its partitions never leave the active table: they are made by ranges for
+	// their indexes to stay small, and are read for good
+	Kept bool
 	// columns and constraints, and the indexes on the partitioned table: btree of the columns, and
 	// hash of a column each
 	columns     string
@@ -57,7 +57,8 @@ type PartitionedTable struct {
 	more  []string
 }
 
-// PartitionedTables are the tables whose rows leave the active tables by ranges of blocks
+// PartitionedTables are the tables whose rows leave the active tables by ranges of blocks, but
+// those Kept
 var PartitionedTables = []PartitionedTable{
 	{
 		Name: "block_chain", Key: "id",
@@ -130,9 +131,10 @@ var PartitionedTables = []PartitionedTable{
 	},
 	{
 		// the one entry of the hash of a transaction a block took: the block of the transaction and
-		// its status (penalty and result, as /txstatus answers them). A block takes a hash once, which
-		// the duplicate check sees to (TxWindow), so the table has no key but the hash index
-		Name: "log_transactions", Key: "block", ByTime: true,
+		// its status (penalty and result, as /txstatus answers them), which every node keeps for
+		// good. A block takes a hash once, which the duplicate check sees to (TxWindow), so the table
+		// has no key but the hash index
+		Name: "log_transactions", Key: "block", Kept: true,
 		columns: `"hash" bytea NOT NULL DEFAULT '',
 		"block" bigint NOT NULL DEFAULT '0',
 		"timestamp" bigint NOT NULL DEFAULT '0',
@@ -207,8 +209,9 @@ func PartitionBounds(table string, k int64) string {
 // inserted and, but for the rollback of a block, neither updated nor deleted, so that a vacuum
 // the inserts trigger would only set the visibility of pages it writes whole again. Nor is a range
 // frozen: a block takes some ten transaction ids, so a range leaves the window thousands of times
-// sooner than its age reaches autovacuum_freeze_max_age; a range an archive node keeps is frozen
-// once by the autovacuum against wraparound, at its throttled pace
+// sooner than its age reaches autovacuum_freeze_max_age; a range kept for good (of a Kept table,
+// and every range on an archive node) is frozen once by the autovacuum against wraparound, at its
+// throttled pace
 const PartitionOptions = `autovacuum_vacuum_insert_threshold = -1, toast.autovacuum_vacuum_insert_threshold = -1`
 
 // CreatePartitionSQL creates the partition of range k of the table, unless it exists
@@ -248,8 +251,7 @@ func HistoryTableSQL() string {
 
 // retentionSQL creates the schemas of the partitions, the partitioned tables but 1_history and
 // the tables of the retention of rows, and of what outlives it: the count of the successful
-// transactions of every ecosystem, the hashes of the StopNetwork transactions and the refs of the
-// tables of rollback_tx
+// transactions of every ecosystem and the refs of the tables of rollback_tx
 func retentionSQL() string {
 	var b strings.Builder
 	for _, s := range []string{PartsSchema, RetiredSchema, ArchiveSchema} {
@@ -268,11 +270,6 @@ func retentionSQL() string {
 		"k" bigint NOT NULL,
 		PRIMARY KEY ("boundary", "table_name", "k")
 	);
-	DROP TABLE IF EXISTS "log_transaction_ranges";
-	CREATE TABLE "log_transaction_ranges" (
-		"k" bigint NOT NULL PRIMARY KEY,
-		"last_time" bigint NOT NULL
-	);
 	DROP TABLE IF EXISTS "partition_id_floors";
 	CREATE TABLE "partition_id_floors" (
 		"table_name" varchar(255) NOT NULL PRIMARY KEY,
@@ -287,11 +284,6 @@ func retentionSQL() string {
 	CREATE TABLE "log_transaction_counts" (
 		"ecosystem_id" bigint NOT NULL PRIMARY KEY,
 		"count" bigint NOT NULL
-	);
-	DROP TABLE IF EXISTS "stop_network_txs";
-	CREATE TABLE "stop_network_txs" (
-		"hash" bytea NOT NULL PRIMARY KEY,
-		"block" bigint NOT NULL
 	);
 	DROP TABLE IF EXISTS "rollback_tables";
 	CREATE TABLE "rollback_tables" (

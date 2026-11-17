@@ -62,7 +62,7 @@ func (t *Transaction) checkTime(checkTime int64) error {
 
 // CheckBatch checks each transaction as Check does, the duplicates in the window of the hashes of
 // the committed transactions (sqldb.TxWindow), and those of StopNetwork, which the window outlives,
-// in stop_network_txs
+// in log_transactions
 func CheckBatch(txs []*Transaction, checkTime int64) []error {
 	errs := make([]error, len(txs))
 	hashes := make([][]byte, 0, len(txs))
@@ -78,7 +78,7 @@ func CheckBatch(txs []*Transaction, checkTime int64) []error {
 	known, err := sqldb.TxWindow.Known(hashes, checkTime)
 	if err == nil && len(stops) > 0 {
 		var stopped map[string]bool
-		if stopped, err = sqldb.KnownStopNetworkTxs(stops); err == nil {
+		if stopped, err = sqldb.KnownLogTransactions(nil, stops); err == nil {
 			maps.Copy(known, stopped)
 		}
 	}

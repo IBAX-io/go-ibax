@@ -16,7 +16,7 @@ import (
 // LogTransaction is a transaction a block took, with its status: Penalty and Result are those
 // /txstatus answers, the result of the contract or the error of a penalty
 type LogTransaction struct {
-	Hash  []byte `gorm:"primary_key;not null"`
+	Hash  []byte `gorm:"not null"`
 	Block int64  `gorm:"not null"`
 	//TxData       []byte `gorm:"not null"`
 	Timestamp    int64  `gorm:"not null"`
@@ -36,10 +36,11 @@ func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
 // knownChunk is the most hashes KnownLogTransactions looks up in one query
 const knownChunk = 512
 
-// KnownLogTransactions are the hashes of those in a block, from log_transactions: what loads
-// TxWindow, and answers a check the window started after. Without a transaction it looks the
-// hashes up in parts at once, on connections of their own: a block of thousands of transactions
-// waits for the longest part only.
+// KnownLogTransactions are the hashes of those in a block, from log_transactions, which keeps
+// every transaction of the chain: what answers a check the window started after, and the
+// duplicates of StopNetwork transactions, which MaxTxBack does not bound. Without a transaction it
+// looks the hashes up in parts at once, on connections of their own: a block of thousands of
+// transactions waits for the longest part only.
 func KnownLogTransactions(dbTx *DbTransaction, hashes [][]byte) (map[string]bool, error) {
 	known := make(map[string]bool)
 	if len(hashes) == 0 {
@@ -56,8 +57,7 @@ func KnownLogTransactions(dbTx *DbTransaction, hashes [][]byte) (map[string]bool
 		wg.Go(func() {
 			part := hashes[k*chunk : min((k+1)*chunk, len(hashes))]
 			arr := column(part, func(h []byte) []byte { return h })
-			errs[k] = GetDB(dbTx).Raw(`SELECT "hash" FROM "log_transactions" WHERE "hash" = ANY(?::bytea[])
-		UNION ALL SELECT "hash" FROM "stop_network_txs" WHERE "hash" = ANY(?::bytea[])`, arr, arr).
+			errs[k] = GetDB(dbTx).Raw(`SELECT "hash" FROM "log_transactions" WHERE "hash" = ANY(?::bytea[])`, arr).
 				Scan(&parts[k]).Error
 		})
 	}
@@ -69,24 +69,6 @@ func KnownLogTransactions(dbTx *DbTransaction, hashes [][]byte) (map[string]bool
 		for _, h := range found {
 			known[string(h)] = true
 		}
-	}
-	return known, nil
-}
-
-// KnownStopNetworkTxs are the hashes of hashes of the StopNetwork transactions in a block, which
-// stay known after their log_transactions leave
-func KnownStopNetworkTxs(hashes [][]byte) (map[string]bool, error) {
-	known := make(map[string]bool)
-	if len(hashes) == 0 {
-		return known, nil
-	}
-	var found [][]byte
-	if err := DBConn.Raw(`SELECT "hash" FROM "stop_network_txs" WHERE "hash" = ANY(?::bytea[])`,
-		column(hashes, func(h []byte) []byte { return h })).Scan(&found).Error; err != nil {
-		return nil, err
-	}
-	for _, h := range found {
-		known[string(h)] = true
 	}
 	return known, nil
 }
@@ -130,7 +112,8 @@ func CreateLogTransactionBatches(dbTx *gorm.DB, lts []*LogTransaction) error {
 		column(lts, func(r *LogTransaction) string { return r.Result })).Error
 }
 
-// DeleteLogTransactionsByHash deletes the transaction of the block, with what outlives it
+// DeleteLogTransactionsByHash deletes the transaction of the block, and takes it off the count of
+// its ecosystem
 func DeleteLogTransactionsByHash(dbTx *DbTransaction, blockID int64, hash []byte) (int64, error) {
 	var deleted []LogTransaction
 	if err := GetDB(dbTx).Raw(`DELETE FROM "log_transactions" WHERE "block" = ? AND "hash" = ? RETURNING "ecosystem_id", "status"`,
@@ -147,14 +130,11 @@ func DeleteLogTransactionsByHash(dbTx *DbTransaction, blockID int64, hash []byte
 			return 0, err
 		}
 	}
-	if err := GetDB(dbTx).Exec(`DELETE FROM "stop_network_txs" WHERE "hash" = ?`, hash).Error; err != nil {
-		return 0, err
-	}
 	return int64(len(deleted)), nil
 }
 
 // CountLogTransactions adds the successful transactions of the block to the counts of their
-// ecosystems, which the retention of log_transactions leaves
+// ecosystems, which GetLogTxCount reads without a count of the rows
 func CountLogTransactions(dbTx *gorm.DB, lts []*LogTransaction) error {
 	counts := make(map[int64]int64)
 	for _, lt := range lts {
@@ -175,26 +155,6 @@ func CountLogTransactions(dbTx *gorm.DB, lts []*LogTransaction) error {
 		}
 	}
 	return nil
-}
-
-// CreateStopNetworkTxs keeps the hashes of the StopNetwork transactions of the block
-func CreateStopNetworkTxs(dbTx *gorm.DB, hashes [][]byte, blockID int64) error {
-	for _, h := range hashes {
-		// a hash in parentheses would be taken for a list of its bytes
-		if err := dbTx.Exec(`INSERT INTO "stop_network_txs" ("hash", "block") SELECT ?::bytea, ?::bigint`, h, blockID).Error; err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// GetLogTransactionsCount count records by transaction hash
-func GetLogTransactionsCount(hash []byte) (int64, error) {
-	var rowsCount int64
-	if err := DBConn.Table("log_transactions").Where("hash = ?", hash).Count(&rowsCount).Error; err != nil {
-		return -1, err
-	}
-	return rowsCount, nil
 }
 
 // GetLogTxCount is the count of the successful transactions of the ecosystem since the chain began

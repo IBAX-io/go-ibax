@@ -56,7 +56,7 @@ func TestCheckTimeSigned(t *testing.T) {
 // A transaction of a block sent again once the window of the duplicates can let it go (the time of
 // its block, plus MaxTxForw, is earlier than MaxTxBack before the block time; sqldb.TxWindow) is
 // refused, whatever time the node receiving it gives it
-func TestCheckTimeReplayPastRetention(t *testing.T) {
+func TestCheckTimeReplayPastWindow(t *testing.T) {
 	const last = int64(1) << 32
 	leaves := last + consts.MaxTxForw + consts.MaxTxBack + 1
 	// the latest a block of the range takes: signed MaxTxForw after the last block

@@ -21,9 +21,9 @@ type TxStatus struct {
 }
 
 // Status is the status of a transaction: pending in the pool, else the one of its block, which
-// log_transactions keeps for the history_blocks window (and an archive node for good), else the
-// refusal of the pool. A refusal comes after the block: a transaction sent again after its block
-// is refused as a duplicate, and keeps the status of its block.
+// log_transactions keeps for good, else the refusal of the pool. A refusal comes after the block:
+// a transaction sent again after its block is refused as a duplicate, and keeps the status of its
+// block.
 func Status(hash []byte) (*TxStatus, bool, error) {
 	pending, bad, inPool := TxPool.Status(hash)
 	if pending {

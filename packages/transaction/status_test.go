@@ -16,9 +16,9 @@ import (
 )
 
 // TestStatus: a transaction is pending while the pool holds it; once a block takes it, its status
-// is the block's, from log_transactions, whatever the pool refuses after; past MaxTxBack, when the
-// window of the duplicates has let it go, its status stays until its range leaves the
-// history_blocks window. A transaction the pool refused and no block took has the refusal.
+// is the block's, from log_transactions, whatever the pool refuses after, and stays for good: past
+// MaxTxBack, when the window of the duplicates has let it go, and out of the history_blocks
+// window. A transaction the pool refused and no block took has the refusal.
 func TestStatus(t *testing.T) {
 	db := windowDB(t)
 	saved := TxPool
@@ -69,23 +69,17 @@ func TestStatus(t *testing.T) {
 	_, found = status("none")
 	require.False(t, found)
 
-	// past MaxTxBack the window lets the transactions go, and the retention at the boundary 2pb
-	// keeps their range in the history_blocks window
-	// (signed at most MaxTxForw after their block, and kept the margin of the window longer)
+	// past MaxTxBack the window lets the transactions go, and their range leaves the history_blocks
+	// window (signed at most MaxTxForw after their block, and kept the margin of the window longer)
 	late := T + consts.MaxTxForw + consts.MaxTxBack + 61
 	require.NoError(t, sqldb.TxWindow.Add(late, nil))
 	known, err := sqldb.TxWindow.Known([][]byte{[]byte("ok")}, late)
 	require.NoError(t, err)
 	require.False(t, known["ok"], "out of the window")
 	dbTx := sqldb.NewDbTransaction(db)
-	require.NoError(t, sqldb.Retain(dbTx, pb, T, 2*pb))
-	logBlock(t, db, 2*pb-1, late)
-	require.NoError(t, sqldb.Retain(dbTx, 2*pb, late, 2*pb))
-	check("past MaxTxBack")
-
-	// out of the history_blocks window the range leaves
-	require.NoError(t, sqldb.RestoreRetired(dbTx, 2*pb))
-	require.NoError(t, sqldb.Retain(dbTx, 2*pb, late, pb))
-	_, found = status("penalty")
-	require.False(t, found, "out of history_blocks")
+	require.NoError(t, sqldb.Retain(dbTx, pb, pb))
+	logBlock(t, db, 3*pb-1, late)
+	require.NoError(t, sqldb.Retain(dbTx, 2*pb, pb))
+	require.NoError(t, sqldb.Retain(dbTx, 3*pb, pb))
+	check("out of history_blocks")
 }

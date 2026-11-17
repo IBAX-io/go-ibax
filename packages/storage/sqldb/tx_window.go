@@ -27,7 +27,7 @@ type WindowTx struct {
 // before the time it is checked at, and a duplicate has the signed time of the transaction it
 // repeats, so a committed transaction signed earlier than MaxTxBack before the latest block, less
 // the margin, is let go. The window rolls forward with the blocks the node commits and is loaded
-// from log_transactions, which keeps them past the history_blocks window, at its first use.
+// from log_transactions, which keeps every transaction of the chain, at its first use.
 type txWindow struct {
 	mu     sync.RWMutex
 	loaded bool

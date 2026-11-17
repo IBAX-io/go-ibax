@@ -37,8 +37,8 @@ var hotQueries = []struct {
 	{`SELECT * FROM "log_transactions" WHERE hash = '\x01' ORDER BY "log_transactions"."hash" LIMIT 1`,
 		[]string{`log_transactions_p\d+_hash_idx`}},
 	{`DELETE FROM "log_transactions" WHERE "block" = 1 AND "hash" = '\x01'`, []string{`log_transactions_p0_hash_idx`}},
-	{`SELECT "hash" FROM "log_transactions" WHERE "hash" IN ('\x01') UNION ALL SELECT "hash" FROM "stop_network_txs" WHERE "hash" IN ('\x01')`,
-		[]string{`log_transactions_p\d+_hash_idx`, `stop_network_txs_pkey`}},
+	{`SELECT "hash" FROM "log_transactions" WHERE "hash" = ANY('{"\\x01"}'::bytea[])`,
+		[]string{`log_transactions_p\d+_hash_idx`}},
 	{`SELECT "count" FROM "log_transaction_counts" WHERE "ecosystem_id" = 1`, []string{`log_transaction_counts_pkey`}},
 	{`SELECT si.output_tx_hash FROM spent_info si WHERE si.output_key_id IN (1, 2) AND si.spent_block = 0
 		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index`, []string{`spent_info_unspent_output_key_id_ecosystem_idx`}},
@@ -117,7 +117,6 @@ var hotRows = []string{
 	`INSERT INTO "confirmations" (block_id) SELECT g FROM generate_series(1, 5001) g`,
 	`INSERT INTO "log_transactions" (hash, block, ecosystem_id) SELECT sha256(int8send(g)), 2 + g / 20, 1
 		FROM generate_series(0, 99999) g`,
-	`INSERT INTO "stop_network_txs" (hash, block) SELECT sha256(int8send(-g)), g FROM generate_series(1, 10) g`,
 	`INSERT INTO "1_history" (id, block_id, txhash) SELECT g, 2 + g / 20, sha256(int8send(g))
 		FROM generate_series(0, 99999) g`,
 	`INSERT INTO "rollback_tables" (ref, name, block_id) SELECT g, g || '_keys', 2 FROM generate_series(1, 50) g`,
@@ -135,7 +134,7 @@ var hotRows = []string{
 // hotTables are the tables hotRows fills
 var hotTables = []string{"1_ecosystems", "1_keys", "1_members", "1_parameters", "1_applications", "1_app_params",
 	"1_notifications", "1_roles_participants", "log_transaction_counts", "block_chain", "confirmations",
-	"log_transactions", "stop_network_txs", "1_history", "rollback_tx", "rollback_tables", "spent_info"}
+	"log_transactions", "1_history", "rollback_tx", "rollback_tables", "spent_info"}
 
 var planIndex = regexp.MustCompile(`Index(?: Only)? Scan(?: Backward)? using "?([^" ]+)"?|Bitmap Index Scan on "?([^" ]+)"?`)
 

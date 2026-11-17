@@ -374,7 +374,7 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction, written afterWritten) er
 }
 
 // writeAfters writes the records of the transactions of the block the writer did not write, the
-// counts of the logs, the StopNetwork transactions and the outputs, and at a retention boundary
+// counts of the logs and the outputs, and at a retention boundary
 // drops what is older than history blocks; it changes nothing of the block
 func (b *Block) writeAfters(dbTx *sqldb.DbTransaction, written afterWritten, outputs []sqldb.SpentInfo, history int64) error {
 	after := b.AfterTxs
@@ -394,29 +394,10 @@ func (b *Block) writeAfters(dbTx *sqldb.DbTransaction, written afterWritten, out
 		if err := sqldb.CountLogTransactions(tx, lts); err != nil {
 			return errors.Wrap(err, "count log_transactions")
 		}
-		if err := sqldb.CreateStopNetworkTxs(tx, b.stopNetworkHashes(lts), b.Header.BlockId); err != nil {
-			return errors.Wrap(err, "insert stop_network_txs")
-		}
 		return sqldb.WriteBlockOutputs(tx, b.Header.BlockId, outputs)
 	})
 	if err != nil || !sqldb.IsRetentionBoundary(b.Header.BlockId) {
 		return err
 	}
-	return errors.Wrap(sqldb.Retain(dbTx, b.Header.BlockId, b.Header.Timestamp, history), "retention")
-}
-
-// stopNetworkHashes are the hashes of the StopNetwork transactions of the block: they are not
-// bound by MaxTxBack, so that they stay known after their log_transactions leave
-func (b *Block) stopNetworkHashes(lts []*sqldb.LogTransaction) [][]byte {
-	logged := make(map[string]bool, len(lts))
-	for _, lt := range lts {
-		logged[string(lt.Hash)] = true
-	}
-	var hashes [][]byte
-	for _, t := range b.Transactions {
-		if t.Type() == types.StopNetworkTxType && logged[string(t.Hash())] {
-			hashes = append(hashes, t.Hash())
-		}
-	}
-	return hashes
+	return errors.Wrap(sqldb.Retain(dbTx, b.Header.BlockId, history), "retention")
 }

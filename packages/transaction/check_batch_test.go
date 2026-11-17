@@ -39,7 +39,7 @@ func windowDB(t *testing.T) *gorm.DB {
 		sqldb.ResetTxWindow()
 		tx.Rollback()
 	})
-	for _, table := range []string{"block_chain", "log_transactions", "stop_network_txs"} {
+	for _, table := range []string{"block_chain", "log_transactions"} {
 		require.NoError(t, tx.Exec(`DELETE FROM "`+table+`"`).Error)
 	}
 	return tx
@@ -69,7 +69,8 @@ func TestCheckBatchWindow(t *testing.T) {
 	const T = int64(1) << 32
 	ms := func(s int64) int64 { return s * 1000 }
 	logBlock(t, db, 30, T, "dup")
-	require.NoError(t, sqldb.CreateStopNetworkTxs(db, [][]byte{[]byte("stop")}, 1))
+	// a StopNetwork transaction of a block long before the window, which log_transactions keeps
+	logBlock(t, db, 1, T-100000, "stop")
 	require.NoError(t, sqldb.LoadTxWindow())
 
 	errs := checkErrs(t, T+1,
