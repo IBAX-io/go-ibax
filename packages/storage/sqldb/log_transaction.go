@@ -33,7 +33,8 @@ func (lt *LogTransaction) GetByHash(hash []byte) (bool, error) {
 // knownChunk is the most hashes KnownLogTransactions looks up in one query
 const knownChunk = 512
 
-// KnownLogTransactions are the hashes of those in a block. Without a transaction it looks the
+// KnownLogTransactions are the hashes of those in a block, from log_transactions: what loads
+// TxWindow, and answers a check the window started after. Without a transaction it looks the
 // hashes up in parts at once, on connections of their own: a block of thousands of transactions
 // waits for the longest part only.
 func KnownLogTransactions(dbTx *DbTransaction, hashes [][]byte) (map[string]bool, error) {
@@ -65,6 +66,24 @@ func KnownLogTransactions(dbTx *DbTransaction, hashes [][]byte) (map[string]bool
 		for _, h := range found {
 			known[string(h)] = true
 		}
+	}
+	return known, nil
+}
+
+// KnownStopNetworkTxs are the hashes of hashes of the StopNetwork transactions in a block, which
+// stay known after their log_transactions leave
+func KnownStopNetworkTxs(hashes [][]byte) (map[string]bool, error) {
+	known := make(map[string]bool)
+	if len(hashes) == 0 {
+		return known, nil
+	}
+	var found [][]byte
+	if err := DBConn.Raw(`SELECT "hash" FROM "stop_network_txs" WHERE "hash" = ANY(?::bytea[])`,
+		column(hashes, func(h []byte) []byte { return h })).Scan(&found).Error; err != nil {
+		return nil, err
+	}
+	for _, h := range found {
+		known[string(h)] = true
 	}
 	return known, nil
 }

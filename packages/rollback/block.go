@@ -35,6 +35,10 @@ func RollbackBlock(data []byte) error {
 	if b.ID != bl.Header.BlockId {
 		return ErrLastBlock
 	}
+	hashes := make([][]byte, len(bl.Transactions))
+	for i, t := range bl.Transactions {
+		hashes[i] = t.Hash()
+	}
 
 	dbTx, err := sqldb.StartTransaction()
 	if err != nil {
@@ -89,6 +93,7 @@ func RollbackBlock(data []byte) error {
 	if err = dbTx.Commit(); err != nil {
 		return err
 	}
+	sqldb.TxWindow.Remove(hashes)
 	transaction.TxPool.Restore(bl.Transactions)
 	return nil
 }

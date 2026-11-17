@@ -12,6 +12,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/network"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -169,7 +170,7 @@ func getUnknownTransactions(buf *bytes.Buffer) ([]byte, error) {
 		return nil, err
 	}
 
-	known, err := sqldb.KnownLogTransactions(nil, hashes)
+	known, err := sqldb.TxWindow.Known(hashes, faults.Now().Unix())
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("Getting log transactions")
 		return nil, utils.ErrInfo(err)

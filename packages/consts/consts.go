@@ -46,8 +46,10 @@ const MinConfirmedNodes = 0
 // MaxTxForw How fast could the time of transaction pass
 const MaxTxForw = 600
 
-// MaxTxBack transaction may wander in the net for a day and then get into a block
-const MaxTxBack = 86400
+// MaxTxBack is how long before the time of a block a transaction it takes may be signed: as long
+// as MaxTxForw, so that the hashes a transaction can be a duplicate of fit in memory
+// (sqldb.TxWindow)
+const MaxTxBack = 600
 
 // RoundFix is rounding constant
 const RoundFix = 0.00000000001

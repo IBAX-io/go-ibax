@@ -313,6 +313,7 @@ func commitHeld(cert *bft.Certificate) (*Block, bool, error) {
 		return nil, true, err
 	}
 	metrics.BlockStage.WithLabelValues(metrics.KindHeld, metrics.StageCommit).Observe(metrics.Since(start))
+	b.addToWindow()
 	transaction.TxPool.Remove(b.committedHashes())
 	start = time.Now()
 	for _, q := range b.Notifications {
@@ -331,6 +332,27 @@ func inChain(b *Block) (bool, error) {
 		return false, err
 	}
 	return found && bytes.Equal(bc.Hash, b.Header.BlockHash), nil
+}
+
+// addToWindow adds the transactions the block logged to the window of the duplicates, once the
+// block is committed
+func (b *Block) addToWindow() {
+	var txs []sqldb.WindowTx
+	if b.AfterTxs != nil {
+		logged := make(map[string]bool, len(b.AfterTxs.Txs))
+		for _, after := range b.AfterTxs.Txs {
+			logged[string(after.Lts.Hash)] = true
+		}
+		txs = make([]sqldb.WindowTx, 0, len(logged))
+		for _, t := range b.Transactions {
+			if logged[string(t.Hash())] {
+				txs = append(txs, sqldb.WindowTx{Hash: t.Hash(), Signed: t.SignedTime()})
+			}
+		}
+	}
+	if err := sqldb.TxWindow.Add(b.Header.Timestamp, txs); err != nil {
+		b.GetLogger().WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("loading the window of the duplicates")
+	}
 }
 
 // committedHashes is the hashes of the transactions of the block: of a generated block, those it took
