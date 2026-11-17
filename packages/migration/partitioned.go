@@ -10,8 +10,9 @@ import (
 	"strings"
 )
 
-// PartitionBlocks is the number of blocks a partition of a table partitioned by block covers
-const PartitionBlocks = 10000
+// PartitionBlocks is the number of blocks a partition of a table partitioned by block covers: at
+// 10,000 transactions a second and a block a second, 20 million transactions a partition
+const PartitionBlocks = 2000
 
 const (
 	// PartsSchema holds the partitions of the active tables, apart from the tables the contracts
@@ -38,6 +39,10 @@ type PartitionedTable struct {
 	Key  string
 	// ID is whether the table has an id column that GetNextID gives
 	ID bool
+	// IDByKey is whether the ids of the table grow with its key, as they are given in the order of
+	// the blocks: the highest id is that of the highest key, which the primary key (key, id) finds,
+	// and the table has no index of the id
+	IDByKey bool
 	// ByTime is whether its partitions leave by the time of their transactions (MaxTxBack)
 	// instead of by the history_blocks window
 	ByTime bool
@@ -87,16 +92,18 @@ var PartitionedTables = []PartitionedTable{
 		PRIMARY KEY ("height")`,
 	},
 	{
-		Name: "rollback_tx", Key: "block_id", ID: true,
+		// the rollback of a block reads and deletes its records by the primary key, the history of a
+		// row reads them by the row; a record has the index of its transaction in the block and the
+		// ref rollback_tables gives its table
+		Name: "rollback_tx", Key: "block_id", ID: true, IDByKey: true,
 		columns: `"id" bigint NOT NULL DEFAULT '0',
 		"block_id" bigint NOT NULL DEFAULT '0',
-		"tx_hash" bytea NOT NULL DEFAULT '',
-		"table_name" varchar(255) NOT NULL DEFAULT '',
+		"tx_idx" integer NOT NULL DEFAULT '0',
+		"table_ref" integer NOT NULL DEFAULT '0',
 		"table_id" varchar(255) NOT NULL DEFAULT '',
-		"data_hash" bytea NOT NULL DEFAULT '',
 		"data" text NOT NULL DEFAULT '',
 		PRIMARY KEY ("block_id", "id")`,
-		indexes: []string{`"id"`, `"tx_hash"`, `"table_name", "table_id", "block_id"`},
+		indexes: []string{`"table_ref", "table_id", "block_id"`},
 	},
 	{
 		Name: "1_history", Key: "block_id", ID: true,
@@ -188,10 +195,18 @@ func PartitionBounds(table string, k int64) string {
 	return fmt.Sprintf("FROM (%s) TO (%d)", from, (k+1)*PartitionBlocks)
 }
 
+// PartitionOptions are the storage parameters of a range partition: the rows of a range are
+// inserted and, but for the rollback of a block, neither updated nor deleted, so that a vacuum
+// the inserts trigger would only set the visibility of pages it writes whole again. Nor is a range
+// frozen: a block takes some ten transaction ids, so a range leaves the window thousands of times
+// sooner than its age reaches autovacuum_freeze_max_age; a range an archive node keeps is frozen
+// once by the autovacuum against wraparound, at its throttled pace
+const PartitionOptions = `autovacuum_vacuum_insert_threshold = -1, toast.autovacuum_vacuum_insert_threshold = -1`
+
 // CreatePartitionSQL creates the partition of range k of the table, unless it exists
 func CreatePartitionSQL(table string, k int64) string {
-	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" PARTITION OF "%s" FOR VALUES %s;`,
-		PartsSchema, PartitionName(table, k), table, PartitionBounds(table, k))
+	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" PARTITION OF "%s" FOR VALUES %s WITH (%s);`,
+		PartsSchema, PartitionName(table, k), table, PartitionBounds(table, k), PartitionOptions)
 }
 
 // sql drops and creates the table, its indexes, the partition that never leaves and the partitions
@@ -222,7 +237,8 @@ func HistoryTableSQL() string {
 
 // retentionSQL creates the schemas of the partitions, the partitioned tables but 1_history and
 // the tables of the retention of rows, and of what outlives it: the count of the successful
-// transactions of every ecosystem and the hashes of the StopNetwork transactions
+// transactions of every ecosystem, the hashes of the StopNetwork transactions and the refs of the
+// tables of rollback_tx
 func retentionSQL() string {
 	var b strings.Builder
 	for _, s := range []string{PartsSchema, RetiredSchema, ArchiveSchema} {
@@ -265,6 +281,12 @@ func retentionSQL() string {
 	CREATE TABLE "stop_network_txs" (
 		"hash" bytea NOT NULL PRIMARY KEY,
 		"block" bigint NOT NULL
+	);
+	DROP TABLE IF EXISTS "rollback_tables";
+	CREATE TABLE "rollback_tables" (
+		"ref" integer NOT NULL PRIMARY KEY,
+		"name" varchar(255) NOT NULL UNIQUE,
+		"block_id" bigint NOT NULL
 	);
 `)
 	return b.String()

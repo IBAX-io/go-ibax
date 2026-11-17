@@ -16,26 +16,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// setRows makes the sets from the heights 2, of block 1, 10000, of block 9999 in range 0, and
-// 20000, of block 19999 in range 1, and the certificates of the blocks of chainRows
+// setRows makes the sets from the heights 2, of block 1, pb, of block pb-1 in range 0, and 2pb,
+// of block 2pb-1 in range 1, and the certificates of the blocks of chainRows
 func setRows(t *testing.T, db *DbTransaction) {
-	for _, h := range []int64{2, 10000, 20000} {
+	for _, h := range []int64{2, pb, 2 * pb} {
 		require.NoError(t, (&BftValidatorSet{FromHeight: h, Data: []byte(fmt.Sprintf("set %d", h))}).Create(db))
 	}
-	for _, h := range []int64{9999, 10000, 19999} {
+	for _, h := range []int64{pb - 1, pb, 2*pb - 1} {
 		require.NoError(t, (&BftCertificate{Height: h, Hash: []byte{byte(h)}, Data: []byte(fmt.Sprintf("cert %d", h))}).Create(db))
 	}
 }
 
-// retainTo20000 makes the rows of chainRows and setRows and takes range 0 out at the boundary 20000
-func retainTo20000(t *testing.T, db *DbTransaction) {
+// retainTo2pb makes the rows of chainRows and setRows and takes range 0 out at the boundary 2pb
+func retainTo2pb(t *testing.T, db *DbTransaction) {
 	conf.Config.Storage.Archive = false
 	T := int64(1) << 32
 	chainRows(t, db, T)
 	setRows(t, db)
-	require.NoError(t, Retain(db, 10000, T, testWindow))
-	addBlocks(t, db, T, 20000, 29999)
-	require.NoError(t, Retain(db, 20000, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
+	require.NoError(t, Retain(db, pb, T, testWindow))
+	addBlocks(t, db, T, 2*pb, 3*pb-1)
+	require.NoError(t, Retain(db, 2*pb, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
 }
 
 func heightsOf(ps []SetProof) []int64 {
@@ -54,46 +54,46 @@ func TestSetProofs(t *testing.T) {
 	setRows(t, db)
 	ps, err := SetProofs(0, 16)
 	require.NoError(t, err)
-	require.Equal(t, []int64{10000, 20000}, heightsOf(ps))
-	require.Equal(t, "cert 9999", string(ps[0].Cert))
-	require.Equal(t, "set 10000", string(ps[0].Set))
+	require.Equal(t, []int64{pb, 2 * pb}, heightsOf(ps))
+	require.Equal(t, fmt.Sprintf("cert %d", pb-1), string(ps[0].Cert))
+	require.Equal(t, fmt.Sprintf("set %d", pb), string(ps[0].Set))
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "bft_set_proofs"`))
 }
 
 // TestSetProofsRetired: the proof of a set whose block the boundary retired is of bft_set_proofs
 func TestSetProofsRetired(t *testing.T) {
 	db := retentionDB(t)
-	retainTo20000(t, db)
-	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "block_chain" WHERE "id" = 9999`))
-	require.EqualValues(t, 1, countRows(t, db, `SELECT count(*) FROM "bft_set_proofs" WHERE "height" = 9999`))
+	retainTo2pb(t, db)
+	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "block_chain" WHERE "id" = ?`, pb-1))
+	require.EqualValues(t, 1, countRows(t, db, `SELECT count(*) FROM "bft_set_proofs" WHERE "height" = ?`, pb-1))
 	ps, err := SetProofs(0, 16)
 	require.NoError(t, err)
-	require.Equal(t, []int64{10000, 20000}, heightsOf(ps))
-	require.Equal(t, "cert 9999", string(ps[0].Cert))
+	require.Equal(t, []int64{pb, 2 * pb}, heightsOf(ps))
+	require.Equal(t, fmt.Sprintf("cert %d", pb-1), string(ps[0].Cert))
 	require.Equal(t, []byte{0}, ps[0].Block)
 	ps, err = SetProofs(0, 1)
 	require.NoError(t, err)
-	require.Equal(t, []int64{10000}, heightsOf(ps))
-	ps, err = SetProofs(10000, 16)
+	require.Equal(t, []int64{pb}, heightsOf(ps))
+	ps, err = SetProofs(pb, 16)
 	require.NoError(t, err)
-	require.Equal(t, []int64{20000}, heightsOf(ps))
-	ps, err = SetProofs(20000, 16)
+	require.Equal(t, []int64{2 * pb}, heightsOf(ps))
+	ps, err = SetProofs(2*pb, 16)
 	require.NoError(t, err)
 	require.Empty(t, ps)
 
 	// the rollback of the boundary puts the block back, and the proof is one still
-	require.NoError(t, RestoreRetired(db, 20000))
+	require.NoError(t, RestoreRetired(db, 2*pb))
 	ps, err = SetProofs(0, 16)
 	require.NoError(t, err)
-	require.Equal(t, []int64{10000, 20000}, heightsOf(ps))
+	require.Equal(t, []int64{pb, 2 * pb}, heightsOf(ps))
 }
 
-// TestPrepareJoined: after the import of a state of the boundary 20000, the node tables have the
+// TestPrepareJoined: after the import of a state of the boundary 2pb, the node tables have the
 // ranges of rollback_tx, the partitions the boundary retired are tables of the retired schema, and
 // the window starts at range 1
 func TestPrepareJoined(t *testing.T) {
 	db := retentionDB(t)
-	retainTo20000(t, db)
+	retainTo2pb(t, db)
 	tx := GetDB(db)
 	retired, err := retiredBefore(db, "<=", 1<<62)
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestPrepareJoined(t *testing.T) {
 
 	first, err := PrepareJoined(db)
 	require.NoError(t, err)
-	require.EqualValues(t, 10000, first)
+	require.EqualValues(t, pb, first)
 	want, err := attachedRanges(db, "rollback_tx")
 	require.NoError(t, err)
 	require.Equal(t, int64(1), want[0])
@@ -121,7 +121,7 @@ func TestPrepareJoined(t *testing.T) {
 	require.EqualValues(t, len(retired), countRows(t, db, `SELECT count(*) FROM pg_tables WHERE schemaname = ?`,
 		migration.RetiredSchema))
 	// the next boundary drops the stubs as it drops what it retired
-	require.NoError(t, Retain(db, 30000, int64(1)<<32+consts.MaxTxForw+consts.MaxTxBack+2, testWindow))
+	require.NoError(t, Retain(db, 3*pb, int64(1)<<32+consts.MaxTxForw+consts.MaxTxBack+2, testWindow))
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM pg_tables WHERE schemaname = ? AND tablename = ?`,
 		migration.RetiredSchema, "rollback_tx_p0"))
 }
@@ -133,12 +133,12 @@ func TestJoinedRollback(t *testing.T) {
 	require.NoError(t, err)
 	require.EqualValues(t, 0, h)
 	require.NoError(t, CheckRollbackTo(db, 1))
-	require.NoError(t, (&SnapshotJoin{Height: 20000, Hash: []byte{1}}).Create(db))
+	require.NoError(t, (&SnapshotJoin{Height: 2 * pb, Hash: []byte{1}}).Create(db))
 	h, err = JoinedHeight(db)
 	require.NoError(t, err)
-	require.EqualValues(t, 20000, h)
-	require.NoError(t, CheckRollbackTo(db, 20000))
-	require.True(t, errors.Is(CheckRollbackTo(db, 19999), ErrBeyondRetention))
+	require.EqualValues(t, 2*pb, h)
+	require.NoError(t, CheckRollbackTo(db, 2*pb))
+	require.True(t, errors.Is(CheckRollbackTo(db, 2*pb-1), ErrBeyondRetention))
 }
 
 // TestInsertJoined: the blocks of the window go in with their certificates
@@ -147,7 +147,7 @@ func TestInsertJoined(t *testing.T) {
 	require.NoError(t, InsertJoined(db, nil, nil))
 	var blocks []BlockChain
 	var certs []BftCertificate
-	for h := int64(10000); h < 10100; h++ {
+	for h := int64(pb); h < pb+100; h++ {
 		blocks = append(blocks, BlockChain{ID: h, Hash: []byte{byte(h)}, RollbacksHash: []byte{0}, Data: []byte{0},
 			CandidateNodes: []byte{0}})
 		certs = append(certs, BftCertificate{Height: h, Hash: []byte{byte(h)}, Data: []byte{1}})

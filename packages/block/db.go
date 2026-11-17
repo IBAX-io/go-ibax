@@ -22,6 +22,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/protocols"
+	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -52,9 +53,9 @@ func ProcessBlockByBinData(data []byte, checkSize bool) (*Block, error) {
 	return block, nil
 }
 
-// rollbackHashes are the hashes of the rollback records rts, taken in parallel before the records
-// have their ids, which rollbacksHash takes
-func rollbackHashes(rts []*sqldb.RollbackTx) ([]string, error) {
+// rollbackHashes are the hashes of the rollback records rts, taken in parallel, which
+// rollbacksHash takes
+func rollbackHashes(rts []*types.RollbackTx) ([]string, error) {
 	hashes := make([]string, len(rts))
 	workers := min(runtime.GOMAXPROCS(0), len(rts)/256+1)
 	errs := make([]error, workers)
@@ -301,21 +302,31 @@ type afterRows struct {
 	statuses []*sqldb.TransactionStatus
 }
 
-// newAfterRows are the records of the transactions txs and of the rollback records rts
-func newAfterRows(txs []*types.AfterTx, rts []*types.RollbackTx) *afterRows {
+// newAfterRows are the records of the transactions txs, from the transaction first of the block
+// on, and of their rollback records rts; the rollback records of the settlement of the fees, which
+// follows the transactions, are of the index after the last
+func newAfterRows(txs []*types.AfterTx, rts []*types.RollbackTx, first int) (*afterRows, error) {
 	rows := &afterRows{
 		rts:      make([]*sqldb.RollbackTx, len(rts)),
 		lts:      make([]*sqldb.LogTransaction, len(txs)),
 		statuses: make([]*sqldb.TransactionStatus, len(txs)),
 	}
+	idx := make(map[string]int32, len(txs)+1)
+	for i, tx := range txs {
+		idx[string(tx.Lts.Hash)] = int32(first + i)
+	}
+	idx[string(smart.SettlementHash)] = int32(first + len(txs))
 	for i, tx := range rts {
+		txIdx, ok := idx[string(tx.TxHash)]
+		if !ok {
+			return nil, fmt.Errorf("a rollback record of the transaction %x, which is not of the part", tx.TxHash)
+		}
 		rows.rts[i] = &sqldb.RollbackTx{
 			BlockID:   tx.BlockId,
+			TxIdx:     txIdx,
 			NameTable: tx.NameTable,
 			Data:      tx.Data,
 			TableID:   tx.TableId,
-			TxHash:    tx.TxHash,
-			DataHash:  tx.DataHash,
 		}
 	}
 	for i, tx := range txs {
@@ -343,15 +354,15 @@ func newAfterRows(txs []*types.AfterTx, rts []*types.RollbackTx) *afterRows {
 			}
 		}
 	}
-	return rows
+	return rows, nil
 }
 
 // writeTxRows writes the logs, the rollback records and the statuses of rows, each in a statement
-func writeTxRows(tx *gorm.DB, rows *afterRows) error {
+func writeTxRows(tx *gorm.DB, rows *afterRows, refs *sqldb.TableRefs) error {
 	if err := sqldb.CreateLogTransactionBatches(tx, rows.lts); err != nil {
 		return errors.Wrap(err, "batches insert log_transactions")
 	}
-	if err := sqldb.CreateBatchesRollbackTx(tx, rows.rts); err != nil {
+	if err := sqldb.CreateBatchesRollbackTx(tx, rows.rts, refs); err != nil {
 		return errors.Wrap(err, "batches insert rollback tx")
 	}
 	if err := sqldb.UpsertBlockStatusBatches(tx, rows.statuses); err != nil {
@@ -365,8 +376,7 @@ func writeTxRows(tx *gorm.DB, rows *afterRows) error {
 func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction, written afterWritten) error {
 	outputs := sqldb.GetAllOutputs(b.OutputsMap)
 	// the writer took the hashes of the rollback records it wrote, or none of them
-	rts := newAfterRows(nil, b.AfterTxs.Rts[len(written.hashes):]).rts
-	hashes, err := rollbackHashes(rts)
+	hashes, err := rollbackHashes(b.AfterTxs.Rts[len(written.hashes):])
 	if err != nil {
 		return errors.Wrap(err, "rollbacks hash")
 	}
@@ -381,10 +391,17 @@ func (b *Block) AfterPlayTxs(dbTx *sqldb.DbTransaction, written afterWritten) er
 // drops what is older than history blocks; it changes nothing of the block
 func (b *Block) writeAfters(dbTx *sqldb.DbTransaction, written afterWritten, outputs []sqldb.SpentInfo, history int64) error {
 	after := b.AfterTxs
-	rest := newAfterRows(after.Txs[written.txs:], after.Rts[written.rts:])
+	rest, err := newAfterRows(after.Txs[written.txs:], after.Rts[written.rts:], written.txs)
+	if err != nil {
+		return err
+	}
+	refs := written.refs
+	if refs == nil {
+		refs = sqldb.NewTableRefs()
+	}
 	lts := append(slices.Clip(written.lts), rest.lts...)
-	err := sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
-		if err := writeTxRows(tx, rest); err != nil {
+	err = sqldb.GetDB(dbTx).Transaction(func(tx *gorm.DB) error {
+		if err := writeTxRows(tx, rest, refs); err != nil {
 			return err
 		}
 		if err := sqldb.CountLogTransactions(tx, lts); err != nil {
