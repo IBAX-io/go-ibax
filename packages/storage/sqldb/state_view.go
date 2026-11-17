@@ -102,6 +102,9 @@ type viewMark struct {
 	name string
 	at   int
 	pg   bool
+	// query is the statement that made the savepoint, which makes it in PostgreSQL once the view
+	// sends a statement there
+	query string
 }
 
 // NewOrderedView is a view of the transaction i of the block, which runs the contract in order,
@@ -441,14 +444,37 @@ func (v *TxView) cleanRun(ctx context.Context, c *stateConn, query string, args 
 	return &cleanRows{r: r}, nil, nil
 }
 
-// pgRun runs a statement in PostgreSQL on the connection
+// pgRun runs a statement in PostgreSQL on the connection. A view run in order first makes there
+// the savepoints it has in memory only: a statement that fails in PostgreSQL aborts the
+// transaction of the block, which only a rollback to a savepoint of PostgreSQL clears
 func (v *TxView) pgRun(ctx context.Context, c *stateConn, query string, args []driver.NamedValue, isQuery bool) (driver.Rows, driver.Result, error) {
+	if v.ordered {
+		if err := v.marksToPG(ctx, c); err != nil {
+			return nil, nil, err
+		}
+	}
 	if isQuery {
 		rows, err := c.pg.QueryContext(ctx, query, args)
 		return rows, nil, err
 	}
 	res, err := c.pg.ExecContext(ctx, query, args)
 	return nil, res, err
+}
+
+// marksToPG makes in PostgreSQL the savepoints of the view that are in memory only, the oldest
+// first. They stand where the view made them: the view has sent no write to PostgreSQL since, as a
+// write there with savepoints in memory runs the view again
+func (v *TxView) marksToPG(ctx context.Context, c *stateConn) error {
+	for i := range v.marks {
+		if v.marks[i].pg {
+			continue
+		}
+		if _, err := c.pg.ExecContext(ctx, v.marks[i].query, nil); err != nil {
+			return err
+		}
+		v.marks[i].pg = true
+	}
+	return nil
 }
 
 // anyPG tells a table is in PostgreSQL: a view run in order then has its savepoints there too
@@ -497,7 +523,7 @@ func (v *TxView) savepoint(ctx context.Context, c *stateConn, p *stmt, query str
 	}
 	switch p.kind {
 	case stSavepoint:
-		v.marks = append(v.marks, viewMark{name: p.name, at: len(v.undo), pg: pg})
+		v.marks = append(v.marks, viewMark{name: p.name, at: len(v.undo), pg: pg, query: query})
 	case stRollbackTo:
 		v.rollbackUndo(v.marks[last].at)
 		v.marks = v.marks[:last+1]
