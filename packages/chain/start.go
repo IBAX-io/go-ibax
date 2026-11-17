@@ -116,6 +116,10 @@ func Start() {
 			log.WithError(err).Error("on running update migrations")
 			exitErr(1)
 		}
+		if err := sqldb.LoadTxWindow(); err != nil {
+			log.WithError(err).Error("loading the window of the duplicates")
+			exitErr(1)
+		}
 		candidateNodes, err := syspar.GetCandidateNodes()
 		if err == nil && len(candidateNodes) > 0 {
 			syspar.SetRunModel(consts.CandidateNodeMode)

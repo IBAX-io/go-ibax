@@ -96,6 +96,7 @@ func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 	states.afterCommit(b.Header.BlockId)
 	sqldb.AnalyzeRange(b.Header.BlockId)
 	b.stage(metrics.StageCommit, start)
+	b.addToWindow()
 	hashes := make([][]byte, len(b.Transactions))
 	for i, t := range b.Transactions {
 		hashes[i] = t.Hash()

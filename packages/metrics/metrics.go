@@ -44,8 +44,8 @@ const (
 	StageVerify   = "verify"   // verifying in parallel the signatures of the transactions of another node's block
 	StagePrepare  = "prepare"  // reading the outputs and the parameters the transactions need
 	StageExecute  = "execute"  // running the transactions
-	StageAfter    = "after"    // writing the logs, the statuses and the rollbacks of the transactions
-	StageStream   = "stream"   // writing the logs, the statuses and the rollbacks of the committed transactions while the block runs
+	StageAfter    = "after"    // writing the logs, with the statuses, and the rollbacks of the transactions
+	StageStream   = "stream"   // writing the logs, with the statuses, and the rollbacks of the committed transactions while the block runs
 	StageInsert   = "insert"   // inserting the block
 	StageCommit   = "commit"   // committing the database transaction
 	StageNotify   = "notify"   // sending the notifications

@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/migration"
 	"gorm.io/gorm"
 )
@@ -39,9 +38,8 @@ func IsRetentionBoundary(blockID int64) bool {
 	return blockID > 0 && blockID%migration.PartitionBlocks == 0
 }
 
-// Retain runs the retention at the boundary block blockID of time blockTime (seconds), with the
-// window of historyBlocks blocks
-func Retain(dbTx *DbTransaction, blockID, blockTime, historyBlocks int64) error {
+// Retain runs the retention at the boundary block blockID, with the window of historyBlocks blocks
+func Retain(dbTx *DbTransaction, blockID, historyBlocks int64) error {
 	db := GetDB(dbTx)
 	k := blockID / migration.PartitionBlocks
 	for _, t := range migration.PartitionedTables {
@@ -49,26 +47,19 @@ func Retain(dbTx *DbTransaction, blockID, blockTime, historyBlocks int64) error 
 			return fmt.Errorf("creating the partition %d of %s: %w", k+1, t.Name, err)
 		}
 	}
-	// the transactions of range k-1 are at most as late as its last block, blockID-1
-	if err := db.Exec(`INSERT INTO "log_transaction_ranges" ("k", "last_time")
-		SELECT ?, "time" FROM "block_chain" WHERE "id" = ?
-		ON CONFLICT ("k") DO UPDATE SET "last_time" = EXCLUDED."last_time"`, k-1, blockID-1).Error; err != nil {
-		return fmt.Errorf("recording the time of range %d: %w", k-1, err)
-	}
 	if err := finishRetired(dbTx, blockID); err != nil {
 		return err
 	}
 	for _, t := range migration.PartitionedTables {
+		if t.Kept {
+			continue
+		}
 		ranges, err := attachedRanges(dbTx, t.Name)
 		if err != nil {
 			return err
 		}
 		for _, r := range ranges {
-			out, err := outOfWindow(dbTx, t, r, blockID, blockTime, historyBlocks)
-			if err != nil {
-				return err
-			}
-			if !out {
+			if !outOfWindow(r, blockID, historyBlocks) {
 				break
 			}
 			if err := retire(dbTx, t, r, blockID); err != nil {
@@ -79,24 +70,10 @@ func Retain(dbTx *DbTransaction, blockID, blockTime, historyBlocks int64) error 
 	return nil
 }
 
-// outOfWindow is whether the range r of the table t is out of the window at the boundary blockID
-func outOfWindow(dbTx *DbTransaction, t migration.PartitionedTable, r, blockID, blockTime, historyBlocks int64) (bool, error) {
-	end := (r + 1) * migration.PartitionBlocks
-	if !t.ByTime {
-		return end <= blockID-historyBlocks, nil
-	}
-	if end > blockID {
-		return false, nil
-	}
-	// a transaction is refused whose signed time is earlier than MaxTxBack before the block time;
-	// a block takes it signed at most MaxTxForw after its time (transaction.checkTime), so the
-	// range leaves once its last block is so old that none of its transactions passes the check
-	var last []int64
-	if err := GetDB(dbTx).Raw(`SELECT "last_time" FROM "log_transaction_ranges" WHERE "k" = ?`, r).
-		Scan(&last).Error; err != nil {
-		return false, err
-	}
-	return len(last) == 1 && last[0]+consts.MaxTxForw < blockTime-consts.MaxTxBack, nil
+// outOfWindow is whether the range r is out of the window of historyBlocks blocks at the boundary
+// blockID
+func outOfWindow(r, blockID, historyBlocks int64) bool {
+	return (r+1)*migration.PartitionBlocks <= blockID-historyBlocks
 }
 
 // attachedRanges are, in order, the ranges of the partitions of the table in the active table
@@ -350,6 +327,9 @@ func PrepareArchive() error {
 		return nil
 	}
 	for _, t := range migration.PartitionedTables {
+		if t.Kept {
+			continue
+		}
 		var exists bool
 		if err := DBConn.Raw(`SELECT to_regclass(?) IS NOT NULL`, `"`+t.Name+`"`).Scan(&exists).Error; err != nil {
 			return err
@@ -372,9 +352,9 @@ func archived(table string) *gorm.DB {
 
 // ArchivedTable is the table, or on an archive node the view, that the queries of the API and of
 // the synchronization of other nodes read for the rows of the table, wherever they are: a
-// partitioned table
+// partitioned table. The active table holds every row of a Kept table.
 func ArchivedTable(table string) string {
-	if conf.Config.Storage.Archive {
+	if t, _ := migration.PartitionedTableOf(table); conf.Config.Storage.Archive && !t.Kept {
 		return fmt.Sprintf(`"%s"."%s_all"`, migration.ArchiveSchema, table)
 	}
 	return `"` + table + `"`

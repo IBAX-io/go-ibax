@@ -35,6 +35,10 @@ func RollbackBlock(data []byte) error {
 	if b.ID != bl.Header.BlockId {
 		return ErrLastBlock
 	}
+	hashes := make([][]byte, len(bl.Transactions))
+	for i, t := range bl.Transactions {
+		hashes[i] = t.Hash()
+	}
 
 	dbTx, err := sqldb.StartTransaction()
 	if err != nil {
@@ -89,6 +93,7 @@ func RollbackBlock(data []byte) error {
 	if err = dbTx.Commit(); err != nil {
 		return err
 	}
+	sqldb.TxWindow.Remove(hashes)
 	// the transactions of the block rolled back go back to the pool, not those of the block before it
 	transaction.TxPool.Restore(bl.Transactions)
 	return nil
@@ -108,14 +113,9 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 		t := block.Transactions[i]
 		t.DbTransaction = dbTx
 
-		_, err := sqldb.DeleteLogTransactionsByHash(dbTx, t.Hash())
+		_, err := sqldb.DeleteLogTransactionsByHash(dbTx, block.Header.BlockId, t.Hash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting log transactions by hash")
-			return err
-		}
-
-		if err = sqldb.DeleteTransactionStatus(dbTx, t.Hash()); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transaction status")
 			return err
 		}
 

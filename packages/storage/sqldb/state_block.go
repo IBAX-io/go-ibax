@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/metrics"
+	"github.com/IBAX-io/go-ibax/packages/migration"
 )
 
 // The state of a block keeps in memory the rows the transactions of the block write. A row it
@@ -482,7 +483,12 @@ func (ts *tableState) rowID(r stateRow) (int64, bool) {
 
 // loadMax reads the highest id of the table when the block began
 func (ts *tableState) loadMax(ctx context.Context, c *stateConn) error {
-	rows, err := fetchRows(ctx, c, `SELECT "id" FROM `+quoteIdent(ts.meta.name)+` ORDER BY "id" DESC LIMIT 1`, nil)
+	order := `"id" DESC`
+	if t, ok := migration.PartitionedTableOf(ts.meta.name); ok && t.IDByKey {
+		// the table has no index of the id: the highest is that of the highest key
+		order = quoteIdent(t.Key) + ` DESC, "id" DESC`
+	}
+	rows, err := fetchRows(ctx, c, `SELECT "id" FROM `+quoteIdent(ts.meta.name)+` ORDER BY `+order+` LIMIT 1`, nil)
 	if err != nil {
 		return err
 	}

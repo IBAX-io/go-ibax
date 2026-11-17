@@ -34,9 +34,11 @@ var hotQueries = []struct {
 	// an ecosystem has tens of applications
 	{`SELECT * FROM "1_applications" WHERE "ecosystem" = 1 and "name" = 'Basic' and "deleted" = 0`,
 		[]string{`1_applications_ecosystem_idx`}},
-	{`SELECT * FROM "transactions_status" WHERE hash = '\x01'`, []string{`transactions_status_pkey`}},
-	{`SELECT "hash" FROM "log_transactions" WHERE "hash" IN ('\x01') UNION ALL SELECT "hash" FROM "stop_network_txs" WHERE "hash" IN ('\x01')`,
-		[]string{`log_transactions_p\d+_hash_idx`, `stop_network_txs_pkey`}},
+	{`SELECT * FROM "log_transactions" WHERE hash = '\x01' ORDER BY "log_transactions"."hash" LIMIT 1`,
+		[]string{`log_transactions_p\d+_hash_idx`}},
+	{`DELETE FROM "log_transactions" WHERE "block" = 1 AND "hash" = '\x01'`, []string{`log_transactions_p0_hash_idx`}},
+	{`SELECT "hash" FROM "log_transactions" WHERE "hash" = ANY('{"\\x01"}'::bytea[])`,
+		[]string{`log_transactions_p\d+_hash_idx`}},
 	{`SELECT "count" FROM "log_transaction_counts" WHERE "ecosystem_id" = 1`, []string{`log_transaction_counts_pkey`}},
 	{`SELECT si.output_tx_hash FROM spent_info si WHERE si.output_key_id IN (1, 2) AND si.spent_block = 0
 		ORDER BY si.output_key_id, si.block_id, si.output_tx_hash, si.output_index`, []string{`spent_info_unspent_output_key_id_ecosystem_idx`}},
@@ -67,7 +69,15 @@ var hotQueries = []struct {
 	{`SELECT * FROM "rollback_tx" WHERE table_ref = (SELECT ref FROM rollback_tables WHERE name = '1_keys')
 		AND table_id = '1' ORDER BY block_id DESC, id DESC`,
 		[]string{`rollback_tx_p\d+_table_ref_table_id_block_id_idx`, `rollback_tables_name_key`}},
-	{`SELECT * FROM "1_history" WHERE txhash = '\x01'`, []string{`1_history_p\d+_txhash_idx`}},
+	{`SELECT * FROM "1_history" WHERE block_id = 1 AND txhash = '\x01' ORDER BY "1_history"."id" LIMIT 1`,
+		[]string{`1_history_p0_pkey`}},
+	{`select id from "1_history" order by "block_id" desc, id desc limit 1`, []string{`1_history_p\d+_pkey`}},
+	{`DELETE FROM "1_history" WHERE "id"=1 AND "ecosystem"=1 AND "block_id"=1`, []string{`1_history_p0_pkey`}},
+	// a page of an account's rows, newest first, as the data API reads an $or of its two sides
+	{`SELECT "id" FROM ((SELECT * FROM "1_history" WHERE "ecosystem" = 1 AND ("sender_id" = 1)
+		ORDER BY "id" DESC LIMIT 21) UNION ALL (SELECT * FROM "1_history" WHERE "ecosystem" = 1 AND ("recipient_id" = 1)
+		AND ("sender_id" = 1) IS NOT TRUE ORDER BY "id" DESC LIMIT 21)) AS "rows" ORDER BY "id" DESC LIMIT 21`,
+		[]string{`1_history_p\d+_ecosystem_sender_id_id_idx`, `1_history_p\d+_ecosystem_recipient_id_id_idx`}},
 	{`select ap.value from "1_app_params" ap, "1_applications" a where ap.app_id = a.id and a."name" = 'CandidateNode'
 		and ap."name" = 'limit_candidate_pack' and a.deleted = 0 and a.ecosystem = 1`,
 		[]string{`1_app_params_ecosystem_app_id_name`}},
@@ -110,12 +120,10 @@ var hotRows = []string{
 	`INSERT INTO "block_chain" (id, hash, node_position, time) SELECT g, sha256(int8send(g)), g % 5, g
 		FROM generate_series(1, 5001) g`,
 	`INSERT INTO "confirmations" (block_id) SELECT g FROM generate_series(1, 5001) g`,
-	`INSERT INTO "transactions_status" (hash, block_id) SELECT sha256(int8send(g)), 2 + g / 20
-		FROM generate_series(0, 99999) g`,
 	`INSERT INTO "log_transactions" (hash, block, ecosystem_id) SELECT sha256(int8send(g)), 2 + g / 20, 1
 		FROM generate_series(0, 99999) g`,
-	`INSERT INTO "stop_network_txs" (hash, block) SELECT sha256(int8send(-g)), g FROM generate_series(1, 10) g`,
-	`INSERT INTO "1_history" (id, block_id, txhash) SELECT g, 2 + g / 20, sha256(int8send(g))
+	`INSERT INTO "1_history" (id, block_id, txhash, sender_id, recipient_id) SELECT g, 2 + g / 20, sha256(int8send(g)),
+		CASE WHEN g % 5 = 0 THEN 1 ELSE 3 + g % 1000 END, CASE WHEN g % 5 = 1 THEN 1 ELSE 3 + g % 997 END
 		FROM generate_series(0, 99999) g`,
 	`INSERT INTO "rollback_tables" (ref, name, block_id) SELECT g, g || '_keys', 2 FROM generate_series(1, 50) g`,
 	`INSERT INTO "rollback_tx" (id, block_id, tx_idx, table_ref, table_id)
@@ -132,7 +140,7 @@ var hotRows = []string{
 // hotTables are the tables hotRows fills
 var hotTables = []string{"1_ecosystems", "1_keys", "1_members", "1_parameters", "1_applications", "1_app_params",
 	"1_notifications", "1_roles_participants", "log_transaction_counts", "block_chain", "confirmations",
-	"transactions_status", "log_transactions", "stop_network_txs", "1_history", "rollback_tx", "rollback_tables", "spent_info"}
+	"log_transactions", "1_history", "rollback_tx", "rollback_tables", "spent_info"}
 
 var planIndex = regexp.MustCompile(`Index(?: Only)? Scan(?: Backward)? using "?([^" ]+)"?|Bitmap Index Scan on "?([^" ]+)"?`)
 

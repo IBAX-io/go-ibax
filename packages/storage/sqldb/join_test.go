@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/stretchr/testify/require"
 )
@@ -33,9 +32,9 @@ func retainTo2pb(t *testing.T, db *DbTransaction) {
 	T := int64(1) << 32
 	chainRows(t, db, T)
 	setRows(t, db)
-	require.NoError(t, Retain(db, pb, T, testWindow))
+	require.NoError(t, Retain(db, pb, testWindow))
 	addBlocks(t, db, T, 2*pb, 3*pb-1)
-	require.NoError(t, Retain(db, 2*pb, T+consts.MaxTxForw+consts.MaxTxBack+1, testWindow))
+	require.NoError(t, Retain(db, 2*pb, testWindow))
 }
 
 func heightsOf(ps []SetProof) []int64 {
@@ -121,7 +120,7 @@ func TestPrepareJoined(t *testing.T) {
 	require.EqualValues(t, len(retired), countRows(t, db, `SELECT count(*) FROM pg_tables WHERE schemaname = ?`,
 		migration.RetiredSchema))
 	// the next boundary drops the stubs as it drops what it retired
-	require.NoError(t, Retain(db, 3*pb, int64(1)<<32+consts.MaxTxForw+consts.MaxTxBack+2, testWindow))
+	require.NoError(t, Retain(db, 3*pb, testWindow))
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM pg_tables WHERE schemaname = ? AND tablename = ?`,
 		migration.RetiredSchema, "rollback_tx_p0"))
 }

@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"encoding/hex"
+	"maps"
 
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -39,7 +40,7 @@ func (t *Transaction) Check(checkTime int64) error {
 // checkTime: later than MaxTxForw after it, or, but for StopNetwork, earlier than MaxTxBack before
 // it. The window is of the time the signature covers, not of the time a node received the
 // transaction at, so that a transaction sent again past MaxTxBack is refused once its hash has
-// left log_transactions (sqldb.Retain)
+// left the window of the duplicates (sqldb.TxWindow)
 func (t *Transaction) checkTime(checkTime int64) error {
 	if t.KeyID() == 0 {
 		return ErrEmptyKey
@@ -59,19 +60,34 @@ func (t *Transaction) checkTime(checkTime int64) error {
 	return nil
 }
 
-// knownInBlocks is the query of the hashes of transactions in blocks
-var knownInBlocks = sqldb.KnownLogTransactions
+// knownInBlocks is the check of the hashes against the window of the hashes of the committed
+// transactions
+var knownInBlocks = func(hashes [][]byte, checkTime int64) (map[string]bool, error) {
+	return sqldb.TxWindow.Known(hashes, checkTime)
+}
 
-// CheckBatch checks each transaction as Check does, with one query of the transactions in blocks
+// CheckBatch checks each transaction as Check does, the duplicates in the window of the hashes of
+// the committed transactions (sqldb.TxWindow), and those of StopNetwork, which the window outlives,
+// in log_transactions
 func CheckBatch(txs []*Transaction, checkTime int64) []error {
 	errs := make([]error, len(txs))
 	hashes := make([][]byte, 0, len(txs))
+	var stops [][]byte
 	for i, t := range txs {
 		if errs[i] = t.checkTime(checkTime); errs[i] == nil {
 			hashes = append(hashes, t.Hash())
+			if t.Type() == types.StopNetworkTxType {
+				stops = append(stops, t.Hash())
+			}
 		}
 	}
-	known, err := knownInBlocks(nil, hashes)
+	known, err := knownInBlocks(hashes, checkTime)
+	if err == nil && len(stops) > 0 {
+		var stopped map[string]bool
+		if stopped, err = sqldb.KnownLogTransactions(nil, stops); err == nil {
+			maps.Copy(known, stopped)
+		}
+	}
 	if err != nil {
 		log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting log transactions by hash")
 	}

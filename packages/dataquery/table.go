@@ -57,6 +57,8 @@ type Table struct {
 	ordered []string
 	reads   map[string]string
 	checked map[string]error
+	// The columns an index of the table starts with, after the ecosystem in a shared table
+	leads map[string]bool
 	// The row scope, its reader's values bound; nil when the table has none
 	rows Where
 }
@@ -100,7 +102,8 @@ func Describe(reader Reader, name string, ecosystem int64) (*Table, error) {
 		return nil, err
 	}
 	return &Table{reader: reader, Name: name, Ecosystem: ecosystem, Record: d.record, physical: d.physical,
-		shared: d.shared, columns: d.columns, ordered: d.ordered, reads: d.reads, checked: map[string]error{}}, nil
+		shared: d.shared, columns: d.columns, ordered: d.ordered, reads: d.reads, leads: d.leads,
+		checked: map[string]error{}}, nil
 }
 
 // tableKey is a table of an ecosystem
@@ -117,6 +120,7 @@ type description struct {
 	columns  map[string]tableColumn
 	ordered  []string
 	reads    map[string]string
+	leads    map[string]bool
 }
 
 // descriptions are the tables described, until a block commits
@@ -150,8 +154,11 @@ func describe(name string, ecosystem int64) (*description, error) {
 	if err := t.readConditions(); err != nil {
 		return nil, err
 	}
+	if err := t.readLeads(); err != nil {
+		return nil, err
+	}
 	return &description{record: t.Record, physical: t.physical, shared: t.shared, columns: t.columns,
-		ordered: t.ordered, reads: t.reads}, nil
+		ordered: t.ordered, reads: t.reads, leads: t.leads}, nil
 }
 
 // selfDescribed are the tables of an ecosystem that are not rows of 1_tables, each with the record
@@ -205,6 +212,36 @@ func (t *Table) readColumns() error {
 		}
 		t.columns[name] = tableColumn{t: TypeOf(dataType), withZone: dataType == "timestamp with time zone"}
 		t.ordered = append(t.ordered, name)
+	}
+	if err := rows.Err(); err != nil {
+		return queryFailed(err, t.physical)
+	}
+	return nil
+}
+
+// readLeads reads the columns the indexes of the table start with: in a shared table, whose
+// indexes start with the ecosystem, the column after it
+func (t *Table) readLeads() error {
+	rows, err := query(`SELECT a.attname, coalesce(b.attname, '') FROM pg_index i
+		JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = i.indkey[0]
+		LEFT JOIN pg_attribute b ON b.attrelid = i.indrelid AND b.attnum = i.indkey[1]
+		WHERE i.indrelid = to_regclass($1)`, t.from())
+	if err != nil {
+		return queryFailed(err, t.physical)
+	}
+	defer rows.Close()
+	t.leads = map[string]bool{}
+	for rows.Next() {
+		var first, second string
+		if err := rows.Scan(&first, &second); err != nil {
+			return queryFailed(err, t.physical)
+		}
+		if t.shared && first == "ecosystem" {
+			first = second
+		}
+		if first != "" {
+			t.leads[first] = true
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return queryFailed(err, t.physical)
