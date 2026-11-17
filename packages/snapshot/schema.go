@@ -6,11 +6,14 @@
 package snapshot
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -133,8 +136,16 @@ const ownIndexes = `SELECT pg_get_indexdef(i.indexrelid) FROM pg_index i
 	AND NOT EXISTS (SELECT 1 FROM pg_inherits h WHERE h.inhrelid = i.indexrelid)
 	ORDER BY pg_get_indexdef(i.indexrelid) COLLATE "C"`
 
-// describe sets the description of a table and the query of its encoding: the columns of the
-// rows, by the primary key, or by the text of the whole row for a table without one
+// rowOrders are the columns the rows of a table without a primary key are in the order of, before
+// the text of the whole row: a partitioned one of them encodes partition by partition, in the
+// order of their bounds, each sorting its rows alone
+var rowOrders = map[string][]string{
+	"log_transactions": {"block", "hash"},
+}
+
+// describe sets the description of a table and the queries of its encoding: the columns of the
+// rows, by the primary key, or for a table without one by its rowOrders and the text of the whole
+// row
 func (s *Snapshot) describe(ctx context.Context, t *table) error {
 	var d Desc
 	// a column of a collation is one of text, which orders by the "C" collation in the key
@@ -213,12 +224,52 @@ func (s *Snapshot) describe(ctx context.Context, t *table) error {
 		}
 	}
 	if len(order) == 0 {
+		for _, k := range rowOrders[t.name] {
+			o := quote(k)
+			if text[k] {
+				o += ` COLLATE "C"`
+			}
+			order = append(order, o)
+		}
 		// the text of the row is that of the columns of the state alone
-		order = []string{fmt.Sprintf(`(ROW(%s))::text COLLATE "C"`, strings.Join(names, ", "))}
+		order = append(order, fmt.Sprintf(`(ROW(%s))::text COLLATE "C"`, strings.Join(names, ", ")))
 	}
-	t.query = fmt.Sprintf(`COPY (SELECT %s FROM public.%s ORDER BY %s) TO STDOUT`,
-		strings.Join(names, ", "), quote(t.name), strings.Join(order, ", "))
+	query := func(from string) string {
+		return fmt.Sprintf(`COPY (SELECT %s FROM %s ORDER BY %s) TO STDOUT`,
+			strings.Join(names, ", "), from, strings.Join(order, ", "))
+	}
+	if len(d.Key) > 0 || len(rowOrders[t.name]) == 0 || t.kind != 'p' {
+		t.queries = []string{query("public." + quote(t.name))}
+		return nil
+	}
+	if !strings.HasPrefix(d.PartKey, "RANGE ("+rowOrders[t.name][0]+")") {
+		return fmt.Errorf("the rows of %s are not in the order of its partition key %s", t.name, d.PartKey)
+	}
+	parts := slices.Clone(d.Partitions)
+	from := make(map[string]int64, len(parts))
+	for _, p := range parts {
+		if from[p.Name], err = lowerBound(p.Bound); err != nil {
+			return fmt.Errorf("the partition %s of %s: %w", p.Name, t.name, err)
+		}
+	}
+	slices.SortFunc(parts, func(a, b Partition) int { return cmp.Compare(from[a.Name], from[b.Name]) })
+	for _, p := range parts {
+		t.queries = append(t.queries, query(quote(p.Schema)+"."+quote(p.Name)))
+	}
 	return nil
+}
+
+// lowerBound is the lower bound of a range partition of an integer key, as pg_get_expr gives it
+func lowerBound(bound string) (int64, error) {
+	rest, ok := strings.CutPrefix(bound, "FOR VALUES FROM (")
+	v, _, found := strings.Cut(rest, ")")
+	if !ok || !found {
+		return 0, fmt.Errorf("the bound %q is not of a range", bound)
+	}
+	if v == "MINVALUE" {
+		return math.MinInt64, nil
+	}
+	return strconv.ParseInt(strings.Trim(v, "'"), 10, 64)
 }
 
 // partitions sets the partition key and the partitions of a partitioned table, of one level

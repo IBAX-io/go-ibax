@@ -10,13 +10,14 @@
 // The state is every table of the schema but those of the chain history and those of the node
 // alone (nodeTables), and the columns of the node alone (nodeColumns). A table encodes as the
 // output of COPY TO STDOUT in the text format of its rows in the order of its primary key, the
-// text of a column in the "C" collation, and of the text of the whole row for a table without
-// one, under fixed session settings. The encoding splits into chunks of chunkBytes; a table hash
-// is the hash of its description, its rows, its bytes and the hashes of its chunks; the state
-// hash is the hash of the names of the tables, in the "C" order, each with its table hash. The
-// hash function is that of the chain. A chunk is the unit a node verifies of a snapshot it
-// downloads. The description of a table is its schema, Desc, and the entry SchemaEntry describes
-// the functions and the views (schema.go), so that the state hash covers what an import creates.
+// text of a column in the "C" collation, and for a table without one in the order of its
+// rowOrders, partition by partition, and of the text of the whole row, under fixed session
+// settings. The encoding splits into chunks of chunkBytes; a table hash is the hash of its
+// description, its rows, its bytes and the hashes of its chunks; the state hash is the hash of
+// the names of the tables, in the "C" order, each with its table hash. The hash function is that
+// of the chain. A chunk is the unit a node verifies of a snapshot it downloads. The description of
+// a table is its schema, Desc, and the entry SchemaEntry describes the functions and the views
+// (schema.go), so that the state hash covers what an import creates.
 //
 // Begin takes a snapshot of the database in a read-only transaction of REPEATABLE READ, which
 // the node opens right after it commits the block of the height and before it commits the next:
@@ -198,11 +199,12 @@ func end(conn *sql.Conn) {
 
 // table is a table of the state as the snapshot describes it
 type table struct {
-	oid   uint32
-	kind  byte
-	name  string
-	desc  string
-	query string
+	oid  uint32
+	kind byte
+	name string
+	desc string
+	// queries are the COPY of its rows, in their order
+	queries []string
 }
 
 // tables reads the tables of the state of the snapshot and how to encode each
@@ -348,16 +350,17 @@ func (s *Snapshot) encode(ctx context.Context, t table, sink Sink) (Table, error
 		c.out = out
 	}
 	err = conn.Raw(func(dc any) error {
-		if t.query == "" {
-			// the entry of the schema, of no rows
-			return nil
-		}
+		// the entry of the schema has no rows
 		pg, ok := dc.(*stdlib.Conn)
-		if !ok {
+		if !ok && len(t.queries) > 0 {
 			return fmt.Errorf("a connection of %T, not of pgx", dc)
 		}
-		_, err := pg.Conn().PgConn().CopyTo(ctx, c, t.query)
-		return err
+		for _, q := range t.queries {
+			if _, err := pg.Conn().PgConn().CopyTo(ctx, c, q); err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 	if out != nil {
 		if errClose := out.Close(); err == nil {
