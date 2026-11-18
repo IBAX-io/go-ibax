@@ -30,6 +30,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
@@ -484,6 +485,9 @@ func b7Open(t testing.TB) *b7Env {
 		`DELETE FROM "1_tables" WHERE name = '` + b7hTyped + `' AND ecosystem = 1`,
 	}
 	stmts := append([]string{}, drop...)
+	// the rows of 1_history are of block b7hBlock, which needs its partition: a node makes the
+	// partition of the next range only, so a chain below its range has none (one of 2,000 blocks)
+	stmts = append(stmts, migration.CreatePartitionSQL("1_history", b7hBlock/migration.PartitionBlocks))
 	for i := 0; i < b7hKeys; i++ {
 		stmts = append(stmts, fmt.Sprintf(`INSERT INTO "1_keys" (id, pub, amount, ecosystem, account) VALUES (%d, '\x01', 1000000000000, 1, '%s')`,
 			b7hBase-int64(i), b7hAccount(i)))
