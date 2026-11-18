@@ -102,7 +102,9 @@ func (v *TxView) Digest() string {
 			row(u.old.prev), row(u.old.row), u.orderLen, u.uniq)
 	}
 	for _, m := range v.marks {
-		fmt.Fprintf(&b, "mark %q at %d pg %t\n", m.name, m.at, m.pg)
+		// where the view made the savepoint: one it made in PostgreSQL later, when it sent a
+		// statement there, depends on which reads the caches of the node answered
+		fmt.Fprintf(&b, "mark %q at %d pg %t\n", m.name, m.at, m.pg && !m.late)
 	}
 	return b.String()
 }

@@ -105,6 +105,9 @@ type viewMark struct {
 	// query is the statement that made the savepoint, which makes it in PostgreSQL once the view
 	// sends a statement there
 	query string
+	// late tells the view made the savepoint in PostgreSQL after it made it in memory, when it
+	// sent a statement there
+	late bool
 }
 
 // NewOrderedView is a view of the transaction i of the block, which runs the contract in order,
@@ -479,6 +482,7 @@ func (v *TxView) marksToPG(ctx context.Context, c *stateConn) error {
 			return err
 		}
 		v.marks[i].pg = true
+		v.marks[i].late = true
 	}
 	return nil
 }
