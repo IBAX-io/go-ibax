@@ -85,7 +85,7 @@ func BlockGenerator(ctx context.Context, d *daemon) error {
 
 	btc := protocols.NewBlockTimeCounter()
 	st := time.Now()
-	if exists, err := btc.BlockForTimeExists(st, int(nodePosition)); exists || err != nil {
+	if exists, err := btc.BlockForTimeExists(nil, st, int(nodePosition)); exists || err != nil {
 		return nil
 	}
 
