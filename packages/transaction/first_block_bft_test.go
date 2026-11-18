@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
+	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
@@ -94,13 +95,13 @@ func TestCheckFirstBlockConsensus(t *testing.T) {
 			return nodes
 		}, "the interval is a multiple"},
 		{"an interval within a partition", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
-			fb.SnapshotInterval = 15000
+			fb.SnapshotInterval = migration.PartitionBlocks * 3 / 2
 			return nodes
 		}, "the interval is a multiple"},
 		{"the delay of a partition", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
-			fb.SnapshotDelay = 10000
+			fb.SnapshotDelay = migration.PartitionBlocks
 			return nodes
-		}, "below 10000"},
+		}, fmt.Sprintf("below %d", migration.PartitionBlocks)},
 		{"no delay", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
 			fb.SnapshotDelay = 0
 			return nodes

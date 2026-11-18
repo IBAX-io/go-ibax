@@ -7,6 +7,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/converter"
+	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	log "github.com/sirupsen/logrus"
@@ -59,9 +61,9 @@ func init() {
 	generateFirstBlockCmd.Flags().BoolVar(&honorNodesOnly, "honorNodesOnly", false, "if true - only the honor nodes generate blocks, the chain never enters the candidate node mode")
 	generateFirstBlockCmd.Flags().BoolVar(&bftConsensus, "bftConsensus", false, "if true - the validators commit each block by the votes of more than two thirds of them (needs --honorNodesOnly and --honorNodes)")
 	generateFirstBlockCmd.Flags().StringVar(&honorNodesFilepath, "honorNodes", "", "file of the validators of a chain of the BFT consensus, in the JSON of the platform parameter honor_nodes, each with the key_id of its operator; this node first, operated by the founder")
-	generateFirstBlockCmd.Flags().Uint64Var(&snapshotInterval, "snapshotInterval", 10000, "on a chain of the BFT consensus, the heights between two snapshots of the state the nodes hash, a multiple of 10000, the blocks of a partition")
+	generateFirstBlockCmd.Flags().Uint64Var(&snapshotInterval, "snapshotInterval", 10000, fmt.Sprintf("on a chain of the BFT consensus, the heights between two snapshots of the state the nodes hash, a multiple of %d, the blocks of a partition", migration.PartitionBlocks))
 	generateFirstBlockCmd.Flags().Int64Var(&firstBlockTime, "time", 0, "the Unix time of the first block (default now); a test chain of a fast clock starts in the past (faults.Config.ClockFrom)")
-	generateFirstBlockCmd.Flags().Uint64Var(&snapshotDelay, "snapshotDelay", 1000, "on a chain of the BFT consensus, the heights after a snapshot at which a block carries its state hash, below 10000")
+	generateFirstBlockCmd.Flags().Uint64Var(&snapshotDelay, "snapshotDelay", 1000, fmt.Sprintf("on a chain of the BFT consensus, the heights after a snapshot at which a block carries its state hash, below %d", migration.PartitionBlocks))
 	generateFirstBlockCmd.Flags().StringVar(&supplyFilepath, "supply", "", `file of the supply of the coin of ecosystem 1 and the allocations of the first block, in the smallest unit, e.g. {"supply":"2100000000000000000000","allocations":[{"name":"reserve","account":"1234-5678-9012-3456-7890","amount":"210000000000000000000","conditions":"@1ReserveRelease"}]}: an allocation to an account other than the founder's names the contracts that move it; the rest of the supply is not issued (default: the supply 2100000000, the founder 5250000)`)
 	generateFirstBlockCmd.Flags().StringVar(&accountAlgorithms, "accountAlgorithms", "", `algorithms account keys may have, as the platform parameter account_algorithms, e.g. [{"algo":"ECC_P256","sign_until":"2031-12-31"},{"algo":"MLDSA65"}] (default: the node algorithm, MLDSA65, ECC_P256, RSA2048 and RSA3072, those the node verifies on the network hash, classical ones until 2031-12-31 and RSA2048 registered until 2030-12-31)`)
 }

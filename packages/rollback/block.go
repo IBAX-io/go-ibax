@@ -11,7 +11,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/consts"
-	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	log "github.com/sirupsen/logrus"
@@ -35,6 +34,10 @@ func RollbackBlock(data []byte) error {
 
 	if b.ID != bl.Header.BlockId {
 		return ErrLastBlock
+	}
+	hashes := make([][]byte, len(bl.Transactions))
+	for i, t := range bl.Transactions {
+		hashes[i] = t.Hash()
 	}
 
 	dbTx, err := sqldb.StartTransaction()
@@ -90,6 +93,7 @@ func RollbackBlock(data []byte) error {
 	if err = dbTx.Commit(); err != nil {
 		return err
 	}
+	sqldb.TxWindow.Remove(hashes)
 	// the transactions of the block rolled back go back to the pool, not those of the block before it
 	transaction.TxPool.Restore(bl.Transactions)
 	return nil
@@ -98,28 +102,27 @@ func RollbackBlock(data []byte) error {
 func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 	// the settlement of the fees ran after the transactions, and the transactions in their order
 	logger := block.GetLogger()
-	if err := rollbackTransaction(block.Header.BlockId, smart.SettlementHash, dbTx, logger); err != nil {
+	records, err := getBlockRecords(block.Header.BlockId, dbTx, logger)
+	if err != nil {
+		return err
+	}
+	if err := rollbackTransaction(records, len(block.Transactions), dbTx, logger); err != nil {
 		return err
 	}
 	for i := len(block.Transactions) - 1; i >= 0; i-- {
 		t := block.Transactions[i]
 		t.DbTransaction = dbTx
 
-		_, err := sqldb.DeleteLogTransactionsByHash(dbTx, t.Hash())
+		_, err := sqldb.DeleteLogTransactionsByHash(dbTx, block.Header.BlockId, t.Hash())
 		if err != nil {
 			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting log transactions by hash")
-			return err
-		}
-
-		if err = sqldb.DeleteTransactionStatus(dbTx, t.Hash()); err != nil {
-			logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("deleting transaction status")
 			return err
 		}
 
 		switch t.Inner.(type) {
 		case *transaction.SmartTransactionParser:
 			t.Inner.(*transaction.SmartTransactionParser).DbTransaction = t.DbTransaction
-			if err = rollbackTransaction(block.Header.BlockId, t.Hash(), t.DbTransaction, logger); err != nil {
+			if err = rollbackTransaction(records, i, t.DbTransaction, logger); err != nil {
 				return err
 			}
 		}
@@ -129,7 +132,10 @@ func rollbackBlock(dbTx *sqldb.DbTransaction, block *block.Block) error {
 		}
 	}
 
-	err := sqldb.RollbackOutputs(block.Header.BlockId, dbTx, logger)
+	if err = deleteBlockRecords(block.Header.BlockId, dbTx, logger); err != nil {
+		return err
+	}
+	err = sqldb.RollbackOutputs(block.Header.BlockId, dbTx, logger)
 	if err != nil {
 		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("updating outputs by block id")
 		return err

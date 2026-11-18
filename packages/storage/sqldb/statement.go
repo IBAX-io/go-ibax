@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/IBAX-io/go-ibax/packages/migration"
 )
 
 // Statement is a statement of a fixed text that runs many times with other values. It keeps what
@@ -232,12 +234,17 @@ func (tr *DbTransaction) OneRowStatement(s *Statement, args ...any) *OneRow {
 // idStatements are the selects of the highest id of the tables, by table
 var idStatements sync.Map
 
-// idStatement is the select of the highest id of the table
+// idStatement is the select of the highest id of the table: by the id, or, of a table whose ids grow
+// with its key (IDByKey), by the key and then the id, as the table has no index of the id
 func idStatement(table string) *Statement {
 	if s, ok := idStatements.Load(table); ok {
 		return s.(*Statement)
 	}
-	s, _ := idStatements.LoadOrStore(table, NewStatement(`select id from "`+table+`" order by id desc limit 1`))
+	order := `id desc`
+	if t, ok := migration.PartitionedTableOf(table); ok && t.IDByKey {
+		order = `"` + t.Key + `" desc, id desc`
+	}
+	s, _ := idStatements.LoadOrStore(table, NewStatement(`select id from "`+table+`" order by `+order+` limit 1`))
 	return s.(*Statement)
 }
 

@@ -315,6 +315,8 @@ func (j *joiner) join(height int64, hash []byte, proofs []sqldb.BftSetProof, imp
 	if err := snapshot.Import(j.ctx, db, store, height, hash, joinWorkers); err != nil {
 		return err
 	}
+	sqldb.ResetTableRefs()
+	sqldb.ResetTxWindow()
 	if err := syspar.SysUpdate(nil); err != nil {
 		return err
 	}

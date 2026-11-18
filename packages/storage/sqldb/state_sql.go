@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+
+	"github.com/IBAX-io/go-ibax/packages/migration"
 )
 
 // The state of a block plans the statements it runs in memory: the selects of the rows of one
@@ -641,13 +643,26 @@ func (p *parser) selectStmt() (*stmt, bool) {
 	if !p.tail(st) {
 		return nil, false
 	}
-	if len(st.proj) == 1 && st.proj[0].col == "id" && st.where == nil && len(st.order) == 1 &&
-		st.order[0].col == "id" && st.order[0].desc && st.limit != nil &&
-		st.limit.op == eNumber && st.limit.text == "1" && st.offset == nil {
+	if len(st.proj) == 1 && st.proj[0].col == "id" && st.where == nil && maxIDOrder(st.table, st.order) &&
+		st.limit != nil && st.limit.op == eNumber && st.limit.text == "1" && st.offset == nil {
 		st.kind = stMaxID
 	}
 	st.tables = []string{st.table}
 	return st, true
+}
+
+// maxIDOrder is whether order finds the row of the highest id of the table first: id descending,
+// or, of a table whose ids grow with its key (IDByKey), the key and then id descending, the order
+// MaxID reads such a table in, as it has no index of the id
+func maxIDOrder(table string, order []orderItem) bool {
+	switch len(order) {
+	case 1:
+		return order[0].col == "id" && order[0].desc
+	case 2:
+		t, ok := migration.PartitionedTableOf(table)
+		return ok && t.IDByKey && order[0].col == t.Key && order[0].desc && order[1].col == "id" && order[1].desc
+	}
+	return false
 }
 
 // tail reads the WHERE, ORDER BY, LIMIT and OFFSET clauses of a select

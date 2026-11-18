@@ -20,7 +20,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/smart"
-	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
 )
 
@@ -513,7 +512,7 @@ func BenchmarkPoolTake(b *testing.B) {
 func stubKnown(t *testing.T, during func(hashes [][]byte)) {
 	saved := knownInBlocks
 	t.Cleanup(func() { knownInBlocks = saved })
-	knownInBlocks = func(_ *sqldb.DbTransaction, hashes [][]byte) (map[string]bool, error) {
+	knownInBlocks = func(hashes [][]byte, _ int64) (map[string]bool, error) {
 		during(hashes)
 		return map[string]bool{}, nil
 	}

@@ -10,8 +10,9 @@ import (
 	"strings"
 )
 
-// PartitionBlocks is the number of blocks a partition of a table partitioned by block covers
-const PartitionBlocks = 10000
+// PartitionBlocks is the number of blocks a partition of a table partitioned by block covers: at
+// 10,000 transactions a second and a block a second, 20 million transactions a partition
+const PartitionBlocks = 2000
 
 const (
 	// PartsSchema holds the partitions of the active tables, apart from the tables the contracts
@@ -38,19 +39,26 @@ type PartitionedTable struct {
 	Key  string
 	// ID is whether the table has an id column that GetNextID gives
 	ID bool
-	// ByTime is whether its partitions leave by the time of their transactions (MaxTxBack)
-	// instead of by the history_blocks window
-	ByTime bool
-	// columns and constraints, and the indexes on the partitioned table
-	columns string
-	indexes []string
+	// IDByKey is whether the ids of the table grow with its key, as they are given in the order of
+	// the blocks: the highest id is that of the highest key, which the primary key (key, id) finds,
+	// and the table has no index of the id
+	IDByKey bool
+	// Kept is whether its partitions never leave the active table: they are made by ranges for
+	// their indexes to stay small, and are read for good
+	Kept bool
+	// columns and constraints, and the indexes on the partitioned table: btree of the columns, and
+	// hash of a column each
+	columns     string
+	indexes     []string
+	hashIndexes []string
 	// fixed is the CREATE TABLE of the partition that never leaves, if any, and more the statements
 	// after the partitions are made
 	fixed string
 	more  []string
 }
 
-// PartitionedTables are the tables whose rows leave the active tables by ranges of blocks
+// PartitionedTables are the tables whose rows leave the active tables by ranges of blocks, but
+// those Kept
 var PartitionedTables = []PartitionedTable{
 	{
 		Name: "block_chain", Key: "id",
@@ -87,19 +95,24 @@ var PartitionedTables = []PartitionedTable{
 		PRIMARY KEY ("height")`,
 	},
 	{
-		Name: "rollback_tx", Key: "block_id", ID: true,
+		// the rollback of a block reads and deletes its records by the primary key, the history of a
+		// row reads them by the row; a record has the index of its transaction in the block and the
+		// ref rollback_tables gives its table
+		Name: "rollback_tx", Key: "block_id", ID: true, IDByKey: true,
 		columns: `"id" bigint NOT NULL DEFAULT '0',
 		"block_id" bigint NOT NULL DEFAULT '0',
-		"tx_hash" bytea NOT NULL DEFAULT '',
-		"table_name" varchar(255) NOT NULL DEFAULT '',
+		"tx_idx" integer NOT NULL DEFAULT '0',
+		"table_ref" integer NOT NULL DEFAULT '0',
 		"table_id" varchar(255) NOT NULL DEFAULT '',
-		"data_hash" bytea NOT NULL DEFAULT '',
 		"data" text NOT NULL DEFAULT '',
 		PRIMARY KEY ("block_id", "id")`,
-		indexes: []string{`"id"`, `"tx_hash"`, `"table_name", "table_id", "block_id"`},
+		indexes: []string{`"table_ref", "table_id", "block_id"`},
 	},
 	{
-		Name: "1_history", Key: "block_id", ID: true,
+		// a transaction finds its rows by its block, which log_transactions gives, and the highest
+		// id is that of the highest block. An account reads its rows by the id, newest first, a page
+		// at a time: the id ends the index of each side, which an $or of the two reads apart
+		Name: "1_history", Key: "block_id", ID: true, IDByKey: true,
 		columns: `"id" bigint NOT NULL DEFAULT '0',
 		"sender_id" bigint NOT NULL DEFAULT '0',
 		"recipient_id" bigint NOT NULL DEFAULT '0',
@@ -115,10 +128,14 @@ var PartitionedTables = []PartitionedTable{
 		"ecosystem" bigint NOT NULL DEFAULT '1',
 		"type" bigint NOT NULL DEFAULT '1',
 		PRIMARY KEY ("block_id", "id")`,
-		indexes: []string{`"id"`, `"txhash"`, `"ecosystem", "sender_id"`, `"ecosystem", "recipient_id"`},
+		indexes: []string{`"ecosystem", "sender_id", "id"`, `"ecosystem", "recipient_id", "id"`},
 	},
 	{
-		Name: "log_transactions", Key: "block", ByTime: true,
+		// the one entry of the hash of a transaction a block took: the block of the transaction and
+		// its status (penalty and result, as /txstatus answers them), which every node keeps for
+		// good. A block takes a hash once, which the duplicate check sees to (TxWindow), so the table
+		// has no key but the hash index
+		Name: "log_transactions", Key: "block", Kept: true,
 		columns: `"hash" bytea NOT NULL DEFAULT '',
 		"block" bigint NOT NULL DEFAULT '0',
 		"timestamp" bigint NOT NULL DEFAULT '0',
@@ -126,8 +143,9 @@ var PartitionedTables = []PartitionedTable{
 		"address" bigint NOT NULL DEFAULT '0',
 		"ecosystem_id" bigint NOT NULL DEFAULT '0',
 		"status" bigint NOT NULL DEFAULT '0',
-		PRIMARY KEY ("block", "hash")`,
-		indexes: []string{`"hash"`},
+		"penalty" bigint NOT NULL DEFAULT '0',
+		"result" varchar(255) NOT NULL DEFAULT ''`,
+		hashIndexes: []string{`"hash"`},
 	},
 	// an output stays in the unspent partition until a block spends it, and moves then to the range
 	// of that block, which leaves with the ranges of the other tables of its blocks
@@ -188,10 +206,19 @@ func PartitionBounds(table string, k int64) string {
 	return fmt.Sprintf("FROM (%s) TO (%d)", from, (k+1)*PartitionBlocks)
 }
 
+// PartitionOptions are the storage parameters of a range partition: the rows of a range are
+// inserted and, but for the rollback of a block, neither updated nor deleted, so that a vacuum
+// the inserts trigger would only set the visibility of pages it writes whole again. Nor is a range
+// frozen: a block takes some ten transaction ids, so a range leaves the window thousands of times
+// sooner than its age reaches autovacuum_freeze_max_age; a range kept for good (of a Kept table,
+// and every range on an archive node) is frozen once by the autovacuum against wraparound, at its
+// throttled pace
+const PartitionOptions = `autovacuum_vacuum_insert_threshold = -1, toast.autovacuum_vacuum_insert_threshold = -1`
+
 // CreatePartitionSQL creates the partition of range k of the table, unless it exists
 func CreatePartitionSQL(table string, k int64) string {
-	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" PARTITION OF "%s" FOR VALUES %s;`,
-		PartsSchema, PartitionName(table, k), table, PartitionBounds(table, k))
+	return fmt.Sprintf(`CREATE TABLE IF NOT EXISTS "%s"."%s" PARTITION OF "%s" FOR VALUES %s WITH (%s);`,
+		PartsSchema, PartitionName(table, k), table, PartitionBounds(table, k), PartitionOptions)
 }
 
 // sql drops and creates the table, its indexes, the partition that never leaves and the partitions
@@ -202,6 +229,9 @@ func (t PartitionedTable) sql() string {
 		t.Name, t.columns, t.Key)
 	for _, cols := range t.indexes {
 		fmt.Fprintf(&b, "CREATE INDEX ON \"%s\" (%s);\n", t.Name, cols)
+	}
+	for _, col := range t.hashIndexes {
+		fmt.Fprintf(&b, "CREATE INDEX ON \"%s\" USING hash (%s);\n", t.Name, col)
 	}
 	if t.fixed != "" {
 		b.WriteString(t.fixed + "\n")
@@ -222,7 +252,7 @@ func HistoryTableSQL() string {
 
 // retentionSQL creates the schemas of the partitions, the partitioned tables but 1_history and
 // the tables of the retention of rows, and of what outlives it: the count of the successful
-// transactions of every ecosystem and the hashes of the StopNetwork transactions
+// transactions of every ecosystem and the refs of the tables of rollback_tx
 func retentionSQL() string {
 	var b strings.Builder
 	for _, s := range []string{PartsSchema, RetiredSchema, ArchiveSchema} {
@@ -241,11 +271,6 @@ func retentionSQL() string {
 		"k" bigint NOT NULL,
 		PRIMARY KEY ("boundary", "table_name", "k")
 	);
-	DROP TABLE IF EXISTS "log_transaction_ranges";
-	CREATE TABLE "log_transaction_ranges" (
-		"k" bigint NOT NULL PRIMARY KEY,
-		"last_time" bigint NOT NULL
-	);
 	DROP TABLE IF EXISTS "partition_id_floors";
 	CREATE TABLE "partition_id_floors" (
 		"table_name" varchar(255) NOT NULL PRIMARY KEY,
@@ -261,10 +286,11 @@ func retentionSQL() string {
 		"ecosystem_id" bigint NOT NULL PRIMARY KEY,
 		"count" bigint NOT NULL
 	);
-	DROP TABLE IF EXISTS "stop_network_txs";
-	CREATE TABLE "stop_network_txs" (
-		"hash" bytea NOT NULL PRIMARY KEY,
-		"block" bigint NOT NULL
+	DROP TABLE IF EXISTS "rollback_tables";
+	CREATE TABLE "rollback_tables" (
+		"ref" integer NOT NULL PRIMARY KEY,
+		"name" varchar(255) NOT NULL UNIQUE,
+		"block_id" bigint NOT NULL
 	);
 `)
 	return b.String()

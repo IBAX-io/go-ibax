@@ -10,8 +10,10 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"fmt"
 	"io"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -296,4 +298,58 @@ func TestStateHashSchema(t *testing.T) {
 			require.ErrorContains(t, err, "the state cannot carry")
 		})
 	}
+}
+
+// encodingOf is the state of the database and the encoding of its tables
+func encodingOf(t *testing.T, db *sql.DB) (*State, map[string]*bytes.Buffer) {
+	t.Helper()
+	var mu sync.Mutex
+	all := map[string]*bytes.Buffer{}
+	sink := func(name string) (io.WriteCloser, error) {
+		mu.Lock()
+		defer mu.Unlock()
+		all[name] = &bytes.Buffer{}
+		return sinkBuf{mu: &mu, all: all, name: name}, nil
+	}
+	s, err := Begin(context.Background(), db)
+	require.NoError(t, err)
+	defer s.Close()
+	st, err := s.Hash(context.Background(), 2, sink)
+	require.NoError(t, err)
+	return st, all
+}
+
+// log_transactions, of no primary key, encodes partition by partition in the order of their
+// bounds, not of their names, each by (block, hash): two nodes that wrote the same rows in
+// other orders, into partitions made in other orders, encode the same bytes
+func TestStateHashLogTransactions(t *testing.T) {
+	const table = `CREATE TABLE log_transactions (hash bytea NOT NULL, block bigint NOT NULL, status bigint NOT NULL,
+		result varchar(255) NOT NULL) PARTITION BY RANGE (block);
+		CREATE INDEX ON log_transactions USING hash (hash)`
+	part := func(k int) string {
+		return fmt.Sprintf(`CREATE TABLE log_transactions_p%d PARTITION OF log_transactions FOR VALUES FROM (%d) TO (%d)`,
+			k, k*10, (k+1)*10)
+	}
+	rows := []string{`('\x02', 105, 0, 'b')`, `('\x01', 105, 1, 'a')`, `('\x03', 21, 0, '')`, `('\x01', 3, 0, 'x')`,
+		`('\xff', 3, 0, '')`, `('\x00', 99, 0, '')`}
+	a, b := testDB(t), testDB(t)
+	exec(t, a, table, part(0), part(2), part(9), part(10))
+	exec(t, b, table, part(10), part(9), part(2), part(0))
+	exec(t, a, `INSERT INTO log_transactions VALUES `+strings.Join(rows, ", "))
+	slices.Reverse(rows)
+	for _, r := range rows {
+		exec(t, b, `INSERT INTO log_transactions VALUES `+r)
+	}
+	exec(t, b, `UPDATE log_transactions SET status = status WHERE block = 105`)
+	sa, ea := encodingOf(t, a)
+	sb, eb := encodingOf(t, b)
+	require.Equal(t, sa.Hash, sb.Hash)
+	require.Equal(t, ea["log_transactions"].String(), eb["log_transactions"].String())
+	require.Equal(t, `\\x01	3	0	x
+\\xff	3	0	
+\\x03	21	0	
+\\x00	99	0	
+\\x01	105	1	a
+\\x02	105	0	b
+`, ea["log_transactions"].String())
 }

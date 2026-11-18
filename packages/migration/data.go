@@ -64,17 +64,6 @@ var (
 		t.Column("stop_time", "int", {"default": "0"})
 	{{footer}}
 
-	{{head "transactions_status"}}
-		t.Column("hash", "bytea", {"default": ""})
-		t.Column("time", "bigint", {"default": "0"})
-		t.Column("type", "int", {"default": "0"})
-		t.Column("ecosystem", "int", {"default": "1"})
-		t.Column("wallet_id", "bigint", {"default": "0"})
-		t.Column("block_id", "int", {"default": "0"})
-		t.Column("error", "string", {"default": "", "size":255})
-		t.Column("penalty", "int", {"default": "0"})
-	{{footer "primary(hash)"}}
-
 `
 
 	migrationInitialSchema = `

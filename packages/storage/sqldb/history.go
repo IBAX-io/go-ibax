@@ -55,9 +55,15 @@ type SenderTxCount struct {
 	TxCount  int64
 }
 
-// Get is retrieving model from database
+// Get reads the first row of the transaction: in its block, which log_transactions gives, as
+// 1_history has no index of the hash
 func (ts *History) Get(transactionHash []byte) (bool, error) {
-	return isFound(DBConn.Table(ts.TableName()).Where("txhash = ?", transactionHash).First(ts))
+	block, found, err := TxBlock(transactionHash)
+	if err != nil || !found {
+		return false, err
+	}
+	return isFound(DBConn.Table(ts.TableName()).Where("block_id = ? AND txhash = ?", block, transactionHash).
+		First(ts))
 }
 
 // GetExcessCommonTokenMovementPerDay returns sum of amounts 24 hours
