@@ -1528,7 +1528,7 @@ func CreateColumn(sc *SmartContract, tableName, name, colType, permissions strin
 	return
 }
 
-// PermColumn is contract func
+// PermColumn sets the permission of a column of a table of the ecosystem of the caller
 func PermColumn(sc *SmartContract, tableName, name, permissions string) error {
 	if err := sc.denyBftTable(tableName); err != nil {
 		return err
@@ -1536,28 +1536,39 @@ func PermColumn(sc *SmartContract, tableName, name, permissions string) error {
 	if err := validateAccess(sc, "PermColumn"); err != nil {
 		return err
 	}
+	return setColumnPermission(sc, tableName, name, permissions)
+}
+
+// setColumnPermission writes the permission of the column into the registry row of the table of the ecosystem
+// of the caller, found by (ecosystem, name) as the other functions of 1_tables find it, and written by
+// its id. A table of every ecosystem, as keys, has a row in 1_tables for each: a row found by its name
+// alone was the first of any ecosystem, which wrote the columns of another ecosystem with the one
+// column over the caller's row, so that no second permission could be added after genesis.
+func setColumnPermission(sc *SmartContract, tableName, name, permissions string) error {
 	name = converter.EscapeSQL(strings.ToLower(name))
 	tableName = converter.EscapeSQL(strings.ToLower(tableName))
-	tables := `1_tables`
-	type cols struct {
-		Columns string
-	}
-	temp := &cols{}
-	err := sqldb.GetDB(sc.DbTransaction).Table(tables).Where("name = ?", tableName).Select("columns").Find(temp).Error
+	t := &sqldb.Table{}
+	t.SetTablePrefix(converter.Int64ToStr(sc.TxSmart.EcosystemID))
+	found, err := sc.tables.Get(sc.DbTransaction, t, tableName)
 	if err != nil {
-		return logErrorDB(err, "querying columns by table name")
+		return logErrorDB(err, "querying the table of the ecosystem by name")
+	}
+	if !found {
+		return fmt.Errorf(eTableNotFound, tableName)
 	}
 	var perm map[string]string
-	if err = unmarshalJSON([]byte(temp.Columns), &perm, `columns from json`); err != nil {
+	if err = unmarshalJSON([]byte(t.Columns), &perm, `columns from json`); err != nil {
 		return err
+	}
+	if perm == nil {
+		perm = make(map[string]string)
 	}
 	perm[name] = permissions
 	permout, err := marshalJSON(perm, `column permissions to json`)
 	if err != nil {
 		return err
 	}
-	_, _, err = sc.update([]string{`columns`}, []any{string(permout)},
-		tables, `name`, tableName)
+	_, _, err = sc.update([]string{`columns`}, []any{string(permout)}, `1_tables`, `id`, t.ID)
 	return err
 }
 
