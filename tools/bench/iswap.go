@@ -527,9 +527,6 @@ func (c *chainClient) tokenBalance(address string, eco int64) (string, error) {
 // the reserves equal to the balances of the pair, a removal of liquidity pays back its share, and
 // the contracts refuse the calls that would take the tokens of the pairs
 func iswapCheck(c *chainClient, cfg iswapConfig, s *iswapState) error {
-	// The headers of a process share their time: InitParam again would be the transaction of the
-	// step pairs, which the node takes for a double, when one process ran both
-	c.signer.time = time.Now().Unix()
 	a := cfg.accounts[0]
 	p := s.Pairs[0]
 	swapID, err := c.iswapID(s, "SwapExactTokensForTokens")

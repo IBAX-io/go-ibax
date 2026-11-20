@@ -26,13 +26,29 @@ type signedTx struct {
 // signer signs the transactions of the accounts for a network
 type signer struct {
 	networkID int64
-	// time is the time of the headers: pre-signed transactions of a run share it, and differ in
-	// their content
-	time int64
+	// clock tells the time of the header of each transaction it signs: a node takes a transaction
+	// only within consts.MaxTxBack of the time of the block, so a run of any length stamps each
+	// transaction when it signs it, not once for the process
+	clock func() int64
 }
 
 func newSigner(info *chainInfo) *signer {
-	return &signer{networkID: info.NetworkID, time: time.Now().Unix()}
+	return &signer{networkID: info.NetworkID, clock: func() int64 { return time.Now().Unix() }}
+}
+
+// chainClock is the clock of a chain whose time was from at the start and goes speed seconds a
+// second (faults.Config.ClockSpeed) until it reaches the system clock, as the fast clock of a test
+// chain does
+func chainClock(from int64, speed float64) func() int64 {
+	start := time.Now()
+	return func() int64 {
+		now := time.Now()
+		t := from + int64(now.Sub(start).Seconds()*speed)
+		if speed > 1 && t > now.Unix() {
+			t = now.Unix()
+		}
+		return t
+	}
 }
 
 // sign fills the header of tx with the account and signs it in ecosystem 1
@@ -50,7 +66,7 @@ func (s *signer) signIn(a *account, eco int64, tx *types.SmartTransaction) (*sig
 	}
 	tx.EcosystemID = eco
 	tx.KeyID = a.keyID
-	tx.Time = s.time
+	tx.Time = s.clock()
 	tx.NetworkID = s.networkID
 	tx.PublicKey = nil
 	if a.unregistered {

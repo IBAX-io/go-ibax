@@ -51,6 +51,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/shopspring/decimal"
 )
 
@@ -82,7 +83,8 @@ func main() {
 	metrics := fs.String("metrics", "", "URLs of the /metrics of the nodes, comma-separated")
 	out := fs.String("out", "bench-results", "directory of the reports")
 	label := fs.String("label", "", "text the report starts with: the build, the machine, the network")
-	txTime := fs.Int64("time", 0, "the Unix time of the headers of the transactions (default now): on a test chain of a fast clock (faults.Config.ClockSpeed), its time, which the blocks are of")
+	txTime := fs.Int64("time", 0, "the Unix time of the chain at the start (default the system clock): on a test chain of a fast clock (faults.Config.ClockSpeed), its time, which the blocks are of; the headers of the transactions follow it from there")
+	clockSpeed := fs.Float64("clock-speed", 1, "seconds the time of the chain goes a second from -time, until it reaches the system clock (faults.Config.ClockSpeed)")
 
 	bundle := fs.String("bundle", "", "contracts.json of iSwap, which iswap imports")
 	iswapState := fs.String("iswap", "iswap.json", "file of what iswap made, which the iswap-* workloads read")
@@ -105,7 +107,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if *txTime > 0 {
-		c.signer.time = *txTime
+		c.signer.clock = chainClock(*txTime, *clockSpeed)
 	}
 	log.Printf("network %d of %d nodes: node keys %s, hash %s", c.info.NetworkID, len(c.nodes), c.info.Cryptoer, c.info.Hasher)
 
@@ -180,6 +182,11 @@ func main() {
 		log.Fatal(err)
 	}
 	cfg := runConfig{duration: *duration, batch: *batch, drain: *drain, p99: *p99, metrics: splitList(*metrics), poll: *poll}
+	// A step signs its transactions before it sends them, and the last of them may reach a block a
+	// drain after the step ends: the nodes refuse all a step sends past consts.MaxTxBack
+	if window := consts.MaxTxBack * time.Second; *duration+*drain >= window {
+		log.Fatalf("-duration %v and -drain %v: a step must end its drain within %v of signing, consts.MaxTxBack; run more steps of the rate", *duration, *drain, window)
+	}
 	for _, r := range splitList(*rates) {
 		v, err := strconv.Atoi(r)
 		if err != nil || v < 1 {
