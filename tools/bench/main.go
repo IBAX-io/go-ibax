@@ -17,7 +17,7 @@
 // of the accounts in the file. run takes the accounts of the file and, for each workload, sends
 // transactions at each rate in turn for the duration, open loop and pre-signed, to the nodes in
 // turn, while the network keeps up: every transaction in a block of every node and at least 80% of
-// the rate in TPS. A step passes when, besides, the P99 of the latency to a block of every node is
+// the rate in TPS (with -all-rates, every rate whether it keeps up or not). A step passes when, besides, the P99 of the latency to a block of every node is
 // within the target. The latency is from the send to the time the bench saw the transaction in a
 // block of the node, which it reads every -poll. It writes the steps, with the metrics of the nodes
 // of -metrics (the /metrics of --metricsListen), as JSON and Markdown in -out, and exits 1 if no
@@ -79,6 +79,7 @@ func main() {
 	duration := fs.Duration("duration", 30*time.Second, "time a step sends")
 	p99 := fs.Duration("p99", 2*time.Second, "P99 target of the latency to a block of every node")
 	drain := fs.Duration("drain", 30*time.Second, "time a step waits for a transaction to reach a block after the last did")
+	allRates := fs.Bool("all-rates", false, "run every rate of -rates, also after a step the network does not keep up with: a test of the network held past its capacity, as its memory under a backlog")
 	poll := fs.Duration("poll", 50*time.Millisecond, "time between two reads of the last block of a node")
 	metrics := fs.String("metrics", "", "URLs of the /metrics of the nodes, comma-separated")
 	out := fs.String("out", "bench-results", "directory of the reports")
@@ -181,7 +182,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg := runConfig{duration: *duration, batch: *batch, drain: *drain, p99: *p99, metrics: splitList(*metrics), poll: *poll}
+	cfg := runConfig{duration: *duration, batch: *batch, drain: *drain, p99: *p99, metrics: splitList(*metrics), poll: *poll, allRates: *allRates}
 	// A step signs its transactions before it sends them, and the last of them may reach a block a
 	// drain after the step ends: the nodes refuse all a step sends past consts.MaxTxBack
 	if window := consts.MaxTxBack * time.Second; *duration+*drain >= window {
