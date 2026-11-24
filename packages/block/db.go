@@ -278,7 +278,7 @@ func (b *Block) upsertInfoBlock(dbTx *sqldb.DbTransaction, block *sqldb.BlockCha
 		CandidateNodes: block.CandidateNodes,
 	}
 	if block.ID == 1 {
-		ib.CurrentVersion = fmt.Sprintf("%d", consts.BlockVersion)
+		ib.CurrentVersion = fmt.Sprintf("%d", b.Header.Version)
 		err := ib.Create(dbTx)
 		if err != nil {
 			log.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("creating info block")

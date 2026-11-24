@@ -321,8 +321,10 @@ func CheckFirstBlockConsensus(data *types.FirstBlock) error {
 		return fmt.Errorf("the snapshots every %d heights: the interval is a multiple of %d, the blocks of a partition",
 			data.SnapshotInterval, migration.PartitionBlocks)
 	}
-	if data.SnapshotDelay < 1 || data.SnapshotDelay >= migration.PartitionBlocks {
-		return fmt.Errorf("the state hash %d heights after its snapshot: the delay is at least 1 and below %d, the blocks of a partition",
+	// the proposer of block h has executed the blocks up to h-2 only (consts.BvOrdered): the
+	// snapshot of h-1 is not taken yet
+	if data.SnapshotDelay < 2 || data.SnapshotDelay >= migration.PartitionBlocks {
+		return fmt.Errorf("the state hash %d heights after its snapshot: the delay is at least 2 and below %d, the blocks of a partition",
 			data.SnapshotDelay, migration.PartitionBlocks)
 	}
 	var nodes []*syspar.HonorNode

@@ -32,6 +32,23 @@ func TestForShaVersions(t *testing.T) {
 	require.NotEqual(t, hash, h.ForSha(prev, nil))
 }
 
+// The hash of a block of version 5 takes the execution hash of block h-2 and the state hash, and
+// neither the rollbacks hash of the block before nor a validators hash: no result of the
+// execution of the block or of the block before
+func TestForShaOrdered(t *testing.T) {
+	prev := &BlockHeader{BlockHash: []byte{0xaa}, RollbacksHash: []byte{0xbb}}
+	h := &BlockHeader{BlockId: 2, Timestamp: 3, KeyId: 4, NodePosition: 1, NetworkId: 9, Version: consts.BvOrdered,
+		NextValidatorsHash: []byte{0xcc}, StateHash: []byte{0xdd}, ExecHash: []byte{0xee}}
+	require.Equal(t, "2,aa,mr,3,0,4,1,9,ee,dd", h.ForSha(prev, []byte("mr")))
+	require.Equal(t, "0,2,aa,3,0,4,1,mr,9,ee,dd", h.ForSign(prev, []byte("mr")))
+
+	hash := h.ForSha(prev, nil)
+	prev.RollbacksHash, h.NextValidatorsHash = []byte{0xbc}, []byte{0xce}
+	require.Equal(t, hash, h.ForSha(prev, nil))
+	h.ExecHash = []byte{0xef}
+	require.NotEqual(t, hash, h.ForSha(prev, nil))
+}
+
 // HeaderOf reads from the first bytes of a marshalled block the header that the whole block has,
 // tells the length of data a header longer than the bytes needs, and refuses data that does not
 // lead with a header

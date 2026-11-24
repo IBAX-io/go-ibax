@@ -1055,7 +1055,7 @@ func (a bftApp) propose(height uint64, round uint32, start, started, deadline ti
 		KeyId:         conf.Config.KeyID,
 		NetworkId:     conf.Config.LocalConf.NetworkID,
 		NodePosition:  position,
-		Version:       consts.BlockVersion,
+		Version:       consts.BftBlockVersion,
 		ConsensusMode: consts.HonorNodeMode,
 	}
 	prevHeader := &types.BlockHeader{

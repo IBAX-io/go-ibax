@@ -17,6 +17,9 @@ enum TxInvokeStatusCode{
   PENALTY = 1;
   FAILED = 2;
   PENDING = 3;
+  // the transaction failed a check before its contract ran, at the execution of an ordered block:
+  // it changed nothing and paid no fee
+  DISCARDED = 4;
 }
 
 message FirstBlock {

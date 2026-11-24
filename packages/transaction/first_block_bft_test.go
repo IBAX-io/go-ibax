@@ -105,7 +105,11 @@ func TestCheckFirstBlockConsensus(t *testing.T) {
 		{"no delay", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
 			fb.SnapshotDelay = 0
 			return nodes
-		}, "the delay is at least 1"},
+		}, "the delay is at least 2"},
+		{"a delay of 1", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
+			fb.SnapshotDelay = 1
+			return nodes
+		}, "the delay is at least 2"},
 		{"3 validators", func(fb *types.FirstBlock, nodes []bftTestNode) []bftTestNode {
 			return nodes[:3]
 		}, "at least 4"},

@@ -26,6 +26,9 @@ message BlockHeader{
   bytes next_validators_hash = 13;
   // the state hash of the snapshot height whose state the block confirms (block version 4)
   bytes state_hash = 14;
+  // the execution hash of block h-2 on a chain of the BFT consensus (block version 5): the hash
+  // of its height, rollbacks hash, results hash and the hash of the validators set it leaves
+  bytes exec_hash = 15;
 }
 
 // BlockData is a structure of the block's

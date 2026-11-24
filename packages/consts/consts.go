@@ -21,8 +21,16 @@ const BvIncludeRollbackHash = 3
 // next height and the state hash
 const BvValidatorsHash = 4
 
-// BlockVersion is block version
+// BvOrdered is the block version of a chain of the BFT consensus whose blocks are ordered before
+// they are executed: the hash of block h takes the execution hash of block h-2 (ExecHash) and the
+// state hash, and no result of the execution of h itself
+const BvOrdered = 5
+
+// BlockVersion is the version of the blocks of a chain without the BFT consensus
 const BlockVersion = BvValidatorsHash
+
+// BftBlockVersion is the version of the blocks of a chain of the BFT consensus
+const BftBlockVersion = BvOrdered
 
 // DefaultTcpPort used when port number missed in host addr
 const DefaultTcpPort = 7078

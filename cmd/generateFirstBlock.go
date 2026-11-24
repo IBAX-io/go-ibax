@@ -144,6 +144,7 @@ func genesisBlock() ([]byte, error) {
 			log.WithFields(log.Fields{"size": crypto.HashSize()}).Fatal("--bftConsensus needs a hash of 32 bytes: the votes sign the hash of a block")
 		}
 		bft = 1
+		header.Version = consts.BftBlockVersion
 		interval, delay = snapshotInterval, snapshotDelay
 		data, err := os.ReadFile(honorNodesFilepath)
 		if err != nil {

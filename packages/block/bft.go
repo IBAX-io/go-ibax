@@ -411,8 +411,8 @@ func VerifyCertified(raw []byte, cert *bft.Certificate, set bft.Validators, netw
 	if uint64(height) != cert.Height || b.PrevHeader.BlockId != height-1 {
 		return nil, fmt.Errorf("the certificate of height %d commits no block %d after %d", cert.Height, height, b.PrevHeader.BlockId)
 	}
-	if b.Header.Version < consts.BvValidatorsHash {
-		return nil, fmt.Errorf("block %d: version %d, without the validators hash", height, b.Header.Version)
+	if b.Header.Version != consts.BftBlockVersion {
+		return nil, fmt.Errorf("block %d: version %d, not %d", height, b.Header.Version, consts.BftBlockVersion)
 	}
 	merkle := b.GenMerkleRoot()
 	if !bytes.Equal(merkle, b.MerkleRoot) {
@@ -600,7 +600,7 @@ func parseProposal(binData []byte, height int64, hash bft.Hash) (*Block, error) 
 
 // checkNetwork checks the block is of the network of the node and of the version
 func checkNetwork(h *types.BlockHeader) error {
-	if h.NetworkId != conf.Config.LocalConf.NetworkID || h.Version != consts.BlockVersion {
+	if h.NetworkId != conf.Config.LocalConf.NetworkID || h.Version != consts.BftBlockVersion {
 		return fmt.Errorf("block %d: network %d, version %d", h.BlockId, h.NetworkId, h.Version)
 	}
 	return nil
