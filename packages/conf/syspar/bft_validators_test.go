@@ -60,9 +60,9 @@ func TestCheckBftValidators(t *testing.T) {
 	}
 }
 
-// bft_timeout_propose_ms stays above max_block_generation_time and BftProposerWait, and
-// bft_stop_review_days above bft_review_voting_days, the starting values too; the bound behind of
-// the timeliness grows with the round
+// bft_timeout_propose_ms stays above the wait of a proposer for its executor and its clock and the
+// way of its proposal, whatever max_block_generation_time is, and bft_stop_review_days above
+// bft_review_voting_days; the bound behind of the timeliness grows with the round
 func TestCheckBftParameter(t *testing.T) {
 	mutex.Lock()
 	saved := cache
@@ -79,13 +79,12 @@ func TestCheckBftParameter(t *testing.T) {
 		ok          bool
 	}{
 		{BftTimeoutPropose, "4000", true},
-		{BftTimeoutPropose, "3001", true},
-		{BftTimeoutPropose, "3000", false},
+		{BftTimeoutPropose, "2501", true},
+		{BftTimeoutPropose, "2500", false},
 		{BftTimeoutPropose, "0", false},
 		{BftTimeoutPropose, "x", false},
-		{MaxBlockGenerationTime, "2999", true},
-		{MaxBlockGenerationTime, "3000", false},
-		{MaxBlockGenerationTime, "-1", false},
+		{MaxBlockGenerationTime, "3999", true},
+		{MaxBlockGenerationTime, "60000", true},
 		{BftStopReviewDays, "7", true},
 		{BftStopReviewDays, "4", true},
 		{BftStopReviewDays, "3", false},
@@ -102,7 +101,7 @@ func TestCheckBftParameter(t *testing.T) {
 	for _, tc := range []struct {
 		round  uint32
 		behind time.Duration
-	}{{0, 5 * time.Second}, {1, 5500 * time.Millisecond}, {2, 6050 * time.Millisecond}, {25, 54173 * time.Millisecond}} {
+	}{{0, 3500 * time.Millisecond}, {1, 3850 * time.Millisecond}, {2, 4235 * time.Millisecond}, {25, 37921 * time.Millisecond}} {
 		ahead, behind := GetBftTimeliness(tc.round)
 		if ahead != 2*time.Second || behind < tc.behind || behind > tc.behind+tc.behind/1000 {
 			t.Errorf("round %d: the bounds %v ahead and %v behind, want 2s and %v", tc.round, ahead, behind, tc.behind)
@@ -113,14 +112,12 @@ func TestCheckBftParameter(t *testing.T) {
 	}
 }
 
-// The first block of a chain of the BFT consensus writes starting values that keep each pair of
-// bftPairs, with max_block_generation_time at its starting 2000 ms: bft_timeout_propose_ms 3000,
-// which chains of the consensus before the margin started with, does not, and such a chain is not
-// upgraded but made again (README, Branches and chains)
+// The first block of a chain of the BFT consensus writes starting values that pass
+// CheckBftParameter: bft_timeout_propose_ms above its floor, each pair of bftPairs in order
 func TestBftParametersKeepPairs(t *testing.T) {
 	mutex.Lock()
 	saved := cache
-	cache = map[string]string{MaxBlockGenerationTime: "2000"}
+	cache = map[string]string{}
 	for _, p := range BftParameters {
 		cache[p[0]] = p[1]
 	}
@@ -130,15 +127,10 @@ func TestBftParametersKeepPairs(t *testing.T) {
 		cache = saved
 		mutex.Unlock()
 	}()
-	for _, p := range bftPairs {
-		for _, name := range []string{p.longer, p.shorter} {
-			if err := CheckBftParameter(name, strconv.FormatInt(pairValue(name), 10)); err != nil {
-				t.Errorf("the starting value of %s: %v", name, err)
-			}
+	for _, p := range BftParameters {
+		if err := CheckBftParameter(p[0], strconv.FormatInt(bftInt(p[0]), 10)); err != nil {
+			t.Errorf("the starting value of %s: %v", p[0], err)
 		}
-	}
-	if err := CheckBftParameter(BftTimeoutPropose, "3000"); err == nil {
-		t.Error("bft_timeout_propose_ms 3000 keeps the margin over max_block_generation_time 2000")
 	}
 }
 

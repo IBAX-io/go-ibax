@@ -20,27 +20,31 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// maxBlockResult is the executed height of the node, whose state the reads see, and its committed
+// height: a chain of the BFT consensus commits a block before it executes it, up to
+// consts.BftExecDepth heights ahead; the other chains execute a block as they write it
 type maxBlockResult struct {
-	MaxBlockID int64 `json:"max_block_id"`
+	MaxBlockID       int64 `json:"max_block_id"`
+	CommittedBlockID int64 `json:"committed_block_id"`
 }
 
 func getMaxBlockHandler(w http.ResponseWriter, r *http.Request) {
 	logger := getLogger(r)
-
-	block := &sqldb.BlockChain{}
-	found, err := block.GetMaxBlock()
-	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting max block")
-		errorResponse(w, err)
-		return
+	executed, err := sqldb.ExecutedHeight()
+	if err == nil {
+		var committed int64
+		if committed, err = sqldb.CommittedHeight(); err == nil {
+			if committed == 0 {
+				logger.WithFields(log.Fields{"type": consts.NotFound}).Debug("last block not found")
+				errorResponse(w, errNotFound)
+				return
+			}
+			jsonResponse(w, &maxBlockResult{MaxBlockID: executed, CommittedBlockID: committed})
+			return
+		}
 	}
-	if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound}).Debug("last block not found")
-		errorResponse(w, errNotFound)
-		return
-	}
-
-	jsonResponse(w, &maxBlockResult{block.ID})
+	logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting the heights")
+	errorResponse(w, err)
 }
 
 type blockInfoResult struct {

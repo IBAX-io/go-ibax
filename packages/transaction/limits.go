@@ -60,8 +60,8 @@ type Limits struct {
 	of *Limits
 }
 
-// Deferred are the limits of a run in parallel: they check nothing, and tell the time left to the
-// block
+// Deferred are the limits of a run in parallel: they check nothing, the block checks them in its
+// order once the run commits
 func (limits *Limits) Deferred() *Limits {
 	return &Limits{Mode: limits.Mode, of: limits}
 }
@@ -188,20 +188,6 @@ func (bl *timeBlockLimit) check(t TransactionCaller, mode LimitMode) error {
 	}
 
 	return limitError("txBlockTimeLimit", "Block generation time exceeded")
-}
-
-// TimeLeft is the time left to the next transaction of the block being generated, in ms, at most
-// max_block_generation_time
-func (limits *Limits) TimeLeft() int64 {
-	if limits.of != nil {
-		return limits.of.TimeLeft()
-	}
-	for _, l := range limits.Limiters {
-		if bl, ok := l.(*timeBlockLimit); ok {
-			return bl.left().Milliseconds()
-		}
-	}
-	return syspar.GetMaxBlockGenerationTime()
 }
 
 // Checking the max tx from one user in the block

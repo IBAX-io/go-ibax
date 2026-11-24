@@ -228,6 +228,17 @@ func (w *txWindow) Known(hashes [][]byte, checkTime int64) (map[string]bool, err
 	return known, nil
 }
 
+// Has tells a committed block holds the transaction of the hash, of those the window keeps
+func (w *txWindow) Has(hash []byte) (bool, error) {
+	if err := w.ensure(); err != nil {
+		return false, err
+	}
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+	_, ok := w.signed[string(hash)]
+	return ok, nil
+}
+
 // Len is the hashes the window holds
 func (w *txWindow) Len() int {
 	w.mu.RLock()

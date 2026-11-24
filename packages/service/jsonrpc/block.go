@@ -36,22 +36,28 @@ func newBlockChainApi() *blockChainApi {
 	return &blockChainApi{}
 }
 
+// MaxBlockId is the executed height of the node, whose state the reads see
 func (b *blockChainApi) MaxBlockId(ctx RequestContext) (*int64, *Error) {
-	r := ctx.HTTPRequest()
-	logger := getLogger(r)
+	return height(ctx, sqldb.ExecutedHeight)
+}
 
-	bk := &sqldb.BlockChain{}
-	found, err := bk.GetMaxBlock()
+// CommittedBlockId is the committed height of the node: a chain of the BFT consensus commits a
+// block before it executes it, up to consts.BftExecDepth heights ahead of MaxBlockId
+func (b *blockChainApi) CommittedBlockId(ctx RequestContext) (*int64, *Error) {
+	return height(ctx, sqldb.CommittedHeight)
+}
+
+// height is a height of the node, NotFoundError before its first block
+func height(ctx RequestContext, get func() (int64, error)) (*int64, *Error) {
+	h, err := get()
 	if err != nil {
-		logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting max block")
+		getLogger(ctx.HTTPRequest()).WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting the height")
 		return nil, DefaultError(err.Error())
 	}
-	if !found {
-		logger.WithFields(log.Fields{"type": consts.NotFound}).Debug("last block not found")
+	if h == 0 {
 		return nil, NotFoundError()
 	}
-
-	return &bk.ID, nil
+	return &h, nil
 }
 
 type BlockInfoResult struct {

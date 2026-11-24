@@ -16,6 +16,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
@@ -35,9 +36,6 @@ const (
 	// bftRateMin is the fewest transactions of a block whose execution measures the rate of the
 	// executor, and the fewest a proposer takes for its block once the rate is measured
 	bftRateMin = 100
-	// bftExecTarget is the time of execution a proposer sizes its block to: a chain makes at most
-	// one block a second, so the executor keeps up with a block of the rate of a second
-	bftExecTarget = time.Second
 	// bftSyncWait is how long the synchronization waits for the executor before it verifies the
 	// certificate of a height whose validators set the execution of a block before stores
 	bftSyncWait = time.Minute
@@ -65,6 +63,10 @@ type bftExecutor struct {
 	notify func()
 	// retryAt is when the executor tries again a block whose execution failed
 	retryAt time.Time
+	// committedAt is when the node committed the blocks it has not executed, and lastEnd when the
+	// last execution ended: the idle time of the executor (metrics.BftExecIdle)
+	committedAt map[int64]time.Time
+	lastEnd     time.Time
 }
 
 var (
@@ -86,8 +88,14 @@ func startBftExecutor(ctx context.Context, logger *log.Entry) {
 	})
 }
 
-// signal wakes the executor: a block was committed
-func (e *bftExecutor) signal() {
+// signal wakes the executor: the block of the height was committed
+func (e *bftExecutor) signal(height int64) {
+	e.mu.Lock()
+	if e.committedAt == nil {
+		e.committedAt = make(map[int64]time.Time)
+	}
+	e.committedAt[height] = time.Now()
+	e.mu.Unlock()
 	select {
 	case e.wake <- struct{}{}:
 	default:
@@ -134,12 +142,14 @@ func (e *bftExecutor) step() bool {
 	}
 	// the commit of block 1 executes it, and a node that joins imports the executed state
 	e.moved(executed)
+	metrics.BftExecLag.Set(float64(committed - executed))
 	if executed >= committed {
 		DBUnlock()
 		return false
 	}
 	height := executed + 1
 	start := time.Now()
+	e.idle(height, start)
 	b, err := block.Committed(height)
 	if err == nil {
 		err = b.Execute()
@@ -150,7 +160,9 @@ func (e *bftExecutor) step() bool {
 		return false
 	}
 	took := time.Since(start)
+	metrics.BftExecLag.Set(float64(committed - height))
 	e.mu.Lock()
+	e.lastEnd = time.Now()
 	if n := len(b.Transactions); n >= bftRateMin && took > 0 {
 		e.rate = float64(n) / took.Seconds()
 	}
@@ -163,6 +175,28 @@ func (e *bftExecutor) step() bool {
 		notify()
 	}
 	return true
+}
+
+// idle observes the time the executor was idle before it started the execution of the height at
+// start: from the commit of the block, or the end of the execution before it if that came later.
+// Nothing for the first execution of the node, or for a block it committed before it started.
+func (e *bftExecutor) idle(height int64, start time.Time) {
+	e.mu.Lock()
+	at, ok := e.committedAt[height]
+	for h := range e.committedAt {
+		if h <= height {
+			delete(e.committedAt, h)
+		}
+	}
+	lastEnd := e.lastEnd
+	e.mu.Unlock()
+	if !ok || lastEnd.IsZero() {
+		return
+	}
+	if lastEnd.After(at) {
+		at = lastEnd
+	}
+	metrics.BftExecIdle.Observe(max(start.Sub(at), 0).Seconds())
 }
 
 // failed takes an execution of the height that failed: an execution hash not that of the node
@@ -218,7 +252,7 @@ func (e *bftExecutor) wait(ctx context.Context, height int64, deadline time.Time
 }
 
 // capacity is the transactions a proposer takes at most for its block: those the executor runs
-// in bftExecTarget at its last rate, at least bftRateMin, at most max_tx_block; max_tx_block
+// in syspar.BftExecTarget at its last rate, at least bftRateMin, at most max_tx_block; max_tx_block
 // before the executor measured its rate
 func (e *bftExecutor) capacity() int {
 	e.mu.Lock()
@@ -228,7 +262,7 @@ func (e *bftExecutor) capacity() int {
 	if rate == 0 {
 		return limit
 	}
-	return min(max(int(rate*bftExecTarget.Seconds()), bftRateMin), limit)
+	return min(max(int(rate*syspar.BftExecTarget.Seconds()), bftRateMin), limit)
 }
 
 // heights is the executed and the committed heights of the node
@@ -271,6 +305,6 @@ func commitCertified(bin []byte, cert *bft.Certificate) (bool, error) {
 	if _, err := block.Commit(bin, cert); err != nil {
 		return false, err
 	}
-	bftExec.signal()
+	bftExec.signal(int64(cert.Height))
 	return true, nil
 }

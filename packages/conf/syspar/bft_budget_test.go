@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-// The budget of a proposer is BftProposerWait and max_block_generation_time, at most
-// bft_timeout_propose_ms, and grows with the round as the timeout does
+// The budget of a proposer is bft_timeout_propose_ms less BftProposalMargin, and grows with the
+// round as the timeout does; max_block_generation_time takes no part
 func TestBftProposeBudget(t *testing.T) {
 	mutex.Lock()
 	saved := cache
@@ -35,12 +35,12 @@ func TestBftProposeBudget(t *testing.T) {
 		round          uint32
 		want           time.Duration
 	}{
-		{"2000", "4000", 0, 3000 * time.Millisecond},
-		{"2000", "4000", 1, 3500 * time.Millisecond},
-		{"2000", "4000", 4, 5000 * time.Millisecond},
-		{"500", "4000", 0, 1500 * time.Millisecond},
-		{"2000", "2500", 0, 2500 * time.Millisecond},
-		{"2000", "2500", 2, 3500 * time.Millisecond},
+		{"2000", "4000", 0, 3500 * time.Millisecond},
+		{"2000", "4000", 1, 4000 * time.Millisecond},
+		{"2000", "4000", 4, 5500 * time.Millisecond},
+		{"500", "4000", 0, 3500 * time.Millisecond},
+		{"9000", "2600", 0, 2100 * time.Millisecond},
+		{"9000", "2600", 2, 3100 * time.Millisecond},
 	} {
 		set(c.block, c.propose)
 		propose, _, _ := GetBftTimeouts()
@@ -48,8 +48,8 @@ func TestBftProposeBudget(t *testing.T) {
 		if got != c.want {
 			t.Errorf("block %s ms, propose %s ms, round %d: budget %v, want %v", c.block, c.propose, c.round, got, c.want)
 		}
-		if timeout := propose + time.Duration(c.round)*BftTimeoutDelta; got > timeout {
-			t.Errorf("block %s ms, propose %s ms, round %d: budget %v past the timeout %v", c.block, c.propose, c.round, got, timeout)
+		if timeout := propose + time.Duration(c.round)*BftTimeoutDelta; got > timeout-BftProposalMargin {
+			t.Errorf("block %s ms, propose %s ms, round %d: budget %v leaves less than the margin of the timeout %v", c.block, c.propose, c.round, got, timeout)
 		}
 	}
 }

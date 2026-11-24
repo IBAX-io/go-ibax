@@ -47,6 +47,9 @@ const (
 	discardFuel int32 = 2
 )
 
+// discardNames names the reasons of the discards in metrics.BftDiscardedTxs
+var discardNames = map[int32]string{discardCheck: "check", discardFuel: "fuel"}
+
 // ordered reports whether the block is of an ordered chain, executed after its order
 func (b *Block) ordered() bool {
 	return b.Header.Version >= consts.BvOrdered
@@ -130,7 +133,6 @@ func (b *Block) discard(afters *types.AfterTxs, t *transaction.Transaction, err 
 		b.discards = make(map[string]int32)
 	}
 	b.discards[string(t.Hash())] = reason
-	metrics.TxResults.WithLabelValues(b.execKind(), "discarded").Inc()
 }
 
 // resultsHash is the hash of the results of the transactions of the block, in their order: of each
@@ -350,6 +352,9 @@ func (b *Block) Execute() error {
 	}
 	states.afterCommit(b.Header.BlockId)
 	sqldb.AnalyzeRange(b.Header.BlockId)
+	for _, reason := range b.discards {
+		metrics.BftDiscardedTxs.WithLabelValues(discardNames[reason]).Inc()
+	}
 	b.stage(metrics.StageCommit, start)
 	start = time.Now()
 	for _, q := range b.Notifications {

@@ -262,6 +262,30 @@ var (
 	}, []string{"type"})
 )
 
+var (
+	// BftDiscardedTxs counts the transactions the executed ordered blocks discarded, by reason:
+	// check, a check before the body of the contract; fuel, the fuel of the transaction or the block
+	BftDiscardedTxs = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "bft_discarded_txs_total",
+		Help: "Transactions the executed ordered blocks discarded, by reason.",
+	}, []string{"reason"})
+
+	// BftExecLag is the committed blocks the executor of the node has not executed yet
+	BftExecLag = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: namespace, Name: "bft_exec_lag_blocks",
+		Help: "Committed blocks not executed yet.",
+	})
+
+	// BftExecIdle is the time the executor was idle while a committed block waited for it: from
+	// the commit of the block, or the end of the execution before it if that came later, to the
+	// start of its execution
+	BftExecIdle = prometheus.NewHistogram(prometheus.HistogramOpts{
+		Namespace: namespace, Name: "bft_exec_idle_seconds",
+		Help:    "Executor idle time while a committed block waited to be executed.",
+		Buckets: durationBuckets,
+	})
+)
+
 func init() {
 	registry.MustRegister(
 		collectors.NewGoCollector(),
@@ -269,6 +293,7 @@ func init() {
 		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, TxExecutions,
 		ContractTime, ContractFuel, ContractStatements, ContractRows, ContractRuns, ContractResults, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
 		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
+		BftDiscardedTxs, BftExecLag, BftExecIdle,
 	)
 }
 

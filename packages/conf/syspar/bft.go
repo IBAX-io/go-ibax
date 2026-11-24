@@ -39,11 +39,22 @@ const (
 
 	// BftTimeoutDelta is what each round adds to the timeouts of round 0
 	BftTimeoutDelta = 500 * time.Millisecond
+	// BftExecTarget is the time of execution a proposer sizes its block to, by the last rate of
+	// its executor, and so the most a proposer waits for its executor to have the execution hash
+	// its block carries: a chain makes at most one block a second, so the executor of a validator
+	// is at most a block behind
+	BftExecTarget = time.Second
 	// BftProposerWait is how long a proposer waits at most for its clock to pass the time of the
-	// last block, before it reads its clock and makes the block in max_block_generation_time: the
-	// time of a block of an honest proposer is not ahead of its clock, so the clock of the next is
-	// past it within a second but for the drift of the clocks
+	// last block, before it reads its clock and collects its block: the time of a block of an
+	// honest proposer is not ahead of its clock, so the clock of the next is past it within a
+	// second but for the drift of the clocks
 	BftProposerWait = time.Second
+	// BftProposalMargin is what the propose timeout keeps for the proposer to collect its block
+	// from its pool, sign it, and for the proposal to reach the validators
+	BftProposalMargin = 500 * time.Millisecond
+	// bftProposeFloor is the least bft_timeout_propose_ms, in ms: a proposer waits for its
+	// executor, then for its clock, then collects its block, which reaches the validators
+	bftProposeFloor = (BftExecTarget + BftProposerWait + BftProposalMargin) / time.Millisecond
 	// bftTimelinessGrowth is how much the bound behind of the timeliness grows each round, up to
 	// round bftTimelinessRounds, so that a round whose messages take longer than the bound
 	// assumes still takes a proposal in a later round
@@ -106,56 +117,48 @@ func GetBftMaxClockDrift() time.Duration {
 // GetBftTimeliness is how far the time of the block of a new proposal of a round may be from the
 // time a validator takes the proposal (design 4.4): ahead of it by at most bft_max_clock_drift_ms,
 // and behind it by at most that, the second the proposer rounds its clock down to, and
-// max_block_generation_time, in which the proposer makes the block after it reads its clock, so
-// that only puts the time of the block behind. The bound behind grows by bftTimelinessGrowth each
-// round, up to round bftTimelinessRounds.
+// BftProposalMargin, in which the proposer collects the block after it reads its clock and the
+// proposal reaches the validator, so that only puts the time of the block behind. The bound behind
+// grows by bftTimelinessGrowth each round, up to round bftTimelinessRounds.
 func GetBftTimeliness(round uint32) (ahead, behind time.Duration) {
 	drift := GetBftMaxClockDrift()
-	behind = drift + time.Second + time.Duration(GetMaxBlockGenerationTime())*time.Millisecond
+	behind = drift + time.Second + BftProposalMargin
 	growth := math.Pow(bftTimelinessGrowth, float64(min(round, bftTimelinessRounds)))
 	return drift, time.Duration(float64(behind) * growth)
 }
 
 // bftPairs are the parameters of a chain of the BFT consensus that a vote changes only with the
-// parameter they pair with, the longer one above the shorter and its margin: a proposer waits up
-// to BftProposerWait for its clock and makes its block within max_block_generation_time, so a
-// validator waits longer for the proposal, bft_timeout_propose_ms;
-// the vote of a review lasts bft_review_voting_days, so a review has longer to reach its
-// conclusion, bft_stop_review_days (design 4.5)
+// parameter they pair with, the longer one above the shorter and its margin: the vote of a review
+// lasts bft_review_voting_days, so a review has longer to reach its conclusion,
+// bft_stop_review_days (design 4.5)
 var bftPairs = []struct {
 	longer, shorter string
 	margin          int64
 	reason          string
 }{
-	{BftTimeoutPropose, MaxBlockGenerationTime, BftProposerWait.Milliseconds(),
-		"the validators would time out before the proposal of a proposer that takes its time"},
 	{BftStopReviewDays, BftReviewVotingDays, 0, "a review would be overdue before the vote of its conclusion ends"},
 }
 
 // GetBftProposeBudget is the time the proposer of a round has for its proposal from when the
-// validators started the round, so that it reaches them within bft_timeout_propose_ms: what
-// bftPairs keeps of the timeout for the proposer, BftProposerWait for its clock and
-// max_block_generation_time for its block, and the BftTimeoutDelta each round adds to the
-// timeout. The rest of the timeout, the margin of bftPairs and more, is the way of the proposal
-// to the validators. A proposer that starts the round after the validators, as it was still
-// trying the block of the height before, has its lag less of it.
+// validators started the round, so that it reaches them within bft_timeout_propose_ms and the
+// BftTimeoutDelta each round adds to it: the timeout less BftProposalMargin, the way of the
+// proposal. A proposer that starts the round after the validators, as it was still committing the
+// block of the height before, has its lag less of it.
 func GetBftProposeBudget(round uint32) time.Duration {
 	propose, _, _ := GetBftTimeouts()
-	block := time.Duration(GetMaxBlockGenerationTime()) * time.Millisecond
-	return min(propose, block+BftProposerWait) + time.Duration(round)*BftTimeoutDelta
+	return propose - BftProposalMargin + time.Duration(round)*BftTimeoutDelta
 }
 
-// pairValue is the value a node reads of a parameter of bftPairs
-func pairValue(name string) int64 {
-	if name == MaxBlockGenerationTime {
-		return GetMaxBlockGenerationTime()
-	}
-	return bftInt(name)
-}
-
-// CheckBftParameter checks a new value of a platform parameter on a chain of the BFT consensus
-// against the parameter it pairs with in bftPairs
+// CheckBftParameter checks a new value of a platform parameter on a chain of the BFT consensus:
+// bft_timeout_propose_ms above bftProposeFloor, and a parameter of bftPairs against the one it
+// pairs with
 func CheckBftParameter(name, value string) error {
+	if name == BftTimeoutPropose {
+		v, err := strconv.ParseInt(value, 10, 64)
+		if err != nil || v <= int64(bftProposeFloor) {
+			return fmt.Errorf("%s is %q: it is above %d, the wait of a proposer for its executor and its clock and the way of its proposal", name, value, bftProposeFloor)
+		}
+	}
 	for _, p := range bftPairs {
 		if name != p.longer && name != p.shorter {
 			continue
@@ -164,7 +167,7 @@ func CheckBftParameter(name, value string) error {
 		if err != nil || v <= 0 {
 			return fmt.Errorf("%s is %q: it is a positive integer", name, value)
 		}
-		longer, shorter := pairValue(p.longer), pairValue(p.shorter)
+		longer, shorter := bftInt(p.longer), bftInt(p.shorter)
 		if name == p.longer {
 			longer = v
 		} else {

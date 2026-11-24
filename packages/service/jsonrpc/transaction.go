@@ -83,6 +83,8 @@ type txstatusError struct {
 }
 
 type txstatusResult struct {
+	// Status is pending, executed, penalty, discarded or refused (transaction.TxState)
+	Status  string         `json:"status"`
 	BlockID string         `json:"blockid"`
 	Message *txstatusError `json:"errmsg,omitempty"`
 	Result  string         `json:"result"`
@@ -127,15 +129,19 @@ func getTxStatus(r *http.Request, hash string) (*txstatusResult, error) {
 			}
 		}
 	}
-	if ts.BlockID > 0 {
+	status.Status = string(ts.State)
+	switch ts.State {
+	case transaction.TxExecuted:
+		status.BlockID = converter.Int64ToStr(ts.BlockID)
+		status.Result = ts.Error
+	case transaction.TxPenalty:
 		status.BlockID = converter.Int64ToStr(ts.BlockID)
 		status.Penalty = ts.Penalty
-		if ts.Penalty == 1 {
-			checkErr()
-		} else {
-			status.Result = ts.Error
-		}
-	} else {
+		checkErr()
+	case transaction.TxDiscarded:
+		status.BlockID = converter.Int64ToStr(ts.BlockID)
+		status.Message = &txstatusError{Type: "discarded", Error: ts.Error}
+	case transaction.TxRefused:
 		checkErr()
 	}
 	return &status, nil

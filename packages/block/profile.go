@@ -21,6 +21,10 @@ type execProfile struct {
 	kind   string
 	start  time.Time
 	fields log.Fields
+	// slow is the time past which the execution is logged at warning level: for an ordered block
+	// syspar.BftExecTarget, the time a proposer sizes its block to, else the time a node has to
+	// generate a block
+	slow time.Duration
 }
 
 // execKind is the kind of the execution of the block
@@ -38,7 +42,11 @@ func (b *Block) execKind() string {
 // beginProfile starts the profile of an execution of the block; the kind is read now, so trial
 // is set before
 func (b *Block) beginProfile() {
-	b.prof = &execProfile{kind: b.execKind(), start: time.Now(), fields: log.Fields{}}
+	slow := time.Duration(syspar.GetMaxBlockGenerationTime()) * time.Millisecond
+	if b.ordered() {
+		slow = syspar.BftExecTarget
+	}
+	b.prof = &execProfile{kind: b.execKind(), start: time.Now(), fields: log.Fields{}, slow: slow}
 }
 
 // stage records a stage of the execution that began at since
@@ -100,9 +108,8 @@ func (p *execProfile) end(blockID int64, txs int, statements int64) {
 	p.fields["txs"] = txs
 	p.fields["db_statements"] = statements
 	p.fields["total_ms"] = float64(total.Microseconds()) / 1000
-	// an execution past the time a proposer has for its block is logged at warning level
 	level := log.InfoLevel
-	if total > time.Duration(syspar.GetMaxBlockGenerationTime())*time.Millisecond {
+	if total > p.slow {
 		level = log.WarnLevel
 	}
 	log.WithFields(p.fields).Log(level, "block execution profile")

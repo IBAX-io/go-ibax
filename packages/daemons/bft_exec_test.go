@@ -13,7 +13,9 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/block"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 
+	dto "github.com/prometheus/client_model/go"
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
 )
@@ -72,4 +74,43 @@ func TestBftExecutorFailed(t *testing.T) {
 	require.ErrorIs(t, e.wait(ctx, 6, time.Now().Add(time.Second)), block.ErrExecHash)
 	e.retryAt = time.Time{}
 	require.False(t, e.step(), "a stopped executor executes")
+}
+
+// idleSamples is the count and the sum of metrics.BftExecIdle
+func idleSamples(t *testing.T) (uint64, float64) {
+	m := &dto.Metric{}
+	require.NoError(t, metrics.BftExecIdle.Write(m))
+	return m.GetHistogram().GetSampleCount(), m.GetHistogram().GetSampleSum()
+}
+
+// The idle time of the executor runs from the commit of a block, or the end of the execution
+// before it if that came later, to the start of its execution; nothing is observed for the first
+// execution of the node nor for a block committed before it started
+func TestBftExecutorIdle(t *testing.T) {
+	e := testExecutor(5)
+	now := time.Now()
+	e.signal(6)
+	e.idle(6, now)
+	n, sum0 := idleSamples(t)
+	e.lastEnd = now
+	e.idle(7, now.Add(time.Second))
+	got, _ := idleSamples(t)
+	require.Equal(t, n, got, "an idle time of a block committed before the executor started")
+
+	e.signal(8)
+	e.signal(9)
+	e.committedAt[8] = now.Add(-time.Second)
+	e.idle(8, now.Add(300*time.Millisecond))
+	got, sum := idleSamples(t)
+	require.Equal(t, n+1, got)
+	require.InDelta(t, 0.3, sum-sum0, 1e-9, "from the end of the execution before, after the commit")
+	require.NotContains(t, e.committedAt, int64(8))
+	require.Contains(t, e.committedAt, int64(9))
+
+	e.committedAt[9] = now.Add(time.Second)
+	e.idle(9, now.Add(1500*time.Millisecond))
+	got, sum2 := idleSamples(t)
+	require.Equal(t, n+2, got)
+	require.InDelta(t, 0.5, sum2-sum, 1e-9, "from the commit, after the end of the execution before")
+	require.Empty(t, e.committedAt)
 }

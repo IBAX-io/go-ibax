@@ -15,10 +15,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestStatus: a transaction is pending while the pool holds it; once a block takes it, its status
-// is the block's, from log_transactions, whatever the pool refuses after, and stays for good: past
-// MaxTxBack, when the window of the duplicates has let it go, and out of the history_blocks
-// window. A transaction the pool refused and no block took has the refusal.
+// TestStatus: a transaction is pending while the pool holds it, and while the block that took it
+// is committed and not executed; once its block is executed, its status is the block's, from
+// log_transactions, whatever the pool refuses after, and stays for good: past MaxTxBack, when the
+// window of the duplicates has let it go, and out of the history_blocks window. A transaction the
+// pool refused and no block took has the refusal.
 func TestStatus(t *testing.T) {
 	db := windowDB(t)
 	saved := TxPool
@@ -36,7 +37,7 @@ func TestStatus(t *testing.T) {
 	TxPool.Restore([]*Transaction{keyTx("ok", 1, T*1000, 1), keyTx("penalty", 2, T*1000, 1)})
 	ts, found := status("ok")
 	require.True(t, found)
-	require.Equal(t, TxStatus{Hash: []byte("ok")}, ts, "pending")
+	require.Equal(t, TxStatus{Hash: []byte("ok"), State: TxPending}, ts, "pending")
 
 	logBlock(t, db, pb-1, T)
 	require.NoError(t, db.Create(&sqldb.LogTransaction{Hash: []byte("ok"), Block: pb - 1, Result: "42"}).Error)
@@ -45,8 +46,8 @@ func TestStatus(t *testing.T) {
 	require.NoError(t, sqldb.TxWindow.Add(T, []sqldb.WindowTx{{Hash: []byte("ok"), Signed: T}, {Hash: []byte("penalty"), Signed: T}}))
 	TxPool.Remove([][]byte{[]byte("ok"), []byte("penalty")})
 	committed := map[string]TxStatus{
-		"ok":      {Hash: []byte("ok"), BlockID: pb - 1, Error: "42"},
-		"penalty": {Hash: []byte("penalty"), BlockID: pb - 1, Error: `{"type":"panic","error":"no funds"}`, Penalty: 1},
+		"ok":      {Hash: []byte("ok"), State: TxExecuted, BlockID: pb - 1, Error: "42"},
+		"penalty": {Hash: []byte("penalty"), State: TxPenalty, BlockID: pb - 1, Error: `{"type":"panic","error":"no funds"}`, Penalty: 1},
 	}
 	check := func(when string) {
 		for hash, want := range committed {
@@ -57,6 +58,13 @@ func TestStatus(t *testing.T) {
 	}
 	check("in its block")
 
+	// of a block committed and not executed yet, it is pending, a refusal after the commit too
+	require.NoError(t, sqldb.TxWindow.Add(T, []sqldb.WindowTx{{Hash: []byte("ordered"), Signed: T}}))
+	TxPool.Bad([]byte("ordered"), "duplicate")
+	ts, found = status("ordered")
+	require.True(t, found)
+	require.Equal(t, TxStatus{Hash: []byte("ordered"), State: TxPending}, ts, "committed")
+
 	// sent again, it is refused as a duplicate, and keeps the status of its block
 	TxPool.Bad([]byte("ok"), "duplicate")
 	check("refused again")
@@ -65,7 +73,7 @@ func TestStatus(t *testing.T) {
 	TxPool.Bad([]byte("refused"), `{"type":"error","error":"bad"}`)
 	ts, found = status("refused")
 	require.True(t, found)
-	require.Equal(t, TxStatus{Hash: []byte("refused"), Error: `{"type":"error","error":"bad"}`}, ts)
+	require.Equal(t, TxStatus{Hash: []byte("refused"), State: TxRefused, Error: `{"type":"error","error":"bad"}`}, ts)
 	_, found = status("none")
 	require.False(t, found)
 

@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -41,15 +42,23 @@ var (
 
 // TestMain runs the tests of the package, which call the API of a node at apiAddress signed by the
 // private key in the file key, only when the node answers and the file is there
+// TestMain runs the tests of a node, which need its private key in the file key and the node at
+// apiAddress, only with them; the tests named TestOffline need neither and run without them
 func TestMain(m *testing.M) {
-	if _, err := os.Stat(`key`); err != nil {
-		fmt.Println("skipping the API tests: they need the private key of a node in the file key")
-		os.Exit(0)
+	flag.Parse()
+	offline := func(reason string) {
+		fmt.Println("only the offline API tests run: " + reason)
+		if err := flag.Set("test.run", "^TestOffline"); err != nil {
+			panic(err)
+		}
 	}
-	var ret getUIDResult
-	if err := sendGet(`getuid`, nil, &ret); err != nil {
-		fmt.Printf("skipping the API tests: they need a node at %s: %v\n", apiAddress, err)
-		os.Exit(0)
+	if _, err := os.Stat(`key`); err != nil {
+		offline("the others need the private key of a node in the file key")
+	} else {
+		var ret getUIDResult
+		if err := sendGet(`getuid`, nil, &ret); err != nil {
+			offline(fmt.Sprintf("the others need a node at %s: %v", apiAddress, err))
+		}
 	}
 	os.Exit(m.Run())
 }
