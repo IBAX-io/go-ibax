@@ -171,7 +171,6 @@ func (r *blockRun) execute() error {
 func (r *blockRun) close(err error) error {
 	b := r.b
 	if r.state != nil {
-		b.execEnd = time.Now()
 		r.state.stopWorkers()
 		if err == nil {
 			err = r.state.settleFees(r)
@@ -201,11 +200,8 @@ func (r *blockRun) end(err error) error {
 	err = r.close(err)
 	var written afterWritten
 	if r.state != nil {
-		start := time.Now()
 		r.state.stopStream()
-		b.drained = time.Since(start)
 		written = r.state.written
-		observeWrite(written)
 		b.stage(metrics.StageStream, time.Now().Add(-written.spent))
 		if err == nil {
 			err = r.state.streamErr

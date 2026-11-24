@@ -30,8 +30,7 @@ const namespace = "ibax"
 // The kinds of a block execution
 const (
 	KindGenerate = "generate" // the node makes the block
-	KindTrial    = "trial"    // a BFT trial, held for the decision of its height
-	KindHeld     = "held"     // the node commits the trial it held of the block its height decided
+	KindTrial    = "trial"    // a proposal of the BFT consensus a validator checks
 	KindApply    = "apply"    // the node applies a block another node made
 	KindReceived = "received" // a block the node got from another node, parsed before it runs
 	KindPropose  = "propose"  // a proposer of the BFT consensus makes its proposal
@@ -39,32 +38,25 @@ const (
 
 // The stages of a block execution
 const (
-	StageBegin    = "begin"    // taking the snapshot of the memory and the database transaction of a trial
-	StageExpand   = "expand"   // filling in the block of a compact proposal from the queue and the proposer
-	StageVerify   = "verify"   // verifying in parallel the signatures of the transactions of another node's block
-	StagePrepare  = "prepare"  // reading the outputs and the parameters the transactions need
-	StageExecute  = "execute"  // running the transactions
-	StageAfter    = "after"    // writing the logs, with the statuses, and the rollbacks of the transactions
-	StageStream   = "stream"   // writing the logs, with the statuses, and the rollbacks of the committed transactions while the block runs
-	StageInsert   = "insert"   // inserting the block
-	StageCommit   = "commit"   // committing the database transaction
-	StageNotify   = "notify"   // sending the notifications
-	StageTotal    = "total"    // the whole execution
-	StageParse    = "parse"    // parsing the block from its bytes
-	StageRollback = "rollback" // rolling back a trial that failed, or one held of a block not decided
-	StageHold     = "hold"     // holding a trial: the snapshot of the memory it changed, and the memory set back
-	StageSeal     = "seal"     // the proposer seals its block after its transactions: its hashes, its header and BinData
-	StageReady    = "ready"    // the trial of a proposal of the node from its start to its block sealed, the proposal ready
-	StageWrites   = "writes"   // the commit of a held proposal of the node waits for the writes the trial went on with
-	StageLag      = "lag"      // the proposer starts its round after the validators started it, as far as it knows
-	StageWait     = "wait"     // the proposer waits for its clock to pass the time of the last block
-	StageCollect  = "collect"  // the proposer takes the transactions of its block from the queue
-	StageCheck    = "check"    // reading the previous header, checking the header, the transactions and the sign of a block
-	StageTrial    = "trial"    // the proposer runs its block
-	StageBehind   = "behind"   // from the time of the proposed block to the end of the proposal
-	StageValid    = "valid"    // valid(v) of a proposal from its arrival, by the speculation or by Validate
-	StageLead     = "lead"     // from the end of the node's last block, the pool not empty, to the start of the collection of its next one
-	StageCycle    = "cycle"    // from the end of the node's last block, the pool not empty, to the end of its next one
+	StageExpand  = "expand"  // filling in the block of a compact proposal from the queue and the proposer
+	StageVerify  = "verify"  // verifying in parallel the signatures of the transactions of another node's block
+	StagePrepare = "prepare" // reading the outputs and the parameters the transactions need
+	StageExecute = "execute" // running the transactions
+	StageAfter   = "after"   // writing the logs, with the statuses, and the rollbacks of the transactions
+	StageStream  = "stream"  // writing the logs, with the statuses, and the rollbacks of the committed transactions while the block runs
+	StageInsert  = "insert"  // inserting the block
+	StageCommit  = "commit"  // committing the database transaction
+	StageNotify  = "notify"  // sending the notifications
+	StageTotal   = "total"   // the whole execution
+	StageParse   = "parse"   // parsing the block from its bytes
+	StageLag     = "lag"     // the proposer starts its round after the validators started it, as far as it knows
+	StageWait    = "wait"    // the proposer waits for its clock to pass the time of the last block
+	StageCollect = "collect" // the proposer takes the transactions of its block from the queue
+	StageCheck   = "check"   // reading the previous header, checking the header, the transactions and the sign of a block
+	StageBehind  = "behind"  // from the time of the proposed block to the end of the proposal
+	StageValid   = "valid"   // valid(v) of a proposal from its arrival: the wait for the executor and the check
+	StageLead    = "lead"    // from the end of the node's last block, the pool not empty, to the start of the collection of its next one
+	StageCycle   = "cycle"   // from the end of the node's last block, the pool not empty, to the end of its next one
 )
 
 // The stages of a transaction execution
@@ -182,15 +174,6 @@ var (
 		Help: "Transactions by contract and result: ok, penalty, failed, time_long, time_short, limit.",
 	}, []string{"contract", "result"})
 
-	// Speculations counts how the speculations of streaming proposals ended: finished, as the
-	// proposal went on from them; refused, as they decided a proposal is not valid; validated, as
-	// they did not decide the proposal and the node tried it from the start; aborted, with no
-	// proposal of theirs
-	Speculations = prometheus.NewCounterVec(prometheus.CounterOpts{
-		Namespace: namespace, Name: "speculations_total",
-		Help: "Speculations of streaming proposals by how they ended: finished, refused, validated, aborted.",
-	}, []string{"result"})
-
 	// StateFallbacks counts what the state of the block ran in PostgreSQL or only in order, by
 	// reason
 	StateFallbacks = prometheus.NewCounterVec(prometheus.CounterOpts{
@@ -284,7 +267,7 @@ func init() {
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, TxExecutions,
-		ContractTime, ContractFuel, ContractStatements, ContractRows, ContractRuns, ContractResults, Speculations, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
+		ContractTime, ContractFuel, ContractStatements, ContractRows, ContractRuns, ContractResults, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
 		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
 	)
 }

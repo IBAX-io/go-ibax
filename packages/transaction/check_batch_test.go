@@ -39,7 +39,7 @@ func windowDB(t *testing.T) *gorm.DB {
 		sqldb.ResetTxWindow()
 		tx.Rollback()
 	})
-	for _, table := range []string{"block_chain", "log_transactions"} {
+	for _, table := range []string{"block_chain", "log_transactions", "info_block"} {
 		require.NoError(t, tx.Exec(`DELETE FROM "`+table+`"`).Error)
 	}
 	return tx
@@ -52,6 +52,10 @@ func logBlock(t *testing.T, db *gorm.DB, id, time int64, hashes ...string) {
 	for _, h := range hashes {
 		require.NoError(t, db.Create(&sqldb.LogTransaction{Hash: []byte(h), Block: id}).Error)
 	}
+	// the block is executed: its transactions have their logs, and the executed height is the
+	// highest block of info_block
+	require.NoError(t, db.Create(&sqldb.InfoBlock{Hash: []byte{byte(id)}, NodePosition: "0", BlockID: id, Time: time, RollbacksHash: []byte{0},
+		CandidateNodes: []byte{0}}).Error)
 }
 
 func checkErrs(t *testing.T, checkTime int64, txs ...*Transaction) []error {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/smart"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -22,10 +23,9 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// A generated block of a chain of the BFT consensus puts in its header the hash of the validators
-// set of the next height, and the block of another node is valid only with the hash of the set
-// its execution leaves; it needs only a database, IBAX_TEST_DSN, where it makes a schema of its
-// own that it rolls back
+// The execution of a block of a chain of the BFT consensus leaves the validators set of the height
+// BftSetDelay after it, which its execution hash covers: the header carries no hash of it. It
+// needs only a database, IBAX_TEST_DSN, where it makes a schema of its own that it rolls back.
 func TestValidatorsHash(t *testing.T) {
 	dsn := os.Getenv("IBAX_TEST_DSN")
 	if dsn == "" {
@@ -59,46 +59,33 @@ func TestValidatorsHash(t *testing.T) {
 	require.NoError(t, tx.Create(&sqldb.PlatformParameter{ID: 1, Name: syspar.HonorNodes, Value: string(value)}).Error)
 	dbTx := sqldb.NewDbTransaction(tx)
 
-	block := func(id int64, gen bool) *Block {
-		return &Block{BlockData: &types.BlockData{Header: &types.BlockHeader{BlockId: id}}, GenBlock: gen}
+	block := func(id int64) *Block {
+		return &Block{BlockData: &types.BlockData{Header: &types.BlockHeader{BlockId: id, Version: consts.BvOrdered}}}
 	}
 	// a chain without the BFT consensus has no validators set
-	b := block(5, true)
+	b := block(5)
 	require.NoError(t, b.validatorsHash(dbTx))
-	require.Nil(t, b.Header.NextValidatorsHash)
 	require.Nil(t, b.nextValidators)
 
 	syspar.SetFirstBlockData(&types.FirstBlock{BftConsensus: 1})
-	all := crypto.Hash(validatorsData(t, dbTx, 6))
-	gen := block(5, true)
-	gen.Header.StateHash = []byte{1}
-	require.NoError(t, gen.validatorsHash(dbTx))
-	require.Equal(t, all, gen.Header.NextValidatorsHash)
-	require.Nil(t, gen.Header.StateHash)
+	all := validatorsData(t, dbTx, 5+consts.BftSetDelay)
+	b = block(5)
+	require.NoError(t, b.validatorsHash(dbTx))
+	require.Equal(t, all, b.nextValidators)
+	require.Nil(t, b.Header.NextValidatorsHash, "an ordered block carries no validators hash")
 
-	other := block(5, false)
-	other.Header.NextValidatorsHash = gen.Header.NextValidatorsHash
-	require.NoError(t, other.validatorsHash(dbTx))
-	other.Header.NextValidatorsHash = crypto.Hash([]byte("another set"))
-	require.ErrorContains(t, other.validatorsHash(dbTx), "the validators hash")
-	other.Header.NextValidatorsHash = nil
-	require.ErrorContains(t, other.validatorsHash(dbTx), "the validators hash")
-	other.Header.NextValidatorsHash, other.Header.StateHash = all, []byte{1}
-	require.ErrorContains(t, other.validatorsHash(dbTx), "state hash")
-
-	// an evidence stops the second node from height 7: block 6 leaves a set without it
-	require.NoError(t, tx.Create(&sqldb.BftReview{ID: 1, EvidenceID: 1, PublicKey: keys[1], StopHeight: 7}).Error)
-	before, after := block(5, true), block(6, true)
+	// an evidence stops the second node from height 9: block 6 leaves a set without it
+	require.NoError(t, tx.Create(&sqldb.BftReview{ID: 1, EvidenceID: 1, PublicKey: keys[1], StopHeight: 6 + consts.BftSetDelay}).Error)
+	before, after := block(5), block(6)
 	require.NoError(t, before.validatorsHash(dbTx))
 	require.NoError(t, after.validatorsHash(dbTx))
-	require.Equal(t, all, before.Header.NextValidatorsHash)
-	require.NotEqual(t, all, after.Header.NextValidatorsHash)
-	require.Equal(t, crypto.Hash(validatorsData(t, dbTx, 7)), after.Header.NextValidatorsHash)
+	require.Equal(t, all, before.nextValidators)
+	require.NotEqual(t, all, after.nextValidators)
+	require.Equal(t, validatorsData(t, dbTx, 6+consts.BftSetDelay), after.nextValidators)
 
-	// block 1 carries no hash, but keeps the set for storeValidators
-	genesis := block(1, false)
+	// block 1 leaves the set of height 2, that of the honor_nodes it writes
+	genesis := block(1)
 	require.NoError(t, genesis.validatorsHash(dbTx))
-	require.Nil(t, genesis.Header.NextValidatorsHash)
 	require.Equal(t, validatorsData(t, dbTx, 2), genesis.nextValidators)
 }
 
@@ -106,17 +93,4 @@ func validatorsData(t *testing.T, dbTx *sqldb.DbTransaction, height int64) []byt
 	set, err := smart.BftValidatorsOf(dbTx, height)
 	require.NoError(t, err)
 	return set.Marshal()
-}
-
-// The shell of a streaming proposal is without the hashes its trial sets: the validators hash and
-// the state hash
-func TestShellWithoutValidatorsHash(t *testing.T) {
-	b := &Block{BlockData: &types.BlockData{Header: &types.BlockHeader{BlockId: 5, Version: 4}}}
-	bare, err := b.shell()
-	require.NoError(t, err)
-	b.Header.NextValidatorsHash, b.Header.StateHash = []byte{1}, []byte{2}
-	shell, err := b.shell()
-	require.NoError(t, err)
-	require.Equal(t, bare, shell)
-	require.Equal(t, []byte{1}, b.Header.NextValidatorsHash)
 }

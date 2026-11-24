@@ -94,7 +94,9 @@ func (b *Block) checkHeader() error {
 		logger.WithFields(log.Fields{"type": consts.BlockError, "error": err}).Warn("incorrect block time")
 		return utils.WithBan(fmt.Errorf("%s %d", ErrIncorrectBlockTime, b.PrevHeader.Timestamp))
 	}
-	if !bytes.Equal(b.PrevRollbacksHash, b.PrevHeader.RollbacksHash) {
+	// an ordered block follows a block whose execution may come after it: its execution hash
+	// covers the rollbacks hash instead (checkExecHash)
+	if !b.ordered() && !bytes.Equal(b.PrevRollbacksHash, b.PrevHeader.RollbacksHash) {
 		return ErrIncorrectRollbackHash
 	}
 	return nil
@@ -161,6 +163,9 @@ func checkConsensusMode(header *types.BlockHeader, honorNodesOnly bool) error {
 func (b *Block) CheckSign() error {
 	if b.IsGenesis() || conf.Config.IsSubNode() || b.PrevHeader == nil {
 		return nil
+	}
+	if b.ordered() {
+		return b.checkOrderedSign()
 	}
 	nodePub, err := syspar.GetNodePublicKeyByPosition(b.Header.NodePosition)
 	if err != nil {

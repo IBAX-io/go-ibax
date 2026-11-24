@@ -144,8 +144,8 @@ func TestStateHashesAfterCommit(t *testing.T) {
 // its own differs
 func TestStateHashRules(t *testing.T) {
 	stateTestDB(t)
-	block := func(id int64, gen, trial bool, hash []byte) *Block {
-		b := &Block{BlockData: &types.BlockData{Header: &types.BlockHeader{BlockId: id, StateHash: hash}}, GenBlock: gen}
+	block := func(id int64, trial bool, hash []byte) *Block {
+		b := &Block{BlockData: &types.BlockData{Header: &types.BlockHeader{BlockId: id, StateHash: hash}}}
 		b.trial = trial
 		return b
 	}
@@ -154,28 +154,28 @@ func TestStateHashRules(t *testing.T) {
 	done := make(chan struct{})
 	states.pending = map[int64]chan struct{}{20000: done}
 
-	gen := block(11000, true, true, other)
-	require.NoError(t, gen.putStateHash())
-	require.Equal(t, mine, gen.Header.StateHash)
+	hash, err := StateHashAt(11000)
+	require.NoError(t, err)
+	require.Equal(t, mine, hash)
 	for _, h := range []int64{11001, 21000, 31000} {
-		gen := block(h, true, true, other)
-		require.NoError(t, gen.putStateHash())
-		require.Nil(t, gen.Header.StateHash, h)
+		hash, err := StateHashAt(h)
+		require.NoError(t, err)
+		require.Nil(t, hash, h)
 	}
 
 	for _, trial := range []bool{true, false} {
-		require.NoError(t, block(11000, false, trial, nil).checkStateHash())
-		require.NoError(t, block(11000, false, trial, mine).checkStateHash())
-		require.ErrorContains(t, block(11000, false, trial, other).checkStateHash(), "the hash of the state of this node")
-		require.ErrorContains(t, block(11001, false, trial, mine).checkStateHash(), "without a snapshot")
+		require.NoError(t, block(11000, trial, nil).checkStateHash())
+		require.NoError(t, block(11000, trial, mine).checkStateHash())
+		require.ErrorContains(t, block(11000, trial, other).checkStateHash(), "the hash of the state of this node")
+		require.ErrorContains(t, block(11001, trial, mine).checkStateHash(), "without a snapshot")
 	}
 	// unknown: a proposal is refused, a certified block taken
-	require.ErrorContains(t, block(31000, false, true, mine).checkStateHash(), "no state hash of height 30000")
-	require.NoError(t, block(31000, false, false, mine).checkStateHash())
+	require.ErrorContains(t, block(31000, true, mine).checkStateHash(), "no state hash of height 30000")
+	require.NoError(t, block(31000, false, mine).checkStateHash())
 	// pending: a proposal is refused, a certified block waits for the hash
-	require.ErrorContains(t, block(21000, false, true, mine).checkStateHash(), "no state hash of height 20000")
+	require.ErrorContains(t, block(21000, true, mine).checkStateHash(), "no state hash of height 20000")
 	checked := make(chan error)
-	go func() { checked <- block(21000, false, false, other).checkStateHash() }()
+	go func() { checked <- block(21000, false, other).checkStateHash() }()
 	require.NoError(t, (&sqldb.BftStateHash{Height: 20000, Hash: mine}).Save())
 	states.mu.Lock()
 	delete(states.pending, 20000)

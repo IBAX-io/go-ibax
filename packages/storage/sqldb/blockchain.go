@@ -91,6 +91,25 @@ func FirstKeptBlock() (int64, error) {
 	return id[0], nil
 }
 
+// CommittedHeight is the height of the last block the node committed, 0 for none: on an ordered
+// chain the blocks after info_block, the last block it executed, wait for their execution
+func CommittedHeight() (int64, error) {
+	var height []int64
+	if err := DBConn.Raw(`SELECT coalesce(max("id"), 0) FROM "block_chain"`).Scan(&height).Error; err != nil {
+		return 0, err
+	}
+	return height[0], nil
+}
+
+// ExecutedHeight is the height of the last block the node executed, info_block, 0 for none
+func ExecutedHeight() (int64, error) {
+	var height []int64
+	if err := DBConn.Raw(`SELECT coalesce(max("block_id"), 0) FROM "info_block"`).Scan(&height).Error; err != nil {
+		return 0, err
+	}
+	return height[0], nil
+}
+
 // GetMaxBlock returns last block existence. It reads the header of the block, not its data: the
 // callers ask for the height, the hash or the time, and the data of a block is megabytes.
 func (b *BlockChain) GetMaxBlock() (bool, error) {

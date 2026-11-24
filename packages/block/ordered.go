@@ -228,10 +228,13 @@ func (b *Block) delayedTxs(dbTx *sqldb.DbTransaction) ([]*transaction.Transactio
 	if len(rows) == 0 {
 		return nil, nil
 	}
-	var signer int64
-	if pub, err := syspar.GetNodePublicKeyByPosition(b.Header.NodePosition); err == nil && len(pub) > 0 {
-		signer = crypto.Address(pub)
+	// the node signer is the validator that proposed the block, at its position in the set of
+	// the height, as the header names it and every node has it
+	pub, err := validatorAt(dbTx, b.Header.BlockId, b.Header.NodePosition)
+	if err != nil {
+		return nil, err
 	}
+	signer := crypto.Address(pub)
 	txs := make([]*transaction.Transaction, len(rows))
 	for i, row := range rows {
 		txs[i] = transaction.NewDelayed(b.Header, signer, transaction.Delayed{ID: row.ID, Contract: row.Contract, KeyID: row.KeyID})
@@ -282,6 +285,14 @@ func (b *Block) Execute() error {
 			return errors.Join(err, errMem)
 		}
 		return err
+	}
+	// the chain agreed on the execution hash the block carries, of the block BftExecDepth before
+	// it, and on its state hash: a node whose execution differs executes no further
+	if err := b.checkExecHash(); err != nil {
+		return fail(err)
+	}
+	if err := b.checkStateHash(); err != nil {
+		return fail(err)
 	}
 	b.verifySignatures()
 	system, err := b.delayedTxs(dbTx)

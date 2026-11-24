@@ -121,7 +121,7 @@ func (b *Block) InsertIntoBlockchain(dbTx *sqldb.DbTransaction) error {
 // seal checks the time of the block, takes, from dbTx, the validators set the block leaves, and
 // makes the header of a generated block of its rollbacks hash and of the hashes of the set and of
 // the state, and its BinData. It reads the platform parameters as the transactions of the block
-// left them: what writes the block after reads none (writeBlock, sealTrial).
+// left them: what writes the block after reads none (writeBlock).
 func (b *Block) seal(dbTx *sqldb.DbTransaction) error {
 	if err := b.checkBlockTime(dbTx); err != nil {
 		return err

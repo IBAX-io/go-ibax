@@ -26,6 +26,9 @@ const (
 	// letExecute is the execution of a block of an ordered chain (consts.BvOrdered): the order of
 	// the block checked the counts and the sizes, the execution checks the fuel alone
 	letExecute LimitMode = 0x0008
+	// letOrder is the check of a proposal of an ordered chain: the counts and the sizes of the
+	// block, which make it invalid
+	letOrder LimitMode = 0x0010
 )
 
 func GetLetPreprocess() LimitMode {
@@ -42,6 +45,10 @@ func GetLetParsing() LimitMode {
 
 func GetLetExecute() LimitMode {
 	return letExecute
+}
+
+func GetLetOrder() LimitMode {
+	return letOrder
 }
 
 // Limits is used for saving current limit information
@@ -97,10 +104,10 @@ func NewLimits(b LimitMode) (limits *Limits) {
 	limits.Mode = b
 
 	allLimiters := []limiterModes{
-		{limiter: &txMaxSize{}, modes: letPreprocess | letGenBlock | letParsing},
-		{limiter: &txUserLimit{}, modes: letPreprocess | letParsing},
-		{limiter: &txMaxLimit{}, modes: letPreprocess | letParsing},
-		{limiter: &txUserEcosysLimit{}, modes: letPreprocess | letParsing},
+		{limiter: &txMaxSize{}, modes: letPreprocess | letGenBlock | letParsing | letOrder},
+		{limiter: &txUserLimit{}, modes: letPreprocess | letParsing | letOrder},
+		{limiter: &txMaxLimit{}, modes: letPreprocess | letParsing | letOrder},
+		{limiter: &txUserEcosysLimit{}, modes: letPreprocess | letParsing | letOrder},
 		{limiter: &timeBlockLimit{}, modes: letGenBlock},
 		{limiter: &txMaxFuel{}, modes: letGenBlock | letParsing | letExecute},
 	}
@@ -154,20 +161,11 @@ func (bl *txMaxLimit) check(t TransactionCaller, mode LimitMode) error {
 	return nil
 }
 
-// Checking the time of the start of generating block: a transaction ends within the time of the
-// block less what the block takes after its transactions run, Tail for each transaction it took
-// and for the transaction, so the whole block is made within the time of the block
+// Checking the time of the start of generating block, on a chain that is not one of the BFT
+// consensus: a transaction ends within the time of the block
 type timeBlockLimit struct {
 	Start time.Time     // the time of the start of generating block
 	Limit time.Duration // the maximum time
-	// Tail is what a transaction the block took adds to the block after the transactions run:
-	// writing its state, its rows and the block, and rolling the trial back
-	Tail  time.Duration
-	Count int // the transactions the block took
-	// Backlog is the time the writer of the records of the transactions the block committed
-	// takes for those it was given and has not written: the block waits for it after its
-	// transactions run. It is called from the runs in parallel too.
-	Backlog func() time.Duration
 }
 
 func (bl *timeBlockLimit) init() {
@@ -175,37 +173,13 @@ func (bl *timeBlockLimit) init() {
 	bl.Limit = time.Millisecond * time.Duration(syspar.GetMaxBlockGenerationTime())
 }
 
-// TailFreeTxs is how many transactions a block takes before it keeps time for their tail: a trial
-// of fewer tells no tail, so a tail measured too long, by a stall of the disk, would hold the
-// blocks below that many and never be measured again
-const TailFreeTxs = 100
-
-// reserve is the time the block keeps for the tail of n transactions. It has no bound below the
-// time of the block: the tail of a large block, which writes the records of its transactions after
-// they run, can take most of its time, and a block that keeps less is made past its time.
-func (bl *timeBlockLimit) reserve(n int) time.Duration {
-	return bl.Tail * time.Duration(n)
-}
-
-// left is the time left to the next transaction of the block. The first TailFreeTxs transactions
-// have the whole time of the block, none kept for their tail: a transaction the time stops as the
-// first of its block had the most time a block leaves a transaction, and the block takes it as one
-// that never fits. The backlog of the writer is kept from the start: a part given to the writer
-// late in the block is written after its transactions run, all at once.
+// left is the time left to the next transaction of the block
 func (bl *timeBlockLimit) left() time.Duration {
-	var reserve time.Duration
-	if bl.Count >= TailFreeTxs {
-		reserve = bl.reserve(bl.Count + 1)
-	}
-	if bl.Backlog != nil {
-		reserve += bl.Backlog()
-	}
-	return max(0, bl.Limit-reserve-max(0, time.Since(bl.Start)))
+	return max(0, bl.Limit-max(0, time.Since(bl.Start)))
 }
 
 func (bl *timeBlockLimit) check(t TransactionCaller, mode LimitMode) error {
 	if bl.left() > 0 {
-		bl.Count++
 		return nil
 	}
 
@@ -214,37 +188,6 @@ func (bl *timeBlockLimit) check(t TransactionCaller, mode LimitMode) error {
 	}
 
 	return limitError("txBlockTimeLimit", "Block generation time exceeded")
-}
-
-// StartAt starts the time of the block being generated at start, and keeps tail of it for each
-// transaction the block takes
-func (limits *Limits) StartAt(start time.Time, tail time.Duration) {
-	for _, l := range limits.Limiters {
-		if bl, ok := l.(*timeBlockLimit); ok {
-			bl.Start, bl.Tail = start, tail
-		}
-	}
-}
-
-// LimitTo shortens the time of the block being generated to limit from its start, if limit is
-// below it: the proposer of a chain of the BFT consensus that started its round late has less
-// than max_block_generation_time before the validators time out
-func (limits *Limits) LimitTo(limit time.Duration) {
-	for _, l := range limits.Limiters {
-		if bl, ok := l.(*timeBlockLimit); ok {
-			bl.Limit = min(bl.Limit, limit)
-		}
-	}
-}
-
-// KeepBacklog keeps, besides the tail of each transaction, the time backlog tells for the writer of
-// the records of the transactions the block committed
-func (limits *Limits) KeepBacklog(backlog func() time.Duration) {
-	for _, l := range limits.Limiters {
-		if bl, ok := l.(*timeBlockLimit); ok {
-			bl.Backlog = backlog
-		}
-	}
 }
 
 // TimeLeft is the time left to the next transaction of the block being generated, in ms, at most

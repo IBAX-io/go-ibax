@@ -427,24 +427,8 @@ func (b *Block) beginState(dbTx *sqldb.DbTransaction) (*stateExec, error) {
 		return nil, err
 	}
 	st.SetOutputs(b.OutputsMap)
-	// the proposer takes the hashes of the rollback records as it seals its block, the writer of
-	// any other block as it writes them
-	stream := newAfterStream(dbTx, !b.GenBlock)
+	stream := newAfterStream(dbTx)
 	limits := transaction.NewLimits(b.limitMode())
-	// The proposer keeps, of the time of its block, the tail of each transaction and the backlog
-	// of the writer though its own proposal is ready before either (sealTrial): the validators try
-	// the same block in their driver, the wait for their writer and the writes of the block
-	// included, before they prevote it, and so does the proposer, once its writes end (Written),
-	// which prevotes nil if they do not end by its propose timeout. A block sized for the
-	// transactions alone would make every prevote of it, and the commit of the height, later by
-	// its writes.
-	if !b.genStart.IsZero() {
-		limits.StartAt(b.genStart, tail())
-		if b.genLimit > 0 {
-			limits.LimitTo(b.genLimit)
-		}
-		limits.KeepBacklog(stream.backlog)
-	}
 	return &stateExec{b: b, dbTx: dbTx, st: st, limits: limits, ecoParams: b.EcoParams, stream: stream}, nil
 }
 
@@ -498,15 +482,6 @@ func (e *stateExec) stopStream() {
 		e.written, e.streamErr = e.stream.stop()
 		e.stream = nil
 	}
-}
-
-// cancel stops the writer of the records of the transactions and the workers without waiting
-// for what the writer was given: the transaction of the block is rolled back
-func (e *stateExec) cancel() {
-	if e.stream != nil {
-		e.stream.cancel()
-	}
-	e.stop()
 }
 
 // stopWorkers stops the workers and the runs again of the commit
@@ -675,12 +650,6 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 					if b.tooLong(len(*processedTx)) {
 						txBadChan <- badTxStruct{index: curTx, hash: t.Hash(), msg: errTxTooLong.Error(), keyID: t.KeyID()}
 					}
-					if !b.genStopped {
-						// where the time stopped the block, and what it kept then
-						b.note("stop", time.Since(b.genStart))
-						b.note("backlog", e.stream.backlog())
-						b.note("tail_reserve", tail()*time.Duration(len(*processedTx)+1))
-					}
 					b.genStopped = true
 					br.stopped = true
 					break
@@ -784,9 +753,6 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 		afters.Rts = append(afters.Rts, t.RollBackTx...)
 		e.stream.send(afters)
 		*processedTx = append(*processedTx, t.FullData)
-		if b.onCommit != nil {
-			b.onCommit(t)
-		}
 	}
 	if fb := st.Fallbacks(); len(fb) > 0 {
 		b.GetLogger().WithFields(log.Fields{"fallbacks": fb}).Debug("state of the block")

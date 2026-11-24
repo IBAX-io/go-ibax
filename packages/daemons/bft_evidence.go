@@ -20,6 +20,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/script"
 	"github.com/IBAX-io/go-ibax/packages/smart"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 
@@ -72,12 +73,12 @@ func (s *bftEvidence) take(key bft.EvidenceKey, body []byte) bool {
 // validators set is stored, and keeps a new one to submit; it reports whether the evidence is
 // new and valid, to send it on
 func (d *bftDriver) takeEvidence(body []byte) bool {
-	last, err := lastBlock()
+	committed, err := sqldb.CommittedHeight()
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting the last block")
 		return false
 	}
-	e, key, err := bft.CheckEvidence(body, d.networkID, smart.EvidenceChain{Top: last + 1})
+	e, key, err := bft.CheckEvidence(body, d.networkID, smart.EvidenceChain{Top: uint64(committed) + 1})
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.InvalidObject, "error": err}).Debug("an evidence refused")
 		return false
@@ -99,11 +100,12 @@ func (d *bftDriver) submitEvidence() {
 	if len(pending) == 0 {
 		return
 	}
-	last, err := lastBlock()
+	committed, err := sqldb.CommittedHeight()
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting the last block")
 		return
 	}
+	last := uint64(committed)
 	var kept [][]byte
 	for _, body := range pending {
 		e, err := bft.UnmarshalEvidence(body, d.networkID)

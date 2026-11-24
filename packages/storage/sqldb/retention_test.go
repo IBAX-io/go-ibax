@@ -71,7 +71,7 @@ func retentionDB(t *testing.T) *DbTransaction {
 	for _, table := range []string{"block_chain", "confirmations", "bft_certificates", "rollback_tx", "rollback_tables",
 		"1_history", "log_transactions", "spent_info", "retired_partitions",
 		"partition_id_floors", "retention_state", "log_transaction_counts", "bft_validator_sets",
-		"bft_set_proofs", "snapshot_joins"} {
+		"bft_set_proofs", "snapshot_joins", "info_block"} {
 		require.NoError(t, tx.Exec(`DELETE FROM "`+table+`"`).Error)
 	}
 	return NewDbTransaction(tx)
@@ -83,6 +83,13 @@ func addBlocks(t *testing.T, db *DbTransaction, time int64, ids ...int64) {
 		require.NoError(t, (&BlockChain{ID: b, Hash: []byte{byte(b)}, RollbacksHash: []byte{0},
 			Data: []byte{0}, CandidateNodes: []byte{0}, Time: time}).Create(db))
 	}
+}
+
+// executeBlock marks the block of the time executed: the executed height is the highest block of
+// info_block
+func executeBlock(t *testing.T, db *DbTransaction, time, id int64) {
+	require.NoError(t, GetDB(db).Create(&InfoBlock{Hash: []byte{byte(id)}, NodePosition: "0", BlockID: id, Time: time,
+		RollbacksHash: []byte{0}, CandidateNodes: []byte{0}}).Error)
 }
 
 // chainRows makes the blocks 1 and 5, the rollback rows of ids 1 to 3, a transaction and a spent

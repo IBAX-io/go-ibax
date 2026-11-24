@@ -207,10 +207,11 @@ func certifySynced(height uint64, raw, data []byte) error {
 // CASE for each.
 func TestLocalChainCertificates(t *testing.T) {
 	localChain(t)
-	last, err := lastBlock()
+	committed, err := sqldb.CommittedHeight()
 	if err != nil {
 		t.Fatal(err)
 	}
+	last := uint64(committed)
 	least, withTxs := 0, int64(0)
 	for h := uint64(2); h <= last; h++ {
 		raw, data := storedHeight(t, int64(h))
@@ -306,10 +307,11 @@ func TestLocalChainFlood(t *testing.T) {
 	localChain(t)
 	addr := os.Getenv("BFT_FLOOD_ADDR")
 	vPriv, vPub := nodeKeys(t, os.Getenv("BFT_FLOOD_VALIDATOR"))
-	last, err := lastBlock()
+	committed, err := sqldb.CommittedHeight()
 	if err != nil {
 		t.Fatal(err)
 	}
+	last := uint64(committed)
 	height := last + 1
 	set, err := validatorsAt(last)
 	if err != nil {

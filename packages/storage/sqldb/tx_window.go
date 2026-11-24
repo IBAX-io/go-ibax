@@ -6,6 +6,7 @@
 package sqldb
 
 import (
+	"errors"
 	"math"
 	"sync"
 
@@ -45,7 +46,8 @@ type txWindow struct {
 // TxWindow is the window of the hashes of the committed transactions the node checks duplicates in
 var TxWindow = &txWindow{}
 
-// LoadTxWindow loads the window from log_transactions, at the start of the node
+// LoadTxWindow loads the window from log_transactions and the blocks committed after the last
+// executed one, at the start of the node
 func LoadTxWindow() error {
 	TxWindow.mu.Lock()
 	defer TxWindow.mu.Unlock()
@@ -87,8 +89,40 @@ func (w *txWindow) load() error {
 		for _, r := range rows {
 			w.put(string(r.Hash), r.Time+consts.MaxTxForw)
 		}
+		if err := w.loadUnexecuted(); err != nil {
+			return err
+		}
 	}
 	w.loaded = true
+	return nil
+}
+
+// ParseWindowTxs is the transactions of the data of a block as the window takes them; package
+// block sets it, as the parsing of a block is its own
+var ParseWindowTxs func(data []byte) ([]WindowTx, error)
+
+// loadUnexecuted adds the transactions of the blocks of an ordered chain committed after the last
+// block the node executed: their transactions are spent though no log of them is written yet
+func (w *txWindow) loadUnexecuted() error {
+	var rows []struct {
+		Data []byte
+	}
+	if err := DBConn.Raw(`SELECT "data" FROM "block_chain" WHERE "id" > (SELECT coalesce(max("block_id"), 0) FROM "info_block")
+		ORDER BY "id"`).Scan(&rows).Error; err != nil {
+		return err
+	}
+	if len(rows) > 0 && ParseWindowTxs == nil {
+		return errors.New("blocks committed after the last executed block, and no parser of their transactions")
+	}
+	for _, r := range rows {
+		txs, err := ParseWindowTxs(r.Data)
+		if err != nil {
+			return err
+		}
+		for _, t := range txs {
+			w.put(string(t.Hash), t.Signed)
+		}
+	}
 	return nil
 }
 

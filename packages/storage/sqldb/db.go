@@ -311,13 +311,6 @@ func (tr *DbTransaction) Cancel() {
 	}
 }
 
-// WaitsIdle lets the transaction wait idle as long as it is open, past the
-// idle_in_transaction_session_timeout of the connection: the trial of a block waits for the
-// decision of its height, which the network makes in its own time
-func (tr *DbTransaction) WaitsIdle() error {
-	return tr.conn.Exec("SET LOCAL idle_in_transaction_session_timeout = 0").Error
-}
-
 // Rollback is transaction rollback; that of a transaction Cancel ended returns nil, whatever
 // the end of its connection returned
 func (tr *DbTransaction) Rollback() error {

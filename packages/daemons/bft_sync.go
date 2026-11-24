@@ -12,12 +12,12 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
-	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
+	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -29,7 +29,8 @@ const bftFetchTimeout = 10 * time.Second
 // behind takes the blocks after its last block from the node with the most blocks, each with its
 // certificate, and commits a block only if its certificate verifies by the validators set of its
 // height. A committed block is final, so there is no fork to replace, and a block that fails bans
-// no node: the node takes it again, from this node or another one.
+// no node: the node takes it again, from this node or another one. The executor executes the
+// blocks it commits; the set of a height is known once it executed the block BftSetDelay before.
 func updateChainBft(ctx context.Context, d *daemon) error {
 	hosts := syspar.GetRemoteHosts()
 	host, maxBlockID, err := tcpclient.HostWithMaxBlock(ctx, hosts)
@@ -40,28 +41,17 @@ func updateChainBft(ctx context.Context, d *daemon) error {
 		d.logger.WithError(err).Warn("on checking best host")
 		return err
 	}
-	last, err := lastBlock()
+	startBftExecutor(ctx, d.logger)
+	last, err := sqldb.CommittedHeight()
 	if err != nil {
 		return err
 	}
-	if maxBlockID <= int64(last) {
+	if maxBlockID <= last {
 		return nil
 	}
-
-	lockWrites()
-	defer func() {
-		node.NodeDoneUpdatingBlockchain()
-		DBUnlock()
-	}()
-	if last, err = lastBlock(); err != nil {
-		return err
-	}
-	// the driver may have committed the blocks while the node waited for the lock
-	if maxBlockID <= int64(last) {
-		return nil
-	}
+	defer node.NodeDoneUpdatingBlockchain()
 	d.logger.WithFields(log.Fields{"from": last + 1, "to": maxBlockID, "host": host}).Info("synchronizing by certificates")
-	for h := int64(last) + 1; h <= maxBlockID; {
+	for h := last + 1; h <= maxBlockID; {
 		n, err := syncCertified(ctx, host, h, maxBlockID)
 		if errors.Is(err, tcpclient.ErrNotKept) {
 			// the blocks are out of the window of the host: a node that keeps them goes on
@@ -105,7 +95,7 @@ func syncCertified(ctx context.Context, host string, from, to int64) (int64, err
 			if n == b.count {
 				break
 			}
-			if err := commitSynced(uint64(b.from+n), b.certs[n], raw); err != nil {
+			if err := commitSynced(ctx, uint64(b.from+n), b.certs[n], raw); err != nil {
 				return n, err
 			}
 			n++
@@ -114,13 +104,17 @@ func syncCertified(ctx context.Context, host string, from, to int64) (int64, err
 	})
 }
 
-// commitSynced commits a block of a height by its certificate
-func commitSynced(height uint64, data, raw []byte) error {
+// commitSynced commits a block of a height by its certificate, once the executor stored the
+// validators set of the height
+func commitSynced(ctx context.Context, height uint64, data, raw []byte) error {
+	if err := bftExec.wait(ctx, int64(height)-consts.BftSetDelay, time.Now().Add(bftSyncWait)); err != nil {
+		return err
+	}
 	cert, err := syncedCertificate(height, data)
 	if err != nil {
 		return err
 	}
-	_, err = block.Commit(raw, cert)
+	_, err = commitCertified(raw, cert)
 	return err
 }
 
@@ -131,7 +125,7 @@ func syncedCertificate(height uint64, data []byte) (*bft.Certificate, error) {
 	if err != nil {
 		return nil, err
 	}
-	set, err := validatorsAt(height)
+	set, err := knownValidators(height)
 	if err != nil {
 		return nil, err
 	}

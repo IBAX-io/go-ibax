@@ -21,8 +21,8 @@ var (
 	ErrIncorrectRollbackHash = errors.New("Rollback hash doesn't match")
 	ErrEmptyBlock            = errors.New("Block doesn't contain transactions")
 	ErrIncorrectBlockTime    = utils.WithBan(errors.New("Incorrect block time"))
-	// errTxTooLong is a transaction that does not end within the time a block of a chain of the
-	// BFT consensus leaves its first transaction
+	// errTxTooLong is a transaction that does not end within max_block_generation_time, the time
+	// a block a node generates leaves its first transaction
 	errTxTooLong = errors.New("the transaction does not end within the time a block leaves it")
 	// errStopNetworkNotAlone: a StopNetwork transaction is the only transaction of its block
 	errStopNetworkNotAlone = errors.New("a block with a StopNetwork transaction has other transactions")
@@ -39,7 +39,9 @@ type Block struct {
 	PrevSysPar        map[string]string
 	EcoParams         []sqldb.EcoParam // combustion percent,digits for each ecosystem
 	size              *blockSize       // the encoded length of the block being generated
-	trial             bool             // the block is executed by Trial and held for the decision
+	// trial is that the block is a proposal the node checks: it bans no key and marks no
+	// transaction bad, and it does not wait for a state hash it has not
+	trial bool
 	// discards are the reasons of the transactions the execution of an ordered block discarded, by
 	// their hashes (discardOf)
 	discards map[string]int32
@@ -48,23 +50,8 @@ type Block struct {
 	systemTxs int
 	// executed is the execution hash the execution of an ordered block left (execHash)
 	executed []byte
-	// genStart is when the proposer of a chain of the BFT consensus read the clock for the block:
-	// the block is made within max_block_generation_time from then (syspar.GetBftTimeliness), its
-	// transactions leaving the time the block takes after them
-	genStart time.Time
-	// genLimit, if positive and below max_block_generation_time, is the time the block has from
-	// genStart: the proposer started its round after the validators and has the time left until
-	// they time out (bftApp.Value)
-	genLimit time.Duration
-	// genStopped is that the time left to the block stopped a transaction of it
+	// genStopped is that the time left to the block being generated stopped a transaction of it
 	genStopped bool
-	// execEnd is when the transactions of the execution running ended, and drained the time it
-	// then waited for the writer of their records to write what it was given: the tail of the
-	// execution is the time after execEnd but drained
-	execEnd time.Time
-	drained time.Duration
-	// writes is the trial of a block the node proposed, which writes the block after its seal
-	writes *heldTrial
 	// prof is the profile of the execution running
 	prof *execProfile
 	// rollbacksHash is the hash of the rollback records and the outputs the block wrote
@@ -72,8 +59,6 @@ type Block struct {
 	// nextValidators is the encoded validators set of the next height the execution of the block
 	// leaves, on a chain of the BFT consensus
 	nextValidators []byte
-	// onCommit takes each transaction the block the node generates commits, in their order
-	onCommit func(t *transaction.Transaction)
 }
 
 // GetLogger is returns logger

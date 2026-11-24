@@ -37,6 +37,7 @@ func TestTxWindow(t *testing.T) {
 	T := int64(1) << 32
 	logTx := func(hash string, block, time int64) {
 		addBlocks(t, db, time, block)
+		executeBlock(t, db, time, block)
 		require.NoError(t, GetDB(db).Create(&LogTransaction{Hash: []byte(hash), Block: block}).Error)
 	}
 	logTx("old", 10, T-2000)
@@ -68,6 +69,35 @@ func TestTxWindow(t *testing.T) {
 	// a window used before it is loaded loads itself
 	ResetTxWindow()
 	require.Equal(t, []bool{true, true}, windowKnown(t, T+700, "new", "add"))
+}
+
+// TestTxWindowUnexecuted: the window loads the transactions of the blocks an ordered chain
+// committed after the last block the node executed, which have no logs yet, by the parser of
+// package block, and fails to load without it
+func TestTxWindowUnexecuted(t *testing.T) {
+	db := retentionDB(t)
+	ResetTxWindow()
+	t.Cleanup(ResetTxWindow)
+	saved := ParseWindowTxs
+	t.Cleanup(func() { ParseWindowTxs = saved })
+	T := int64(1) << 32
+	addBlocks(t, db, T, 10, 11, 12)
+	executeBlock(t, db, T, 10)
+	require.NoError(t, GetDB(db).Create(&LogTransaction{Hash: []byte("executed"), Block: 10}).Error)
+
+	ParseWindowTxs = nil
+	require.Error(t, LoadTxWindow(), "blocks committed after the executed one, and no parser")
+
+	var parsed []int64
+	ParseWindowTxs = func(data []byte) ([]WindowTx, error) {
+		parsed = append(parsed, int64(data[0]))
+		return []WindowTx{{Hash: []byte{'c', data[0]}, Signed: T}}, nil
+	}
+	require.NoError(t, GetDB(db).Exec(`UPDATE "block_chain" SET "data" = decode(lpad(to_hex("id"), 2, '0'), 'hex')`).Error)
+	ResetTxWindow()
+	require.NoError(t, LoadTxWindow())
+	require.Equal(t, []int64{11, 12}, parsed, "the blocks after the executed one, in order")
+	require.Equal(t, []bool{true, true, true, false}, windowKnown(t, T, "executed", "c\x0b", "c\x0c", "c\x0a"))
 }
 
 // TestTxWindowEmptyChain: the window of a chain without blocks holds what its blocks add

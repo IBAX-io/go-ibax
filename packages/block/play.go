@@ -140,17 +140,18 @@ func checkStopNetworkAlone(txs []*transaction.Transaction) error {
 	return nil
 }
 
+// tooLong reports whether a transaction the time left to the block being generated stopped never
+// fits a block: no transaction is in the block and none stopped before it, so the transaction had
+// the whole of max_block_generation_time
+func (b *Block) tooLong(processed int) bool {
+	return processed == 0 && !b.genStopped
+}
+
 // executeTxs runs the transactions in their order. A transaction that fails is left out of a block
 // the node generates, and fails a block of another node
 func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct, afters *types.AfterTxs, processedTx *[][]byte, txs []*transaction.Transaction,
 	fees *smart.FeeSettlement) error {
 	limits := transaction.NewLimits(b.limitMode())
-	if !b.genStart.IsZero() {
-		limits.StartAt(b.genStart, tail())
-		if b.genLimit > 0 {
-			limits.LimitTo(b.genLimit)
-		}
-	}
 	logger := b.GetLogger()
 	for curTx := 0; curTx < len(txs); curTx++ {
 		t := txs[curTx]
@@ -286,6 +287,5 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 		sqldb.UpdateTxInputs(t.Hash(), b.Header.BlockId, t.TxInputsMap, b.OutputsMap)
 		sqldb.InsertTxOutputs(t.Hash(), t.TxOutputsMap, b.OutputsMap)
 	}
-	b.execEnd = time.Now()
 	return nil
 }

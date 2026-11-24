@@ -194,15 +194,14 @@ func generateNextBlock(blockHeader, prevBlock *types.BlockHeader, trs [][]byte) 
 
 // processTransactionsNew takes the transactions of a new block: the delayed ones of txs first, then
 // those of the pool. It returns their data and the parsed transactions, in the order the block
-// executes and stores them. limit is the time the block has, max_block_generation_time but for
-// a proposer of a chain of the BFT consensus that started its round late (bftApp.Value).
+// executes and stores them. limit is the time the block has, max_block_generation_time. A chain
+// of the BFT consensus does not generate its blocks here (bftApp.Value).
 func processTransactionsNew(logger *log.Entry, txs []*transaction.Pending, st time.Time, limit time.Duration) ([][]byte, []*transaction.Transaction, error) {
 	var done = make(<-chan time.Time, 1)
-	limited := syspar.IsHonorNodeMode() || syspar.IsBftConsensus()
+	limited := syspar.IsHonorNodeMode()
 	if limited {
 		// a node takes transactions for half of the time of the block, and executes them in
 		// about as long, so it makes the block within that time: max_block_generation_time is
-		// the time a proposer of a chain of the BFT consensus has (syspar.GetBftTimeliness), and
 		// the time a block of a chain of honor nodes takes, which may span slots, as a slot holds
 		// at most one block and the next block takes the next free slot
 		done = time.After(limit / 2)

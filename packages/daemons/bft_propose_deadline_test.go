@@ -65,34 +65,6 @@ func TestBftWatchDecided(t *testing.T) {
 	}
 }
 
-// The block of a proposal has max_block_generation_time, cut to the deadline, and at least
-// 1/proposeFloor of it, late below that
-func TestProposeLimit(t *testing.T) {
-	const block = 2 * time.Second
-	t0 := time.Now()
-	for _, c := range []struct {
-		name            string
-		collect, budget time.Duration
-		limit           time.Duration
-		late            bool
-	}{
-		{"on time", 0, 3 * time.Second, block, false},
-		{"waited for the clock", time.Second, 3 * time.Second, block, false},
-		{"lagged", 1500 * time.Millisecond, 3 * time.Second, 1500 * time.Millisecond, false},
-		// h270 r0 of the 4000 tx/s run on 3 cores a validator: the validators started at the
-		// quorum of 269, the proposer collected 2.06 s later
-		{"h270", 2060 * time.Millisecond, 3 * time.Second, 940 * time.Millisecond, false},
-		{"at the floor", 2800 * time.Millisecond, 3 * time.Second, block / proposeFloor, false},
-		{"below the floor", 2900 * time.Millisecond, 3 * time.Second, block / proposeFloor, true},
-		{"past the deadline", 4 * time.Second, 3 * time.Second, block / proposeFloor, true},
-	} {
-		limit, late := proposeLimit(t0.Add(c.collect), t0.Add(c.budget), block)
-		if limit != c.limit || late != c.late {
-			t.Errorf("%s: limit %v late %v, want %v %v", c.name, limit, late, c.limit, c.late)
-		}
-	}
-}
-
 // The validators start a round as their precommit timeout of the round before expires: the
 // driver takes the time it was due as the start of the next round of its height, and of no other
 func TestBftRoundStartOfPrecommitTimeout(t *testing.T) {

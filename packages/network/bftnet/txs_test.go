@@ -375,14 +375,14 @@ func TestServeConcurrency(t *testing.T) {
 		s.txSlots <- struct{}{}
 	}
 	before = bftmon.Get().Messages[bftmon.RefusedTxRequests]
-	if _, err := FetchTransactions(addr, 1, 0, bft.Hash{}, hashes, 1000, time.Second); err == nil {
+	if _, err := FetchTransactions(addr, bft.Hash{}, hashes, 1000, time.Second); err == nil {
 		t.Fatal("a request of bodies past the requests at once is answered")
 	}
 	if bftmon.Get().Messages[bftmon.RefusedTxRequests] != before+1 {
 		t.Fatal("the refused request of bodies is not counted")
 	}
 	<-s.txSlots
-	if got, err := FetchTransactions(addr, 1, 0, bft.Hash{}, hashes, 1000, time.Second); err != nil || len(got) != 1 {
+	if got, err := FetchTransactions(addr, bft.Hash{}, hashes, 1000, time.Second); err != nil || len(got) != 1 {
 		t.Fatalf("a request of bodies with a free slot: %v", err)
 	}
 }
