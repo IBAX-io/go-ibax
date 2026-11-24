@@ -151,7 +151,7 @@ func (a bftApp) propose(height int64, round uint32, prev *sqldb.BlockChain) ([]b
 		NodePosition:  int64(position),
 		Version:       consts.BftBlockVersion,
 		ConsensusMode: consts.HonorNodeMode,
-		ExecHash:      exec,
+		ExecHash:      faults.ExecHash(exec),
 		StateHash:     state,
 	}
 	prevHeader := &types.BlockHeader{BlockId: prev.ID, BlockHash: prev.Hash}

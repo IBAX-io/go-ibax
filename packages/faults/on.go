@@ -56,7 +56,8 @@ func Watch(path string) {
 			if old := config(); !equal(old, c) {
 				log.WithFields(log.Fields{"refuse": c.Refuse, "delay_ms": c.DelayMs, "jitter_ms": c.JitterMs,
 					"clock_offset_ms": c.ClockOffsetMs, "clock_from": c.ClockFrom, "clock_at": c.ClockAt,
-					"clock_speed": c.ClockSpeed}).Warn("the faults change")
+					"clock_speed": c.ClockSpeed, "forge_exec_hash": c.ForgeExecHash, "exec_hold": c.ExecHold}).
+					Warn("the faults change")
 			}
 			current.Store(c)
 			mu.Lock()
@@ -79,8 +80,22 @@ func Watch(path string) {
 func equal(a, b *Config) bool {
 	return slices.Equal(a.Refuse, b.Refuse) && a.DelayMs == b.DelayMs && a.JitterMs == b.JitterMs &&
 		a.ClockOffsetMs == b.ClockOffsetMs && a.ClockFrom == b.ClockFrom && a.ClockAt == b.ClockAt &&
-		a.ClockSpeed == b.ClockSpeed
+		a.ClockSpeed == b.ClockSpeed && a.ForgeExecHash == b.ForgeExecHash && a.ExecHold == b.ExecHold
 }
+
+// ExecHash is the execution hash the node proposes: hash, or with ForgeExecHash hash with its
+// first byte inverted, a hash of no execution
+func ExecHash(hash []byte) []byte {
+	if !config().ForgeExecHash || len(hash) == 0 {
+		return hash
+	}
+	forged := slices.Clone(hash)
+	forged[0] ^= 0xff
+	return forged
+}
+
+// ExecHold is how many committed blocks the executor leaves unexecuted
+func ExecHold() int64 { return max(config().ExecHold, 0) }
 
 // Now is the clock of the node: the clock of the system, or the fast clock until it reaches it,
 // ClockOffsetMs ahead

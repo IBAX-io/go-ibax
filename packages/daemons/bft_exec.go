@@ -16,6 +16,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/block"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/faults"
 	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 
@@ -143,7 +144,7 @@ func (e *bftExecutor) step() bool {
 	// the commit of block 1 executes it, and a node that joins imports the executed state
 	e.moved(executed)
 	metrics.BftExecLag.Set(float64(committed - executed))
-	if executed >= committed {
+	if executed >= committed-faults.ExecHold() {
 		DBUnlock()
 		return false
 	}

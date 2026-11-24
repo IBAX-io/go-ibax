@@ -4,8 +4,8 @@
  *--------------------------------------------------------------------------------------------*/
 
 // Package faults injects the faults of a network and of a clock into a node of a local test chain
-// (F18 design 8, items 5, 6, 7 and 14): the partition of the validators, the latency of a WAN, a
-// clock ahead. Only a build with the tag faults injects them; any other build, a release among
+// (F18 design 8, items 5, 6, 7, 14 and 19): the partition of the validators, the latency of a WAN, a
+// clock ahead, a proposer that forges the execution hash, an executor that lags behind the commits. Only a build with the tag faults injects them; any other build, a release among
 // them, reads the clock and dials as the standard library does.
 //
 // A node of the build reads File in its data directory every Poll; without the file it injects
@@ -40,4 +40,11 @@ type Config struct {
 	ClockFrom  int64   `json:"clock_from"`
 	ClockAt    int64   `json:"clock_at"`
 	ClockSpeed float64 `json:"clock_speed"`
+	// ForgeExecHash makes the node a Byzantine proposer: each block it proposes carries an execution
+	// hash that is not that of its execution, which the other validators refuse
+	ForgeExecHash bool `json:"forge_exec_hash"`
+	// ExecHold is how many committed blocks the executor of the node leaves unexecuted: it executes
+	// a block only while the node committed more than ExecHold blocks after it, so a node stopped
+	// with ExecHold set has executed up to its committed height minus ExecHold
+	ExecHold int64 `json:"exec_hold"`
 }

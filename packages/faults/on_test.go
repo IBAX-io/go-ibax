@@ -8,6 +8,7 @@
 package faults
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
 	"net"
@@ -115,5 +116,28 @@ func TestFastClock(t *testing.T) {
 	}
 	if d := Span(2 * time.Second); d != 200*time.Second {
 		t.Fatalf("2 s of the system go %v of the clock", d)
+	}
+}
+
+// TestExecFaults: a forged execution hash differs from the execution hash in its first byte and
+// leaves the hash it took as it was; ExecHold is the hold of the file, never below zero
+func TestExecFaults(t *testing.T) {
+	saved := current.Load()
+	t.Cleanup(func() { current.Store(saved) })
+	hash := []byte{1, 2, 3}
+	current.Store(&Config{})
+	if got := ExecHash(hash); !bytes.Equal(got, hash) || ExecHold() != 0 {
+		t.Fatalf("no faults: hash %x, hold %d", got, ExecHold())
+	}
+	current.Store(&Config{ForgeExecHash: true, ExecHold: 2})
+	if got := ExecHash(hash); !bytes.Equal(got, []byte{0xfe, 2, 3}) || !bytes.Equal(hash, []byte{1, 2, 3}) {
+		t.Fatalf("forged %x of %x", got, hash)
+	}
+	if ExecHash(nil) != nil || ExecHold() != 2 {
+		t.Fatalf("the hash of no block forged, or hold %d", ExecHold())
+	}
+	current.Store(&Config{ExecHold: -1})
+	if ExecHold() != 0 {
+		t.Fatalf("hold %d", ExecHold())
 	}
 }

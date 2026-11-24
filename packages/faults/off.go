@@ -34,3 +34,9 @@ func Dial(addr string, timeout time.Duration) (net.Conn, error) {
 
 // Accepted is a connection another node dialed: conn
 func Accepted(conn net.Conn) net.Conn { return conn }
+
+// ExecHash is the execution hash the node proposes: hash
+func ExecHash(hash []byte) []byte { return hash }
+
+// ExecHold is how many committed blocks the executor leaves unexecuted: none
+func ExecHold() int64 { return 0 }
