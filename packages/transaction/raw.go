@@ -6,6 +6,7 @@ package transaction
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
@@ -104,4 +105,26 @@ func (rtx *Transaction) unmarshall(buffer *bytes.Buffer, fill, client bool) erro
 	inner.setTxSize(int64(len(rtx.FullData)))
 	rtx.Inner = inner
 	return nil
+}
+
+// WindowEntry is the hash and the signed time of a transaction in its stored form, read without its
+// contract: the window of the duplicates takes the transactions of the blocks the node committed
+// and has not executed, whose contracts the node may not know yet, as one a block before creates
+func WindowEntry(data []byte) ([]byte, int64, error) {
+	if len(data) == 0 {
+		return nil, 0, errors.New("empty transaction buffer")
+	}
+	switch data[0] {
+	case types.SmartContractTxType, types.TransferSelfTxType, types.UtxoTxType:
+		s := &SmartTransactionParser{SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)}}
+		if err := s.decode(bytes.NewBuffer(data[1:])); err != nil {
+			return nil, 0, fmt.Errorf("parse transaction error: %w", err)
+		}
+		return s.Hash, s.TxSmart.Time, nil
+	}
+	tx, err := UnmarshallTransaction(bytes.NewBuffer(data), false)
+	if err != nil {
+		return nil, 0, err
+	}
+	return tx.Hash(), tx.SignedTime(), nil
 }

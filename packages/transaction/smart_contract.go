@@ -316,6 +316,17 @@ func (s *SmartTransactionParser) BinMarshalWithPrivate(smartTx *types.SmartTrans
 }
 
 func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer, fill bool) error {
+	if err := s.decode(buffer); err != nil {
+		return err
+	}
+	if s.SmartContract.TxSmart.UTXO != nil || s.SmartContract.TxSmart.TransferSelf != nil {
+		return nil
+	}
+	return s.parseFromContract(fill)
+}
+
+// decode reads the stored form of the transaction and its payload, without its contract
+func (s *SmartTransactionParser) decode(buffer *bytes.Buffer) error {
 	var stored storedTx
 	if err := msgpack.Unmarshal(buffer.Bytes(), &stored); err != nil {
 		return err
@@ -340,12 +351,6 @@ func (s *SmartTransactionParser) Unmarshal(buffer *bytes.Buffer, fill bool) erro
 	}
 	if s.TxSmart.Header == nil {
 		return fmt.Errorf("a transaction carries no header")
-	}
-	if s.SmartContract.TxSmart.UTXO != nil || s.SmartContract.TxSmart.TransferSelf != nil {
-		return nil
-	}
-	if err := s.parseFromContract(fill); err != nil {
-		return err
 	}
 	return nil
 }

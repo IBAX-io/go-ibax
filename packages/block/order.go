@@ -15,6 +15,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
+	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/IBAX-io/go-ibax/packages/utils"
 	log "github.com/sirupsen/logrus"
 )
@@ -40,12 +41,23 @@ func init() {
 }
 
 // windowTxs is the transactions of the data of a block as the window of the duplicates takes them
+// windowTxs is the transactions of the data of a committed block as the window of the duplicates
+// takes them, read without their contracts: the block may call a contract that a block the node
+// has not executed yet creates
 func windowTxs(data []byte) ([]sqldb.WindowTx, error) {
-	b, err := UnmarshallBlock(bytes.NewBuffer(data), true)
-	if err != nil {
+	raw := &types.BlockData{}
+	if err := raw.UnmarshallBlock(data); err != nil {
 		return nil, err
 	}
-	return b.windowTxs(), nil
+	txs := make([]sqldb.WindowTx, len(raw.TxFullData))
+	for i, full := range raw.TxFullData {
+		hash, signed, err := transaction.WindowEntry(full)
+		if err != nil {
+			return nil, err
+		}
+		txs[i] = sqldb.WindowTx{Hash: hash, Signed: signed}
+	}
+	return txs, nil
 }
 
 // windowTxs is the transactions of the block as the window of the duplicates takes them
