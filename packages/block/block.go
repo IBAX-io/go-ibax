@@ -40,6 +40,11 @@ type Block struct {
 	EcoParams         []sqldb.EcoParam // combustion percent,digits for each ecosystem
 	size              *blockSize       // the encoded length of the block being generated
 	trial             bool             // the block is executed by Trial and held for the decision
+	// discards are the reasons of the transactions the execution of an ordered block discarded, by
+	// their hashes (discardOf)
+	discards map[string]int32
+	// executed is the execution hash the execution of an ordered block left (execHash)
+	executed []byte
 	// genStart is when the proposer of a chain of the BFT consensus read the clock for the block:
 	// the block is made within max_block_generation_time from then (syspar.GetBftTimeliness), its
 	// transactions leaving the time the block takes after them
@@ -84,6 +89,9 @@ func (b *Block) limitMode() transaction.LimitMode {
 	}
 	if b.GenBlock {
 		return transaction.GetLetGenBlock()
+	}
+	if b.ordered() && !b.IsGenesis() {
+		return transaction.GetLetExecute()
 	}
 	return transaction.GetLetParsing()
 }

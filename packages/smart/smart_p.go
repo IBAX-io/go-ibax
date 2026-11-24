@@ -231,7 +231,8 @@ func updatePlatformParam(sc *SmartContract, name, value, conditions string, chec
 }
 
 // checkBftHonorNodes checks a new value of honor_nodes on a chain of the BFT consensus against
-// the value prev it replaces, by the set of the next height (syspar.CheckBftValidatorsChange)
+// the value prev it replaces, by the set of the height the change takes effect at, consts.BftSetDelay
+// after the block (syspar.CheckBftValidatorsChange)
 func (sc *SmartContract) checkBftHonorNodes(prev string, next []*syspar.HonorNode) error {
 	var before []*syspar.HonorNode
 	if err := json.Unmarshal([]byte(prev), &before); err != nil {
@@ -240,7 +241,7 @@ func (sc *SmartContract) checkBftHonorNodes(prev string, next []*syspar.HonorNod
 	if sc.BlockHeader == nil {
 		return fmt.Errorf("honor_nodes changes in a block")
 	}
-	out, err := bftOut(sc.DbTransaction, sc.BlockHeader.BlockId+1)
+	out, err := bftOut(sc.DbTransaction, sc.BlockHeader.BlockId+consts.BftSetDelay)
 	if err != nil {
 		return err
 	}

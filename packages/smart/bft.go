@@ -139,9 +139,9 @@ func bftRunsIn(sc *SmartContract, name, caller string) error {
 // BftApplyEvidence takes the body of an evidence transaction in the contract BftEvidenceContract
 // (design 4.5): it makes the six checks of the evidence against the chain before the block,
 // refuses an evidence past one for each validator in the block, and writes the evidence and the
-// review of the stop of its validator. The validator is out of the set from the next height; the
-// review is overdue bft_stop_review_days after the block, and keeps the size and the quorum of the
-// set it leaves. It returns the id of the review.
+// review of the stop of its validator. The validator is out of the set from the height
+// consts.BftSetDelay after the block; the review is overdue bft_stop_review_days after the block,
+// and keeps the size and the quorum of the set it leaves. It returns the id of the review.
 func BftApplyEvidence(sc *SmartContract, body []byte) (int64, error) {
 	if err := bftRunsIn(sc, BftEvidenceContract, ""); err != nil {
 		return 0, logErrorShort(err, consts.AccessDenied)
@@ -173,10 +173,10 @@ func BftApplyEvidence(sc *SmartContract, body []byte) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	stop := block + 1
+	stop := block + consts.BftSetDelay
 	next, err := BftValidatorsOf(sc.DbTransaction, stop)
 	if err != nil {
-		return 0, logErrorDB(err, "the validators set of the next height")
+		return 0, logErrorDB(err, "the validators set of the stop height")
 	}
 	if _, ok := next.Index([]byte(key.PublicKey)); ok {
 		next.Keys = slices.DeleteFunc(next.Keys, func(k []byte) bool { return bytes.Equal(k, []byte(key.PublicKey)) })
@@ -196,8 +196,8 @@ func BftApplyEvidence(sc *SmartContract, body []byte) (int64, error) {
 
 // BftConcludeReview concludes an open review in the contract BftReviewConcludeContract, which the
 // vote of the review runs from VotingDecisionCheck (design 4.5). maintain keeps the node out and
-// removes it from honor_nodes; restore puts it back in the set from the next height, with the
-// reason and the fixed version.
+// removes it from honor_nodes; restore puts it back in the set from the height consts.BftSetDelay
+// after the block, with the reason and the fixed version.
 func BftConcludeReview(sc *SmartContract, id int64, conclusion, reason, version string) error {
 	if err := bftRunsIn(sc, BftReviewConcludeContract, votingDecisionCheck); err != nil {
 		return logErrorShort(err, consts.AccessDenied)
@@ -223,7 +223,7 @@ func BftConcludeReview(sc *SmartContract, id int64, conclusion, reason, version 
 		fields, values = append(fields, "status"), append(values, sqldb.BftReviewMaintained)
 	case conclusion == BftReviewRestore && reason != "" && version != "":
 		fields = append(fields, "status", "version", "restore_height")
-		values = append(values, sqldb.BftReviewRestored, version, block+1)
+		values = append(values, sqldb.BftReviewRestored, version, block+consts.BftSetDelay)
 	default:
 		return logErrorShort(errBftConclusion, consts.InvalidObject)
 	}

@@ -7,10 +7,12 @@ package transaction
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/smart"
 )
 
 // The time left to a transaction of a block runs from the start StartAt sets, less the tail of the
@@ -156,5 +158,38 @@ func TestLimitTo(t *testing.T) {
 	}
 	if err := block.check(nil, letGenBlock); !errors.Is(err, ErrTimeLeft) {
 		t.Fatalf("a block past its limit goes on: %v", err)
+	}
+}
+
+// The execution of an ordered block checks the fuel alone; a transaction past the fuel of a
+// transaction or of the block fails by ErrFuelLimit with the text of the virtual machine, and takes
+// no fuel of the block, so that the transactions after it run on the fuel left
+func TestFuelLimitOfExecution(t *testing.T) {
+	limits := NewLimits(letExecute)
+	if len(limits.Limiters) != 1 {
+		t.Fatalf("the execution checks %d limits, want the fuel alone", len(limits.Limiters))
+	}
+	fuel, ok := limits.Limiters[0].(*txMaxFuel)
+	if !ok {
+		t.Fatalf("the execution checks %T, want the fuel", limits.Limiters[0])
+	}
+	fuel.LimitTx, fuel.LimitBlock = 100, 250
+	tx := func(f int64) *SmartTransactionParser {
+		return &SmartTransactionParser{SmartContract: &smart.SmartContract{TxFuel: f}}
+	}
+	for i, c := range []struct {
+		fuel int64
+		ok   bool
+		used int64
+	}{
+		{90, true, 90}, {101, false, 90}, {90, true, 180}, {80, false, 180}, {70, true, 250}, {1, false, 250},
+	} {
+		err := fuel.check(tx(c.fuel), letExecute)
+		if c.ok != (err == nil) || (err != nil && !errors.Is(err, ErrFuelLimit)) || fuel.Fuel != c.used {
+			t.Fatalf("transaction %d of fuel %d: %v, the block used %d, want %d", i, c.fuel, err, fuel.Fuel, c.used)
+		}
+		if err != nil && !strings.Contains(err.Error(), "Max fuel") {
+			t.Fatalf("transaction %d: the text %q is not that of the virtual machine", i, err)
+		}
 	}
 }

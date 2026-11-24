@@ -624,21 +624,21 @@ func Timely(binData []byte, received time.Time, ahead, behind time.Duration) err
 	return nil
 }
 
-// validatorsHash takes, on a chain of the BFT consensus, the validators set of the next height
-// as the execution of the block leaves it (design 4.1): a generated block puts its hash in its
-// header, and a block of another node is valid only if its header has the hash. Block 1 carries
-// no hash, the set it leaves is that of the honor_nodes it writes. It checks the state hash too.
+// validatorsHash takes, on a chain of the BFT consensus, the validators set the execution of the
+// block leaves (setHeight; design 4.1): a generated block of a version before consts.BvOrdered
+// puts its hash in its header, and a block of another node is valid only if its header has the
+// hash. Block 1 carries no hash, the set it leaves is that of the honor_nodes it writes; an
+// ordered block carries none either, its execution hash covers the set. It checks the state hash
+// of a block before consts.BvOrdered too.
 func (b *Block) validatorsHash(dbTx *sqldb.DbTransaction) error {
 	b.nextValidators = nil
 	if !syspar.IsBftConsensus() {
 		return nil
 	}
-	set, err := smart.BftValidatorsOf(dbTx, b.Header.BlockId+1)
-	if err != nil {
+	if err := b.leaveValidators(dbTx); err != nil {
 		return err
 	}
-	b.nextValidators = set.Marshal()
-	if b.IsGenesis() {
+	if b.IsGenesis() || b.ordered() {
 		return nil
 	}
 	hash := crypto.Hash(b.nextValidators)
@@ -703,11 +703,11 @@ func (b *Block) checkStateHash() error {
 	return nil
 }
 
-// storeValidators writes, in the transaction of the block, the validators set of the next height
-// if it is not the set before: the nodes of honor_nodes in their order, but the stopped ones and
-// those an evidence keeps out of the height (design 4.5)
+// storeValidators writes, in the transaction of the block, the validators set the execution of
+// the block leaves (setHeight) if it is not the set before: the nodes of honor_nodes in their
+// order, but the stopped ones and those an evidence keeps out of the height (design 4.5)
 func (b *Block) storeValidators(dbTx *sqldb.DbTransaction) error {
-	height := b.Header.BlockId + 1
+	height := b.setHeight()
 	data := b.nextValidators
 	if data == nil {
 		// block 1 makes the chain one of the BFT consensus as it inserts it

@@ -644,6 +644,20 @@ func (b *Block) commitState(e *stateExec, br *blockRun, from, to int, queued boo
 
 		if err != nil {
 			st.Skip(curTx)
+			if reason, ok := b.discardable(err); ok {
+				if t.SysUpdate {
+					e.node.Lock()
+					err := e.reloadSysPar(curTx)
+					e.node.Unlock()
+					if err != nil {
+						return err
+					}
+					t.SysUpdate = false
+				}
+				b.discard(afters, t, err, reason)
+				e.stream.send(afters)
+				continue
+			}
 			if !b.GenBlock {
 				br.failedAt = curTx + 1
 			}

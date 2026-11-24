@@ -32,6 +32,15 @@ const BlockVersion = BvValidatorsHash
 // BftBlockVersion is the version of the blocks of a chain of the BFT consensus
 const BftBlockVersion = BvOrdered
 
+// BftExecDepth is how many heights the execution of the blocks of a chain of the BFT consensus
+// runs behind their order: block h carries the execution hash of block h-BftExecDepth
+const BftExecDepth = 2
+
+// BftSetDelay is how many heights after the block that changes it a validators set takes effect:
+// the execution of block h leaves the set of height h+BftSetDelay, which the order of that height
+// needs before the executor reaches h+1
+const BftSetDelay = BftExecDepth + 1
+
 // DefaultTcpPort used when port number missed in host addr
 const DefaultTcpPort = 7078
 

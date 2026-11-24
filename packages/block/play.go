@@ -86,6 +86,13 @@ func (b *Block) playSafe(also func(dbTx *sqldb.DbTransaction) error) error {
 			dbTx.Rollback()
 			return err
 		}
+		if b.ordered() {
+			// block 1 of an ordered chain: block 3 carries its execution hash
+			if err := b.storeExecHash(dbTx); err != nil {
+				dbTx.Rollback()
+				return err
+			}
+		}
 	}
 	b.stage(metrics.StageInsert, start)
 	start = time.Now()
@@ -179,6 +186,16 @@ func (b *Block) executeTxs(dbTx *sqldb.DbTransaction, txBadChan chan badTxStruct
 			metrics.TxStage.WithLabelValues(metrics.TxRollback).Observe(metrics.Since(start))
 			if errRoll != nil {
 				return fmt.Errorf("%v; %w", err, errRoll)
+			}
+			if reason, ok := b.discardable(err); ok {
+				if t.SysUpdate {
+					if err := syspar.SysUpdate(t.DbTransaction); err != nil {
+						return fmt.Errorf("updating syspar: %w", err)
+					}
+					t.SysUpdate = false
+				}
+				b.discard(afters, t, err, reason)
+				continue
 			}
 			if b.GenBlock {
 				if errors.Is(err, transaction.ErrTimeLeft) {

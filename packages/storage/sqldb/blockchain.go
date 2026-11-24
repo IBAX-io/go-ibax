@@ -40,6 +40,18 @@ func (b *BlockChain) Get(blockID int64) (bool, error) {
 }
 
 // GetHead is Get with only the first size bytes of the data of the block, which hold its header
+// GetIn reads the block of an id in a transaction or not
+func (b *BlockChain) GetIn(dbTx *DbTransaction, blockID int64) (bool, error) {
+	return isFound(GetDB(dbTx).Where("id = ?", blockID).First(b))
+}
+
+// SetRollbacksHash writes the rollbacks hash of the block, which the execution of a block of an
+// ordered chain leaves after the commit of the block
+func (b *BlockChain) SetRollbacksHash(dbTx *DbTransaction, hash []byte) error {
+	b.RollbacksHash = hash
+	return GetDB(dbTx).Model(&BlockChain{}).Where("id = ?", b.ID).Update("rollbacks_hash", hash).Error
+}
+
 func (b *BlockChain) GetHead(blockID int64, size int) (bool, error) {
 	return isFound(DBConn.Select("id, hash, rollbacks_hash, substring(data from 1 for ?) AS data", size).
 		Where("id = ?", blockID).First(b))

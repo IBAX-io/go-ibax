@@ -52,6 +52,7 @@ var chunkBytes = 1 << 20
 var nodeTables = map[string]bool{
 	"block_chain":       true,
 	"bft_certificates":  true,
+	"bft_exec_hashes":   true,
 	"bft_set_proofs":    true,
 	"confirmations":     true,
 	"bft_state_hashes":  true,

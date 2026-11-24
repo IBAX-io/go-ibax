@@ -23,6 +23,9 @@ const (
 	letPreprocess LimitMode = 0x0001 // checking before generating block
 	letGenBlock   LimitMode = 0x0002 // checking during generating block
 	letParsing    LimitMode = 0x0004 // common checking during parsing block
+	// letExecute is the execution of a block of an ordered chain (consts.BvOrdered): the order of
+	// the block checked the counts and the sizes, the execution checks the fuel alone
+	letExecute LimitMode = 0x0008
 )
 
 func GetLetPreprocess() LimitMode {
@@ -35,6 +38,10 @@ func GetLetGenBlock() LimitMode {
 
 func GetLetParsing() LimitMode {
 	return letParsing
+}
+
+func GetLetExecute() LimitMode {
+	return letExecute
 }
 
 // Limits is used for saving current limit information
@@ -70,7 +77,18 @@ var (
 	ErrLimitStop = errors.New(`stop generating block`)
 	// ErrTimeLeft is ErrLimitStop for a transaction the time left to the block stopped
 	ErrTimeLeft = errors.WithMessage(ErrLimitStop, "the block has no time left")
+	// ErrFuelLimit is a transaction past the fuel of a transaction or of its block
+	ErrFuelLimit = errors.New("fuel limit")
 )
+
+// limitErr is the error of a limit: its text is that of the error of the virtual machine, and it
+// is of its kind (errors.Is)
+type limitErr struct {
+	vm, kind error
+}
+
+func (e *limitErr) Error() string   { return e.vm.Error() }
+func (e *limitErr) Unwrap() []error { return []error{e.vm, e.kind} }
 
 // NewLimits initializes Limits structure.
 func NewLimits(b LimitMode) (limits *Limits) {
@@ -84,7 +102,7 @@ func NewLimits(b LimitMode) (limits *Limits) {
 		{limiter: &txMaxLimit{}, modes: letPreprocess | letParsing},
 		{limiter: &txUserEcosysLimit{}, modes: letPreprocess | letParsing},
 		{limiter: &timeBlockLimit{}, modes: letGenBlock},
-		{limiter: &txMaxFuel{}, modes: letGenBlock | letParsing},
+		{limiter: &txMaxFuel{}, modes: letGenBlock | letParsing | letExecute},
 	}
 	for _, limiter := range allLimiters {
 		if limiter.modes&limits.Mode == 0 {
@@ -350,14 +368,16 @@ func (bl *txMaxFuel) check(t TransactionCaller, mode LimitMode) error {
 	}
 	fuel := smart.TxFuel
 	if fuel > bl.LimitTx {
-		return limitError(`txMaxFuel`, `Max fuel of tx %d > %d`, fuel, bl.LimitTx)
+		return &limitErr{vm: limitError(`txMaxFuel`, `Max fuel of tx %d > %d`, fuel, bl.LimitTx), kind: ErrFuelLimit}
 	}
-	bl.Fuel += fuel
-	if bl.Fuel > bl.LimitBlock {
+	if bl.Fuel+fuel > bl.LimitBlock {
 		if mode == letGenBlock {
 			return errors.WithMessage(ErrLimitStop, "txMaxFuel")
 		}
-		return limitError(`txMaxFuel`, `Max fuel of the block`)
+		// the transaction takes no fuel of the block: the execution of an ordered block discards
+		// it, and the transactions after it run on the fuel left
+		return &limitErr{vm: limitError(`txMaxFuel`, `Max fuel of the block`), kind: ErrFuelLimit}
 	}
+	bl.Fuel += fuel
 	return nil
 }

@@ -175,6 +175,28 @@ func (h *BftStateHash) Get(height int64) (bool, error) {
 	return isFound(DBConn.Where("height = ?", height).First(h))
 }
 
+// BftExecHash is the execution hash of a block of an ordered chain (consts.BvOrdered) as this node
+// executed it: the block BftExecDepth heights after carries the hash the chain agreed on
+type BftExecHash struct {
+	Height int64 `gorm:"primary_key;not null"`
+	Hash   []byte
+}
+
+// TableName returns name of table
+func (BftExecHash) TableName() string {
+	return "bft_exec_hashes"
+}
+
+// SaveIn writes the hash of its height in the transaction of the execution of its block
+func (h *BftExecHash) SaveIn(dbTx *DbTransaction) error {
+	return GetDB(dbTx).Save(h).Error
+}
+
+// GetIn reads the hash of a height, in a transaction or not
+func (h *BftExecHash) GetIn(dbTx *DbTransaction, height int64) (bool, error) {
+	return isFound(GetDB(dbTx).Where("height = ?", height).First(h))
+}
+
 // BftEvidence is an evidence on the chain, unique by its key (public_key, height, round, kind),
 // of the kinds bft.KindDoubleProposal and after; Data is the body of its transaction and BlockID the block that carries it
 type BftEvidence struct {
