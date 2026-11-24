@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/migration"
 	"gorm.io/gorm"
 )
@@ -109,12 +110,14 @@ func retire(dbTx *DbTransaction, t migration.PartitionedTable, r, blockID int64)
 	part := migration.PartitionName(t.Name, r)
 	if t.Name == "block_chain" {
 		// the changes of the validators set of the range keep their proofs: the blocks before
-		// them, with their certificates, which come after them in PartitionedTables
-		if err := db.Exec(fmt.Sprintf(`INSERT INTO "bft_set_proofs" ("height", "block", "cert")
-			SELECT b."id", b."data", c."data" FROM "%s"."%s" b
+		// them, with their certificates, which come after them in PartitionedTables, and the
+		// preimages of the execution hashes the blocks carry
+		if err := db.Exec(fmt.Sprintf(`INSERT INTO "bft_set_proofs" ("height", "block", "cert", "exec")
+			SELECT b."id", b."data", c."data", e."data" FROM "%s"."%s" b
 			JOIN "bft_certificates" c ON c."height" = b."id"
 			JOIN "bft_validator_sets" s ON s."from_height" = b."id" + 1
-			ON CONFLICT ("height") DO NOTHING`, migration.PartsSchema, part)).Error; err != nil {
+			JOIN "bft_exec_hashes" e ON e."height" = b."id" + 1 - ?
+			ON CONFLICT ("height") DO NOTHING`, migration.PartsSchema, part), consts.BftSetDelay).Error; err != nil {
 			return fmt.Errorf("keeping the proofs of the validators sets of %s: %w", part, err)
 		}
 	}

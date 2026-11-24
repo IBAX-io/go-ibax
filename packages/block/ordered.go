@@ -6,6 +6,7 @@
 package block
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"database/sql/driver"
@@ -148,15 +149,42 @@ func (b *Block) resultsHash() []byte {
 	return crypto.Hash(buf)
 }
 
-// execHash is the execution hash of the block: of its height, its rollbacks hash, the hash of the
-// results of its transactions and the hash of the validators set it leaves
-func (b *Block) execHash() []byte {
-	buf := binary.BigEndian.AppendUint64(nil, uint64(b.Header.BlockId))
-	for _, part := range [][]byte{b.rollbacksHash, b.resultsHash(), crypto.Hash(b.nextValidators)} {
+// ExecPreimage is the preimage of the execution hash of the block of a height, the hash of it: the
+// height, the rollbacks hash of the block, the hash of the results of its transactions and the
+// validators set it leaves, by its hash, each part after its length
+func ExecPreimage(height int64, rollbacks, results, set []byte) []byte {
+	buf := binary.BigEndian.AppendUint64(nil, uint64(height))
+	for _, part := range [][]byte{rollbacks, results, crypto.Hash(set)} {
 		buf = binary.BigEndian.AppendUint32(buf, uint32(len(part)))
 		buf = append(buf, part...)
 	}
-	return crypto.Hash(buf)
+	return buf
+}
+
+// CheckSetProof checks the proof of the validators set from the height after the block of the
+// header on (design 4.5): the preimage is of the execution hash the header carries, of the block
+// BftExecDepth before it, and the execution it hashes left the set
+func CheckSetProof(header *types.BlockHeader, preimage, set []byte) error {
+	if !bytes.Equal(crypto.Hash(preimage), header.ExecHash) {
+		return fmt.Errorf("block %d: the preimage is not of the execution hash it carries", header.BlockId)
+	}
+	height := header.BlockId - consts.BftExecDepth
+	if len(preimage) < 8 || int64(binary.BigEndian.Uint64(preimage)) != height {
+		return fmt.Errorf("block %d: the execution hash it carries is not of block %d", header.BlockId, height)
+	}
+	rest := preimage[8:]
+	var last []byte
+	for range 3 {
+		if len(rest) < 4 || uint32(len(rest)-4) < binary.BigEndian.Uint32(rest) {
+			return fmt.Errorf("block %d: the preimage of the execution hash does not parse", header.BlockId)
+		}
+		n := binary.BigEndian.Uint32(rest)
+		last, rest = rest[4:4+n], rest[4+n:]
+	}
+	if len(rest) != 0 || !bytes.Equal(last, crypto.Hash(set)) {
+		return fmt.Errorf("block %d: the execution of block %d left another set", header.BlockId, height)
+	}
+	return nil
 }
 
 // leaveValidators takes, in the transaction of the block, the validators set the execution of the
@@ -209,8 +237,9 @@ func (b *Block) storeExecHash(dbTx *sqldb.DbTransaction) error {
 			return err
 		}
 	}
-	b.executed = b.execHash()
-	if err := (&sqldb.BftExecHash{Height: b.Header.BlockId, Hash: b.executed}).SaveIn(dbTx); err != nil {
+	preimage := ExecPreimage(b.Header.BlockId, b.rollbacksHash, b.resultsHash(), b.nextValidators)
+	b.executed = crypto.Hash(preimage)
+	if err := (&sqldb.BftExecHash{Height: b.Header.BlockId, Hash: b.executed, Data: preimage}).SaveIn(dbTx); err != nil {
 		return fmt.Errorf("storing the execution hash: %w", err)
 	}
 	return nil

@@ -183,7 +183,7 @@ func setProofs(from int64, n int) ([]snapnet.Proof, error) {
 	}
 	ps := make([]snapnet.Proof, len(rows))
 	for i, r := range rows {
-		ps[i] = snapnet.Proof{FromHeight: r.FromHeight, Block: r.Block, Cert: r.Cert, Set: r.Set}
+		ps[i] = snapnet.Proof{FromHeight: r.FromHeight, Block: r.Block, Cert: r.Cert, Exec: r.Exec, Set: r.Set}
 	}
 	return ps, nil
 }

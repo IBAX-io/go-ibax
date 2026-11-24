@@ -15,6 +15,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/pbgo"
 	"github.com/IBAX-io/go-ibax/packages/script"
@@ -22,6 +23,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/stretchr/testify/require"
 )
 
 // An error of the transaction and the state discards the transaction, for the reason of its kind;
@@ -111,7 +113,7 @@ func TestExecHash(t *testing.T) {
 		if change != nil {
 			change(b)
 		}
-		return b.execHash()
+		return crypto.Hash(ExecPreimage(b.Header.BlockId, b.rollbacksHash, b.resultsHash(), b.nextValidators))
 	}
 	base := make(nil)
 	if !bytes.Equal(base, make(nil)) {
@@ -166,5 +168,25 @@ func TestDiscardRecord(t *testing.T) {
 	}
 	if b.discards[string(tx.Hash())] != discardFuel {
 		t.Fatalf("the reason of the discard: %d", b.discards[string(tx.Hash())])
+	}
+}
+
+// The proof of a validators set: the preimage of the execution hash a header carries, of the
+// block BftExecDepth before it, whose execution left the set
+func TestCheckSetProof(t *testing.T) {
+	useSuite("ECC_P256", "SHA256")
+	set := []byte("set")
+	preimage := ExecPreimage(7, []byte{1, 2}, crypto.Hash([]byte("results")), set)
+	header := &types.BlockHeader{BlockId: 9, ExecHash: crypto.Hash(preimage)}
+	require.NoError(t, CheckSetProof(header, preimage, set))
+
+	require.ErrorContains(t, CheckSetProof(header, preimage, []byte("other set")), "left another set")
+	other := ExecPreimage(7, []byte{1, 3}, crypto.Hash([]byte("results")), set)
+	require.ErrorContains(t, CheckSetProof(header, other, set), "not of the execution hash")
+	of8 := ExecPreimage(8, []byte{1, 2}, crypto.Hash([]byte("results")), set)
+	require.ErrorContains(t, CheckSetProof(&types.BlockHeader{BlockId: 9, ExecHash: crypto.Hash(of8)}, of8, set),
+		"not of block 7")
+	for _, bad := range [][]byte{preimage[:6], preimage[:20], append(append([]byte{}, preimage...), 0)} {
+		require.Error(t, CheckSetProof(&types.BlockHeader{BlockId: 9, ExecHash: crypto.Hash(bad)}, bad, set))
 	}
 }

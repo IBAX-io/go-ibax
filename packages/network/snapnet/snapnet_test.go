@@ -327,7 +327,7 @@ func TestServePaths(t *testing.T) {
 func TestProofs(t *testing.T) {
 	var all []Proof
 	for h := int64(100); h <= 2000; h += 100 {
-		all = append(all, Proof{FromHeight: h, Block: rows(byte(h), 1000), Cert: rows(1, 200), Set: rows(2, 300)})
+		all = append(all, Proof{FromHeight: h, Block: rows(byte(h), 1000), Cert: rows(1, 200), Exec: rows(3, 116), Set: rows(2, 300)})
 	}
 	from := func(ps []Proof) Proofs {
 		return func(from int64, n int) ([]Proof, error) {

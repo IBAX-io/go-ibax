@@ -15,8 +15,8 @@
 //	opChunks:   u64 height, u8 n, n bytes of a table name, u32 index, u8 count
 //	            -> u8 n, n × (u32 size, size bytes)
 //	opProofs:   u64 from, u8 count
-//	            -> u8 n, n × (u64 from height, u32 size, u32 size, u32 size, the block, the
-//	            certificate and the set)
+//	            -> u8 n, n × (u64 from height, u32 size, u32 size, u32 size, u32 size, the
+//	            block, the certificate, the execution hash preimage and the set)
 package snapnet
 
 import (
@@ -55,18 +55,21 @@ const (
 	MaxProofs = 16
 	// proofsBytes is the bytes after which a node answers no more proofs, but the first
 	proofsBytes = 64 << 20
-	// maxProofBlock, maxProofCert and maxProofSet bound what a node takes of a proof
+	// maxProofBlock, maxProofCert, maxProofExec and maxProofSet bound what a node takes of a proof
 	maxProofBlock = 256 << 20
 	maxProofCert  = 1 << 20
+	maxProofExec  = 1 << 10
 	maxProofSet   = 4 << 20
 )
 
-// Proof is the proof of the validators set from a height on: the block before the height, whose
-// header has the hash of the set, its certificate and the set
+// Proof is the proof of the validators set from a height on: the block before the height, its
+// certificate, the preimage of the execution hash the block carries, of the execution that left
+// the set, and the set
 type Proof struct {
 	FromHeight int64
 	Block      []byte
 	Cert       []byte
+	Exec       []byte
 	Set        []byte
 }
 
@@ -194,7 +197,7 @@ func Serve(rw io.ReadWriter, store snapshot.Store, proofs Proofs) error {
 		}
 		size := 0
 		for i, p := range ps {
-			if size += len(p.Block) + len(p.Cert) + len(p.Set); i > 0 && size > proofsBytes {
+			if size += len(p.Block) + len(p.Cert) + len(p.Exec) + len(p.Set); i > 0 && size > proofsBytes {
 				ps = ps[:i]
 				break
 			}
@@ -202,13 +205,13 @@ func Serve(rw io.ReadWriter, store snapshot.Store, proofs Proofs) error {
 		out := []byte{byte(len(ps))}
 		for _, p := range ps {
 			out = binary.BigEndian.AppendUint64(out, uint64(p.FromHeight))
-			for _, b := range [][]byte{p.Block, p.Cert, p.Set} {
+			for _, b := range [][]byte{p.Block, p.Cert, p.Exec, p.Set} {
 				out = binary.BigEndian.AppendUint32(out, uint32(len(b)))
 			}
 			if _, err := rw.Write(out); err != nil {
 				return err
 			}
-			for _, b := range [][]byte{p.Block, p.Cert, p.Set} {
+			for _, b := range [][]byte{p.Block, p.Cert, p.Exec, p.Set} {
 				if _, err := rw.Write(b); err != nil {
 					return err
 				}
@@ -361,7 +364,7 @@ func FetchProofs(addr string, from int64, count int, timeout time.Duration) ([]P
 	ps := make([]Proof, n[0])
 	last := from
 	for i := range ps {
-		var head [20]byte
+		var head [24]byte
 		if _, err := io.ReadFull(conn, head[:]); err != nil {
 			return nil, err
 		}
@@ -374,14 +377,14 @@ func FetchProofs(addr string, from int64, count int, timeout time.Duration) ([]P
 		for k, b := range []struct {
 			to  *[]byte
 			max uint32
-		}{{&p.Block, maxProofBlock}, {&p.Cert, maxProofCert}, {&p.Set, maxProofSet}} {
+		}{{&p.Block, maxProofBlock}, {&p.Cert, maxProofCert}, {&p.Exec, maxProofExec}, {&p.Set, maxProofSet}} {
 			size := binary.BigEndian.Uint32(head[8+4*k:])
 			if size > b.max {
 				return nil, fmt.Errorf("snapnet: a proof of %d bytes", size)
 			}
 			*b.to = make([]byte, size)
 		}
-		for _, b := range [][]byte{p.Block, p.Cert, p.Set} {
+		for _, b := range [][]byte{p.Block, p.Cert, p.Exec, p.Set} {
 			if _, err := io.ReadFull(conn, b); err != nil {
 				return nil, err
 			}

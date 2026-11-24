@@ -8,6 +8,8 @@ package sqldb
 import (
 	"fmt"
 
+	"github.com/IBAX-io/go-ibax/packages/consts"
+
 	"gorm.io/gorm/clause"
 )
 
@@ -68,13 +70,14 @@ func (s *BftValidatorSet) GetAt(dbTx *DbTransaction, height int64) (bool, error)
 }
 
 // BftSetProof is the proof of a change of the validators set out of the window of the blocks: the
-// block of Height, whose header has the hash of the set of Height+1, and its certificate. A node
-// that joins from a snapshot walks the sets from block 1 to the snapshot height by the proofs
-// (design 4.5).
+// block of Height, its certificate, and the preimage of the execution hash its header carries, of
+// the block whose execution left the set of Height+1 (BftExecHash.Data). A node that joins from a
+// snapshot walks the sets from block 1 to the snapshot height by the proofs (design 4.5).
 type BftSetProof struct {
 	Height int64 `gorm:"primary_key;not null"`
 	Block  []byte
 	Cert   []byte
+	Exec   []byte
 }
 
 // TableName returns name of table
@@ -82,33 +85,44 @@ func (BftSetProof) TableName() string {
 	return "bft_set_proofs"
 }
 
-// SetProof is the proof of the validators set from a height on: the block before the height and
-// its certificate, and the set
+// SetProof is the proof of the validators set from a height on: the block before the height, its
+// certificate, the preimage of the execution hash the block carries, and the set
 type SetProof struct {
 	FromHeight int64
 	Block      []byte
 	Cert       []byte
+	Exec       []byte
 	Set        []byte
 }
 
 // SetProofs reads up to n proofs of the sets from the heights after from, ascending: of the
-// blocks the node keeps, and of those out of its window, bft_set_proofs. Block 1 has no
-// certificate, so the set it leaves has no proof: a node has it of its block 1.
+// blocks the node keeps, and of those out of its window, bft_set_proofs. The block before the set
+// of F carries the execution hash of block F-BftSetDelay, whose execution left the set. Block 1
+// has no certificate, so the set it leaves has no proof: a node has it of its block 1.
 func SetProofs(from int64, n int) ([]SetProof, error) {
 	var ps []SetProof
 	err := DBConn.Raw(fmt.Sprintf(`SELECT DISTINCT ON ("from_height") * FROM (
-			SELECT s."from_height", b."data" AS "block", c."data" AS "cert", s."data" AS "set"
+			SELECT s."from_height", b."data" AS "block", c."data" AS "cert", e."data" AS "exec", s."data" AS "set"
 			FROM "bft_validator_sets" s
 			JOIN %s b ON b."id" = s."from_height" - 1
 			JOIN %s c ON c."height" = s."from_height" - 1
+			JOIN "bft_exec_hashes" e ON e."height" = s."from_height" - ?
 			WHERE s."from_height" > ?
 			UNION ALL
-			SELECT s."from_height", p."block", p."cert", s."data"
+			SELECT s."from_height", p."block", p."cert", p."exec", s."data"
 			FROM "bft_validator_sets" s JOIN "bft_set_proofs" p ON p."height" = s."from_height" - 1
 			WHERE s."from_height" > ?
 		) AS proofs ORDER BY "from_height" LIMIT ?`, ArchivedTable("block_chain"), ArchivedTable("bft_certificates")),
-		from, from, n).Scan(&ps).Error
+		consts.BftSetDelay, from, from, n).Scan(&ps).Error
 	return ps, err
+}
+
+// SetChanges is the heights from from up to to, both included, at which the validators set changes
+func SetChanges(dbTx *DbTransaction, from, to int64) ([]int64, error) {
+	var heights []int64
+	err := GetDB(dbTx).Model(&BftValidatorSet{}).Where("from_height BETWEEN ? AND ?", from, to).
+		Order("from_height").Pluck("from_height", &heights).Error
+	return heights, err
 }
 
 // SaveSetProofs stores proofs of the sets out of the window of the blocks
@@ -176,10 +190,15 @@ func (h *BftStateHash) Get(height int64) (bool, error) {
 }
 
 // BftExecHash is the execution hash of a block of an ordered chain (consts.BvOrdered) as this node
-// executed it: the block BftExecDepth heights after carries the hash the chain agreed on
+// executed it, and its preimage, Hash the hash of Data: the block BftExecDepth heights after
+// carries the hash the chain agreed on, and the preimage proves of it the validators set the
+// execution left (SetProofs). A node that joined from a snapshot has the hashes of the last
+// blocks of the snapshot of the blocks that carry them, without preimage, and the preimages of
+// the changes of the sets of the proofs it walked.
 type BftExecHash struct {
 	Height int64 `gorm:"primary_key;not null"`
 	Hash   []byte
+	Data   []byte
 }
 
 // TableName returns name of table

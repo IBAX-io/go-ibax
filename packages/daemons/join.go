@@ -19,6 +19,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network/snapnet"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/snapshot"
@@ -32,15 +33,18 @@ import (
 // instead of executing the blocks up to it:
 //
 //  1. it walks the validators sets from the set block 1 leaves up to the height S+D, D the delay
-//     of the state hash, by the proofs of the changes: each the block before a change, whose
-//     header has the hash of the new set, with its certificate by the set before;
+//     of the state hash, and at least up to S+BftSetDelay, by the proofs of the changes: each the
+//     block before a change with its certificate by the set before, and the preimage of the
+//     execution hash the block carries, of the block whose execution left the new set;
 //  2. it verifies the block S+D by its certificate and the set of S+D: the block carries the
 //     state hash of S;
 //  3. it downloads the snapshot of S, each chunk checked against the manifest and the manifest
 //     against the state hash, imports it and checks the hash of what it imported;
 //  4. it takes the blocks of the window up to S, each by its certificate and the set of its
 //     height, which the state has, so that it serves them and the contracts read them as on the
-//     other nodes, and keeps the proofs of the changes out of the window;
+//     other nodes, keeps the proofs of the changes out of the window and the preimages of those
+//     in it, which it serves as the proofs of the changes, and takes the execution hashes of S-1
+//     and S of the blocks S+1 and S+2 that carry them, which its executor checks the blocks by;
 //  5. it goes on from S+1 as any node, by the certificates.
 //
 // It trusts the validators of the sets it walks: the proofs are of more than two thirds of the
@@ -143,7 +147,7 @@ func joinFromSnapshot(ctx context.Context, logger *log.Entry, restore func() err
 	imported := false
 	var errs []error
 	for _, host := range j.hosts {
-		sets, proofs, err := j.walk(host, local, candidates[0]+delay)
+		sets, proofs, err := j.walk(host, local, candidates[0]+max(delay, consts.BftSetDelay))
 		if err != nil {
 			errs = append(errs, fmt.Errorf("walking the validators sets of %s: %w", host, err))
 			continue
@@ -216,7 +220,8 @@ func (j *joiner) snapshotHeights(interval int64) []int64 {
 }
 
 // walk walks the validators sets of a host from the set of height 2 up to the height to, each by
-// its proof, and returns the sets and the proofs
+// its proof, and returns the sets and the proofs: the block before the set, certified by the set
+// before it, carries the execution hash whose preimage hashes the set
 func (j *joiner) walk(host string, set bft.Validators, to int64) ([]walkedSet, []sqldb.BftSetProof, error) {
 	sets := []walkedSet{{from: 2, set: set}}
 	var proofs []sqldb.BftSetProof
@@ -238,15 +243,18 @@ func (j *joiner) walk(host string, set bft.Validators, to int64) ([]walkedSet, [
 			if err != nil {
 				return nil, nil, err
 			}
-			if b.Header.BlockId != p.FromHeight-1 || !bytes.Equal(b.Header.NextValidatorsHash, crypto.Hash(p.Set)) {
-				return nil, nil, fmt.Errorf("the proof of the set of height %d is of another set", p.FromHeight)
+			if b.Header.BlockId != p.FromHeight-1 {
+				return nil, nil, fmt.Errorf("the proof of the set of height %d is of block %d", p.FromHeight, b.Header.BlockId)
+			}
+			if err := block.CheckSetProof(b.Header, p.Exec, p.Set); err != nil {
+				return nil, nil, fmt.Errorf("the proof of the set of height %d is of another set: %w", p.FromHeight, err)
 			}
 			next, err := bft.UnmarshalValidators(p.Set)
 			if err != nil {
 				return nil, nil, err
 			}
 			sets = append(sets, walkedSet{from: p.FromHeight, set: next})
-			proofs = append(proofs, sqldb.BftSetProof{Height: b.Header.BlockId, Block: p.Block, Cert: p.Cert})
+			proofs = append(proofs, sqldb.BftSetProof{Height: b.Header.BlockId, Block: p.Block, Cert: p.Cert, Exec: p.Exec})
 		}
 		if len(ps) < snapnet.MaxProofs {
 			return sets, proofs, nil
@@ -257,6 +265,16 @@ func (j *joiner) walk(host string, set bft.Validators, to int64) ([]walkedSet, [
 // certifiedStateHash takes the block of a height from the hosts and verifies it by its
 // certificate and the set of the height, and returns the state hash it carries, nil if none
 func (j *joiner) certifiedStateHash(height int64, set bft.Validators) ([]byte, error) {
+	b, err := j.certified(height, set)
+	if err != nil {
+		return nil, err
+	}
+	return b.Header.StateHash, nil
+}
+
+// certified takes the block of a height from the first host that has it and verifies it by its
+// certificate and the set of the height
+func (j *joiner) certified(height int64, set bft.Validators) (*types.BlockData, error) {
 	var errs []error
 	for _, host := range j.hosts {
 		b, err := j.certifiedBlock(host, height, set)
@@ -264,9 +282,66 @@ func (j *joiner) certifiedStateHash(height int64, set bft.Validators) ([]byte, e
 			errs = append(errs, fmt.Errorf("%s: %w", host, err))
 			continue
 		}
-		return b.Header.StateHash, nil
+		return b, nil
 	}
 	return nil, errors.Join(append([]error{fmt.Errorf("no host has the block %d of its certificate", height)}, errs...)...)
+}
+
+// lastExecHashes are the execution hashes of the blocks of the snapshot height and of the one
+// before, which the node did not execute: the blocks BftExecDepth after them carry them, each
+// verified by its certificate and the set of its height, which the imported state has
+func (j *joiner) lastExecHashes(height int64) ([]sqldb.BftExecHash, error) {
+	var hashes []sqldb.BftExecHash
+	for h := height - 1; h <= height; h++ {
+		set, err := validatorsAt(uint64(h + consts.BftExecDepth))
+		if err != nil {
+			return nil, err
+		}
+		b, err := j.certified(h+consts.BftExecDepth, set)
+		if err != nil {
+			return nil, err
+		}
+		hashes = append(hashes, sqldb.BftExecHash{Height: h, Hash: b.Header.ExecHash, Data: []byte{}})
+	}
+	return hashes, nil
+}
+
+// keepProofs stores the proofs walked of the changes of the sets out of the window, from the
+// first block of the window, and the preimages of the execution hashes of those in it up to the
+// snapshot height, which the node serves the proofs of these changes by, with the execution
+// hashes of the last blocks; the proofs cover every change of the state from the window up to the
+// set the block of the snapshot height leaves
+func keepProofs(dbTx *sqldb.DbTransaction, first, height int64, proofs []sqldb.BftSetProof, execs []sqldb.BftExecHash) error {
+	changes, err := sqldb.SetChanges(dbTx, first+1, height+consts.BftSetDelay)
+	if err != nil {
+		return err
+	}
+	var out []sqldb.BftSetProof
+	proved := map[int64]bool{}
+	for _, p := range proofs {
+		if p.Height < first {
+			out = append(out, p)
+			continue
+		}
+		if e := p.Height + 1 - consts.BftSetDelay; e <= height {
+			proved[p.Height+1] = true
+			execs = append(execs, sqldb.BftExecHash{Height: e, Hash: crypto.Hash(p.Exec), Data: p.Exec})
+		}
+	}
+	for _, f := range changes {
+		if !proved[f] {
+			return fmt.Errorf("no proof of the change of the validators set at height %d", f)
+		}
+	}
+	if err := sqldb.SaveSetProofs(dbTx, out); err != nil {
+		return err
+	}
+	for _, e := range execs {
+		if err := e.SaveIn(dbTx); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // certifiedBlock takes a block of a height from a host and verifies it by its certificate
@@ -323,6 +398,10 @@ func (j *joiner) join(height int64, hash []byte, proofs []sqldb.BftSetProof, imp
 	if err := syspar.SysTableColType(nil); err != nil {
 		return err
 	}
+	execs, err := j.lastExecHashes(height)
+	if err != nil {
+		return err
+	}
 	importedAt := time.Now()
 	dbTx, err := sqldb.StartTransaction()
 	if err != nil {
@@ -336,8 +415,7 @@ func (j *joiner) join(height int64, hash []byte, proofs []sqldb.BftSetProof, imp
 	if err := j.window(dbTx, first, height); err != nil {
 		return err
 	}
-	kept := slices.DeleteFunc(proofs, func(p sqldb.BftSetProof) bool { return p.Height >= first })
-	if err := sqldb.SaveSetProofs(dbTx, kept); err != nil {
+	if err := keepProofs(dbTx, first, height, proofs, execs); err != nil {
 		return err
 	}
 	if err := (&sqldb.BftStateHash{Height: height, Hash: hash}).SaveIn(dbTx); err != nil {
@@ -349,7 +427,7 @@ func (j *joiner) join(height int64, hash []byte, proofs []sqldb.BftSetProof, imp
 	if err := dbTx.Commit(); err != nil {
 		return err
 	}
-	j.logger.WithFields(log.Fields{"height": height, "window": height - first + 1, "proofs": len(kept),
+	j.logger.WithFields(log.Fields{"height": height, "window": height - first + 1, "proofs": len(proofs),
 		"download": downloaded.Sub(start), "import": importedAt.Sub(downloaded),
 		"blocks": time.Since(importedAt)}).Info("join")
 	return nil
@@ -406,7 +484,7 @@ func (j *joiner) window(dbTx *sqldb.DbTransaction, from, to int64) error {
 	if _, err := info.Get(); err != nil {
 		return err
 	}
-	if info.BlockID != to || !bytes.Equal(info.Hash, prev.BlockHash) || !bytes.Equal(info.RollbacksHash, prev.RollbacksHash) {
+	if info.BlockID != to || !bytes.Equal(info.Hash, prev.BlockHash) {
 		return fmt.Errorf("the state is of block %d %x, not of block %d %x", info.BlockID, info.Hash, to, prev.BlockHash)
 	}
 	return nil
@@ -446,14 +524,15 @@ func (j *joiner) windowBlock(height int64, raw, certData []byte, prev *types.Blo
 		return nil, nil, fmt.Errorf("block %d does not follow block %d", h.BlockId, height-1)
 	}
 	bc := &joinedBlock{BlockChain: sqldb.BlockChain{
-		ID:             height,
-		Hash:           h.BlockHash,
-		Data:           raw,
-		EcosystemID:    h.EcosystemId,
-		KeyID:          h.KeyId,
-		NodePosition:   h.NodePosition,
-		Time:           h.Timestamp,
-		RollbacksHash:  h.RollbacksHash,
+		ID:           height,
+		Hash:         h.BlockHash,
+		Data:         raw,
+		EcosystemID:  h.EcosystemId,
+		KeyID:        h.KeyId,
+		NodePosition: h.NodePosition,
+		Time:         h.Timestamp,
+		// the execution of a block writes its rollbacks hash: the node executed none of the window
+		RollbacksHash:  []byte{},
 		Tx:             int32(len(b.TxFullData)),
 		ConsensusMode:  h.ConsensusMode,
 		CandidateNodes: h.CandidateNodes,

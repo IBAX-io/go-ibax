@@ -28,12 +28,14 @@ var (
 	{{head "bft_exec_hashes"}}
 		t.Column("height", "bigint", {"default": "0"})
 		t.Column("hash", "bytea", {"default": ""})
+		t.Column("data", "bytea", {"default": ""})
 	{{footer "primary(height)"}}
 
 	{{head "bft_set_proofs"}}
 		t.Column("height", "bigint", {"default": "0"})
 		t.Column("block", "bytea", {"default": ""})
 		t.Column("cert", "bytea", {"default": ""})
+		t.Column("exec", "bytea", {"default": ""})
 	{{footer "primary(height)"}}
 
 	{{head "snapshot_joins"}}

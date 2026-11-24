@@ -88,7 +88,7 @@ func newJoinChain(t *testing.T, last, each int64, stateHash map[int64][]byte) *j
 	for h := each + 1; h <= last+1; h += each {
 		c.sets, c.from = append(c.sets, newJoinSet(t, 4)), append(c.from, h)
 	}
-	prev := &types.BlockHeader{BlockHash: []byte("genesis"), RollbacksHash: []byte{0}}
+	prev := &types.BlockHeader{BlockHash: []byte("genesis")}
 	for h := int64(1); h <= last; h++ {
 		c.add(t, h, prev, nil)
 		prev = c.headers[h]
@@ -96,11 +96,21 @@ func newJoinChain(t *testing.T, last, each int64, stateHash map[int64][]byte) *j
 	return c
 }
 
-// add makes the block of a height after prev, of the header changed by change
+// exec is the preimage of the execution hash of the block of a height, which leaves the set of the
+// height BftSetDelay after it
+func (c *joinChain) exec(height int64) []byte {
+	return block.ExecPreimage(height, []byte{byte(height)}, []byte{byte(height), 1},
+		c.sets[c.setIndex(height+consts.BftSetDelay)].set.Marshal())
+}
+
+// add makes the block of a height after prev, of the header changed by change: it carries the
+// execution hash of the block BftExecDepth before it
 func (c *joinChain) add(t *testing.T, height int64, prev *types.BlockHeader, change func(*types.BlockData)) {
 	header := &types.BlockHeader{BlockId: height, Timestamp: 1000 + height, NetworkId: joinNetwork,
-		Version: consts.BvValidatorsHash, RollbacksHash: []byte{byte(height)}, StateHash: c.stateHash[height],
-		NextValidatorsHash: crypto.Hash(c.sets[c.setIndex(height+1)].set.Marshal())}
+		Version: consts.BvOrdered, StateHash: c.stateHash[height]}
+	if height > consts.BftExecDepth {
+		header.ExecHash = crypto.Hash(c.exec(height - consts.BftExecDepth))
+	}
 	b := &types.BlockData{Header: header, PrevHeader: prev}
 	b.MerkleRoot = b.GenMerkleRoot()
 	if change != nil {
@@ -122,7 +132,8 @@ func (c *joinChain) proofs() []snapnet.Proof {
 	var ps []snapnet.Proof
 	for i := 1; i < len(c.from); i++ {
 		h := c.from[i]
-		ps = append(ps, snapnet.Proof{FromHeight: h, Block: c.raws[h-1], Cert: c.certs[h-1], Set: c.sets[i].set.Marshal()})
+		ps = append(ps, snapnet.Proof{FromHeight: h, Block: c.raws[h-1], Cert: c.certs[h-1],
+			Exec: c.exec(h - consts.BftSetDelay), Set: c.sets[i].set.Marshal()})
 	}
 	return ps
 }
@@ -216,6 +227,14 @@ func TestJoinWalk(t *testing.T) {
 		t.Fatalf("another set: %v", err)
 	}
 
+	// the preimage of the execution of another block
+	shifted := append([]snapnet.Proof{}, ps...)
+	shifted[2].Exec = c.exec(shifted[2].FromHeight - consts.BftSetDelay - 1)
+	serveProofs(t, shifted)
+	if _, _, err := j.walk("host", c.sets[0].set, 400); err == nil || !strings.Contains(err.Error(), "another set") {
+		t.Fatalf("the preimage of another block: %v", err)
+	}
+
 	// a proof of another block than the one before the change
 	moved := append([]snapnet.Proof{}, ps...)
 	moved[1].Block, moved[1].Cert = c.raws[39], c.certs[39]
@@ -280,7 +299,7 @@ func TestVerifyCertified(t *testing.T) {
 		change func(*types.BlockData)
 	}{
 		{"a transaction", func(b *types.BlockData) { b.TxFullData = [][]byte{[]byte("tx")} }},
-		{"a version without the validators hash", func(b *types.BlockData) { b.Header.Version = consts.BvValidatorsHash - 1 }},
+		{"an unordered version", func(b *types.BlockData) { b.Header.Version = consts.BvOrdered - 1 }},
 		{"the block before", func(b *types.BlockData) { b.PrevHeader = &types.BlockHeader{BlockId: 5, BlockHash: []byte("x")} }},
 		{"another height", func(b *types.BlockData) { b.Header.BlockId = 7 }},
 	} {

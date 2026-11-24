@@ -11,15 +11,22 @@ import (
 	"testing"
 
 	"github.com/IBAX-io/go-ibax/packages/conf"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/migration"
 	"github.com/stretchr/testify/require"
 )
 
 // setRows makes the sets from the heights 2, of block 1, pb, of block pb-1 in range 0, and 2pb,
-// of block 2pb-1 in range 1, and the certificates of the blocks of chainRows
+// of block 2pb-1 in range 1, the execution hashes of the blocks whose execution left the sets but
+// that of block 1, and the certificates of the blocks of chainRows
 func setRows(t *testing.T, db *DbTransaction) {
+	require.NoError(t, GetDB(db).Exec(`DELETE FROM "bft_exec_hashes"`).Error)
 	for _, h := range []int64{2, pb, 2 * pb} {
 		require.NoError(t, (&BftValidatorSet{FromHeight: h, Data: []byte(fmt.Sprintf("set %d", h))}).Create(db))
+		if h > 2 {
+			e := h - consts.BftSetDelay
+			require.NoError(t, (&BftExecHash{Height: e, Hash: []byte{byte(e)}, Data: []byte(fmt.Sprintf("exec %d", e))}).SaveIn(db))
+		}
 	}
 	for _, h := range []int64{pb - 1, pb, 2*pb - 1} {
 		require.NoError(t, (&BftCertificate{Height: h, Hash: []byte{byte(h)}, Data: []byte(fmt.Sprintf("cert %d", h))}).Create(db))
@@ -56,7 +63,15 @@ func TestSetProofs(t *testing.T) {
 	require.Equal(t, []int64{pb, 2 * pb}, heightsOf(ps))
 	require.Equal(t, fmt.Sprintf("cert %d", pb-1), string(ps[0].Cert))
 	require.Equal(t, fmt.Sprintf("set %d", pb), string(ps[0].Set))
+	require.Equal(t, fmt.Sprintf("exec %d", pb-consts.BftSetDelay), string(ps[0].Exec))
 	require.EqualValues(t, 0, countRows(t, db, `SELECT count(*) FROM "bft_set_proofs"`))
+
+	changes, err := SetChanges(db, 3, 2*pb)
+	require.NoError(t, err)
+	require.Equal(t, []int64{pb, 2 * pb}, changes)
+	changes, err = SetChanges(db, 2, pb)
+	require.NoError(t, err)
+	require.Equal(t, []int64{2, pb}, changes)
 }
 
 // TestSetProofsRetired: the proof of a set whose block the boundary retired is of bft_set_proofs
@@ -70,6 +85,7 @@ func TestSetProofsRetired(t *testing.T) {
 	require.Equal(t, []int64{pb, 2 * pb}, heightsOf(ps))
 	require.Equal(t, fmt.Sprintf("cert %d", pb-1), string(ps[0].Cert))
 	require.Equal(t, []byte{0}, ps[0].Block)
+	require.Equal(t, fmt.Sprintf("exec %d", pb-consts.BftSetDelay), string(ps[0].Exec), "the retired proof keeps the preimage")
 	ps, err = SetProofs(0, 1)
 	require.NoError(t, err)
 	require.Equal(t, []int64{pb}, heightsOf(ps))
