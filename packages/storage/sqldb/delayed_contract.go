@@ -27,11 +27,12 @@ func (DelayedContract) TableName() string {
 	return tableDelayedContracts
 }
 
-// GetAllDelayedContractsForBlockID returns contracts that want to execute for blockID
-func GetAllDelayedContractsForBlockID(blockID int64) ([]*DelayedContract, error) {
+// GetAllDelayedContractsForBlockID returns the contracts due at blockID, as the database of the
+// transaction has them, in the order they run: of the highest rate first, then of their ids
+func GetAllDelayedContractsForBlockID(dbTx *DbTransaction, blockID int64) ([]*DelayedContract, error) {
 	var contracts []*DelayedContract
-	if err := DBConn.Where(`block_id <= ? AND ?%every_block = 0 AND deleted = ? AND (counter < "1_delayed_contracts".limit OR "1_delayed_contracts".limit = 0)`,
-		blockID, blockID, availableDelayedContracts).Order("high_rate desc").Find(&contracts).Error; err != nil {
+	if err := GetDB(dbTx).Where(`block_id <= ? AND ?%every_block = 0 AND deleted = ? AND (counter < "1_delayed_contracts".limit OR "1_delayed_contracts".limit = 0)`,
+		blockID, blockID, availableDelayedContracts).Order("high_rate desc, id").Find(&contracts).Error; err != nil {
 		return nil, err
 	}
 	return contracts, nil

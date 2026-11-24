@@ -518,7 +518,7 @@ func (d *bftDriver) hasWork() bool {
 	if transaction.TxPool.Live(faults.Now().Unix()) {
 		return true
 	}
-	delayed, err := sqldb.GetAllDelayedContractsForBlockID(int64(d.m.Height()))
+	delayed, err := sqldb.GetAllDelayedContractsForBlockID(nil, int64(d.m.Height()))
 	if err != nil {
 		d.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting delayed contracts")
 		return false

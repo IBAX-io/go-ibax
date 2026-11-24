@@ -29,6 +29,7 @@ func (t *Transaction) Clone() *Transaction {
 		TxSignature: s.TxSignature,
 		TxSize:      s.TxSize,
 		Size:        s.Size,
+		System:      s.System,
 	}
 	if s.TxContract != nil {
 		sc.TxContract = &smart.Contract{Name: s.TxContract.Name, Block: s.TxContract.Block}

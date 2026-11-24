@@ -151,7 +151,7 @@ func (r *blockRun) execute() error {
 		r.ran = len(b.Transactions)
 		return b.executeTxs(r.dbTx, r.bad, r.afters, &r.processed, txs, r.fees)
 	}
-	if err := checkStopNetworkAlone(b.Transactions); err != nil {
+	if err := checkStopNetworkAlone(b.Transactions[b.systemTxs:]); err != nil {
 		return err
 	}
 	if r.state == nil {

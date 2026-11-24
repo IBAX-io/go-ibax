@@ -216,6 +216,29 @@ func (b *Block) storeExecHash(dbTx *sqldb.DbTransaction) error {
 	return nil
 }
 
+// delayedTxs are the system transactions of the delayed contracts due at the height, as the
+// database of the transaction of the block has them after the block before it: of the highest
+// rate first, then of their rows. The validator that proposed the block runs them, by the node key
+// the position of the signed header names; with none there, they are discarded.
+func (b *Block) delayedTxs(dbTx *sqldb.DbTransaction) ([]*transaction.Transaction, error) {
+	rows, err := sqldb.GetAllDelayedContractsForBlockID(dbTx, b.Header.BlockId)
+	if err != nil {
+		return nil, fmt.Errorf("getting the delayed contracts: %w", err)
+	}
+	if len(rows) == 0 {
+		return nil, nil
+	}
+	var signer int64
+	if pub, err := syspar.GetNodePublicKeyByPosition(b.Header.NodePosition); err == nil && len(pub) > 0 {
+		signer = crypto.Address(pub)
+	}
+	txs := make([]*transaction.Transaction, len(rows))
+	for i, row := range rows {
+		txs[i] = transaction.NewDelayed(b.Header, signer, transaction.Delayed{ID: row.ID, Contract: row.Contract, KeyID: row.KeyID})
+	}
+	return txs, nil
+}
+
 // writeExecuted writes, last in the transaction of the execution of a committed block, its
 // rollbacks hash to block_chain and the block to info_block: info_block is the last block the node
 // executed
@@ -261,6 +284,15 @@ func (b *Block) Execute() error {
 		return err
 	}
 	b.verifySignatures()
+	system, err := b.delayedTxs(dbTx)
+	if err != nil {
+		return fail(err)
+	}
+	// the delayed contracts due at the height run first, as transactions of the block that it
+	// does not store
+	body := b.Transactions
+	b.Transactions, b.systemTxs = append(system, body...), len(system)
+	defer func() { b.Transactions, b.systemTxs = body, 0 }()
 	if err := b.ProcessTxs(dbTx); err != nil {
 		return fail(err)
 	}

@@ -37,7 +37,7 @@ type DelayedTx struct {
 
 // RunForDelayBlockID creates the transactions that need to be run for blockID
 func (dtx *DelayedTx) RunForDelayBlockID(blockID int64) ([]*transaction.Pending, error) {
-	contracts, err := sqldb.GetAllDelayedContractsForBlockID(blockID)
+	contracts, err := sqldb.GetAllDelayedContractsForBlockID(nil, blockID)
 	if err != nil {
 		dtx.logger.WithFields(log.Fields{"type": consts.DBError, "error": err}).Error("getting delayed contracts for block")
 		return nil, err

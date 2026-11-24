@@ -43,6 +43,9 @@ type Block struct {
 	// discards are the reasons of the transactions the execution of an ordered block discarded, by
 	// their hashes (discardOf)
 	discards map[string]int32
+	// systemTxs is the number of the system transactions (delayed contracts) the execution of an
+	// ordered block runs before the transactions of the block, at the head of Transactions
+	systemTxs int
 	// executed is the execution hash the execution of an ordered block left (execHash)
 	executed []byte
 	// genStart is when the proposer of a chain of the BFT consensus read the clock for the block:

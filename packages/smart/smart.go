@@ -96,6 +96,9 @@ type SmartContract struct {
 	TxOutputsMap    map[sqldb.KeyUTXO][]sqldb.SpentInfo
 	PrevSysPar      map[string]string
 	EcoParams       []sqldb.EcoParam
+	// System is a transaction the execution of a block makes, never one received: a delayed
+	// contract due at the height, signed by no key (direction A). Only the executor sets it.
+	System bool
 	// callAs is the account that CallContractAs runs a contract as, 0 outside it
 	callAs int64
 	// keys are the rows of 1_keys the run of the transaction read, which it reads again from them
@@ -713,6 +716,9 @@ func (sc *SmartContract) GetContractLimit() (ret int64) {
 
 func (sc *SmartContract) GetSignedBy(public []byte) (int64, error) {
 	signedBy := sc.TxSmart.KeyID
+	if sc.System && sc.TxSmart.SignedBy == 0 {
+		return 0, fmt.Errorf("%w: %v", errDelayedContract, `a transaction of the execution without a validator`)
+	}
 	if sc.TxSmart.SignedBy != 0 {
 		var isNode bool
 		signedBy = sc.TxSmart.SignedBy
@@ -916,6 +922,11 @@ func (sc *SmartContract) CheckTxSign() error {
 		err = fmt.Errorf(eEcoKeyDisable, converter.AddressToString(signedBy), sc.TxSmart.EcosystemID)
 		sc.GetLogger().WithFields(log.Fields{"type": consts.ContractError, "error": err}).Error("disable keyid")
 		return err
+	}
+	// a transaction of the execution has no signature: GetSignedBy has checked that it runs a
+	// delayed contract as a validator of the chain
+	if sc.System {
+		return nil
 	}
 	var registered []byte
 	if isFound {
