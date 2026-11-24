@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/block"
+	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/metrics"
 
 	dto "github.com/prometheus/client_model/go"
@@ -113,4 +114,36 @@ func TestBftExecutorIdle(t *testing.T) {
 	require.Equal(t, n+2, got)
 	require.InDelta(t, 0.5, sum2-sum, 1e-9, "from the commit, after the end of the execution before")
 	require.Empty(t, e.committedAt)
+}
+
+// A node that synchronizes from height 1 commits a block by its certificate once its executor
+// executed the block BftSetDelay before it, whose execution stored the validators set of the
+// height: the certificates of heights 1 to BftSetDelay are checked at once, that of the next height
+// waits for the execution of block 1
+func TestBftSyncWaitsForExecutor(t *testing.T) {
+	saved := bftExec
+	bftExec = testExecutor(0)
+	t.Cleanup(func() { bftExec = saved })
+	ctx := context.Background()
+	for h := uint64(1); h <= consts.BftSetDelay; h++ {
+		err := commitSynced(ctx, h, []byte{0xff}, nil)
+		require.Error(t, err)
+		require.NotErrorIs(t, err, block.ErrNotExecuted, "height %d waits for the executor", h)
+	}
+
+	done := make(chan error, 1)
+	go func() { done <- commitSynced(ctx, consts.BftSetDelay+1, []byte{0xff}, nil) }()
+	select {
+	case err := <-done:
+		t.Fatalf("the certificate of height %d is checked before block 1 is executed: %v", consts.BftSetDelay+1, err)
+	case <-time.After(50 * time.Millisecond):
+	}
+	bftExec.moved(1)
+	err := <-done
+	require.Error(t, err, "the certificate does not decode")
+	require.NotErrorIs(t, err, block.ErrNotExecuted)
+
+	cancelled, cancel := context.WithCancel(ctx)
+	cancel()
+	require.ErrorIs(t, commitSynced(cancelled, consts.BftSetDelay+2, nil, nil), context.Canceled)
 }

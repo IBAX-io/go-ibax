@@ -11,6 +11,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
@@ -27,36 +28,7 @@ import (
 // BftSetDelay after it, which its execution hash covers: the header carries no hash of it. It
 // needs only a database, IBAX_TEST_DSN, where it makes a schema of its own that it rolls back.
 func TestValidatorsHash(t *testing.T) {
-	dsn := os.Getenv("IBAX_TEST_DSN")
-	if dsn == "" {
-		t.Skip("IBAX_TEST_DSN names no database")
-	}
-	conn, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Discard})
-	require.NoError(t, err)
-	tx := conn.Begin()
-	require.NoError(t, tx.Error)
-	saved := sqldb.DBConn
-	sqldb.DBConn = tx
-	t.Cleanup(func() {
-		sqldb.DBConn = saved
-		tx.Rollback()
-		syspar.SetFirstBlockData(nil)
-	})
-	require.NoError(t, tx.Exec(`CREATE SCHEMA validators_hash; SET LOCAL search_path TO validators_hash`).Error)
-	require.NoError(t, tx.AutoMigrate(&sqldb.PlatformParameter{}, &sqldb.BftReview{}))
-	useSuite("ECC_P256", "SHA256")
-	var nodes []map[string]any
-	keys := make([][]byte, 3)
-	for i := range keys {
-		_, pub, err := crypto.GenNodeKeyPair()
-		require.NoError(t, err)
-		keys[i] = pub
-		nodes = append(nodes, map[string]any{"tcp_address": fmt.Sprintf("127.0.0.1:%d", 7078+i),
-			"api_address": fmt.Sprintf("http://127.0.0.1:%d", 7079+i), "public_key": crypto.PubToHex(pub), "unban_time": "0"})
-	}
-	value, err := json.Marshal(nodes)
-	require.NoError(t, err)
-	require.NoError(t, tx.Create(&sqldb.PlatformParameter{ID: 1, Name: syspar.HonorNodes, Value: string(value)}).Error)
+	tx, keys := validatorsDB(t, "validators_hash", 3)
 	dbTx := sqldb.NewDbTransaction(tx)
 
 	block := func(id int64) *Block {
@@ -89,8 +61,123 @@ func TestValidatorsHash(t *testing.T) {
 	require.Equal(t, validatorsData(t, dbTx, 2), genesis.nextValidators)
 }
 
+// validatorsDB is a transaction it rolls back on the database IBAX_TEST_DSN, DBConn meanwhile, in a
+// schema of its own with honor_nodes of n nodes, whose keys it returns, the reviews of the evidence
+// and the validators sets; the chain is not one of the BFT consensus
+func validatorsDB(t *testing.T, schema string, n int) (*gorm.DB, [][]byte) {
+	dsn := os.Getenv("IBAX_TEST_DSN")
+	if dsn == "" {
+		t.Skip("IBAX_TEST_DSN names no database")
+	}
+	conn, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: logger.Discard})
+	require.NoError(t, err)
+	tx := conn.Begin()
+	require.NoError(t, tx.Error)
+	saved := sqldb.DBConn
+	sqldb.DBConn = tx
+	t.Cleanup(func() {
+		sqldb.DBConn = saved
+		tx.Rollback()
+		syspar.SetFirstBlockData(nil)
+	})
+	require.NoError(t, tx.Exec(`CREATE SCHEMA `+schema+`; SET LOCAL search_path TO `+schema).Error)
+	require.NoError(t, tx.AutoMigrate(&sqldb.PlatformParameter{}, &sqldb.BftReview{}, &sqldb.BftValidatorSet{}))
+	useSuite("ECC_P256", "SHA256")
+	keys := make([][]byte, n)
+	for i := range keys {
+		_, pub, err := crypto.GenNodeKeyPair()
+		require.NoError(t, err)
+		keys[i] = pub
+	}
+	require.NoError(t, tx.Create(&sqldb.PlatformParameter{ID: 1, Name: syspar.HonorNodes, Value: honorNodes(t, keys)}).Error)
+	return tx, keys
+}
+
+// honorNodes is the value of honor_nodes of the nodes of the keys
+func honorNodes(t *testing.T, keys [][]byte) string {
+	var nodes []map[string]any
+	for i, k := range keys {
+		nodes = append(nodes, map[string]any{"tcp_address": fmt.Sprintf("127.0.0.1:%d", 7078+2*i),
+			"api_address": fmt.Sprintf("http://127.0.0.1:%d", 7079+2*i), "public_key": crypto.PubToHex(k), "unban_time": "0"})
+	}
+	value, err := json.Marshal(nodes)
+	require.NoError(t, err)
+	return string(value)
+}
+
 func validatorsData(t *testing.T, dbTx *sqldb.DbTransaction, height int64) []byte {
 	set, err := smart.BftValidatorsOf(dbTx, height)
 	require.NoError(t, err)
 	return set.Marshal()
+}
+
+// A change of the validators set takes effect BftSetDelay heights after the block whose execution
+// makes it, on every node, as the execution of each block stores the set it leaves: honor_nodes a
+// vote changes in block 6 is the set of height 9, the stop of an evidence in block 7 that of 10, the
+// restore a review concludes in block 11 that of 14. The heights between keep the set before, and
+// the signer of the header of a block is resolved in the set of its height.
+func TestSetChangeAtDelay(t *testing.T) {
+	tx, keys := validatorsDB(t, "set_change_delay", 3)
+	dbTx := sqldb.NewDbTransaction(tx)
+	syspar.SetFirstBlockData(&types.FirstBlock{BftConsensus: 1})
+	_, added, err := crypto.GenNodeKeyPair()
+	require.NoError(t, err)
+
+	execute := func(id int64, change func()) {
+		if change != nil {
+			change()
+		}
+		b := &Block{BlockData: &types.BlockData{Header: &types.BlockHeader{BlockId: id, Version: consts.BvOrdered}}}
+		require.NoError(t, b.validatorsHash(dbTx), "block %d", id)
+		require.NoError(t, b.storeValidators(dbTx), "block %d", id)
+	}
+	for id := int64(1); id <= 12; id++ {
+		switch id {
+		case 6:
+			execute(id, func() {
+				require.NoError(t, tx.Model(&sqldb.PlatformParameter{}).Where("name = ?", syspar.HonorNodes).
+					Update("value", honorNodes(t, append(append([][]byte{}, keys...), added))).Error)
+			})
+		case 7:
+			execute(id, func() {
+				require.NoError(t, tx.Create(&sqldb.BftReview{ID: 1, EvidenceID: 1, PublicKey: keys[0],
+					StopHeight: id + consts.BftSetDelay}).Error)
+			})
+		case 11:
+			execute(id, func() {
+				require.NoError(t, tx.Model(&sqldb.BftReview{}).Where("id = 1").
+					Update("restore_height", id+consts.BftSetDelay).Error)
+			})
+		default:
+			execute(id, nil)
+		}
+	}
+
+	all := append(append([][]byte{}, keys...), added)
+	want := func(height int64) [][]byte {
+		switch {
+		case height < 9:
+			return keys
+		case height < 10, height >= 14:
+			return all
+		}
+		return all[1:]
+	}
+	for height := int64(2); height <= 15; height++ {
+		s := &sqldb.BftValidatorSet{}
+		found, err := s.GetAt(dbTx, height)
+		require.NoError(t, err)
+		require.True(t, found, "height %d", height)
+		set, err := bft.UnmarshalValidators(s.Data)
+		require.NoError(t, err)
+		require.Equal(t, want(height), set.Keys, "the set of height %d", height)
+		for i, k := range want(height) {
+			got, err := validatorAt(dbTx, height, int64(i))
+			require.NoError(t, err)
+			require.Equal(t, k, got, "the signer at %d of height %d", i, height)
+		}
+	}
+	var changes int64
+	require.NoError(t, tx.Model(&sqldb.BftValidatorSet{}).Count(&changes).Error)
+	require.EqualValues(t, 4, changes, "a set is stored at 2 and at each change: 9, 10, 14")
 }
