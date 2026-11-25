@@ -24,9 +24,10 @@ import (
 // not use the connection of its transaction. The block holds the connection but while it commits
 // runs in parallel, and takes it before a statement until its next transaction, so a part never
 // goes between the statements of a run in order or after a savepoint the block may roll back to.
-// The writer takes the hashes of the rollback records, and writes the parts in the order of the
-// block, which gives the rollback records the ids, and their tables the refs, in that order:
-// AfterPlayTxs writes the rest, and the rollbacks hash of the block is the one it had without.
+// The writer takes the hashes of the rollback records, in parallel with the statements of their
+// part, and writes the parts in the order of the block, which gives the rollback records the ids,
+// and their tables the refs, in that order: AfterPlayTxs writes the rest, and the rollbacks hash
+// of the block is the one it had without.
 
 const (
 	// afterPartTxs and afterPartRts are the transactions, or their rollback records, a part has
@@ -135,14 +136,19 @@ func (s *afterStream) write() {
 		if rows, s.err = newAfterRows(part.txs, part.rts, s.written.txs); s.err != nil {
 			continue
 		}
-		hashes := make([]string, len(part.rts))
-		for i, rt := range part.rts {
-			if hashes[i], s.err = rollbackHash(rt); s.err != nil {
-				break
-			}
-		}
+		// the hashes are taken in parallel while the statements write the part: taken one by one
+		// before them, they were tens of milliseconds a block on the path of its end
+		var hashes []string
+		var errHash error
+		hashed := make(chan struct{})
+		go func() {
+			defer close(hashed)
+			hashes, errHash = rollbackHashes(part.rts)
+		}()
+		s.err = s.writeRows(rows)
+		<-hashed
 		if s.err == nil {
-			s.err = s.writeRows(rows)
+			s.err = errHash
 		}
 		s.written.txs += len(part.txs)
 		s.written.rts += len(part.rts)
