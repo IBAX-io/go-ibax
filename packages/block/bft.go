@@ -68,22 +68,12 @@ func inChain(b *Block) (bool, error) {
 // height and of its hash, the hash of its content. It checks nothing of the certificate's
 // precommits, which bft.Certificate.Verify does.
 func Certify(binData []byte, cert *bft.Certificate) (*Block, error) {
-	b, err := ProcessBlockByBinData(binData, true)
+	b, err := parseBft(binData, cert.Hash, useCommit)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("the certificate of height %d: %w", cert.Height, err)
 	}
 	if uint64(b.Header.BlockId) != cert.Height {
 		return nil, fmt.Errorf("the certificate of height %d commits no block %d", cert.Height, b.Header.BlockId)
-	}
-	hash, err := bft.HashOf(b.Header.BlockHash)
-	if err != nil {
-		return nil, err
-	}
-	if hash != cert.Hash {
-		return nil, fmt.Errorf("the certificate of height %d commits another block than %x", cert.Height, b.Header.BlockHash)
-	}
-	if err := b.checkContent(); err != nil {
-		return nil, err
 	}
 	return b, nil
 }
@@ -128,44 +118,15 @@ func VerifyCertified(raw []byte, cert *bft.Certificate, set bft.Validators, netw
 	return b, nil
 }
 
-// checkContent checks that the hash of the block is the hash of its content: its header, the
-// last block it follows, and the merkle root of its transactions as the block carries them. A
-// parsed block takes its hash and its merkle root as they are written, so a certificate, which
-// commits the hash, commits the content only by this check.
-func (b *Block) checkContent() error {
-	raw := &types.BlockData{}
-	if err := proto.Unmarshal(b.BinData, raw); err != nil {
-		return fmt.Errorf("parsing the block: %w", err)
-	}
-	merkle := raw.GenMerkleRoot()
-	if !bytes.Equal(merkle, raw.MerkleRoot) {
-		return fmt.Errorf("block %d: the merkle root is not that of its transactions", b.Header.BlockId)
-	}
-	if !bytes.Equal(b.Header.GenHash(b.PrevHeader, merkle), b.Header.BlockHash) {
-		return fmt.Errorf("block %d: the hash is not that of its content", b.Header.BlockId)
-	}
-	return nil
-}
-
 // parseProposal parses the block of a proposal, and checks it is of the height, its hash is the
 // hash and the hash of its content, and it is of the network and of the version
 func parseProposal(binData []byte, height int64, hash bft.Hash) (*Block, error) {
-	b, err := ProcessBlockByBinData(binData, true)
+	b, err := parseBft(binData, hash, useProposal)
 	if err != nil {
 		return nil, err
 	}
 	if b.Header.BlockId != height {
 		return nil, fmt.Errorf("a block %d proposed at height %d", b.Header.BlockId, height)
-	}
-	got, err := bft.HashOf(b.Header.BlockHash)
-	if err != nil {
-		return nil, err
-	}
-	if got != hash {
-		return nil, fmt.Errorf("block %d: the hash %x is not the hash proposed", height, b.Header.BlockHash)
-	}
-	if err := b.checkContent(); err != nil {
-		return nil, err
 	}
 	if err := checkNetwork(b.Header); err != nil {
 		return nil, err

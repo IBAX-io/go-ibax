@@ -298,6 +298,13 @@ var (
 		Namespace: namespace, Name: "bft_pace_behind_total",
 		Help: "Proposals sized down because a validator's executor was behind.",
 	})
+
+	// BlockDecodes is the uses of a block of the consensus, the check of its proposal, its commit and
+	// its execution, by whether the node parsed the block for it or took the block it parsed before
+	BlockDecodes = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: namespace, Name: "block_decodes_total",
+		Help: "Uses of a consensus block (proposal, commit, execute) by source: parsed or cached.",
+	}, []string{"use", "source"})
 )
 
 func init() {
@@ -307,7 +314,7 @@ func init() {
 		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, TxExecutions,
 		ContractTime, ContractFuel, ContractStatements, ContractRows, ContractRuns, ContractResults, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
 		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
-		BftDiscardedTxs, BftExecLag, BftExecIdle, BftPaceRate, BftPaceBehind,
+		BftDiscardedTxs, BftExecLag, BftExecIdle, BftPaceRate, BftPaceBehind, BlockDecodes,
 	)
 }
 

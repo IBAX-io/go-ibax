@@ -13,6 +13,7 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
+	"github.com/IBAX-io/go-ibax/packages/metrics"
 	"github.com/IBAX-io/go-ibax/packages/storage/sqldb"
 	"github.com/IBAX-io/go-ibax/packages/transaction"
 	"github.com/IBAX-io/go-ibax/packages/types"
@@ -258,7 +259,11 @@ func Commit(binData []byte, cert *bft.Certificate) (*Block, error) {
 	if !b.ordered() {
 		return nil, fmt.Errorf("block %d: version %d, not %d", b.Header.BlockId, b.Header.Version, consts.BftBlockVersion)
 	}
-	return b, b.commitOrdered(c)
+	if err := b.commitOrdered(c); err != nil {
+		return nil, err
+	}
+	decoded.commit(cert.Hash)
+	return b, nil
 }
 
 // commitOrdered writes the ordered block and its certificate, and spends its transactions
@@ -297,9 +302,14 @@ func (b *Block) commitOrdered(c *sqldb.BftCertificate) error {
 	return nil
 }
 
-// Committed is the committed block of the height, to execute: parsed from block_chain, of the
-// header of the block before it
+// Committed is the committed block of the height, to execute, of the header of the block before
+// it: the block the node parsed when it committed it, else parsed from block_chain
 func Committed(height int64) (*Block, error) {
+	if e := decoded.take(height); e != nil {
+		metrics.BlockDecodes.WithLabelValues(useExecute, "cached").Inc()
+		return e.block()
+	}
+	metrics.BlockDecodes.WithLabelValues(useExecute, "parsed").Inc()
 	bc := &sqldb.BlockChain{}
 	found, err := bc.Get(height)
 	if err != nil {

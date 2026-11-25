@@ -186,6 +186,16 @@ func (b *BlockData) MarshallCompressed(key []byte) ([]byte, error) {
 }
 
 func (b *BlockData) UnmarshallBlock(data []byte) error {
+	if err := b.UnmarshallRaw(data); err != nil {
+		return err
+	}
+	b.Uncompress()
+	return nil
+}
+
+// UnmarshallRaw reads the block as it is written, its transactions compressed, of which its merkle
+// root is (GenMerkleRoot); Uncompress uncompresses them after
+func (b *BlockData) UnmarshallRaw(data []byte) error {
 	if len(data) == 0 {
 		return ErrZeroBlockSize
 	}
@@ -195,11 +205,15 @@ func (b *BlockData) UnmarshallBlock(data []byte) error {
 	if err := proto.Unmarshal(data, b); err != nil {
 		return errors.Wrap(err, "unmarshalling block")
 	}
+	b.BinData = data
+	return nil
+}
+
+// Uncompress uncompresses the transactions of a block UnmarshallRaw read
+func (b *BlockData) Uncompress() {
 	eachParallel(len(b.TxFullData), func(i int) {
 		b.TxFullData[i] = DoZlibUnCompress(b.TxFullData[i])
 	})
-	b.BinData = data
-	return nil
 }
 
 // MerkleTreeRoot return Merkle value

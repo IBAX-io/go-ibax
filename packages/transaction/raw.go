@@ -21,7 +21,51 @@ import (
 
 // Unmarshall reads a transaction in its stored form, as a block holds it and nodes pass it on
 func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer, fill bool) error {
-	return rtx.unmarshall(buffer, fill, false)
+	return rtx.unmarshall(buffer, fill, false, true)
+}
+
+// Decode reads a transaction in its stored form without its contract: what follows from its bytes
+// alone, which no execution changes. Bind binds it to the contract it calls as the node has it.
+// A node decodes the transactions of a block once and binds them for each use of the block.
+func Decode(data []byte) (*Transaction, error) {
+	tx := &Transaction{}
+	if err := tx.unmarshall(bytes.NewBuffer(data), false, false, false); err != nil {
+		return nil, fmt.Errorf("parse transaction error: %w", err)
+	}
+	return tx, nil
+}
+
+// Bind is the decoded transaction bound to the contract it calls as the node has it now, with its
+// parameters filled in by the types of the contract: a copy sharing what Decode read, which no run
+// changes. A transaction of another type than a contract call is the transaction itself, as its
+// clones share it.
+func (rtx *Transaction) Bind() (*Transaction, error) {
+	s, ok := rtx.Inner.(*SmartTransactionParser)
+	if !ok {
+		return rtx, nil
+	}
+	b := &Transaction{
+		FullData: rtx.FullData,
+		packed:   rtx.packed,
+		InToCxt:  &InToCxt{DbTransaction: new(sqldb.DbTransaction)},
+	}
+	itx := &SmartTransactionParser{
+		SmartContract: &smart.SmartContract{
+			TxSmart:     s.TxSmart,
+			Hash:        s.Hash,
+			Payload:     s.Payload,
+			Timestamp:   s.Timestamp,
+			TxSignature: s.TxSignature,
+		},
+		storedSize: s.storedSize,
+	}
+	if itx.TxSmart.UTXO == nil && itx.TxSmart.TransferSelf == nil {
+		if err := itx.parseFromContract(true); err != nil {
+			return nil, fmt.Errorf("parse transaction error: %w", err)
+		}
+	}
+	b.Inner = itx
+	return b, nil
 }
 
 // UnmarshallClient reads a transaction a client sends: a frame of the client (ClientTxType), which
@@ -29,10 +73,12 @@ func (rtx *Transaction) Unmarshall(buffer *bytes.Buffer, fill bool) error {
 // Only the node a client sends to reads a frame of the client: in a block, every node would store
 // it with a time of its own, and they would disagree on the block.
 func (rtx *Transaction) UnmarshallClient(buffer *bytes.Buffer, fill bool) error {
-	return rtx.unmarshall(buffer, fill, true)
+	return rtx.unmarshall(buffer, fill, true, true)
 }
 
-func (rtx *Transaction) unmarshall(buffer *bytes.Buffer, fill, client bool) error {
+// unmarshall reads a transaction, a frame of a client too if client, and binds a contract call to
+// its contract if bind
+func (rtx *Transaction) unmarshall(buffer *bytes.Buffer, fill, client, bind bool) error {
 	if buffer.Len() == 0 {
 		log.WithFields(log.Fields{"type": consts.EmptyObject}).Error("empty transaction buffer")
 		return fmt.Errorf("empty transaction buffer")
@@ -54,7 +100,12 @@ func (rtx *Transaction) unmarshall(buffer *bytes.Buffer, fill, client bool) erro
 			SmartContract: &smart.SmartContract{TxSmart: new(types.SmartTransaction)},
 		}
 		inner = itx
-		if err = itx.Unmarshal(buffer, fill); err != nil {
+		if bind {
+			err = itx.Unmarshal(buffer, fill)
+		} else {
+			err = itx.decode(buffer)
+		}
+		if err != nil {
 			return err
 		}
 	case types.ClientTxType:
