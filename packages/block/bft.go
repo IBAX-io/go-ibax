@@ -57,7 +57,7 @@ func (m memState) restore() error {
 // connection fails after PostgreSQL commits returns an error
 func inChain(b *Block) (bool, error) {
 	bc := &sqldb.BlockChain{}
-	found, err := bc.Get(b.Header.BlockId)
+	found, err := bc.GetMeta(nil, b.Header.BlockId)
 	if err != nil {
 		return false, err
 	}

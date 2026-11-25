@@ -278,7 +278,7 @@ func (b *Block) delayedTxs(dbTx *sqldb.DbTransaction) ([]*transaction.Transactio
 // executed
 func (b *Block) writeExecuted(dbTx *sqldb.DbTransaction) error {
 	bc := &sqldb.BlockChain{}
-	found, err := bc.GetIn(dbTx, b.Header.BlockId)
+	found, err := bc.GetMeta(dbTx, b.Header.BlockId)
 	if err != nil {
 		return err
 	}

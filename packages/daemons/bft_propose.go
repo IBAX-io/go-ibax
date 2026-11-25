@@ -98,7 +98,7 @@ func (a bftApp) Value(height uint64, round uint32) (_ []byte, _ bft.Hash, err er
 		return nil, bft.Hash{}, err
 	}
 	prev := &sqldb.BlockChain{}
-	found, err := prev.Get(h - 1)
+	found, err := prev.GetMeta(nil, h-1)
 	if err != nil {
 		return nil, bft.Hash{}, err
 	}
