@@ -386,3 +386,38 @@ func TestServeConcurrency(t *testing.T) {
 		t.Fatalf("a request of bodies with a free slot: %v", err)
 	}
 }
+
+// A validator sends its execution status to its peers; a peer takes it and relays none, and a
+// frame that does not decode is dropped
+func TestSendExecuted(t *testing.T) {
+	ha, hb, hc := newTestHandler(), newTestHandler(), newTestHandler()
+	a, b, c := NewService(DefaultConfig, ha), NewService(DefaultConfig, hb), NewService(DefaultConfig, hc)
+	addrB, _ := testServer(t, b)
+	addrC, _ := testServer(t, c)
+	a.SetPeers([]string{addrB})
+	b.SetPeers([]string{addrC})
+	defer a.Close()
+	defer b.Close()
+
+	sent := &bft.ExecStatus{Validator: 2, Height: 951, Rate: 1855, Signature: []byte{1, 2, 3}}
+	a.SendExecuted(sent)
+	execs := func(h *testHandler) []*bft.ExecStatus {
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		return slices.Clone(h.execs)
+	}
+	waitFor(t, "the execution status", func() bool { return len(execs(hb)) == 1 })
+	if got := execs(hb)[0]; !bytes.Equal(got.Marshal(), sent.Marshal()) {
+		t.Fatalf("the execution status is %+v", got)
+	}
+	undecoded := bftmon.Get().Messages[bftmon.MessagesUndecoded]
+	a.Broadcast(FrameExecuted, make([]byte, bft.ExecStatusFixed-1))
+	waitFor(t, "the short execution status", func() bool { return bftmon.Get().Messages[bftmon.MessagesUndecoded] > undecoded })
+	time.Sleep(100 * time.Millisecond)
+	if n := len(execs(hc)); n != 0 {
+		t.Fatalf("the peer relayed %d execution statuses", n)
+	}
+	if n := len(execs(hb)); n != 1 {
+		t.Fatalf("the peer took %d execution statuses", n)
+	}
+}

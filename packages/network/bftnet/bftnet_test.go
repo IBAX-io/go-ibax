@@ -35,6 +35,7 @@ type testHandler struct {
 	bodies  [][][]byte        // the transactions of each frame taken
 	hints   [][2]uint64       // the height and the validator of each frame FramePending taken
 	pending [][]byte          // the transactions of the pool in the order of the blocks
+	execs   []*bft.ExecStatus // the execution statuses taken
 }
 
 func newTestHandler() *testHandler { return &testHandler{seen: map[string]bool{}} }
@@ -109,6 +110,12 @@ func (h *testHandler) Pending(height uint64, validator uint32) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.hints = append(h.hints, [2]uint64{height, uint64(validator)})
+}
+
+func (h *testHandler) Executed(e *bft.ExecStatus) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.execs = append(h.execs, e)
 }
 
 func (h *testHandler) PendingTxs(count int, maxBytes int64) [][]byte {
@@ -202,8 +209,9 @@ func TestReadFrame(t *testing.T) {
 		kind uint8
 		size int64
 	}{
-		{0, 1}, {7, 1},
+		{0, 1}, {8, 1},
 		{FramePending, pendingPayload + 1},
+		{FrameExecuted, maxPayload(FrameExecuted, 1000) + 1},
 		{FrameVote, maxPayload(FrameVote, 1000) + 1},
 		{FrameProposal, maxPayload(FrameProposal, 1000) + 1},
 		{FrameEvidence, maxPayload(FrameEvidence, 1000) + 1},
@@ -216,7 +224,7 @@ func TestReadFrame(t *testing.T) {
 			t.Fatalf("kind %d of %d bytes: %v", c.kind, c.size, err)
 		}
 	}
-	for _, kind := range []uint8{FrameProposal, FrameVote, FrameEvidence, FrameTxs} {
+	for _, kind := range []uint8{FrameProposal, FrameVote, FrameEvidence, FrameTxs, FrameExecuted} {
 		max := maxPayload(kind, 1000)
 		frame := AppendFrame(nil, kind, make([]byte, max))
 		if _, _, err := ReadFrame(bytes.NewReader(frame), 1000); err != nil {
@@ -231,6 +239,10 @@ func TestReadFrame(t *testing.T) {
 	}
 	if int64(len(v)) != maxPayload(FrameVote, 1000) {
 		t.Fatalf("a vote of %d bytes, the frame allows %d", len(v), maxPayload(FrameVote, 1000))
+	}
+	x := &bft.ExecStatus{Validator: 3, Height: 9, Rate: 7, Signature: make([]byte, crypto.NodeSignatureSize())}
+	if int64(len(x.Marshal())) != maxPayload(FrameExecuted, 1000) {
+		t.Fatalf("an execution status of %d bytes, the frame allows %d", len(x.Marshal()), maxPayload(FrameExecuted, 1000))
 	}
 	e := &bft.Evidence{SigA: make([]byte, crypto.NodeSignatureSize()), SigB: make([]byte, crypto.NodeSignatureSize())}
 	if int64(len(e.Marshal())) != maxPayload(FrameEvidence, 1000) {

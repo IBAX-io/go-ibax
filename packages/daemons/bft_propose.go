@@ -58,10 +58,10 @@ type bftApp struct {
 // Value makes the block of the proposer (F18 design 3.2): it carries the execution hash of the
 // block BftExecDepth before it, which the node waits for its executor to have, and its
 // transactions are those of the pool that are valid at its time, in the order of the pool, up to
-// what the executor runs in a second, max_tx_block and max_block_size. Its time is the clock in
-// seconds and above the time of the last block, so a chain has at most one block a second; a
-// proposer whose clock is not yet past the time of the last block waits for it, up to
-// maxTimeWait (design 4.4).
+// what the slowest executor of the validators runs in a second (bftPace), max_tx_block and
+// max_block_size. Its time is the clock in seconds and above the time of the last block, so a
+// chain has at most one block a second; a proposer whose clock is not yet past the time of the
+// last block waits for it, up to maxTimeWait (design 4.4).
 //
 // The proposal reaches the validators before they time out: the proposer makes it within
 // syspar.GetBftProposeBudget from when they started the round (roundStart), or from when it
@@ -138,7 +138,7 @@ func (a bftApp) propose(height int64, round uint32, prev *sqldb.BlockChain) ([]b
 	}
 	collect := time.Now()
 	ts := max(faults.Now().Unix(), prev.Time+1)
-	bodies, txs := collectTxs(ts, a.exec.capacity(), syspar.GetMaxBlockSize()-blockFrame)
+	bodies, txs := collectTxs(ts, a.exec.capacity(a.set, syspar.GetNodePubKey(), height-1), syspar.GetMaxBlockSize()-blockFrame)
 	if len(txs) == 0 && (a.delayed == nil || !a.delayed(height)) {
 		return nil, bft.Hash{}, block.ErrEmptyBlock
 	}

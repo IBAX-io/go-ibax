@@ -41,6 +41,10 @@
 // by the request RequestTypeBftPending: count u32, answered by count u32 ‖ count × (len u32 ‖
 // body), at most count of them and max_block_size bytes together.
 //
+// After each block its executor ran, a validator sends its execution status (bft.ExecStatus) in a
+// frame of the kind FrameExecuted, which the service relays none of: the proposers size their
+// blocks by the slowest executor of the validators.
+//
 // The requests come unauthenticated from anyone who reaches the TCP port, and a few bytes of one
 // ask for up to max_block_size of answer. The service serves at most Config.ServeTxs requests
 // RequestTypeBftTransactions at once and closes those past it unanswered: a node asks for the
@@ -78,6 +82,7 @@ const (
 	FrameEvidence uint8 = 3
 	FrameTxs      uint8 = 5
 	FramePending  uint8 = 6
+	FrameExecuted uint8 = 7
 )
 
 // pendingPayload is the length of the payload of a frame FramePending
@@ -119,6 +124,8 @@ type Handler interface {
 	// Pending takes the word of the validator of the index that it has transactions at the
 	// height; it does not block the stream
 	Pending(height uint64, validator uint32)
+	// Executed takes a decoded execution status of a validator; it does not block the stream
+	Executed(s *bft.ExecStatus)
 	// PendingTxs is the bodies of the first count transactions of the pool in the order of the
 	// blocks, as they were sent, at most maxBytes of them together
 	PendingTxs(count int, maxBytes int64) [][]byte
@@ -266,6 +273,8 @@ func maxPayload(kind uint8, maxBlock int64) int64 {
 		return maxBlock
 	case FramePending:
 		return pendingPayload
+	case FrameExecuted:
+		return bft.ExecStatusFixed + sig
 	}
 	return -1
 }
@@ -362,6 +371,11 @@ func (s *Service) take(kind uint8, payload []byte) bool {
 	case FramePending:
 		if len(payload) == pendingPayload {
 			s.handler.Pending(binary.BigEndian.Uint64(payload), binary.BigEndian.Uint32(payload[8:]))
+			return false
+		}
+	case FrameExecuted:
+		if e, err := bft.UnmarshalExecStatus(payload); err == nil {
+			s.handler.Executed(e)
 			return false
 		}
 	}
@@ -680,6 +694,9 @@ func (s *Service) SendPending(height uint64, validator uint32) {
 	p := binary.BigEndian.AppendUint64(make([]byte, 0, pendingPayload), height)
 	s.Broadcast(FramePending, binary.BigEndian.AppendUint32(p, validator))
 }
+
+// SendExecuted broadcasts the execution status of the node
+func (s *Service) SendExecuted(e *bft.ExecStatus) { s.Broadcast(FrameExecuted, e.Marshal()) }
 
 // MarshalTxs is the payload of a frame of transactions
 func MarshalTxs(bodies [][]byte) []byte {

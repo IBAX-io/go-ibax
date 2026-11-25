@@ -44,7 +44,8 @@ const (
 	MessagesAdmitted = "admitted"
 	// MessagesDropped is the proposals and the votes the pool refused: of no validator of the set
 	// or not of the proposer, out of the windows of the height and the round, of a signature that
-	// does not verify, or past the two the pool keeps of a validator, height, round and type
+	// does not verify, or past the two the pool keeps of a validator, height, round and type; and the
+	// execution statuses of a signature that does not verify
 	MessagesDropped = "dropped"
 	// MessagesDuplicate is the proposals and the votes of the validator, height, round, type and
 	// hash of one the pool has: the resends and the relays of the validators, which grow with the

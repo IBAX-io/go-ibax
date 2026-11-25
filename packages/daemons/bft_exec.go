@@ -60,8 +60,10 @@ type bftExecutor struct {
 	stopped error
 	// rate is the transactions a second of the last block of at least bftRateMin, zero before one
 	rate float64
-	// notify is called after each block the executor executes
-	notify func()
+	// notify is called after each block the executor executes, with its height and the rate
+	notify func(height int64, rate float64)
+	// pace is the execution statuses of the validators
+	pace bftPace
 	// retryAt is when the executor tries again a block whose execution failed
 	retryAt time.Time
 	// committedAt is when the node committed the blocks it has not executed, and lastEnd when the
@@ -104,7 +106,7 @@ func (e *bftExecutor) signal(height int64) {
 }
 
 // setNotify sets what the executor calls after each block it executes
-func (e *bftExecutor) setNotify(f func()) {
+func (e *bftExecutor) setNotify(f func(height int64, rate float64)) {
 	e.mu.Lock()
 	e.notify = f
 	e.mu.Unlock()
@@ -167,13 +169,13 @@ func (e *bftExecutor) step() bool {
 	if n := len(b.Transactions); n >= bftRateMin && took > 0 {
 		e.rate = float64(n) / took.Seconds()
 	}
-	notify := e.notify
+	notify, rate := e.notify, e.rate
 	e.mu.Unlock()
 	e.moved(height)
 	e.logger.WithFields(log.Fields{"height": height, "txs": len(b.Transactions), "took": took, "lag": committed - height}).
 		Debug("executed")
 	if notify != nil {
-		notify()
+		notify(height, rate)
 	}
 	return true
 }
@@ -252,17 +254,27 @@ func (e *bftExecutor) wait(ctx context.Context, height int64, deadline time.Time
 	}
 }
 
-// capacity is the transactions a proposer takes at most for its block: those the executor runs
-// in syspar.BftExecTarget at its last rate, at least bftRateMin, at most max_tx_block; max_tx_block
-// before the executor measured its rate
-func (e *bftExecutor) capacity() int {
+// capacity is the transactions the proposer of the key takes at most for its block after the
+// committed height: capacityOf the rate of the slowest executor of the validators of the set
+// (bftPace.rate), max_tx_block before the executor of the node measured its rate
+func (e *bftExecutor) capacity(set bft.Validators, self []byte, committed int64) int {
 	e.mu.Lock()
-	rate := e.rate
+	own := e.rate
 	e.mu.Unlock()
-	limit := syspar.GetMaxTxCount()
-	if rate == 0 {
-		return limit
+	if own == 0 {
+		return syspar.GetMaxTxCount()
 	}
+	rate, behind := e.pace.rate(set, self, own, committed, time.Now())
+	metrics.BftPaceRate.Set(rate)
+	if behind {
+		metrics.BftPaceBehind.Inc()
+	}
+	return capacityOf(rate, syspar.GetMaxTxCount())
+}
+
+// capacityOf is the transactions an executor of the rate runs in syspar.BftExecTarget, at least
+// bftRateMin, at most the limit
+func capacityOf(rate float64, limit int) int {
 	return min(max(int(rate*syspar.BftExecTarget.Seconds()), bftRateMin), limit)
 }
 

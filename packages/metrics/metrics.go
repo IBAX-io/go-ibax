@@ -284,6 +284,20 @@ var (
 		Help:    "Executor idle time while a committed block waited to be executed.",
 		Buckets: durationBuckets,
 	})
+
+	// BftPaceRate is the transactions a second a proposer of the node sized its last block to:
+	// that of the slowest executor of the validators (daemons bftPace)
+	BftPaceRate = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: namespace, Name: "bft_pace_rate_txs",
+		Help: "Transactions per second the last proposal of the node was sized to.",
+	})
+
+	// BftPaceBehind is the proposals of the node made smaller because a validator was behind in
+	// its execution
+	BftPaceBehind = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace, Name: "bft_pace_behind_total",
+		Help: "Proposals sized down because a validator's executor was behind.",
+	})
 )
 
 func init() {
@@ -293,7 +307,7 @@ func init() {
 		BlockStage, BlockTxs, BlockStatements, TxStage, TxResults, TxRuns, TxExecutions,
 		ContractTime, ContractFuel, ContractStatements, ContractRows, ContractRuns, ContractResults, StateFallbacks, StateFlush, StateFlushRows, DBStatements, DBCache,
 		SignVerify, SignVerifyCached, TxPool, LockWait, LockHold, DaemonRun, APIRequest, TCPRequest,
-		BftDiscardedTxs, BftExecLag, BftExecIdle,
+		BftDiscardedTxs, BftExecLag, BftExecIdle, BftPaceRate, BftPaceBehind,
 	)
 }
 

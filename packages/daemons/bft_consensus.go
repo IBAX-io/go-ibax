@@ -10,9 +10,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"path/filepath"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
@@ -116,8 +118,10 @@ type bftDriver struct {
 	// bodies is the blocks of the proposals the node made or filled in
 	bodies *bftBodies
 
-	// m is used only by the goroutine of run
-	m *bft.Machine
+	// m is used only by the goroutine of run, and set is the validators set of its height, which
+	// the executor and the service read for the execution statuses
+	m   *bft.Machine
+	set atomic.Pointer[bft.Validators]
 	// roundStart is used only by the goroutine of run
 	roundStart bftRoundStart
 	// held is the propose timeout of a round without work the node holds (idle), and work is
@@ -189,7 +193,10 @@ func newBftDriver(ctx context.Context, logger *log.Entry) *bftDriver {
 
 func (d *bftDriver) run() {
 	syspar.SetRunModel(consts.HonorNodeMode)
-	bftExec.setNotify(func() { d.post(bftNext{}) })
+	bftExec.setNotify(func(height int64, rate float64) {
+		d.post(bftNext{})
+		d.sendExecuted(height, rate)
+	})
 	err := d.reset()
 	for errors.Is(err, block.ErrNotExecuted) {
 		// a node that committed blocks ahead of its execution starts once it executed them
@@ -270,6 +277,7 @@ func validatorsAt(height uint64) (bft.Validators, error) {
 func (d *bftDriver) newMachine(height uint64, set bft.Validators) {
 	app := bftApp{ctx: d.ctx, logger: d.logger, bodies: d.bodies, exec: bftExec, set: set, roundStart: d.roundStartOf,
 		pull: d.pending.pullNow, delayed: func(height int64) bool { return delayedDue(d.logger, height) }}
+	d.set.Store(&set)
 	d.m = bft.NewMachine(d.config(), app, syspar.GetNodePrivKey(), syspar.GetNodePubKey(), d.networkID, height, set)
 }
 
@@ -757,6 +765,43 @@ func (d *bftDriver) Pending(height uint64, validator uint32) {
 	if !bftStopped() {
 		d.pending.hint(height, validator)
 	}
+}
+
+// sendExecuted sends the execution status of the node, a validator of the set of the machine,
+// after it executed the block of the height (bftPace)
+func (d *bftDriver) sendExecuted(height int64, rate float64) {
+	set := d.set.Load()
+	if set == nil || bftStopped() {
+		return
+	}
+	index, ok := set.Index(syspar.GetNodePubKey())
+	if !ok {
+		return
+	}
+	s := &bft.ExecStatus{Validator: index, Height: uint64(height), Rate: uint32(min(rate, math.MaxUint32))}
+	if err := s.Sign(syspar.GetNodePrivKey(), d.networkID); err != nil {
+		d.logger.WithFields(log.Fields{"type": consts.CryptoError, "height": height, "error": err}).Error("signing the execution status")
+		return
+	}
+	d.svc.SendExecuted(s)
+}
+
+// Executed is bftnet.Handler.Executed: the pace takes the execution status of another validator
+// of the set of the machine that is newer than the one it has and verifies
+func (d *bftDriver) Executed(s *bft.ExecStatus) {
+	set := d.set.Load()
+	if set == nil || bftStopped() {
+		return
+	}
+	key, ok := set.Key(s.Validator)
+	if !ok || bytes.Equal(key, syspar.GetNodePubKey()) || !bftExec.pace.newer(key, int64(s.Height)) {
+		return
+	}
+	if s.Verify(key, d.networkID) != nil {
+		bftmon.Count(bftmon.MessagesDropped)
+		return
+	}
+	bftExec.pace.take(key, int64(s.Height), float64(s.Rate), time.Now())
 }
 
 // PendingTxs is bftnet.Handler.PendingTxs: the first transactions of the pool
