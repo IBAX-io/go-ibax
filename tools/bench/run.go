@@ -143,6 +143,8 @@ func runStep(c *chainClient, w workload, rate, total int, cfg runConfig, seq *in
 			}()
 		}
 	}
+	// the line a profile of the step starts from: the transactions are signed, the sending starts
+	log.Printf("%s at %d/s: sending", w.name, rate)
 	start := time.Now()
 	tick := time.NewTicker(10 * time.Millisecond)
 	next, turn := 0, 0
