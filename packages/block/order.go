@@ -166,7 +166,29 @@ func (b *Block) checkOrderedSign() error {
 // BftExecDepth before it as this node executed it and the state hash as this node has it, and its
 // transactions verify, are within the limits of a block and are no duplicates, in the block or of
 // a committed one. An empty block is valid: delayed contracts may be due at the height.
+//
+// The sync of the node commits the blocks of the others by their certificates while the consensus
+// checks a proposal: a commit of the height puts the transactions of its block in the window of the
+// duplicates, after its database transaction, and the check of the very block it committed found
+// them duplicates. A proposal of a height the node committed before the check ends is stale,
+// whatever the check found.
 func CheckProposal(binData []byte, height int64, hash bft.Hash) error {
+	if err := notCommitted(height); err != nil {
+		return err
+	}
+	b, err := parseProposal(binData, height, hash)
+	if err == nil {
+		b.trial = true
+		err = b.checkOrdered()
+	}
+	if stale := notCommitted(height); stale != nil {
+		return stale
+	}
+	return err
+}
+
+// notCommitted is ErrStale if the node committed a block of the height
+func notCommitted(height int64) error {
 	committed, err := sqldb.CommittedHeight()
 	if err != nil {
 		return err
@@ -174,12 +196,7 @@ func CheckProposal(binData []byte, height int64, hash bft.Hash) error {
 	if committed >= height {
 		return fmt.Errorf("%w %d: the last committed block is %d", ErrStale, height, committed)
 	}
-	b, err := parseProposal(binData, height, hash)
-	if err != nil {
-		return err
-	}
-	b.trial = true
-	return b.checkOrdered()
+	return nil
 }
 
 // checkOrdered checks the header and the transactions of an ordered block (CheckProposal)
