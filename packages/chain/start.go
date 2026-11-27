@@ -20,7 +20,6 @@ import (
 	"github.com/IBAX-io/go-ibax/packages/chain/daemonsctl"
 	"github.com/IBAX-io/go-ibax/packages/chain/system"
 
-	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	logtools "github.com/IBAX-io/go-ibax/packages/common/log"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
@@ -85,9 +84,8 @@ func Start() {
 		log.Warning("Warning! Access checking is disabled in some built-in functions")
 	}
 
-	// Centrifugo tokens are HMAC-SHA256 signed with the secret
-	if err := crypto.CheckHMACKey(len(conf.Config.Centrifugo.Secret)); err != nil {
-		log.WithFields(log.Fields{"type": consts.ConfigError, "error": err}).Error("Centrifugo secret (--centSecret)")
+	if err := publisher.CheckConfig(conf.Config.Centrifugo); err != nil {
+		log.WithFields(log.Fields{"type": consts.ConfigError, "error": err}).Error("Centrifugo (--centUrl, --centSecret, --centKey)")
 		exitErr(1)
 	}
 	publisher.InitCentrifugo(conf.Config.Centrifugo)

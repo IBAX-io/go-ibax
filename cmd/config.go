@@ -114,9 +114,9 @@ func init() {
 	cmdFlags.StringVar(&conf.Config.Metrics.Listen, "metricsListen", "", "loopback host:port serving the Prometheus metrics at /metrics and the Go profiler at /debug/pprof/; empty serves nothing")
 
 	// Centrifugo
-	cmdFlags.StringVar(&conf.Config.Centrifugo.Secret, "centSecret", "127.0.0.1", "Centrifugo secret")
-	cmdFlags.StringVar(&conf.Config.Centrifugo.URL, "centUrl", "127.0.0.1", "Centrifugo URL")
-	cmdFlags.StringVar(&conf.Config.Centrifugo.Key, "centKey", "127.0.0.1", "Centrifugo API key")
+	cmdFlags.StringVar(&conf.Config.Centrifugo.URL, "centUrl", "", "Centrifugo server HTTP address, which pushes the counts of notifications to clients; empty pushes nothing")
+	cmdFlags.StringVar(&conf.Config.Centrifugo.Secret, "centSecret", "", "Centrifugo token HMAC secret, required with --centUrl")
+	cmdFlags.StringVar(&conf.Config.Centrifugo.Key, "centKey", "", "Centrifugo HTTP API key, required with --centUrl")
 
 	// Log
 	cmdFlags.StringVar(&conf.Config.Log.LogTo, "logTo", "stdout", "Send logs to stdout|(filename)|syslog")

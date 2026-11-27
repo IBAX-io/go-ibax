@@ -174,6 +174,7 @@ func GetFirstEcosystemScript(data SqlData) (ret string, err error) {
 		return
 	}
 	ret += HistoryTableSQL()
+	ret += NotificationCountsSQL
 	var out string
 	out, err = sqlTemplate([]string{
 		firstDelayedContractsDataSQL,

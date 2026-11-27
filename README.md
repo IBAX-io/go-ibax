@@ -21,6 +21,10 @@ of `feat/tps` is such a change: it raises the starting `bft_timeout_propose_ms` 
 and bounds the timeouts by margins. A chain created before that merge keeps its binaries; a chain
 on the merged code is created anew by a binary of the merged code.
 
+The table `notification_counts`, with its trigger on `1_notifications`, is likewise made by the
+first block: a chain whose first block was generated before it is not upgraded to a binary that
+reads it, but created anew.
+
 ### Build from Source
 
 #### Install Go

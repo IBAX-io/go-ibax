@@ -54,31 +54,36 @@ type NotificationsCount struct {
 	Count       int64  `gorm:"count"`
 }
 
-// GetNotificationsCount returns all unclosed notifications by users and ecosystem through role_id
-// if userIDs is nil or empty then filter will be skipped
+// notificationsCountSQL reads the counts of notification_counts, which a trigger keeps with
+// 1_notifications (migration.NotificationCountsSQL): for every account its open notifications of
+// type 1, and for every role it takes part in, in the ecosystem, the open notifications of type 2
+// to the role that no account processes or that the account processes. It costs a few index
+// lookups per account and role, whatever the number of notifications.
+const notificationsCountSQL = `SELECT k.id AS recipient_id, k.account, '0' AS role_id, coalesce(c.count, 0) AS count
+FROM "1_keys" k
+LEFT JOIN notification_counts c ON c.ecosystem = k.ecosystem AND c.kind = 1 AND c.role_id = '0' AND c.account = k.account
+WHERE k.ecosystem = ? AND k.account IN (?)
+UNION ALL
+SELECT k.id, k.account, r.role_id, coalesce(sum(c.count), 0)
+FROM "1_keys" k
+JOIN (SELECT DISTINCT member->>'account' AS account, role->>'id' AS role_id FROM "1_roles_participants"
+	WHERE ecosystem = ? AND deleted = 0 AND member->>'account' IN (?)) r ON r.account = k.account
+LEFT JOIN notification_counts c ON c.ecosystem = k.ecosystem AND c.kind = 2 AND c.role_id = r.role_id AND c.account IN ('', k.account)
+WHERE k.ecosystem = ? AND k.account IN (?)
+GROUP BY k.id, k.account, r.role_id`
+
+// GetNotificationsCount returns the numbers of open notifications of the accounts in the
+// ecosystem: one row with role 0 per account, for the notifications to the account, and one row
+// per role of the account, for those to the role.
 func GetNotificationsCount(ecosystemID int64, accounts []string) ([]NotificationsCount, error) {
 	result := make([]NotificationsCount, 0, len(accounts))
-	for _, account := range accounts {
-		query := `SELECT k.id as "recipient_id", '0' as "role_id", count(n.id), k.account
-			FROM "1_keys" k
-			LEFT JOIN "1_notifications" n ON n.ecosystem = k.ecosystem AND n.closed = 0 AND n.notification->>'type' = '1' and n.recipient->>'account' = k.account
-			WHERE k.ecosystem = ? AND k.account = ?
-			GROUP BY recipient_id, k.account, role_id
-			UNION
-			SELECT k.id as "recipient_id", rp.role->>'id' as "role_id", count(n.id), k.account
-			FROM "1_keys" k
-			INNER JOIN "1_roles_participants" rp ON rp.member->>'account' = k.account
-			LEFT JOIN "1_notifications" n ON n.ecosystem = k.ecosystem AND n.closed = 0 AND n.notification->>'type' = '2' AND n.recipient->>'role_id' = rp.role->>'id'
-													AND (n.date_start_processing = 0 OR n.processing_info->>'account' = k.account)
-			WHERE k.ecosystem=? AND k.account = ?
-			GROUP BY recipient_id, k.account, role_id`
-
-		list := make([]NotificationsCount, 0)
-		err := GetDB(nil).Raw(query, ecosystemID, account, ecosystemID, account).Scan(&list).Error
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, list...)
+	if len(accounts) == 0 {
+		return result, nil
+	}
+	err := GetDB(nil).Raw(notificationsCountSQL, ecosystemID, accounts, ecosystemID, accounts, ecosystemID, accounts).
+		Scan(&result).Error
+	if err != nil {
+		return nil, err
 	}
 	return result, nil
 }

@@ -259,8 +259,10 @@ func session(req Request, wallet int64, account *sqldb.Key) (*Result, error) {
 	}); err != nil {
 		return nil, err
 	}
-	if result.NotifyKey, err = publisher.ConnectionToken(account.AccountID, req.Expire); err != nil {
-		return nil, err
+	if publisher.Configured() {
+		if result.NotifyKey, err = publisher.ConnectionToken(account.AccountID, req.Expire); err != nil {
+			return nil, err
+		}
 	}
 	result.Timestamp = converter.Int64ToStr(time.Now().Unix())
 

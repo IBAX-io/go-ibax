@@ -1,8 +1,23 @@
 # Notifications
 
-The node pushes the counts of an account's open notifications to its clients through
-[Centrifugo](https://centrifugal.dev) 5 or later. It publishes with the server HTTP API of
-Centrifugo, and the session of every login carries a connection token for it.
+A node configured with a [Centrifugo](https://centrifugal.dev) 5 or later server (`--centUrl`)
+pushes the counts of an account's open notifications to its clients through it. It publishes with
+the server HTTP API of Centrifugo, and the session of every login carries a connection token for
+it. Without `--centUrl`, the default, the node pushes nothing, the answer of login has no
+`notify_key`, and the endpoint below answers that Centrifugo is not available; clients read the
+counts with the key information (`GET keyinfo/{wallet}`, `ibax.getKeyInfo`).
+
+## The counts
+
+The table `notification_counts` holds the count of the open notifications of every key, which a
+trigger on `1_notifications` keeps with every write: kind 1, role `0` and the recipient account,
+for the notifications to an account; kind 2, the recipient role and the processing account, or
+`""` while nobody processes it, for those to a role. The counts of an account are those of its key
+of kind 1, and for every role it takes part in, in the ecosystem, those of the keys of kind 2 of
+the role with account `""` and with the account. Reading them costs a few index lookups, whatever
+the number of open notifications; the node reads those of all the accounts a block changed in one
+query per ecosystem. A key whose count comes to 0 is deleted: the table is of the state hash, and
+holds exactly the counts the open notifications give.
 
 ## The channel of an account
 
@@ -43,7 +58,8 @@ does not answer, REST answers `503` with the error `E_CENTRIFUGO`, JSON-RPC the 
 ## Running Centrifugo
 
 The node needs the server's address (`--centUrl`), its HTTP API key (`--centKey`) and its token
-secret (`--centSecret`). The configuration of Centrifugo 6 they match:
+secret (`--centSecret`); it does not start with an address and without the key or the secret. The
+configuration of Centrifugo 6 they match:
 
 ```json
 {

@@ -49,7 +49,7 @@ A mismatch stops the node with "the genesis block does not match the configured 
 
 ## What else FIPS mode changes
 
-- HMAC keys shorter than 112 bits (14 bytes) are refused, as SP 800-131A requires: the `HMac` contract function returns an error, and the node exits at startup when the Centrifugo secret (`--centSecret`, which signs Centrifugo tokens with HMAC-SHA256) is shorter; the default `127.0.0.1` is. Outside FIPS mode any key length works.
+- HMAC keys shorter than 112 bits (14 bytes) are refused, as SP 800-131A requires: the `HMac` contract function returns an error, and the node exits at startup when a Centrifugo server is set (`--centUrl`) and its secret (`--centSecret`, which signs Centrifugo tokens with HMAC-SHA256) is shorter. Without a Centrifugo server, the default, the node signs no such token. Outside FIPS mode any key length works.
 - `SHA3_256` comes from `crypto/sha3` (inside the module) instead of `golang.org/x/crypto/sha3`.
 - Links to binaries and to long text or blob values (`/data/...`) carry the network hash or SHA-256; MD5 is no longer used, in the node or in the SQL it runs.
 - The HTTPS API follows SP 800-52 Rev. 2: TLS 1.3, or TLS 1.2 with ECDHE and AES-GCM only. In FIPS mode Go further restricts both to approved groups and signature schemes.

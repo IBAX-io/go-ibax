@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IBAX-io/go-ibax/packages/common/crypto"
 	"github.com/IBAX-io/go-ibax/packages/conf"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 
@@ -36,6 +37,20 @@ var (
 	config conf.CentrifugoConfig
 	client = &http.Client{Timeout: centrifugoTimeout}
 )
+
+// CheckConfig checks the settings of Centrifugo. Without a server nothing is needed: the node
+// pushes nothing and its sessions get no connection token. With one, the token secret, which signs
+// the tokens with HMAC-SHA256, and the API key are required, and in FIPS mode the secret must be
+// an approved HMAC key.
+func CheckConfig(cfg conf.CentrifugoConfig) error {
+	if cfg.URL == "" {
+		return nil
+	}
+	if cfg.Secret == "" || cfg.Key == "" {
+		return errors.New("a Centrifugo server needs its token secret and its API key")
+	}
+	return crypto.CheckHMACKey(len(cfg.Secret))
+}
 
 // InitCentrifugo sets the server and the keys of Centrifugo
 func InitCentrifugo(cfg conf.CentrifugoConfig) {

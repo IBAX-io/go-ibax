@@ -127,3 +127,13 @@ func TestWebSocketURL(t *testing.T) {
 	assert.Equal(t, "wss://example.com", webSocketURL("https://example.com"))
 	assert.Equal(t, "ws://example.com", webSocketURL("ws://example.com"))
 }
+
+func TestCheckConfig(t *testing.T) {
+	// no server: nothing needed, the node pushes nothing
+	require.NoError(t, CheckConfig(conf.CentrifugoConfig{}))
+	require.NoError(t, CheckConfig(conf.CentrifugoConfig{Secret: "s", Key: "k"}))
+	// a server needs its secret and its key
+	require.Error(t, CheckConfig(conf.CentrifugoConfig{URL: "http://127.0.0.1:8000", Key: "k"}))
+	require.Error(t, CheckConfig(conf.CentrifugoConfig{URL: "http://127.0.0.1:8000", Secret: "a secret of 32 bytes, long enough"}))
+	require.NoError(t, CheckConfig(conf.CentrifugoConfig{URL: "http://127.0.0.1:8000", Secret: "a secret of 32 bytes, long enough", Key: "k"}))
+}

@@ -95,7 +95,8 @@ The answer:
 ```
 
 `notify_key` connects the session to Centrifugo for the account's notifications until the session
-expires; see [notifications](notifications.md).
+expires; a node without Centrifugo (no `--centUrl`, the default) leaves it out. See
+[notifications](notifications.md).
 
 ### Guest
 
