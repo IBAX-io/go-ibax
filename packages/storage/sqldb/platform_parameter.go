@@ -111,3 +111,29 @@ func (sp *PlatformParameter) GetNumberOfHonorNodes() (int, error) {
 	}
 	return len(hns), nil
 }
+
+// PlatformParameterHistory is the values the platform parameter had before the blocks from
+// fromBlock on changed it, the latest change first: the old values of the rollback records of its
+// row, of those that changed its value
+func PlatformParameterHistory(dbTx *DbTransaction, name string, fromBlock int64) ([]string, error) {
+	var records []string
+	err := GetDB(dbTx).Raw(`SELECT r."data" FROM "rollback_tx" r
+		WHERE r."block_id" >= ?
+		AND r."table_ref" = (SELECT "ref" FROM "rollback_tables" WHERE "name" = '1_platform_parameters')
+		AND r."table_id" = (SELECT "id"::text FROM "1_platform_parameters" WHERE "name" = ?)
+		ORDER BY r."block_id" DESC, r."id" DESC`, fromBlock, name).Scan(&records).Error
+	if err != nil {
+		return nil, err
+	}
+	values := make([]string, 0, len(records))
+	for _, r := range records {
+		var old map[string]any
+		if err := json.Unmarshal([]byte(r), &old); err != nil {
+			return nil, err
+		}
+		if v, ok := old["value"].(string); ok {
+			values = append(values, v)
+		}
+	}
+	return values, nil
+}

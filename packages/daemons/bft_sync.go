@@ -13,7 +13,6 @@ import (
 
 	"github.com/IBAX-io/go-ibax/packages/bft"
 	"github.com/IBAX-io/go-ibax/packages/conf"
-	"github.com/IBAX-io/go-ibax/packages/conf/syspar"
 	"github.com/IBAX-io/go-ibax/packages/consts"
 	"github.com/IBAX-io/go-ibax/packages/network/tcpclient"
 	"github.com/IBAX-io/go-ibax/packages/service/node"
@@ -32,7 +31,7 @@ const bftFetchTimeout = 10 * time.Second
 // no node: the node takes it again, from this node or another one. The executor executes the
 // blocks it commits; the set of a height is known once it executed the block BftSetDelay before.
 func updateChainBft(ctx context.Context, d *daemon) error {
-	hosts := syspar.GetRemoteHosts()
+	hosts := bftPeers(d.logger)
 	host, maxBlockID, err := tcpclient.HostWithMaxBlock(ctx, hosts)
 	if len(hosts) == 0 || err == tcpclient.ErrNodesUnavailable {
 		host, maxBlockID, err = tcpclient.HostWithMaxBlock(ctx, conf.GetNodesAddr())

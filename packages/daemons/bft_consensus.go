@@ -447,7 +447,7 @@ func (d *bftDriver) moveHeight() bool {
 }
 
 func (d *bftDriver) tick() {
-	d.svc.SetPeers(syspar.GetRemoteHosts())
+	d.svc.SetPeers(bftPeers(d.logger))
 	d.saveUnsaved()
 	if bftStopped() {
 		return
