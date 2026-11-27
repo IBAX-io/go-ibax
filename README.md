@@ -67,6 +67,25 @@ $    go-ibax generateKeys
 $    go-ibax generateFirstBlock --test=true
 ```
 
+   The number of nodes:
+
+   | Chain | First block | Least nodes | Faults it goes on with |
+   |---|---|---|---|
+   | Honor nodes in turn | `--honorNodesOnly` | 1 | All but one node: any honor node makes the blocks of its turns |
+   | BFT consensus | `--honorNodesOnly --bftConsensus --honorNodes=FILE` | 4 validators | ⌊(n−1)/3⌋ of n validators: 1 of 4 to 6, 2 of 7 to 9 |
+
+   A chain of the BFT consensus commits a block with the votes of a quorum of ⌊2n/3⌋+1 validators. With 2 or 3
+   validators one node offline stops the chain, so `generateFirstBlock` refuses fewer than 4 and no vote of
+   `honor_nodes` takes the set below 4. Only an evidence that stops a validator for signing twice can leave 3,
+   with the alert `bft_set_below_4` until a vote adds a validator; meanwhile one more validator offline stops the
+   chain until it is back.
+
+   One vote of `honor_nodes` may take any number of validators out and in, as long as the new set has 4 or
+   more: the vote of block h sets the validators from block h+3, the validators of the set before it vote on
+   h+1 to h+3, and the nodes go on sending them the messages until the new set takes effect. Keep the validators
+   the vote takes out running until the chain is 3 blocks past the vote. The quorum of the blocks before the
+   new set is that of the old one: with 4 validators, 2 offline at once stop the chain whatever the vote.
+
 4. Set up PostgreSQL for the node, with these settings in its `postgresql.conf`:
 
 ```ini
